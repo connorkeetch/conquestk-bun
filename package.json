@@ -1,0 +1,54 @@
+{
+  "name": "risk-game",
+  "version": "1.0.0",
+  "description": "A full-stack Risk-like multiplayer board game",
+  "main": "index.js",
+  "scripts": {
+    "setup": "node setup-check.js",
+    "dev": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:manual": "echo \"Make sure PostgreSQL is running on port 5432 and Redis on port 6379\" && concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend-only": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1 -Frontend",
+    "dev:backend-only": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1 -Backend",
+    "dev:quick": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1 -SkipSetup",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "clean": "rmdir /s /q backend\\node_modules frontend\\node_modules 2>nul || true",
+    "clean:install": "npm run clean && npm run install:all"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/risk-game.git"
+  },
+  "keywords": [
+    "risk",
+    "board-game",
+    "multiplayer",
+    "react",
+    "nodejs",
+    "socket.io",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
+}
