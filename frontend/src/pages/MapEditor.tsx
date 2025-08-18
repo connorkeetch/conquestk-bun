@@ -15,6 +15,8 @@ interface EditorState {
   imageUrl?: string
   imageWidth: number
   imageHeight: number
+  adjacencies: Array<{ from: string; to: string }>
+  firstSelectedTerritory?: string
 }
 
 export default function MapEditor() {
@@ -28,7 +30,9 @@ export default function MapEditor() {
     isDrawing: false,
     currentPolygon: [],
     imageWidth: 800,
-    imageHeight: 600
+    imageHeight: 600,
+    adjacencies: [],
+    firstSelectedTerritory: undefined
   })
 
   const [territoryAbilities, setTerritoryAbilities] = useState<TerritoryAbilityType[]>([])
@@ -41,6 +45,7 @@ export default function MapEditor() {
   const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
   const [isPublic, setIsPublic] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   // Load metadata on component mount
   useEffect(() => {
@@ -83,8 +88,9 @@ export default function MapEditor() {
       // Draw grid background
       drawGrid(ctx)
       redrawTerritories(ctx)
+      drawAdjacencies(ctx)
     }
-  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory])
+  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory, state.adjacencies, state.firstSelectedTerritory])
 
   const drawGrid = (ctx: CanvasRenderingContext2D) => {
     const canvas = ctx.canvas
@@ -156,6 +162,50 @@ export default function MapEditor() {
     }
   }
 
+  const drawAdjacencies = (ctx: CanvasRenderingContext2D) => {
+    // Draw adjacency lines
+    state.adjacencies.forEach(adjacency => {
+      const fromTerritory = state.territories.find(t => t.id === adjacency.from)
+      const toTerritory = state.territories.find(t => t.id === adjacency.to)
+      
+      if (fromTerritory && toTerritory) {
+        ctx.strokeStyle = '#10B981'
+        ctx.lineWidth = 3
+        ctx.setLineDash([10, 5])
+        
+        ctx.beginPath()
+        ctx.moveTo(fromTerritory.armyPosition.x, fromTerritory.armyPosition.y)
+        ctx.lineTo(toTerritory.armyPosition.x, toTerritory.armyPosition.y)
+        ctx.stroke()
+        ctx.setLineDash([])
+        
+        // Draw connection dots
+        ctx.fillStyle = '#10B981'
+        ctx.beginPath()
+        ctx.arc(fromTerritory.armyPosition.x, fromTerritory.armyPosition.y, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(toTerritory.armyPosition.x, toTerritory.armyPosition.y, 4, 0, 2 * Math.PI)
+        ctx.fill()
+      }
+    })
+    
+    // Highlight first selected territory in adjacency mode
+    if (state.selectedTool === 'adjacency' && state.firstSelectedTerritory) {
+      const firstTerritory = state.territories.find(t => t.id === state.firstSelectedTerritory)
+      if (firstTerritory) {
+        ctx.strokeStyle = '#F59E0B'
+        ctx.lineWidth = 4
+        ctx.setLineDash([8, 4])
+        
+        ctx.beginPath()
+        ctx.arc(firstTerritory.armyPosition.x, firstTerritory.armyPosition.y, 20, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    }
+  }
+
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -186,6 +236,54 @@ export default function MapEditor() {
         ...prev,
         selectedTerritory: clickedTerritory?.id
       }))
+    } else if (state.selectedTool === 'adjacency') {
+      // Handle adjacency creation
+      const clickedTerritory = findTerritoryAtPoint(x, y)
+      if (!clickedTerritory) return
+      
+      if (!state.firstSelectedTerritory) {
+        // First territory selection
+        setState(prev => ({
+          ...prev,
+          firstSelectedTerritory: clickedTerritory.id,
+          selectedTerritory: clickedTerritory.id
+        }))
+      } else if (state.firstSelectedTerritory !== clickedTerritory.id) {
+        // Second territory selection - create adjacency
+        const newAdjacency = { 
+          from: state.firstSelectedTerritory, 
+          to: clickedTerritory.id 
+        }
+        
+        // Check if adjacency already exists
+        const exists = state.adjacencies.some(adj => 
+          (adj.from === newAdjacency.from && adj.to === newAdjacency.to) ||
+          (adj.from === newAdjacency.to && adj.to === newAdjacency.from)
+        )
+        
+        if (!exists) {
+          setState(prev => ({
+            ...prev,
+            adjacencies: [...prev.adjacencies, newAdjacency],
+            firstSelectedTerritory: undefined,
+            selectedTerritory: undefined
+          }))
+        } else {
+          // Reset selection if adjacency already exists
+          setState(prev => ({
+            ...prev,
+            firstSelectedTerritory: undefined,
+            selectedTerritory: undefined
+          }))
+        }
+      } else {
+        // Same territory clicked - deselect
+        setState(prev => ({
+          ...prev,
+          firstSelectedTerritory: undefined,
+          selectedTerritory: undefined
+        }))
+      }
     }
   }, [state.selectedTool, state.isDrawing, state.territories])
 
@@ -246,6 +344,10 @@ export default function MapEditor() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Store the actual file for upload
+    setSelectedFile(file)
+    
+    // Create preview URL for canvas display
     const imageUrl = URL.createObjectURL(file)
     
     // Get image dimensions
@@ -298,7 +400,7 @@ export default function MapEditor() {
         tags: ['custom']
       }
 
-      const savedMap = await mapService.createMap(mapData)
+      const savedMap = await mapService.createMap(mapData, selectedFile || undefined)
       
       // Save continents
       const savedContinents = []
@@ -311,11 +413,12 @@ export default function MapEditor() {
         savedContinents.push(saved)
       }
 
-      // Save territories
+      // Save territories and collect mapping for adjacencies
+      const savedTerritories = []
       for (const territory of state.territories) {
         const continentId = savedContinents.find(c => c.name === state.continents.find(sc => sc.id === territory.continentId)?.name)?.id
         
-        await mapService.createTerritory({
+        const savedTerritory = await mapService.createTerritory({
           mapId: savedMap.id,
           territoryId: territory.territoryId,
           name: territory.name,
@@ -324,6 +427,22 @@ export default function MapEditor() {
           armyPosition: territory.armyPosition,
           startingArmies: territory.startingArmies
         })
+        savedTerritories.push({ editorId: territory.id, savedId: savedTerritory.id })
+      }
+
+      // Save adjacencies
+      for (const adjacency of state.adjacencies) {
+        const fromMapping = savedTerritories.find(t => t.editorId === adjacency.from)
+        const toMapping = savedTerritories.find(t => t.editorId === adjacency.to)
+        
+        if (fromMapping && toMapping) {
+          await mapService.createAdjacency({
+            fromTerritoryId: fromMapping.savedId,
+            toTerritoryId: toMapping.savedId,
+            connectionType: 'land',
+            isBidirectional: true
+          })
+        }
       }
 
       setState(prev => ({ ...prev, currentMap: savedMap }))
@@ -347,10 +466,13 @@ export default function MapEditor() {
         isDrawing: false,
         selectedTerritory: undefined,
         selectedContinent: undefined,
-        imageUrl: undefined
+        imageUrl: undefined,
+        adjacencies: [],
+        firstSelectedTerritory: undefined
       }))
       setMapName('')
       setMapDescription('')
+      setSelectedFile(null)
     }
   }
 
