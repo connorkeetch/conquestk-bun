@@ -1,24 +1,37 @@
 import { Pool, QueryResult } from 'pg';
 import { Database } from 'sqlite3';
 import { logger } from '../utils/logger';
+import { runMigrations } from '../utils/migrationRunner';
 
 type DatabaseType = 'postgresql' | 'sqlite';
 const DB_TYPE: DatabaseType = (process.env.DB_TYPE as DatabaseType) || 'postgresql';
+
 
 let pgPool: Pool | null = null;
 let sqliteDb: Database | null = null;
 
 if (DB_TYPE === 'postgresql') {
-  pgPool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    database: process.env.DB_NAME || 'risk_game',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
+  // Use DATABASE_URL if available (Railway/Heroku style), otherwise use individual env vars
+  if (process.env.DATABASE_URL) {
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  } else {
+    pgPool = new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'risk_game',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'password',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  }
 } else {
   const sqlite3 = require('sqlite3').verbose();
   const dbPath = process.env.SQLITE_DB_PATH || './risk_game.db';
@@ -131,6 +144,10 @@ export async function initDatabase() {
       await initializeSqliteTables();
       logger.info('✅ SQLite tables initialized');
       
+      // Run additional migrations
+      await runMigrations();
+      logger.info('✅ Extended map schema applied');
+      
     } else {
       throw new Error(`Unsupported database type: ${DB_TYPE}. Use 'postgresql' or 'sqlite'.`);
     }
@@ -158,11 +175,15 @@ export async function initDatabase() {
       `);
     }
     
+    // In production, log the error but don't crash the server immediately
+    // This allows Railway to display better error logs
+    logger.warn('⚠️  Running without database - some features will be limited');
+    logger.warn('🔧 Fix database issues above and restart to enable full functionality');
+    
     if (process.env.NODE_ENV === 'production') {
-      throw error;
-    } else {
-      logger.warn('⚠️  Running in development mode without database - some features will be limited');
-      logger.warn('🔧 Fix database issues above and restart to enable full functionality');
+      logger.error('💡 To fix in Railway: Ensure PostgreSQL plugin is added and DATABASE_URL is set');
+      // Don't throw in production - let the app start so we can see logs
+      // throw error;
     }
   }
 }

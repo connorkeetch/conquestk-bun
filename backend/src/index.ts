@@ -81,13 +81,27 @@ setupSocketHandlers(io);
 
 async function startServer() {
   try {
+    // Initialize database (will not throw in production)
     await initDatabase();
+    
     server.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT}`);
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`📊 Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
-    logger.error('Failed to start server:', error);
-    process.exit(1);
+    logger.error('❌ Failed to start server:', error);
+    
+    // In production, try to start the server anyway for better error visibility
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('⚠️  Starting server in degraded mode...');
+      server.listen(PORT, () => {
+        logger.info(`🚀 Server running on port ${PORT} (degraded mode - database issues)`);
+        logger.error('💡 Check Railway logs and ensure PostgreSQL plugin is added');
+      });
+    } else {
+      process.exit(1);
+    }
   }
 }
 
