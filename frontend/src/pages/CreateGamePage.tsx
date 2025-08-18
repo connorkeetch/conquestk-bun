@@ -78,13 +78,13 @@ const CreateGamePage: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder="Quick Game" 
-                  className="input w-full max-w-md"
+                  className="w-full max-w-md px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium mb-2">Map</label>
-                <select className="input w-full max-w-md">
+                <select className="w-full max-w-md px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                   <option>Classic World</option>
                   <option>Europe</option>
                   <option>Asia</option>
@@ -94,7 +94,7 @@ const CreateGamePage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Max Players</label>
-                <select className="input w-full max-w-md">
+                <select className="w-full max-w-md px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                   <option>2 Players</option>
                   <option>3 Players</option>
                   <option>4 Players</option>
@@ -126,7 +126,7 @@ const CreateGamePage: React.FC = () => {
                     <input 
                       type="text" 
                       placeholder="My Custom Game" 
-                      className="input w-full"
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       value={gameName}
                       onChange={(e) => setGameName(e.target.value)}
                     />
@@ -135,7 +135,7 @@ const CreateGamePage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Max Players</label>
                     <select 
-                      className="input w-full"
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       value={maxPlayers}
                       onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
                     >
@@ -151,7 +151,7 @@ const CreateGamePage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Map</label>
                   <select 
-                    className="input w-full max-w-md"
+                    className="w-full max-w-md px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     value={selectedMap}
                     onChange={(e) => setSelectedMap(e.target.value)}
                   >

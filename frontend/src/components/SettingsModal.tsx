@@ -66,12 +66,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">Account Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
                   <input 
                     type="text" 
-                    className="input w-full" 
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
                     placeholder="Enter username" 
                     defaultValue="Player123"
                   />
@@ -80,7 +80,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                   <input 
                     type="email" 
-                    className="input w-full" 
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
                     placeholder="Enter email" 
                     defaultValue="player@example.com"
                   />
@@ -164,7 +164,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Default Turn Time (seconds)</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="60">60 seconds</option>
                     <option value="120" selected>120 seconds</option>
                     <option value="180">180 seconds</option>
@@ -180,7 +180,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Map Style</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="classic">Classic Risk</option>
                     <option value="custom" selected>Custom Maps</option>
                     <option value="both">Both</option>
@@ -312,7 +312,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Territory Label Size</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="small">Small</option>
                     <option value="medium" selected>Medium</option>
                     <option value="large">Large</option>
@@ -439,7 +439,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Profile Visibility</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="public" selected>Public - Anyone can view</option>
                     <option value="friends">Friends Only</option>
                     <option value="private">Private - Hidden</option>
@@ -475,7 +475,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Who can message you</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="everyone">Everyone</option>
                     <option value="friends" selected>Friends Only</option>
                     <option value="nobody">Nobody</option>
@@ -484,7 +484,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Who can invite you to games</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="everyone" selected>Everyone</option>
                     <option value="friends">Friends Only</option>
                     <option value="nobody">Nobody</option>
@@ -530,7 +530,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Graphics Quality</label>
-                  <select className="input w-full">
+                  <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
                     <option value="high">High</option>
@@ -618,7 +618,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
       <div 
         ref={modalRef}
-        className="bg-gray-800 rounded-xl border border-gray-600 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-gray-800 rounded-xl border border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
