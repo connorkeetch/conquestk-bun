@@ -4,7 +4,19 @@ import { logger } from '../utils/logger';
 import { runMigrations } from '../utils/migrationRunner';
 
 type DatabaseType = 'postgresql' | 'sqlite';
-const DB_TYPE: DatabaseType = (process.env.DB_TYPE as DatabaseType) || 'postgresql';
+// Force PostgreSQL in production if DATABASE_URL is set
+const DB_TYPE: DatabaseType = process.env.DATABASE_URL ? 'postgresql' : 
+  (process.env.DB_TYPE as DatabaseType) || 
+  (process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite');
+
+// Log database configuration for debugging
+logger.info('🔧 Database Configuration:', {
+  DB_TYPE,
+  NODE_ENV: process.env.NODE_ENV,
+  DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+  DB_HOST: process.env.DB_HOST || 'NOT_SET',
+  DB_NAME: process.env.DB_NAME || 'NOT_SET'
+});
 
 
 let pgPool: Pool | null = null;

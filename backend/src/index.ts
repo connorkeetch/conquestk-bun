@@ -83,6 +83,19 @@ app.get('/health', async (req, res) => {
   }
 });
 
+app.get('/debug/env', (req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    DB_TYPE: process.env.DB_TYPE,
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+    DB_HOST: process.env.DB_HOST || 'NOT_SET',
+    DB_NAME: process.env.DB_NAME || 'NOT_SET',
+    DB_USER: process.env.DB_USER || 'NOT_SET',
+    PORT: process.env.PORT,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/debug/tables', async (req, res) => {
   try {
     const { query } = await import('./config/database');
@@ -96,12 +109,18 @@ app.get('/debug/tables', async (req, res) => {
       ORDER BY table_name
     `);
     
-    const userCount = await query('SELECT COUNT(*) as count FROM users');
+    let userCount = null;
+    try {
+      const userCountResult = await query('SELECT COUNT(*) as count FROM users');
+      userCount = userCountResult.rows[0]?.count || 0;
+    } catch (e) {
+      userCount = 'Table does not exist';
+    }
     
     res.json({
       status: 'OK',
       tables: tableCheck.rows.map(row => row.table_name),
-      userCount: userCount.rows[0]?.count || 0,
+      userCount,
       databaseType: process.env.DB_TYPE || 'postgresql',
       databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
       timestamp: new Date().toISOString()
@@ -110,6 +129,8 @@ app.get('/debug/tables', async (req, res) => {
     res.status(500).json({
       status: 'ERROR',
       error: error instanceof Error ? error.message : 'Unknown error',
+      databaseType: process.env.DB_TYPE || 'postgresql',
+      databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
       timestamp: new Date().toISOString()
     });
   }
