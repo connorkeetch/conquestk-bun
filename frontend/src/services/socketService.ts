@@ -20,7 +20,7 @@ class SocketService {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001', {
       auth: {
         token,
       },

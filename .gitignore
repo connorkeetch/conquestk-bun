@@ -72,8 +72,8 @@ Thumbs.db
 *.swo
 *.sublime-*
 
-# Package manager lock files
-package-lock.json
+# Package manager lock files (keeping package-lock.json for deployment)
+# package-lock.json  # Commented out - needed for Railway deployment
 yarn.lock
 pnpm-lock.yaml
 

@@ -11,17 +11,29 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
     },
   },
   build: {
-    outDir: 'dist',
-    sourcemap: true,
+    outDir: '../backend/public',
+    emptyOutDir: true,
+    sourcemap: false, // Disable sourcemaps in production for smaller bundle size
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          redux: ['@reduxjs/toolkit', 'react-redux'],
+          ui: ['lucide-react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
   },
   test: {
     globals: true,
