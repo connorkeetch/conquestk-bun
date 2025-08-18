@@ -147,6 +147,10 @@ export async function initDatabase() {
         logger.info('✅ PostgreSQL tables created successfully');
       }
       
+      // Run additional migrations for PostgreSQL too
+      await runMigrations();
+      logger.info('✅ PostgreSQL migrations applied');
+      
     } else if (DB_TYPE === 'sqlite') {
       if (!sqliteDb) {
         throw new Error('SQLite database not initialized. Check your SQLITE_DB_PATH environment variable.');
