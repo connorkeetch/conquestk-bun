@@ -22,8 +22,18 @@ export class GameService {
     return updatedState;
   }
 
-  async initializeGame(roomId: string, players: string[]): Promise<GameState> {
-    const gameState = this.gameEngine.initializeGame(roomId, players);
+  async initializeGame(roomId: string, players: string[], gameConfig?: any): Promise<GameState> {
+    // Default game configuration
+    const defaultGameConfig = {
+      movementType: 'classic_adjacent' as const,
+      allowTeamPlay: false,
+      maxPlayers: 6,
+      mapId: 'classic',
+      gameMode: 'standard'
+    };
+    
+    const config = gameConfig || defaultGameConfig;
+    const gameState = this.gameEngine.initializeGame(roomId, players, config);
     this.activeGames.set(roomId, gameState);
     return gameState;
   }
@@ -125,7 +135,7 @@ export class GameService {
     // Calculate reinforcement armies if moving to reinforcement phase
     let reinforcementArmies = 0;
     if (updatedState.phase === 'reinforcement') {
-      reinforcementArmies = this.gameEngine.calculateReinforcementArmies(updatedState, updatedState.currentPlayer);
+      reinforcementArmies = this.gameEngine.calculateBaseReinforcementArmies(updatedState, updatedState.currentPlayer);
     }
 
     return {

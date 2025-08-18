@@ -20,13 +20,13 @@ function Write-ColorOutput {
     Write-Host $Message -ForegroundColor $Color
 }
 
-function Write-Success { param([string]$Message) Write-ColorOutput "✅ $Message" "Green" }
-function Write-Warning { param([string]$Message) Write-ColorOutput "⚠️  $Message" "Yellow" }
-function Write-Error { param([string]$Message) Write-ColorOutput "❌ $Message" "Red" }
-function Write-Info { param([string]$Message) Write-ColorOutput "ℹ️  $Message" "Cyan" }
+function Write-Success { param([string]$Message) Write-ColorOutput "[SUCCESS] $Message" "Green" }
+function Write-Warning { param([string]$Message) Write-ColorOutput "[WARNING] $Message" "Yellow" }
+function Write-Error { param([string]$Message) Write-ColorOutput "[ERROR] $Message" "Red" }
+function Write-Info { param([string]$Message) Write-ColorOutput "[INFO] $Message" "Cyan" }
 
 # Header
-Write-ColorOutput "`n🎮 Risk Game Development Environment" "Magenta"
+Write-ColorOutput "`nRisk Game Development Environment" "Magenta"
 Write-ColorOutput "====================================" "Magenta"
 
 # Check PowerShell version
@@ -105,7 +105,7 @@ function Start-Service {
     try {
         $startInfo = New-Object System.Diagnostics.ProcessStartInfo
         $startInfo.FileName = "powershell.exe"
-        $startInfo.Arguments = "-NoExit -Command `"cd '$WorkingDirectory'; $Command`""
+        $startInfo.Arguments = '-NoExit -Command "cd ' + "'$WorkingDirectory'; $Command" + '"'
         $startInfo.WorkingDirectory = $WorkingDirectory
         $startInfo.UseShellExecute = $true
         $startInfo.WindowStyle = "Normal"
@@ -197,27 +197,27 @@ if ($startFrontend) {
 }
 
 # Summary
-Write-ColorOutput "`n🚀 Development Environment Started!" "Green"
+Write-ColorOutput "`nDevelopment Environment Started!" "Green"
 Write-ColorOutput "=================================" "Green"
 
 if ($startBackend) {
-    Write-Info "🔧 Backend API: http://localhost:$backendPort"
-    Write-Info "📊 Backend Logs: Check backend console window"
+    Write-Info "Backend API: http://localhost:$backendPort"
+    Write-Info "Backend Logs: Check backend console window"
 }
 
 if ($startFrontend) {
-    Write-Info "🌐 Frontend App: http://localhost:$frontendPort"
-    Write-Info "🎨 Frontend Logs: Check frontend console window"
+    Write-Info "Frontend App: http://localhost:$frontendPort"
+    Write-Info "Frontend Logs: Check frontend console window"
 }
 
-Write-ColorOutput "`n📋 Useful Commands:" "Yellow"
+Write-ColorOutput "`nUseful Commands:" "Yellow"
 Write-Info "• To stop services: Close the console windows or press Ctrl+C in them"
 Write-Info "• To restart: Run this script again"
 Write-Info "• To check setup: npm run setup"
 Write-Info "• To start only frontend: .\start-dev.ps1 -Frontend"
 Write-Info "• To start only backend: .\start-dev.ps1 -Backend"
 
-Write-ColorOutput "`n🎮 Happy Coding!" "Magenta"
+Write-ColorOutput "`nHappy Coding!" "Magenta"
 
 # Keep script running to monitor processes
 if ($processes.Count -gt 0) {

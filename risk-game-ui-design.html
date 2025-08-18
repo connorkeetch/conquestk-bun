@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conquest - Modern Risk Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #10b981;
+            --accent-danger: #ef4444;
+            --accent-warning: #f59e0b;
+            --border-color: #333333;
+            --hover-bg: rgba(59, 130, 246, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Hamburger Menu Styles */
+        .hamburger {
+            width: 32px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background: var(--text-primary);
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+
+        /* Slide-out Menu */
+        .slide-menu {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 320px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            transition: left 0.3s ease;
+            z-index: 1001;
+            overflow-y: auto;
+        }
+
+        .slide-menu.active {
+            left: 0;
+        }
+
+        .menu-header {
+            padding: 1.5rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: background 0.3s;
+        }
+
+        .menu-close:hover {
+            background: var(--hover-bg);
+        }
+
+        .menu-section {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .menu-section-header {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .menu-section-header:hover {
+            background: var(--hover-bg);
+        }
+
+        .menu-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chevron {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.3s;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .menu-dropdown {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--bg-primary);
+        }
+
+        .menu-dropdown.open {
+            max-height: 500px;
+        }
+
+        .menu-item {
+            padding: 0.75rem 1.5rem 0.75rem 3.5rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .menu-item:hover {
+            background: var(--hover-bg);
+            color: var(--accent-primary);
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.5rem 1.5rem;
+        }
+
+        .menu-toggle-item {
+            padding: 0.75rem 1.5rem 0.75rem 3.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: var(--accent-primary);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .user-profile {
+            padding: 1.5rem;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .user-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 80px;
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1), transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        /* Game Preview */
+        .game-preview {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .preview-card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-header {
+            padding: 1rem 1.5rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .phase-indicator {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .phase {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .phase.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* Game Board Mock */
+        .game-board-mock {
+            position: relative;
+            height: 500px;
+            background: linear-gradient(135deg, #1e3a5f, #0f1f35);
+            overflow: hidden;
+        }
+
+        .territory {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 3px solid white;
+        }
+
+        .territory:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .territory.player1 { background: #3b82f6; }
+        .territory.player2 { background: #ef4444; }
+        .territory.player3 { background: #10b981; }
+        .territory.player4 { background: #f59e0b; }
+
+        /* Lobby Section */
+        .lobby-section {
+            max-width: 1400px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .lobby-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .room-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .room-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .room-name {
+            font-weight: bold;
+            font-size: 1.125rem;
+        }
+
+        .room-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            background: var(--bg-tertiary);
+            color: var(--accent-secondary);
+        }
+
+        .room-players {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .player-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .room-info {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Features Grid */
+        .features {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            background: var(--accent-primary);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .feature-title {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Game HUD */
+        .game-hud {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .hud-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .hud-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .dice-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .die {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--bg-primary);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Theme Switcher */
+        .theme-switcher {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .theme-option:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .theme-option.dark {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+        }
+
+        .theme-option.ocean {
+            background: linear-gradient(135deg, #0f2027, #2c5364);
+        }
+
+        .theme-option.pirate {
+            background: linear-gradient(135deg, #8b4513, #daa520);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .game-hud {
+                width: 90%;
+                padding: 0.75rem 1rem;
+                gap: 1rem;
+            }
+        }
+    </style>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('slideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            const hamburger = document.querySelector('.hamburger');
+            
+            menu.classList.toggle('active');
+            overlay.classList.toggle('active');
+            hamburger.classList.toggle('active');
+        }
+
+        function toggleDropdown(menuId) {
+            const dropdown = document.getElementById(menuId);
+            const chevron = document.getElementById(menuId + 'Chevron');
+            
+            dropdown.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+
+        // Toggle switches
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleSwitches = document.querySelectorAll('.toggle-switch');
+            toggleSwitches.forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('active');
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div class="hamburger" onclick="toggleMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="logo">
+                    ⚔️ CONQUEST
+                </div>
+            </div>
+            <div class="nav-links">
+                <button class="btn btn-secondary">Quick Match</button>
+                <button class="btn btn-primary">Create Game</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Slide-out Menu -->
+    <div class="slide-menu" id="slideMenu">
+        <div class="menu-header">
+            <div class="logo" style="font-size: 1.25rem;">⚔️ CONQUEST</div>
+            <div class="menu-close" onclick="toggleMenu()">✕</div>
+        </div>
+
+        <!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-avatar">CK</div>
+            <div class="user-name">Connor Keetch</div>
+            <div style="color: var(--text-secondary); font-size: 0.875rem;">Rank: Field Marshal</div>
+            <div class="user-stats">
+                <div class="stat-item">
+                    <div class="stat-value">147</div>
+                    <div class="stat-label">WINS</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">82%</div>
+                    <div class="stat-label">WIN RATE</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">2,341</div>
+                    <div class="stat-label">RATING</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('gameMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">🎮</span>
+                    <span>Game</span>
+                </div>
+                <span class="chevron" id="gameMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="gameMenu">
+                <div class="menu-item">
+                    <span>🎯 Quick Match</span>
+                </div>
+                <div class="menu-item">
+                    <span>🏠 Create Private Room</span>
+                </div>
+                <div class="menu-item">
+                    <span>🌍 Browse Public Games</span>
+                </div>
+                <div class="menu-item">
+                    <span>👥 Find Friends</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item">
+                    <span>📚 Tutorial</span>
+                </div>
+                <div class="menu-item">
+                    <span>🤖 Practice vs AI</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('settingsMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">⚙️</span>
+                    <span>Settings</span>
+                </div>
+                <span class="chevron" id="settingsMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="settingsMenu">
+                <div class="menu-toggle-item">
+                    <span>🔊 Sound Effects</span>
+                    <div class="toggle-switch active"></div>
+                </div>
+                <div class="menu-toggle-item">
+                    <span>🎵 Music</span>
+                    <div class="toggle-switch"></div>
+                </div>
+                <div class="menu-toggle-item">
+                    <span>📳 Vibration</span>
+                    <div class="toggle-switch active"></div>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item">
+                    <span>🎨 Theme Settings</span>
+                </div>
+                <div class="menu-item">
+                    <span>🎯 Board Preferences</span>
+                </div>
+                <div class="menu-item">
+                    <span>⚡ Animation Speed</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-toggle-item">
+                    <span>🔔 Notifications</span>
+                    <div class="toggle-switch active"></div>
+                </div>
+                <div class="menu-toggle-item">
+                    <span>⏰ Turn Timer Alerts</span>
+                    <div class="toggle-switch active"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats & Progress Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('statsMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">📊</span>
+                    <span>Stats & Progress</span>
+                </div>
+                <span class="chevron" id="statsMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="statsMenu">
+                <div class="menu-item">
+                    <span>🏆 Leaderboard</span>
+                </div>
+                <div class="menu-item">
+                    <span>📈 Match History</span>
+                </div>
+                <div class="menu-item">
+                    <span>🎖️ Achievements</span>
+                </div>
+                <div class="menu-item">
+                    <span>📊 Personal Stats</span>
+                </div>
+                <div class="menu-item">
+                    <span>🗺️ Territory Heatmap</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Community Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('communityMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">👥</span>
+                    <span>Community</span>
+                </div>
+                <span class="chevron" id="communityMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="communityMenu">
+                <div class="menu-item">
+                    <span>💬 Global Chat</span>
+                </div>
+                <div class="menu-item">
+                    <span>👫 Friends List</span>
+                </div>
+                <div class="menu-item">
+                    <span>⚔️ Clans</span>
+                </div>
+                <div class="menu-item">
+                    <span>🏅 Tournaments</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item">
+                    <span>📢 News & Updates</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('helpMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">❓</span>
+                    <span>Help & Info</span>
+                </div>
+                <span class="chevron" id="helpMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="helpMenu">
+                <div class="menu-item">
+                    <span>📖 How to Play</span>
+                </div>
+                <div class="menu-item">
+                    <span>🎯 Strategy Guide</span>
+                </div>
+                <div class="menu-item">
+                    <span>📜 Game Rules</span>
+                </div>
+                <div class="menu-item">
+                    <span>🗺️ Map Guides</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item">
+                    <span>💡 Tips & Tricks</span>
+                </div>
+                <div class="menu-item">
+                    <span>🐛 Report Bug</span>
+                </div>
+                <div class="menu-item">
+                    <span>📧 Contact Support</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Section -->
+        <div class="menu-section">
+            <div class="menu-section-header" onclick="toggleDropdown('accountMenu')">
+                <div class="menu-section-title">
+                    <span class="menu-icon">👤</span>
+                    <span>Account</span>
+                </div>
+                <span class="chevron" id="accountMenuChevron">▼</span>
+            </div>
+            <div class="menu-dropdown" id="accountMenu">
+                <div class="menu-item">
+                    <span>✏️ Edit Profile</span>
+                </div>
+                <div class="menu-item">
+                    <span>🔐 Change Password</span>
+                </div>
+                <div class="menu-item">
+                    <span>🔗 Linked Accounts</span>
+                </div>
+                <div class="menu-item">
+                    <span>🔒 Privacy Settings</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item" style="color: var(--accent-danger);">
+                    <span>🚪 Sign Out</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <h1>Conquer the World</h1>
+            <p>Strategic multiplayer warfare. Command armies, forge alliances, dominate territories.</p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" style="font-size: 1.125rem; padding: 0.75rem 2rem;">
+                    ⚡ Quick Match
+                </button>
+                <button class="btn btn-secondary" style="font-size: 1.125rem; padding: 0.75rem 2rem;">
+                    🎮 Create Private Room
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Preview -->
+    <section class="game-preview">
+        <div class="preview-card">
+            <div class="preview-header">
+                <div class="phase-indicator">
+                    <div class="phase">REINFORCE</div>
+                    <div class="phase active">ATTACK</div>
+                    <div class="phase">FORTIFY</div>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span style="color: var(--text-secondary);">Turn 12</span>
+                    <span style="color: var(--accent-primary); font-weight: bold;">Your Turn</span>
+                </div>
+            </div>
+            <div class="game-board-mock">
+                <!-- Sample territories -->
+                <div class="territory player1" style="left: 20%; top: 25%;">8</div>
+                <div class="territory player2" style="left: 30%; top: 20%;">5</div>
+                <div class="territory player1" style="left: 40%; top: 30%;">12</div>
+                <div class="territory player3" style="left: 25%; top: 40%;">3</div>
+                <div class="territory player4" style="left: 50%; top: 25%;">7</div>
+                <div class="territory player1" style="left: 60%; top: 35%;">15</div>
+                <div class="territory player2" style="left: 70%; top: 30%;">9</div>
+                <div class="territory player3" style="left: 35%; top: 50%;">4</div>
+                <div class="territory player4" style="left: 55%; top: 45%;">6</div>
+                <div class="territory player1" style="left: 45%; top: 60%;">10</div>
+                <div class="territory player2" style="left: 65%; top: 55%;">11</div>
+                <div class="territory player3" style="left: 75%; top: 50%;">2</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Active Games Lobby -->
+    <section class="lobby-section">
+        <h2 class="section-title">Active Games</h2>
+        <div class="lobby-grid">
+            <div class="room-card">
+                <div class="room-header">
+                    <span class="room-name">World Domination</span>
+                    <span class="room-status">4/6 Players</span>
+                </div>
+                <div class="room-players">
+                    <div class="player-avatar" style="background: #3b82f6;">A</div>
+                    <div class="player-avatar" style="background: #ef4444;">B</div>
+                    <div class="player-avatar" style="background: #10b981;">C</div>
+                    <div class="player-avatar" style="background: #f59e0b;">D</div>
+                    <div class="player-avatar">?</div>
+                    <div class="player-avatar">?</div>
+                </div>
+                <div class="room-info">
+                    <span>⏱️ Turn Timer: 2min</span>
+                    <span>🗺️ Classic Map</span>
+                </div>
+            </div>
+
+            <div class="room-card">
+                <div class="room-header">
+                    <span class="room-name">Pirate's Cove</span>
+                    <span class="room-status">2/4 Players</span>
+                </div>
+                <div class="room-players">
+                    <div class="player-avatar" style="background: #3b82f6;">J</div>
+                    <div class="player-avatar" style="background: #ef4444;">K</div>
+                    <div class="player-avatar">?</div>
+                    <div class="player-avatar">?</div>
+                </div>
+                <div class="room-info">
+                    <span>⏱️ No Timer</span>
+                    <span>🏴‍☠️ Pirate Theme</span>
+                </div>
+            </div>
+
+            <div class="room-card">
+                <div class="room-header">
+                    <span class="room-name">Speed Conquest</span>
+                    <span class="room-status">5/6 Players</span>
+                </div>
+                <div class="room-players">
+                    <div class="player-avatar" style="background: #3b82f6;">X</div>
+                    <div class="player-avatar" style="background: #ef4444;">Y</div>
+                    <div class="player-avatar" style="background: #10b981;">Z</div>
+                    <div class="player-avatar" style="background: #f59e0b;">W</div>
+                    <div class="player-avatar" style="background: #8b5cf6;">V</div>
+                    <div class="player-avatar">?</div>
+                </div>
+                <div class="room-info">
+                    <span>⚡ 30s Timer</span>
+                    <span>🗺️ Small Map</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="feature-card">
+            <div class="feature-icon">🎲</div>
+            <div class="feature-title">Real-time Battles</div>
+            <div class="feature-description">Authentic dice mechanics with smooth animations</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌍</div>
+            <div class="feature-title">Multiple Maps</div>
+            <div class="feature-description">Classic world map plus themed variations</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <div class="feature-title">6 Player Support</div>
+            <div class="feature-description">Epic battles with up to 6 simultaneous players</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <div class="feature-title">Custom Themes</div>
+            <div class="feature-description">Choose from multiple visual themes</div>
+        </div>
+    </section>
+
+    <!-- Game HUD (shows when in game) -->
+    <div class="game-hud">
+        <div class="hud-item">
+            <span class="hud-label">ARMIES</span>
+            <span class="hud-value" style="color: var(--accent-secondary);">+5</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">TERRITORIES</span>
+            <span class="hud-value">18/42</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">BATTLE RESULT</span>
+            <div class="dice-container">
+                <div class="die">⚅</div>
+                <div class="die">⚃</div>
+                <div class="die">⚁</div>
+            </div>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">PHASE</span>
+            <button class="btn btn-primary">End Attack</button>
+        </div>
+    </div>
+
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <div class="theme-option dark" title="Dark Theme"></div>
+        <div class="theme-option ocean" title="Ocean Theme"></div>
+        <div class="theme-option pirate" title="Pirate Theme"></div>
+    </div>
+</body>
+</html>

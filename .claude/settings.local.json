@@ -5,10 +5,63 @@
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(npm test)",
-      "Bash(npm run test:backend:*)"
+      "Bash(npm run test:backend:*)",
+      "Bash(claude mcp install:*)",
+      "Bash(claude mcp add git:*)",
+      "Bash(claude mcp add fetch -s:*)",
+      "Bash(taskkill:*)",
+      "Bash('taskkill' '/F' '/PID' '7536')",
+      "Bash(pwsh:*)",
+      "Bash(move STATUS.md CLAUDE.md)",
+      "mcp__memory__create_entities",
+      "mcp__memory__create_relations",
+      "mcp__filesystem__list_directory",
+      "WebFetch(domain:docs.anthropic.com)",
+      "mcp__memory__search_nodes",
+      "mcp__memory__read_graph",
+      "Bash(powershell:*)",
+      "mcp__memory__search_nodes",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "WebSearch",
+      "mcp__puppeteer__puppeteer_fill",
+      "mcp__puppeteer__puppeteer_click",
+      "mcp__puppeteer__puppeteer_navigate",
+      "Bash(npm start)",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "Bash(npm install)",
+      "Bash(dir:*)",
+      "Bash(npm ci:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"Add Railway deployment configuration and package-lock.json\n\n- Add Railway deployment files (railway.toml, nixpacks.toml, Dockerfile)\n- Add package-lock.json for reliable dependency resolution\n- Update .gitignore to include package-lock.json for deployment\n- Add production environment files (.env.production)\n- Configure frontend build output to backend/public for single-server deployment\n- Update CORS configuration for conquestk.com domain\n- Update API service URLs to use production environment variables\n- Add comprehensive deployment documentation\n\nReady for deployment at conquestk.com via Railway\")",
+      "Bash(git push origin main)",
+      "Bash(git commit -m \"Add missing backend files for Railway deployment\n\n- Add maps and profile route handlers\n- Add map and profile service layers\n- Add TypeScript type definitions\n- Add database migration files\n- Add migration runner utility\n\nFixes Railway build error: Cannot find module ''./routes/maps'' and ''./routes/profile''\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
-  }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/startup.bat"
+          }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/startup.bat"
+          }
+        ]
+      }
+    ]
+  },
+  "outputStyle": "default"
 }

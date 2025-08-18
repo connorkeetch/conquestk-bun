@@ -22,7 +22,7 @@ npm run dev
 
 **That's it!** The setup script will handle dependencies, database configuration, and start both frontend and backend.
 
-👉 **For detailed setup info, troubleshooting, and features, see [STATUS.md](STATUS.md)**
+👉 **For detailed setup info, troubleshooting, and features, see [CLAUDE.md](CLAUDE.md)**
 
 ## ✨ Features
 
@@ -181,6 +181,47 @@ npm run docker:up    # Start with Docker Compose
 npm run docker:down  # Stop containers
 ```
 
+## 🚀 Development Roadmap
+
+We're transforming this Risk game into a comprehensive gaming platform! Based on research from modern gaming sites like Steam, Discord, and Chess.com, here's what's coming:
+
+### 🎯 **Upcoming Features**
+
+#### **Phase 1: Enhanced Navigation** ⏱️ 1-2 weeks
+- 🏠 **Dashboard**: Personalized home with quick play, recent games, friend activity
+- 🎮 **Play Hub**: Quick match, lobby browser, custom games, AI opponents
+- 🗺️ **Maps Gallery**: Browse, rate, and discover community-created maps
+- 👥 **Community**: Friends, leaderboards, tournaments, and social features
+- 📊 **Profile System**: Stats, achievements, game history, and settings
+
+#### **Phase 2: Social Features** ⏱️ 2-3 weeks  
+- 👫 **Friends System**: Add friends, see their activity, invite to games
+- 🏆 **Achievements**: Unlock badges for various gameplay milestones
+- 📈 **Statistics**: Detailed analytics on your gameplay and improvement
+- 💬 **Real-time Chat**: Lobby chat, private messages, community discussions
+
+#### **Phase 3: Advanced Gaming** ⏱️ 3-4 weeks
+- ⚔️ **Matchmaking**: Skill-based ranked games with competitive ladder
+- 🎪 **Tournaments**: Community-organized events with brackets and prizes
+- 🗺️ **Map Workshop**: Enhanced editor with sharing and collaboration
+- 📱 **Mobile Optimization**: Touch-friendly interface for all devices
+
+### 🌟 **Vision: Complete Gaming Platform**
+
+Transform from a simple Risk game into a thriving gaming community with:
+- **Personalized Experience**: Custom profiles, preferences, and recommendations
+- **Social Gaming**: Friends, tournaments, and community-created content
+- **Competitive Play**: Rankings, seasons, and organized tournaments
+- **Content Creation**: Advanced map editor with sharing and rating system
+
+### 📊 **Current Status**
+- ✅ **Core Game**: Complete Risk gameplay with real-time multiplayer
+- ✅ **Map Editor**: Advanced territory creation with special abilities
+- ✅ **Database**: Robust schema supporting custom maps and game modes
+- 🟡 **Next Up**: Enhanced navigation and dashboard (Phase 1)
+
+> 📖 **See [CLAUDE.md](CLAUDE.md) for detailed technical implementation plans, API specifications, and database schemas.**
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -216,7 +257,7 @@ netstat -ano | findstr :5000
 npm run clean:install
 ```
 
-For more detailed troubleshooting, see [STATUS.md](STATUS.md).
+For more detailed troubleshooting, see [CLAUDE.md](CLAUDE.md).
 
 ## 🌟 Acknowledgments
 

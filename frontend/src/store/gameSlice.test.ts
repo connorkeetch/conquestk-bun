@@ -114,7 +114,7 @@ describe('gameSlice', () => {
       }));
       
       const state = store.getState().game;
-      const alaskaTerritory = state.currentGame?.board.find(t => t.id === 'alaska');
+      const alaskaTerritory = state.currentGame?.board.find((t: any) => t.id === 'alaska');
       
       expect(alaskaTerritory?.armies).toBe(5);
       expect(alaskaTerritory?.ownerId).toBe('player2');

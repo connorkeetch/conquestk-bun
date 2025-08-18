@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
-import { deployArmies, executeAttack, executeFortify } from '../store/gameActions';
+import { deployArmies, executeAttack, executeFortify, goBackToReinforcement } from '../store/gameActions';
 import { selectTerritory, selectTargetTerritory, setPendingAction, setBattleResult } from '../store/gameSlice';
 import { BattleModal } from './BattleModal';
 
@@ -152,6 +152,21 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
       {/* Attack Phase Controls */}
       {gameState.phase === 'attack' && (
         <div className="space-y-3">
+          {/* Go Back Button - Only show if no attacks made yet */}
+          {!gameState.hasAttackedThisTurn && (
+            <div className="bg-yellow-50 p-2 rounded border border-yellow-300">
+              <button
+                onClick={() => dispatch(goBackToReinforcement())}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm w-full"
+              >
+                ← Go Back to Reinforcement Phase
+              </button>
+              <p className="text-xs text-yellow-700 mt-1">
+                You can return to deploy more armies before attacking
+              </p>
+            </div>
+          )}
+          
           <div className="bg-red-50 p-3 rounded border">
             <h4 className="font-medium text-red-800 mb-2">Attack Territories</h4>
             
@@ -201,23 +216,60 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
       {/* Fortification Phase Controls */}
       {gameState.phase === 'fortify' && (
         <div className="space-y-3">
+          {/* Movement Type Info */}
+          <div className="bg-indigo-50 p-2 rounded border border-indigo-200">
+            <div className="text-xs font-medium text-indigo-800 mb-1">Movement Rules:</div>
+            <div className="text-xs text-indigo-700">
+              {gameState.gameConfig?.movementType === 'classic_adjacent' && 'One territory → Adjacent only (1 move per turn)'}
+              {gameState.gameConfig?.movementType === 'adjacent_multi' && 'Multiple territories → Adjacent only'}
+              {gameState.gameConfig?.movementType === 'path_single' && 'One territory → Any connected territory (1 move per turn)'}
+              {gameState.gameConfig?.movementType === 'path_multi' && 'Multiple territories → Any connected territories'}
+            </div>
+          </div>
+          
           <div className="bg-blue-50 p-3 rounded border">
             <h4 className="font-medium text-blue-800 mb-2">Fortify Territories</h4>
             
+            {/* Show movement restrictions */}
+            {(gameState.gameConfig?.movementType === 'classic_adjacent' || gameState.gameConfig?.movementType === 'path_single') && 
+             Object.keys(gameState.movementTracking || {}).length > 0 && (
+              <div className="bg-yellow-100 border border-yellow-300 rounded p-2 mb-3">
+                <p className="text-xs text-yellow-800 font-medium">
+                  ⚠️ Only one move allowed per fortify phase (already used)
+                </p>
+              </div>
+            )}
+            
             {!selectedTerritory ? (
-              <p className="text-sm text-blue-600">
-                Select one of your territories with 2+ armies to move armies from
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-blue-600">
+                  Select one of your territories with 2+ armies to move armies from
+                </p>
+                {Object.keys(gameState.movementTracking || {}).length > 0 && (
+                  <div className="text-xs text-gray-600">
+                    <strong>Already moved:</strong>{' '}
+                    {Object.keys(gameState.movementTracking || {}).map(territoryId => {
+                      const territory = gameState.board.find(t => t.id === territoryId);
+                      return territory?.name;
+                    }).join(', ')}
+                  </div>
+                )}
+              </div>
             ) : !selectedTargetTerritory ? (
               <div className="space-y-2">
                 <p className="text-sm">
                   Moving from: <strong>{selectedTerritoryData?.name}</strong> 
                   ({selectedTerritoryData?.armies} armies)
+                  {gameState.movementTracking?.[selectedTerritory] && (
+                    <span className="ml-2 text-xs bg-yellow-200 px-1 rounded">Already moved</span>
+                  )}
                 </p>
                 <p className="text-sm text-blue-600">
                   {validTargets.length > 0 
-                    ? `Select an adjacent territory you own (${validTargets.length} available)`
-                    : 'No adjacent territories to fortify'
+                    ? `Select a destination territory (${validTargets.length} available)`
+                    : gameState.gameConfig?.movementType?.includes('path') 
+                      ? 'No connected territories to fortify'
+                      : 'No adjacent territories to fortify'
                   }
                 </p>
               </div>

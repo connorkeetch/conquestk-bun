@@ -6,6 +6,10 @@ export interface GameState {
   turn: number
   board: Territory[]
   cards: Card[]
+  hasAttackedThisTurn?: boolean
+  lastBattleResult?: BattleResult
+  gameConfig: GameConfiguration
+  movementTracking?: { [territoryId: string]: boolean }
 }
 
 export interface GamePlayer {
@@ -34,8 +38,40 @@ export interface Card {
 }
 
 export interface GameAction {
-  type: 'deploy' | 'attack' | 'fortify' | 'end_turn' | 'trade_cards'
+  type: 'deploy' | 'attack' | 'fortify' | 'end_turn' | 'trade_cards' | 'go_back_to_reinforcement' | 'begin_turn'
   roomId: string
   playerId: string
   payload: any
 }
+
+export interface BattleResult {
+  attackerDice: number[]
+  defenderDice: number[]
+  attackerLosses: number
+  defenderLosses: number
+  conquered: boolean
+  fromTerritory: {
+    id: string
+    name: string
+    armies: number
+  }
+  toTerritory: {
+    id: string
+    name: string
+    armies: number
+    ownerId: string
+  }
+  gameEnded?: boolean
+  winner?: GamePlayer | null
+  eliminatedPlayers?: string[]
+}
+
+export interface GameConfiguration {
+  movementType: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
+  allowTeamPlay?: boolean
+  maxPlayers: number
+  mapId?: string
+  gameMode?: string
+}
+
+export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'

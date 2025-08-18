@@ -1,0 +1,124 @@
+{
+  "continents": {
+    "northern_lands": {
+      "name": "Northern Lands",
+      "bonus": 3,
+      "color": "#4CAF50"
+    },
+    "central_kingdoms": {
+      "name": "Central Kingdoms", 
+      "bonus": 4,
+      "color": "#2196F3"
+    },
+    "southern_realms": {
+      "name": "Southern Realms",
+      "bonus": 2,
+      "color": "#FF9800"
+    },
+    "eastern_empire": {
+      "name": "Eastern Empire",
+      "bonus": 3,
+      "color": "#9C27B0"
+    }
+  },
+  "territories": {
+    "frozen_wastes": {
+      "id": "frozen_wastes",
+      "name": "Frozen Wastes",
+      "continent": "northern_lands",
+      "adjacentTerritories": ["ice_peaks", "tundra_plains"],
+      "armyPosition": { "x": 150, "y": 80 }
+    },
+    "ice_peaks": {
+      "id": "ice_peaks",
+      "name": "Ice Peaks",
+      "continent": "northern_lands",
+      "adjacentTerritories": ["frozen_wastes", "tundra_plains", "mountain_pass"],
+      "armyPosition": { "x": 300, "y": 80 }
+    },
+    "tundra_plains": {
+      "id": "tundra_plains",
+      "name": "Tundra Plains",
+      "continent": "northern_lands",
+      "adjacentTerritories": ["frozen_wastes", "ice_peaks", "forest_realm", "mountain_pass"],
+      "armyPosition": { "x": 225, "y": 140 }
+    },
+    "forest_realm": {
+      "id": "forest_realm",
+      "name": "Forest Realm",
+      "continent": "central_kingdoms",
+      "adjacentTerritories": ["tundra_plains", "mountain_pass", "river_valley", "crystal_caverns"],
+      "armyPosition": { "x": 150, "y": 200 }
+    },
+    "mountain_pass": {
+      "id": "mountain_pass",
+      "name": "Mountain Pass",
+      "continent": "central_kingdoms",
+      "adjacentTerritories": ["ice_peaks", "tundra_plains", "forest_realm", "golden_fields", "dragon_spine"],
+      "armyPosition": { "x": 300, "y": 200 }
+    },
+    "river_valley": {
+      "id": "river_valley",
+      "name": "River Valley",
+      "continent": "central_kingdoms",
+      "adjacentTerritories": ["forest_realm", "crystal_caverns", "coastal_haven"],
+      "armyPosition": { "x": 75, "y": 260 }
+    },
+    "golden_fields": {
+      "id": "golden_fields",
+      "name": "Golden Fields",
+      "continent": "central_kingdoms",
+      "adjacentTerritories": ["mountain_pass", "dragon_spine", "trade_crossroads"],
+      "armyPosition": { "x": 375, "y": 260 }
+    },
+    "crystal_caverns": {
+      "id": "crystal_caverns",
+      "name": "Crystal Caverns",
+      "continent": "southern_realms",
+      "adjacentTerritories": ["forest_realm", "river_valley", "coastal_haven", "burning_sands"],
+      "armyPosition": { "x": 150, "y": 320 }
+    },
+    "coastal_haven": {
+      "id": "coastal_haven",
+      "name": "Coastal Haven",
+      "continent": "southern_realms",
+      "adjacentTerritories": ["river_valley", "crystal_caverns", "burning_sands"],
+      "armyPosition": { "x": 75, "y": 380 }
+    },
+    "burning_sands": {
+      "id": "burning_sands",
+      "name": "Burning Sands",
+      "continent": "southern_realms",
+      "adjacentTerritories": ["crystal_caverns", "coastal_haven", "trade_crossroads", "jade_peaks"],
+      "armyPosition": { "x": 225, "y": 380 }
+    },
+    "trade_crossroads": {
+      "id": "trade_crossroads",
+      "name": "Trade Crossroads",
+      "continent": "southern_realms",
+      "adjacentTerritories": ["golden_fields", "burning_sands", "dragon_spine", "jade_peaks", "mystic_isles"],
+      "armyPosition": { "x": 375, "y": 380 }
+    },
+    "dragon_spine": {
+      "id": "dragon_spine",
+      "name": "Dragon Spine",
+      "continent": "eastern_empire",
+      "adjacentTerritories": ["mountain_pass", "golden_fields", "trade_crossroads", "jade_peaks", "mystic_isles"],
+      "armyPosition": { "x": 450, "y": 260 }
+    },
+    "jade_peaks": {
+      "id": "jade_peaks",
+      "name": "Jade Peaks",
+      "continent": "eastern_empire",
+      "adjacentTerritories": ["burning_sands", "trade_crossroads", "dragon_spine", "mystic_isles"],
+      "armyPosition": { "x": 450, "y": 350 }
+    },
+    "mystic_isles": {
+      "id": "mystic_isles",
+      "name": "Mystic Isles",
+      "continent": "eastern_empire",
+      "adjacentTerritories": ["trade_crossroads", "dragon_spine", "jade_peaks"],
+      "armyPosition": { "x": 525, "y": 320 }
+    }
+  }
+}

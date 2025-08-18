@@ -260,6 +260,33 @@ export const endTurn = createAsyncThunk(
   }
 )
 
+// Go back to reinforcement phase action
+export const goBackToReinforcement = createAsyncThunk(
+  'game/goBackToReinforcement',
+  async (_, { getState, dispatch }) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+    
+    if (!currentGame) throw new Error('No active game')
+    if (currentGame.phase !== 'attack') throw new Error('Can only go back from attack phase')
+    if (currentGame.hasAttackedThisTurn) throw new Error('Cannot go back after attacking')
+    
+    try {
+      socketService.emit('goBackToReinforcement', {
+        roomId: currentGame.roomId
+      })
+      
+      // Clear all selections when going back
+      dispatch(selectTerritory(null))
+      dispatch(selectTargetTerritory(null))
+      dispatch(setPendingAction(null))
+      
+    } catch (error) {
+      dispatch(setError('Failed to go back to reinforcement phase'))
+    }
+  }
+)
+
 // Calculate reinforcement armies for a player
 export const calculateReinforcementArmies = (playerId: string, gameState: any) => {
   const playerTerritories = gameState.board.filter((t: any) => t.ownerId === playerId);
