@@ -16,6 +16,7 @@ import mapRoutes from './routes/maps';
 import profileRoutes from './routes/profile';
 import { setupSocketHandlers } from './services/socketService';
 import { initDatabase } from './config/database';
+import { ensureTablesExist } from './utils/initTables';
 
 const app = express();
 const server = createServer(app);
@@ -62,8 +63,56 @@ app.use('/api/game', gameRoutes);
 app.use('/api/maps', mapRoutes);
 app.use('/api/profile', profileRoutes);
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  try {
+    const { query } = await import('./config/database');
+    await query('SELECT 1');
+    res.json({ 
+      status: 'OK', 
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'ERROR', 
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString() 
+    });
+  }
+});
+
+app.get('/debug/tables', async (req, res) => {
+  try {
+    const { query } = await import('./config/database');
+    
+    // Check if tables exist
+    const tableCheck = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+    
+    const userCount = await query('SELECT COUNT(*) as count FROM users');
+    
+    res.json({
+      status: 'OK',
+      tables: tableCheck.rows.map(row => row.table_name),
+      userCount: userCount.rows[0]?.count || 0,
+      databaseType: process.env.DB_TYPE || 'postgresql',
+      databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Serve static frontend files in production
@@ -81,13 +130,17 @@ setupSocketHandlers(io);
 
 async function startServer() {
   try {
-    // Initialize database (will not throw in production)
+    // Initialize database connection
     await initDatabase();
+    
+    // Ensure all required tables exist (this will create them if missing)
+    await ensureTablesExist();
     
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`📊 Health check: http://localhost:${PORT}/health`);
+      logger.info(`📋 Database: ${process.env.DB_TYPE || 'postgresql'} tables ready`);
     });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);
@@ -95,6 +148,8 @@ async function startServer() {
     // In production, try to start the server anyway for better error visibility
     if (process.env.NODE_ENV === 'production') {
       logger.warn('⚠️  Starting server in degraded mode...');
+      logger.error('💡 Database issue - some features may not work');
+      logger.error(`💡 Error details: ${error}`);
       server.listen(PORT, () => {
         logger.info(`🚀 Server running on port ${PORT} (degraded mode - database issues)`);
         logger.error('💡 Check Railway logs and ensure PostgreSQL plugin is added');
