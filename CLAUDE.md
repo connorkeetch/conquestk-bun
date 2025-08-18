@@ -1,137 +1,137 @@
-# 🎮 Risk Game - Development Status
+# 🎮 Risk Game - Full-Stack Multiplayer Risk Game
+
+A modern implementation of the classic Risk board game with custom map creation, real-time multiplayer, and advanced game features.
 
 ## 🚀 Quick Start
 
+### One-Command Setup
 ```bash
-# Check setup and install dependencies
-npm run setup
-
-# Start development environment (opens new windows)
-npm run dev
-
-# Alternative: Start both services manually
-npm run dev:frontend  # Frontend only
-npm run dev:backend   # Backend only
+npm run setup && npm run dev
 ```
 
-## 🎯 Recent Major Updates
+This will:
+- ✅ Check dependencies and environment  
+- ✅ Configure database (PostgreSQL or SQLite fallback)
+- ✅ Start both frontend (localhost:3000) and backend (localhost:5001)
+- ✅ Open browser to the game interface
 
-### ✅ Map Editor System (Latest Feature)
-- **Advanced Map Creation**: Full-featured map editor with polygon territory drawing
-- **Custom Game Modes**: Support for asymmetric gameplay and special territory abilities
-- **Database Schema**: Comprehensive schema supporting maps, continents, territories, adjacencies
-- **Image Upload**: Background map image support with file upload functionality
-- **Territory Abilities**: 7 built-in ability types (Fortress, Naval Base, Trade Hub, Capital, etc.)
-- **Map Validation**: Point-in-polygon algorithms and connectivity checking
-- **Community Features**: Public maps, ratings, reviews, and sharing system
+### Live Demo
+🌐 **Production**: [conquestk.com](https://conquestk.com) - Railway deployment
 
-### ✅ Navigation & UI System (Latest Update)
-- **Professional Gaming UI**: Complete redesign following modern gaming platform standards
-- **Slide-out Navigation Menu**: Hamburger menu with smooth animations and dropdown sections
-- **Settings Modal**: Global settings accessible via Cmd/Ctrl + , with 7 comprehensive sections
-- **Breadcrumb Navigation**: Context-aware breadcrumbs for all nested routes with icons
-- **Context-Aware Actions**: Dynamic quick actions in navigation based on current page
-- **User Profile Section**: Stats display in menu with wins, win rate, and rating
-- **Responsive Design**: Mobile-optimized with proper breakpoints
+## 📊 Feature Status
 
-### 🗂️ New Files Added
-- `backend/src/db/migrations/001_extended_maps_schema.sql` - Advanced database schema
-- `backend/src/types/maps.ts` - TypeScript interfaces for map system
-- `backend/src/services/mapService.ts` - Complete map service layer
-- `backend/src/routes/maps.ts` - 15+ REST API endpoints for map management
-- `frontend/src/services/mapService.ts` - Frontend API service
-- `frontend/src/pages/MapEditor.tsx` - Interactive canvas-based map editor (650+ lines)
-- `frontend/src/components/SimpleMapSVG.tsx` - Simple territory display component
-- `frontend/src/components/SimpleRiskGameBoard.tsx` - Basic game board component
-- `frontend/src/data/simple-territories.json` - Territory data for simple map
-- `frontend/src/pages/SimpleMapDemo.tsx` - Demo page for simple map
-- `frontend/src/components/SettingsModal.tsx` - Comprehensive settings modal (800+ lines)
-- `frontend/src/components/Breadcrumb.tsx` - Dynamic breadcrumb navigation component
-- `frontend/src/components/AuthGuard.tsx` - Route protection component
-- `frontend/src/pages/LobbyPage.tsx` - Game lobby with tabs
-- `frontend/src/pages/GameListPage.tsx` - Active/completed games management
-- `frontend/src/pages/GamePage.tsx` - Full-screen game view
-- `frontend/src/pages/CreateGamePage.tsx` - Game creation wizard
-- `frontend/src/pages/LeaderboardPage.tsx` - Rankings system
-- `frontend/src/pages/CommunityPage.tsx` - Forum/clans/events
-- `frontend/src/pages/LearnPage.tsx` - Tutorial and learning resources
-- `frontend/src/pages/NotFoundPage.tsx` - 404 error page
+| Component | Status | Notes |
+|-----------|---------|-------|
+| Core Game Engine | ✅ Complete | Full Risk gameplay with turn phases |
+| Map Editor | ✅ Complete | Interactive polygon territory creation |
+| Multiplayer | ✅ Complete | Socket.io real-time sync |
+| Authentication | ✅ Complete | JWT-based user system |
+| Database | ✅ Complete | PostgreSQL with migrations |
+| Production Deploy | ✅ Live | conquestk.com via Railway |
+| Advanced UI/UX | ✅ Complete | Modern responsive design implemented |
+| Map Editor System | ✅ Complete | Full functionality with adjacency system |
 
-## ✅ What's Working
+## 🤖 MCP Server Usage
 
-### ✅ Navigation & UI System
-- **Hamburger Menu**: Clean slide-out navigation with smooth animations
-- **Settings Modal**: Global access via button or Cmd/Ctrl + , keyboard shortcut
-- **Breadcrumb Navigation**: Dynamic path display with icons for all routes
-- **Context-Aware UI**: Navigation adapts based on current page/route
-- **Responsive Design**: Mobile-optimized with proper breakpoints
-- **30+ Routes**: Complete routing structure with protected routes via AuthGuard
-- **Professional UI**: Modern gaming platform design with dark theme
+### Available MCP Servers
+- **Memory Server**: Store and search project context
+- **Filesystem Server**: File operations with proper permissions  
+- **Git Server**: Advanced git operations and workflows
+- **GitHub Server**: Repository management and PRs
+- **Puppeteer Server**: Browser automation for testing
+- **Fetch Server**: Web content retrieval and analysis
 
-### ✅ Core Game Features
-- **Complete turn flow**: Reinforcement → Attack → Fortify phases
-- **Real dice mechanics**: Proper Risk-style battle system with animated results
-- **Territory management**: Click to select, visual feedback for valid targets
-- **Phase-specific UI**: Different controls and instructions for each game phase
-- **Multiplayer sync**: Real-time updates via Socket.io
-- **Game state persistence**: Redux store with proper state management
+### Memory Integration Examples
+```bash
+# Search for specific project information
+Search for "database schema" to see table structure
+Search for "port conflicts" to get troubleshooting info
+Search for "Map Editor" to understand editor features
+```
 
-### ✅ Map Editor Features
-- **Interactive Canvas Drawing**: Click-to-draw polygon territories with real-time preview
-- **Territory Management**: Create, edit, delete territories with army placement points
-- **Continent System**: Group territories into continents with bonus armies
-- **Adjacency Editor**: Define which territories connect to each other
-- **Game Mode Support**: Configure maps for different gameplay styles
-- **Special Abilities**: Assign unique abilities to territories (fortresses, naval bases, etc.)
-- **Image Upload**: Upload background images for custom maps
-- **Map Validation**: Automatic validation of territory connectivity and overlaps
-- **Save/Load System**: Persistent storage of custom maps in database
-- **Public Sharing**: Publish maps for community use with rating system
+## 🔧 Using Subagents
 
-### ✅ Database Features
-- **Advanced Schema**: Support for maps, territories, continents, adjacencies, game modes
-- **Territory Abilities**: 7 pre-configured ability types with extensible system
-- **Game Mode Configuration**: 5 built-in game modes (Classic, Capital Conquest, Naval, etc.)
-- **Rating System**: Community ratings and reviews for custom maps
-- **User Attribution**: Track map creators and download counts
+### Available Specialized Agents
+- **memory-bank-synchronizer**: Keep documentation in sync with code
+- **code-searcher**: Advanced code analysis and search  
+- **ux-design-expert**: UI/UX design guidance
+- **code-reviewer**: Automated code review
 
-### ✅ Frontend (React + TypeScript)
-- **Modern React setup**: Vite + TypeScript + Redux Toolkit
-- **Interactive map**: SVG-based world map with territory selection
-- **Battle animations**: Dice rolling modal with results display
-- **Map Editor UI**: Canvas-based territory drawing with tool palette
-- **Responsive design**: Works on different screen sizes
-- **Type safety**: Full TypeScript coverage
+### Usage Examples
+```bash
+# Sync documentation with current code state
+Use memory-bank-synchronizer to update CLAUDE.md with current project state
 
-### ✅ Backend (Node.js + TypeScript)
-- **RESTful API**: Express.js with proper routing + 15 new map endpoints
-- **Real-time communication**: Socket.io for live multiplayer
-- **Flexible database**: PostgreSQL or SQLite support
-- **Authentication**: JWT-based user system
-- **Game engine**: Complete Risk game logic implementation
-- **File Upload**: Multer integration for map image uploads
-- **Map Validation**: Server-side validation of map data
+# Search for specific patterns
+Use code-searcher to find all socket.io event handlers
 
-### ✅ Development Tools
-- **Automated setup**: One-command environment setup
-- **Database flexibility**: Auto-detects and configures PostgreSQL or SQLite
-- **Hot reloading**: Both frontend and backend auto-restart on changes
-- **TypeScript**: Full type checking across the stack
-- **ESLint**: Code quality and consistency
-- **Database Migrations**: Proper schema versioning system
+# Get UX feedback  
+Use ux-design-expert to review navigation component design
+```
 
-## ⚠️ What Needs Manual Setup
+## 🤖 AI Guidance & Best Practices
 
-### Database (Optional - Auto-configured)
-- **PostgreSQL**: If you want to use PostgreSQL instead of SQLite
-  ```bash
-  # Install PostgreSQL, then:
-  createdb risk_game
-  # Update backend/.env with your credentials
-  ```
+### Mentoring Approach
+- **Be Educational, Not Just Helpful**: Challenge assumptions, explain WHY solutions work
+- **Code Quality First**: Prioritize maintainability over quick fixes  
+- **Teaching Mindset**: Connect new concepts to SQL/BI background when relevant
+- **Constructive Standards**: Point out better approaches even when current code works
+- **Senior Developer Perspective**: Question flawed architecture and suggest improvements
 
-### Environment Variables
-The setup script creates these automatically, but you can customize:
+### Core Principles
+- **Ignore GEMINI.md and GEMINI-*.md files** - Not relevant to this project
+- **Use code-searcher subagent** for code searches, inspections, troubleshooting, or analysis
+- **Reflect on tool results** before proceeding - plan and iterate based on new information
+- **Invoke tools simultaneously** when performing multiple independent operations
+- **Verify solutions** before finishing tasks
+- **Explain Technical Debt**: Show both "quick way" and "right way" when they differ
+- **Warn About Scaling Issues**: Flag architecture problems before they become critical
+
+### File Management Rules
+- **NEVER create files** unless absolutely necessary for the goal
+- **ALWAYS prefer editing** existing files over creating new ones
+- **NEVER proactively create documentation** files (*.md) unless explicitly requested
+- **Update memory bank** when modifying core context files
+- **Exclude CLAUDE.md and CLAUDE-*.md** from commits - never delete these files
+
+### Memory Bank System
+This project uses a structured memory bank system with specialized context files:
+
+#### Core Context Files
+- **CLAUDE-activeContext.md** - Current session state, goals, and progress (if exists)
+- **CLAUDE-patterns.md** - Established code patterns and conventions (if exists)  
+- **CLAUDE-decisions.md** - Architecture decisions and rationale (if exists)
+- **CLAUDE-troubleshooting.md** - Common issues and proven solutions (if exists)
+- **CLAUDE-config-variables.md** - Configuration variables reference (if exists)
+- **CLAUDE-temp.md** - Temporary scratch pad (only read when referenced)
+
+**Important**: Always reference the active context file first to understand current work and maintain session continuity.
+
+## 📋 Development Commands
+
+### 🔧 Setup & Development
+```bash
+npm run setup              # Check and configure environment
+npm run dev                # Start both frontend and backend
+npm run dev:frontend       # Start frontend only (port 3000)
+npm run dev:backend        # Start backend only (port 5001)
+```
+
+### 🏗️ Build & Production
+```bash
+npm run build              # Build both frontend and backend
+npm start                  # Start production backend
+```
+
+### 🧪 Testing & Quality
+```bash
+npm test                   # Run all tests
+npm run lint               # Run all linting
+```
+
+## ⚙️ Environment Configuration
+
+Environment variables are auto-configured by setup script:
 
 **Frontend** (`frontend/.env`):
 ```env
@@ -143,11 +143,9 @@ VITE_SOCKET_URL=http://localhost:5001
 ```env
 NODE_ENV=development
 PORT=5001
-JWT_SECRET=your-super-secret-jwt-key
-
-# Database (auto-configured)
-DB_TYPE=sqlite  # or postgresql
-DATABASE_URL=sqlite:./database.sqlite
+JWT_SECRET=auto-generated
+DB_TYPE=postgresql  # or sqlite fallback
+DATABASE_URL=auto-configured
 ```
 
 ## 🔧 Common Issues & Fixes
@@ -211,6 +209,36 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 2. Restart your terminal
 3. Verify: `node --version` and `npm --version`
 
+## 🎯 Recent Major Achievements (Aug 2025)
+
+### **Map Editor System - Fully Functional** ✅
+- **Issue**: Map editor had broken file uploads and missing adjacency system
+- **Solution**: Comprehensive audit and systematic fixes
+- **Result**: Complete map creation workflow now working
+  - ✅ Background image upload and server storage
+  - ✅ Canvas-based territory drawing with polygon creation
+  - ✅ Territory adjacency system with visual feedback
+  - ✅ Continent management and territory assignment
+  - ✅ End-to-end save workflow with database integration
+
+### **UI/UX Enhancement Project** ✅  
+- **Issue**: Forms and modals stretched full-width on desktop screens
+- **Solution**: Applied modern responsive design principles
+- **Result**: Professional, constrained layouts
+  - ✅ Login/Register forms with modern card design
+  - ✅ Settings modal properly constrained (max-w-4xl vs max-w-5xl)
+  - ✅ Consistent input styling with focus states and transitions
+  - ✅ Mobile-first responsive design with desktop constraints
+
+### **Database Architecture Stability** ✅
+- **Issue**: PostgreSQL migration system incomplete for production
+- **Solution**: Fixed migration runner and database initialization
+- **Result**: Robust production deployment
+  - ✅ PostgreSQL working correctly on Railway
+  - ✅ SQLite compatibility for local development
+  - ✅ Complete schema with all required tables
+  - ✅ Proper JSONB handling for cross-database compatibility
+
 ## 📋 Available Commands
 
 ### 🔧 Setup & Development
@@ -243,62 +271,19 @@ npm run lint:frontend      # Run frontend linting
 npm run lint:backend       # Run backend linting
 ```
 
-### 🧹 Maintenance
-```bash
-npm run install:all        # Install all dependencies
-npm run clean              # Remove node_modules directories
-npm run clean:install      # Clean and reinstall everything
-```
+## 🎯 Architecture Overview
 
-### 🐳 Docker (Optional)
-```bash
-npm run docker:up          # Start with Docker Compose
-npm run docker:down        # Stop Docker containers
-npm run docker:logs        # View Docker logs
-```
+**Tech Stack**: React + TypeScript + Node.js + PostgreSQL + Socket.io + Redis  
+**Deployment**: Railway (conquestk.com) with automated CI/CD  
+**Database**: PostgreSQL (production) with SQLite fallback (development)
 
-## 🎯 Project Structure
-
-```
-risk-game/
-├── 📄 setup-check.js      # Automated environment setup
-├── 📄 start-dev.ps1       # PowerShell development startup
-├── 📄 package.json        # Root package with convenience scripts
-├── 📄 CLAUDE.md           # This file (renamed from STATUS.md)
-├── frontend/               # React + TypeScript frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── SimpleMapSVG.tsx        # Basic territory display
-│   │   │   ├── SimpleRiskGameBoard.tsx # Simple game board
-│   │   │   └── Layout.tsx               # App layout
-│   │   ├── pages/
-│   │   │   ├── MapEditor.tsx           # Advanced map editor (NEW)
-│   │   │   ├── SimpleMapDemo.tsx       # Simple map demo (NEW)
-│   │   │   └── Home.tsx                # Main game page
-│   │   ├── store/         # Redux store and slices
-│   │   ├── services/      # API and Socket.io services
-│   │   │   └── mapService.ts           # Map API service (NEW)
-│   │   ├── data/
-│   │   │   └── simple-territories.json # Territory data (NEW)
-│   │   └── types/         # TypeScript type definitions
-│   └── package.json
-├── backend/                # Node.js + TypeScript backend
-│   ├── src/
-│   │   ├── controllers/   # API route handlers
-│   │   ├── services/      # Business logic
-│   │   │   └── mapService.ts           # Map service layer (NEW)
-│   │   ├── routes/
-│   │   │   └── maps.ts                 # Map API endpoints (NEW)
-│   │   ├── game/          # Game engine and logic
-│   │   ├── config/        # Database and app configuration
-│   │   ├── db/
-│   │   │   └── migrations/
-│   │   │       └── 001_extended_maps_schema.sql # Advanced schema (NEW)
-│   │   └── types/
-│   │       └── maps.ts                 # Map type definitions (NEW)
-│   └── package.json
-└── database/               # Database initialization scripts
-```
+### Key Components
+- **Frontend**: React/Vite with Redux state management
+- **Backend**: Express.js REST API + Socket.io for real-time
+- **Game Engine**: Complete Risk gameplay logic with turn phases  
+- **Map Editor**: Canvas-based territory creation with polygon drawing
+- **Database**: Comprehensive schema for games, maps, users, territories
+- **Authentication**: JWT-based with secure user sessions
 
 ## 🎮 Game Features Status
 
@@ -357,63 +342,6 @@ risk-game/
 6. **Mountain Pass** 🏔️: Restricted access from specific directions
 7. **Magical Nexus** 🔮: Special abilities and teleportation
 
-## 🤖 Claude Code Integration
-
-### 🚀 Automatic Startup Script
-When starting Claude Code in this project directory, a startup script automatically:
-- ✅ Checks if CLAUDE.md exists and shows last modified date
-- ✅ Displays quick project summary with key technologies
-- ✅ Lists available MCP servers and their purposes
-- ✅ Verifies you're in the correct project directory
-- ✅ Shows common development commands
-- ✅ Checks if backend (port 5001) and frontend (port 5173) are running
-- ✅ Suggests using memory integration for context
-
-### 🧠 Memory Integration
-Key project information is stored in Claude's memory system:
-- **Risk Game Project**: Core project details and architecture
-- **Map Editor System**: Advanced features and capabilities
-- **Database Schema**: Table structure and relationships
-- **Development Commands**: Common workflows and scripts
-- **Common Issues**: Troubleshooting tips and solutions
-
-**Usage**: Use memory search to quickly find project context:
-```
-Search for "port conflicts" to get troubleshooting info
-Search for "Map Editor" to understand the editor features
-Search for "Database Schema" to see table structure
-```
-
-### 📁 Configuration Files
-- `.claude/startup.bat` - Startup script that runs when Claude Code starts
-- `.claude/settings.local.json` - Permissions and hooks configuration
-- Hook triggers on both "startup" and "resume" events
-
-## 🆘 Getting Help
-
-1. **Startup script**: Shows key info automatically when Claude Code starts
-2. **Memory search**: Use memory integration to find project context
-3. **Run the setup check**: `npm run setup`
-4. **Check this CLAUDE.md file** for common issues
-5. **Look at console errors** in browser developer tools
-6. **Check backend logs** in the backend console window
-7. **Verify ports**: Make sure 5001 (backend) and 5173 (frontend) are available
-8. **Test map editor**: Visit `/map-editor` to test custom map creation
-
-## 🎉 Success Indicators
-
-When everything is working correctly, you should see:
-
-1. ✅ Setup check passes without errors
-2. ✅ Backend starts on http://localhost:5001
-3. ✅ Frontend starts on http://localhost:5173
-4. ✅ Browser shows the Risk game interface
-5. ✅ Console shows successful database connection
-6. ✅ No error messages in browser developer tools
-7. ✅ Map editor loads at `/map-editor` with canvas drawing
-8. ✅ Can create territories by clicking on canvas
-9. ✅ Backend responds to `/api/maps` endpoints
-
 ## 🎨 Map Editor Usage
 
 ### Creating a New Map
@@ -433,221 +361,62 @@ When everything is working correctly, you should see:
 - **Ability Selector**: Assign special powers to territories
 - **Validation**: Check map connectivity and territory overlaps
 
-## 🚀 Development Roadmap
+## 🔧 Common Issues & Fixes
 
-### 📈 **Navigation & UI Enhancement Plan**
+### ❌ "Port already in use"
+```bash
+# Check what's using the ports
+netstat -ano | findstr :5001  # Backend
+netstat -ano | findstr :3000  # Frontend
 
-Based on research of modern gaming platforms (Steam, Discord, Chess.com, board.io), we've designed a comprehensive plan to transform the Risk game into a feature-rich gaming platform.
-
-#### **🎯 Target Architecture**
-```
-🌍 Risk Game | 🏠 Dashboard | 🎮 Play | 🗺️ Maps | 👥 Community | 📊 Profile | ⚙️ Settings
-```
-
-#### **📊 Implementation Phases**
-
-### **Phase 1: Core Navigation Structure** ⏱️ 1-2 weeks
-**Status:** 🟡 Next Up
-- ✅ Enhanced Layout Component with dropdown navigation
-- ✅ Dashboard Page (welcome, quick play, recent games, friends activity)
-- ✅ Breadcrumb Component for deep navigation
-- ✅ User menu redesign (profile, settings, logout)
-- ✅ Mobile-responsive navigation
-
-### **Phase 2: Profile & User Management** ⏱️ 1-2 weeks  
-**Status:** ⏳ Planned
-- ✅ Complete user profile system with stats
-- ✅ Settings page (account, game preferences, privacy)
-- ✅ Achievement system with badge collection
-- ✅ User preferences and customization
-- ✅ Avatar upload and management
-
-### **Phase 3: Enhanced Game Lobby System** ⏱️ 2-3 weeks
-**Status:** ⏳ Planned
-- ✅ Play section landing with multiple game modes
-- ✅ Quick Match matchmaking system
-- ✅ Enhanced lobby browser with filters
-- ✅ Real-time lobby updates and chat
-- ✅ Host controls and spectator slots
-- ✅ Skill-based matchmaking for ranked games
-
-### **Phase 4: Maps & Content System** ⏱️ 2-3 weeks
-**Status:** ⏳ Planned
-- ✅ Maps gallery with search, sort, and filters
-- ✅ Map detail pages with stats and ratings
-- ✅ Enhanced map editor with cloud save
-- ✅ Map sharing and collaboration features
-- ✅ Community map curation system
-
-### **Phase 5: Community Features** ⏱️ 2-3 weeks
-**Status:** ⏳ Planned
-- ✅ Friends system with invitations
-- ✅ Global leaderboards and rankings
-- ✅ Tournament system and brackets
-- ✅ Community chat and messaging
-- ✅ News and announcements system
-
-### **Phase 6: Advanced Features** ⏱️ 3-4 weeks
-**Status:** ⏳ Future
-- ✅ Real-time notification system
-- ✅ Analytics dashboard with performance insights
-- ✅ Mobile optimization and touch controls
-- ✅ Advanced map editor features
-- ✅ Tournament management tools
-
-#### **🛠️ Technical Architecture**
-
-### **New Components Required**
-```typescript
-src/
-├── components/
-│   ├── navigation/
-│   │   ├── PrimaryNav.tsx          // Main navigation with dropdowns
-│   │   ├── UserMenu.tsx            // Profile dropdown menu
-│   │   ├── Breadcrumb.tsx          // Path navigation
-│   │   └── MobileNav.tsx           // Mobile-optimized menu
-│   ├── lobby/
-│   │   ├── LobbyBrowser.tsx        // Browse active games
-│   │   ├── LobbyCreator.tsx        // Create custom games
-│   │   ├── GameLobby.tsx           // In-lobby interface
-│   │   └── QuickMatch.tsx          // Matchmaking system
-│   ├── profile/
-│   │   ├── ProfileOverview.tsx     // Main profile dashboard
-│   │   ├── UserStats.tsx           // Statistics and analytics
-│   │   ├── AchievementGrid.tsx     // Badge collection display
-│   │   └── GameHistory.tsx         // Match history browser
-│   ├── maps/
-│   │   ├── MapGallery.tsx          // Grid layout with filters
-│   │   ├── MapDetail.tsx           // Individual map pages
-│   │   ├── MapEditor.tsx           // Enhanced editor (upgrade existing)
-│   │   └── MapPreview.tsx          // Thumbnail components
-│   └── community/
-│       ├── Leaderboard.tsx         // Player rankings
-│       ├── FriendsList.tsx         // Social connections
-│       ├── TournamentBrowser.tsx   // Event listings
-│       └── NotificationCenter.tsx  // Message system
+# Kill the process (replace PID)
+taskkill /PID <process-id> /F
 ```
 
-### **API Endpoints to Implement**
-```typescript
-// User Management
-GET/PUT  /api/users/profile         // Profile CRUD
-GET      /api/users/stats           // User statistics
-GET      /api/users/achievements    // Achievement progress
+### ❌ Database connection failed
+**Solution**: Setup script auto-configures PostgreSQL or SQLite fallback
+```bash
+# Option 1: Use SQLite (default fallback)
+# Nothing needed - automatically configured
 
-// Enhanced Lobby System
-GET      /api/lobbies               // Browse with filters
-POST     /api/lobbies               // Create lobby
-GET/POST /api/lobbies/:id/join      // Join/leave actions
-GET      /api/matchmaking           // Queue status
-
-// Maps & Content  
-GET      /api/maps                  // Gallery with pagination
-GET      /api/maps/:id              // Details with comments
-POST     /api/maps/:id/rate         // Rating system
-GET      /api/maps/trending         // Popular maps
-
-// Social Features
-GET/POST /api/friends               // Friend management
-GET      /api/leaderboard           // Rankings
-GET      /api/tournaments           // Tournament listings
-GET      /api/notifications         // User messages
+# Option 2: Setup PostgreSQL
+createdb risk_game
+# Restart with: npm run setup
 ```
 
-### **Database Schema Extensions**
-```sql
--- User profiles and achievements
-CREATE TABLE user_profiles (
-  user_id UUID PRIMARY KEY,
-  avatar_url TEXT,
-  bio TEXT,
-  join_date TIMESTAMP,
-  last_active TIMESTAMP,
-  preferences JSONB DEFAULT '{}'
-);
+### ❌ Frontend won't connect to backend
+**Solution**: Check backend is running and environment variables
+```bash
+# Verify backend is running on port 5001
+curl http://localhost:5001/api/health
 
-CREATE TABLE achievements (
-  id UUID PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  icon_url TEXT,
-  points INTEGER DEFAULT 0
-);
-
-CREATE TABLE user_achievements (
-  user_id UUID REFERENCES users(id),
-  achievement_id UUID REFERENCES achievements(id),
-  unlocked_at TIMESTAMP DEFAULT NOW(),
-  PRIMARY KEY (user_id, achievement_id)
-);
-
--- Enhanced lobby system
-CREATE TABLE lobbies (
-  id UUID PRIMARY KEY,
-  host_id UUID REFERENCES users(id),
-  name VARCHAR(100),
-  map_id UUID REFERENCES maps(id),
-  max_players INTEGER DEFAULT 6,
-  current_players INTEGER DEFAULT 1,
-  game_mode VARCHAR(50),
-  status VARCHAR(20) DEFAULT 'waiting',
-  settings JSONB DEFAULT '{}',
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Social features
-CREATE TABLE friendships (
-  requester_id UUID REFERENCES users(id),
-  addressee_id UUID REFERENCES users(id),
-  status VARCHAR(20) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT NOW(),
-  PRIMARY KEY (requester_id, addressee_id)
-);
-
-CREATE TABLE tournaments (
-  id UUID PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  organizer_id UUID REFERENCES users(id),
-  start_date TIMESTAMP,
-  end_date TIMESTAMP,
-  max_participants INTEGER,
-  prize_pool INTEGER DEFAULT 0,
-  status VARCHAR(20) DEFAULT 'upcoming'
-);
+# Check frontend .env points to correct backend URL
+cat frontend/.env
 ```
 
-### **🎯 Success Metrics & KPIs**
-- **User Engagement**: 30+ min average session, 70% weekly retention
-- **Game Activity**: 90% lobby fill rate, 85% match completion
-- **Community Growth**: 5+ friends per user, 30% public map sharing
-- **Feature Adoption**: 80% try map editor, 40% join tournaments
+### ❌ Map Editor not working
+**Solution**: Ensure database migrations have run
+```bash
+# Apply database migrations
+cd backend && npm run migrate
+```
 
-### **📱 Design Principles** 
-- **Dark theme** with high contrast (research-backed for gaming)
-- **Card-based layouts** for lobbies and maps
-- **Real-time updates** for social features
-- **Mobile-first responsive design**
-- **Clear visual hierarchy** with proper spacing
-- **Breadcrumb navigation** for complex flows
+## 🆘 Getting Help
 
-#### **🎲 Current Feature Status**
+1. **Run setup check**: `npm run setup`
+2. **Check browser console** for JavaScript errors
+3. **Check backend logs** in terminal for API errors  
+4. **Verify ports**: Backend (5001) and Frontend (3000) available
+5. **Test basic functionality**: Can you register/login and view games?
+6. **Memory search**: Use memory integration for troubleshooting context
 
-### ✅ **Completed Features**
-- [x] **Core Game Engine**: Full Risk gameplay with turn phases
-- [x] **Real-time Multiplayer**: Socket.io synchronization
-- [x] **Map Editor**: Interactive polygon territory creation (650+ lines)
-- [x] **Custom Maps Database**: Advanced schema with abilities/game modes  
-- [x] **Simple Risk Demo**: Coordinate-based clickable territories
-- [x] **Authentication System**: JWT-based user management
-- [x] **Development Tools**: Automated setup, hot reloading, migrations
+## 🎉 Success Indicators
 
-### 🚧 **In Progress**
-- [ ] **Enhanced Navigation**: Primary nav with dropdowns (Phase 1)
-
-### 📋 **Planned Implementation Order**
-1. **MVP (4-6 weeks)**: Navigation → Profile → Lobby → Maps
-2. **Feature-Rich (8-12 weeks)**: + Friends → Achievements → Tournaments  
-3. **Advanced Platform (12-16 weeks)**: + Mobile → Analytics → Advanced Editor
-
-**Happy gaming! 🎲**
+✅ Setup check passes without errors  
+✅ Backend starts on http://localhost:5001  
+✅ Frontend starts on http://localhost:3000  
+✅ Browser shows Risk game interface  
+✅ No console errors in browser developer tools  
+✅ Can register/login successfully  
+✅ Map editor loads at `/map-editor`  
+✅ Backend responds to `/api/maps` endpoints
