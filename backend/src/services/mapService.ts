@@ -1,5 +1,6 @@
 import { query, getClient } from '../config/database';
 import { logger } from '../utils/logger';
+import { ContinentBonus } from '../types/game';
 import {
   CustomMap,
   MapTerritory,
@@ -296,6 +297,28 @@ export class MapService {
   async getMapContinents(mapId: string): Promise<MapContinent[]> {
     const result = await query('SELECT * FROM map_continents WHERE map_id = ? ORDER BY name', [mapId]);
     return result.rows.map(row => this.formatContinentFromDb(row));
+  }
+
+  async getMapContinentBonuses(mapId: string): Promise<ContinentBonus[]> {
+    const result = await query(`
+      SELECT 
+        mc.id,
+        mc.name,
+        mc.bonus_armies,
+        GROUP_CONCAT(mt.territory_id) as territories
+      FROM map_continents mc
+      LEFT JOIN map_territories mt ON mc.id = mt.continent_id
+      WHERE mc.map_id = ?
+      GROUP BY mc.id, mc.name, mc.bonus_armies
+      ORDER BY mc.name
+    `, [mapId]);
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      bonusArmies: row.bonus_armies,
+      territories: row.territories ? row.territories.split(',') : []
+    }));
   }
 
   // ============= ADJACENCY OPERATIONS =============

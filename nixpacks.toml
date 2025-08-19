@@ -1,8 +1,8 @@
 [build]
-cmd = "npm ci && npm run build"
+cmd = "npm ci && npm run build:backend"
 
 [start]
-cmd = "npm start"
+cmd = "node backend/dist/index.js"
 
 [variables]
 NODE_VERSION = "18"

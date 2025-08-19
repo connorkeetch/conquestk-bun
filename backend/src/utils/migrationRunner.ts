@@ -5,7 +5,7 @@ import { logger } from './logger';
 
 export async function runMigration(migrationFile: string) {
   try {
-    const migrationPath = join(__dirname, '../db/migrations', migrationFile);
+    const migrationPath = join(__dirname, '../../migrations', migrationFile);
     let migrationSQL = readFileSync(migrationPath, 'utf8');
     
     // Convert JSONB to TEXT for SQLite compatibility
@@ -52,7 +52,9 @@ export async function runMigration(migrationFile: string) {
 export async function runMigrations() {
   const migrations = [
     '001_extended_maps_schema.sql',
-    '002_user_profiles_schema.sql'
+    '002_user_profiles_schema.sql',
+    '003_admin_system.sql',
+    '004_game_room_settings.sql'
   ];
   
   for (const migration of migrations) {

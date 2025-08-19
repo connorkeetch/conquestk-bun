@@ -72,6 +72,14 @@ export interface GameConfiguration {
   maxPlayers: number;
   mapId?: string;
   gameMode?: string;
+  continentBonuses?: ContinentBonus[];
+}
+
+export interface ContinentBonus {
+  id: string;
+  name: string;
+  bonusArmies: number;
+  territories: string[];
 }
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi';

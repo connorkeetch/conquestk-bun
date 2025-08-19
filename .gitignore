@@ -90,6 +90,16 @@ docker-compose.override.yml
 tmp/
 temp/
 
+# Frontend build output served by backend
+backend/public/
+
+# Archive directory
+_archive/
+
 # Keep important development scripts
 !start-dev.ps1
 !setup-check.js
+
+# Memory bank system files (never commit)
+CLAUDE-*.md
+!CLAUDE.md

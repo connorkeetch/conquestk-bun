@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { GameRoomService } from '../services/gameRoomService';
+import { GameRoomService, CreateRoomData } from '../services/gameRoomService';
 import { logger } from '../utils/logger';
 
 export class GameController {
@@ -17,16 +17,21 @@ export class GameController {
 
   createRoom = async (req: Request, res: Response) => {
     try {
-      const { name, maxPlayers, isPrivate } = req.body;
+      const { name, maxPlayers, isPrivate, mapId, gameType, movementType, allowTeamPlay } = req.body;
       const hostId = (req as any).userId;
       
-      const room = await this.gameRoomService.createRoom({
+      const roomData: CreateRoomData = {
         name,
         hostId,
         maxPlayers: maxPlayers || 6,
         isPrivate: isPrivate || false,
-        status: 'waiting'
-      });
+        mapId: mapId || null,
+        gameType: gameType || 'quick',
+        movementType: movementType || 'classic_adjacent',
+        allowTeamPlay: allowTeamPlay || false
+      };
+      
+      const room = await this.gameRoomService.createRoom(roomData);
 
       return res.status(201).json({ room });
     } catch (error) {

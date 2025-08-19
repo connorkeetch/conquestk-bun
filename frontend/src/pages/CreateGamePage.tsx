@@ -1,14 +1,72 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MovementType } from '../types/game';
+import { gameService, CreateGameData } from '../services/gameService';
 
 const CreateGamePage: React.FC = () => {
+  const navigate = useNavigate();
   const [gameType, setGameType] = useState<'quick' | 'custom' | 'tournament'>('quick');
   const [gameName, setGameName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [selectedMap, setSelectedMap] = useState('classic');
   const [movementType, setMovementType] = useState<MovementType>('classic_adjacent');
   const [allowTeamPlay, setAllowTeamPlay] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCreateGame = async (gameData: CreateGameData) => {
+    try {
+      setIsCreating(true);
+      setError(null);
+
+      const response = await gameService.createRoom(gameData);
+      
+      if (response.room) {
+        // Navigate to the created game room
+        navigate(`/room/${response.room.id}`);
+      } else {
+        throw new Error('Failed to create game room');
+      }
+    } catch (err: any) {
+      console.error('Error creating game:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to create game');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleQuickGameCreate = async () => {
+    const gameData: CreateGameData = {
+      name: gameName || 'Quick Game',
+      maxPlayers: 6,
+      isPrivate: false,
+      gameType: 'quick',
+      mapId: 'classic',
+      movementType: 'classic_adjacent',
+      allowTeamPlay: false
+    };
+    
+    await handleCreateGame(gameData);
+  };
+
+  const handleCustomGameCreate = async () => {
+    if (!gameName.trim()) {
+      setError('Please enter a game name');
+      return;
+    }
+
+    const gameData: CreateGameData = {
+      name: gameName,
+      maxPlayers,
+      isPrivate: false,
+      gameType: 'custom',
+      mapId: selectedMap,
+      movementType,
+      allowTeamPlay
+    };
+    
+    await handleCreateGame(gameData);
+  };
 
   return (
     <div className="container mx-auto px-8 py-8">
@@ -65,6 +123,16 @@ const CreateGamePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-900/50 border border-red-500 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <span className="text-red-400">❌</span>
+            <span className="text-red-400">{error}</span>
+          </div>
+        </div>
+      )}
+
       {/* Game Settings */}
       <div className="card">
         <div className="card-header">
@@ -78,6 +146,8 @@ const CreateGamePage: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder="Quick Game" 
+                  value={gameName}
+                  onChange={(e) => setGameName(e.target.value)}
                   className="w-full max-w-md px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
@@ -104,10 +174,14 @@ const CreateGamePage: React.FC = () => {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button className="btn btn-primary">
-                  🎮 Create & Start Game
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleQuickGameCreate}
+                  disabled={isCreating}
+                >
+                  {isCreating ? '🔄 Creating...' : '🎮 Create & Start Game'}
                 </button>
-                <button className="btn btn-secondary">
+                <button className="btn btn-secondary" disabled={isCreating}>
                   💾 Save as Template
                 </button>
               </div>
@@ -287,13 +361,17 @@ const CreateGamePage: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-4 pt-6 border-t border-gray-700">
-                <button className="btn btn-primary">
-                  🎮 Create Custom Game
+                <button 
+                  className="btn btn-primary"
+                  onClick={handleCustomGameCreate}
+                  disabled={isCreating}
+                >
+                  {isCreating ? '🔄 Creating...' : '🎮 Create Custom Game'}
                 </button>
-                <button className="btn btn-secondary">
+                <button className="btn btn-secondary" disabled={isCreating}>
                   💾 Save as Template
                 </button>
-                <button className="btn btn-ghost">
+                <button className="btn btn-ghost" disabled={isCreating}>
                   👁️ Preview Rules
                 </button>
               </div>

@@ -6,6 +6,7 @@ import territoryData from '../data/territories.json';
 import { RootState, AppDispatch } from '../store';
 import { selectTerritory, selectTargetTerritory, setPendingAction } from '../store/gameSlice';
 import { endTurn } from '../store/gameActions';
+import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses';
 
 interface TerritoryDisplay {
   id: string;
@@ -74,6 +75,9 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const players = gameState.players;
   const currentPlayer = gameState.currentPlayer;
   const currentPhase = gameState.phase;
+  
+  // Calculate continent control status for all players
+  const allPlayersContinentStatus = calculateAllPlayersContinentStatus(players, gameState.board);
 
   const getTerritoryColor = useCallback((territoryId: string): string => {
     const territory = territories[territoryId];
@@ -302,19 +306,114 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             </div>
           )}
 
-          {/* Continent Bonuses */}
+          {/* Continent Control Status */}
           <div className="p-4 flex-1 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-3">Continent Bonuses</h3>
-            <div className="space-y-2">
-              {Object.entries(territoryData.continents).map(([continentId, continent]) => (
-                <div
-                  key={continentId}
-                  className="p-2 rounded border border-gray-200"
-                >
-                  <div className="font-medium">{continent.name}</div>
-                  <div className="text-sm text-gray-600">+{continent.bonus} armies per turn</div>
-                </div>
-              ))}
+            <h3 className="text-lg font-semibold mb-3">Continent Control</h3>
+            <div className="space-y-3">
+              {Object.entries(territoryData.continents).map(([continentId, continent]) => {
+                // Find which player controls this continent (if any)
+                const controllingPlayer = allPlayersContinentStatus.find(playerStatus =>
+                  playerStatus.controlledContinents.some(cc => 
+                    cc.continent.id === continentId && cc.controlled
+                  )
+                );
+                
+                const continentStatus = controllingPlayer?.controlledContinents.find(cc => 
+                  cc.continent.id === continentId
+                );
+
+                return (
+                  <div
+                    key={continentId}
+                    className={`p-3 rounded-lg border ${
+                      controllingPlayer ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-4 h-4 rounded-full mr-2 border border-gray-300"
+                          style={{ backgroundColor: continent.color }}
+                        />
+                        <span className="font-medium">{continent.name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-green-600">
+                        +{continent.bonus} armies
+                      </span>
+                    </div>
+                    
+                    {controllingPlayer ? (
+                      <div className="flex items-center text-sm">
+                        <div
+                          className="w-3 h-3 rounded-full mr-2 border border-gray-400"
+                          style={{ 
+                            backgroundColor: players.find(p => p.id === controllingPlayer.playerId)?.color 
+                          }}
+                        />
+                        <span className="font-medium">
+                          Controlled by {players.find(p => p.id === controllingPlayer.playerId)?.username}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        <div className="mb-1">Not controlled by any player</div>
+                        <div className="text-xs">
+                          {/* Show partial control status */}
+                          {allPlayersContinentStatus.map(playerStatus => {
+                            const partialControl = playerStatus.controlledContinents.find(cc => 
+                              cc.continent.id === continentId && !cc.controlled && cc.controlledTerritories > 0
+                            );
+                            
+                            if (!partialControl) return null;
+                            
+                            const player = players.find(p => p.id === playerStatus.playerId);
+                            return (
+                              <div key={playerStatus.playerId} className="flex items-center mb-1">
+                                <div
+                                  className="w-2 h-2 rounded-full mr-1 border border-gray-400"
+                                  style={{ backgroundColor: player?.color }}
+                                />
+                                <span>
+                                  {player?.username}: {partialControl.controlledTerritories}/{partialControl.totalTerritories}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Total Bonuses Summary */}
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-blue-800 mb-2">Current Turn Bonuses</h4>
+              <div className="space-y-1 text-sm">
+                {allPlayersContinentStatus
+                  .filter(playerStatus => playerStatus.totalBonusArmies > 0)
+                  .map(playerStatus => {
+                    const player = players.find(p => p.id === playerStatus.playerId);
+                    return (
+                      <div key={playerStatus.playerId} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2 border border-gray-400"
+                            style={{ backgroundColor: player?.color }}
+                          />
+                          <span>{player?.username}</span>
+                        </div>
+                        <span className="font-semibold text-green-600">
+                          +{playerStatus.totalBonusArmies}
+                        </span>
+                      </div>
+                    );
+                  })}
+                {allPlayersContinentStatus.every(ps => ps.totalBonusArmies === 0) && (
+                  <div className="text-gray-500 italic">No continent bonuses this turn</div>
+                )}
+              </div>
             </div>
           </div>
         </div>

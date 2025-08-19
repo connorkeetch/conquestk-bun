@@ -1,5 +1,6 @@
 import { GameEngine } from '../game/gameEngine';
 import { GameState, GameAction } from '../types/game';
+import { mapService } from './mapService';
 
 export class GameService {
   private gameEngine = new GameEngine();
@@ -32,7 +33,19 @@ export class GameService {
       gameMode: 'standard'
     };
     
-    const config = gameConfig || defaultGameConfig;
+    const config = { ...defaultGameConfig, ...gameConfig };
+    
+    // Load continent bonuses for custom maps
+    if (config.mapId && config.mapId !== 'classic') {
+      try {
+        const continentBonuses = await mapService.getMapContinentBonuses(config.mapId);
+        config.continentBonuses = continentBonuses;
+      } catch (error) {
+        console.warn(`Failed to load continent bonuses for map ${config.mapId}:`, error);
+        // Continue with classic behavior if loading fails
+      }
+    }
+    
     const gameState = this.gameEngine.initializeGame(roomId, players, config);
     this.activeGames.set(roomId, gameState);
     return gameState;

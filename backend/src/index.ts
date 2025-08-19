@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth';
 import { gameRoutes } from './routes/game';
 import mapRoutes from './routes/maps';
 import profileRoutes from './routes/profile';
+import adminRoutes from './routes/admin';
 import { setupSocketHandlers } from './services/socketService';
 import { initDatabase } from './config/database';
 import { ensureTablesExist } from './utils/initTables';
@@ -62,6 +63,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/maps', mapRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', async (req, res) => {
   try {

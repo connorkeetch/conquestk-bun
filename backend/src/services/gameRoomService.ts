@@ -2,15 +2,27 @@ import { query, getClient } from '../config/database';
 import { GameRoom } from '../types/gameRoom';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface CreateRoomData {
+  name: string;
+  hostId: string;
+  maxPlayers: number;
+  isPrivate: boolean;
+  mapId?: string;
+  gameType?: string;
+  movementType?: string;
+  allowTeamPlay?: boolean;
+  gameSettings?: any;
+}
+
 export class GameRoomService {
-  async createRoom(roomData: Omit<GameRoom, 'id' | 'createdAt' | 'players'>): Promise<GameRoom> {
+  async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
     const id = uuidv4();
     const isPostgres = process.env.DB_TYPE !== 'sqlite';
     
     if (isPostgres) {
       const pgQuery = `
-        INSERT INTO game_rooms (name, host_id, max_players, is_private, status)
-        VALUES ($1, $2, $3, $4, 'waiting')
+        INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, game_settings, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'waiting')
         RETURNING *
       `;
       
@@ -18,14 +30,19 @@ export class GameRoomService {
         roomData.name,
         roomData.hostId,
         roomData.maxPlayers,
-        roomData.isPrivate
+        roomData.isPrivate,
+        roomData.mapId || null,
+        roomData.gameType || 'quick',
+        roomData.movementType || 'classic_adjacent',
+        roomData.allowTeamPlay || false,
+        JSON.stringify(roomData.gameSettings || {})
       ]);
       
       return result.rows[0];
     } else {
       const sqliteQuery = `
-        INSERT INTO game_rooms (id, name, host_id, max_players, is_private, status)
-        VALUES (?, ?, ?, ?, ?, 'waiting')
+        INSERT INTO game_rooms (id, name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, game_settings, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting')
       `;
       
       await query(sqliteQuery, [
@@ -33,7 +50,12 @@ export class GameRoomService {
         roomData.name,
         roomData.hostId,
         roomData.maxPlayers,
-        roomData.isPrivate
+        roomData.isPrivate,
+        roomData.mapId || null,
+        roomData.gameType || 'quick',
+        roomData.movementType || 'classic_adjacent',
+        roomData.allowTeamPlay || false,
+        JSON.stringify(roomData.gameSettings || {})
       ]);
       
       const result = await query('SELECT * FROM game_rooms WHERE id = ?', [id]);
@@ -43,16 +65,26 @@ export class GameRoomService {
 
   async getActiveRooms(): Promise<GameRoom[]> {
     const getQuery = `
-      SELECT gr.*, COUNT(rp.user_id) as player_count
+      SELECT gr.*, 
+             COUNT(rp.user_id) as current_players,
+             u.username as host_username,
+             m.name as map_name
       FROM game_rooms gr
       LEFT JOIN room_players rp ON gr.id = rp.room_id
-      WHERE gr.status IN ('waiting', 'in_progress')
-      GROUP BY gr.id
+      LEFT JOIN users u ON gr.host_id = u.id
+      LEFT JOIN maps m ON gr.map_id = m.id
+      WHERE gr.status IN ('waiting', 'active')
+      GROUP BY gr.id, u.username, m.name
       ORDER BY gr.created_at DESC
     `;
     
     const result = await query(getQuery);
-    return result.rows;
+    return result.rows.map((row: any) => ({
+      ...row,
+      currentPlayers: parseInt(row.current_players) || 0,
+      hostUsername: row.host_username,
+      mapName: row.map_name
+    }));
   }
 
   async getRoomById(roomId: string): Promise<GameRoom | null> {

@@ -4,6 +4,7 @@ import { RootState, AppDispatch } from '../store';
 import { deployArmies, executeAttack, executeFortify, goBackToReinforcement } from '../store/gameActions';
 import { selectTerritory, selectTargetTerritory, setPendingAction, setBattleResult } from '../store/gameSlice';
 import { BattleModal } from './BattleModal';
+import { getContinentBonusArmies, calculatePlayerContinentStatus } from '../utils/continentBonuses';
 
 interface GamePhaseControlsProps {
   onEndTurn: () => void;
@@ -39,11 +40,15 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     const territoryCount = gameState.board.filter(t => t.ownerId === currentPlayer.id).length;
     const baseArmies = Math.max(3, Math.floor(territoryCount / 3));
     
-    // TODO: Add continent bonuses
-    // const continentBonuses = calculateContinentBonuses(currentPlayer.id);
+    // Add continent bonuses
+    const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board);
     
-    return baseArmies;
+    return baseArmies + continentBonuses;
   };
+
+  // Get detailed continent status for current player
+  const currentPlayerContinentStatus = currentPlayer ? 
+    calculatePlayerContinentStatus(currentPlayer.id, gameState.board) : null;
 
   const selectedTerritoryData = selectedTerritory ? 
     gameState.board.find(t => t.id === selectedTerritory) : null;
@@ -112,9 +117,64 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         <div className="space-y-3">
           <div className="bg-green-50 p-3 rounded border">
             <h4 className="font-medium text-green-800 mb-2">Deploy New Armies</h4>
-            <p className="text-sm text-green-700 mb-3">
-              You have {calculateReinforcementArmies()} new armies to deploy this turn
-            </p>
+            <div className="text-sm text-green-700 mb-3">
+              <p className="font-medium mb-2">
+                You have {calculateReinforcementArmies()} new armies to deploy this turn
+              </p>
+              
+              {/* Army breakdown */}
+              <div className="text-xs space-y-1 bg-green-100 p-2 rounded">
+                {(() => {
+                  if (!currentPlayer) return null;
+                  const territoryCount = gameState.board.filter(t => t.ownerId === currentPlayer.id).length;
+                  const baseArmies = Math.max(3, Math.floor(territoryCount / 3));
+                  const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board);
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Base armies ({territoryCount} territories):</span>
+                        <span>+{baseArmies}</span>
+                      </div>
+                      {continentBonuses > 0 && (
+                        <div className="flex justify-between">
+                          <span>Continent bonuses:</span>
+                          <span>+{continentBonuses}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-medium border-t pt-1">
+                        <span>Total:</span>
+                        <span>{baseArmies + continentBonuses}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Continent control details */}
+              {currentPlayerContinentStatus && currentPlayerContinentStatus.totalBonusArmies > 0 && (
+                <div className="mt-2 text-xs">
+                  <div className="font-medium text-green-800 mb-1">Controlled Continents:</div>
+                  <div className="space-y-1">
+                    {currentPlayerContinentStatus.controlledContinents
+                      .filter(cc => cc.controlled)
+                      .map(cc => (
+                        <div key={cc.continent.id} className="flex justify-between items-center">
+                          <span className="flex items-center">
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2" 
+                              style={{ backgroundColor: cc.continent.color }}
+                            />
+                            {cc.continent.name}
+                          </span>
+                          <span className="font-medium">+{cc.continent.bonusArmies}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
             
             {selectedTerritory ? (
               <div className="space-y-2">

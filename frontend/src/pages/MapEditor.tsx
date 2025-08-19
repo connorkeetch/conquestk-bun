@@ -43,9 +43,12 @@ export default function MapEditor() {
   const [newContinentName, setNewContinentName] = useState('')
   const [newContinentBonus, setNewContinentBonus] = useState(2)
   const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
+  const [editingContinent, setEditingContinent] = useState<string | null>(null)
+  const [showContinentTerritories, setShowContinentTerritories] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   // Load metadata on component mount
   useEffect(() => {
@@ -343,6 +346,21 @@ export default function MapEditor() {
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    processImageFile(file)
+  }
+
+  const processImageFile = (file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, GIF, WEBP)')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image file must be smaller than 10MB')
+      return
+    }
 
     // Store the actual file for upload
     setSelectedFile(file)
@@ -363,13 +381,52 @@ export default function MapEditor() {
     img.src = imageUrl
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    
+    const files = Array.from(e.dataTransfer.files)
+    const imageFile = files.find(file => file.type.startsWith('image/'))
+    
+    if (imageFile) {
+      processImageFile(imageFile)
+    } else {
+      alert('Please drop an image file (PNG, JPG, GIF, WEBP)')
+    }
+  }
+
   const createContinent = () => {
-    if (!newContinentName.trim()) return
+    if (!newContinentName.trim()) {
+      alert('Please enter a continent name')
+      return
+    }
+
+    // Check for duplicate names
+    if (state.continents.some(c => c.name.toLowerCase() === newContinentName.trim().toLowerCase())) {
+      alert('A continent with this name already exists')
+      return
+    }
+
+    // Validate bonus armies range
+    if (newContinentBonus < 1 || newContinentBonus > 20) {
+      alert('Bonus armies must be between 1 and 20')
+      return
+    }
 
     const newContinent: MapContinent = {
       id: `temp_${Date.now()}`,
       mapId: state.currentMap?.id || 'temp',
-      name: newContinentName,
+      name: newContinentName.trim(),
       bonusArmies: newContinentBonus,
       color: newContinentColor,
       createdAt: new Date().toISOString()
@@ -381,6 +438,97 @@ export default function MapEditor() {
     }))
 
     setNewContinentName('')
+    setNewContinentBonus(2)
+    setNewContinentColor('#3B82F6')
+  }
+
+  const editContinent = (continentId: string) => {
+    const continent = state.continents.find(c => c.id === continentId)
+    if (!continent) return
+
+    setNewContinentName(continent.name)
+    setNewContinentBonus(continent.bonusArmies)
+    setNewContinentColor(continent.color)
+    setEditingContinent(continentId)
+  }
+
+  const updateContinent = () => {
+    if (!editingContinent || !newContinentName.trim()) return
+
+    // Check for duplicate names (excluding current continent)
+    if (state.continents.some(c => c.id !== editingContinent && c.name.toLowerCase() === newContinentName.trim().toLowerCase())) {
+      alert('A continent with this name already exists')
+      return
+    }
+
+    // Validate bonus armies range
+    if (newContinentBonus < 1 || newContinentBonus > 20) {
+      alert('Bonus armies must be between 1 and 20')
+      return
+    }
+
+    setState(prev => ({
+      ...prev,
+      continents: prev.continents.map(c => 
+        c.id === editingContinent 
+          ? { ...c, name: newContinentName.trim(), bonusArmies: newContinentBonus, color: newContinentColor }
+          : c
+      )
+    }))
+
+    cancelEditContinent()
+  }
+
+  const cancelEditContinent = () => {
+    setEditingContinent(null)
+    setNewContinentName('')
+    setNewContinentBonus(2)
+    setNewContinentColor('#3B82F6')
+  }
+
+  const deleteContinent = (continentId: string) => {
+    const continent = state.continents.find(c => c.id === continentId)
+    if (!continent) return
+
+    const territoriesInContinent = state.territories.filter(t => t.continentId === continentId)
+    
+    if (territoriesInContinent.length > 0) {
+      if (!confirm(`Continent "${continent.name}" contains ${territoriesInContinent.length} territories. Are you sure you want to delete it? Territories will be moved to "No Continent".`)) {
+        return
+      }
+
+      // Remove continent assignment from territories
+      setState(prev => ({
+        ...prev,
+        territories: prev.territories.map(t => 
+          t.continentId === continentId ? { ...t, continentId: undefined } : t
+        ),
+        continents: prev.continents.filter(c => c.id !== continentId)
+      }))
+    } else {
+      setState(prev => ({
+        ...prev,
+        continents: prev.continents.filter(c => c.id !== continentId)
+      }))
+    }
+
+    // Cancel editing if this continent was being edited
+    if (editingContinent === continentId) {
+      cancelEditContinent()
+    }
+  }
+
+  const getContinentTerritoryCount = (continentId: string) => {
+    return state.territories.filter(t => t.continentId === continentId).length
+  }
+
+  const reassignTerritoryContinent = (territoryId: string, newContinentId: string | undefined) => {
+    setState(prev => ({
+      ...prev,
+      territories: prev.territories.map(t => 
+        t.id === territoryId ? { ...t, continentId: newContinentId } : t
+      )
+    }))
   }
 
   const saveMap = async () => {
@@ -518,10 +666,16 @@ export default function MapEditor() {
             className="hidden"
           />
           <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium"
+            onClick={validateMap}
+            className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-medium"
           >
-            📷 Upload Image
+            🔍 Validate Map
+          </button>
+          <button 
+            onClick={clearMap}
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium"
+          >
+            🗑️ Clear All
           </button>
         </div>
       </div>
@@ -543,21 +697,103 @@ export default function MapEditor() {
               />
             </div>
             <div className="mt-4 text-sm text-gray-400">
-              <p><strong>Instructions:</strong></p>
-              <p>• Select "Territory Tool" to draw territories by clicking to add points</p>
-              <p>• Double-click to finish drawing a territory</p>
-              <p>• Use "Select Tool" to click and select existing territories</p>
-              <p>• Upload a background image to trace territories over</p>
+              <p><strong>How to Create Your Map:</strong></p>
+              <div className="space-y-1 mt-2">
+                <p><span className="text-blue-400">1.</span> Upload a background image (PNG/JPG) of your map</p>
+                <p><span className="text-blue-400">2.</span> Create continents with bonus armies</p>
+                <p><span className="text-blue-400">3.</span> Use Territory Tool to trace territories on the image</p>
+                <p><span className="text-blue-400">4.</span> Assign territories to continents</p>
+                <p><span className="text-blue-400">5.</span> Connect territories with adjacency lines</p>
+                <p><span className="text-blue-400">6.</span> Save your custom map!</p>
+              </div>
+              <div className="mt-3 p-2 bg-gray-700 rounded text-xs">
+                <p><strong>Controls:</strong> Click to add points • Double-click to finish • Right-click to cancel</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Tools Panel */}
         <div className="space-y-4">
-          {/* Map Info */}
+          {/* Map Setup */}
           <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">Map Info</h3>
-            <div className="space-y-3">
+            <h3 className="text-lg font-bold mb-3">🗺️ Map Setup</h3>
+            <div className="space-y-4">
+              {/* Background Image Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Background Image</label>
+                <div 
+                  className={`bg-gray-700 rounded-lg p-3 border-2 border-dashed transition-colors ${
+                    isDragOver 
+                      ? 'border-blue-400 bg-blue-900/20' 
+                      : 'border-gray-600'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <div className="text-center">
+                    {state.imageUrl ? (
+                      <div className="space-y-2">
+                        <div className="text-sm text-green-400 font-medium">✅ Image Loaded</div>
+                        <div className="text-xs text-gray-400">
+                          {state.imageWidth} × {state.imageHeight} pixels
+                        </div>
+                        <div className="flex justify-center space-x-2">
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs"
+                          >
+                            Change
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setState(prev => ({ ...prev, imageUrl: undefined }))
+                              setSelectedFile(null)
+                            }}
+                            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-2xl">
+                          {isDragOver ? '📂' : '🖼️'}
+                        </div>
+                        <div className="text-sm text-gray-300 font-medium">
+                          {isDragOver ? 'Drop image here' : 'Upload Background'}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {isDragOver ? (
+                            'Release to upload'
+                          ) : (
+                            <>
+                              Drag & drop or click to browse
+                              <br />
+                              PNG, JPG, GIF, WEBP (max 10MB)
+                            </>
+                          )}
+                        </div>
+                        {!isDragOver && (
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
+                          >
+                            Choose File
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-1 text-xs text-gray-400">
+                  💡 Start by uploading a map image, then draw territories on top
+                </div>
+              </div>
+
+              {/* Map Details */}
               <div>
                 <label className="block text-sm font-medium mb-1">Map Name</label>
                 <input
@@ -663,56 +899,127 @@ export default function MapEditor() {
 
           {/* Continent Management */}
           <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">Continents</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold">Continents ({state.continents.length})</h3>
+              <button
+                onClick={() => setShowContinentTerritories(!showContinentTerritories)}
+                className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded"
+              >
+                {showContinentTerritories ? 'Hide Details' : 'Show Details'}
+              </button>
+            </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  value={newContinentName}
-                  onChange={(e) => setNewContinentName(e.target.value)}
-                  className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
-                  placeholder="Name..."
-                />
-                <input
-                  type="number"
-                  value={newContinentBonus}
-                  onChange={(e) => setNewContinentBonus(parseInt(e.target.value) || 2)}
-                  className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
-                  placeholder="Bonus"
-                  min="1"
-                  max="10"
-                />
+              {/* Add/Edit Form */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newContinentName}
+                    onChange={(e) => setNewContinentName(e.target.value)}
+                    className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                    placeholder="Continent name..."
+                  />
+                  <input
+                    type="number"
+                    value={newContinentBonus}
+                    onChange={(e) => setNewContinentBonus(parseInt(e.target.value) || 2)}
+                    className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                    placeholder="Bonus armies"
+                    min="1"
+                    max="20"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="color"
+                    value={newContinentColor}
+                    onChange={(e) => setNewContinentColor(e.target.value)}
+                    className="flex-1 h-8 bg-gray-700 border border-gray-600 rounded"
+                  />
+                  {editingContinent ? (
+                    <>
+                      <button
+                        onClick={updateContinent}
+                        className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                      >
+                        Update
+                      </button>
+                      <button
+                        onClick={cancelEditContinent}
+                        className="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={createContinent}
+                      className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                    >
+                      Add
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <input
-                  type="color"
-                  value={newContinentColor}
-                  onChange={(e) => setNewContinentColor(e.target.value)}
-                  className="flex-1 h-8 bg-gray-700 border border-gray-600 rounded"
-                />
-                <button
-                  onClick={createContinent}
-                  className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
-                >
-                  Add
-                </button>
-              </div>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+
+              {/* Continents List */}
+              <div className="max-h-40 overflow-y-auto space-y-1">
                 {state.continents.length === 0 ? (
-                  <div className="text-sm text-gray-400">No continents created</div>
+                  <div className="text-sm text-gray-400 text-center py-4">
+                    No continents created yet
+                    <br />
+                    <span className="text-xs">Continents group territories and provide bonus armies</span>
+                  </div>
                 ) : (
-                  state.continents.map(continent => (
-                    <div key={continent.id} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2">
-                        <div 
-                          className="w-4 h-4 rounded border border-gray-500"
-                          style={{ backgroundColor: continent.color }}
-                        />
-                        <span>{continent.name}</span>
+                  state.continents.map(continent => {
+                    const territoryCount = getContinentTerritoryCount(continent.id)
+                    return (
+                      <div key={continent.id} className="bg-gray-700 rounded p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-4 h-4 rounded border border-gray-500"
+                              style={{ backgroundColor: continent.color }}
+                            />
+                            <span className="font-medium text-sm">{continent.name}</span>
+                            <span className="text-xs text-gray-400">({territoryCount} territories)</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span className="text-sm text-green-400">+{continent.bonusArmies}</span>
+                            <button
+                              onClick={() => editContinent(continent.id)}
+                              className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteContinent(continent.id)}
+                              className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Show territories in this continent */}
+                        {showContinentTerritories && territoryCount > 0 && (
+                          <div className="mt-2 text-xs">
+                            <div className="text-gray-400 mb-1">Territories:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {state.territories
+                                .filter(t => t.continentId === continent.id)
+                                .map(territory => (
+                                  <span key={territory.id} className="bg-gray-600 px-2 py-1 rounded">
+                                    {territory.name}
+                                  </span>
+                                ))
+                              }
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-gray-400">+{continent.bonusArmies}</span>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </div>
@@ -723,23 +1030,59 @@ export default function MapEditor() {
             <h3 className="text-lg font-bold mb-3">Territories ({state.territories.length})</h3>
             <div className="max-h-48 overflow-y-auto space-y-1">
               {state.territories.length === 0 ? (
-                <div className="text-sm text-gray-400">No territories created yet</div>
+                <div className="text-sm text-gray-400 text-center py-4">
+                  No territories created yet
+                  <br />
+                  <span className="text-xs">Use the Territory Tool to draw new territories</span>
+                </div>
               ) : (
                 state.territories.map(territory => {
                   const continent = state.continents.find(c => c.id === territory.continentId)
                   return (
                     <div 
                       key={territory.id}
-                      onClick={() => setState(prev => ({ ...prev, selectedTerritory: territory.id }))}
-                      className={`text-sm p-2 rounded cursor-pointer ${
+                      className={`text-sm p-2 rounded border ${
                         state.selectedTerritory === territory.id 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-700 hover:bg-gray-600'
+                          ? 'bg-blue-600 text-white border-blue-400' 
+                          : 'bg-gray-700 hover:bg-gray-600 border-gray-600'
                       }`}
                     >
-                      <div className="font-medium">{territory.name}</div>
-                      {continent && (
-                        <div className="text-xs opacity-75">{continent.name}</div>
+                      <div 
+                        onClick={() => setState(prev => ({ ...prev, selectedTerritory: territory.id }))}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">{territory.name}</div>
+                          {continent && (
+                            <div 
+                              className="w-3 h-3 rounded border"
+                              style={{ backgroundColor: continent.color }}
+                              title={continent.name}
+                            />
+                          )}
+                        </div>
+                        <div className="text-xs opacity-75">
+                          {continent ? continent.name : 'No continent'}
+                        </div>
+                      </div>
+                      
+                      {/* Continent reassignment dropdown */}
+                      {state.selectedTerritory === territory.id && (
+                        <div className="mt-2 pt-2 border-t border-gray-600">
+                          <label className="block text-xs mb-1">Reassign to continent:</label>
+                          <select 
+                            value={territory.continentId || ''}
+                            onChange={(e) => reassignTerritoryContinent(territory.id, e.target.value || undefined)}
+                            className="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-xs"
+                          >
+                            <option value="">No continent</option>
+                            {state.continents.map(continent => (
+                              <option key={continent.id} value={continent.id}>
+                                {continent.name} (+{continent.bonusArmies})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       )}
                     </div>
                   )

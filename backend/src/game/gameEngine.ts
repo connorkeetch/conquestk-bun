@@ -1,4 +1,4 @@
-import { GameState, GameAction, Territory, GamePlayer, BattleResult, GameConfiguration, MovementType } from '../types/game';
+import { GameState, GameAction, Territory, GamePlayer, BattleResult, GameConfiguration, MovementType, ContinentBonus } from '../types/game';
 import { WorldMap } from './worldMap';
 
 export class GameEngine {
@@ -15,7 +15,7 @@ export class GameEngine {
     this.distributeTerritoriesWithNeutrals(territories, players);
     
     // Each player starts with 3 armies per territory
-    this.deployInitialArmies(territories, players);
+    this.deployInitialArmies(territories, players, gameConfig);
 
     return {
       roomId,
@@ -143,15 +143,15 @@ export class GameEngine {
     }
   }
 
-  private deployInitialArmies(territories: Territory[], players: GamePlayer[]): void {
+  private deployInitialArmies(territories: Territory[], players: GamePlayer[], gameConfig: GameConfiguration): void {
     // Initial armies already deployed (3 per territory)
     // Calculate reinforcement armies for each player
     for (const player of players) {
-      player.armies = this.calculateReinforcementArmies(player.territories, territories);
+      player.armies = this.calculateReinforcementArmies(player.territories, territories, gameConfig);
     }
   }
   
-  calculateReinforcementArmies(playerTerritories: string[], allTerritories: Territory[]): number {
+  calculateReinforcementArmies(playerTerritories: string[], allTerritories: Territory[], gameConfig?: GameConfiguration): number {
     const territoryCount = playerTerritories.length;
     
     // Base armies: 3 minimum, or territories/3 (rounded down)
@@ -164,41 +164,56 @@ export class GameEngine {
     }
     
     // Add continent bonuses
-    armies += this.calculateContinentBonuses(playerTerritories, allTerritories);
+    armies += this.calculateContinentBonuses(playerTerritories, allTerritories, gameConfig);
     
     return armies;
   }
   
-  private calculateContinentBonuses(playerTerritories: string[], allTerritories: Territory[]): number {
-    const continentBonuses: { [continent: string]: number } = {
-      'North America': 5,
-      'South America': 2,
-      'Europe': 5,
-      'Asia': 7,
-      'Africa': 3,
-      'Australia': 2
-    };
-    
-    const continents: { [continent: string]: string[] } = {};
-    
-    // Group territories by continent
-    for (const territory of allTerritories) {
-      if (!continents[territory.continent]) {
-        continents[territory.continent] = [];
-      }
-      continents[territory.continent].push(territory.id);
-    }
-    
+  private calculateContinentBonuses(playerTerritories: string[], allTerritories: Territory[], gameConfig?: GameConfiguration): number {
     let bonusArmies = 0;
     
-    // Check each continent for complete control
-    for (const [continent, territories] of Object.entries(continents)) {
-      const playerOwnsAll = territories.every(territoryId => 
-        playerTerritories.includes(territoryId)
-      );
+    // Use continent bonuses from game config if available
+    if (gameConfig?.continentBonuses) {
+      // Dynamic continent bonuses from database (custom maps)
+      for (const continent of gameConfig.continentBonuses) {
+        const playerOwnsAll = continent.territories.every(territoryId => 
+          playerTerritories.includes(territoryId)
+        );
+        
+        if (playerOwnsAll) {
+          bonusArmies += continent.bonusArmies;
+        }
+      }
+    } else {
+      // Fallback to classic Risk continent bonuses
+      const classicContinentBonuses: { [continent: string]: number } = {
+        'north-america': 5,
+        'south-america': 2,
+        'europe': 5,
+        'asia': 7,
+        'africa': 3,
+        'australia': 2
+      };
       
-      if (playerOwnsAll && continentBonuses[continent]) {
-        bonusArmies += continentBonuses[continent];
+      const continents: { [continent: string]: string[] } = {};
+      
+      // Group territories by continent
+      for (const territory of allTerritories) {
+        if (!continents[territory.continent]) {
+          continents[territory.continent] = [];
+        }
+        continents[territory.continent].push(territory.id);
+      }
+      
+      // Check each continent for complete control
+      for (const [continent, territories] of Object.entries(continents)) {
+        const playerOwnsAll = territories.every(territoryId => 
+          playerTerritories.includes(territoryId)
+        );
+        
+        if (playerOwnsAll && classicContinentBonuses[continent]) {
+          bonusArmies += classicContinentBonuses[continent];
+        }
       }
     }
     
@@ -368,7 +383,7 @@ export class GameEngine {
     
     // Calculate reinforcement armies for new player
     const nextPlayer = gameState.players[nextPlayerIndex];
-    nextPlayer.armies = this.calculateReinforcementArmies(nextPlayer.territories, gameState.board);
+    nextPlayer.armies = this.calculateReinforcementArmies(nextPlayer.territories, gameState.board, gameState.gameConfig);
     
     // Increment turn counter when we complete a full round (back to first active player)
     const firstActivePlayerIndex = gameState.players.findIndex(p => !p.isEliminated);
@@ -386,7 +401,7 @@ export class GameEngine {
       // Calculate starting reinforcement armies for current player
       const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
       if (currentPlayer) {
-        currentPlayer.armies = this.calculateReinforcementArmies(currentPlayer.territories, gameState.board);
+        currentPlayer.armies = this.calculateReinforcementArmies(currentPlayer.territories, gameState.board, gameState.gameConfig);
       }
     }
     
@@ -439,7 +454,7 @@ export class GameEngine {
       // Recalculate reinforcement armies for current player
       const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
       if (currentPlayer) {
-        currentPlayer.armies = this.calculateReinforcementArmies(currentPlayer.territories, gameState.board);
+        currentPlayer.armies = this.calculateReinforcementArmies(currentPlayer.territories, gameState.board, gameState.gameConfig);
       }
     }
     
