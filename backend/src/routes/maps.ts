@@ -6,6 +6,14 @@ import { logger } from '../utils/logger';
 import { CreateMapRequest, UpdateMapRequest } from '../types/maps';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads', 'maps');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  logger.info('Created uploads directory:', uploadsDir);
+}
 
 const router = Router();
 
@@ -92,6 +100,23 @@ const checkValidation = (req: Request, res: Response, next: any) => {
   return next();
 };
 
+// Multer error handling middleware
+const handleMulterError = (error: any, req: Request, res: Response, next: any) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'Unexpected field in file upload. Use "image" field name.' });
+    }
+    return res.status(400).json({ error: `Upload error: ${error.message}` });
+  }
+  if (error && error.message === 'Only image files are allowed') {
+    return res.status(400).json({ error: 'Only image files (PNG, JPG, GIF, WEBP) are allowed.' });
+  }
+  return next(error);
+};
+
 // ============= PUBLIC ROUTES =============
 
 // Get all public maps with filtering and pagination
@@ -171,6 +196,7 @@ router.get('/abilities/list', async (req: Request, res: Response) => {
 router.post('/',
   authenticateToken,
   upload.single('image'),
+  handleMulterError,
   validateCreateMap,
   checkValidation,
   async (req: Request, res: Response) => {

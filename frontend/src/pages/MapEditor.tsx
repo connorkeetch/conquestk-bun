@@ -47,6 +47,7 @@ export default function MapEditor() {
   const [showContinentTerritories, setShowContinentTerritories] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number>(0)
@@ -396,7 +397,7 @@ export default function MapEditor() {
     }
     
     img.onerror = () => {
-      setUploadError('Failed to load image. Please try a different file.')
+      setUploadError('Failed to load image. Please check the file format and try a different file.')
       setIsUploading(false)
       setUploadProgress(0)
     }
@@ -620,10 +621,14 @@ export default function MapEditor() {
       setSaveStatus('saved')
       
       setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving map:', error)
       setSaveStatus('error')
-      setTimeout(() => setSaveStatus('idle'), 2000)
+      setSaveError(error.message || 'Failed to save map. Please try again.')
+      setTimeout(() => {
+        setSaveStatus('idle')
+        setSaveError(null)
+      }, 5000)
     }
   }
 
@@ -682,6 +687,13 @@ export default function MapEditor() {
              saveStatus === 'saved' ? '✅ Saved' :
              saveStatus === 'error' ? '❌ Error' : '💾 Save Map'}
           </button>
+          
+          {/* Save Error Display */}
+          {saveError && (
+            <div className="mt-2 p-2 bg-red-900/50 border border-red-600 rounded text-red-300 text-sm">
+              ❌ {saveError}
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"

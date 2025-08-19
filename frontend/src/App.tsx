@@ -23,13 +23,12 @@ import CreateGamePage from './pages/CreateGamePage';
 import CommunityPage from './pages/CommunityPage';
 import Profile from './pages/Profile';
 import Statistics from './pages/Statistics';
+import Settings from './pages/Settings';
 
 // Existing Pages (Legacy)
 import GameLobby from './pages/GameLobby';
 import GameRoom from './pages/GameRoom';
 import MapEditor from './pages/MapEditor';
-import SimpleMapDemo from './pages/SimpleMapDemo';
-import RiskMapDemo from './pages/RiskMapDemo';
 import Dashboard from './pages/Dashboard';
 import Play from './pages/Play';
 import Maps from './pages/Maps';
@@ -261,6 +260,14 @@ function App() {
             </AuthGuard>
           } 
         />
+        <Route 
+          path="/settings" 
+          element={
+            <AuthGuard>
+              <Settings />
+            </AuthGuard>
+          } 
+        />
 
         {/* Legacy Routes - Backward Compatibility */}
         <Route 
@@ -304,23 +311,6 @@ function App() {
           } 
         />
 
-        {/* Demo Routes (Public) */}
-        <Route 
-          path="/simple-map" 
-          element={
-            <AuthGuard requireAuth={false}>
-              <SimpleMapDemo />
-            </AuthGuard>
-          } 
-        />
-        <Route 
-          path="/risk-map" 
-          element={
-            <AuthGuard requireAuth={false}>
-              <RiskMapDemo />
-            </AuthGuard>
-          } 
-        />
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />

@@ -20,8 +20,8 @@ export default function Login() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
-      <h2 className="text-3xl font-bold mb-8 text-center text-white">Welcome Back</h2>
+    <div className="max-w-md mx-auto bg-slate-900/90 backdrop-blur-sm rounded-xl p-8 shadow-2xl border border-slate-700">
+      <h2 className="text-3xl font-bold mb-8 text-center gradient-text">Welcome Back</h2>
       
       {error && (
         <div className="bg-red-500/10 border border-red-500 text-red-400 p-4 rounded-lg mb-6 text-sm">

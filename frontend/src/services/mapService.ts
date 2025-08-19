@@ -14,6 +14,18 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Add response interceptor to handle errors better
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.data?.error) {
+      // Use the server's error message if available
+      error.message = error.response.data.error
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Types matching our backend
 export interface CustomMap {
   id: string

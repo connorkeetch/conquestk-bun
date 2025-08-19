@@ -122,15 +122,14 @@ a:hover {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   z-index: 1000;
-  padding: 1rem 2rem;
+  padding: 1rem 1.5rem;
 }
 
 .nav-container {
-  max-width: 1400px;
-  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .nav-left {

@@ -111,8 +111,8 @@ const Home: React.FC = () => {
                 <Link to="/register" className="btn btn-primary btn-lg">
                   ⚡ Join the Battle
                 </Link>
-                <Link to="/simple-map" className="btn btn-secondary btn-lg">
-                  🎮 Try Demo
+                <Link to="/login" className="btn btn-secondary btn-lg">
+                  🔑 Sign In
                 </Link>
               </>
             )}
