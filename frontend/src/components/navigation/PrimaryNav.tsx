@@ -13,6 +13,7 @@ interface DropdownItem {
   label: string;
   icon: string;
   description?: string;
+  comingSoon?: boolean;
 }
 
 const PrimaryNav: React.FC = () => {
@@ -50,7 +51,7 @@ const PrimaryNav: React.FC = () => {
         { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
         { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
         { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
-        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' }
+        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps', comingSoon: true }
       ]
     },
     {
@@ -142,20 +143,40 @@ const PrimaryNav: React.FC = () => {
           {item.dropdown && activeDropdown === item.path && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 py-2 z-50">
               {item.dropdown.map((dropdownItem) => (
-                <Link
-                  key={dropdownItem.path}
-                  to={dropdownItem.path}
-                  className="flex items-start space-x-3 px-4 py-3 hover:bg-gray-700 transition-colors duration-150"
-                  onClick={() => setActiveDropdown(null)}
-                >
-                  <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium text-white">{dropdownItem.label}</div>
-                    {dropdownItem.description && (
-                      <div className="text-xs text-gray-400 mt-0.5">{dropdownItem.description}</div>
-                    )}
+                dropdownItem.comingSoon ? (
+                  <div
+                    key={dropdownItem.path}
+                    className="flex items-start space-x-3 px-4 py-3 opacity-60 cursor-not-allowed relative"
+                  >
+                    <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-400 flex items-center">
+                        {dropdownItem.label}
+                        <span className="ml-2 bg-yellow-600/80 text-yellow-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                          Coming Soon
+                        </span>
+                      </div>
+                      {dropdownItem.description && (
+                        <div className="text-xs text-gray-500 mt-0.5">{dropdownItem.description}</div>
+                      )}
+                    </div>
                   </div>
-                </Link>
+                ) : (
+                  <Link
+                    key={dropdownItem.path}
+                    to={dropdownItem.path}
+                    className="flex items-start space-x-3 px-4 py-3 hover:bg-gray-700 transition-colors duration-150"
+                    onClick={() => setActiveDropdown(null)}
+                  >
+                    <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{dropdownItem.label}</div>
+                      {dropdownItem.description && (
+                        <div className="text-xs text-gray-400 mt-0.5">{dropdownItem.description}</div>
+                      )}
+                    </div>
+                  </Link>
+                )
               ))}
             </div>
           )}

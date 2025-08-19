@@ -73,12 +73,17 @@ const Maps: React.FC = () => {
           <h1 className="text-3xl font-bold text-white mb-4">🗺️ Maps Gallery</h1>
           <p className="text-gray-400 text-lg">Discover battlefields from around the world</p>
         </div>
-        <Link
-          to="/map-editor"
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-white shadow-lg hover:shadow-xl"
-        >
-          ✏️ Create Map
-        </Link>
+        <div className="relative">
+          <button
+            disabled
+            className="bg-gradient-to-r from-gray-600 to-gray-700 px-6 py-3 rounded-lg font-medium text-white shadow-lg opacity-60 cursor-not-allowed"
+          >
+            ✏️ Create Map
+          </button>
+          <span className="absolute -top-2 -right-2 bg-yellow-600/80 text-yellow-100 px-2 py-1 rounded-full text-xs font-medium">
+            Coming Soon
+          </span>
+        </div>
       </div>
 
       {/* Search and Filter */}

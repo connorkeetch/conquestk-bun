@@ -28,7 +28,7 @@ import Settings from './pages/Settings';
 // Existing Pages (Legacy)
 import GameLobby from './pages/GameLobby';
 import GameRoom from './pages/GameRoom';
-import MapEditor from './pages/MapEditor';
+import ComingSoon from './pages/ComingSoon';
 import Dashboard from './pages/Dashboard';
 import Play from './pages/Play';
 import Maps from './pages/Maps';
@@ -204,7 +204,19 @@ function App() {
           path="/editor/new" 
           element={
             <AuthGuard>
-              <MapEditor />
+              <ComingSoon 
+                title="Map Editor"
+                description="Create custom maps with territories, continents, and special abilities. Draw boundaries, set adjacencies, and design your perfect battleground."
+                icon="🗺️"
+                features={[
+                  "Interactive territory drawing",
+                  "Continent management",
+                  "Adjacency system",
+                  "Custom map backgrounds",
+                  "Territory special abilities",
+                  "Map validation tools"
+                ]}
+              />
             </AuthGuard>
           } 
         />
@@ -212,7 +224,19 @@ function App() {
           path="/editor/:mapId" 
           element={
             <AuthGuard>
-              <MapEditor />
+              <ComingSoon 
+                title="Map Editor"
+                description="Edit and customize existing maps. Modify territories, adjust boundaries, and perfect your map designs."
+                icon="✏️"
+                features={[
+                  "Edit existing maps",
+                  "Modify territory boundaries",
+                  "Update continent assignments",
+                  "Adjust map settings",
+                  "Version control",
+                  "Collaboration tools"
+                ]}
+              />
             </AuthGuard>
           } 
         />
@@ -298,7 +322,19 @@ function App() {
           path="/map-editor" 
           element={
             <AuthGuard>
-              <MapEditor />
+              <ComingSoon 
+                title="Map Editor"
+                description="Create custom maps with territories, continents, and special abilities. Draw boundaries, set adjacencies, and design your perfect battleground."
+                icon="🗺️"
+                features={[
+                  "Interactive territory drawing",
+                  "Continent management",
+                  "Adjacency system",
+                  "Custom map backgrounds",
+                  "Territory special abilities",
+                  "Map validation tools"
+                ]}
+              />
             </AuthGuard>
           } 
         />
