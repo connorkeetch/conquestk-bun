@@ -1,12 +1,12 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth.js';
-import { adminAuthMiddleware } from '../middleware/adminAuth.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/adminAuth.js';
 import MapApprovalService from '../services/mapApprovalService.js';
 
 const router = express.Router();
 
 // Apply auth middleware to all routes
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // Version Management Routes
 
@@ -40,11 +40,12 @@ router.get('/versions/:versionId', async (req, res) => {
 router.post('/maps/:mapId/versions', async (req, res) => {
   try {
     const { mapId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const versionData = req.body;
     
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
     }
     
     // TODO: Check if user has permission to create versions for this map
@@ -76,11 +77,12 @@ router.put('/versions/:versionId/current', async (req, res) => {
 router.post('/versions/:versionId/submit', async (req, res) => {
   try {
     const { versionId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const { submissionNotes } = req.body;
     
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
     }
     
     const approvalRequest = await MapApprovalService.submitForApproval(
@@ -92,6 +94,7 @@ router.post('/versions/:versionId/submit', async (req, res) => {
     res.status(201).json({ approvalRequest });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+    return;
   }
 });
 
@@ -116,7 +119,7 @@ router.get('/approval-requests/:requestId', async (req, res) => {
 
 // Get pending approval requests
 router.get('/approval-requests', 
-  adminAuthMiddleware(['maps.review', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const requests = await MapApprovalService.getPendingApprovalRequests();
@@ -129,12 +132,12 @@ router.get('/approval-requests',
 
 // Assign reviewer to approval request
 router.put('/approval-requests/:requestId/assign', 
-  adminAuthMiddleware(['maps.review', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const { requestId } = req.params;
       const { moderatorId } = req.body;
-      const currentUserId = req.user?.id;
+      const currentUserId = (req as any).userId;
       
       // If no moderatorId provided, assign to current user
       const assignedModeratorId = moderatorId || currentUserId;
@@ -149,7 +152,7 @@ router.put('/approval-requests/:requestId/assign',
 
 // Get review criteria
 router.get('/review-criteria', 
-  adminAuthMiddleware(['maps.review', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const criteria = await MapApprovalService.getReviewCriteria();
@@ -162,19 +165,21 @@ router.get('/review-criteria',
 
 // Submit review results
 router.post('/approval-requests/:requestId/review', 
-  adminAuthMiddleware(['maps.review', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const { requestId } = req.params;
-      const moderatorId = req.user?.id;
+      const moderatorId = (req as any).userId;
       const { results, decision, moderatorFeedback } = req.body;
       
       if (!moderatorId) {
-        return res.status(401).json({ message: 'Moderator not authenticated' });
+        res.status(401).json({ message: 'Moderator not authenticated' });
+        return;
       }
       
       if (!results || !decision) {
-        return res.status(400).json({ message: 'Review results and decision are required' });
+        res.status(400).json({ message: 'Review results and decision are required' });
+        return;
       }
       
       await MapApprovalService.submitReviewResults(
@@ -194,14 +199,15 @@ router.post('/approval-requests/:requestId/review',
 
 // Publish approved version
 router.post('/versions/:versionId/publish', 
-  adminAuthMiddleware(['maps.publish', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const { versionId } = req.params;
-      const moderatorId = req.user?.id;
+      const moderatorId = (req as any).userId;
       
       if (!moderatorId) {
-        return res.status(401).json({ message: 'Moderator not authenticated' });
+        res.status(401).json({ message: 'Moderator not authenticated' });
+        return;
       }
       
       await MapApprovalService.publishVersion(versionId, moderatorId);
@@ -214,15 +220,16 @@ router.post('/versions/:versionId/publish',
 
 // Archive map
 router.post('/maps/:mapId/archive', 
-  adminAuthMiddleware(['maps.moderate', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const { mapId } = req.params;
-      const moderatorId = req.user?.id;
+      const moderatorId = (req as any).userId;
       const { reason } = req.body;
       
       if (!moderatorId) {
-        return res.status(401).json({ message: 'Moderator not authenticated' });
+        res.status(401).json({ message: 'Moderator not authenticated' });
+        return;
       }
       
       await MapApprovalService.archiveMap(mapId, moderatorId, reason);
@@ -235,7 +242,7 @@ router.post('/maps/:mapId/archive',
 
 // Get map moderation history
 router.get('/maps/:mapId/moderation-history', 
-  adminAuthMiddleware(['maps.view', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const { mapId } = req.params;
@@ -249,7 +256,7 @@ router.get('/maps/:mapId/moderation-history',
 
 // Get approval statistics (admin dashboard)
 router.get('/stats/approvals', 
-  adminAuthMiddleware(['admin.dashboard', 'maps.*']), 
+  requireAdmin, 
   async (req, res) => {
     try {
       const stats = await MapApprovalService.getApprovalStats();
@@ -265,10 +272,11 @@ router.get('/stats/approvals',
 // Get user's maps and their permissions
 router.get('/my-maps', async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
     }
     
     // TODO: Implement getting user's maps with permission levels

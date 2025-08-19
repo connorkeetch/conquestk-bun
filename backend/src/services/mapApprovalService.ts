@@ -1,4 +1,4 @@
-import { query } from '../db/database.js';
+import { query } from '../config/database.js';
 
 export interface MapVersion {
   id: string;
@@ -115,7 +115,7 @@ export class MapApprovalService {
       versionData.changelog, userId
     ]);
     
-    return this.getVersionById(result.lastInsertRowid.toString());
+    return this.getVersionById(result.rows[0]?.id || '1');
   }
   
   static async getCurrentVersion(mapId: string): Promise<MapVersion | null> {
@@ -126,7 +126,7 @@ export class MapApprovalService {
       WHERE v.map_id = ? AND v.is_current = 1
     `, [mapId]);
     
-    return result[0] || null;
+    return result.rows[0] || null;
   }
   
   static async getVersionById(versionId: string): Promise<MapVersion> {
@@ -137,11 +137,11 @@ export class MapApprovalService {
       WHERE v.id = ?
     `, [versionId]);
     
-    if (!result[0]) {
+    if (!result.rows[0]) {
       throw new Error('Version not found');
     }
     
-    return result[0];
+    return result.rows[0];
   }
   
   static async getVersionHistory(mapId: string): Promise<MapVersion[]> {
@@ -153,7 +153,7 @@ export class MapApprovalService {
       ORDER BY v.version_major DESC, v.version_minor DESC, v.version_patch DESC
     `, [mapId]);
     
-    return result;
+    return result.rows;
   }
   
   static async setCurrentVersion(versionId: string): Promise<void> {
@@ -188,7 +188,7 @@ export class MapApprovalService {
       ) VALUES (?, ?, ?, ?)
     `, [versionId, userId, submissionNotes, 'normal']);
     
-    return this.getApprovalRequestById(result.lastInsertRowid.toString());
+    return this.getApprovalRequestById(result.rows[0]?.id || '1');
   }
   
   static async getApprovalRequestById(requestId: string): Promise<MapApprovalRequest> {
@@ -196,11 +196,11 @@ export class MapApprovalService {
       SELECT * FROM map_approval_requests WHERE id = ?
     `, [requestId]);
     
-    if (!result[0]) {
+    if (!result.rows[0]) {
       throw new Error('Approval request not found');
     }
     
-    return result[0];
+    return result.rows[0];
   }
   
   static async getPendingApprovalRequests(): Promise<MapApprovalRequest[]> {
@@ -214,7 +214,7 @@ export class MapApprovalService {
       ORDER BY ar.created_at ASC
     `);
     
-    return result;
+    return result.rows;
   }
   
   static async assignReviewer(requestId: string, moderatorId: string): Promise<void> {
@@ -240,7 +240,7 @@ export class MapApprovalService {
       ORDER BY category, check_order
     `);
     
-    return result;
+    return result.rows;
   }
   
   static async submitReviewResults(requestId: string, moderatorId: string, results: {
@@ -306,7 +306,7 @@ export class MapApprovalService {
       ORDER BY rc.category, rc.check_order
     `, [requestId]);
     
-    return result;
+    return result.rows;
   }
   
   // Publishing and Status Management
@@ -349,11 +349,11 @@ export class MapApprovalService {
       SELECT id FROM map_status WHERE name = ?
     `, [statusName]);
     
-    if (!result[0]) {
+    if (!result.rows[0]) {
       throw new Error(`Status '${statusName}' not found`);
     }
     
-    return result[0].id;
+    return result.rows[0].id;
   }
   
   private static async recordModerationAction(
@@ -380,7 +380,7 @@ export class MapApprovalService {
       ORDER BY ma.created_at DESC
     `, [mapId]);
     
-    return result;
+    return result.rows;
   }
   
   // Statistics and Analytics
@@ -399,7 +399,7 @@ export class MapApprovalService {
       WHERE created_at >= date('now', '-30 days')
     `);
     
-    return result[0] || {};
+    return result.rows[0] || {};
   }
 }
 
