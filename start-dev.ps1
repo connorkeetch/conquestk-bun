@@ -78,7 +78,7 @@ function Test-Port {
 }
 
 # Check if required ports are available
-$backendPort = 5000
+$backendPort = 5001
 $frontendPort = 5173  # Vite default
 
 if (Test-Port $backendPort) {

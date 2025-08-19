@@ -19,6 +19,11 @@ backend/dist/
 .env.test.local
 .env.production.local
 
+# Environment strategy files (keep these, but don't commit sensitive versions)
+# .env.development  # Safe to commit with dummy values
+# .env.production   # Safe to commit with dummy values
+# Note: Actual sensitive environment files are handled by deployment
+
 # Logs
 logs
 *.log

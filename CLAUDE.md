@@ -131,7 +131,25 @@ npm run lint               # Run all linting
 
 ## ⚙️ Environment Configuration
 
-Environment variables are auto-configured by setup script:
+### Environment Strategy
+The project now uses a multi-environment approach for better development and deployment workflows:
+
+**Available Environments:**
+- **Development** (`.env.development`) - SQLite for fast local development
+- **Production** (`.env.production`) - Railway PostgreSQL for live deployment
+
+**Quick Environment Switching:**
+```bash
+# Switch to development (SQLite)
+.\switch-env.ps1 development
+
+# Switch to production (Railway)
+.\switch-env.ps1 production
+
+# Current environment is always in backend/.env
+```
+
+### Default Configuration
 
 **Frontend** (`frontend/.env`):
 ```env
@@ -139,13 +157,22 @@ VITE_API_URL=http://localhost:5001/api
 VITE_SOCKET_URL=http://localhost:5001
 ```
 
-**Backend** (`backend/.env`):
+**Backend Development** (`backend/.env.development`):
 ```env
 NODE_ENV=development
 PORT=5001
-JWT_SECRET=auto-generated
-DB_TYPE=postgresql  # or sqlite fallback
-DATABASE_URL=auto-configured
+DB_TYPE=sqlite
+SQLITE_DB_PATH=./risk_game.db
+JWT_SECRET=your-super-secret-jwt-key-for-development-only
+```
+
+**Backend Production** (`backend/.env.production`):
+```env
+NODE_ENV=production
+PORT=${PORT:-5001}
+DB_TYPE=postgresql
+DATABASE_URL=${DATABASE_URL}
+FRONTEND_URL=https://conquestk.com
 ```
 
 ## 🔧 Common Issues & Fixes
@@ -238,6 +265,16 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
   - ✅ SQLite compatibility for local development
   - ✅ Complete schema with all required tables
   - ✅ Proper JSONB handling for cross-database compatibility
+
+### **Environment Strategy Implementation** ✅ (Aug 2025)
+- **Issue**: Port conflicts and inconsistent environment configuration
+- **Solution**: Implemented multi-environment approach with easy switching
+- **Result**: Clean development workflow
+  - ✅ Fixed port mismatch between setup script (5000) and config (5001)
+  - ✅ Separate environment files for development and production
+  - ✅ PowerShell script for easy environment switching
+  - ✅ SQLite for fast local development, PostgreSQL for production
+  - ✅ No 500 errors - registration and API endpoints working correctly
 
 ## 📋 Available Commands
 
