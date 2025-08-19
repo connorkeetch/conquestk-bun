@@ -228,7 +228,7 @@ export const MapVersionManager: React.FC = () => {
       )}
 
       {/* Versions List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600">
         {versions.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-gray-400 text-6xl mb-4">📝</div>
@@ -268,7 +268,7 @@ export const MapVersionManager: React.FC = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-slate-800 divide-y divide-slate-600">
                 {versions.map((version) => (
                   <tr key={version.id} className={version.isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}>
                     <td className="px-6 py-4">
@@ -342,7 +342,7 @@ export const MapVersionManager: React.FC = () => {
       {/* Create Version Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Create New Version
             </h3>

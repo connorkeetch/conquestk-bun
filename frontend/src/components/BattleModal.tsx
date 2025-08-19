@@ -65,13 +65,13 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full m-4">
+      <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-w-md w-full m-4">
         <div className="p-6">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Battle Results
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-300">
               {battleResult.fromTerritory.name} vs {battleResult.toTerritory.name}
             </p>
           </div>
@@ -80,7 +80,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             {/* Attacker */}
             <div className="text-center">
               <h3 className="font-semibold text-red-600 mb-3">Attacker</h3>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-300 mb-2">
                 {battleResult.fromTerritory.name}
               </p>
               {renderDice(battleResult.attackerDice, 'bg-red-500')}
@@ -95,7 +95,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   </span>
                 )}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400">
                 {battleResult.fromTerritory.armies} armies remaining
               </p>
             </div>
@@ -103,7 +103,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             {/* Defender */}
             <div className="text-center">
               <h3 className="font-semibold text-blue-600 mb-3">Defender</h3>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-300 mb-2">
                 {battleResult.toTerritory.name}
               </p>
               {renderDice(battleResult.defenderDice, 'bg-blue-500')}
@@ -118,7 +118,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   </span>
                 )}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400">
                 {battleResult.toTerritory.armies} armies remaining
               </p>
             </div>
@@ -126,12 +126,12 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
           {/* Conquest Message */}
           {battleResult.conquered && (
-            <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4 mb-4">
+            <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4 mb-4">
               <div className="text-center">
-                <h3 className="font-bold text-yellow-800 text-lg mb-1">
+                <h3 className="font-bold text-yellow-300 text-lg mb-1">
                   Territory Conquered! 🎉
                 </h3>
-                <p className="text-yellow-700 text-sm">
+                <p className="text-yellow-200 text-sm">
                   {battleResult.toTerritory.name} is now under your control
                 </p>
               </div>
@@ -139,7 +139,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
           )}
 
           {/* Battle Explanation */}
-          <div className="bg-gray-50 rounded-lg p-3 mb-4 text-xs text-gray-600">
+          <div className="bg-slate-700/50 rounded-lg p-3 mb-4 text-xs text-gray-300">
             <p className="font-medium mb-1">How the battle was resolved:</p>
             <p>
               Highest dice are compared first. Ties go to the defender.

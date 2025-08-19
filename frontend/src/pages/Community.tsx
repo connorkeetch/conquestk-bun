@@ -92,20 +92,22 @@ const Community: React.FC = () => {
       {/* Community Features */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {communityFeatures.map((feature) => (
-          <Link
+          <div
             key={feature.path}
-            to={feature.path}
-            className={`group bg-gradient-to-br ${feature.color} rounded-xl p-6 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl`}
+            className={`relative group bg-gradient-to-br ${feature.color} rounded-xl p-6 transition-all duration-300 opacity-60 cursor-not-allowed shadow-lg`}
           >
+            <div className="absolute top-2 right-2">
+              <span className="bg-black/30 text-white px-2 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+            </div>
             <div className="text-center">
-              <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">
+              <div className="text-4xl mb-3">
                 {feature.icon}
               </div>
               <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
               <p className="text-gray-100 text-sm opacity-90 mb-3">{feature.description}</p>
               <div className="text-xs text-gray-200 opacity-75">{feature.stats}</div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
@@ -135,12 +137,12 @@ const Community: React.FC = () => {
               </div>
             ))}
           </div>
-          <Link
-            to="/community/leaderboards"
-            className="block mt-4 text-center text-blue-400 hover:text-blue-300 text-sm font-medium"
-          >
-            View Full Leaderboard →
-          </Link>
+          <div className="mt-4 text-center">
+            <span className="inline-block text-gray-500 text-sm font-medium cursor-not-allowed">
+              <span className="bg-yellow-600/80 text-yellow-100 px-2 py-1 rounded text-xs mr-2">Coming Soon</span>
+              View Full Leaderboard
+            </span>
+          </div>
         </div>
 
         {/* Recent Activity */}
@@ -165,9 +167,10 @@ const Community: React.FC = () => {
             ))}
           </div>
           <div className="mt-4 text-center">
-            <button className="text-blue-400 hover:text-blue-300 text-sm font-medium">
-              View All Activity →
-            </button>
+            <span className="inline-block text-gray-500 text-sm font-medium cursor-not-allowed">
+              <span className="bg-yellow-600/80 text-yellow-100 px-2 py-1 rounded text-xs mr-2">Coming Soon</span>
+              View All Activity
+            </span>
           </div>
         </div>
       </div>
@@ -177,18 +180,18 @@ const Community: React.FC = () => {
         <h2 className="text-2xl font-bold text-white mb-4">Join the Community</h2>
         <p className="text-blue-100 mb-6">Connect with players from around the world and climb the ranks!</p>
         <div className="flex justify-center space-x-4">
-          <Link
-            to="/community/tournaments"
-            className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-white"
-          >
-            Join Tournament
-          </Link>
-          <Link
-            to="/community/friends"
-            className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-white"
-          >
-            Find Friends
-          </Link>
+          <div className="relative">
+            <span className="bg-white/10 px-6 py-3 rounded-lg font-medium text-white cursor-not-allowed opacity-60">
+              Join Tournament
+            </span>
+            <span className="absolute -top-2 -right-2 bg-yellow-600/80 text-yellow-100 px-2 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+          </div>
+          <div className="relative">
+            <span className="bg-white/10 px-6 py-3 rounded-lg font-medium text-white cursor-not-allowed opacity-60">
+              Find Friends
+            </span>
+            <span className="absolute -top-2 -right-2 bg-yellow-600/80 text-yellow-100 px-2 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+          </div>
         </div>
       </div>
     </div>

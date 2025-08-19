@@ -22,7 +22,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
+      <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
         {/* Header */}
         <div className={`p-6 text-center ${
           winner ? 'bg-gradient-to-r from-yellow-400 to-orange-500' : 'bg-gradient-to-r from-gray-600 to-gray-700'
@@ -46,18 +46,18 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                    style={{ backgroundColor: winner.color }}>
                 {winner.username.charAt(0).toUpperCase()}
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+              <h3 className="text-xl font-bold text-white mb-2">
                 Champion: {winner.username}
               </h3>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-yellow-800">Final Territories:</span>
-                    <div className="text-yellow-700">{winner.territories.length}</div>
+                    <span className="font-medium text-yellow-300">Final Territories:</span>
+                    <div className="text-yellow-200">{winner.territories.length}</div>
                   </div>
                   <div>
-                    <span className="font-medium text-yellow-800">Total Armies:</span>
-                    <div className="text-yellow-700">{winner.armies}</div>
+                    <span className="font-medium text-yellow-300">Total Armies:</span>
+                    <div className="text-yellow-200">{winner.armies}</div>
                   </div>
                 </div>
               </div>
@@ -66,13 +66,13 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
           {eliminatedPlayers.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-700 mb-3 text-center">
+              <h4 className="font-semibold text-gray-300 mb-3 text-center">
                 Players Eliminated This Turn
               </h4>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4">
                 <div className="flex flex-wrap gap-2 justify-center">
                   {eliminatedPlayers.map(playerId => (
-                    <div key={playerId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+                    <div key={playerId} className="bg-red-800/50 text-red-300 px-3 py-1 rounded-full text-sm">
                       Player eliminated
                     </div>
                   ))}
@@ -82,16 +82,16 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           )}
 
           {/* Game Statistics */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-gray-700 mb-3 text-center">Game Summary</h4>
+          <div className="bg-slate-700/50 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-gray-300 mb-3 text-center">Game Summary</h4>
             <div className="grid grid-cols-2 gap-4 text-sm text-center">
               <div>
-                <div className="font-medium text-gray-600">Duration</div>
-                <div className="text-gray-800">Epic Battle</div>
+                <div className="font-medium text-gray-400">Duration</div>
+                <div className="text-gray-200">Epic Battle</div>
               </div>
               <div>
-                <div className="font-medium text-gray-600">Final Turn</div>
-                <div className="text-gray-800">Turn Complete</div>
+                <div className="font-medium text-gray-400">Final Turn</div>
+                <div className="text-gray-200">Turn Complete</div>
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             )}
             <button 
               onClick={onClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 px-4 rounded-lg font-semibold transition-colors"
+              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
             >
               📊 View Final Board
             </button>

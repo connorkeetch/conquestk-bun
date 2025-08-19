@@ -150,7 +150,7 @@ export const AdminMapReviews: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Map Review Queue</h1>
@@ -208,7 +208,7 @@ export const AdminMapReviews: React.FC = () => {
       )}
 
       {/* Review Queue */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">
@@ -360,7 +360,7 @@ export const AdminMapReviews: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button

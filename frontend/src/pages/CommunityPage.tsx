@@ -14,41 +14,44 @@ const CommunityPage: React.FC = () => {
 
       <div className="flex gap-2 mb-8 border-b border-gray-700">
         <button 
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
             activeTab === 'forum' 
               ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-white'
+              : 'text-gray-500'
           }`}
-          onClick={() => setActiveTab('forum')}
+          disabled
         >
           💬 Forum
         </button>
         <button 
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
             activeTab === 'clans' 
               ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-white'
+              : 'text-gray-500'
           }`}
-          onClick={() => setActiveTab('clans')}
+          disabled
         >
           ⚔️ Clans
         </button>
         <button 
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
             activeTab === 'events' 
               ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-white'
+              : 'text-gray-500'
           }`}
-          onClick={() => setActiveTab('events')}
+          disabled
         >
           🎉 Events
         </button>
       </div>
 
-      <div className="text-center text-gray-400 py-16">
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-8 border border-slate-700 text-center">
         <div className="text-6xl mb-4">👥</div>
-        <p className="text-lg">Community features will be implemented here</p>
-        <p className="text-sm mt-2">This will include forums, clans, events, and social features</p>
+        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4 mb-4">
+          <span className="bg-yellow-600/80 text-yellow-100 px-3 py-1 rounded-full text-sm font-medium">Coming Soon</span>
+        </div>
+        <p className="text-lg text-gray-300 mb-2">Community features will be implemented here</p>
+        <p className="text-sm text-gray-400">This will include forums, clans, events, and social features</p>
       </div>
     </div>
   );
