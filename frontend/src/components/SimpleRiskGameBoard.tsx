@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { SimpleMapSVG } from './SimpleMapSVG';
+import { TestMapSVG } from './TestMapSVG';
 import { GamePhaseControls } from './GamePhaseControls';
 import { GameOverModal } from './GameOverModal';
 import territoryData from '../data/simple-territories.json';
@@ -147,6 +148,14 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({
   }, []);
 
   const currentPlayerInfo = players.find(p => p.id === currentPlayer);
+  
+  // Determine which map to use based on mapId in game config
+  const mapId = gameState.gameConfig?.mapId;
+  const isTestMap = mapId === 'test-simple-world' || mapId === 'test-mini-risk';
+  const mapType = mapId === 'test-mini-risk' ? 'mini-risk' : 'simple-world';
+  const mapTitle = mapId === 'test-mini-risk' ? 'Mini Risk' : 
+                   mapId === 'test-simple-world' ? 'Simple World' : 
+                   '🏰 Fantasy Realms';
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg overflow-hidden shadow-lg">
@@ -155,7 +164,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2">
-              🏰 Fantasy Realms
+              {mapTitle}
             </h2>
             <div className="text-sm opacity-75 mt-1">
               Phase: {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} | Turn: {gameState.turn}
@@ -179,20 +188,35 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({
         {/* Map Area */}
         <div className="flex-1 relative p-4">
           <div className="relative w-full h-full">
-            <SimpleMapSVG
-              territories={territories}
-              onTerritoryClick={handleTerritoryClick}
-              onTerritoryHover={handleTerritoryHover}
-              getTerritoryColor={getTerritoryColor}
-              hoveredTerritory={hoveredTerritory}
-              selectedTerritory={selectedTerritory}
-              selectedTargetTerritory={selectedTargetTerritory}
-              validTargets={validTargets}
-              pendingAction={pendingAction}
-            />
+            {isTestMap ? (
+              <TestMapSVG
+                territories={territories}
+                onTerritoryClick={handleTerritoryClick}
+                onTerritoryHover={handleTerritoryHover}
+                getTerritoryColor={getTerritoryColor}
+                hoveredTerritory={hoveredTerritory}
+                selectedTerritory={selectedTerritory}
+                selectedTargetTerritory={selectedTargetTerritory}
+                validTargets={validTargets}
+                pendingAction={pendingAction}
+                mapType={mapType as 'simple-world' | 'mini-risk'}
+              />
+            ) : (
+              <SimpleMapSVG
+                territories={territories}
+                onTerritoryClick={handleTerritoryClick}
+                onTerritoryHover={handleTerritoryHover}
+                getTerritoryColor={getTerritoryColor}
+                hoveredTerritory={hoveredTerritory}
+                selectedTerritory={selectedTerritory}
+                selectedTargetTerritory={selectedTargetTerritory}
+                validTargets={validTargets}
+                pendingAction={pendingAction}
+              />
+            )}
             
-            {/* Army Count Overlays */}
-            {Object.entries(territories).map(([territoryId, territory]) => {
+            {/* Army Count Overlays - Disabled since SVG components render armies */}
+            {/* {Object.entries(territories).map(([territoryId, territory]) => {
               if (!territory.armies) return null;
               
               const hasMoved = gameState.movementTracking?.[territoryId] || false;
@@ -219,7 +243,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })} */}
           </div>
         </div>
 

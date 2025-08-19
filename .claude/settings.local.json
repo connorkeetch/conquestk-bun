@@ -41,7 +41,11 @@
       "mcp__filesystem__directory_tree",
       "mcp__sequential-thinking__sequentialthinking",
       "mcp__filesystem__get_file_info",
-      "mcp__filesystem__read_multiple_files"
+      "mcp__filesystem__read_multiple_files",
+      "WebFetch(domain:github.com)",
+      "mcp__fetch-server__get_raw_text",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": [],
     "ask": [],
