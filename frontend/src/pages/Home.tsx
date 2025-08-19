@@ -21,36 +21,8 @@ interface Feature {
 
 const Home: React.FC = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
-  const [currentPhase, setCurrentPhase] = useState<'REINFORCE' | 'ATTACK' | 'FORTIFY'>('ATTACK');
 
-  const mockGameRooms: GameRoom[] = [
-    {
-      id: '1',
-      name: 'World Domination',
-      players: 4,
-      maxPlayers: 6,
-      map: 'Classic Map',
-      timer: '2min',
-      status: 'waiting'
-    },
-    {
-      id: '2',
-      name: "Pirate's Cove",
-      players: 2,
-      maxPlayers: 4,
-      map: 'Pirate Theme',
-      status: 'waiting'
-    },
-    {
-      id: '3',
-      name: 'Speed Conquest',
-      players: 5,
-      maxPlayers: 6,
-      map: 'Small Map',
-      timer: '30s',
-      status: 'waiting'
-    }
-  ];
+  const mockGameRooms: GameRoom[] = [];
 
   const features: Feature[] = [
     {
@@ -75,25 +47,8 @@ const Home: React.FC = () => {
     }
   ];
 
-  const mockTerritories = [
-    { id: '1', x: 20, y: 25, armies: 8, player: 1 },
-    { id: '2', x: 30, y: 20, armies: 5, player: 2 },
-    { id: '3', x: 40, y: 30, armies: 12, player: 1 },
-    { id: '4', x: 25, y: 40, armies: 3, player: 3 },
-    { id: '5', x: 50, y: 25, armies: 7, player: 4 },
-    { id: '6', x: 60, y: 35, armies: 15, player: 1 },
-    { id: '7', x: 70, y: 30, armies: 9, player: 2 },
-    { id: '8', x: 35, y: 50, armies: 4, player: 3 },
-    { id: '9', x: 55, y: 45, armies: 6, player: 4 },
-    { id: '10', x: 45, y: 60, armies: 10, player: 1 },
-    { id: '11', x: 65, y: 55, armies: 11, player: 2 },
-    { id: '12', x: 75, y: 50, armies: 2, player: 3 }
-  ];
+  const mockTerritories: any[] = [];
 
-  const getPlayerColor = (player: number): string => {
-    const colors = ['', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-    return colors[player] || '#6b7280';
-  };
 
   const getPlayerAvatars = (count: number, maxCount: number) => {
     const avatars = [];
@@ -165,68 +120,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Game Preview */}
-      <section className="container mx-auto px-8 py-16">
-        <div className="card max-w-6xl mx-auto overflow-hidden">
-          {/* Game Header */}
-          <div className="card-header bg-gray-800 border-b border-gray-700">
-            <div className="flex gap-4">
-              <button 
-                className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  currentPhase === 'REINFORCE' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-                }`}
-                onClick={() => setCurrentPhase('REINFORCE')}
-              >
-                REINFORCE
-              </button>
-              <button 
-                className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  currentPhase === 'ATTACK' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-                }`}
-                onClick={() => setCurrentPhase('ATTACK')}
-              >
-                ATTACK
-              </button>
-              <button 
-                className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  currentPhase === 'FORTIFY' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-                }`}
-                onClick={() => setCurrentPhase('FORTIFY')}
-              >
-                FORTIFY
-              </button>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-400">Turn 12</span>
-              <span className="text-blue-400 font-bold">Your Turn</span>
-            </div>
-          </div>
-
-          {/* Game Board Mock */}
-          <div className="relative h-96 bg-gradient-to-br from-blue-900 to-purple-900 overflow-hidden">
-            {mockTerritories.map((territory) => (
-              <div
-                key={territory.id}
-                className="absolute w-12 h-12 rounded-full border-4 border-white flex items-center justify-center font-bold cursor-pointer transition-all duration-300 hover:scale-125 hover:z-10 shadow-lg"
-                style={{
-                  left: `${territory.x}%`,
-                  top: `${territory.y}%`,
-                  backgroundColor: getPlayerColor(territory.player),
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                {territory.armies}
-              </div>
-            ))}
-            
-            {/* Game Phase Indicator */}
-            <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg p-3">
-              <div className="text-sm text-gray-300">Current Phase:</div>
-              <div className="text-lg font-bold text-blue-400">{currentPhase}</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Active Games Lobby */}
       {isAuthenticated && (
@@ -269,16 +162,18 @@ const Home: React.FC = () => {
         </section>
       )}
 
-      {/* Features Grid */}
+      {/* Features Section */}
       <section className="container mx-auto px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {features.map((feature, index) => (
-            <div key={index} className="card text-center hover:bg-gray-700 transition-all duration-300">
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-              <p className="text-gray-400 text-sm">{feature.description}</p>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-slate-800/50 rounded-lg p-8 text-center border border-slate-700">
+            <h2 className="text-2xl font-bold text-slate-100 mb-6">Game Features</h2>
+            <div className="text-slate-300 space-y-3 select-none">
+              <p><span className="text-2xl mr-2">🎲</span> <strong>Real-time Battles</strong> - Authentic dice mechanics with smooth animations</p>
+              <p><span className="text-2xl mr-2">🌍</span> <strong>Multiple Maps</strong> - Classic world map plus themed variations</p>
+              <p><span className="text-2xl mr-2">👥</span> <strong>6 Player Support</strong> - Epic battles with up to 6 simultaneous players</p>
+              <p><span className="text-2xl mr-2">🎨</span> <strong>Custom Themes</strong> - Choose from multiple visual themes</p>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 

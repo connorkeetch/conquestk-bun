@@ -16,12 +16,13 @@ declare global {
   }
 }
 
-export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+export const requireAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).userId;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      res.status(401).json({ error: 'Authentication required' });
+      return;
     }
 
     const isAdmin = await adminService.isAdmin(userId);
@@ -35,7 +36,8 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
         req.get('User-Agent')
       );
       
-      return res.status(403).json({ error: 'Admin access required' });
+      res.status(403).json({ error: 'Admin access required' });
+      return;
     }
 
     // Get admin info for request context
@@ -51,16 +53,18 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
   } catch (error) {
     logger.error('Admin authentication error:', error);
     res.status(500).json({ error: 'Authentication error' });
+    return;
   }
 };
 
 export const requirePermission = (permission: string) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = (req as any).userId;
       
       if (!userId) {
-        return res.status(401).json({ error: 'Authentication required' });
+        res.status(401).json({ error: 'Authentication required' });
+        return;
       }
 
       const hasPermission = await adminService.hasPermission(userId, permission);
@@ -80,16 +84,18 @@ export const requirePermission = (permission: string) => {
           req.get('User-Agent')
         );
         
-        return res.status(403).json({ 
+        res.status(403).json({ 
           error: 'Insufficient permissions',
           required: permission 
         });
+        return;
       }
 
       next();
     } catch (error) {
       logger.error('Permission check error:', error);
       res.status(500).json({ error: 'Permission check failed' });
+      return;
     }
   };
 };

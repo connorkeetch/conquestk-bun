@@ -43,11 +43,11 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = "" }) => {
   };
 
   const getUserStats = () => {
-    // Mock stats - replace with real data from user profile
+    // TODO: Replace with real data from user profile API
     return {
-      level: 12,
-      gamesWon: 47,
-      winRate: 73
+      level: 1,
+      gamesWon: 0,
+      winRate: 0
     };
   };
 

@@ -42,7 +42,6 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/lobby/browse', label: 'Browse Public Games', icon: '🌍' },
         { path: '/community', label: 'Find Friends', icon: '👥' },
         { path: '/learn/tutorial', label: 'Tutorial', icon: '📚' },
-        { path: '/simple-map', label: 'Practice vs AI', icon: '🤖' }
       ]
     },
     {
@@ -65,8 +64,6 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/editor/browse', label: 'Browse Maps', icon: '🖼️' },
         { path: '/editor/new', label: 'Create Map', icon: '✏️' },
         { path: '/maps', label: 'My Maps', icon: '📁' },
-        { path: '/simple-map', label: 'Simple Demo', icon: '🏰' },
-        { path: '/risk-map', label: 'Risk Demo', icon: '🌍' }
       ]
     }
   ];
@@ -127,7 +124,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             
             <Link to="/" className="logo">
-              ⚔️ CONQUEST
+              ⚔️ CONQUEST K
             </Link>
           </div>
 
@@ -159,7 +156,7 @@ export default function Layout({ children }: LayoutProps) {
       <div className={`slide-menu ${isMenuOpen ? 'active' : ''}`}>
         {/* Menu Header */}
         <div className="menu-header">
-          <div className="logo" style={{ fontSize: '1.25rem' }}>⚔️ CONQUEST</div>
+          <div className="logo" style={{ fontSize: '1.25rem' }}>⚔️ CONQUEST K</div>
           <div className="menu-close" onClick={toggleMenu}>✕</div>
         </div>
 
@@ -169,21 +166,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="user-avatar">{getUserInitial()}</div>
             <div className="user-name">{user?.username}</div>
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Rank: Field Marshal
-            </div>
-            <div className="user-stats">
-              <div className="stat-item">
-                <div className="stat-value">147</div>
-                <div className="stat-label">WINS</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">82%</div>
-                <div className="stat-label">WIN RATE</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">2,341</div>
-                <div className="stat-label">RATING</div>
-              </div>
+              Welcome back!
             </div>
           </div>
         )}

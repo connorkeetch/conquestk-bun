@@ -49,6 +49,9 @@ export default function MapEditor() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // Load metadata on component mount
   useEffect(() => {
@@ -350,23 +353,30 @@ export default function MapEditor() {
   }
 
   const processImageFile = (file: File) => {
+    // Clear previous errors
+    setUploadError(null)
+    
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (PNG, JPG, GIF, WEBP)')
+      setUploadError('Please select an image file (PNG, JPG, GIF, WEBP)')
       return
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Image file must be smaller than 10MB')
+      setUploadError('Image file must be smaller than 10MB')
       return
     }
 
+    setIsUploading(true)
+    setUploadProgress(10)
+    
     // Store the actual file for upload
     setSelectedFile(file)
     
     // Create preview URL for canvas display
     const imageUrl = URL.createObjectURL(file)
+    setUploadProgress(50)
     
     // Get image dimensions
     const img = new Image()
@@ -377,7 +387,20 @@ export default function MapEditor() {
         imageWidth: img.width,
         imageHeight: img.height
       }))
+      
+      setUploadProgress(100)
+      setTimeout(() => {
+        setIsUploading(false)
+        setUploadProgress(0)
+      }, 500)
     }
+    
+    img.onerror = () => {
+      setUploadError('Failed to load image. Please try a different file.')
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+    
     img.src = imageUrl
   }
 
@@ -637,9 +660,10 @@ export default function MapEditor() {
   const selectedTerritoryData = state.territories.find(t => t.id === state.selectedTerritory)
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">🗺️ Map Editor</h1>
+    <div className="min-h-screen bg-slate-900 text-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-slate-100">🗺️ Map Editor</h1>
         <div className="space-x-2">
           <button 
             onClick={saveMap}
@@ -716,8 +740,8 @@ export default function MapEditor() {
         {/* Tools Panel */}
         <div className="space-y-4">
           {/* Map Setup */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">🗺️ Map Setup</h3>
+          <div className="bg-slate-800 rounded-lg p-4">
+            <h3 className="text-lg font-bold mb-3 text-slate-100">🗺️ Map Setup</h3>
             <div className="space-y-4">
               {/* Background Image Upload */}
               <div>
@@ -733,16 +757,38 @@ export default function MapEditor() {
                   onDrop={handleDrop}
                 >
                   <div className="text-center">
+                    {/* Upload Error Display */}
+                    {uploadError && (
+                      <div className="mb-3 p-2 bg-red-900/50 border border-red-600 rounded text-red-300 text-xs">
+                        ❌ {uploadError}
+                      </div>
+                    )}
+                    
+                    {/* Upload Progress Bar */}
+                    {isUploading && (
+                      <div className="mb-3 space-y-1">
+                        <div className="text-slate-300 text-xs">Processing image...</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div 
+                            className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-slate-400">{uploadProgress}%</div>
+                      </div>
+                    )}
+                    
                     {state.imageUrl ? (
                       <div className="space-y-2">
-                        <div className="text-sm text-green-400 font-medium">✅ Image Loaded</div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-sm text-emerald-400 font-medium">✅ Image Loaded</div>
+                        <div className="text-xs text-slate-400">
                           {state.imageWidth} × {state.imageHeight} pixels
                         </div>
                         <div className="flex justify-center space-x-2">
                           <button 
                             onClick={() => fileInputRef.current?.click()}
-                            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs"
+                            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs transition-colors"
+                            disabled={isUploading}
                           >
                             Change
                           </button>
@@ -750,8 +796,10 @@ export default function MapEditor() {
                             onClick={() => {
                               setState(prev => ({ ...prev, imageUrl: undefined }))
                               setSelectedFile(null)
+                              setUploadError(null)
                             }}
-                            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs"
+                            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs transition-colors"
+                            disabled={isUploading}
                           >
                             Remove
                           </button>
@@ -762,10 +810,10 @@ export default function MapEditor() {
                         <div className="text-2xl">
                           {isDragOver ? '📂' : '🖼️'}
                         </div>
-                        <div className="text-sm text-gray-300 font-medium">
+                        <div className="text-sm text-slate-300 font-medium">
                           {isDragOver ? 'Drop image here' : 'Upload Background'}
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-slate-400">
                           {isDragOver ? (
                             'Release to upload'
                           ) : (
@@ -776,10 +824,10 @@ export default function MapEditor() {
                             </>
                           )}
                         </div>
-                        {!isDragOver && (
+                        {!isDragOver && !isUploading && (
                           <button 
                             onClick={() => fileInputRef.current?.click()}
-                            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
+                            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition-colors"
                           >
                             Choose File
                           </button>
@@ -788,29 +836,29 @@ export default function MapEditor() {
                     )}
                   </div>
                 </div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="mt-1 text-xs text-slate-400">
                   💡 Start by uploading a map image, then draw territories on top
                 </div>
               </div>
 
               {/* Map Details */}
               <div>
-                <label className="block text-sm font-medium mb-1">Map Name</label>
+                <label className="block text-sm font-medium mb-1 text-slate-200">Map Name</label>
                 <input
                   type="text"
                   value={mapName}
                   onChange={(e) => setMapName(e.target.value)}
-                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                  className="max-w-md px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   placeholder="Enter map name..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium mb-1 text-slate-200">Description</label>
                 <textarea
                   value={mapDescription}
                   onChange={(e) => setMapDescription(e.target.value)}
-                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
-                  rows={2}
+                  className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  rows={3}
                   placeholder="Describe your map..."
                 />
               </div>
@@ -820,16 +868,16 @@ export default function MapEditor() {
                   id="isPublic"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="rounded"
+                  className="rounded text-blue-500 bg-slate-700 border-slate-600 focus:ring-blue-500"
                 />
-                <label htmlFor="isPublic" className="text-sm">Make Public</label>
+                <label htmlFor="isPublic" className="text-sm text-slate-200">Make Public</label>
               </div>
             </div>
           </div>
 
           {/* Tools */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">Tools</h3>
+          <div className="bg-slate-800 rounded-lg p-4">
+            <h3 className="text-lg font-bold mb-3 text-slate-100">Tools</h3>
             <div className="space-y-2">
               {[
                 { id: 'select', name: '👆 Select Tool', desc: 'Select territories' },
@@ -840,10 +888,10 @@ export default function MapEditor() {
                 <button
                   key={tool.id}
                   onClick={() => setState(prev => ({ ...prev, selectedTool: tool.id as EditorTool }))}
-                  className={`w-full px-3 py-2 rounded text-sm text-left ${
+                  className={`w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${
                     state.selectedTool === tool.id
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 hover:bg-gray-600'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                   }`}
                 >
                   <div className="font-medium">{tool.name}</div>
@@ -855,25 +903,25 @@ export default function MapEditor() {
 
           {/* Territory Properties */}
           {state.selectedTool === 'territory' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-lg font-bold mb-3">New Territory</h3>
+            <div className="bg-slate-800 rounded-lg p-4">
+              <h3 className="text-lg font-bold mb-3 text-slate-100">New Territory</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Territory Name</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-200">Territory Name</label>
                   <input
                     type="text"
                     value={newTerritoryName}
                     onChange={(e) => setNewTerritoryName(e.target.value)}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                    className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     placeholder="Enter name..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Continent</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-200">Continent</label>
                   <select 
                     value={state.selectedContinent || ''}
                     onChange={(e) => setState(prev => ({ ...prev, selectedContinent: e.target.value || undefined }))}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                    className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   >
                     <option value="">No continent</option>
                     {state.continents.map(continent => (
@@ -1110,6 +1158,7 @@ export default function MapEditor() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

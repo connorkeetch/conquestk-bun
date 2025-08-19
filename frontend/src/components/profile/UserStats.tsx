@@ -63,59 +63,53 @@ const UserStats: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Mock data for now - will be replaced with API calls
-    const mockStats: DetailedStats = {
+    // TODO: Replace with real API calls when backend is ready
+    const emptyStats: DetailedStats = {
       general: {
-        gamesPlayed: 147,
-        gamesWon: 89,
-        gamesLost: 58,
-        winRate: 60.5,
-        averageGameDuration: 45,
-        totalPlayTime: 6825,
-        ranking: 342,
-        rankingChange: +15,
-        longestWinStreak: 12,
-        currentWinStreak: 3
+        gamesPlayed: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        winRate: 0,
+        averageGameDuration: 0,
+        totalPlayTime: 0,
+        ranking: 0,
+        rankingChange: 0,
+        longestWinStreak: 0,
+        currentWinStreak: 0
       },
       performance: {
-        territoriesConquered: 2834,
-        territoriesLost: 1967,
-        armiesDeployed: 15678,
-        battlesWon: 1834,
-        battlesLost: 1203,
-        averageArmiesPerGame: 106.7,
-        quickestVictory: 18,
-        comebackWins: 23
+        territoriesConquered: 0,
+        territoriesLost: 0,
+        armiesDeployed: 0,
+        battlesWon: 0,
+        battlesLost: 0,
+        averageArmiesPerGame: 0,
+        quickestVictory: 0,
+        comebackWins: 0
       },
       maps: {
-        favoriteMap: 'Classic World',
-        mapStats: [
-          { mapName: 'Classic World', gamesPlayed: 45, winRate: 67 },
-          { mapName: 'Europe', gamesPlayed: 32, winRate: 59 },
-          { mapName: 'Asia', gamesPlayed: 28, winRate: 54 },
-          { mapName: 'Custom Islands', gamesPlayed: 23, winRate: 61 },
-          { mapName: 'North America', gamesPlayed: 19, winRate: 58 }
-        ]
+        favoriteMap: 'None',
+        mapStats: []
       },
       gameModes: {
-        classicWins: 52,
-        capitalConquestWins: 18,
-        navalSupremacyWins: 12,
-        resourceWarWins: 5,
-        asymmetricWins: 2
+        classicWins: 0,
+        capitalConquestWins: 0,
+        navalSupremacyWins: 0,
+        resourceWarWins: 0,
+        asymmetricWins: 0
       },
       monthly: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-        gamesPlayed: [8, 12, 15, 18, 22, 19, 25, 28],
-        winRate: [58, 62, 59, 65, 61, 68, 64, 63]
+        labels: [],
+        gamesPlayed: [],
+        winRate: []
       }
     };
 
     // Simulate API loading
     setTimeout(() => {
-      setStats(mockStats);
+      setStats(emptyStats);
       setLoading(false);
-    }, 800);
+    }, 300);
   }, [selectedPeriod]);
 
   const formatDuration = (minutes: number): string => {
