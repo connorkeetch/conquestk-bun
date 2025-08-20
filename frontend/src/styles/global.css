@@ -617,6 +617,11 @@ kbd {
   background-clip: text;
 }
 
+/* Custom Transform Utilities */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
 .text-center { text-align: center; }
 .text-left { text-align: left; }
 .text-right { text-align: right; }
