@@ -82,6 +82,8 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                maxLength={50}
+                autoComplete="username"
                 className="w-full px-4 py-3 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
                 placeholder="Enter your username (e.g., CommanderKeetch)"
               />
@@ -98,6 +100,8 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                maxLength={255}
+                autoComplete="email"
                 className="w-full px-4 py-3 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
                 placeholder="Enter your email address"
               />
@@ -115,6 +119,8 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  maxLength={128}
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 pr-12 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
                   placeholder="Create a strong password"
                 />
@@ -163,6 +169,8 @@ export default function Register() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  maxLength={128}
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 pr-12 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
                   placeholder="Confirm your password"
                 />
