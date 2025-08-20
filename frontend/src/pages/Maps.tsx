@@ -18,44 +18,7 @@ const Maps: React.FC = () => {
     { id: 'my-maps', label: 'My Maps', icon: '💝' }
   ];
 
-  const officialMaps = [
-    {
-      id: '1',
-      name: 'Classic World',
-      description: 'The original Risk world map with 42 territories',
-      territories: 42,
-      rating: 4.9,
-      games: 1234,
-      thumbnail: '🌍'
-    },
-    {
-      id: '2',
-      name: 'Europe',
-      description: 'Strategic battles across European nations',
-      territories: 32,
-      rating: 4.7,
-      games: 892,
-      thumbnail: '🏰'
-    },
-    {
-      id: '3',
-      name: 'Asia',
-      description: 'Conquer the vast Asian continent',
-      territories: 28,
-      rating: 4.6,
-      games: 667,
-      thumbnail: '🏯'
-    },
-    {
-      id: '4',
-      name: 'Americas',
-      description: 'From Alaska to Argentina',
-      territories: 30,
-      rating: 4.8,
-      games: 445,
-      thumbnail: '🗽'
-    }
-  ];
+  // Note: Mock maps removed - will be populated from backend when maps are implemented
 
   const getRatingStars = (rating: number) => {
     const stars = Math.floor(rating);
@@ -123,54 +86,50 @@ const Maps: React.FC = () => {
         </div>
       </div>
 
-      {/* Maps Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {officialMaps.map((map) => (
-          <Link
-            key={map.id}
-            to={`/maps/${map.id}`}
-            className="group bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl"
-          >
-            {/* Map Thumbnail */}
-            <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-6xl group-hover:scale-110 transition-transform duration-300">
-              {map.thumbnail}
-            </div>
-
-            {/* Map Info */}
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
-                {map.name}
-              </h3>
-              <p className="text-gray-400 text-sm mb-3 line-clamp-2">{map.description}</p>
-              
-              {/* Stats */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Territories</span>
-                  <span className="text-white font-medium">{map.territories}</span>
+      {/* Coming Soon Content */}
+      <div className="text-center py-20">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-8xl mb-8">🗺️</div>
+          <h2 className="text-3xl font-bold text-white mb-4">Maps Coming Soon</h2>
+          <p className="text-gray-400 text-lg mb-8 leading-relaxed">
+            We're working on building an amazing collection of strategic battlefields. 
+            Soon you'll be able to play on classic maps, browse community creations, 
+            and even build your own territories with our map editor.
+          </p>
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700/50">
+            <h3 className="text-xl font-bold text-white mb-4">What's Coming:</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div className="flex items-start gap-3">
+                <span className="text-green-400 mt-1">✓</span>
+                <div>
+                  <div className="font-semibold text-white">Classic Risk Maps</div>
+                  <div className="text-gray-400 text-sm">World, Europe, Asia & more</div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Rating</span>
-                  <div className="flex items-center space-x-1">
-                    <span className="text-yellow-400 text-xs">{getRatingStars(map.rating)}</span>
-                    <span className="text-white font-medium">{map.rating}</span>
-                  </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-blue-400 mt-1">🚧</span>
+                <div>
+                  <div className="font-semibold text-white">Map Editor</div>
+                  <div className="text-gray-400 text-sm">Create custom battlefields</div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Games Played</span>
-                  <span className="text-green-400 font-medium">{map.games}</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-blue-400 mt-1">🚧</span>
+                <div>
+                  <div className="font-semibold text-white">Community Maps</div>
+                  <div className="text-gray-400 text-sm">Share & discover creations</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-blue-400 mt-1">🚧</span>
+                <div>
+                  <div className="font-semibold text-white">Map Ratings</div>
+                  <div className="text-gray-400 text-sm">Community feedback system</div>
                 </div>
               </div>
             </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Load More */}
-      <div className="mt-12 text-center">
-        <button className="bg-gray-800 hover:bg-gray-700 px-8 py-3 rounded-lg font-medium transition-all duration-200 text-white border border-gray-600">
-          Load More Maps
-        </button>
+          </div>
+        </div>
       </div>
     </div>
   );
