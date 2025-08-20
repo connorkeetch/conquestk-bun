@@ -165,6 +165,8 @@ export default function Layout({ children }: LayoutProps) {
           <div className="nav-links">
             {isAuthenticated ? (
               <>
+                <Link to="/lobby" className="btn btn-secondary">🎯 Find Game</Link>
+                
                 {/* Active Games Dropdown */}
                 <div className="relative">
                   <button 
@@ -219,7 +221,7 @@ export default function Layout({ children }: LayoutProps) {
                   )}
                 </div>
                 
-                <Link to="/create" className="btn btn-primary">Create Game</Link>
+                <Link to="/create" className="btn btn-primary">+ Create Game</Link>
               </>
             ) : (
               <>
@@ -235,7 +237,7 @@ export default function Layout({ children }: LayoutProps) {
       <div className={`slide-menu ${isMenuOpen ? 'active' : ''}`}>
         {/* Menu Header */}
         <div className="menu-header">
-          <div className="logo" style={{ fontSize: '1.25rem' }}>⚔️ CONQUEST K</div>
+          <Link to="/" className="logo" style={{ fontSize: '1.25rem' }} onClick={() => setIsMenuOpen(false)}>⚔️ CONQUEST K</Link>
           <div className="menu-close" onClick={toggleMenu}>✕</div>
         </div>
 

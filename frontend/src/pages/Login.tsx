@@ -25,13 +25,15 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">⚔️ CONQUEST K</h1>
+          <Link to="/" className="inline-block">
+            <h1 className="text-4xl font-bold text-white mb-2 hover:opacity-80 transition-opacity">⚔️ CONQUEST K</h1>
+          </Link>
           <p className="text-gray-400">Welcome back, Commander</p>
         </div>
         
         {/* Form Card */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Sign In</h2>
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">Login</h2>
           
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg mb-6 text-sm flex items-center gap-2">
@@ -118,10 +120,10 @@ export default function Login() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  Logging in...
                 </span>
               ) : (
-                'Sign In'
+                'Login'
               )}
             </button>
           </form>

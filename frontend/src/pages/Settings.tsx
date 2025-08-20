@@ -48,7 +48,7 @@ export default function Settings() {
     const renderComingSoonBadge = () => {
       if (!setting.isWorking) {
         return (
-          <div className="absolute top-2 right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold">
+          <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
             Coming Soon
           </div>
         );
@@ -508,7 +508,7 @@ export default function Settings() {
                   <button className="btn btn-secondary mb-3 opacity-50 cursor-not-allowed" disabled>
                     📁 Upload New Avatar
                   </button>
-                  <div className="absolute top-0 right-0 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold -mt-2 -mr-2">
+                  <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
                     Coming Soon
                   </div>
                 </div>

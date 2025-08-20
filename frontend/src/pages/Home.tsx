@@ -41,7 +41,7 @@ const Home: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-20">
       {/* Optimized Hero Section - Reduced Height */}
       <section className="relative overflow-hidden py-20 lg:py-32">
         {/* Animated Background */}
@@ -119,7 +119,7 @@ const Home: React.FC = () => {
                   to="/login" 
                   className="px-8 py-4 text-lg bg-gray-800/50 backdrop-blur-sm border-2 border-gray-600 hover:border-blue-500 text-white font-semibold rounded-xl transform hover:scale-105 transition-all duration-200"
                 >
-                  Sign In
+                  Login
                 </Link>
               </>
             )}

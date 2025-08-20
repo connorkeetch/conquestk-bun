@@ -44,7 +44,9 @@ export default function Register() {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">⚔️ CONQUEST K</h1>
+          <Link to="/" className="inline-block">
+            <h1 className="text-4xl font-bold text-white mb-2 hover:opacity-80 transition-opacity">⚔️ CONQUEST K</h1>
+          </Link>
           <p className="text-gray-400">Join the battle for world domination</p>
         </div>
         

@@ -683,6 +683,86 @@ kbd {
   text-align: center;
 }
 
+/* Dark Theme Form Control Overrides */
+input[type="radio"],
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #4b5563;
+  background-color: #374151;
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="radio"]:checked,
+input[type="checkbox"]:checked {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+input[type="radio"]:checked::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+input[type="checkbox"]:checked::before {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+}
+
+input[type="radio"]:disabled,
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  background-color: #374151 !important;
+  color: white !important;
+  border: 1px solid #4b5563 !important;
+}
+
+select option {
+  background-color: #1f2937;
+  color: white;
+}
+
+/* Ensure no white backgrounds anywhere */
+* {
+  color: inherit;
+}
+
+*:not(input[type="radio"]:checked::before, input[type="checkbox"]:checked::before, .slider:before) {
+  background-color: inherit;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   :root {
