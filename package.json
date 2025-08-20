@@ -22,9 +22,6 @@
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "clean": "rmdir /s /q backend\\node_modules frontend\\node_modules 2>nul || true",
     "clean:install": "npm run clean && npm run install:all"
