@@ -1,4 +1,4 @@
-import { Territory, Player } from '../types/game';
+import { Territory, GamePlayer } from '../types/game';
 
 export interface Continent {
   id: string;
@@ -120,7 +120,7 @@ export function calculatePlayerContinentStatus(playerId: string, board: Territor
 /**
  * Calculate continent bonuses for all players
  */
-export function calculateAllPlayersContinentStatus(players: Player[], board: Territory[]): PlayerContinentStatus[] {
+export function calculateAllPlayersContinentStatus(players: GamePlayer[], board: Territory[]): PlayerContinentStatus[] {
   return players.map(player => calculatePlayerContinentStatus(player.id, board));
 }
 
