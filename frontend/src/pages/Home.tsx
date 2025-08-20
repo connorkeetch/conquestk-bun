@@ -224,7 +224,7 @@ const Home: React.FC = () => {
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     ⚡ Quick Match
-                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </span>
@@ -245,7 +245,7 @@ const Home: React.FC = () => {
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     ⚡ Join the Battle
-                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </span>
@@ -341,7 +341,7 @@ const Home: React.FC = () => {
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800/50 backdrop-blur-sm border border-gray-600 hover:border-blue-500 text-white font-semibold rounded-lg transition-all duration-200 hover:transform hover:scale-105"
           >
             {isAuthenticated ? "View All Games" : "Join to Play"}
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
           </Link>
@@ -456,19 +456,19 @@ const Home: React.FC = () => {
 
             <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-400">
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 Free to play
               </div>
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 No downloads
               </div>
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 Cross-platform
