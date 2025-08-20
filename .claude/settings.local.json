@@ -45,7 +45,12 @@
       "WebFetch(domain:github.com)",
       "mcp__fetch-server__get_raw_text",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(claude mcp:*)",
+      "mcp__filesystem__read_text_file",
+      "Bash(curl:*)",
+      "mcp__filesystem__write_file",
+      "Bash(claude --version)"
     ],
     "deny": [],
     "ask": [],
