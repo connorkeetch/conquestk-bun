@@ -7,6 +7,7 @@ import { CreateMapRequest, UpdateMapRequest } from '../types/maps';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sizeOf from 'image-size';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps');
@@ -210,6 +211,18 @@ router.post('/',
 
       if (req.file) {
         mapData.imageUrl = `/uploads/maps/${req.file.filename}`;
+        
+        try {
+          // Get image dimensions
+          const dimensions = sizeOf(fs.readFileSync(req.file.path));
+          mapData.imageWidth = dimensions.width || 800;
+          mapData.imageHeight = dimensions.height || 600;
+        } catch (dimensionError) {
+          logger.warn('Failed to get image dimensions:', dimensionError);
+          // Use default dimensions if we can't read the image
+          mapData.imageWidth = 800;
+          mapData.imageHeight = 600;
+        }
       }
 
       const map = await mapService.createMap((req as any).userId, mapData);
@@ -238,6 +251,18 @@ router.put('/:mapId',
 
       if (req.file) {
         updates.imageUrl = `/uploads/maps/${req.file.filename}`;
+        
+        try {
+          // Get image dimensions
+          const dimensions = sizeOf(fs.readFileSync(req.file.path));
+          updates.imageWidth = dimensions.width || 800;
+          updates.imageHeight = dimensions.height || 600;
+        } catch (dimensionError) {
+          logger.warn('Failed to get image dimensions:', dimensionError);
+          // Use default dimensions if we can't read the image
+          updates.imageWidth = 800;
+          updates.imageHeight = 600;
+        }
       }
 
       const map = await mapService.updateMap(req.params.mapId, (req as any).userId, updates);

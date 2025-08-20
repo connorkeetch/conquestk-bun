@@ -27,13 +27,16 @@ export class MapService {
     try {
       // Create the map record
       const mapResult = await client.query(`
-        INSERT INTO maps (name, description, creator_id, is_public, tags)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `, [
         mapData.name,
         mapData.description || null,
         userId,
+        mapData.imageUrl || null,
+        mapData.imageWidth || 800,
+        mapData.imageHeight || 600,
         mapData.isPublic || false,
         JSON.stringify(mapData.tags || [])
       ]);
@@ -98,6 +101,18 @@ export class MapService {
       if (updates.tags !== undefined) {
         updateFields.push('tags = ?');
         updateValues.push(JSON.stringify(updates.tags));
+      }
+      if (updates.imageUrl !== undefined) {
+        updateFields.push('image_url = ?');
+        updateValues.push(updates.imageUrl);
+      }
+      if (updates.imageWidth !== undefined) {
+        updateFields.push('image_width = ?');
+        updateValues.push(updates.imageWidth);
+      }
+      if (updates.imageHeight !== undefined) {
+        updateFields.push('image_height = ?');
+        updateValues.push(updates.imageHeight);
       }
 
       if (updateFields.length === 0) {

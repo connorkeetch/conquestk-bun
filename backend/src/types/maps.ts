@@ -233,6 +233,8 @@ export interface CreateMapRequest {
   description?: string;
   imageFile?: File;
   imageUrl?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   isPublic?: boolean;
   tags?: string[];
 }
@@ -241,6 +243,8 @@ export interface UpdateMapRequest {
   name?: string;
   description?: string;
   imageUrl?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   isPublic?: boolean;
   tags?: string[];
 }
