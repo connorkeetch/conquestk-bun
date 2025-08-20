@@ -20,10 +20,7 @@ const Maps: React.FC = () => {
 
   // Note: Mock maps removed - will be populated from backend when maps are implemented
 
-  const getRatingStars = (rating: number) => {
-    const stars = Math.floor(rating);
-    return '⭐'.repeat(stars) + (rating % 1 >= 0.5 ? '⭐' : '');
-  };
+  // Note: getRatingStars function removed - will be re-added when map ratings are implemented
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
