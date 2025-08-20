@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../components/navigation/Breadcrumb';
+import Breadcrumb from '../components/Breadcrumb';
 
 const Maps: React.FC = () => {
   const [activeTab, setActiveTab] = useState('official');

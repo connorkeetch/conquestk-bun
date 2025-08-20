@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { WorldMapSVG } from './WorldMapSVG';
 import { GamePhaseControls } from './GamePhaseControls';
-import territoryData from '../data/territories.json';
+import territoryData from '../data/territories-classic.json';
 import { RootState, AppDispatch } from '../store';
 import { selectTerritory, selectTargetTerritory, setPendingAction } from '../store/gameSlice';
 import { endTurn } from '../store/gameActions';

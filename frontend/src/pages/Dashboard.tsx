@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../hooks/redux';
-import Breadcrumb from '../components/navigation/Breadcrumb';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface RecentGame {
   id: string;

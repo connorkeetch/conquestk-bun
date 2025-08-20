@@ -4,159 +4,146 @@ import { Link, useLocation } from 'react-router-dom';
 interface BreadcrumbItem {
   label: string;
   path?: string;
+  link?: string; // Support both 'path' and 'link' for compatibility
   icon?: string;
 }
 
-const Breadcrumb: React.FC = () => {
+interface BreadcrumbProps {
+  items?: BreadcrumbItem[];
+  className?: string;
+}
+
+const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = "" }) => {
   const location = useLocation();
   
+  // Auto-generate breadcrumbs if no items provided
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [
       { label: 'Home', path: '/', icon: '🏠' }
     ];
 
-    // Build breadcrumbs based on current route
+    // Skip if we're on the home page
+    if (pathSegments.length === 0) {
+      return breadcrumbs;
+    }
+
+    // Build breadcrumb path
     let currentPath = '';
     
-    for (let i = 0; i < pathSegments.length; i++) {
-      const segment = pathSegments[i];
-      currentPath += `/${segment}`;
+    const breadcrumbMap: Record<string, BreadcrumbItem> = {
+      // Main sections
+      'dashboard': { label: 'Dashboard', icon: '📊' },
+      'play': { label: 'Play', icon: '🎮' },
+      'maps': { label: 'Maps', icon: '🗺️' },
+      'map-editor': { label: 'Map Editor', icon: '✏️' },
+      'community': { label: 'Community', icon: '👥' },
+      'leaderboard': { label: 'Leaderboard', icon: '🏆' },
+      'learn': { label: 'Learn', icon: '📚' },
+      'profile': { label: 'Profile', icon: '👤' },
+      'settings': { label: 'Settings', icon: '⚙️' },
+      'statistics': { label: 'Statistics', icon: '📈' },
       
-      // Define breadcrumb mappings
-      const breadcrumbMap: Record<string, BreadcrumbItem> = {
-        // Main sections
-        'lobby': { label: 'Game Lobby', path: currentPath, icon: '🎯' },
-        'games': { label: 'My Games', path: currentPath, icon: '🎮' },
-        'game': { label: 'Game', icon: '⚔️' },
-        'create': { label: 'Create Game', path: currentPath, icon: '➕' },
-        'editor': { label: 'Map Editor', path: currentPath, icon: '✏️' },
-        'maps': { label: 'Maps', path: currentPath, icon: '🗺️' },
-        'community': { label: 'Community', path: currentPath, icon: '👥' },
-        'profile': { label: 'Profile', path: currentPath, icon: '👤' },
-        'leaderboard': { label: 'Leaderboard', path: currentPath, icon: '🏆' },
-        'learn': { label: 'Learn & Help', path: currentPath, icon: '📚' },
-        
-        // Lobby subsections
-        'browse': { label: 'Browse Games', path: currentPath, icon: '🌍' },
-        'private': { label: 'Private Games', path: currentPath, icon: '🔒' },
-        'tournaments': { label: 'Tournaments', path: currentPath, icon: '🏆' },
-        
-        // Games subsections
-        'active': { label: 'Active Games', path: currentPath, icon: '⚡' },
-        'completed': { label: 'Completed', path: currentPath, icon: '✅' },
-        'spectate': { label: 'Spectate', path: currentPath, icon: '👁️' },
-        
-        // Editor subsections
-        'new': { label: 'New Map', path: currentPath, icon: '🆕' },
-        
-        // Community subsections
-        'forum': { label: 'Forum', path: currentPath, icon: '💬' },
-        'clans': { label: 'Clans', path: currentPath, icon: '⚔️' },
-        'events': { label: 'Events', path: currentPath, icon: '🎉' },
-        
-        // Profile subsections
-        'stats': { label: 'Statistics', path: currentPath, icon: '📈' },
-        'achievements': { label: 'Achievements', path: currentPath, icon: '🎖️' },
-        
-        // Learn subsections
-        'tutorial': { label: 'Tutorial', path: currentPath, icon: '🎯' },
-        'rules': { label: 'Rules', path: currentPath, icon: '📜' },
-        'strategies': { label: 'Strategies', path: currentPath, icon: '🧠' },
-        'videos': { label: 'Videos', path: currentPath, icon: '📹' },
-        'map-creation': { label: 'Map Creation Guide', path: currentPath, icon: '🎓' },
-        
-        // Create game types
-        'quick': { label: 'Quick Match', path: currentPath, icon: '⚡' },
-        'custom': { label: 'Custom Game', path: currentPath, icon: '🎨' },
-        'tournament': { label: 'Tournament', path: currentPath, icon: '🏆' },
-        
-        // Auth pages
-        'login': { label: 'Login', path: currentPath, icon: '🔑' },
-        'register': { label: 'Register', path: currentPath, icon: '📝' },
-        
-        // Legacy routes
-        'dashboard': { label: 'Dashboard', path: currentPath, icon: '📊' },
-        'play': { label: 'Play', path: currentPath, icon: '🎮' },
-        'map-editor': { label: 'Map Editor', path: currentPath, icon: '✏️' },
-        'simple-map': { label: 'Simple Map Demo', path: currentPath, icon: '🏰' },
-        'risk-map': { label: 'Risk Map Demo', path: currentPath, icon: '🌍' },
-        'room': { label: 'Game Room', icon: '🏠' }
+      // Game related
+      'lobby': { label: 'Game Lobby', icon: '🎲' },
+      'game': { label: 'Game', icon: '🎯' },
+      'games': { label: 'Games', icon: '🎯' },
+      'create': { label: 'Create Game', icon: '➕' },
+      'join': { label: 'Join Game', icon: '🚪' },
+      'quick-match': { label: 'Quick Match', icon: '⚡' },
+      'ranked': { label: 'Ranked', icon: '🏆' },
+      'browse': { label: 'Browse', icon: '🔍' },
+      'ai': { label: 'vs AI', icon: '🤖' },
+      'tutorial': { label: 'Tutorial', icon: '📖' },
+      
+      // Map related
+      'official': { label: 'Official Maps', icon: '🌍' },
+      'featured': { label: 'Featured', icon: '⭐' },
+      'my-maps': { label: 'My Maps', icon: '📁' },
+      'workshop': { label: 'Workshop', icon: '🔧' },
+      
+      // Auth
+      'login': { label: 'Login', icon: '🔑' },
+      'register': { label: 'Register', icon: '📝' },
+      
+      // Admin
+      'admin': { label: 'Admin', icon: '👨‍💼' },
+      'users': { label: 'Users', icon: '👥' },
+      'content': { label: 'Content', icon: '📝' },
+      'reviews': { label: 'Reviews', icon: '📋' },
+    };
+
+    pathSegments.forEach((segment, index) => {
+      currentPath += `/${segment}`;
+      const item = breadcrumbMap[segment.toLowerCase()] || {
+        label: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
+        icon: '📄'
       };
       
-      // Handle dynamic segments (IDs)
-      if (breadcrumbMap[segment]) {
-        breadcrumbs.push(breadcrumbMap[segment]);
+      // Don't add link to the last item (current page)
+      if (index === pathSegments.length - 1) {
+        breadcrumbs.push({ ...item });
       } else {
-        // Handle dynamic IDs
-        const previousSegment = pathSegments[i - 1];
-        
-        if (previousSegment === 'game') {
-          breadcrumbs.push({ label: `Game #${segment.slice(0, 8)}`, icon: '⚔️' });
-        } else if (previousSegment === 'room') {
-          breadcrumbs.push({ label: `Room #${segment.slice(0, 8)}`, icon: '🏠' });
-        } else if (previousSegment === 'profile' && segment !== 'stats' && segment !== 'achievements') {
-          breadcrumbs.push({ label: segment, icon: '👤' });
-        } else if (previousSegment === 'editor' && segment !== 'new' && segment !== 'browse') {
-          breadcrumbs.push({ label: `Map #${segment.slice(0, 8)}`, icon: '🗺️' });
-        } else if (previousSegment === 'leaderboard') {
-          const typeMap: Record<string, string> = {
-            'weekly': 'Weekly Rankings',
-            'monthly': 'Monthly Rankings',
-            'alltime': 'All-Time Rankings',
-            'tournament': 'Tournament Rankings'
-          };
-          breadcrumbs.push({ 
-            label: typeMap[segment] || segment, 
-            path: currentPath, 
-            icon: '🏆' 
-          });
-        } else {
-          // Fallback for unknown segments
-          breadcrumbs.push({ 
-            label: segment.charAt(0).toUpperCase() + segment.slice(1), 
-            path: currentPath 
-          });
-        }
+        breadcrumbs.push({ ...item, path: currentPath });
       }
-    }
-    
+    });
+
     return breadcrumbs;
   };
 
-  const breadcrumbs = generateBreadcrumbs();
-  
-  // Don't show breadcrumbs on home page or if only one level deep
-  if (location.pathname === '/' || breadcrumbs.length <= 1) {
+  // Use provided items or auto-generate
+  const breadcrumbItems = items || generateBreadcrumbs();
+
+  // If only one item (Home) and we're on the home page, don't show breadcrumb
+  if (breadcrumbItems.length === 1 && location.pathname === '/') {
     return null;
   }
 
   return (
-    <nav className="breadcrumb bg-gray-900/50 border-b border-gray-700 px-6 py-3">
-      <ol className="flex items-center space-x-2 text-sm">
-        {breadcrumbs.map((item, index) => (
-          <li key={index} className="flex items-center">
-            {index > 0 && (
-              <span className="mx-2 text-gray-500 select-none">/</span>
-            )}
+    <nav className={`flex items-center space-x-2 text-sm ${className}`} aria-label="Breadcrumb">
+      {breadcrumbItems.map((item, index) => {
+        const isLast = index === breadcrumbItems.length - 1;
+        const linkPath = item.path || item.link; // Support both properties
+        
+        return (
+          <React.Fragment key={index}>
+            {/* Breadcrumb Item */}
+            <div className="flex items-center">
+              {linkPath && !isLast ? (
+                <Link 
+                  to={linkPath}
+                  className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors"
+                >
+                  {item.icon && <span>{item.icon}</span>}
+                  <span>{item.label}</span>
+                </Link>
+              ) : (
+                <div className="flex items-center space-x-1 text-white">
+                  {item.icon && <span>{item.icon}</span>}
+                  <span>{item.label}</span>
+                </div>
+              )}
+            </div>
             
-            {item.path && index < breadcrumbs.length - 1 ? (
-              <Link
-                to={item.path}
-                className="flex items-center gap-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+            {/* Separator */}
+            {!isLast && (
+              <svg 
+                className="w-4 h-4 text-gray-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
               >
-                {item.icon && <span className="text-xs">{item.icon}</span>}
-                <span>{item.label}</span>
-              </Link>
-            ) : (
-              <span className="flex items-center gap-1.5 text-white font-medium">
-                {item.icon && <span className="text-xs">{item.icon}</span>}
-                <span>{item.label}</span>
-              </span>
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9 5l7 7-7 7" 
+                />
+              </svg>
             )}
-          </li>
-        ))}
-      </ol>
+          </React.Fragment>
+        );
+      })}
     </nav>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../components/navigation/Breadcrumb';
+import Breadcrumb from '../components/Breadcrumb';
 
 const Play: React.FC = () => {
   const breadcrumbItems = [

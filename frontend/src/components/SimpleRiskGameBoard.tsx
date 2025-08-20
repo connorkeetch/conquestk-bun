@@ -4,7 +4,7 @@ import { SimpleMapSVG } from './SimpleMapSVG';
 import { TestMapSVG } from './TestMapSVG';
 import { GamePhaseControls } from './GamePhaseControls';
 import { GameOverModal } from './GameOverModal';
-import territoryData from '../data/simple-territories.json';
+import territoryData from '../data/territories-example.json';
 import { RootState, AppDispatch } from '../store';
 import { selectTerritory, selectTargetTerritory, setPendingAction } from '../store/gameSlice';
 import { endTurn } from '../store/gameActions';
