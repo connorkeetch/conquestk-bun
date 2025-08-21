@@ -2,8 +2,6 @@ import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
 import { logout } from '../store/authSlice';
-// import Breadcrumb from './Breadcrumb';
-import QuickNav from './QuickNav';
 import { gameService, GameRoom } from '../services/gameService';
 
 interface LayoutProps {
@@ -162,12 +160,64 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
+          {/* Center - Navigation Links */}
+          {isAuthenticated && (
+            <div className="hidden lg:flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
+              <Link 
+                to="/dashboard" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/dashboard' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link 
+                to="/lobby" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/lobby' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Find Game
+              </Link>
+              <Link 
+                to="/create" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/create' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Create Game
+              </Link>
+              <Link 
+                to="/maps" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/maps' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Maps
+              </Link>
+              <Link 
+                to="/leaderboard" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/leaderboard' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Leaderboard
+              </Link>
+              <Link 
+                to="/profile" 
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/profile' ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Profile
+              </Link>
+            </div>
+          )}
+
           {/* Right Side - Quick Actions */}
           <div className="nav-links">
             {isAuthenticated ? (
               <>
-                <Link to="/lobby" className="btn btn-secondary">🎯 Find Game</Link>
-                
                 {/* Active Games Dropdown */}
                 <div className="relative">
                   <button 
@@ -221,8 +271,6 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   )}
                 </div>
-                
-                <Link to="/create" className="btn btn-primary">+ Create Game</Link>
               </>
             ) : (
               <>
@@ -326,9 +374,6 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Page Content Container */}
       <div className="page-container">
-        {/* Quick Navigation Bar */}
-        <QuickNav />
-        
         {/* Main Content with improved spacing */}
         <main className="main-content py-8 sm:py-12">
           {children}
