@@ -141,10 +141,26 @@ app.get('/debug/tables', async (req, res) => {
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../public');
-  app.use(express.static(frontendPath));
   
-  // Handle React Router - serve index.html for all non-API routes
+  // IMPORTANT: Serve static files with explicit options
+  app.use(express.static(frontendPath, {
+    maxAge: '1d',
+    setHeaders: (res, filePath) => {
+      // Set proper content types for assets
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    }
+  }));
+  
+  // Handle React Router - serve index.html for all non-API and non-asset routes
   app.get('*', (req, res) => {
+    // Don't catch requests for assets
+    if (req.path.startsWith('/assets/') || req.path.startsWith('/static/')) {
+      return res.status(404).send('Asset not found');
+    }
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
