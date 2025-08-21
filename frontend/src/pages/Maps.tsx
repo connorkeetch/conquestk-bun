@@ -19,7 +19,7 @@ const Maps: React.FC = () => {
   // Note: getRatingStars function removed - will be re-added when map ratings are implemented
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
