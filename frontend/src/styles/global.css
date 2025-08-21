@@ -816,3 +816,16 @@ select option {
     padding: 0 var(--space-3);
   }
 }
+
+/* Animation delays for battle scene */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}

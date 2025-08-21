@@ -125,25 +125,44 @@ const Home: React.FC = () => {
             )}
           </div>
 
-          {/* Trust Indicators */}
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              Free to play
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              No downloads
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-green-400" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              Cross-platform
+        </div>
+      </section>
+
+      {/* Epic Battle Image Section */}
+      <section className="relative py-16 overflow-hidden">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+            {/* Placeholder for epic battle image */}
+            <div className="relative h-96 md:h-[500px] bg-gradient-to-br from-gray-900 via-red-900/20 to-gray-900 flex items-center justify-center">
+              {/* Animated battle scene background effect */}
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute inset-0" style={{
+                  backgroundImage: `
+                    radial-gradient(circle at 20% 50%, rgba(239, 68, 68, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.2) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 20%, rgba(217, 70, 239, 0.2) 0%, transparent 50%)
+                  `
+                }}></div>
+              </div>
+              
+              {/* Battle Text Overlay */}
+              <div className="relative z-10 text-center px-8">
+                <div className="text-6xl md:text-8xl mb-6">⚔️</div>
+                <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                  <span className="bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
+                    CONQUER THE WORLD
+                  </span>
+                </h2>
+                <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                  Deploy armies • Capture territories • Achieve total domination
+                </p>
+              </div>
+              
+              {/* Animated elements */}
+              <div className="absolute top-10 left-10 text-4xl animate-pulse">🏰</div>
+              <div className="absolute top-20 right-20 text-4xl animate-pulse delay-100">🗡️</div>
+              <div className="absolute bottom-10 left-20 text-4xl animate-pulse delay-200">🛡️</div>
+              <div className="absolute bottom-20 right-10 text-4xl animate-pulse delay-300">🏴</div>
             </div>
           </div>
         </div>
@@ -154,11 +173,8 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span className="gradient-text">What Makes Us Different</span>
+              <span className="gradient-text">Core Features</span>
             </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Cutting-edge features that bring strategic warfare into the modern age
-            </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -204,39 +220,12 @@ const Home: React.FC = () => {
               Shape the future of multiplayer Risk gaming.
             </p>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-              <div className="group">
-                <div className="text-2xl font-bold text-blue-400 mb-1 group-hover:scale-110 transition-transform">
-                  ⚡
-                </div>
-                <div className="text-sm text-gray-400">Real-time Battles</div>
-              </div>
-              <div className="group">
-                <div className="text-2xl font-bold text-green-400 mb-1 group-hover:scale-110 transition-transform">
-                  🎨
-                </div>
-                <div className="text-sm text-gray-400">Map Editor</div>
-              </div>
-              <div className="group">
-                <div className="text-2xl font-bold text-purple-400 mb-1 group-hover:scale-110 transition-transform">
-                  🛡️
-                </div>
-                <div className="text-sm text-gray-400">Secure Play</div>
-              </div>
-              <div className="group">
-                <div className="text-2xl font-bold text-orange-400 mb-1 group-hover:scale-110 transition-transform">
-                  🚀
-                </div>
-                <div className="text-sm text-gray-400">Regular Updates</div>
-              </div>
-            </div>
-
             {!isAuthenticated && (
               <Link 
                 to="/register" 
                 className="inline-flex items-center gap-3 px-8 py-4 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-600/25 transform hover:scale-105 transition-all duration-200"
               >
-                🎮 Start Your Campaign
+                Join the Beta Now
               </Link>
             )}
           </div>
