@@ -161,7 +161,7 @@ if (process.env.NODE_ENV === 'production') {
     if (req.path.startsWith('/assets/') || req.path.startsWith('/static/')) {
       return res.status(404).send('Asset not found');
     }
-    res.sendFile(path.join(frontendPath, 'index.html'));
+    return res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 
