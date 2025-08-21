@@ -155,12 +155,9 @@ if (process.env.NODE_ENV === 'production') {
     }
   }));
   
-  // Handle React Router - serve index.html for all non-API and non-asset routes
+  // Handle React Router - serve index.html for all non-API routes
+  // The static middleware above will handle asset files
   app.get('*', (req, res) => {
-    // Don't catch requests for assets
-    if (req.path.startsWith('/assets/') || req.path.startsWith('/static/')) {
-      return res.status(404).send('Asset not found');
-    }
     return res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
