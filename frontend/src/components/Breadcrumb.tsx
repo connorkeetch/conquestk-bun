@@ -100,7 +100,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = "" }) => {
   }
 
   return (
-    <nav className={`flex items-center space-x-2 text-sm ${className}`} aria-label="Breadcrumb">
+    <nav className={`flex items-center gap-2 text-sm ${className}`} aria-label="Breadcrumb">
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1;
         const linkPath = item.path || item.link; // Support both properties
@@ -128,10 +128,11 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = "" }) => {
             {/* Separator */}
             {!isLast && (
               <svg 
-                className="w-4 h-4 text-gray-600" 
+                className="w-4 h-4 text-gray-600 flex-shrink-0" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path 
                   strokeLinecap="round" 
