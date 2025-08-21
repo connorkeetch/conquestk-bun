@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Link
           to="/play/quick-match"
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl p-6 transition-all duration-200 transform hover:scale-105 shadow-lg"
+          className="group relative bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🚀</div>
@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
 
         <Link
           to="/play/create"
-          className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 rounded-xl p-6 transition-all duration-200 transform hover:scale-105 shadow-lg"
+          className="group relative bg-gradient-to-br from-green-600/20 to-teal-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">➕</div>
@@ -174,7 +174,7 @@ const Dashboard: React.FC = () => {
 
         <Link
           to="/maps"
-          className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-xl p-6 transition-all duration-200 transform hover:scale-105 shadow-lg"
+          className="group relative bg-gradient-to-br from-orange-600/20 to-red-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🗺️</div>
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
 
         <Link
           to="/community/tournaments"
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl p-6 transition-all duration-200 transform hover:scale-105 shadow-lg"
+          className="group relative bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🏆</div>
@@ -198,7 +198,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Stats Overview */}
         <div className="lg:col-span-1">
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">📊</span>
               Your Stats
@@ -242,14 +242,14 @@ const Dashboard: React.FC = () => {
 
         {/* Recent Games */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">🎮</span>
               Recent Games
             </h2>
             <div className="space-y-4">
               {recentGames.map((game) => (
-                <div key={game.id} className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors">
+                <div key={game.id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-all duration-200 border border-white/5 hover:border-white/10">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
                       🗺️
@@ -284,14 +284,14 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Friends Activity */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">👥</span>
               Friends Activity
             </h2>
             <div className="space-y-4">
               {friendsActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center space-x-4 p-3 bg-gray-700/30 rounded-lg">
+                <div key={activity.id} className="flex items-center space-x-4 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all duration-200 border border-white/5 hover:border-white/10">
                   <div className="relative">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold text-white">
                       {activity.username.charAt(0)}
