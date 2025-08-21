@@ -2,7 +2,7 @@ import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
 import { logout } from '../store/authSlice';
-import QuickNav from './QuickNav';
+import Breadcrumb from './Breadcrumb';
 import { gameService, GameRoom } from '../services/gameService';
 
 interface LayoutProps {
@@ -325,8 +325,8 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Page Content Container */}
       <div className="page-container">
-        {/* Quick Navigation */}
-        <QuickNav />
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb />
         
         {/* Main Content */}
         <main className="main-content">

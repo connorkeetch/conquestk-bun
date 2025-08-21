@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Breadcrumb from '../components/Breadcrumb';
 
 const Maps: React.FC = () => {
   const [activeTab, setActiveTab] = useState('official');
+
+  const breadcrumbItems = [
+    { label: 'Dashboard', link: '/dashboard', icon: '🏠' },
+    { label: 'Maps', icon: '🗺️' }
+  ];
 
   const tabs = [
     { id: 'official', label: 'Official Maps', icon: '🌎' },
@@ -18,6 +24,8 @@ const Maps: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      {/* Breadcrumb */}
+      <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">

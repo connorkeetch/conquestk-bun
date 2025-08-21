@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../hooks/redux';
+import Breadcrumb from '../components/Breadcrumb';
 
 interface RecentGame {
   id: string;
@@ -126,8 +127,14 @@ const Dashboard: React.FC = () => {
     return 'Waiting';
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', icon: '🏠' }
+  ];
+
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      {/* Breadcrumb */}
+      <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
       {/* Welcome Header */}
       <div className="mb-8">
