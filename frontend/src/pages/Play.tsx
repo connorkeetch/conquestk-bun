@@ -1,12 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../components/Breadcrumb';
+// import Breadcrumb from '../components/Breadcrumb';
 
 const Play: React.FC = () => {
-  const breadcrumbItems = [
-    { label: 'Dashboard', link: '/dashboard', icon: '🏠' },
-    { label: 'Play', icon: '🎮' }
-  ];
 
   const gameOptions = [
     {
@@ -55,8 +51,6 @@ const Play: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      {/* Breadcrumb */}
-      <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
       {/* Header */}
       <div className="mb-8">
