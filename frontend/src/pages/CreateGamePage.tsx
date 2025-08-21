@@ -12,11 +12,11 @@ interface OptionCardProps {
 }
 
 const OptionCard: React.FC<OptionCardProps> = ({ number, title, children, comingSoon = false }) => (
-  <div className={`bg-gray-800 rounded-lg p-6 border border-gray-700 ${comingSoon ? 'opacity-50' : ''}`}>
+  <div className={`bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl hover:shadow-2xl ${comingSoon ? 'opacity-50' : ''}`}>
     <div className="flex items-start justify-between mb-4">
-      <h2 className="text-lg font-bold flex items-center gap-2">
-        <span className="text-2xl text-blue-500">{number}</span>
-        {title}
+      <h2 className="text-lg font-bold flex items-center gap-3">
+        <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">{number}</span>
+        <span className="text-white">{title}</span>
       </h2>
       {comingSoon && (
         <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
@@ -90,7 +90,7 @@ const CreateGamePage: React.FC = () => {
   const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan', 'pink'];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen text-white p-6">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center justify-between mb-6">
@@ -149,7 +149,7 @@ const CreateGamePage: React.FC = () => {
         {/* 1. Game Type Card */}
         <OptionCard number="1" title="Game Type">
           <div className="space-y-2">
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="gameType" 
@@ -160,12 +160,12 @@ const CreateGamePage: React.FC = () => {
               />
               <span>Custom Game</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 opacity-50">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 opacity-50 transition-all duration-200">
               <input type="radio" name="gameType" value="quick" disabled className="mr-3" />
               <span>Quick Match</span>
               <span className="ml-auto text-xs">Coming Soon</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 opacity-50">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 opacity-50 transition-all duration-200">
               <input type="radio" name="gameType" value="tournament" disabled className="mr-3" />
               <span>Tournament</span>
               <span className="ml-auto text-xs">Coming Soon</span>
@@ -182,12 +182,12 @@ const CreateGamePage: React.FC = () => {
               return (
                 <button
                   key={playerCount}
-                  className={`p-3 rounded font-bold transition ${
+                  className={`p-3 rounded-lg font-bold transition-all duration-200 ${
                     isDisabled 
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                      ? 'bg-white/5 text-gray-400 cursor-not-allowed opacity-50'
                       : maxPlayers === playerCount
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-white hover:bg-blue-600'
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                      : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
                   }`}
                   disabled={isDisabled}
                   onClick={() => !isDisabled && setMaxPlayers(playerCount)}
@@ -203,7 +203,7 @@ const CreateGamePage: React.FC = () => {
         {/* 3. Game Mode Card */}
         <OptionCard number="3" title="Game Mode">
           <div className="space-y-2">
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="gameMode" 
@@ -214,12 +214,12 @@ const CreateGamePage: React.FC = () => {
               />
               <span>Classic Risk</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded opacity-50">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg opacity-50 transition-all duration-200">
               <input type="radio" name="gameMode" disabled className="mr-3" />
               <span>Capitals</span>
               <span className="ml-auto text-xs">Coming Soon</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded opacity-50">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg opacity-50 transition-all duration-200">
               <input type="radio" name="gameMode" disabled className="mr-3" />
               <span>Domination</span>
               <span className="ml-auto text-xs">Coming Soon</span>
@@ -230,7 +230,7 @@ const CreateGamePage: React.FC = () => {
         {/* 4. Fog of War Card */}
         <OptionCard number="4" title="Fog of War">
           <div className="space-y-2">
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="fog" 
@@ -241,7 +241,7 @@ const CreateGamePage: React.FC = () => {
               />
               <span>Off - See entire map</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="fog" 
@@ -258,7 +258,7 @@ const CreateGamePage: React.FC = () => {
         {/* 5. Teams Card */}
         <OptionCard number="5" title="Teams">
           <div className="space-y-2">
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="teams" 
@@ -269,7 +269,7 @@ const CreateGamePage: React.FC = () => {
               />
               <span>No Teams (Free for All)</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="teams" 
@@ -280,7 +280,7 @@ const CreateGamePage: React.FC = () => {
               />
               <span>2 Teams</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="teams" 
@@ -296,7 +296,7 @@ const CreateGamePage: React.FC = () => {
             <div className="mt-3 pt-3 border-t border-gray-600">
               <p className="text-sm text-gray-400 mb-2">Team Assignment:</p>
               <select 
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                className="w-full p-2 bg-white/10 backdrop-blur-sm text-white rounded-lg border border-white/20 focus:border-blue-400 focus:outline-none transition-all duration-200"
                 value={teamAssignment}
                 onChange={(e) => setTeamAssignment(e.target.value)}
               >
@@ -311,7 +311,7 @@ const CreateGamePage: React.FC = () => {
         {/* 6. Fortification Card */}
         <OptionCard number="6" title="Fortification">
           <div className="space-y-2">
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="fortification" 
@@ -322,7 +322,7 @@ const CreateGamePage: React.FC = () => {
               />
               <span>Adjacent - Move to neighboring territory</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="fortification" 
@@ -333,7 +333,7 @@ const CreateGamePage: React.FC = () => {
               />
               <span>Chained - Move through your territories</span>
             </label>
-            <label className="flex items-center p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input 
                 type="radio" 
                 name="fortification" 
@@ -370,7 +370,7 @@ const CreateGamePage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-400 mb-2">Card Trade Bonus:</p>
               <select 
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                className="w-full p-2 bg-white/10 backdrop-blur-sm text-white rounded-lg border border-white/20 focus:border-blue-400 focus:outline-none transition-all duration-200"
                 value={cardTradeBonus}
                 onChange={(e) => setCardTradeBonus(e.target.value)}
               >
@@ -382,7 +382,7 @@ const CreateGamePage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-400 mb-2">Territory Bonus:</p>
               <select 
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                className="w-full p-2 bg-white/10 backdrop-blur-sm text-white rounded-lg border border-white/20 focus:border-blue-400 focus:outline-none transition-all duration-200"
                 value={territoryBonus}
                 onChange={(e) => setTerritoryBonus(e.target.value)}
               >
@@ -415,10 +415,10 @@ const CreateGamePage: React.FC = () => {
 
       {/* Map Selector - Full Width */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 className="text-xl font-bold mb-4">
-            <span className="text-2xl text-blue-500 mr-2">10</span>
-            Select Map
+        <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
+            <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">10</span>
+            <span className="text-white">Select Map</span>
           </h2>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -426,14 +426,14 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-1">
               <input 
                 placeholder="Search maps..." 
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 placeholder-gray-400 mb-3"
+                className="w-full p-2 bg-white/10 backdrop-blur-sm text-white rounded-lg border border-white/20 placeholder-gray-400 mb-3 focus:border-blue-400 focus:outline-none transition-all duration-200"
               />
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {maps.map(map => (
                   <div 
                     key={map.id}
-                    className={`p-3 rounded cursor-pointer transition ${
-                      selectedMap === map.id ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
+                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                      selectedMap === map.id ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                     }`}
                     onClick={() => setSelectedMap(map.id)}
                   >
@@ -448,8 +448,8 @@ const CreateGamePage: React.FC = () => {
             
             {/* Map Preview */}
             <div className="lg:col-span-2">
-              <div className="bg-gray-700 rounded-lg p-4">
-                <div className="w-full h-48 bg-gray-600 rounded mb-4 flex items-center justify-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10">
                   <span className="text-gray-400">Map Preview (Coming Soon)</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -479,14 +479,14 @@ const CreateGamePage: React.FC = () => {
       {/* Action Buttons */}
       <div className="max-w-7xl mx-auto flex gap-4">
         <button 
-          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
+          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
           onClick={handleCreateGame}
           disabled={isCreating || !gameName.trim()}
         >
           {isCreating ? '🔄 Creating...' : '🎮 Create Game'}
         </button>
         <button 
-          className="py-3 px-6 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="py-3 px-6 bg-white/10 backdrop-blur-sm hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl border border-white/20 transition-all duration-200"
           disabled
         >
           💾 Save as Template (Coming Soon)
@@ -494,12 +494,12 @@ const CreateGamePage: React.FC = () => {
       </div>
 
       {/* Game Name Input - Fixed Position */}
-      <div className="fixed bottom-6 right-6 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl">
+      <div className="fixed bottom-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 shadow-2xl">
         <label className="block text-sm font-medium mb-2">Game Name *</label>
         <input 
           type="text" 
           placeholder="My Custom Game" 
-          className="w-64 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-64 px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-all duration-200"
           value={gameName}
           onChange={(e) => setGameName(e.target.value)}
           required
