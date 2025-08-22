@@ -1,0 +1,45 @@
+/* Custom theme configuration for Tailwind v4 */
+@theme {
+  /* Extend the default spacing scale */
+  --spacing-18: 4.5rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+  --spacing-28: 7rem;
+  --spacing-32: 8rem;
+  --spacing-36: 9rem;
+  --spacing-40: 10rem;
+  --spacing-44: 11rem;
+  --spacing-48: 12rem;
+  --spacing-52: 13rem;
+  --spacing-56: 14rem;
+  --spacing-60: 15rem;
+  --spacing-64: 16rem;
+  --spacing-72: 18rem;
+  --spacing-80: 20rem;
+  --spacing-96: 24rem;
+
+  /* Custom colors for the Risk game */
+  --color-brand: oklch(62.3% 0.214 259.815);
+  --color-brand-dark: oklch(45% 0.2 259);
+  
+  /* Breakpoints */
+  --breakpoint-xs: 475px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .glass {
+    backdrop-filter: blur(10px);
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  
+  .glass-light {
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}

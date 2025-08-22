@@ -41,9 +41,9 @@ const Home: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen">
       {/* Optimized Hero Section - Reduced Height */}
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden" style={{ paddingTop: '96px', paddingBottom: '80px' }}>
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-black/50"></div>
         <div className="absolute inset-0 opacity-10">
@@ -58,11 +58,7 @@ const Home: React.FC = () => {
         
         {/* Constrained Content Container */}
         <div className="relative container mx-auto px-6 max-w-6xl text-center">
-          {/* Beta Badge */}
-          <div className="inline-flex items-center gap-3 bg-gray-800/50 backdrop-blur-sm rounded-full px-4 py-2 border border-gray-700/50 mb-8">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-green-400 font-semibold text-sm">Beta Testing</span>
-          </div>
+
 
           {/* Powerful, Concise Hero Title */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
