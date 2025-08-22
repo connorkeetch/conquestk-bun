@@ -177,6 +177,7 @@ async function startServer() {
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`📊 Health check: http://localhost:${PORT}/health`);
       logger.info(`📋 Database: ${process.env.DB_TYPE || 'postgresql'} tables ready`);
+      logger.info(`📅 Deployed: ${new Date().toISOString()}`);
     });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);
