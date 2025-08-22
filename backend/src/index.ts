@@ -178,6 +178,7 @@ async function startServer() {
       logger.info(`📊 Health check: http://localhost:${PORT}/health`);
       logger.info(`📋 Database: ${process.env.DB_TYPE || 'postgresql'} tables ready`);
       logger.info(`📅 Deployed: ${new Date().toISOString()}`);
+      logger.info(`🎨 Tailwind v4 with glass morphism header deployed`);
     });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);
