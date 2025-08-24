@@ -20,7 +20,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 glass border-b border-white/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           {/* Left */}
           <div className="flex items-center gap-3">
             <button 
@@ -38,8 +38,8 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Center nav (desktop) */}
-          <nav className="hidden md:flex items-center gap-6 text-sm">
+          {/* Center nav - always visible for now due to Tailwind v4 responsive issue */}
+          <nav className="flex items-center gap-6 text-sm">
             {isAuthenticated ? (
               <>
                 <Link 
