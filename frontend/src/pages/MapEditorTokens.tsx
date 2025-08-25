@@ -8,7 +8,7 @@ interface Territory {
   name: string
   x: number
   y: number
-  continentId: string
+  continentId: string | null  // Allow null for unassigned territories
   armies: number
   isCapital?: boolean
   connections: string[] // IDs of connected territories
@@ -33,7 +33,7 @@ interface MapState {
 }
 
 type EditorMode = 'territories' | 'continents' | 'connections'
-type TokenShape = 'hexagon' | 'square'
+type TokenShape = 'hexagon' | 'square' | 'circle'
 
 export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -101,7 +101,7 @@ export default function MapEditorTokens() {
     const x = event.clientX - rect.left + scrollLeft
     const y = event.clientY - rect.top + scrollTop
 
-    if (editorMode === 'territories' && isPlacingTerritory && selectedContinentId) {
+    if (editorMode === 'territories' && isPlacingTerritory) {  // Allow placing without continent
       const newTerritory: Territory = {
         id: uuidv4(),
         name: `Territory ${state.territories.length + 1}`,
@@ -263,7 +263,11 @@ export default function MapEditorTokens() {
     setState(prev => ({
       ...prev,
       continents: prev.continents.filter(c => c.id !== continentId),
-      territories: prev.territories.filter(t => t.continentId !== continentId)
+      territories: prev.territories.map(t => 
+        t.continentId === continentId 
+          ? { ...t, continentId: null }  // Unassign territories instead of deleting
+          : t
+      )
     }))
     if (selectedContinentId === continentId) {
       setSelectedContinentId(null)
@@ -273,7 +277,7 @@ export default function MapEditorTokens() {
   // Get continent for territory
   const getContinentForTerritory = (territoryId: string) => {
     const territory = state.territories.find(t => t.id === territoryId)
-    if (!territory) return null
+    if (!territory || !territory.continentId) return null
     return state.continents.find(c => c.id === territory.continentId)
   }
 
@@ -301,8 +305,8 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      <div className="max-w-full mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Map Editor - Token System</h1>
+      <div className="max-w-7xl mx-auto">  {/* Center content with max width */}
+        <h1 className="text-3xl font-bold mb-6">Map Editor</h1>
         
         {/* Toolbar */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
@@ -343,6 +347,12 @@ export default function MapEditorTokens() {
                 className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
                 Square
+              </button>
+              <button
+                onClick={() => setTokenShape('circle')}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-blue-600' : 'bg-gray-700'}`}
+              >
+                Circle
               </button>
             </div>
 
@@ -400,9 +410,8 @@ export default function MapEditorTokens() {
                   value={selectedContinentId || ''}
                   onChange={(e) => setSelectedContinentId(e.target.value)}
                   className="px-3 py-1 bg-gray-700 rounded text-white"
-                  disabled={state.continents.length === 0}
                 >
-                  <option value="">Select Continent</option>
+                  <option value="">No Continent (Unassigned)</option>
                   {state.continents.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -411,7 +420,6 @@ export default function MapEditorTokens() {
               <button
                 onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
                 className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-gray-700'}`}
-                disabled={!selectedContinentId}
               >
                 {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
               </button>
@@ -457,11 +465,31 @@ export default function MapEditorTokens() {
                   max="10"
                 />
                 <button
-                  onClick={handleCreateContinent}
+                  onClick={() => {
+                    if (editingContinentId) {
+                      handleUpdateContinent(editingContinentId)
+                    } else {
+                      handleCreateContinent()
+                    }
+                  }}
                   className="px-4 py-1 bg-green-600 hover:bg-green-700 rounded"
+                  disabled={!newContinentName.trim()}
                 >
-                  ➕ Add Continent
+                  {editingContinentId ? '💾 Update' : '➕ Add Continent'}
                 </button>
+                {editingContinentId && (
+                  <button
+                    onClick={() => {
+                      setEditingContinentId(null)
+                      setNewContinentName('')
+                      setNewContinentColor('#3B82F6')
+                      setNewContinentBonus(3)
+                    }}
+                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
               
               {/* Continent List */}
@@ -474,7 +502,22 @@ export default function MapEditorTokens() {
                   >
                     <span>{c.name} (+{c.bonus})</span>
                     <button
-                      onClick={() => handleDeleteContinent(c.id)}
+                      onClick={() => {
+                        setEditingContinentId(c.id)
+                        setNewContinentName(c.name)
+                        setNewContinentColor(c.color)
+                        setNewContinentBonus(c.bonus)
+                      }}
+                      className="text-blue-400 hover:text-blue-300 text-sm px-1"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete continent "${c.name}"? Territories will become unassigned.`)) {
+                          handleDeleteContinent(c.id)
+                        }
+                      }}
                       className="text-red-400 hover:text-red-300"
                     >
                       ×
@@ -507,12 +550,12 @@ export default function MapEditorTokens() {
           )}
         </div>
 
-        {/* Main Editor Area */}
-        <div className="flex gap-4">
-          {/* Map Canvas */}
+        {/* Main Editor Area - Centered layout */}
+        <div className="flex flex-col lg:flex-row gap-4 justify-center">
+          {/* Map Canvas - Center-biased */}
           <div 
             ref={mapContainerRef}
-            className="flex-1 bg-gray-800 rounded-lg overflow-auto"
+            className="flex-grow bg-gray-800 rounded-lg overflow-auto"
             style={{ maxHeight: '80vh' }}
           >
             <div
@@ -577,15 +620,14 @@ export default function MapEditorTokens() {
               {/* Territory Tokens */}
               {state.territories.map(territory => {
                 const continent = getContinentForTerritory(territory.id)
-                if (!continent) return null
                 
                 return (
                   <div
                     key={territory.id}
                     className="absolute cursor-pointer"
                     style={{
-                      left: territory.x - 15,
-                      top: territory.y - 15,
+                      left: territory.x - 10,  // Adjust for smaller tokens
+                      top: territory.y - 10,
                       transform: 'translate(-50%, -50%)'
                     }}
                     onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
@@ -595,11 +637,12 @@ export default function MapEditorTokens() {
                       x={0}
                       y={0}
                       armies={territory.armies}
-                      color={continent.color}
+                      color={continent?.color || '#808080'}  // Gray for unassigned
+                      outlineColor={continent?.color}  // Continent color for outline
                       shape={tokenShape}
                       isSelected={state.selectedTerritoryId === territory.id}
                       isDragging={state.draggedTerritoryId === territory.id}
-                      size={30}
+                      size={20}  // Smaller tokens
                       opacity={0.7}
                     />
                     {state.selectedTerritoryId === territory.id && (
@@ -633,8 +676,8 @@ export default function MapEditorTokens() {
             </div>
           </div>
 
-          {/* Properties Panel */}
-          <div className="w-80 bg-gray-800 rounded-lg p-4">
+          {/* Properties Panel - Sidebar */}
+          <div className="w-full lg:w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0">
             <h2 className="text-xl font-bold mb-4">Properties</h2>
             
             {/* Map Name */}
@@ -681,9 +724,64 @@ export default function MapEditorTokens() {
                         }}
                         className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
                       />
-                      <p className="text-sm text-gray-400">Continent: {continent?.name}</p>
+                      <div className="mb-2">
+                        <label className="text-xs text-gray-400">Continent:</label>
+                        <select
+                          value={territory.continentId || ''}
+                          onChange={(e) => {
+                            setState(prev => ({
+                              ...prev,
+                              territories: prev.territories.map(t =>
+                                t.id === state.selectedTerritoryId
+                                  ? { ...t, continentId: e.target.value || null }
+                                  : t
+                              )
+                            }))
+                          }}
+                          className="w-full px-2 py-1 bg-gray-600 rounded text-white text-sm"
+                        >
+                          <option value="">Unassigned</option>
+                          {state.continents.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
                       <p className="text-sm text-gray-400">Position: ({Math.round(territory.x)}, {Math.round(territory.y)})</p>
                       <p className="text-sm text-gray-400">Connections: {territory.connections.length}</p>
+                      {territory.connections.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-400 mb-1">Connected to:</p>
+                          <div className="space-y-1">
+                            {territory.connections.map(connId => {
+                              const connTerritory = state.territories.find(t => t.id === connId)
+                              return connTerritory ? (
+                                <div key={connId} className="flex items-center justify-between text-xs bg-gray-600 px-2 py-1 rounded">
+                                  <span>{connTerritory.name}</span>
+                                  <button
+                                    onClick={() => {
+                                      setState(prev => ({
+                                        ...prev,
+                                        territories: prev.territories.map(t => {
+                                          if (t.id === territory.id) {
+                                            return { ...t, connections: t.connections.filter(id => id !== connId) }
+                                          }
+                                          if (t.id === connId) {
+                                            return { ...t, connections: t.connections.filter(id => id !== territory.id) }
+                                          }
+                                          return t
+                                        })
+                                      }))
+                                    }}
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ) : null
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )
                 })()}

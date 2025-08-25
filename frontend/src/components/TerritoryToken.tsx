@@ -1,12 +1,13 @@
 import React from 'react'
 
-export type TokenShape = 'hexagon' | 'square'
+export type TokenShape = 'hexagon' | 'square' | 'circle'
 
 export interface TerritoryTokenProps {
   x: number                 
   y: number                 
   armies?: number           
   color: string            
+  outlineColor?: string     // Optional outline color for continent
   shape?: TokenShape
   isSelected?: boolean     
   isDragging?: boolean     
@@ -21,6 +22,7 @@ export default function TerritoryToken({
   y,
   armies = 1,
   color,
+  outlineColor,
   shape = 'hexagon',
   isSelected = false,
   isDragging = false,
@@ -50,7 +52,7 @@ export default function TerritoryToken({
       alignItems: 'center',
       justifyContent: 'center',
       userSelect: 'none',
-      border: `1px solid rgba(255,255,255,0.2)`
+      border: outlineColor ? `2px solid ${outlineColor}` : `1px solid rgba(255,255,255,0.2)`
     }
 
     switch (shape) {
@@ -63,6 +65,11 @@ export default function TerritoryToken({
         return {
           ...baseStyle,
           borderRadius: '3px',
+        }
+      case 'circle':
+        return {
+          ...baseStyle,
+          borderRadius: '50%',
         }
       default:
         return baseStyle
