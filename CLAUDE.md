@@ -37,10 +37,11 @@ npm run setup && npm run dev
 
 ### Core Operations
 1. **Use code-searcher** for code analysis and troubleshooting
-2. **Reflect on results** before proceeding with solutions
-3. **Invoke tools simultaneously** for independent operations
-4. **Verify solutions** before marking tasks complete
-5. **Update memory bank** when changing core context
+2. **Use context7** for any library/framework documentation needs
+3. **Reflect on results** before proceeding with solutions
+4. **Invoke tools simultaneously** for independent operations
+5. **Verify solutions** before marking tasks complete
+6. **Update memory bank** when changing core context
 
 ## 🤝 Development Partnership
 
@@ -49,7 +50,7 @@ We build production code together. I handle implementation details while you gui
 ### Core Workflow: Research → Plan → Implement → Validate
 **Start every feature with**: "Let me research the codebase and create a plan before implementing."
 
-1. **Research** - Understand existing patterns and architecture
+1. **Research** - Understand existing patterns and architecture (use code-searcher + context7 for library docs)
 2. **Plan** - Propose approach and verify with you
 3. **Implement** - Build with tests and error handling
 4. **Validate** - ALWAYS run formatters, linters, and tests after implementation
@@ -91,6 +92,7 @@ Prefer explicit over implicit:
 - **code-reviewer**: Run after implementing features
 
 ### Available MCP Servers:
+- **context7**: Get up-to-date library docs (USE OFTEN for any library questions)
 - **memory**: Store and search project context (REQUIRED for context)
 - **filesystem**: File operations with proper permissions
 - **git**: Advanced git operations and workflows
@@ -126,6 +128,10 @@ npm run lint              # Check code quality
 # Environment Switching
 .\switch-env.ps1 development   # Use SQLite
 .\switch-env.ps1 production    # Use PostgreSQL
+
+# Context7 Usage Examples
+# Use when working with ANY library: React, Express, Socket.io, Redux, etc.
+# First resolve library ID, then get docs with specific topic focus
 ```
 
 ## 🎯 Current Focus Areas
