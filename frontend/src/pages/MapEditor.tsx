@@ -92,7 +92,7 @@ export default function MapEditor() {
       })
       
       const img = new Image()
-      img.crossOrigin = 'anonymous' // Allow CORS for blob URLs
+      // Don't set crossOrigin for blob URLs
       img.onload = () => {
         console.log('✅ Canvas: Image loaded for drawing:', {
           width: img.width,
@@ -426,7 +426,8 @@ export default function MapEditor() {
     
     // Get image dimensions
     const img = new Image()
-    img.crossOrigin = 'anonymous' // Allow CORS for blob URLs
+    // Don't set crossOrigin for blob URLs - it can cause issues
+    // img.crossOrigin = 'anonymous'
     
     img.onload = () => {
       console.log('✅ Image loaded successfully:', {
@@ -461,15 +462,23 @@ export default function MapEditor() {
           name: file.name,
           type: file.type,
           size: file.size
-        }
+        },
+        blobUrl: imageUrl
       })
       
       // Try to get more specific error information
       let errorMessage = 'Failed to load image. '
+      
+      // Check if browser supports the file type
       if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/i)) {
         errorMessage += `Unsupported format: ${file.type}. `
+      } else if (imageUrl.startsWith('blob:')) {
+        // If blob URL failed, this might be a browser security issue
+        errorMessage += 'This might be a browser security issue with blob URLs. '
+        errorMessage += 'Try the alternative editor at /map-editor-fixed which uses a different approach.'
       }
-      errorMessage += 'Please check the file format and try a different file.'
+      
+      errorMessage += ' Please check the file format and try a different file.'
       
       setUploadError(errorMessage)
       setIsUploading(false)

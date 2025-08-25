@@ -33,6 +33,7 @@ import Dashboard from './pages/Dashboard';
 import Play from './pages/Play';
 import Maps from './pages/Maps';
 import MapEditor from './pages/MapEditor';
+import MapEditorFixed from './pages/MapEditorFixed';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -313,6 +314,14 @@ function App() {
           element={
             <AuthGuard>
               <MapEditor />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/map-editor-fixed" 
+          element={
+            <AuthGuard>
+              <MapEditorFixed />
             </AuthGuard>
           } 
         />
