@@ -24,13 +24,10 @@ export default function Layout({ children }: LayoutProps) {
     <>
       <Header />
       
-      {/* Page Content Container */}
-      <div className="page-container">
-        {/* Main Content with improved spacing */}
-        <main className="main-content py-8 sm:py-12">
-          {children}
-        </main>
-      </div>
+      {/* Main Content - no extra container needed */}
+      <main>
+        {children}
+      </main>
     </>
   );
 }
