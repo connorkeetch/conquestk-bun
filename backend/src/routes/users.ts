@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
 import { authenticateToken } from '../middleware/auth';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -16,11 +16,11 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       [userId]
     );
     
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    return res.json(result[0]);
+    return res.json(result.rows[0]);
   } catch (error) {
     logger.error('Error fetching user profile:', error);
     return res.status(500).json({ error: 'Failed to fetch profile' });
@@ -46,7 +46,7 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
     );
     
     return res.json({ 
-      available: result.length === 0,
+      available: result.rows.length === 0,
       username: username.trim()
     });
   } catch (error) {
@@ -77,7 +77,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
         [username.trim(), userId]
       );
       
-      if (usernameCheck.length > 0) {
+      if (usernameCheck.rows.length > 0) {
         return res.status(400).json({ error: 'Username already taken' });
       }
     }
@@ -89,7 +89,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
         [email.trim().toLowerCase(), userId]
       );
       
-      if (emailCheck.length > 0) {
+      if (emailCheck.rows.length > 0) {
         return res.status(400).json({ error: 'Email already in use' });
       }
     }
@@ -127,7 +127,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     
     return res.json({
       success: true,
-      user: updatedUser[0]
+      user: updatedUser.rows[0]
     });
   } catch (error) {
     logger.error('Error updating user profile:', error);
@@ -155,12 +155,12 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
       [userId]
     );
     
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, result[0].password);
+    const isValidPassword = await bcrypt.compare(currentPassword, result.rows[0].password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
