@@ -40,7 +40,7 @@ const GamePage: React.FC = () => {
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             {!isFullScreen && (
-              <Link to="/games/active" className="btn btn-secondary btn-sm">
+              <Link to="/games/active" className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
                 ← My Games
               </Link>
             )}
@@ -86,14 +86,14 @@ const GamePage: React.FC = () => {
             )}
 
             {/* Game Actions */}
-            <button className="btn btn-secondary btn-sm">⚙️</button>
+            <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">⚙️</button>
             <button 
-              className="btn btn-secondary btn-sm"
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
               onClick={toggleFullScreen}
             >
               {isFullScreen ? '🗗' : '🗖'}
             </button>
-            <button className="btn btn-danger btn-sm">🏳️</button>
+            <button className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">🏳️</button>
           </div>
         </div>
       </div>
@@ -141,8 +141,8 @@ const GamePage: React.FC = () => {
                       <div className="font-bold">ATTACK PHASE</div>
                       <div className="text-sm">Click territories to attack</div>
                     </div>
-                    <button className="btn btn-primary w-full">End Attack Phase</button>
-                    <button className="btn btn-secondary w-full">View Help</button>
+                    <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">End Attack Phase</button>
+                    <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">View Help</button>
                   </div>
                 </div>
               )}

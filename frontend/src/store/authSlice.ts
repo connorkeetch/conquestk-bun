@@ -15,7 +15,7 @@ const initialState: AuthState = {
   token: localStorage.getItem('token'),
   isLoading: false,
   error: null,
-  isAuthenticated: false,
+  isAuthenticated: !!localStorage.getItem('token'),
 }
 
 export const login = createAsyncThunk(
@@ -40,8 +40,18 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
   const token = localStorage.getItem('token')
   if (!token) throw new Error('No token found')
   
-  const response = await authService.getProfile()
-  return response
+  try {
+    const response = await authService.getProfile()
+    return { user: response.user, token }
+  } catch (error: any) {
+    // If it's a 401, the token is invalid
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      throw error
+    }
+    // For other errors (network, server down), keep the token but throw error
+    throw error
+  }
 })
 
 const authSlice = createSlice({
@@ -88,15 +98,24 @@ const authSlice = createSlice({
         state.isLoading = false
         state.error = action.error.message || 'Registration failed'
       })
+      .addCase(checkAuth.pending, (state) => {
+        state.isLoading = true
+      })
       .addCase(checkAuth.fulfilled, (state, action) => {
+        state.isLoading = false
         state.user = action.payload.user
+        state.token = action.payload.token
         state.isAuthenticated = true
       })
-      .addCase(checkAuth.rejected, (state) => {
-        state.user = null
-        state.token = null
-        state.isAuthenticated = false
-        localStorage.removeItem('token')
+      .addCase(checkAuth.rejected, (state, action) => {
+        state.isLoading = false
+        // Only clear auth if it was a 401 (handled in the thunk)
+        // For other errors, keep the existing state
+        if (action.error.message === 'No token found') {
+          state.user = null
+          state.token = null
+          state.isAuthenticated = false
+        }
       })
   },
 })

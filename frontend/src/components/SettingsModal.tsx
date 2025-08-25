@@ -95,7 +95,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   P
                 </div>
                 <div>
-                  <button className="btn btn-secondary btn-sm mb-2">📁 Upload New Avatar</button>
+                  <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg mb-2 transition-colors">📁 Upload New Avatar</button>
                   <p className="text-xs text-gray-400">Recommended: 256x256px, JPG or PNG</p>
                 </div>
               </div>
@@ -104,13 +104,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Security</h3>
               <div className="space-y-3">
-                <button className="btn btn-secondary w-full justify-start">
+                <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left">
                   🔑 Change Password
                 </button>
-                <button className="btn btn-secondary w-full justify-start">
+                <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left">
                   📱 Two-Factor Authentication
                 </button>
-                <button className="btn btn-danger w-full justify-start">
+                <button className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left">
                   🗑️ Delete Account
                 </button>
               </div>
@@ -592,16 +592,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Data Management</h3>
               <div className="space-y-3">
-                <button className="btn btn-secondary w-full justify-start">
+                <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left">
                   📊 Export Game Data
                 </button>
-                <button className="btn btn-secondary w-full justify-start">
+                <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left">
                   💾 Backup Settings
                 </button>
-                <button className="btn btn-danger w-full justify-start">
+                <button className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left">
                   🗑️ Clear Cache
                 </button>
-                <button className="btn btn-danger w-full justify-start">
+                <button className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left">
                   ⚠️ Reset All Settings
                 </button>
               </div>
@@ -680,10 +680,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             Changes are saved automatically
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="btn btn-secondary">
+            <button onClick={onClose} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
               Cancel
             </button>
-            <button onClick={onClose} className="btn btn-primary">
+            <button onClick={onClose} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
               Save & Close
             </button>
           </div>
