@@ -85,12 +85,35 @@ export default function MapEditor() {
 
     // Draw background image if loaded
     if (state.imageUrl) {
+      console.log('🎨 Canvas: Attempting to draw image:', {
+        imageUrl: state.imageUrl.substring(0, 100) + '...',
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height
+      })
+      
       const img = new Image()
+      img.crossOrigin = 'anonymous' // Allow CORS for blob URLs
       img.onload = () => {
+        console.log('✅ Canvas: Image loaded for drawing:', {
+          width: img.width,
+          height: img.height,
+          complete: img.complete
+        })
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         redrawTerritories(ctx)
       }
-      img.src = mapService.getImageUrl(state.imageUrl)
+      
+      img.onerror = (event) => {
+        console.error('❌ Canvas: Failed to load image for drawing:', {
+          event,
+          originalUrl: state.imageUrl?.substring(0, 100) + '...',
+          processedUrl: mapService.getImageUrl(state.imageUrl).substring(0, 100) + '...'
+        })
+      }
+      
+      const processedUrl = mapService.getImageUrl(state.imageUrl)
+      console.log('🔄 Canvas: Setting img.src to:', processedUrl.substring(0, 100) + '...')
+      img.src = processedUrl
     } else {
       // Draw grid background
       drawGrid(ctx)
@@ -357,15 +380,26 @@ export default function MapEditor() {
     // Clear previous errors
     setUploadError(null)
     
+    console.log('🖼️ Processing image file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: new Date(file.lastModified).toISOString()
+    })
+    
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setUploadError('Please select an image file (PNG, JPG, GIF, WEBP)')
+      const error = `Invalid file type: ${file.type}. Please select an image file (PNG, JPG, GIF, WEBP)`
+      console.error('❌ File validation failed:', error)
+      setUploadError(error)
       return
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Image file must be smaller than 10MB')
+      const error = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Image file must be smaller than 10MB`
+      console.error('❌ File size validation failed:', error)
+      setUploadError(error)
       return
     }
 
@@ -376,12 +410,34 @@ export default function MapEditor() {
     setSelectedFile(file)
     
     // Create preview URL for canvas display
-    const imageUrl = URL.createObjectURL(file)
+    let imageUrl: string
+    try {
+      imageUrl = URL.createObjectURL(file)
+      console.log('✅ Created blob URL:', imageUrl)
+    } catch (error) {
+      console.error('❌ Failed to create blob URL:', error)
+      setUploadError(`Failed to create preview URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setIsUploading(false)
+      setUploadProgress(0)
+      return
+    }
+    
     setUploadProgress(50)
     
     // Get image dimensions
     const img = new Image()
+    img.crossOrigin = 'anonymous' // Allow CORS for blob URLs
+    
     img.onload = () => {
+      console.log('✅ Image loaded successfully:', {
+        width: img.width,
+        height: img.height,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        complete: img.complete,
+        src: img.src.substring(0, 100) + '...'
+      })
+      
       setState(prev => ({
         ...prev,
         imageUrl,
@@ -393,15 +449,37 @@ export default function MapEditor() {
       setTimeout(() => {
         setIsUploading(false)
         setUploadProgress(0)
+        console.log('✅ Image upload process completed')
       }, 500)
     }
     
-    img.onerror = () => {
-      setUploadError('Failed to load image. Please check the file format and try a different file.')
+    img.onerror = (event) => {
+      console.error('❌ Image load error:', {
+        event,
+        src: img.src.substring(0, 100) + '...',
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size
+        }
+      })
+      
+      // Try to get more specific error information
+      let errorMessage = 'Failed to load image. '
+      if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/i)) {
+        errorMessage += `Unsupported format: ${file.type}. `
+      }
+      errorMessage += 'Please check the file format and try a different file.'
+      
+      setUploadError(errorMessage)
       setIsUploading(false)
       setUploadProgress(0)
+      
+      // Clean up the blob URL on error
+      URL.revokeObjectURL(imageUrl)
     }
     
+    console.log('🔄 Setting image src to blob URL...')
     img.src = imageUrl
   }
 
