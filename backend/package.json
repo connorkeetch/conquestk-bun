@@ -10,7 +10,9 @@
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix"
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "seed:users": "ts-node src/scripts/seedUsers.ts",
+    "seed": "npm run seed:users"
   },
   "dependencies": {
     "@types/multer": "^2.0.0",
