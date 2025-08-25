@@ -22,19 +22,25 @@ export class UserService {
       
       return result.rows[0];
     } else {
+      // SQLite uses auto-generated UUID, don't provide one
       const sqliteQuery = `
-        INSERT INTO users (id, username, email, password)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (username, email, password)
+        VALUES (?, ?, ?)
       `;
       
-      await query(sqliteQuery, [
-        id,
+      const insertResult = await query(sqliteQuery, [
         userData.username,
         userData.email,
         userData.password
       ]);
       
-      const result = await query('SELECT * FROM users WHERE id = ?', [id]);
+      // For SQLite, we need to get the last inserted row
+      const result = await query('SELECT * FROM users WHERE email = ?', [userData.email]);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error('Failed to retrieve created user');
+      }
+      
       return result.rows[0];
     }
   }

@@ -30,11 +30,15 @@ export async function runMigration(migrationFile: string) {
         try {
           await query(statement);
         } catch (error) {
-          // Log but don't fail on DROP TABLE IF EXISTS or duplicate inserts
+          // Log but don't fail on expected errors
+          const errorMessage = (error as any).message || '';
           if (statement.includes('DROP TABLE IF EXISTS') || 
               statement.includes('INSERT OR IGNORE') ||
-              (error as any).message?.includes('already exists')) {
-            logger.debug(`Skipping statement: ${statement.substring(0, 50)}...`);
+              statement.includes('CREATE INDEX IF NOT EXISTS') ||
+              errorMessage.includes('already exists') ||
+              errorMessage.includes('duplicate column name') ||
+              errorMessage.includes('no such column')) {
+            logger.debug(`Skipping statement (already applied): ${statement.substring(0, 50)}...`);
           } else {
             throw error;
           }
