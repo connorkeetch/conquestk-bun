@@ -39,6 +39,19 @@ function App() {
 
   useEffect(() => {
     dispatch(checkAuth());
+    
+    // Apply saved theme on app load
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        if (settings.display?.theme) {
+          document.documentElement.setAttribute('data-theme', settings.display.theme);
+        }
+      } catch (error) {
+        console.error('Failed to apply saved theme:', error);
+      }
+    }
   }, [dispatch]);
 
   return (

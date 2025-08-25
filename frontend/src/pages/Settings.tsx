@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { useAppSelector } from '../hooks/redux';
+import React, { useState, useRef } from 'react';
+import { useAppSelector, useAppDispatch } from '../hooks/redux';
+import {
+  setAutoEndTurn,
+  setShowAttackAnimations,
+  setConfirmAttacks,
+  setDefaultTurnDuration,
+  setTheme,
+  setShowTerritoryNames,
+  setShowArmyCountBadges,
+  setDebugMode,
+  setBetaFeatures,
+  clearCache,
+  exportSettings,
+  importSettings,
+  resetSettings,
+} from '../store/settingsSlice';
 
 type SettingsTab = 'account' | 'game' | 'audio' | 'display' | 'notifications' | 'privacy' | 'advanced';
 
@@ -13,11 +28,16 @@ interface SettingItem {
   options?: { value: string; label: string }[];
   buttonText?: string;
   buttonVariant?: 'primary' | 'secondary' | 'danger';
+  onChange?: (value: any) => void;
+  onClick?: () => void;
 }
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const { user } = useAppSelector((state) => state.auth);
+  const settings = useAppSelector((state) => state.settings);
+  const dispatch = useAppDispatch();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const settingsTabs = [
     { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
@@ -63,8 +83,13 @@ export default function Settings() {
             <label className="toggle">
               <input 
                 type="checkbox" 
-                defaultChecked={setting.defaultValue}
+                checked={setting.defaultValue}
                 disabled={!setting.isWorking}
+                onChange={(e) => {
+                  if (setting.isWorking && setting.onChange) {
+                    setting.onChange(e.target.checked);
+                  }
+                }}
                 className={!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}
               />
               <span className={`slider ${!setting.isWorking ? 'opacity-50' : ''}`}></span>
@@ -78,6 +103,12 @@ export default function Settings() {
                 !setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               disabled={!setting.isWorking}
+              value={setting.defaultValue}
+              onChange={(e) => {
+                if (setting.isWorking && setting.onChange) {
+                  setting.onChange(e.target.value);
+                }
+              }}
             >
               {setting.options?.map(option => (
                 <option key={option.value} value={option.value}>
@@ -113,6 +144,11 @@ export default function Settings() {
             <button 
               className={buttonClass}
               disabled={!setting.isWorking}
+              onClick={() => {
+                if (setting.isWorking && setting.onClick) {
+                  setting.onClick();
+                }
+              }}
             >
               {setting.buttonText}
             </button>
@@ -214,31 +250,36 @@ export default function Settings() {
             label: 'Auto-end Turn',
             description: 'Automatically end turn when no moves available',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: true
+            isWorking: true,
+            defaultValue: settings.game.autoEndTurn,
+            onChange: (value: boolean) => dispatch(setAutoEndTurn(value))
           },
           {
             id: 'show-animations',
             label: 'Show Attack Animations',
             description: 'Display dice rolling and battle animations',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: true
+            isWorking: true,
+            defaultValue: settings.game.showAttackAnimations,
+            onChange: (value: boolean) => dispatch(setShowAttackAnimations(value))
           },
           {
             id: 'confirm-attacks',
             label: 'Confirm Attacks',
             description: 'Show confirmation dialog before attacking',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: false
+            isWorking: true,
+            defaultValue: settings.game.confirmAttacks,
+            onChange: (value: boolean) => dispatch(setConfirmAttacks(value))
           },
           {
             id: 'turn-timer',
             label: 'Default Turn Duration',
             description: 'Set default time limit for turns',
             type: 'select',
-            isWorking: false,
+            isWorking: true,
+            defaultValue: settings.game.defaultTurnDuration.toString(),
+            onChange: (value: string) => dispatch(setDefaultTurnDuration(parseInt(value))),
             options: [
               { value: '60', label: '1 minute' },
               { value: '120', label: '2 minutes' },
@@ -299,25 +340,32 @@ export default function Settings() {
             id: 'theme',
             label: 'Theme Selection',
             description: 'Choose your preferred color theme',
-            type: 'button',
-            isWorking: false,
-            buttonText: '🎨 Change Theme'
+            type: 'select',
+            isWorking: true,
+            defaultValue: settings.display.theme,
+            onChange: (value: 'dark' | 'light') => dispatch(setTheme(value)),
+            options: [
+              { value: 'dark', label: '🌙 Dark Theme' },
+              { value: 'light', label: '☀️ Light Theme' }
+            ]
           },
           {
             id: 'show-territory-names',
             label: 'Show Territory Names',
             description: 'Display territory names on the map',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: true
+            isWorking: true,
+            defaultValue: settings.display.showTerritoryNames,
+            onChange: (value: boolean) => dispatch(setShowTerritoryNames(value))
           },
           {
             id: 'army-count-badges',
             label: 'Army Count Badges',
             description: 'Show army numbers on territories',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: true
+            isWorking: true,
+            defaultValue: settings.display.showArmyCountBadges,
+            onChange: (value: boolean) => dispatch(setShowArmyCountBadges(value))
           }
         ];
 
@@ -416,49 +464,63 @@ export default function Settings() {
             label: 'Debug Mode',
             description: 'Show additional debug information',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: false
+            isWorking: true,
+            defaultValue: settings.advanced.debugMode,
+            onChange: (value: boolean) => dispatch(setDebugMode(value))
           },
           {
             id: 'beta-features',
             label: 'Beta Features',
             description: 'Enable experimental features',
             type: 'toggle',
-            isWorking: false,
-            defaultValue: false
+            isWorking: true,
+            defaultValue: settings.advanced.betaFeatures,
+            onChange: (value: boolean) => dispatch(setBetaFeatures(value))
           },
           {
             id: 'clear-cache',
             label: 'Clear Cache',
             description: 'Clear stored game data',
             type: 'button',
-            isWorking: false,
-            buttonText: '🗂️ Clear Cache'
+            isWorking: true,
+            buttonText: '🗂️ Clear Cache',
+            onClick: () => {
+              dispatch(clearCache());
+              alert('Cache cleared successfully!');
+            }
           },
           {
             id: 'export-settings',
             label: 'Export Settings',
             description: 'Save your settings to file',
             type: 'button',
-            isWorking: false,
-            buttonText: '💾 Export Settings'
+            isWorking: true,
+            buttonText: '💾 Export Settings',
+            onClick: () => dispatch(exportSettings())
           },
           {
             id: 'import-settings',
             label: 'Import Settings',
             description: 'Load settings from file',
             type: 'button',
-            isWorking: false,
-            buttonText: '📁 Import Settings'
+            isWorking: true,
+            buttonText: '📁 Import Settings',
+            onClick: () => fileInputRef.current?.click()
           },
           {
             id: 'reset-settings',
             label: 'Reset All Settings',
             description: 'Reset all settings to default',
             type: 'button',
-            isWorking: false,
+            isWorking: true,
             buttonText: '🔄 Reset All',
-            buttonVariant: 'danger'
+            buttonVariant: 'danger',
+            onClick: () => {
+              if (confirm('Are you sure you want to reset all settings to default?')) {
+                dispatch(resetSettings());
+                alert('Settings reset to default!');
+              }
+            }
           }
         ];
 
@@ -539,8 +601,35 @@ export default function Settings() {
     );
   };
 
+  // Handle file import
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        try {
+          dispatch(importSettings(content));
+          alert('Settings imported successfully!');
+        } catch (error) {
+          alert('Failed to import settings. Please check the file format.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   return (
     <div className="container mx-auto px-6 py-8">
+      {/* Hidden file input for import */}
+      <input 
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={handleFileImport}
+      />
+      
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 gradient-text">Settings</h1>
         

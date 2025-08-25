@@ -1,6 +1,25 @@
 /* Global Design System - Tailwind v4 Compatible */
 /* Only includes custom styles that Tailwind doesn't provide */
 
+/* Theme Variables */
+:root {
+  /* Dark theme (default) */
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --border-color: #374151;
+}
+
+[data-theme="light"] {
+  /* Light theme */
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+}
+
 /* Accessibility - Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .transition { transition: none !important; }
@@ -10,7 +29,7 @@
 @layer base {
   /* Custom body background that Tailwind doesn't provide */
   body {
-    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
     background-attachment: fixed;
     min-height: 100vh;
     position: relative;
