@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { mapService, CustomMap, MapTerritory, MapContinent, TerritoryAbilityType, GameMode, Coordinate } from '../services/mapService'
+import ImageCropper from '../components/ImageCropper'
 
 type EditorTool = 'select' | 'territory' | 'continent' | 'adjacency'
 
@@ -53,6 +54,8 @@ export default function MapEditor() {
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [showCropper, setShowCropper] = useState(false)
+  const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
 
   // Load metadata on component mount
   useEffect(() => {
@@ -100,8 +103,13 @@ export default function MapEditor() {
           height: img.height,
           complete: img.complete
         })
+        // Clear and draw image
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        
+        // Draw territories and adjacencies on top of image
         redrawTerritories(ctx)
+        drawAdjacencies(ctx)
       }
       
       img.onerror = (event) => {
@@ -110,6 +118,10 @@ export default function MapEditor() {
           isDataUrl: state.imageUrl?.startsWith('data:'),
           urlLength: state.imageUrl?.length
         })
+        // Fall back to grid if image fails
+        drawGrid(ctx)
+        redrawTerritories(ctx)
+        drawAdjacencies(ctx)
       }
       
       // Use the image URL directly for data URLs, or process it for relative URLs
@@ -153,9 +165,10 @@ export default function MapEditor() {
       const continent = state.continents.find(c => c.id === territory.continentId)
       const isSelected = state.selectedTerritory === territory.id
 
-      ctx.fillStyle = continent ? `${continent.color}80` : '#6B728080'
-      ctx.strokeStyle = isSelected ? '#FFD700' : '#374151'
-      ctx.lineWidth = isSelected ? 3 : 2
+      // Use higher opacity for better visibility
+      ctx.fillStyle = continent ? `${continent.color}B3` : '#6B7280B3'  // 70% opacity
+      ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF'  // White borders for better contrast
+      ctx.lineWidth = isSelected ? 4 : 2
 
       // Draw territory polygon
       if (territory.boundaryCoords.length > 0) {
@@ -168,10 +181,18 @@ export default function MapEditor() {
         ctx.fill()
         ctx.stroke()
 
-        // Draw territory name
-        ctx.fillStyle = '#FFFFFF'
-        ctx.font = '12px sans-serif'
+        // Draw territory name with shadow for better readability
+        ctx.fillStyle = '#000000'
+        ctx.font = 'bold 14px sans-serif'
         ctx.textAlign = 'center'
+        // Draw shadow
+        ctx.fillText(
+          territory.name,
+          territory.armyPosition.x + 1,
+          territory.armyPosition.y + 1
+        )
+        // Draw text
+        ctx.fillStyle = '#FFFFFF'
         ctx.fillText(
           territory.name,
           territory.armyPosition.x,
@@ -182,10 +203,20 @@ export default function MapEditor() {
 
     // Draw current polygon being drawn
     if (state.isDrawing && state.currentPolygon.length > 0) {
-      ctx.strokeStyle = '#60A5FA'
-      ctx.lineWidth = 2
-      ctx.setLineDash([5, 5])
-
+      // Draw filled preview with low opacity
+      ctx.fillStyle = '#60A5FA40'  // Light blue with 25% opacity
+      ctx.beginPath()
+      ctx.moveTo(state.currentPolygon[0].x, state.currentPolygon[0].y)
+      state.currentPolygon.slice(1).forEach(coord => {
+        ctx.lineTo(coord.x, coord.y)
+      })
+      ctx.closePath()
+      ctx.fill()
+      
+      // Draw outline
+      ctx.strokeStyle = '#3B82F6'  // Bright blue
+      ctx.lineWidth = 3
+      ctx.setLineDash([8, 4])
       ctx.beginPath()
       ctx.moveTo(state.currentPolygon[0].x, state.currentPolygon[0].y)
       state.currentPolygon.slice(1).forEach(coord => {
@@ -193,6 +224,17 @@ export default function MapEditor() {
       })
       ctx.stroke()
       ctx.setLineDash([])
+      
+      // Draw points
+      state.currentPolygon.forEach(point => {
+        ctx.fillStyle = '#FFFFFF'
+        ctx.strokeStyle = '#3B82F6'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      })
     }
   }
 
@@ -434,19 +476,28 @@ export default function MapEditor() {
           dataUrlLength: dataUrl.length
         })
         
-        setState(prev => ({
-          ...prev,
-          imageUrl: dataUrl,
-          imageWidth: img.width,
-          imageHeight: img.height
-        }))
-        
-        setUploadProgress(100)
-        setTimeout(() => {
+        // Check if image needs cropping (larger than canvas)
+        if (img.width > 800 || img.height > 600) {
+          setTempImageUrl(dataUrl)
+          setShowCropper(true)
           setIsUploading(false)
           setUploadProgress(0)
-          console.log('✅ Image upload process completed')
-        }, 500)
+        } else {
+          // Image fits, use directly
+          setState(prev => ({
+            ...prev,
+            imageUrl: dataUrl,
+            imageWidth: img.width,
+            imageHeight: img.height
+          }))
+          
+          setUploadProgress(100)
+          setTimeout(() => {
+            setIsUploading(false)
+            setUploadProgress(0)
+            console.log('✅ Image upload process completed')
+          }, 500)
+        }
       }
       
       img.onerror = (event) => {
@@ -738,6 +789,24 @@ export default function MapEditor() {
     }
   }
 
+  const handleCropComplete = (croppedImageUrl: string) => {
+    setState(prev => ({
+      ...prev,
+      imageUrl: croppedImageUrl,
+      imageWidth: 800,
+      imageHeight: 600
+    }))
+    setShowCropper(false)
+    setTempImageUrl(null)
+    console.log('✅ Image cropped and applied')
+  }
+
+  const handleCropCancel = () => {
+    setShowCropper(false)
+    setTempImageUrl(null)
+    setUploadError(null)
+  }
+
   const validateMap = () => {
     const validation = mapService.validateMapData(state.territories, [])
     
@@ -752,6 +821,17 @@ export default function MapEditor() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6">
+      {/* Image Cropper Modal */}
+      {showCropper && tempImageUrl && (
+        <ImageCropper
+          imageUrl={tempImageUrl}
+          onCrop={handleCropComplete}
+          onCancel={handleCropCancel}
+          targetWidth={800}
+          targetHeight={600}
+        />
+      )}
+      
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-slate-100">🗺️ Map Editor</h1>
@@ -919,6 +999,10 @@ export default function MapEditor() {
                               Drag & drop or click to browse
                               <br />
                               PNG, JPG, GIF, WEBP (max 10MB)
+                              <br />
+                              <span className="text-blue-300">💡 Recommended: 800×600 or 1600×1200</span>
+                              <br />
+                              <span className="text-yellow-300">⚡ Large images will be cropped</span>
                             </>
                           )}
                         </div>
