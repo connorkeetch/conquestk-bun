@@ -33,6 +33,7 @@ import Dashboard from './pages/Dashboard';
 import Play from './pages/Play';
 import Maps from './pages/Maps';
 import MapEditor from './pages/MapEditor';
+import MapEditorTokens from './pages/MapEditorTokens';
 
 function App() {
   const dispatch = useAppDispatch();
@@ -310,6 +311,14 @@ function App() {
         />
         <Route 
           path="/map-editor" 
+          element={
+            <AuthGuard>
+              <MapEditorTokens />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/map-editor-polygon" 
           element={
             <AuthGuard>
               <MapEditor />
