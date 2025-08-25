@@ -8,12 +8,20 @@ const router = Router();
 router.get('/vapid-public-key', (req: Request, res: Response) => {
   res.json({
     publicKey: notificationService.getVapidPublicKey(),
+    enabled: notificationService.isEnabled(),
   });
 });
 
 // Subscribe to push notifications
 router.post('/subscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!notificationService.isEnabled()) {
+      return res.status(503).json({ 
+        error: 'Push notification service is not available',
+        message: 'The notification service is currently disabled' 
+      });
+    }
+
     const userId = (req as any).userId;
     const { subscription } = req.body;
 
@@ -53,6 +61,13 @@ router.post('/unsubscribe', authenticateToken, async (req: Request, res: Respons
 // Send test notification
 router.post('/test', authenticateToken, async (req: Request, res: Response) => {
   try {
+    if (!notificationService.isEnabled()) {
+      return res.status(503).json({ 
+        error: 'Push notification service is not available',
+        message: 'The notification service is currently disabled' 
+      });
+    }
+
     const userId = (req as any).userId;
 
     const success = await notificationService.sendTestNotification(userId);

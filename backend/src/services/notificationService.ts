@@ -1,11 +1,26 @@
 import webpush from 'web-push';
 
-// Configure web-push with VAPID keys
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com',
-  process.env.VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
+// Check if VAPID keys are configured
+const isNotificationServiceEnabled = !!(
+  process.env.VAPID_PUBLIC_KEY && 
+  process.env.VAPID_PRIVATE_KEY
 );
+
+// Only configure web-push if VAPID keys are available
+if (isNotificationServiceEnabled) {
+  try {
+    webpush.setVapidDetails(
+      process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com',
+      process.env.VAPID_PUBLIC_KEY!,  // We know these exist because of the check above
+      process.env.VAPID_PRIVATE_KEY!
+    );
+    console.log('Push notification service initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize push notification service:', error);
+  }
+} else {
+  console.warn('Push notification service disabled: VAPID keys not configured');
+}
 
 // Store subscriptions in memory for now (should be in database in production)
 const subscriptions = new Map<number, webpush.PushSubscription>();
@@ -48,6 +63,12 @@ class NotificationService {
 
   // Send notification to a specific user
   async sendToUser(userId: number, payload: NotificationPayload): Promise<boolean> {
+    // Skip if notification service is not enabled
+    if (!isNotificationServiceEnabled) {
+      console.debug(`Notification service disabled, skipping notification to user ${userId}`);
+      return false;
+    }
+
     const subscription = await this.getSubscription(userId);
     if (!subscription) {
       console.log(`No push subscription found for user ${userId}`);
@@ -179,6 +200,11 @@ class NotificationService {
   // Get VAPID public key for client
   getVapidPublicKey(): string {
     return process.env.VAPID_PUBLIC_KEY || '';
+  }
+
+  // Check if notification service is enabled
+  isEnabled(): boolean {
+    return isNotificationServiceEnabled;
   }
 }
 
