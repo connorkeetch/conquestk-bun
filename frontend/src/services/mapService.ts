@@ -280,7 +280,7 @@ export const mapService = {
 
   getImageUrl(imageUrl?: string): string {
     if (!imageUrl) return ''
-    if (imageUrl.startsWith('http')) return imageUrl
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:')) return imageUrl
     return `${API_URL.replace('/api', '')}${imageUrl}`
   },
 
