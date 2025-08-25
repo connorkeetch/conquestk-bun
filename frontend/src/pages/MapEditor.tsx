@@ -136,7 +136,7 @@ export default function MapEditor() {
       redrawTerritories(ctx)
       drawAdjacencies(ctx)
     }
-  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory, state.adjacencies, state.firstSelectedTerritory])
+  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory, state.adjacencies, state.firstSelectedTerritory, state.currentPolygon, state.isDrawing])
 
   const drawGrid = (ctx: CanvasRenderingContext2D) => {
     const canvas = ctx.canvas
@@ -287,12 +287,24 @@ export default function MapEditor() {
     if (!canvas) return
 
     const rect = canvas.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
+    // Scale the coordinates based on the actual canvas size vs displayed size
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (event.clientX - rect.left) * scaleX
+    const y = (event.clientY - rect.top) * scaleY
+    
+    console.log('Canvas clicked:', { 
+      x: Math.round(x), 
+      y: Math.round(y), 
+      tool: state.selectedTool, 
+      isDrawing: state.isDrawing,
+      scale: { x: scaleX, y: scaleY }
+    })
 
     if (state.selectedTool === 'territory') {
       if (!state.isDrawing) {
         // Start drawing new territory
+        console.log('Starting new territory at:', { x, y })
         setState(prev => ({
           ...prev,
           isDrawing: true,
@@ -300,6 +312,7 @@ export default function MapEditor() {
         }))
       } else {
         // Add point to current polygon
+        console.log('Adding point to territory:', { x, y, points: state.currentPolygon.length + 1 })
         setState(prev => ({
           ...prev,
           currentPolygon: [...prev.currentPolygon, { x, y }]
@@ -433,9 +446,9 @@ export default function MapEditor() {
       lastModified: new Date(file.lastModified).toISOString()
     })
     
-    // Validate file type
+    // Validate file type (including SVG)
     if (!file.type.startsWith('image/')) {
-      const error = `Invalid file type: ${file.type}. Please select an image file (PNG, JPG, GIF, WEBP)`
+      const error = `Invalid file type: ${file.type}. Please select an image file (PNG, JPG, GIF, WEBP, SVG)`
       console.error('❌ File validation failed:', error)
       setUploadError(error)
       return
@@ -476,8 +489,9 @@ export default function MapEditor() {
           dataUrlLength: dataUrl.length
         })
         
-        // Check if image needs cropping (larger than canvas)
-        if (img.width > 800 || img.height > 600) {
+        // Check if image needs cropping (larger than canvas and not SVG)
+        const isSvg = file.type === 'image/svg+xml'
+        if (!isSvg && (img.width > 800 || img.height > 600)) {
           setTempImageUrl(dataUrl)
           setShowCropper(true)
           setIsUploading(false)
@@ -998,11 +1012,13 @@ export default function MapEditor() {
                             <>
                               Drag & drop or click to browse
                               <br />
-                              PNG, JPG, GIF, WEBP (max 10MB)
+                              PNG, JPG, GIF, WEBP, SVG (max 10MB)
                               <br />
                               <span className="text-blue-300">💡 Recommended: 800×600 or 1600×1200</span>
                               <br />
                               <span className="text-yellow-300">⚡ Large images will be cropped</span>
+                              <br />
+                              <span className="text-green-300">✨ SVG maps supported!</span>
                             </>
                           )}
                         </div>
