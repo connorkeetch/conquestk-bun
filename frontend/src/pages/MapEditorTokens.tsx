@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import TerritoryToken from '../components/TerritoryToken'
 import ImageProcessor from '../components/ImageProcessor'
 import { v4 as uuidv4 } from 'uuid'
+import axios from 'axios'
 
 interface Territory {
   id: string
@@ -281,7 +282,58 @@ export default function MapEditorTokens() {
     return state.continents.find(c => c.id === territory.continentId)
   }
 
-  // Export map data
+  // Save map to database
+  const handleSaveMap = async () => {
+    try {
+      if (state.territories.length < 2) {
+        alert('Please add at least 2 territories before saving')
+        return
+      }
+      if (state.continents.length < 1) {
+        alert('Please add at least 1 continent before saving')
+        return
+      }
+      
+      // Prepare map data for API
+      const formData = new FormData()
+      formData.append('name', state.name)
+      formData.append('description', `Map with ${state.territories.length} territories and ${state.continents.length} continents`)
+      formData.append('isPublic', 'true')
+      formData.append('tags', JSON.stringify(['custom', 'user-created']))
+      
+      // Store territories and continents as metadata
+      const metadata = {
+        territories: state.territories,
+        continents: state.continents,
+        width: state.mapWidth,
+        height: state.mapHeight
+      }
+      formData.append('metadata', JSON.stringify(metadata))
+      
+      // If there's an image, convert data URL to blob and append
+      if (state.imageUrl) {
+        const response = await fetch(state.imageUrl)
+        const blob = await response.blob()
+        formData.append('image', blob, 'map-background.png')
+      }
+      
+      // Save to backend
+      const result = await axios.post('/api/maps', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      console.log('Map saved successfully:', result.data)
+      alert('Map saved successfully! It will appear in the Create Game map selection.')
+    } catch (error) {
+      console.error('Error saving map:', error)
+      alert('Failed to save map. Please try again.')
+    }
+  }
+  
+  // Export map data as JSON file for backup/sharing
   const handleExport = () => {
     const mapData = {
       name: state.name,
@@ -305,7 +357,7 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      <div className="max-w-7xl mx-auto">  {/* Center content with max width */}
+      <div className="w-full max-w-[1920px] mx-auto">  {/* Full width with max limit */}
         <h1 className="text-3xl font-bold mb-6">Map Editor</h1>
         
         {/* Toolbar */}
@@ -394,10 +446,16 @@ export default function MapEditorTokens() {
               📤 Upload Image
             </button>
             <button
-              onClick={handleExport}
+              onClick={handleSaveMap}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
             >
-              💾 Export Map
+              💾 Save to Database
+            </button>
+            <button
+              onClick={handleExport}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+            >
+              📥 Export JSON
             </button>
           </div>
 
@@ -550,13 +608,13 @@ export default function MapEditorTokens() {
           )}
         </div>
 
-        {/* Main Editor Area - Centered layout */}
-        <div className="flex flex-col lg:flex-row gap-4 justify-center">
-          {/* Map Canvas - Center-biased */}
+        {/* Main Editor Area - Full width with right sidebar */}
+        <div className="flex gap-4">
+          {/* Map Canvas - Main area taking most space */}
           <div 
             ref={mapContainerRef}
-            className="flex-grow bg-gray-800 rounded-lg overflow-auto"
-            style={{ maxHeight: '80vh' }}
+            className="flex-1 bg-gray-800 rounded-lg overflow-auto"
+            style={{ height: 'calc(100vh - 280px)' }}
           >
             <div
               ref={containerRef}
@@ -676,8 +734,8 @@ export default function MapEditorTokens() {
             </div>
           </div>
 
-          {/* Properties Panel - Sidebar */}
-          <div className="w-full lg:w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0">
+          {/* Properties Panel - Fixed right sidebar */}
+          <div className="w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0 overflow-y-auto" style={{ height: 'calc(100vh - 280px)' }}>
             <h2 className="text-xl font-bold mb-4">Properties</h2>
             
             {/* Map Name */}

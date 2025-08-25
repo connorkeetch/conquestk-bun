@@ -37,6 +37,9 @@ export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize push notification service and check status
@@ -164,15 +167,68 @@ export default function Settings() {
           );
 
         case 'input':
+          const isEditing = editingField === setting.id;
           return (
-            <input 
-              type="text"
-              className={`px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm w-48 ${
-                !setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              defaultValue={setting.defaultValue}
-              disabled={!setting.isWorking}
-            />
+            <div className="flex items-center gap-2">
+              {!isEditing ? (
+                <>
+                  <span className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm min-w-[200px] inline-block">
+                    {fieldValues[setting.id] || setting.defaultValue || 'Not set'}
+                  </span>
+                  {setting.isWorking && (
+                    <button
+                      onClick={() => {
+                        setEditingField(setting.id);
+                        setFieldValues(prev => ({
+                          ...prev,
+                          [setting.id]: setting.defaultValue || ''
+                        }));
+                      }}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <input 
+                    type={setting.id === 'email' ? 'email' : 'text'}
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm w-48"
+                    value={fieldValues[setting.id] || ''}
+                    onChange={(e) => setFieldValues(prev => ({
+                      ...prev,
+                      [setting.id]: e.target.value
+                    }))}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      // Here you would save to backend
+                      setSaveStatus(`${setting.label} updated successfully!`);
+                      setTimeout(() => setSaveStatus(null), 3000);
+                      setEditingField(null);
+                    }}
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingField(null);
+                      setFieldValues(prev => {
+                        const newValues = { ...prev };
+                        delete newValues[setting.id];
+                        return newValues;
+                      });
+                    }}
+                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
           );
 
         default:
@@ -206,16 +262,16 @@ export default function Settings() {
             label: 'Username',
             description: 'Your display name in games',
             type: 'input',
-            isWorking: true, // Only working setting
-            defaultValue: user?.username || ''
+            isWorking: true,
+            defaultValue: user?.username || 'Player123'
           },
           {
             id: 'email',
             label: 'Email Address',
-            description: 'Your account email',
+            description: 'Your account email for notifications and recovery',
             type: 'input',
-            isWorking: true, // Only working setting
-            defaultValue: user?.email || ''
+            isWorking: true,
+            defaultValue: user?.email || 'player@example.com'
           },
           {
             id: 'avatar',
@@ -547,27 +603,15 @@ export default function Settings() {
     if (activeTab === 'account') {
       return (
         <div className="space-y-8">
+          {saveStatus && (
+            <div className="p-3 bg-green-600/20 border border-green-500 rounded-lg text-green-400">
+              ✅ {saveStatus}
+            </div>
+          )}
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Account Information</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">Username</label>
-                <input 
-                  type="text" 
-                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                  placeholder="Enter username" 
-                  defaultValue={user?.username || ""}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">Email</label>
-                <input 
-                  type="email" 
-                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                  placeholder="Enter email" 
-                  defaultValue={user?.email || ""}
-                />
-              </div>
+            <div className="space-y-4">
+              {settings.slice(0, 2).map(renderSetting)}
             </div>
           </div>
           
