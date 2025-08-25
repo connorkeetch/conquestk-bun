@@ -280,7 +280,11 @@ export const mapService = {
 
   getImageUrl(imageUrl?: string): string {
     if (!imageUrl) return ''
-    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:')) return imageUrl
+    // Return data URLs, http URLs, and blob URLs as-is
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
+      return imageUrl
+    }
+    // Convert relative URLs to absolute
     return `${API_URL.replace('/api', '')}${imageUrl}`
   },
 

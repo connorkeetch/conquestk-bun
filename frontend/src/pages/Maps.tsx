@@ -27,21 +27,12 @@ const Maps: React.FC = () => {
           <h1 className="text-3xl font-bold text-white mb-4">🗺️ Maps Gallery</h1>
           <p className="text-gray-400 text-lg">Discover battlefields from around the world</p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            to="/map-editor"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:scale-105"
-          >
-            ✏️ Create Map
-          </Link>
-          <Link
-            to="/map-editor-fixed"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-teal-600 px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:from-green-700 hover:to-teal-700 transition-all duration-200 hover:scale-105"
-            title="Alternative editor using FileReader API"
-          >
-            🔧 Alternative Editor
-          </Link>
-        </div>
+        <Link
+          to="/map-editor"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:scale-105"
+        >
+          ✏️ Create Map
+        </Link>
       </div>
 
       {/* Search and Filter */}

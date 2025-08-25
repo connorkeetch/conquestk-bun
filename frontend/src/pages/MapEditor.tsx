@@ -86,13 +86,14 @@ export default function MapEditor() {
     // Draw background image if loaded
     if (state.imageUrl) {
       console.log('🎨 Canvas: Attempting to draw image:', {
-        imageUrl: state.imageUrl.substring(0, 100) + '...',
+        isDataUrl: state.imageUrl.startsWith('data:'),
+        imageUrlLength: state.imageUrl.length,
         canvasWidth: canvas.width,
         canvasHeight: canvas.height
       })
       
       const img = new Image()
-      // Don't set crossOrigin for blob URLs
+      // No need for crossOrigin with data URLs
       img.onload = () => {
         console.log('✅ Canvas: Image loaded for drawing:', {
           width: img.width,
@@ -106,14 +107,17 @@ export default function MapEditor() {
       img.onerror = (event) => {
         console.error('❌ Canvas: Failed to load image for drawing:', {
           event,
-          originalUrl: state.imageUrl?.substring(0, 100) + '...',
-          processedUrl: mapService.getImageUrl(state.imageUrl).substring(0, 100) + '...'
+          isDataUrl: state.imageUrl?.startsWith('data:'),
+          urlLength: state.imageUrl?.length
         })
       }
       
-      const processedUrl = mapService.getImageUrl(state.imageUrl)
-      console.log('🔄 Canvas: Setting img.src to:', processedUrl.substring(0, 100) + '...')
-      img.src = processedUrl
+      // Use the image URL directly for data URLs, or process it for relative URLs
+      const imageUrl = state.imageUrl.startsWith('data:') 
+        ? state.imageUrl 
+        : mapService.getImageUrl(state.imageUrl)
+      console.log('🔄 Canvas: Setting img.src, isDataUrl:', imageUrl.startsWith('data:'))
+      img.src = imageUrl
     } else {
       // Draw grid background
       drawGrid(ctx)
@@ -409,87 +413,82 @@ export default function MapEditor() {
     // Store the actual file for upload
     setSelectedFile(file)
     
-    // Create preview URL for canvas display
-    let imageUrl: string
-    try {
-      imageUrl = URL.createObjectURL(file)
-      console.log('✅ Created blob URL:', imageUrl)
-    } catch (error) {
-      console.error('❌ Failed to create blob URL:', error)
-      setUploadError(`Failed to create preview URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      setIsUploading(false)
-      setUploadProgress(0)
-      return
-    }
+    // Use FileReader API for better compatibility (avoids blob URL security issues)
+    const reader = new FileReader()
     
-    setUploadProgress(50)
-    
-    // Get image dimensions
-    const img = new Image()
-    // Don't set crossOrigin for blob URLs - it can cause issues
-    // img.crossOrigin = 'anonymous'
-    
-    img.onload = () => {
-      console.log('✅ Image loaded successfully:', {
-        width: img.width,
-        height: img.height,
-        naturalWidth: img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-        complete: img.complete,
-        src: img.src.substring(0, 100) + '...'
-      })
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      console.log('✅ File converted to data URL, length:', dataUrl.length)
+      setUploadProgress(50)
       
-      setState(prev => ({
-        ...prev,
-        imageUrl,
-        imageWidth: img.width,
-        imageHeight: img.height
-      }))
+      // Get image dimensions
+      const img = new Image()
       
-      setUploadProgress(100)
-      setTimeout(() => {
-        setIsUploading(false)
-        setUploadProgress(0)
-        console.log('✅ Image upload process completed')
-      }, 500)
-    }
-    
-    img.onerror = (event) => {
-      console.error('❌ Image load error:', {
-        event,
-        src: img.src.substring(0, 100) + '...',
-        file: {
-          name: file.name,
-          type: file.type,
-          size: file.size
-        },
-        blobUrl: imageUrl
-      })
-      
-      // Try to get more specific error information
-      let errorMessage = 'Failed to load image. '
-      
-      // Check if browser supports the file type
-      if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/i)) {
-        errorMessage += `Unsupported format: ${file.type}. `
-      } else if (imageUrl.startsWith('blob:')) {
-        // If blob URL failed, this might be a browser security issue
-        errorMessage += 'This might be a browser security issue with blob URLs. '
-        errorMessage += 'Try the alternative editor at /map-editor-fixed which uses a different approach.'
+      img.onload = () => {
+        console.log('✅ Image loaded successfully:', {
+          width: img.width,
+          height: img.height,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          complete: img.complete,
+          dataUrlLength: dataUrl.length
+        })
+        
+        setState(prev => ({
+          ...prev,
+          imageUrl: dataUrl,
+          imageWidth: img.width,
+          imageHeight: img.height
+        }))
+        
+        setUploadProgress(100)
+        setTimeout(() => {
+          setIsUploading(false)
+          setUploadProgress(0)
+          console.log('✅ Image upload process completed')
+        }, 500)
       }
       
-      errorMessage += ' Please check the file format and try a different file.'
+      img.onerror = (event) => {
+        console.error('❌ Image load error:', {
+          event,
+          dataUrlLength: dataUrl.length,
+          file: {
+            name: file.name,
+            type: file.type,
+            size: file.size
+          }
+        })
+        
+        // Try to get more specific error information
+        let errorMessage = 'Failed to load image. '
+        
+        // Check if browser supports the file type
+        if (!file.type.match(/^image\/(jpeg|jpg|png|gif|webp)$/i)) {
+          errorMessage += `Unsupported format: ${file.type}. `
+        }
+        
+        errorMessage += 'Please check the file format and try a different file.'
+        
+        setUploadError(errorMessage)
+        setIsUploading(false)
+        setUploadProgress(0)
+      }
       
-      setUploadError(errorMessage)
-      setIsUploading(false)
-      setUploadProgress(0)
-      
-      // Clean up the blob URL on error
-      URL.revokeObjectURL(imageUrl)
+      console.log('🔄 Setting image src to data URL...')
+      img.src = dataUrl
     }
     
-    console.log('🔄 Setting image src to blob URL...')
-    img.src = imageUrl
+    reader.onerror = (error) => {
+      console.error('❌ FileReader error:', error)
+      setUploadError('Failed to read the image file. Please try again.')
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+    
+    // Start reading the file as data URL
+    console.log('🔄 Reading file as data URL...')
+    reader.readAsDataURL(file)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
