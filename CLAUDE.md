@@ -136,9 +136,9 @@ npm run lint              # Check code quality
 
 ## 🎯 Current Focus Areas
 
-1. **Tailwind v4 Migration** - Complete, maintain standards
-2. **Production Stability** - Monitor Railway deployment
-3. **Map Editor** - Fully functional, enhance UX
+1. **UI Consistency** - Tailwind-only approach, no DaisyUI/custom CSS
+2. **Production Stability** - Monitor Railway deployment at conquestk.com
+3. **Map Editor** - Enhanced with ImageProcessor for flexible image handling
 4. **Push Notifications** - Currently disabled, VAPID keys needed
 
 ## 📋 Task Management
