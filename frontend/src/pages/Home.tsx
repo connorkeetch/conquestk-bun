@@ -41,12 +41,9 @@ const Home: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen relative">
-      {/* Single unified background for entire page */}
-      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-black -z-20" />
-      
+    <div className="min-h-screen relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
       {/* Grid pattern overlay */}
-      <div className="fixed inset-0 -z-10 opacity-50">
+      <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -63,7 +60,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Optimized Hero Section */}
-      <section className="relative overflow-hidden section-spacing">
+      <section className="relative z-10 overflow-hidden section-spacing">
         {/* Constrained Content Container */}
         <div className="relative container mx-auto px-6 max-w-6xl flex flex-col items-center">
 
@@ -129,7 +126,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Epic Battle Image Section - Simplified */}
-      <section className="relative section-spacing-sm overflow-hidden">
+      <section className="relative z-10 section-spacing-sm overflow-hidden">
         <div className="container mx-auto px-6 max-w-6xl">
           {/* Single container with all effects */}
           <div className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 bg-white/[.04] p-12
@@ -174,7 +171,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Features Section - Equal Height & Cleaner */}
-      <section className="section-spacing-sm">
+      <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
@@ -216,7 +213,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Social Proof / Beta Status */}
-      <section className="section-spacing-sm">
+      <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="bg-gradient-to-r from-gray-800/40 via-gray-900/40 to-gray-800/40 backdrop-blur-sm rounded-xl p-8 border border-gray-700/50 flex flex-col items-center">
             <h2 className="text-2xl font-bold mb-3 text-center">
@@ -243,7 +240,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* How It Works - Streamlined */}
-      <section className="section-spacing-sm">
+      <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">

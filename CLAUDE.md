@@ -2,6 +2,15 @@
 
 A modern implementation of the classic Risk board game with custom map creation, real-time multiplayer, and advanced game features.
 
+## 🔴 CRITICAL: ALWAYS USE TAILWIND CSS v4 🔴
+**We use Tailwind CSS v4 with Vite plugin** - NEVER mix inline styles, regular CSS, and Tailwind
+- ✅ Use Tailwind classes exclusively
+- ✅ Check `@theme` variables in app.css for custom utilities
+- ✅ Use `clamp()` for responsive typography
+- ❌ NO style="" attributes
+- ❌ NO regular CSS classes (except custom utilities)
+- ❌ NO Tailwind v3 syntax
+
 ## 🚀 Quick Start
 
 ### One-Command Setup
@@ -12,7 +21,7 @@ npm run setup && npm run dev
 This will:
 - ✅ Check dependencies and environment  
 - ✅ Configure database (PostgreSQL or SQLite fallback)
-- ✅ Start both frontend (localhost:3000) and backend (localhost:5001)
+- ✅ Start both frontend (localhost:5173) and backend (localhost:5001)
 - ✅ Open browser to the game interface
 
 ### Live Demo
@@ -237,6 +246,42 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 3. Verify: `node --version` and `npm --version`
 
 ## 🎯 Recent Major Achievements (Aug 2025)
+
+### **Complete UI/UX Overhaul** ✅ (Aug 25, 2025)
+- **Professional Homepage Design**:
+  - ✅ Unified background gradient - no visible section transitions
+  - ✅ Added subtle grid pattern overlay with radial glow
+  - ✅ Tightened typography with responsive `clamp()` sizing
+  - ✅ Clear primary CTAs with glowing shadow effects
+  - ✅ Reduced section spacing (5rem → 3rem → 48px)
+  - ✅ Equal-height feature cards with hover lift effects
+  - ✅ Simplified "Conquer the World" banner (single container)
+  - ✅ Better contrast on "How to Dominate" cards
+  - ✅ Accessibility: Added `prefers-reduced-motion` support
+  - ✅ Focus rings for keyboard navigation
+
+### **Comprehensive Hamburger Menu** ✅ (Aug 25, 2025)
+- **Full-featured side navigation**:
+  - ✅ 320px wide slide-out panel from left
+  - ✅ Collapsible sections: Game, Stats & Progress, Maps & Editor
+  - ✅ Gradient "CONQUEST K" branding in header
+  - ✅ Active page highlighting with blue accent
+  - ✅ Settings link with arrow indicator
+  - ✅ Authentication section at bottom
+  - ✅ Always visible hamburger button (removed lg:hidden)
+  - ✅ Pure Tailwind v4 implementation - no custom CSS
+
+### **Tailwind CSS v4 Complete Migration** ✅ (Aug 25, 2025)
+- **Critical CSS Fix**:
+  - ✅ **REMOVED universal CSS reset that was breaking ALL Tailwind utilities**
+  - ✅ Reduced global.css from 832 lines to 185 lines (78% reduction)
+  - ✅ Kept only custom utilities not available in Tailwind
+  - ✅ Fixed spacing utilities that were being overridden
+- **Custom Theme Variables**:
+  - ✅ Added `@theme` block in app.css
+  - ✅ Section spacing variables (--section-spacing)
+  - ✅ Glass morphism utilities
+  - ✅ Custom brand colors in oklch
 
 ### **Homepage UX Transformation** ✅ (Aug 20, 2025)
 - **Issue**: Homepage felt clunky with unused space, large SVG arrows, poor content hierarchy

@@ -50,7 +50,9 @@
       "mcp__filesystem__read_text_file",
       "Bash(curl:*)",
       "mcp__filesystem__write_file",
-      "Bash(claude --version)"
+      "Bash(claude --version)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": [],
