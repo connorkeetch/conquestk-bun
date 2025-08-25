@@ -13,10 +13,10 @@ const NotFoundPage: React.FC = () => {
           Let's get you back to safer territory.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/" className="btn btn-primary">
+          <Link to="/" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
             🏠 Return Home
           </Link>
-          <Link to="/lobby" className="btn btn-secondary">
+          <Link to="/lobby" className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
             🎮 Find a Game
           </Link>
         </div>

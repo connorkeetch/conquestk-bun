@@ -61,13 +61,13 @@ const GameListPage: React.FC = () => {
           <p className="text-gray-400">Manage your active and completed games</p>
         </div>
         <div className="flex gap-3">
-          <Link to="/lobby" className="btn btn-primary">
+          <Link to="/lobby" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
             🎮 New Game
           </Link>
           <button 
             onClick={loadUserGames}
             disabled={loading}
-            className="btn btn-secondary"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '🔄 Loading...' : '🔄 Refresh'}
           </button>
@@ -145,7 +145,7 @@ const GameListPage: React.FC = () => {
                 <div className="text-6xl mb-4">🎮</div>
                 <p className="text-lg mb-2">No active games</p>
                 <p className="text-sm mb-6">Create or join a game to get started!</p>
-                <Link to="/lobby" className="btn btn-primary">
+                <Link to="/lobby" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
                   🎮 Find Games
                 </Link>
               </div>
@@ -231,7 +231,7 @@ const GameListPage: React.FC = () => {
                         </div>
                         <Link 
                           to={`/room/${game.id}`}
-                          className="btn btn-ghost text-sm"
+                          className="px-3 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-sm"
                         >
                           📊 View Results
                         </Link>

@@ -579,7 +579,7 @@ export default function Settings() {
               </div>
               <div>
                 <div className="relative">
-                  <button className="btn btn-secondary mb-3 opacity-50 cursor-not-allowed" disabled>
+                  <button className="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed" disabled>
                     📁 Upload New Avatar
                   </button>
                   <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
