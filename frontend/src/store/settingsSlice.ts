@@ -7,17 +7,13 @@ export type Theme = 'dark' | 'light';
 interface SettingsState {
   // Game Settings
   game: {
-    autoEndTurn: boolean;
     showAttackAnimations: boolean;
     confirmAttacks: boolean;
-    defaultTurnDuration: number; // seconds (0 = no limit)
   };
   
   // Display Settings
   display: {
     theme: Theme;
-    showTerritoryNames: boolean;
-    showArmyCountBadges: boolean;
   };
   
   // Audio Settings (for future use)
@@ -39,15 +35,11 @@ interface SettingsState {
 // Default settings
 const defaultSettings: SettingsState = {
   game: {
-    autoEndTurn: true,
     showAttackAnimations: true,
     confirmAttacks: false,
-    defaultTurnDuration: 120, // 2 minutes default
   },
   display: {
     theme: 'dark',
-    showTerritoryNames: true,
-    showArmyCountBadges: true,
   },
   audio: {
     masterVolume: 75,
@@ -98,10 +90,6 @@ const settingsSlice = createSlice({
   initialState: loadSettings(),
   reducers: {
     // Game settings
-    setAutoEndTurn: (state, action: PayloadAction<boolean>) => {
-      state.game.autoEndTurn = action.payload;
-      saveSettings(state);
-    },
     setShowAttackAnimations: (state, action: PayloadAction<boolean>) => {
       state.game.showAttackAnimations = action.payload;
       saveSettings(state);
@@ -110,24 +98,12 @@ const settingsSlice = createSlice({
       state.game.confirmAttacks = action.payload;
       saveSettings(state);
     },
-    setDefaultTurnDuration: (state, action: PayloadAction<number>) => {
-      state.game.defaultTurnDuration = action.payload;
-      saveSettings(state);
-    },
     
     // Display settings
     setTheme: (state, action: PayloadAction<Theme>) => {
       state.display.theme = action.payload;
       // Apply theme to document
       document.documentElement.setAttribute('data-theme', action.payload);
-      saveSettings(state);
-    },
-    setShowTerritoryNames: (state, action: PayloadAction<boolean>) => {
-      state.display.showTerritoryNames = action.payload;
-      saveSettings(state);
-    },
-    setShowArmyCountBadges: (state, action: PayloadAction<boolean>) => {
-      state.display.showArmyCountBadges = action.payload;
       saveSettings(state);
     },
     
@@ -210,13 +186,9 @@ const settingsSlice = createSlice({
 });
 
 export const {
-  setAutoEndTurn,
   setShowAttackAnimations,
   setConfirmAttacks,
-  setDefaultTurnDuration,
   setTheme,
-  setShowTerritoryNames,
-  setShowArmyCountBadges,
   setMasterVolume,
   setSfxVolume,
   setMusicVolume,

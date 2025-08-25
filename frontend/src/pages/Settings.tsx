@@ -1,13 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
+import pushNotificationService from '../services/pushNotificationService';
 import {
-  setAutoEndTurn,
   setShowAttackAnimations,
   setConfirmAttacks,
-  setDefaultTurnDuration,
   setTheme,
-  setShowTerritoryNames,
-  setShowArmyCountBadges,
   setDebugMode,
   setBetaFeatures,
   clearCache,
@@ -38,6 +35,18 @@ export default function Settings() {
   const settings = useAppSelector((state) => state.settings);
   const dispatch = useAppDispatch();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  useEffect(() => {
+    // Initialize push notification service and check status
+    const initNotifications = async () => {
+      await pushNotificationService.initialize();
+      setNotificationStatus(pushNotificationService.getPermissionStatus());
+      setIsSubscribed(pushNotificationService.isEnabled());
+    };
+    initNotifications();
+  }, []);
 
   const settingsTabs = [
     { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
@@ -246,15 +255,6 @@ export default function Settings() {
       case 'game':
         return [
           {
-            id: 'auto-end-turn',
-            label: 'Auto-end Turn',
-            description: 'Automatically end turn when no moves available',
-            type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.game.autoEndTurn,
-            onChange: (value: boolean) => dispatch(setAutoEndTurn(value))
-          },
-          {
             id: 'show-animations',
             label: 'Show Attack Animations',
             description: 'Display dice rolling and battle animations',
@@ -271,22 +271,6 @@ export default function Settings() {
             isWorking: true,
             defaultValue: settings.game.confirmAttacks,
             onChange: (value: boolean) => dispatch(setConfirmAttacks(value))
-          },
-          {
-            id: 'turn-timer',
-            label: 'Default Turn Duration',
-            description: 'Set default time limit for turns',
-            type: 'select',
-            isWorking: true,
-            defaultValue: settings.game.defaultTurnDuration.toString(),
-            onChange: (value: string) => dispatch(setDefaultTurnDuration(parseInt(value))),
-            options: [
-              { value: '60', label: '1 minute' },
-              { value: '120', label: '2 minutes' },
-              { value: '300', label: '5 minutes' },
-              { value: '600', label: '10 minutes' },
-              { value: '0', label: 'No limit' }
-            ]
           }
         ];
 
@@ -348,29 +332,57 @@ export default function Settings() {
               { value: 'dark', label: '🌙 Dark Theme' },
               { value: 'light', label: '☀️ Light Theme' }
             ]
-          },
-          {
-            id: 'show-territory-names',
-            label: 'Show Territory Names',
-            description: 'Display territory names on the map',
-            type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.display.showTerritoryNames,
-            onChange: (value: boolean) => dispatch(setShowTerritoryNames(value))
-          },
-          {
-            id: 'army-count-badges',
-            label: 'Army Count Badges',
-            description: 'Show army numbers on territories',
-            type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.display.showArmyCountBadges,
-            onChange: (value: boolean) => dispatch(setShowArmyCountBadges(value))
           }
         ];
 
       case 'notifications':
         return [
+          {
+            id: 'browser-notifications',
+            label: 'Browser Push Notifications',
+            description: notificationStatus === 'granted' 
+              ? (isSubscribed ? 'Push notifications are enabled' : 'Click to enable push notifications')
+              : (notificationStatus === 'denied' ? 'Notifications blocked - please enable in browser settings' : 'Enable notifications for game updates'),
+            type: 'toggle',
+            isWorking: true,
+            defaultValue: isSubscribed,
+            onChange: async (value: boolean) => {
+              if (value) {
+                const success = await pushNotificationService.subscribe();
+                setIsSubscribed(success);
+                setNotificationStatus(pushNotificationService.getPermissionStatus());
+              } else {
+                await pushNotificationService.unsubscribe();
+                setIsSubscribed(false);
+              }
+            }
+          },
+          {
+            id: 'test-notification',
+            label: 'Test Notification',
+            description: 'Send a test push notification',
+            type: 'button',
+            isWorking: isSubscribed,
+            buttonText: '🔔 Send Test',
+            onClick: async () => {
+              if (isSubscribed) {
+                const response = await fetch('/api/notifications/test', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  },
+                });
+                const result = await response.json();
+                if (result.success) {
+                  alert('Test notification sent! Check your notifications.');
+                } else {
+                  alert(result.error || 'Failed to send test notification');
+                }
+              } else {
+                alert('Please enable browser notifications first');
+              }
+            }
+          },
           {
             id: 'turn-reminders',
             label: 'Turn Reminders',
