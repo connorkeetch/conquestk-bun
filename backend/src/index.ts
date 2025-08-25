@@ -16,6 +16,7 @@ import mapRoutes from './routes/maps';
 import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin';
 import notificationRoutes from './routes/notifications';
+import userRoutes from './routes/users';
 import { setupSocketHandlers } from './services/socketService';
 import { initDatabase } from './config/database';
 import { ensureTablesExist } from './utils/initTables';
@@ -66,6 +67,7 @@ app.use('/api/maps', mapRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/health', async (req, res) => {
   try {

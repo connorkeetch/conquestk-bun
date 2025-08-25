@@ -51,7 +51,7 @@ const PrimaryNav: React.FC = () => {
         { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
         { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
         { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
-        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps', comingSoon: true }
+        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' }
       ]
     },
     {
