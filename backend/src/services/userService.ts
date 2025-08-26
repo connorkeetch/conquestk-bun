@@ -57,6 +57,12 @@ export class UserService {
     return result.rows[0] || null;
   }
 
+  async findByUsername(username: string): Promise<User | null> {
+    const findQuery = `SELECT * FROM users WHERE username = ?`;
+    const result = await query(findQuery, [username]);
+    return result.rows[0] || null;
+  }
+
   async updateLastLogin(id: string): Promise<void> {
     const isPostgres = process.env.DB_TYPE !== 'sqlite';
     const timeFunction = isPostgres ? 'NOW()' : "datetime('now')";
