@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
     "memory": {
       "command": "npx",
       "args": [
@@ -16,16 +23,6 @@
         "C:/Python_Scripts/risk-game"
       ],
       "env": {}
-    },
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
     },
     "git": {
       "command": "npx",
@@ -58,28 +55,6 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ],
       "env": {}
-    },
-    "serena": {
-      "command": "uvx",
-      "args": [
-        "--from", 
-        "git+https://github.com/oraios/serena", 
-        "serena-mcp-server",
-        "--transport",
-        "stdio"
-      ],
-      "env": {}
     }
-  },
-  "settings": {
-    "autoConnect": true,
-    "enabledServers": [
-      "memory",
-      "filesystem",
-      "github",
-      "git",
-      "fetch",
-      "serena"
-    ]
   }
 }

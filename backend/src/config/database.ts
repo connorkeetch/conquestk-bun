@@ -9,13 +9,14 @@ type DatabaseType = 'mysql' | 'sqlite';
 const hasMySQLURL = process.env.MYSQL_URL && process.env.MYSQL_URL !== '';
 const hasRailwayMySQL = process.env.MYSQLHOST && process.env.MYSQLDATABASE;
 const hasCustomMySQL = process.env.DB_HOST && process.env.DB_NAME;
-const hasDatabaseURL = process.env.DATABASE_URL && process.env.DATABASE_URL !== '';
+const hasDatabaseURL = process.env.DATABASE_URL && process.env.DATABASE_URL !== '' && !process.env.DATABASE_URL.startsWith('sqlite:');
 
 // Use MySQL in production, SQLite in development
 // Prioritize MYSQL_URL first since it's Railway's preferred format
-const DB_TYPE: DatabaseType = (hasMySQLURL || hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL) ? 'mysql' : 
-  (process.env.DB_TYPE as DatabaseType) || 
-  (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite');
+// If DB_TYPE is explicitly set, use that first
+const DB_TYPE: DatabaseType = process.env.DB_TYPE as DatabaseType ||
+  ((hasMySQLURL || hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL) ? 'mysql' : 
+  (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite'));
 
 // Log database configuration for debugging
 logger.info('🔧 Database Configuration:', {
