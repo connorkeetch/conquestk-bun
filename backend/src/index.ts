@@ -33,6 +33,10 @@ import {
 
 const app = express();
 const server = createServer(app);
+
+// Trust proxy for Railway deployment - required for rate limiting behind reverse proxy
+app.set('trust proxy', true);
+
 // Configure allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
   if (process.env.NODE_ENV === 'production') {

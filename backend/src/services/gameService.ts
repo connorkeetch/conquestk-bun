@@ -1,10 +1,27 @@
 import { GameEngine } from '../game/gameEngine';
 import { GameState, GameAction } from '../types/game';
 import { mapService } from './mapService';
+import territoryModifierService from './territoryModifierService';
 
 export class GameService {
   private gameEngine = new GameEngine();
   private activeGames = new Map<string, GameState>();
+  
+  // Helper to serialize game state for transmission
+  private serializeGameState(gameState: GameState): any {
+    const serialized = { ...gameState };
+    
+    // Convert Map to object for JSON serialization
+    if ((gameState as any).territoryModifiers instanceof Map) {
+      const modifiersObj: any = {};
+      (gameState as any).territoryModifiers.forEach((value: any, key: string) => {
+        modifiersObj[key] = value;
+      });
+      (serialized as any).territoryModifiers = modifiersObj;
+    }
+    
+    return serialized;
+  }
   
   async isCapitalTerritory(roomId: string, territoryId: string): Promise<boolean> {
     // This is a placeholder - in a real implementation, you'd check the game state
@@ -58,12 +75,39 @@ export class GameService {
     }
     
     const gameState = this.gameEngine.initializeGame(roomId, players, config);
+    
+    // Initialize territory modifiers if enabled
+    if (config.useTerritoryModifiers) {
+      const territoryIds = gameState.board.map(t => t.id);
+      await territoryModifierService.initializeGameModifiers(
+        roomId,
+        config.mapId || 'classic',
+        config.modifierDistribution || 'balanced',
+        territoryIds
+      );
+      
+      // Load modifiers into game state
+      const modifiers = await territoryModifierService.getGameModifiers(roomId);
+      (gameState as any).territoryModifiers = modifiers;
+    }
+    
     this.activeGames.set(roomId, gameState);
     return gameState;
   }
 
   async getGameState(roomId: string): Promise<GameState | null> {
-    return this.activeGames.get(roomId) || null;
+    const gameState = this.activeGames.get(roomId);
+    if (!gameState) return null;
+    
+    // Attach territory modifiers if they exist
+    if (gameState.gameConfig?.useTerritoryModifiers && !(gameState as any).territoryModifiers) {
+      const modifiers = await territoryModifierService.getGameModifiers(roomId);
+      if (modifiers.size > 0) {
+        (gameState as any).territoryModifiers = modifiers;
+      }
+    }
+    
+    return gameState;
   }
 
   async deployArmies(roomId: string, userId: string, territoryId: string, armies: number) {
@@ -87,7 +131,7 @@ export class GameService {
     this.activeGames.set(roomId, updatedState);
 
     return {
-      gameState: updatedState,
+      gameState: this.serializeGameState(updatedState),
       territoryId,
       armies: updatedState.board.find((t: any) => t.id === territoryId)?.armies || 0
     };
@@ -115,7 +159,7 @@ export class GameService {
 
     return {
       ...battleResult,
-      gameState
+      gameState: this.serializeGameState(gameState)
     };
   }
 
@@ -140,7 +184,7 @@ export class GameService {
     this.activeGames.set(roomId, updatedState);
 
     return {
-      gameState: updatedState,
+      gameState: this.serializeGameState(updatedState),
       fromTerritoryId,
       toTerritoryId,
       fromArmies: updatedState.board.find((t: any) => t.id === fromTerritoryId)?.armies || 0,
@@ -163,7 +207,7 @@ export class GameService {
     }
 
     return {
-      gameState: updatedState,
+      gameState: this.serializeGameState(updatedState),
       reinforcementArmies
     };
   }

@@ -73,6 +73,8 @@ export interface GameConfiguration {
   mapId?: string;
   gameMode?: string;
   continentBonuses?: ContinentBonus[];
+  useTerritoryModifiers?: boolean;
+  modifierDistribution?: 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom';
 }
 
 export interface ContinentBonus {
