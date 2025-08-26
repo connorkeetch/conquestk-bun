@@ -5,26 +5,41 @@ import { logger } from './logger';
 
 export async function runMigration(migrationFile: string) {
   try {
-    const migrationPath = join(__dirname, '../../migrations', migrationFile);
+    // Determine which migration file to use based on database type
+    const dbType = process.env.DATABASE_URL ? 'mysql' : 
+      (process.env.DB_TYPE as string) || 
+      (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite');
+    
+    // Try to use MySQL-specific migration if it exists
+    let actualMigrationFile = migrationFile;
+    if (dbType === 'mysql') {
+      const mysqlFile = migrationFile.replace('.sql', '_mysql.sql');
+      const mysqlPath = join(__dirname, '../../migrations', mysqlFile);
+      if (require('fs').existsSync(mysqlPath)) {
+        actualMigrationFile = mysqlFile;
+      }
+    }
+    
+    const migrationPath = join(__dirname, '../../migrations', actualMigrationFile);
     let migrationSQL = readFileSync(migrationPath, 'utf8');
     
-    // Convert JSONB to TEXT for SQLite compatibility
-    const dbType = process.env.DATABASE_URL ? 'postgresql' : 
-      (process.env.DB_TYPE as string) || 
-      (process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite');
-      
+    // Convert for SQLite compatibility if needed
     if (dbType === 'sqlite') {
       migrationSQL = migrationSQL.replace(/JSONB/g, 'TEXT');
+      migrationSQL = migrationSQL.replace(/JSON/g, 'TEXT');
       // Keep SQLite UUID generation function
-    } else if (dbType === 'postgresql') {
-      // Replace SQLite UUID generation with PostgreSQL UUID
+    } else if (dbType === 'mysql' && !actualMigrationFile.includes('_mysql')) {
+      // Convert SQLite/PostgreSQL syntax to MySQL
+      migrationSQL = migrationSQL.replace(/JSONB/g, 'JSON');
+      // Replace SQLite UUID generation with MySQL UUID
       migrationSQL = migrationSQL.replace(
         /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)\)/g,
-        'DEFAULT uuid_generate_v4()'
+        'DEFAULT (UUID())'
       );
-      // Convert TEXT PRIMARY KEY to UUID for PostgreSQL
-      migrationSQL = migrationSQL.replace(/id TEXT PRIMARY KEY DEFAULT uuid_generate_v4\(\)/g, 'id UUID PRIMARY KEY DEFAULT uuid_generate_v4()');
-      migrationSQL = migrationSQL.replace(/user_id TEXT/g, 'user_id UUID');
+      // Convert TEXT PRIMARY KEY to VARCHAR(36) for MySQL
+      migrationSQL = migrationSQL.replace(/id TEXT PRIMARY KEY/g, 'id VARCHAR(36) PRIMARY KEY');
+      migrationSQL = migrationSQL.replace(/user_id TEXT/g, 'user_id VARCHAR(36)');
+      migrationSQL = migrationSQL.replace(/AUTOINCREMENT/g, 'AUTO_INCREMENT');
     }
     
     // Split by semicolon but preserve triggers/functions with BEGIN...END blocks

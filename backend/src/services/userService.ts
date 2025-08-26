@@ -4,74 +4,26 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
   async create(userData: any): Promise<User> {
-    const id = uuidv4();
-    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
-    
-    if (isPostgres) {
-      // First try with email verification columns, fall back to basic if they don't exist
-      try {
-        const pgQuery = `
-          INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING id, username, email, email_verified, created_at, updated_at
-        `;
-        
-        const values = [
-          userData.username,
-          userData.email,
-          userData.password,
-          userData.email_verified === true ? true : false,
-          userData.verification_token || null,
-          userData.verification_sent_at || null
-        ];
-        
-        console.log('PostgreSQL query:', pgQuery);
-        console.log('PostgreSQL values:', values);
-        
-        const result = await query(pgQuery, values);
-        
-        return result.rows[0];
-      } catch (error: any) {
-        // If column doesn't exist, try without email verification columns
-        if (error.message?.includes('column') || error.code === '42703') {
-          console.log('Email verification columns not found, using basic insert');
-          const basicQuery = `
-            INSERT INTO users (username, email, password)
-            VALUES ($1, $2, $3)
-            RETURNING id, username, email, created_at, updated_at
-          `;
-          
-          const result = await query(basicQuery, [
-            userData.username,
-            userData.email,
-            userData.password
-          ]);
-          
-          // Add default values for missing fields
-          return {
-            ...result.rows[0],
-            email_verified: false
-          };
-        }
-        throw error;
-      }
-    } else {
-      // SQLite uses auto-generated UUID, don't provide one
-      const sqliteQuery = `
+    // MySQL and SQLite both use ? placeholders
+    // Try with email verification columns first
+    try {
+      const insertQuery = `
         INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
       
-      const insertResult = await query(sqliteQuery, [
+      const values = [
         userData.username,
         userData.email,
         userData.password,
-        userData.email_verified || false,
+        userData.email_verified === true ? true : false,
         userData.verification_token || null,
         userData.verification_sent_at || null
-      ]);
+      ];
       
-      // For SQLite, we need to get the last inserted row
+      await query(insertQuery, values);
+      
+      // Get the created user
       const result = await query('SELECT * FROM users WHERE email = ?', [userData.email]);
       
       if (!result.rows || result.rows.length === 0) {
@@ -79,47 +31,60 @@ export class UserService {
       }
       
       return result.rows[0];
+    } catch (error: any) {
+      // If email verification columns don't exist, try basic insert
+      if (error.message?.includes('column') || error.code === '42703' || error.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('Email verification columns not found, using basic insert');
+        const basicQuery = `
+          INSERT INTO users (username, email, password)
+          VALUES (?, ?, ?)
+        `;
+        
+        await query(basicQuery, [
+          userData.username,
+          userData.email,
+          userData.password
+        ]);
+        
+        // Get the created user
+        const result = await query('SELECT * FROM users WHERE email = ?', [userData.email]);
+        
+        if (!result.rows || result.rows.length === 0) {
+          throw new Error('Failed to retrieve created user');
+        }
+        
+        // Add default values for missing fields
+        return {
+          ...result.rows[0],
+          email_verified: false
+        };
+      }
+      throw error;
     }
   }
 
   async findById(id: string): Promise<User | null> {
-    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
-    const findQuery = isPostgres
-      ? `SELECT * FROM users WHERE id = $1`
-      : `SELECT * FROM users WHERE id = ?`;
-    const result = await query(findQuery, [id]);
+    const result = await query('SELECT * FROM users WHERE id = ?', [id]);
     return result.rows[0] || null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
-    const findQuery = isPostgres 
-      ? `SELECT * FROM users WHERE email = $1`
-      : `SELECT * FROM users WHERE email = ?`;
-    const result = await query(findQuery, [email]);
+    const result = await query('SELECT * FROM users WHERE email = ?', [email]);
     return result.rows[0] || null;
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
-    const findQuery = isPostgres
-      ? `SELECT * FROM users WHERE username = $1`
-      : `SELECT * FROM users WHERE username = ?`;
-    const result = await query(findQuery, [username]);
+    const result = await query('SELECT * FROM users WHERE username = ?', [username]);
     return result.rows[0] || null;
   }
 
   async updateLastLogin(id: string): Promise<void> {
-    const isPostgres = process.env.DB_TYPE !== 'sqlite';
-    const timeFunction = isPostgres ? 'NOW()' : "datetime('now')";
-    
-    const updateQuery = `UPDATE users SET updated_at = ${timeFunction} WHERE id = ?`;
+    const updateQuery = `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
     await query(updateQuery, [id]);
   }
 
   async findByVerificationToken(token: string): Promise<User | null> {
-    const findQuery = `SELECT * FROM users WHERE verification_token = ?`;
-    const result = await query(findQuery, [token]);
+    const result = await query('SELECT * FROM users WHERE verification_token = ?', [token]);
     return result.rows[0] || null;
   }
 
