@@ -35,7 +35,8 @@ const app = express();
 const server = createServer(app);
 
 // Trust proxy for Railway deployment - required for rate limiting behind reverse proxy
-app.set('trust proxy', true);
+// Set to 1 to trust first proxy (Railway's proxy)
+app.set('trust proxy', 1);
 
 // Configure allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
