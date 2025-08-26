@@ -306,7 +306,7 @@ async function testMySQLConnection() {
       await connection.end();
       break; // If one works, we're good
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ ${name} connection FAILED:`);
       console.error(`  Error code: ${error.code}`);
       console.error(`  Error message: ${error.message}`);
