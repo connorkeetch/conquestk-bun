@@ -104,6 +104,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/workflow', require('./routes/mapWorkflow').default);
 
 app.get('/health', async (req, res) => {
   try {
