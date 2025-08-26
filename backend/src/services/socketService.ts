@@ -83,11 +83,40 @@ export function setupSocketHandlers(io: Server) {
     socket.on('attack', async (data) => {
       try {
         const result = await gameService.attack(data.roomId, socket.userId!, data.fromTerritoryId, data.toTerritoryId);
+        
+        // Check if this was a capital attack that resulted in elimination
+        if (result.capitalElimination) {
+          io.to(data.roomId).emit('capitalElimination', {
+            conqueror: result.capitalElimination.conqueror,
+            eliminated: result.capitalElimination.eliminated,
+            capitalTerritory: result.capitalElimination.capitalTerritory,
+            territoriesGained: result.capitalElimination.territoriesGained,
+            troopsGained: result.capitalElimination.troopsGained
+          });
+        }
+        
         io.to(data.roomId).emit('attackResult', result);
         io.to(data.roomId).emit('game-update', result.gameState);
       } catch (error) {
         logger.error('Attack error:', error);
         socket.emit('gameError', { message: 'Failed to execute attack' });
+      }
+    });
+
+    // Capital warning check
+    socket.on('checkCapitalAttack', async (data) => {
+      try {
+        const { roomId, targetTerritoryId } = data;
+        // Check if target territory is a capital
+        // This would need to be implemented in gameService
+        const isCapital = await gameService.isCapitalTerritory(roomId, targetTerritoryId);
+        socket.emit('capitalAttackCheck', { 
+          territoryId: targetTerritoryId, 
+          isCapital 
+        });
+      } catch (error) {
+        logger.error('Capital check error:', error);
+        socket.emit('gameError', { message: 'Failed to check capital status' });
       }
     });
 

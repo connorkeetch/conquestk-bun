@@ -11,6 +11,7 @@ export interface CreateRoomData {
   gameType?: string;
   movementType?: string;
   allowTeamPlay?: boolean;
+  capitalsEnabled?: boolean;
   gameSettings?: any;
 }
 
@@ -18,6 +19,12 @@ export class GameRoomService {
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
     const id = uuidv4();
     const isPostgres = process.env.DB_TYPE !== 'sqlite';
+    
+    // Include capitalsEnabled in game settings
+    const gameSettings = {
+      ...(roomData.gameSettings || {}),
+      capitalsEnabled: roomData.capitalsEnabled || false
+    };
     
     if (isPostgres) {
       const pgQuery = `
@@ -35,7 +42,7 @@ export class GameRoomService {
         roomData.gameType || 'quick',
         roomData.movementType || 'classic_adjacent',
         roomData.allowTeamPlay || false,
-        JSON.stringify(roomData.gameSettings || {})
+        JSON.stringify(gameSettings)
       ]);
       
       return result.rows[0];
@@ -55,7 +62,7 @@ export class GameRoomService {
         roomData.gameType || 'quick',
         roomData.movementType || 'classic_adjacent',
         roomData.allowTeamPlay || false,
-        JSON.stringify(roomData.gameSettings || {})
+        JSON.stringify(gameSettings)
       ]);
       
       const result = await query('SELECT * FROM game_rooms WHERE id = ?', [id]);

@@ -34,34 +34,45 @@ export class AuthController {
 
       const hashedPassword = await bcrypt.hash(password, 10);
       
-      // Generate verification token
-      const verificationToken = emailService.generateVerificationToken();
+      // Only generate verification token if email service is enabled
+      let verificationToken = null;
+      let verificationSentAt = null;
+      
+      if (emailService.isEnabled()) {
+        verificationToken = emailService.generateVerificationToken();
+        verificationSentAt = new Date();
+      }
       
       const user = await this.userService.create({
         username,
         email,
         password: hashedPassword,
         verification_token: verificationToken,
-        verification_sent_at: new Date(),
-        email_verified: false
+        verification_sent_at: verificationSentAt,
+        email_verified: !emailService.isEnabled() // Auto-verify if email service is disabled
       });
 
-      // Send verification email
-      if (emailService.isEnabled()) {
-        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
-        await emailService.sendVerificationEmail({
-          username,
-          email,
-          verificationLink,
-          expiresIn: '24 hours'
-        });
-        
-        // Log verification email sent
-        await this.userService.logEmailVerification({
-          user_id: user.id,
-          email,
-          token: verificationToken
-        });
+      // Send verification email only if service is enabled
+      if (emailService.isEnabled() && verificationToken) {
+        try {
+          const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
+          await emailService.sendVerificationEmail({
+            username,
+            email,
+            verificationLink,
+            expiresIn: '24 hours'
+          });
+          
+          // Log verification email sent
+          await this.userService.logEmailVerification({
+            user_id: user.id,
+            email,
+            token: verificationToken
+          });
+        } catch (emailError) {
+          // Log error but don't fail registration
+          logger.error('Failed to send verification email:', emailError);
+        }
       }
 
       const token = jwt.sign(

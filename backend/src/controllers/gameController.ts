@@ -17,7 +17,7 @@ export class GameController {
 
   createRoom = async (req: Request, res: Response) => {
     try {
-      const { name, maxPlayers, isPrivate, mapId, gameType, movementType, allowTeamPlay } = req.body;
+      const { name, maxPlayers, isPrivate, mapId, gameType, movementType, allowTeamPlay, capitalsEnabled } = req.body;
       const hostId = (req as any).userId;
       
       const roomData: CreateRoomData = {
@@ -28,7 +28,8 @@ export class GameController {
         mapId: mapId || null,
         gameType: gameType || 'quick',
         movementType: movementType || 'classic_adjacent',
-        allowTeamPlay: allowTeamPlay || false
+        allowTeamPlay: allowTeamPlay || false,
+        capitalsEnabled: capitalsEnabled || false
       };
       
       const room = await this.gameRoomService.createRoom(roomData);

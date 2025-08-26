@@ -37,6 +37,7 @@ export interface CreateGameData {
   movementType?: string
   allowTeamPlay?: boolean
   gameType?: string
+  capitalsEnabled?: boolean
 }
 
 export interface JoinGameResponse {
