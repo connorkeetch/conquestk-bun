@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserService } from '../services/userService';
 import { logger } from '../utils/logger';
+import emailService from '../services/emailService';
 
 export class AuthController {
   private userService = new UserService();
@@ -32,11 +33,36 @@ export class AuthController {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Generate verification token
+      const verificationToken = emailService.generateVerificationToken();
+      
       const user = await this.userService.create({
         username,
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        verification_token: verificationToken,
+        verification_sent_at: new Date(),
+        email_verified: false
       });
+
+      // Send verification email
+      if (emailService.isEnabled()) {
+        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
+        await emailService.sendVerificationEmail({
+          username,
+          email,
+          verificationLink,
+          expiresIn: '24 hours'
+        });
+        
+        // Log verification email sent
+        await this.userService.logEmailVerification({
+          user_id: user.id,
+          email,
+          token: verificationToken
+        });
+      }
 
       const token = jwt.sign(
         { userId: user.id },
@@ -80,6 +106,23 @@ export class AuthController {
         });
       }
 
+      // Check email verification if required
+      const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+      if (requireVerification && !user.email_verified) {
+        // Allow test accounts to bypass verification in development
+        const isTestAccount = process.env.NODE_ENV === 'development' && 
+                            (user.email.includes('test@') || user.username.startsWith('test_'));
+        
+        if (!isTestAccount) {
+          return res.status(403).json({
+            error: 'Email not verified',
+            message: 'Please verify your email address before logging in',
+            requiresVerification: true,
+            email: user.email
+          });
+        }
+      }
+
       const token = jwt.sign(
         { userId: user.id },
         process.env.JWT_SECRET || 'fallback-secret',
@@ -111,11 +154,127 @@ export class AuthController {
       }
 
       return res.json({
-        user: { id: user.id, username: user.username, email: user.email }
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email,
+          email_verified: user.email_verified 
+        }
       });
     } catch (error) {
       logger.error('Get profile error:', error);
       return res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+
+  verifyEmail = async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      
+      // Find user by verification token
+      const user = await this.userService.findByVerificationToken(token);
+      
+      if (!user) {
+        return res.status(404).json({
+          error: 'Invalid token',
+          message: 'This verification link is invalid or has already been used'
+        });
+      }
+
+      // Check if token has expired (24 hours)
+      const sentAt = user.verification_sent_at ? new Date(user.verification_sent_at).getTime() : Date.now();
+      const tokenAge = Date.now() - sentAt;
+      const maxAge = parseInt(process.env.EMAIL_VERIFICATION_EXPIRE_HOURS || '24') * 60 * 60 * 1000;
+      
+      if (tokenAge > maxAge) {
+        return res.status(400).json({
+          error: 'Token expired',
+          message: 'This verification link has expired. Please request a new one.',
+          email: user.email
+        });
+      }
+
+      // Mark email as verified
+      await this.userService.verifyEmail(user.id);
+      
+      // Log successful verification
+      await this.userService.updateEmailVerificationLog(token);
+
+      return res.json({
+        message: 'Email verified successfully',
+        email: user.email
+      });
+    } catch (error) {
+      logger.error('Email verification error:', error);
+      return res.status(500).json({ 
+        error: 'Verification failed',
+        message: 'An error occurred during email verification' 
+      });
+    }
+  };
+
+  resendVerification = async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      const user = await this.userService.findByEmail(email);
+      
+      if (!user) {
+        // Don't reveal if email exists
+        return res.json({
+          message: 'If an account exists with this email, a verification link has been sent'
+        });
+      }
+
+      if (user.email_verified) {
+        return res.status(400).json({
+          error: 'Already verified',
+          message: 'This email address has already been verified'
+        });
+      }
+
+      // Check rate limiting (max 3 requests per hour)
+      const recentAttempts = await this.userService.getRecentVerificationAttempts(user.id);
+      if (recentAttempts >= 3) {
+        return res.status(429).json({
+          error: 'Too many requests',
+          message: 'Please wait before requesting another verification email'
+        });
+      }
+
+      // Generate new verification token
+      const verificationToken = emailService.generateVerificationToken();
+      
+      // Update user with new token
+      await this.userService.updateVerificationToken(user.id, verificationToken);
+      
+      // Send verification email
+      if (emailService.isEnabled()) {
+        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
+        await emailService.sendVerificationEmail({
+          username: user.username,
+          email: user.email,
+          verificationLink,
+          expiresIn: '24 hours'
+        });
+        
+        // Log verification email sent
+        await this.userService.logEmailVerification({
+          user_id: user.id,
+          email: user.email,
+          token: verificationToken
+        });
+      }
+
+      return res.json({
+        message: 'Verification email sent successfully'
+      });
+    } catch (error) {
+      logger.error('Resend verification error:', error);
+      return res.status(500).json({ 
+        error: 'Request failed',
+        message: 'Unable to send verification email' 
+      });
     }
   };
 }

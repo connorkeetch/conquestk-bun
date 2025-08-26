@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gameService, GameRoom } from '../services/gameService';
+import { useAppSelector } from '../hooks/redux';
+import authService from '../services/authService';
 
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState<'browse' | 'private' | 'tournaments'>('browse');
   const [publicGames, setPublicGames] = useState<GameRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [privateGameCode, setPrivateGameCode] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [resendMessage, setResendMessage] = useState('');
   const [filters, setFilters] = useState({
     showFull: true,
     showInProgress: true,
@@ -22,6 +27,35 @@ const LobbyPage: React.FC = () => {
       loadPublicGames();
     }
   }, [activeTab]);
+  
+  useEffect(() => {
+    // Check email verification status
+    const checkVerificationStatus = async () => {
+      try {
+        const response = await authService.getProfile();
+        setEmailVerified(response.user?.email_verified);
+      } catch (error) {
+        console.error('Failed to check verification status:', error);
+      }
+    };
+    
+    if (user) {
+      checkVerificationStatus();
+    }
+  }, [user]);
+  
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+    
+    try {
+      await authService.resendVerification(user.email);
+      setResendMessage('Verification email sent! Please check your inbox.');
+      setTimeout(() => setResendMessage(''), 5000);
+    } catch (error: any) {
+      setResendMessage(error.response?.data?.message || 'Failed to resend verification email');
+      setTimeout(() => setResendMessage(''), 5000);
+    }
+  };
 
   const loadPublicGames = async () => {
     try {
@@ -114,6 +148,34 @@ const LobbyPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-8 py-8">
+      {/* Email Verification Banner */}
+      {emailVerified === false && (
+        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h3 className="text-yellow-300 font-medium">Verify Your Email</h3>
+                <p className="text-gray-300 text-sm mt-1">
+                  Please verify your email address to access all features. Check your inbox for the verification link.
+                </p>
+                {resendMessage && (
+                  <p className="text-green-400 text-sm mt-2">{resendMessage}</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={handleResendVerification}
+              className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              Resend Email
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex justify-between items-center mb-8">
         <div>

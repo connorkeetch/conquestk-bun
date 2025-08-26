@@ -1,0 +1,406 @@
+import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs/promises';
+
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+interface VerificationEmailData {
+  username: string;
+  email: string;
+  verificationLink: string;
+  expiresIn: string;
+}
+
+class EmailService {
+  private transporter: nodemailer.Transporter | null = null;
+  private useSendGrid: boolean = false;
+  private emailEnabled: boolean = false;
+
+  constructor() {
+    this.initialize();
+  }
+
+  private async initialize() {
+    const emailProvider = process.env.EMAIL_PROVIDER || 'smtp';
+    this.emailEnabled = process.env.EMAIL_ENABLED === 'true';
+
+    if (!this.emailEnabled) {
+      console.log('Email service is disabled');
+      return;
+    }
+
+    if (emailProvider === 'sendgrid') {
+      const apiKey = process.env.SENDGRID_API_KEY;
+      if (apiKey) {
+        sgMail.setApiKey(apiKey);
+        this.useSendGrid = true;
+        console.log('Email service initialized with SendGrid');
+      } else {
+        console.error('SendGrid API key not found');
+      }
+    } else {
+      // Configure SMTP
+      this.transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      // Verify SMTP connection
+      if (this.transporter && process.env.SMTP_USER) {
+        try {
+          await this.transporter.verify();
+          console.log('Email service initialized with SMTP');
+        } catch (error) {
+          console.error('SMTP connection failed:', error);
+          this.emailEnabled = false;
+        }
+      }
+    }
+  }
+
+  private async sendEmail(options: EmailOptions): Promise<boolean> {
+    if (!this.emailEnabled) {
+      console.log('Email service disabled, skipping email:', options.subject);
+      return false;
+    }
+
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com';
+    const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game';
+
+    try {
+      if (this.useSendGrid) {
+        const msg = {
+          to: options.to,
+          from: {
+            email: fromEmail,
+            name: fromName,
+          },
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        };
+        await sgMail.send(msg);
+      } else if (this.transporter) {
+        await this.transporter.sendMail({
+          from: `"${fromName}" <${fromEmail}>`,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+      } else {
+        console.error('No email provider configured');
+        return false;
+      }
+      
+      console.log(`Email sent successfully to ${options.to}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      return false;
+    }
+  }
+
+  public generateVerificationToken(): string {
+    return uuidv4();
+  }
+
+  public async sendVerificationEmail(data: VerificationEmailData): Promise<boolean> {
+    const subject = 'Verify Your ConquestK Account';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 40px;
+          }
+          .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 10px;
+          }
+          .content {
+            background-color: #0f3460;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+          }
+          h1 {
+            color: #ffffff;
+            font-size: 24px;
+            margin-bottom: 20px;
+          }
+          p {
+            color: #e0e0e0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+          .button {
+            display: inline-block;
+            background-color: #e94560;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .button:hover {
+            background-color: #d63850;
+          }
+          .info-box {
+            background-color: #16213e;
+            border-left: 4px solid #e94560;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #888;
+            font-size: 14px;
+          }
+          .link {
+            color: #e94560;
+            word-break: break-all;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎮 ConquestK</div>
+            <p style="color: #888;">Strategic Conquest Gaming</p>
+          </div>
+          
+          <div class="content">
+            <h1>Welcome to ConquestK, ${data.username}!</h1>
+            
+            <p>Thank you for joining our strategic conquest community. To complete your registration and start playing, please verify your email address.</p>
+            
+            <div style="text-align: center;">
+              <a href="${data.verificationLink}" class="button">Verify Email Address</a>
+            </div>
+            
+            <div class="info-box">
+              <p style="margin: 0;"><strong>⏱️ This link expires in:</strong> ${data.expiresIn}</p>
+            </div>
+            
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p class="link">${data.verificationLink}</p>
+            
+            <p>If you didn't create an account, you can safely ignore this email.</p>
+          </div>
+          
+          <div class="footer">
+            <p>© 2024 ConquestK. All rights reserved.</p>
+            <p>This is an automated email. Please do not reply.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Welcome to ConquestK, ${data.username}!
+
+Thank you for joining our strategic conquest community. To complete your registration and start playing, please verify your email address.
+
+Verify your email by clicking this link:
+${data.verificationLink}
+
+This link expires in ${data.expiresIn}.
+
+If you didn't create an account, you can safely ignore this email.
+
+© 2024 ConquestK. All rights reserved.
+    `.trim();
+
+    return await this.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  public async sendPasswordResetEmail(data: {
+    username: string;
+    email: string;
+    resetLink: string;
+    expiresIn: string;
+  }): Promise<boolean> {
+    const subject = 'Reset Your ConquestK Password';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 40px;
+          }
+          .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 10px;
+          }
+          .content {
+            background-color: #0f3460;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+          }
+          h1 {
+            color: #ffffff;
+            font-size: 24px;
+            margin-bottom: 20px;
+          }
+          p {
+            color: #e0e0e0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+          .button {
+            display: inline-block;
+            background-color: #e94560;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .warning-box {
+            background-color: #3e1616;
+            border-left: 4px solid #ff6b6b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #888;
+            font-size: 14px;
+          }
+          .link {
+            color: #e94560;
+            word-break: break-all;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎮 ConquestK</div>
+            <p style="color: #888;">Password Reset Request</p>
+          </div>
+          
+          <div class="content">
+            <h1>Password Reset for ${data.username}</h1>
+            
+            <p>We received a request to reset the password for your ConquestK account. Click the button below to create a new password.</p>
+            
+            <div style="text-align: center;">
+              <a href="${data.resetLink}" class="button">Reset Password</a>
+            </div>
+            
+            <div class="warning-box">
+              <p style="margin: 0;"><strong>⚠️ Security Note:</strong> This link expires in ${data.expiresIn}. For security reasons, you can only use it once.</p>
+            </div>
+            
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p class="link">${data.resetLink}</p>
+            
+            <p><strong>Didn't request this?</strong><br>
+            If you didn't request a password reset, please ignore this email. Your password won't be changed.</p>
+          </div>
+          
+          <div class="footer">
+            <p>© 2024 ConquestK. All rights reserved.</p>
+            <p>This is an automated security email. Please do not reply.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Password Reset for ${data.username}
+
+We received a request to reset the password for your ConquestK account.
+
+Reset your password by clicking this link:
+${data.resetLink}
+
+This link expires in ${data.expiresIn} and can only be used once.
+
+If you didn't request a password reset, please ignore this email. Your password won't be changed.
+
+© 2024 ConquestK. All rights reserved.
+    `.trim();
+
+    return await this.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  public isEnabled(): boolean {
+    return this.emailEnabled;
+  }
+}
+
+export default new EmailService();

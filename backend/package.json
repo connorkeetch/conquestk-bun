@@ -15,7 +15,9 @@
     "seed": "npm run seed:users"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
     "@types/multer": "^2.0.0",
+    "@types/nodemailer": "^7.0.1",
     "@types/validator": "^13.15.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -29,6 +31,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "nodemailer": "^7.0.5",
     "pg": "^8.12.0",
     "socket.io": "^4.7.5",
     "sqlite3": "^5.1.7",

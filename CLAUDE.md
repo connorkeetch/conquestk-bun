@@ -141,6 +141,36 @@ npm run lint              # Check code quality
 3. **Map Editor** - Enhanced with ImageProcessor for flexible image handling
 4. **Push Notifications** - Currently disabled, VAPID keys needed
 
+## 🔐 Authentication & Security Features
+
+### Email Verification System
+- **Status**: ✅ Implemented
+- **Features**:
+  - Email verification required for new accounts (configurable)
+  - SendGrid and SMTP support
+  - Beautiful HTML email templates
+  - 24-hour token expiration
+  - Rate limiting (3 resend attempts per hour)
+  - Test account bypass in development (test@ emails, test_ usernames)
+  
+### Configuration (.env)
+```env
+EMAIL_ENABLED=false              # Toggle email system
+EMAIL_PROVIDER=smtp             # smtp or sendgrid
+REQUIRE_EMAIL_VERIFICATION=true # Enforce verification
+EMAIL_VERIFICATION_EXPIRE_HOURS=24
+SENDGRID_API_KEY=your-key       # For SendGrid
+SMTP_HOST=smtp.gmail.com        # For SMTP
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+### Security Hardening
+- Rate limiting on auth endpoints
+- Input validation with express-validator
+- Password requirements (8+ chars, uppercase, lowercase, number, special)
+- Standardized error responses
+
 ## 📋 Task Management
 
 - **Always use TodoWrite** for multi-step tasks
