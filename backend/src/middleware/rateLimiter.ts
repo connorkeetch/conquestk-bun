@@ -39,19 +39,7 @@ export const authLimiter = rateLimit({
   message: createMessage('authentication endpoints', 5, '15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false, // Count all requests
-  keyGenerator: (req: Request) => {
-    // Use IP + email/username for more granular limiting
-    const identifier = req.body?.email || req.body?.username || '';
-    return `${req.ip}:${identifier}`;
-  },
-  handler: (req: Request, res: Response) => {
-    res.status(429).json({
-      error: 'Too many login attempts',
-      message: 'Your account has been temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.',
-      retryAfter: res.getHeader('Retry-After')
-    });
-  }
+  skipSuccessfulRequests: false // Count all requests
 });
 
 /**
@@ -75,12 +63,7 @@ export const gameCreationLimiter = rateLimit({
   max: 10, // 10 games per hour
   message: createMessage('game creation', 10, 'hour'),
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => {
-    // Use user ID if authenticated, otherwise IP
-    const userId = (req as any).user?.id;
-    return userId || req.ip || 'unknown';
-  }
+  legacyHeaders: false
 });
 
 /**
@@ -93,11 +76,7 @@ export const messageLimiter = rateLimit({
   message: createMessage('messaging', 30, 'minute'),
   standardHeaders: true,
   legacyHeaders: false,
-  skipFailedRequests: true, // Don't count failed requests
-  keyGenerator: (req: Request) => {
-    const userId = (req as any).user?.id;
-    return userId || req.ip || 'unknown';
-  }
+  skipFailedRequests: true // Don't count failed requests
 });
 
 /**
@@ -109,11 +88,7 @@ export const passwordResetLimiter = rateLimit({
   max: 3, // 3 requests per hour
   message: 'Too many password reset requests. Please check your email or try again later.',
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => {
-    const email = req.body?.email || '';
-    return `${req.ip}:${email}`;
-  }
+  legacyHeaders: false
 });
 
 /**
@@ -125,11 +100,7 @@ export const mapUploadLimiter = rateLimit({
   max: 5, // 5 maps per day
   message: createMessage('map uploads', 5, 'day'),
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => {
-    const userId = (req as any).user?.id;
-    return userId || req.ip || 'unknown';
-  }
+  legacyHeaders: false
 });
 
 /**
@@ -154,11 +125,7 @@ export const adminLimiter = rateLimit({
   max: 30, // 30 requests per minute
   message: 'Admin operation rate limit exceeded.',
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req: Request) => {
-    const userId = (req as any).user?.id;
-    return `admin:${userId || req.ip}`;
-  }
+  legacyHeaders: false
 });
 
 /**
@@ -225,3 +192,16 @@ export class SuspiciousActivityTracker {
 }
 
 export const suspiciousActivityTracker = new SuspiciousActivityTracker();
+
+/**
+ * Standard rate limiter for general protected routes
+ * 60 requests per minute
+ */
+export const standardLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: false
+});

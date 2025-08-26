@@ -6,6 +6,7 @@ export interface User {
   email_verified?: boolean;
   verification_token?: string | null;
   verification_sent_at?: Date | null;
+  is_admin?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -53,6 +53,7 @@ if (DB_TYPE === 'postgresql') {
 export interface DatabaseResult {
   rows: any[];
   rowCount?: number;
+  lastID?: number;
 }
 
 export interface DatabaseClient {
@@ -76,7 +77,7 @@ class SqliteClient implements DatabaseClient {
       } else {
         this.db.run(text, params, function(err) {
           if (err) reject(err);
-          else resolve({ rows: [], rowCount: this.changes });
+          else resolve({ rows: [], rowCount: this.changes, lastID: this.lastID });
         });
       }
     });
