@@ -5,8 +5,13 @@ import { runMigrations } from '../utils/migrationRunner';
 
 type DatabaseType = 'mysql' | 'sqlite';
 
+// Check for MySQL environment variables (Railway format or custom)
+const hasRailwayMySQL = process.env.MYSQLHOST && process.env.MYSQLDATABASE;
+const hasCustomMySQL = process.env.DB_HOST && process.env.DB_NAME;
+const hasDatabaseURL = process.env.DATABASE_URL && process.env.DATABASE_URL !== '';
+
 // Use MySQL in production, SQLite in development
-const DB_TYPE: DatabaseType = process.env.DATABASE_URL ? 'mysql' : 
+const DB_TYPE: DatabaseType = (hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL) ? 'mysql' : 
   (process.env.DB_TYPE as DatabaseType) || 
   (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite');
 
@@ -15,6 +20,8 @@ logger.info('🔧 Database Configuration:', {
   DB_TYPE,
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+  MYSQLHOST: process.env.MYSQLHOST || 'NOT_SET',
+  MYSQLDATABASE: process.env.MYSQLDATABASE || 'NOT_SET',
   DB_HOST: process.env.DB_HOST || 'NOT_SET',
   DB_NAME: process.env.DB_NAME || 'NOT_SET'
 });
@@ -23,9 +30,26 @@ let mysqlPool: mysql.Pool | null = null;
 let sqliteDb: Database | null = null;
 
 if (DB_TYPE === 'mysql') {
-  // Parse DATABASE_URL if available (Railway style mysql://user:pass@host:port/database)
-  if (process.env.DATABASE_URL) {
-    const url = new URL(process.env.DATABASE_URL);
+  // Railway MySQL format (separate variables)
+  if (hasRailwayMySQL) {
+    logger.info('🔧 Using Railway MySQL configuration');
+    mysqlPool = mysql.createPool({
+      host: process.env.MYSQLHOST!,
+      port: parseInt(process.env.MYSQLPORT || '3306'),
+      database: process.env.MYSQLDATABASE!,
+      user: process.env.MYSQLUSER || 'root',
+      password: process.env.MYSQLPASSWORD || '',
+      waitForConnections: true,
+      connectionLimit: 20,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0
+    });
+  } 
+  // Parse DATABASE_URL if available (standard format mysql://user:pass@host:port/database)
+  else if (hasDatabaseURL) {
+    logger.info('🔧 Using DATABASE_URL for MySQL');
+    const url = new URL(process.env.DATABASE_URL!);
     mysqlPool = mysql.createPool({
       host: url.hostname,
       port: parseInt(url.port || '3306'),
@@ -38,8 +62,10 @@ if (DB_TYPE === 'mysql') {
       enableKeepAlive: true,
       keepAliveInitialDelay: 0
     });
-  } else {
-    // Use individual env vars
+  } 
+  // Use custom individual env vars
+  else {
+    logger.info('🔧 Using custom MySQL environment variables');
     mysqlPool = mysql.createPool({
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '3306'),
