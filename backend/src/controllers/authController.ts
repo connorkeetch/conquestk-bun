@@ -12,6 +12,8 @@ export class AuthController {
     try {
       const { username, email, password } = req.body;
       
+      logger.info('Registration attempt:', { username, email });
+      
       // Check if user exists with better error messages
       const existingUserByEmail = await this.userService.findByEmail(email);
       if (existingUserByEmail) {
@@ -43,14 +45,49 @@ export class AuthController {
         verificationSentAt = new Date();
       }
       
-      const user = await this.userService.create({
-        username,
-        email,
-        password: hashedPassword,
-        verification_token: verificationToken,
-        verification_sent_at: verificationSentAt,
-        email_verified: !emailService.isEnabled() // Auto-verify if email service is disabled
-      });
+      let user;
+      try {
+        logger.info('Creating user with data:', {
+          username,
+          email,
+          hasVerificationToken: !!verificationToken,
+          emailServiceEnabled: emailService.isEnabled()
+        });
+        
+        user = await this.userService.create({
+          username,
+          email,
+          password: hashedPassword,
+          verification_token: verificationToken,
+          verification_sent_at: verificationSentAt,
+          email_verified: !emailService.isEnabled() // Auto-verify if email service is disabled
+        });
+        
+        logger.info('User created successfully:', { userId: user.id, username: user.username });
+      } catch (createError) {
+        logger.error('Failed to create user in database:', createError);
+        logger.error('Error details:', {
+          message: (createError as any).message,
+          code: (createError as any).code,
+          detail: (createError as any).detail
+        });
+        
+        // Provide more specific error message based on the error
+        const errorMessage = (createError as any).message || '';
+        if (errorMessage.includes('email_verified') || errorMessage.includes('verification_token')) {
+          return res.status(500).json({ 
+            error: 'Database schema error',
+            message: 'Database is missing required columns. Please restart the server to apply migrations.',
+            technicalDetails: errorMessage
+          });
+        }
+        
+        return res.status(500).json({ 
+          error: 'Database error',
+          message: 'Failed to create user in database. Please check server logs.',
+          technicalDetails: errorMessage
+        });
+      }
 
       // Send verification email only if service is enabled
       if (emailService.isEnabled() && verificationToken) {
@@ -88,9 +125,16 @@ export class AuthController {
       });
     } catch (error) {
       logger.error('Registration error:', error);
+      logger.error('Full error details:', {
+        message: (error as any).message,
+        stack: (error as any).stack,
+        code: (error as any).code
+      });
+      
       return res.status(500).json({ 
         error: 'Registration failed',
-        message: 'An unexpected error occurred during registration. Please try again.' 
+        message: 'An unexpected error occurred during registration. Please check server logs.',
+        technicalDetails: (error as any).message 
       });
     }
   };
