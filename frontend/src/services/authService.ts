@@ -15,11 +15,15 @@ api.interceptors.request.use((config) => {
 })
 
 export const authService = {
-  async login(credentials: { email: string; password: string }) {
+  async login(credentials: { identifier: string; password: string }) {
     try {
       const response = await api.post('/auth/login', credentials)
       return response.data
     } catch (error: any) {
+      // Handle verification errors specifically
+      if (error.response?.data?.requiresVerification) {
+        throw error.response.data;
+      }
       // Extract the error message from the backend response
       const message = error.response?.data?.message || 
                      error.response?.data?.error || 
@@ -63,6 +67,16 @@ export const authService = {
 
   async resendVerification(email: string) {
     const response = await api.post('/auth/resend-verification', { email })
+    return response.data
+  },
+
+  async forgotPassword(email: string) {
+    const response = await api.post('/auth/forgot-password', { email })
+    return response.data
+  },
+
+  async resetPassword(token: string, password: string) {
+    const response = await api.post('/auth/reset-password', { token, password })
     return response.data
   },
 }

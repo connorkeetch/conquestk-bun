@@ -86,14 +86,29 @@ export class AuthController {
 
   login = async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      // Support both email and identifier fields for backwards compatibility
+      const identifier = req.body.identifier || req.body.email;
+      const { password } = req.body;
       
-      const user = await this.userService.findByEmail(email);
+      if (!identifier) {
+        return res.status(400).json({
+          error: 'Missing credentials',
+          message: 'Please provide username or email',
+          field: 'identifier'
+        });
+      }
+      
+      // Check if identifier is email or username
+      const isEmail = identifier.includes('@');
+      const user = isEmail 
+        ? await this.userService.findByEmail(identifier)
+        : await this.userService.findByUsername(identifier);
+      
       if (!user) {
         return res.status(401).json({ 
           error: 'Authentication failed',
-          message: 'No account found with this email address',
-          field: 'email'
+          message: 'Invalid credentials',
+          field: 'identifier'
         });
       }
 
@@ -101,7 +116,7 @@ export class AuthController {
       if (!validPassword) {
         return res.status(401).json({ 
           error: 'Authentication failed',
-          message: 'Incorrect password',
+          message: 'Invalid credentials',
           field: 'password'
         });
       }
@@ -209,6 +224,126 @@ export class AuthController {
       return res.status(500).json({ 
         error: 'Verification failed',
         message: 'An error occurred during email verification' 
+      });
+    }
+  };
+
+  forgotPassword = async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          error: 'Email required',
+          message: 'Please provide your email address'
+        });
+      }
+      
+      const user = await this.userService.findByEmail(email);
+      
+      // Always return success to prevent email enumeration
+      if (!user) {
+        return res.json({
+          message: 'If an account exists with this email, a password reset link has been sent'
+        });
+      }
+      
+      // Check rate limiting (max 3 requests per hour)
+      const recentAttempts = await this.userService.getRecentPasswordResetAttempts(user.id);
+      if (recentAttempts >= 3) {
+        return res.status(429).json({
+          error: 'Too many requests',
+          message: 'Please wait before requesting another password reset'
+        });
+      }
+      
+      // Generate reset token
+      const resetToken = emailService.generateVerificationToken();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      
+      // Save token to database
+      await this.userService.createPasswordResetToken({
+        user_id: user.id,
+        token: resetToken,
+        expires_at: expiresAt
+      });
+      
+      // Send reset email
+      if (emailService.isEnabled()) {
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+        await emailService.sendPasswordResetEmail({
+          username: user.username,
+          email: user.email,
+          resetLink,
+          expiresIn: '1 hour'
+        });
+      }
+      
+      return res.json({
+        message: 'If an account exists with this email, a password reset link has been sent'
+      });
+    } catch (error) {
+      logger.error('Forgot password error:', error);
+      return res.status(500).json({
+        error: 'Request failed',
+        message: 'Unable to process password reset request'
+      });
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({
+          error: 'Missing fields',
+          message: 'Token and new password are required'
+        });
+      }
+      
+      // Find and validate token
+      const resetToken = await this.userService.findPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.status(404).json({
+          error: 'Invalid token',
+          message: 'This reset link is invalid or has already been used'
+        });
+      }
+      
+      // Check if token has expired
+      if (new Date() > new Date(resetToken.expires_at)) {
+        return res.status(400).json({
+          error: 'Token expired',
+          message: 'This reset link has expired. Please request a new one.'
+        });
+      }
+      
+      if (resetToken.used) {
+        return res.status(400).json({
+          error: 'Token already used',
+          message: 'This reset link has already been used'
+        });
+      }
+      
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Update user password
+      await this.userService.updatePassword(resetToken.user_id, hashedPassword);
+      
+      // Mark token as used
+      await this.userService.markPasswordResetTokenUsed(token);
+      
+      return res.json({
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      logger.error('Reset password error:', error);
+      return res.status(500).json({
+        error: 'Reset failed',
+        message: 'Unable to reset password'
       });
     }
   };

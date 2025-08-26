@@ -12,5 +12,7 @@ router.post('/logout', authController.logout);
 router.get('/me', authController.getProfile);
 router.post('/verify-email/:token', authController.verifyEmail);
 router.post('/resend-verification', authLimiter, authController.resendVerification);
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
+router.post('/reset-password', authLimiter, authController.resetPassword);
 
 export { router as authRoutes };

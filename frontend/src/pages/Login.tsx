@@ -5,7 +5,7 @@ import { login, clearError } from '../store/authSlice'
 import authService from '../services/authService'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [verificationError, setVerificationError] = useState<{ message: string; email?: string } | null>(null)
@@ -31,7 +31,7 @@ export default function Login() {
     dispatch(clearError())
     setVerificationError(null)
     
-    const result = await dispatch(login({ email, password }))
+    const result = await dispatch(login({ identifier, password }))
     
     // Check if the error is email verification related
     if (login.rejected.match(result)) {
@@ -113,21 +113,21 @@ export default function Login() {
           )}
           
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
+            {/* Username/Email Field */}
             <div>
-              <label htmlFor="email" className="block text-gray-300 text-sm font-medium mb-2">
-                ✉️ Email Address
+              <label htmlFor="identifier" className="block text-gray-300 text-sm font-medium mb-2">
+                👤 Username or Email
               </label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                id="identifier"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
                 maxLength={255}
                 autoComplete="username"
                 className="w-full px-4 py-3 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
-                placeholder="Enter your email address"
+                placeholder="Enter username or email"
               />
             </div>
             
@@ -137,13 +137,12 @@ export default function Login() {
                 <label htmlFor="password" className="block text-gray-300 text-sm font-medium">
                   🔒 Password
                 </label>
-                <button
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                  disabled
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <input
