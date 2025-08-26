@@ -27,9 +27,9 @@ const Home: React.FC = () => {
     },
     {
       icon: '👥',
-      title: 'Multiplayer Wars',
-      description: 'Epic battles with up to 6 commanders',
-      status: 'coming-soon'
+      title: 'Massive Multiplayer Wars',
+      description: 'Epic battles with up to 12 conquerors',
+      status: 'available'
     },
     {
       icon: '🏆',
@@ -41,31 +41,14 @@ const Home: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
-      {/* Grid pattern overlay */}
-      <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="1"/>
-            </pattern>
-            <radialGradient id="glow" cx="50%" cy="40%" r="80%">
-              <stop offset="0%" stopColor="#6ee7ff" stopOpacity=".12"/>
-              <stop offset="100%" stopColor="#000000" stopOpacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)"/>
-          <rect width="100%" height="100%" fill="url(#glow)"/>
-        </svg>
-      </div>
-
+    <div className="min-h-screen">
       {/* Optimized Hero Section */}
-      <section className="relative z-10 overflow-hidden section-spacing">
+      <section className="overflow-hidden section-spacing">
         {/* Constrained Content Container */}
         <div className="relative container mx-auto px-6 max-w-6xl flex flex-col items-center">
 
-          {/* Tighter, More Impactful Hero Title */}
-          <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-extrabold leading-tight text-white text-center">
+          {/* Standardized Hero Title */}
+          <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-bold leading-tight text-white text-center">
             Strategic Warfare{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-violet-400">
               Redefined
