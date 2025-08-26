@@ -65,6 +65,10 @@ class SocketService {
     this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId })
   }
 
+  checkCapitalAttack(roomId: string, targetTerritoryId: string) {
+    this.socket?.emit('checkCapitalAttack', { roomId, targetTerritoryId })
+  }
+
   fortify(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies: number) {
     this.socket?.emit('fortify', { roomId, fromTerritoryId, toTerritoryId, armies })
   }
@@ -192,6 +196,27 @@ class SocketService {
       store.dispatch(updateTerritory({
         territoryId: data.toTerritoryId,
         armies: data.toArmies
+      }))
+    })
+
+    // Capital-specific events
+    this.socket.on('capitalAttackCheck', (data) => {
+      // Store this result for when player clicks attack
+      store.dispatch(updateGameState({
+        pendingCapitalAttack: data.isCapital ? data.territoryId : null
+      }))
+    })
+
+    this.socket.on('capitalElimination', (data) => {
+      // Show capital elimination notification
+      store.dispatch(updateGameState({
+        capitalElimination: {
+          conqueror: data.conqueror,
+          eliminated: data.eliminated,
+          capitalTerritory: data.capitalTerritory,
+          territoriesGained: data.territoriesGained,
+          troopsGained: data.troopsGained
+        }
       }))
     })
 

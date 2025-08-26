@@ -81,7 +81,8 @@ const CreateGamePage: React.FC = () => {
         gameType: 'custom',
         mapId: selectedMap,
         movementType: 'classic_adjacent' as MovementType,
-        allowTeamPlay: teams > 0
+        allowTeamPlay: teams > 0,
+        capitalsEnabled: gameMode === 'capitals'
       };
       
       const response = await gameService.createRoom(gameData);
@@ -277,10 +278,19 @@ const CreateGamePage: React.FC = () => {
               />
               <span className="text-white">Classic Risk</span>
             </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg opacity-50 transition-all duration-200">
-              <input type="radio" name="gameMode" disabled className="mr-3" />
-              <span className="text-gray-400">Capitals</span>
-              <span className="ml-auto text-xs text-gray-500">Coming Soon</span>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input 
+                type="radio" 
+                name="gameMode" 
+                value="capitals"
+                checked={gameMode === 'capitals'}
+                onChange={(e) => setGameMode(e.target.value)}
+                className="mr-3 accent-blue-500" 
+              />
+              <div className="flex-1">
+                <span className="text-white">👑 Capitals</span>
+                <p className="text-xs text-gray-400 mt-1">Capture enemy capitals for instant elimination</p>
+              </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg opacity-50 transition-all duration-200">
               <input type="radio" name="gameMode" disabled className="mr-3" />

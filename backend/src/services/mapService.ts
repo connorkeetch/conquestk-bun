@@ -27,8 +27,8 @@ export class MapService {
     try {
       // Create the map record
       const mapResult = await client.query(`
-        INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `, [
         mapData.name,
@@ -38,7 +38,8 @@ export class MapService {
         mapData.imageWidth || 800,
         mapData.imageHeight || 600,
         mapData.isPublic || false,
-        JSON.stringify(mapData.tags || [])
+        JSON.stringify(mapData.tags || []),
+        mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null
       ]);
 
       const map = mapResult.rows[0];
@@ -72,6 +73,82 @@ export class MapService {
     ]);
 
     return { map, continents, territories, adjacencies };
+  }
+
+  async updateCapitalTerritories(mapId: string, userId: string, capitalTerritories: Record<string, number[]>): Promise<boolean> {
+    try {
+      // Validate capital territories
+      const validationResult = await this.validateCapitalTerritories(mapId, capitalTerritories);
+      if (!validationResult.valid) {
+        throw new Error(`Invalid capital configuration: ${validationResult.error}`);
+      }
+
+      const result = await query(`
+        UPDATE maps 
+        SET capital_territories = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND creator_id = ?
+      `, [JSON.stringify(capitalTerritories), mapId, userId]);
+
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      logger.error('Error updating capital territories:', error);
+      throw error;
+    }
+  }
+
+  async validateCapitalTerritories(mapId: string, capitalTerritories: Record<string, number[]>): Promise<{valid: boolean; error?: string}> {
+    try {
+      // Get all territories for this map
+      const territoriesResult = await query(`
+        SELECT id, adjacencies FROM map_territories 
+        WHERE map_id = ?
+      `, [mapId]);
+
+      const territories = territoriesResult.rows;
+      const territoryIds = new Set(territories.map(t => t.id));
+
+      // Validate each player count configuration
+      for (const [playerCount, capitals] of Object.entries(capitalTerritories)) {
+        const count = parseInt(playerCount);
+        
+        // Check player count is valid (2-12)
+        if (count < 2 || count > 12) {
+          return { valid: false, error: `Invalid player count: ${count}` };
+        }
+
+        // Check correct number of capitals
+        if (capitals.length !== count) {
+          return { valid: false, error: `Player count ${count} requires exactly ${count} capitals, got ${capitals.length}` };
+        }
+
+        // Check all capital IDs exist
+        for (const capitalId of capitals) {
+          if (!territoryIds.has(capitalId)) {
+            return { valid: false, error: `Territory ${capitalId} does not exist in this map` };
+          }
+        }
+
+        // Check capitals are not adjacent (minimum 2 territories apart)
+        for (let i = 0; i < capitals.length; i++) {
+          for (let j = i + 1; j < capitals.length; j++) {
+            const territory1 = territories.find(t => t.id === capitals[i]);
+            const territory2 = territories.find(t => t.id === capitals[j]);
+            
+            if (territory1 && territory2) {
+              const adjacencies1 = JSON.parse(territory1.adjacencies || '[]');
+              if (adjacencies1.includes(capitals[j])) {
+                return { valid: false, error: `Capitals ${capitals[i]} and ${capitals[j]} are adjacent (too close)` };
+              }
+            }
+          }
+        }
+      }
+
+      return { valid: true };
+    } catch (error) {
+      logger.error('Error validating capital territories:', error);
+      return { valid: false, error: 'Validation failed' };
+    }
   }
 
   async updateMap(mapId: string, userId: string, updates: UpdateMapRequest): Promise<CustomMap | null> {

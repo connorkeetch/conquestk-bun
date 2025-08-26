@@ -15,6 +15,7 @@ export interface CustomMap {
   ratingAverage: number;
   ratingCount: number;
   tags: string[]; // ["naval", "asymmetric", "fantasy"]
+  capitalTerritories?: Record<string, number[]>; // {"2": [1, 25], "3": [1, 17, 33], ...}
   createdAt: Date;
   updatedAt: Date;
 }
@@ -237,6 +238,7 @@ export interface CreateMapRequest {
   imageHeight?: number;
   isPublic?: boolean;
   tags?: string[];
+  capitalTerritories?: Record<string, number[]>;
 }
 
 export interface UpdateMapRequest {
