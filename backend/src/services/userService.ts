@@ -3,35 +3,41 @@ import { User } from '../types/user';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
-  async create(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  async create(userData: any): Promise<User> {
     const id = uuidv4();
     const isPostgres = process.env.DB_TYPE !== 'sqlite';
     
     if (isPostgres) {
       const pgQuery = `
-        INSERT INTO users (username, email, password)
-        VALUES ($1, $2, $3)
-        RETURNING id, username, email, created_at, updated_at
+        INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, username, email, email_verified, created_at, updated_at
       `;
       
       const result = await query(pgQuery, [
         userData.username,
         userData.email,
-        userData.password
+        userData.password,
+        userData.email_verified || false,
+        userData.verification_token || null,
+        userData.verification_sent_at || null
       ]);
       
       return result.rows[0];
     } else {
       // SQLite uses auto-generated UUID, don't provide one
       const sqliteQuery = `
-        INSERT INTO users (username, email, password)
-        VALUES (?, ?, ?)
+        INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
       
       const insertResult = await query(sqliteQuery, [
         userData.username,
         userData.email,
-        userData.password
+        userData.password,
+        userData.email_verified || false,
+        userData.verification_token || null,
+        userData.verification_sent_at || null
       ]);
       
       // For SQLite, we need to get the last inserted row
@@ -69,5 +75,65 @@ export class UserService {
     
     const updateQuery = `UPDATE users SET updated_at = ${timeFunction} WHERE id = ?`;
     await query(updateQuery, [id]);
+  }
+
+  async findByVerificationToken(token: string): Promise<User | null> {
+    const findQuery = `SELECT * FROM users WHERE verification_token = ?`;
+    const result = await query(findQuery, [token]);
+    return result.rows[0] || null;
+  }
+
+  async verifyEmail(userId: string): Promise<void> {
+    const updateQuery = `
+      UPDATE users 
+      SET email_verified = true, 
+          verification_token = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    await query(updateQuery, [userId]);
+  }
+
+  async updateVerificationToken(userId: string, token: string): Promise<void> {
+    const updateQuery = `
+      UPDATE users 
+      SET verification_token = ?,
+          verification_sent_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    await query(updateQuery, [token, userId]);
+  }
+
+  async logEmailVerification(data: {
+    user_id: string;
+    email: string;
+    token: string;
+  }): Promise<void> {
+    const insertQuery = `
+      INSERT INTO email_verification_logs (user_id, email, token, created_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `;
+    await query(insertQuery, [data.user_id, data.email, data.token]);
+  }
+
+  async updateEmailVerificationLog(token: string): Promise<void> {
+    const updateQuery = `
+      UPDATE email_verification_logs 
+      SET verified_at = CURRENT_TIMESTAMP
+      WHERE token = ?
+    `;
+    await query(updateQuery, [token]);
+  }
+
+  async getRecentVerificationAttempts(userId: string): Promise<number> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const countQuery = `
+      SELECT COUNT(*) as count 
+      FROM email_verification_logs 
+      WHERE user_id = ? AND created_at > ?
+    `;
+    const result = await query(countQuery, [userId, oneHourAgo]);
+    return result.rows[0]?.count || 0;
   }
 }

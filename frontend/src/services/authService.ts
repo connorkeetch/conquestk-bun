@@ -55,4 +55,16 @@ export const authService = {
     const response = await api.post('/auth/logout')
     return response.data
   },
+
+  async verifyEmail(token: string) {
+    const response = await api.post(`/auth/verify-email/${token}`)
+    return response.data
+  },
+
+  async resendVerification(email: string) {
+    const response = await api.post('/auth/resend-verification', { email })
+    return response.data
+  },
 }
+
+export default authService

@@ -11,6 +11,7 @@ import AuthGuard from './components/AuthGuard';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
 import LeaderboardPage from './pages/LeaderboardPage';
 import LearnPage from './pages/LearnPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -80,6 +81,14 @@ function App() {
           element={
             <AuthGuard requireAuth={false}>
               <Register />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/verify-email/:token" 
+          element={
+            <AuthGuard requireAuth={false}>
+              <VerifyEmail />
             </AuthGuard>
           } 
         />

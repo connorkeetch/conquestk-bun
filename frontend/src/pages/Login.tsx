@@ -1,14 +1,26 @@
-import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { login, clearError } from '../store/authSlice'
+import authService from '../services/authService'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [verificationError, setVerificationError] = useState<{ message: string; email?: string } | null>(null)
+  const [resendMessage, setResendMessage] = useState('')
   const dispatch = useAppDispatch()
   const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth)
+  const location = useLocation()
+  
+  useEffect(() => {
+    // Check for message from verification redirect
+    if (location.state?.message) {
+      setResendMessage(location.state.message)
+      setTimeout(() => setResendMessage(''), 5000)
+    }
+  }, [location])
 
   if (isAuthenticated) {
     return <Navigate to="/lobby" replace />
@@ -17,7 +29,34 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     dispatch(clearError())
-    dispatch(login({ email, password }))
+    setVerificationError(null)
+    
+    const result = await dispatch(login({ email, password }))
+    
+    // Check if the error is email verification related
+    if (login.rejected.match(result)) {
+      const payload = result.payload as any
+      if (payload?.requiresVerification) {
+        setVerificationError({
+          message: payload.message,
+          email: payload.email
+        })
+      }
+    }
+  }
+  
+  const handleResendVerification = async () => {
+    if (!verificationError?.email) return
+    
+    try {
+      await authService.resendVerification(verificationError.email)
+      setResendMessage('Verification email sent! Please check your inbox.')
+      setVerificationError(null)
+      setTimeout(() => setResendMessage(''), 5000)
+    } catch (error: any) {
+      setResendMessage(error.response?.data?.message || 'Failed to resend verification email')
+      setTimeout(() => setResendMessage(''), 5000)
+    }
   }
 
   return (
@@ -35,7 +74,36 @@ export default function Login() {
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Login</h2>
           
-          {error && (
+          {resendMessage && (
+            <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-lg mb-6 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {resendMessage}
+            </div>
+          )}
+          
+          {verificationError && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-4 rounded-lg mb-6">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-2">{verificationError.message}</p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    className="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded transition-colors"
+                  >
+                    Resend Verification Email
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {error && !verificationError && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg mb-6 text-sm flex items-center gap-2">
               <svg className="w-4 h-4 flex-shrink-0" width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
