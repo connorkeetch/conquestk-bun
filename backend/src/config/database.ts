@@ -6,13 +6,14 @@ import { runMigrations } from '../utils/migrationRunner';
 type DatabaseType = 'mysql' | 'sqlite';
 
 // Check for MySQL environment variables (Railway format or custom)
+const hasMySQLURL = process.env.MYSQL_URL && process.env.MYSQL_URL !== '';
 const hasRailwayMySQL = process.env.MYSQLHOST && process.env.MYSQLDATABASE;
 const hasCustomMySQL = process.env.DB_HOST && process.env.DB_NAME;
 const hasDatabaseURL = process.env.DATABASE_URL && process.env.DATABASE_URL !== '';
-const hasMySQLURL = process.env.MYSQL_URL && process.env.MYSQL_URL !== '';
 
 // Use MySQL in production, SQLite in development
-const DB_TYPE: DatabaseType = (hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL || hasMySQLURL) ? 'mysql' : 
+// Prioritize MYSQL_URL first since it's Railway's preferred format
+const DB_TYPE: DatabaseType = (hasMySQLURL || hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL) ? 'mysql' : 
   (process.env.DB_TYPE as DatabaseType) || 
   (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite');
 
@@ -263,8 +264,9 @@ export async function initDatabase() {
         throw new Error('MySQL pool not initialized. Check your DATABASE_URL or DB_* environment variables.');
       }
       
-      await query('SELECT NOW()');
+      const testResult = await query('SELECT NOW() as current_time');
       logger.info('✅ MySQL database connected successfully');
+      logger.info('  Connection test result:', testResult.rows[0]);
       
       // Test if tables exist and create them if not
       try {
