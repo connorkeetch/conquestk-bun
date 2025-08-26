@@ -1,21 +1,36 @@
 // Advanced Map System Types
 // Supports custom maps with special abilities, game modes, and asymmetric gameplay
 
+export type MapStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived';
+
 export interface CustomMap {
   id: string;
   name: string;
   description?: string;
   creatorId: string;
+  creatorName?: string; // For display
   imageUrl?: string;
   imageWidth: number;
   imageHeight: number;
   isPublic: boolean;
   isFeatured: boolean;
+  status: MapStatus;
+  version: number;
+  parentMapId?: string; // For tracking edits of approved maps
   downloadCount: number;
+  playCount: number;
   ratingAverage: number;
   ratingCount: number;
   tags: string[]; // ["naval", "asymmetric", "fantasy"]
   capitalTerritories?: Record<string, number[]>; // {"2": [1, 25], "3": [1, 17, 33], ...}
+  
+  // Review fields
+  submittedAt?: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  reviewNotes?: string;
+  rejectionReason?: string;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -288,4 +303,72 @@ export interface MapSearchResult {
   maps: CustomMap[];
   total: number;
   hasMore: boolean;
+}
+
+// Map Draft System
+export interface MapDraft {
+  id: string;
+  userId: string;
+  mapId?: string; // If editing existing map
+  name: string;
+  description?: string;
+  data: any; // JSON map data
+  territories?: any;
+  continents?: any;
+  adjacencies?: any;
+  thumbnailUrl?: string;
+  autoSavedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Map Version History
+export interface MapVersion {
+  id: string;
+  mapId: string;
+  versionNumber: number;
+  data: any;
+  territories?: any;
+  continents?: any;
+  adjacencies?: any;
+  changeSummary?: string;
+  changedBy: string;
+  createdAt: Date;
+}
+
+// Review Queue
+export interface MapReviewItem {
+  id: string;
+  mapId: string;
+  map?: CustomMap;
+  submittedBy: string;
+  submitterName?: string;
+  status: 'pending' | 'in_review' | 'approved' | 'rejected';
+  priority: number;
+  assignedTo?: string;
+  submittedAt: Date;
+  reviewedAt?: Date;
+}
+
+// Admin Notifications
+export interface AdminNotification {
+  id: string;
+  adminId?: string;
+  type: 'map_submission' | 'map_update' | 'system_update' | 'user_report';
+  title: string;
+  message: string;
+  data?: any;
+  isRead: boolean;
+  createdAt: Date;
+  readAt?: Date;
+}
+
+// Map Submission Log
+export interface MapSubmissionLog {
+  id: string;
+  mapId: string;
+  action: 'created' | 'submitted' | 'approved' | 'rejected' | 'edited' | 'archived';
+  performedBy: string;
+  details?: any;
+  createdAt: Date;
 }
