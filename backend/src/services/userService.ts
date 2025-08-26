@@ -83,19 +83,28 @@ export class UserService {
   }
 
   async findById(id: string): Promise<User | null> {
-    const findQuery = `SELECT * FROM users WHERE id = ?`;
+    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
+    const findQuery = isPostgres
+      ? `SELECT * FROM users WHERE id = $1`
+      : `SELECT * FROM users WHERE id = ?`;
     const result = await query(findQuery, [id]);
     return result.rows[0] || null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const findQuery = `SELECT * FROM users WHERE email = ?`;
+    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
+    const findQuery = isPostgres 
+      ? `SELECT * FROM users WHERE email = $1`
+      : `SELECT * FROM users WHERE email = ?`;
     const result = await query(findQuery, [email]);
     return result.rows[0] || null;
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const findQuery = `SELECT * FROM users WHERE username = ?`;
+    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
+    const findQuery = isPostgres
+      ? `SELECT * FROM users WHERE username = $1`
+      : `SELECT * FROM users WHERE username = ?`;
     const result = await query(findQuery, [username]);
     return result.rows[0] || null;
   }
