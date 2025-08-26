@@ -20,6 +20,16 @@ import userRoutes from './routes/users';
 import { setupSocketHandlers } from './services/socketService';
 import { initDatabase } from './config/database';
 import { ensureTablesExist } from './utils/initTables';
+import { 
+  authLimiter,
+  gameCreationLimiter,
+  messageLimiter,
+  generalApiLimiter,
+  adminLimiter,
+  mapUploadLimiter,
+  suspiciousActivityTracker,
+  loginSlowDown
+} from './middleware/rateLimiter';
 
 const app = express();
 const server = createServer(app);
@@ -53,9 +63,35 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5001;
 
-app.use(helmet());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+// Apply suspicious activity tracker globally
+app.use(suspiciousActivityTracker.middleware());
+
+// Apply general rate limiting to all API routes
+app.use('/api/', generalApiLimiter);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
