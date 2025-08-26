@@ -3,6 +3,18 @@ import dotenv from 'dotenv';
 // Load environment variables FIRST before any other imports
 dotenv.config();
 
+// Debug MySQL environment variables immediately
+console.log('🔍 MySQL Environment Variables Check:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  DATABASE_URL:', process.env.DATABASE_URL ? `SET (length: ${process.env.DATABASE_URL.length})` : 'NOT SET');
+console.log('  MYSQL_URL:', process.env.MYSQL_URL ? `SET (length: ${process.env.MYSQL_URL.length})` : 'NOT SET');
+console.log('  MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? 'SET' : 'NOT SET');
+console.log('  MYSQLHOST:', process.env.MYSQLHOST || 'NOT SET');
+console.log('  MYSQLPORT:', process.env.MYSQLPORT || 'NOT SET');
+console.log('  MYSQLDATABASE:', process.env.MYSQLDATABASE || 'NOT SET');
+console.log('  MYSQLUSER:', process.env.MYSQLUSER || 'NOT SET');
+console.log('  MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? 'SET (hidden)' : 'NOT SET');
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -229,8 +241,96 @@ if (process.env.NODE_ENV === 'production') {
 
 setupSocketHandlers(io);
 
+// Test MySQL connection with detailed logging
+async function testMySQLConnection() {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('📊 Skipping MySQL test in development (using SQLite)');
+    return;
+  }
+
+  const mysql = require('mysql2/promise');
+  
+  console.log('🔄 Testing MySQL connections...');
+  
+  // Test different connection methods
+  const connectionConfigs = [];
+  
+  // Method 1: MYSQL_URL if available
+  if (process.env.MYSQL_URL) {
+    connectionConfigs.push({
+      name: 'MYSQL_URL',
+      config: process.env.MYSQL_URL
+    });
+  }
+  
+  // Method 2: DATABASE_URL if available
+  if (process.env.DATABASE_URL) {
+    connectionConfigs.push({
+      name: 'DATABASE_URL',
+      config: process.env.DATABASE_URL
+    });
+  }
+  
+  // Method 3: Individual variables
+  if (process.env.MYSQLHOST && process.env.MYSQLDATABASE) {
+    connectionConfigs.push({
+      name: 'Individual Variables',
+      config: {
+        host: process.env.MYSQLHOST,
+        port: parseInt(process.env.MYSQLPORT || '3306'),
+        database: process.env.MYSQLDATABASE,
+        user: process.env.MYSQLUSER || 'root',
+        password: process.env.MYSQLPASSWORD || ''
+      }
+    });
+  }
+  
+  for (const { name, config } of connectionConfigs) {
+    try {
+      console.log(`\n🔌 Testing connection method: ${name}`);
+      if (typeof config === 'string') {
+        console.log(`  URL pattern: ${config.replace(/:[^@]+@/, ':****@')}`);
+      } else {
+        console.log(`  Host: ${config.host}`);
+        console.log(`  Port: ${config.port}`);
+        console.log(`  Database: ${config.database}`);
+        console.log(`  User: ${config.user}`);
+      }
+      
+      const connection = await mysql.createConnection(config);
+      const [rows] = await connection.execute('SELECT 1 as test');
+      
+      console.log(`✅ ${name} connection SUCCESSFUL!`);
+      console.log('  Test query result:', rows);
+      
+      await connection.end();
+      break; // If one works, we're good
+      
+    } catch (error) {
+      console.error(`❌ ${name} connection FAILED:`);
+      console.error(`  Error code: ${error.code}`);
+      console.error(`  Error message: ${error.message}`);
+      if (error.code === 'ECONNREFUSED') {
+        console.error('  → Connection refused. Check if host/port are correct');
+      } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+        console.error('  → Access denied. Check username/password');
+      } else if (error.code === 'ENOTFOUND') {
+        console.error('  → Host not found. Check MYSQLHOST value');
+      }
+    }
+  }
+  
+  if (connectionConfigs.length === 0) {
+    console.error('❌ No MySQL configuration found!');
+    console.error('  Please set one of: MYSQL_URL, DATABASE_URL, or MYSQLHOST+MYSQLDATABASE');
+  }
+}
+
 async function startServer() {
   try {
+    // Test MySQL connection first
+    await testMySQLConnection();
+    
     // Initialize database connection
     await initDatabase();
     

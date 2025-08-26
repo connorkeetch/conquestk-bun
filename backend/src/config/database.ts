@@ -9,9 +9,10 @@ type DatabaseType = 'mysql' | 'sqlite';
 const hasRailwayMySQL = process.env.MYSQLHOST && process.env.MYSQLDATABASE;
 const hasCustomMySQL = process.env.DB_HOST && process.env.DB_NAME;
 const hasDatabaseURL = process.env.DATABASE_URL && process.env.DATABASE_URL !== '';
+const hasMySQLURL = process.env.MYSQL_URL && process.env.MYSQL_URL !== '';
 
 // Use MySQL in production, SQLite in development
-const DB_TYPE: DatabaseType = (hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL) ? 'mysql' : 
+const DB_TYPE: DatabaseType = (hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL || hasMySQLURL) ? 'mysql' : 
   (process.env.DB_TYPE as DatabaseType) || 
   (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite');
 
@@ -20,6 +21,7 @@ logger.info('🔧 Database Configuration:', {
   DB_TYPE,
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+  MYSQL_URL: process.env.MYSQL_URL ? 'SET' : 'NOT_SET',
   MYSQLHOST: process.env.MYSQLHOST || 'NOT_SET',
   MYSQLDATABASE: process.env.MYSQLDATABASE || 'NOT_SET',
   DB_HOST: process.env.DB_HOST || 'NOT_SET',
@@ -30,9 +32,26 @@ let mysqlPool: mysql.Pool | null = null;
 let sqliteDb: Database | null = null;
 
 if (DB_TYPE === 'mysql') {
+  // Try MYSQL_URL first (Railway's preferred format)
+  if (hasMySQLURL) {
+    logger.info('🔧 Using MYSQL_URL for MySQL connection');
+    const url = new URL(process.env.MYSQL_URL!);
+    mysqlPool = mysql.createPool({
+      host: url.hostname,
+      port: parseInt(url.port || '3306'),
+      user: url.username,
+      password: url.password,
+      database: url.pathname.substring(1), // Remove leading /
+      waitForConnections: true,
+      connectionLimit: 20,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0
+    });
+  }
   // Railway MySQL format (separate variables)
-  if (hasRailwayMySQL) {
-    logger.info('🔧 Using Railway MySQL configuration');
+  else if (hasRailwayMySQL) {
+    logger.info('🔧 Using Railway MySQL configuration (individual variables)');
     mysqlPool = mysql.createPool({
       host: process.env.MYSQLHOST!,
       port: parseInt(process.env.MYSQLPORT || '3306'),
