@@ -217,6 +217,9 @@ async function createPostgreSQLTables() {
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(255),
+        verification_sent_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -350,6 +353,9 @@ async function initializeSqliteTables() {
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(255),
+        verification_sent_at TIMESTAMP,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
