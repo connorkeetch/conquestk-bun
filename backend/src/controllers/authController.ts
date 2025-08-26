@@ -11,9 +11,24 @@ export class AuthController {
     try {
       const { username, email, password } = req.body;
       
-      const existingUser = await this.userService.findByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
+      // Check if user exists with better error messages
+      const existingUserByEmail = await this.userService.findByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ 
+          error: 'Registration failed',
+          message: 'An account with this email already exists',
+          field: 'email'
+        });
+      }
+
+      // Check if username is taken
+      const existingUserByUsername = await this.userService.findByUsername(username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ 
+          error: 'Registration failed',
+          message: 'This username is already taken',
+          field: 'username'
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -36,7 +51,10 @@ export class AuthController {
       });
     } catch (error) {
       logger.error('Registration error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      return res.status(500).json({ 
+        error: 'Registration failed',
+        message: 'An unexpected error occurred during registration. Please try again.' 
+      });
     }
   };
 
@@ -46,12 +64,20 @@ export class AuthController {
       
       const user = await this.userService.findByEmail(email);
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ 
+          error: 'Authentication failed',
+          message: 'No account found with this email address',
+          field: 'email'
+        });
       }
 
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ 
+          error: 'Authentication failed',
+          message: 'Incorrect password',
+          field: 'password'
+        });
       }
 
       const token = jwt.sign(

@@ -291,13 +291,35 @@ export const validateAuth = (req: Request, res: Response, next: NextFunction) =>
   });
   
   if (error) {
+    // Create user-friendly error messages
+    const details = error.details.map(detail => {
+      const field = detail.path.join('.');
+      let message = detail.message;
+      
+      // Provide clearer password requirement message
+      if (field === 'password' && detail.type === 'string.pattern.base') {
+        message = 'Password must be at least 8 characters and include: 1 uppercase letter (A-Z), 1 lowercase letter (a-z), 1 number (0-9), and 1 special character (@$!%*?&)';
+      }
+      
+      return { field, message };
+    });
+    
+    // Get the main error message based on the first error
+    let mainMessage = 'Please check your input';
+    if (details.length > 0) {
+      if (details[0].field === 'password') {
+        mainMessage = 'Password does not meet security requirements';
+      } else if (details[0].field === 'email') {
+        mainMessage = 'Please provide a valid email address';
+      } else if (details[0].field === 'username') {
+        mainMessage = 'Username format is invalid';
+      }
+    }
+    
     return res.status(400).json({ 
-      error: 'Validation error',
-      message: 'Invalid input data',
-      details: error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      }))
+      error: 'Validation failed',
+      message: mainMessage,
+      details
     });
   }
   

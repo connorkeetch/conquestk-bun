@@ -143,20 +143,42 @@ export default function Register() {
                   )}
                 </button>
               </div>
-              {/* Password Strength Indicator */}
-              {password && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="flex-1 bg-gray-700 rounded-full h-1.5">
-                      <div 
-                        className={`h-1.5 rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                        style={{ width: passwordStrength.width }}
-                      />
+              {/* Password Requirements & Strength Indicator */}
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-gray-400">
+                  Password must contain at least:
+                </p>
+                <ul className="text-xs space-y-1">
+                  <li className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-400' : 'text-gray-500'}`}>
+                    {password.length >= 8 ? '✓' : '○'} 8 characters
+                  </li>
+                  <li className={`flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                    {/[A-Z]/.test(password) ? '✓' : '○'} 1 uppercase letter (A-Z)
+                  </li>
+                  <li className={`flex items-center gap-1 ${/[a-z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                    {/[a-z]/.test(password) ? '✓' : '○'} 1 lowercase letter (a-z)
+                  </li>
+                  <li className={`flex items-center gap-1 ${/\d/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                    {/\d/.test(password) ? '✓' : '○'} 1 number (0-9)
+                  </li>
+                  <li className={`flex items-center gap-1 ${/[@$!%*?&]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}>
+                    {/[@$!%*?&]/.test(password) ? '✓' : '○'} 1 special character (@$!%*?&)
+                  </li>
+                </ul>
+                {password && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+                        <div 
+                          className={`h-1.5 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                          style={{ width: passwordStrength.width }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-400 capitalize min-w-12">{passwordStrength.strength}</span>
                     </div>
-                    <span className="text-xs text-gray-400 capitalize min-w-12">{passwordStrength.strength}</span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             
             {/* Confirm Password Field */}

@@ -16,13 +16,34 @@ api.interceptors.request.use((config) => {
 
 export const authService = {
   async login(credentials: { email: string; password: string }) {
-    const response = await api.post('/auth/login', credentials)
-    return response.data
+    try {
+      const response = await api.post('/auth/login', credentials)
+      return response.data
+    } catch (error: any) {
+      // Extract the error message from the backend response
+      const message = error.response?.data?.message || 
+                     error.response?.data?.error || 
+                     'Login failed. Please check your credentials.'
+      throw new Error(message)
+    }
   },
 
   async register(userData: { username: string; email: string; password: string }) {
-    const response = await api.post('/auth/register', userData)
-    return response.data
+    try {
+      const response = await api.post('/auth/register', userData)
+      return response.data
+    } catch (error: any) {
+      // Extract the error message from the backend response
+      const message = error.response?.data?.message || 
+                     error.response?.data?.error || 
+                     'Registration failed. Please try again.'
+      // Include field-specific details if available
+      const details = error.response?.data?.details
+      if (details && details.length > 0) {
+        throw new Error(details[0].message)
+      }
+      throw new Error(message)
+    }
   },
 
   async getProfile() {
