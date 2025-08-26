@@ -38,6 +38,8 @@ export interface CreateGameData {
   allowTeamPlay?: boolean
   gameType?: string
   capitalsEnabled?: boolean
+  useTerritoryModifiers?: boolean
+  modifierDistribution?: 'none' | 'sparse' | 'balanced' | 'abundant'
 }
 
 export interface JoinGameResponse {

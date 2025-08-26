@@ -1,8 +1,10 @@
 import { GameState, GameAction, Territory, GamePlayer, BattleResult, GameConfiguration, MovementType, ContinentBonus } from '../types/game';
 import { WorldMap } from './worldMap';
+import territoryModifierService, { GameTerritoryModifier } from '../services/territoryModifierService';
 
 export class GameEngine {
   private worldMap = new WorldMap();
+  private gameModifiers: Map<string, GameTerritoryModifier> = new Map();
 
   initializeGame(roomId: string, playerIds: string[], gameConfig: GameConfiguration): GameState {
     const territories = this.worldMap.getTerritories();
@@ -235,7 +237,7 @@ export class GameEngine {
     return gameState;
   }
 
-  private handleAttack(gameState: GameState, action: GameAction): BattleResult {
+  private async handleAttack(gameState: GameState, action: GameAction): Promise<BattleResult> {
     const { fromTerritoryId, toTerritoryId } = action.payload;
     
     const fromTerritory = gameState.board.find(t => t.id === fromTerritoryId);
@@ -247,6 +249,27 @@ export class GameEngine {
     
     // Mark that player has attacked this turn
     gameState.hasAttackedThisTurn = true;
+    
+    // Get territory modifiers if game uses them
+    let attackBonus = 0;
+    let defenseBonus = 0;
+    
+    if (gameState.gameConfig?.useTerritoryModifiers) {
+      // Load modifiers if not cached
+      if (this.gameModifiers.size === 0 && gameState.roomId) {
+        this.gameModifiers = await territoryModifierService.getGameModifiers(gameState.roomId);
+      }
+      
+      const attackerModifier = this.gameModifiers.get(fromTerritoryId);
+      const defenderModifier = this.gameModifiers.get(toTerritoryId);
+      
+      if (attackerModifier) {
+        attackBonus = attackerModifier.attack_bonus;
+      }
+      if (defenderModifier) {
+        defenseBonus = defenderModifier.defense_bonus;
+      }
+    }
     
     // Determine number of dice
     const attackerDiceCount = Math.min(3, fromTerritory.armies - 1);
@@ -501,15 +524,31 @@ export class GameEngine {
     return this.validateMovementByType(gameState, fromTerritoryId, toTerritoryId, action.playerId);
   }
 
-  private simulateBattle(attackerDiceCount: number, defenderDiceCount: number): {
+  private simulateBattle(
+    attackerDiceCount: number, 
+    defenderDiceCount: number,
+    attackBonus: number = 0,
+    defenseBonus: number = 0
+  ): {
     attackerDice: number[];
     defenderDice: number[];
     attackerLosses: number;
     defenderLosses: number;
   } {
     // Roll dice for attacker and defender
-    const attackerDice = this.rollDice(attackerDiceCount).sort((a, b) => b - a);
-    const defenderDice = this.rollDice(defenderDiceCount).sort((a, b) => b - a);
+    let attackerDice = this.rollDice(attackerDiceCount).sort((a, b) => b - a);
+    let defenderDice = this.rollDice(defenderDiceCount).sort((a, b) => b - a);
+    
+    // Apply territory modifiers to dice rolls
+    // Bonuses are applied to all dice, capped between 1 and 6
+    if (attackBonus !== 0) {
+      attackerDice = attackerDice.map(die => Math.max(1, Math.min(6, die + attackBonus)));
+      attackerDice.sort((a, b) => b - a);
+    }
+    if (defenseBonus !== 0) {
+      defenderDice = defenderDice.map(die => Math.max(1, Math.min(6, die + defenseBonus)));
+      defenderDice.sort((a, b) => b - a);
+    }
     
     let attackerLosses = 0;
     let defenderLosses = 0;

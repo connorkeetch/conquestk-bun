@@ -2,11 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { WorldMapSVG } from './WorldMapSVG';
 import { GamePhaseControls } from './GamePhaseControls';
+import { TerritoryModifierIcon } from './TerritoryModifierIcon';
+import { TerritoryModifierLegend } from './TerritoryModifierLegend';
 import territoryData from '../data/territories-classic.json';
 import { RootState, AppDispatch } from '../store';
 import { selectTerritory, selectTargetTerritory, setPendingAction } from '../store/gameSlice';
 import { endTurn } from '../store/gameActions';
 import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses';
+import type { TerritoryModifier } from '../types/game';
 
 interface TerritoryDisplay {
   id: string;
@@ -170,6 +173,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             {/* Army Count Overlays */}
             {Object.entries(territories).map(([territoryId, territory]) => {
               if (!territory.armies) return null;
+              const modifier = gameState.territoryModifiers?.[territoryId];
               
               return (
                 <div
@@ -181,13 +185,31 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                     transform: 'translate(-50%, -50%)',
                   }}
                 >
-                  <div className="bg-white border-2 border-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
-                    {territory.armies}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="bg-white border-2 border-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
+                      {territory.armies}
+                    </div>
+                    {modifier && (
+                      <TerritoryModifierIcon 
+                        modifier={modifier} 
+                        size="small"
+                        showTooltip={true}
+                      />
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
+          
+          {/* Territory Modifiers Legend */}
+          {gameState.territoryModifiers && Object.keys(gameState.territoryModifiers).length > 0 && (
+            <TerritoryModifierLegend 
+              modifiers={new Map(Object.entries(gameState.territoryModifiers))}
+              position="bottom-right"
+              collapsible={true}
+            />
+          )}
         </div>
 
         {/* Sidebar */}

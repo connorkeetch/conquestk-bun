@@ -10,6 +10,7 @@ export interface GameState {
   lastBattleResult?: BattleResult
   gameConfig: GameConfiguration
   movementTracking?: { [territoryId: string]: boolean }
+  territoryModifiers?: { [territoryId: string]: TerritoryModifier }
 }
 
 export interface GamePlayer {
@@ -72,6 +73,19 @@ export interface GameConfiguration {
   maxPlayers: number
   mapId?: string
   gameMode?: string
+  useTerritoryModifiers?: boolean
+  modifierDistribution?: 'none' | 'sparse' | 'balanced' | 'abundant'
+}
+
+export interface TerritoryModifier {
+  name: string
+  icon: string
+  color: string
+  defense_bonus: number
+  attack_bonus: number
+  troop_generation_bonus: number
+  movement_restriction?: boolean
+  supply_line_bonus?: boolean
 }
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'

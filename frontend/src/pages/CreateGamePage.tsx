@@ -48,6 +48,8 @@ const CreateGamePage: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState('red');
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive');
   const [staticBonusValue, setStaticBonusValue] = useState(10);
+  const [useTerritoryModifiers, setUseTerritoryModifiers] = useState(false);
+  const [modifierDistribution, setModifierDistribution] = useState<'sparse' | 'balanced' | 'abundant'>('balanced');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +84,9 @@ const CreateGamePage: React.FC = () => {
         mapId: selectedMap,
         movementType: 'classic_adjacent' as MovementType,
         allowTeamPlay: teams > 0,
-        capitalsEnabled: gameMode === 'capitals'
+        capitalsEnabled: gameMode === 'capitals',
+        useTerritoryModifiers,
+        modifierDistribution: useTerritoryModifiers ? modifierDistribution : 'none'
       };
       
       const response = await gameService.createRoom(gameData);
@@ -487,21 +491,83 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 8. Advanced Options Card */}
-        <OptionCard number="8" title="Advanced Options" comingSoon={true}>
-          <div className="space-y-2 opacity-50">
-            <label className="flex items-center">
-              <input type="checkbox" disabled className="mr-3" />
-              <span className="text-gray-400">Balanced Dice</span>
+        {/* 8. Territory Modifiers Card */}
+        <OptionCard number="8" title="Territory Modifiers">
+          <div className="space-y-3">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input 
+                type="checkbox" 
+                checked={useTerritoryModifiers}
+                onChange={(e) => setUseTerritoryModifiers(e.target.checked)}
+                className="mr-3 accent-blue-500" 
+              />
+              <div className="flex-1">
+                <span className="text-white">⚡ Enable Territory Modifiers</span>
+                <p className="text-xs text-gray-400 mt-1">Add special properties to territories (defense bonuses, supply lines, etc.)</p>
+              </div>
             </label>
-            <label className="flex items-center">
-              <input type="checkbox" disabled className="mr-3" />
-              <span className="text-gray-400">No First Turn Advantage</span>
-            </label>
-            <label className="flex items-center">
-              <input type="checkbox" disabled className="mr-3" />
-              <span className="text-gray-400">Zombie Mode</span>
-            </label>
+            
+            {useTerritoryModifiers && (
+              <div className="mt-3 pt-3 border-t border-gray-600">
+                <p className="text-sm text-gray-400 mb-2">Modifier Distribution:</p>
+                <div className="space-y-2">
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
+                    <input 
+                      type="radio" 
+                      name="modifierDist" 
+                      value="sparse"
+                      checked={modifierDistribution === 'sparse'}
+                      onChange={(e) => setModifierDistribution(e.target.value as 'sparse' | 'balanced' | 'abundant')}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white text-sm">Sparse (15%)</span>
+                      <p className="text-xs text-gray-400">Few strategic territories</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
+                    <input 
+                      type="radio" 
+                      name="modifierDist" 
+                      value="balanced"
+                      checked={modifierDistribution === 'balanced'}
+                      onChange={(e) => setModifierDistribution(e.target.value as 'sparse' | 'balanced' | 'abundant')}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white text-sm">Balanced (30%)</span>
+                      <p className="text-xs text-gray-400">Moderate strategic depth</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
+                    <input 
+                      type="radio" 
+                      name="modifierDist" 
+                      value="abundant"
+                      checked={modifierDistribution === 'abundant'}
+                      onChange={(e) => setModifierDistribution(e.target.value as 'sparse' | 'balanced' | 'abundant')}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white text-sm">Abundant (50%)</span>
+                      <p className="text-xs text-gray-400">Many strategic territories</p>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="mt-3 p-2 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                  <p className="text-xs text-blue-400">
+                    🎲 Modifiers are randomly assigned at game start. Examples:
+                  </p>
+                  <ul className="text-xs text-gray-400 mt-1 space-y-1">
+                    <li>🛡️ Fortresses: +2 defense bonus</li>
+                    <li>⚔️ Training grounds: +1 attack bonus</li>
+                    <li>🔗 Supply depots: Troop generation bonus</li>
+                    <li>🚧 Mountains: Movement restrictions</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </OptionCard>
 
