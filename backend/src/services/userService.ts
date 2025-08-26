@@ -5,25 +5,51 @@ import { v4 as uuidv4 } from 'uuid';
 export class UserService {
   async create(userData: any): Promise<User> {
     const id = uuidv4();
-    const isPostgres = process.env.DB_TYPE !== 'sqlite';
+    const isPostgres = process.env.DATABASE_URL || process.env.DB_TYPE === 'postgresql';
     
     if (isPostgres) {
-      const pgQuery = `
-        INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, username, email, email_verified, created_at, updated_at
-      `;
-      
-      const result = await query(pgQuery, [
-        userData.username,
-        userData.email,
-        userData.password,
-        userData.email_verified || false,
-        userData.verification_token || null,
-        userData.verification_sent_at || null
-      ]);
-      
-      return result.rows[0];
+      // First try with email verification columns, fall back to basic if they don't exist
+      try {
+        const pgQuery = `
+          INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id, username, email, email_verified, created_at, updated_at
+        `;
+        
+        const result = await query(pgQuery, [
+          userData.username,
+          userData.email,
+          userData.password,
+          userData.email_verified || false,
+          userData.verification_token || null,
+          userData.verification_sent_at || null
+        ]);
+        
+        return result.rows[0];
+      } catch (error: any) {
+        // If column doesn't exist, try without email verification columns
+        if (error.message?.includes('column') || error.code === '42703') {
+          console.log('Email verification columns not found, using basic insert');
+          const basicQuery = `
+            INSERT INTO users (username, email, password)
+            VALUES ($1, $2, $3)
+            RETURNING id, username, email, created_at, updated_at
+          `;
+          
+          const result = await query(basicQuery, [
+            userData.username,
+            userData.email,
+            userData.password
+          ]);
+          
+          // Add default values for missing fields
+          return {
+            ...result.rows[0],
+            email_verified: false
+          };
+        }
+        throw error;
+      }
     } else {
       // SQLite uses auto-generated UUID, don't provide one
       const sqliteQuery = `
