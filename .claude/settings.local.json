@@ -52,12 +52,36 @@
       "mcp__filesystem__write_file",
       "Bash(claude --version)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "mcp__github__get_file_contents",
+      "Bash(git config:*)",
+      "mcp__github__create_or_update_file",
+      "Bash(npm run setup:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(source ~/.bashrc)",
+      "Bash(pkill:*)",
+      "mcp__github__search_repositories",
+      "Bash(env)",
+      "Bash(./switch-env.sh:*)",
+      "Bash(DB_TYPE=sqlite npm run dev)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
   },
+  "enabledMcpjsonServers": [
+    "github",
+    "memory",
+    "filesystem",
+    "git",
+    "puppeteer",
+    "fetch",
+    "sequential-thinking",
+    "serena"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -65,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd /c .claude\\startup.bat"
+            "command": "bash .claude/startup.sh"
           }
         ]
       },
@@ -74,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd /c .claude\\startup.bat"
+            "command": "bash .claude/startup.sh"
           }
         ]
       }

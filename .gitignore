@@ -108,3 +108,9 @@ _archive/
 # Memory bank system files (never commit)
 CLAUDE-*.md
 !CLAUDE.md
+
+# MCP configuration (machine-specific)
+.mcp.json
+
+# Claude Code configuration (machine-specific)
+.claude/

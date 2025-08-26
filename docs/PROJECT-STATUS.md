@@ -76,6 +76,8 @@
 - [x] **Map Validation**: Connectivity and overlap checking
 
 ### 🚧 Future Enhancements
+
+#### Game Features
 - [ ] **Continent Bonuses**: Additional armies for controlling continents
 - [ ] **Card System**: Territory cards and set trading
 - [ ] **AI Players**: Computer opponents
@@ -85,3 +87,14 @@
 - [ ] **Spectator Mode**: Watch games in progress
 - [ ] **Tournament Mode**: Multi-game tournaments
 - [ ] **Map Editor Improvements**: Undo/redo, grid snap, shape tools
+
+#### Settings Phase 2 - Backend Required
+- [ ] **Account Settings**: Password change, avatar upload, 2FA, account deletion
+- [ ] **Audio Settings**: Master/SFX/music volume, dice/turn sounds
+- [ ] **Notification Channels**: Email (SendGrid), SMS (Twilio), Slack webhooks
+- [ ] **Per-event notification preferences**
+
+#### Settings Phase 3 - Complex Features
+- [ ] **Privacy Settings**: Public profile, statistics visibility, online status, GDPR data download
+- [ ] **Social Features**: Friend system, block list, chat preferences
+- [ ] **Game-Specific Settings**: Preferred modes, auto-join, matchmaking, custom hotkeys
