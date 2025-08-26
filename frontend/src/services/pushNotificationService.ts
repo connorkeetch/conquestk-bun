@@ -75,9 +75,15 @@ class PushNotificationService {
         return false;
       }
 
-      // Get public VAPID key from server
-      const response = await fetch(`${API_URL}/notifications/vapid-public-key`);
-      const { publicKey } = await response.json();
+      // Get public VAPID key from environment or fallback to server
+      let publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      
+      if (!publicKey) {
+        // Fallback to fetching from server if not in environment
+        const response = await fetch(`${API_URL}/notifications/vapid-public-key`);
+        const data = await response.json();
+        publicKey = data.publicKey;
+      }
 
       // Convert the public key to Uint8Array
       const convertedVapidKey = this.urlBase64ToUint8Array(publicKey);
