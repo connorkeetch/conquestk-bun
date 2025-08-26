@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
 import { logout } from '../store/authSlice';
+import { sanitizeText } from '../utils/sanitizer';
 
 interface MenuSection {
   id: string;
@@ -145,7 +146,7 @@ export default function Header() {
             {isAuthenticated ? (
               <>
                 <span className="hidden sm:inline text-sm text-white/70 mr-2">
-                  {user?.username}
+                  {user?.username ? sanitizeText(user.username) : ''}
                 </span>
                 <button 
                   onClick={handleLogout}
@@ -276,7 +277,7 @@ export default function Header() {
             {isAuthenticated ? (
               <div className="space-y-2">
                 <div className="px-3 py-2 text-sm text-gray-400">
-                  Logged in as <span className="text-white font-medium">{user?.username}</span>
+                  Logged in as <span className="text-white font-medium">{user?.username ? sanitizeText(user.username) : ''}</span>
                 </div>
                 <button
                   onClick={handleLogout}

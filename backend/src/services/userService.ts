@@ -46,25 +46,22 @@ export class UserService {
   }
 
   async findById(id: string): Promise<User | null> {
-    const paramPlaceholder = process.env.DB_TYPE === 'sqlite' ? '?' : '$1';
-    const findQuery = `SELECT * FROM users WHERE id = ${paramPlaceholder}`;
+    const findQuery = `SELECT * FROM users WHERE id = ?`;
     const result = await query(findQuery, [id]);
     return result.rows[0] || null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const paramPlaceholder = process.env.DB_TYPE === 'sqlite' ? '?' : '$1';
-    const findQuery = `SELECT * FROM users WHERE email = ${paramPlaceholder}`;
+    const findQuery = `SELECT * FROM users WHERE email = ?`;
     const result = await query(findQuery, [email]);
     return result.rows[0] || null;
   }
 
   async updateLastLogin(id: string): Promise<void> {
     const isPostgres = process.env.DB_TYPE !== 'sqlite';
-    const paramPlaceholder = isPostgres ? '$1' : '?';
     const timeFunction = isPostgres ? 'NOW()' : "datetime('now')";
     
-    const updateQuery = `UPDATE users SET updated_at = ${timeFunction} WHERE id = ${paramPlaceholder}`;
+    const updateQuery = `UPDATE users SET updated_at = ${timeFunction} WHERE id = ?`;
     await query(updateQuery, [id]);
   }
 }

@@ -104,7 +104,7 @@ export class GameRoomService {
         FROM game_rooms gr
         LEFT JOIN room_players rp ON gr.id = rp.room_id
         LEFT JOIN users u ON rp.user_id = u.id
-        WHERE gr.id = ${paramPlaceholder}
+        WHERE gr.id = ?
         GROUP BY gr.id
       `;
       
@@ -121,7 +121,7 @@ export class GameRoomService {
         FROM game_rooms gr
         LEFT JOIN room_players rp ON gr.id = rp.room_id
         LEFT JOIN users u ON rp.user_id = u.id
-        WHERE gr.id = ${paramPlaceholder}
+        WHERE gr.id = ?
         GROUP BY gr.id
       `;
       
@@ -155,7 +155,7 @@ export class GameRoomService {
         await client.query('BEGIN TRANSACTION');
       }
       
-      const roomQuery = `SELECT * FROM game_rooms WHERE id = ${param1}`;
+      const roomQuery = `SELECT * FROM game_rooms WHERE id = ?`;
       const roomResult = await client.query(roomQuery, [roomId]);
       
       if (roomResult.rows.length === 0) {
@@ -168,7 +168,7 @@ export class GameRoomService {
         throw new Error('Room is not accepting new players');
       }
       
-      const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = ${param1}`;
+      const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = ?`;
       const countResult = await client.query(playerCountQuery, [roomId]);
       const currentPlayers = parseInt(countResult.rows[0].count);
       
@@ -208,7 +208,7 @@ export class GameRoomService {
     const param1 = isPostgres ? '$1' : '?';
     const param2 = isPostgres ? '$2' : '?';
     
-    const deleteQuery = `DELETE FROM room_players WHERE room_id = ${param1} AND user_id = ${param2}`;
+    const deleteQuery = `DELETE FROM room_players WHERE room_id = ? AND user_id = ?`;
     await query(deleteQuery, [roomId, userId]);
   }
 }
