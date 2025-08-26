@@ -102,11 +102,22 @@ class PostgresClient implements DatabaseClient {
 
 export const query = async (text: string, params: any[] = []): Promise<DatabaseResult> => {
   if (DB_TYPE === 'postgresql' && pgPool) {
-    const result = await pgPool.query(text, params);
-    return {
-      rows: result.rows,
-      rowCount: result.rowCount ?? undefined
-    };
+    try {
+      const result = await pgPool.query(text, params);
+      return {
+        rows: result.rows,
+        rowCount: result.rowCount ?? undefined
+      };
+    } catch (error: any) {
+      console.error('PostgreSQL query error:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        query: text,
+        params: params
+      });
+      throw error;
+    }
   } else if (DB_TYPE === 'sqlite' && sqliteDb) {
     const client = new SqliteClient(sqliteDb);
     return await client.query(text, params);
