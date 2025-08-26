@@ -136,4 +136,56 @@ export class UserService {
     const result = await query(countQuery, [userId, oneHourAgo]);
     return result.rows[0]?.count || 0;
   }
+
+  async createPasswordResetToken(data: {
+    user_id: string;
+    token: string;
+    expires_at: Date;
+  }): Promise<void> {
+    const insertQuery = `
+      INSERT INTO password_reset_tokens (user_id, token, expires_at)
+      VALUES (?, ?, ?)
+    `;
+    await query(insertQuery, [data.user_id, data.token, data.expires_at]);
+  }
+
+  async findPasswordResetToken(token: string): Promise<any> {
+    const findQuery = `
+      SELECT * FROM password_reset_tokens 
+      WHERE token = ?
+    `;
+    const result = await query(findQuery, [token]);
+    return result.rows[0] || null;
+  }
+
+  async markPasswordResetTokenUsed(token: string): Promise<void> {
+    const updateQuery = `
+      UPDATE password_reset_tokens 
+      SET used = true, 
+          used_at = CURRENT_TIMESTAMP
+      WHERE token = ?
+    `;
+    await query(updateQuery, [token]);
+  }
+
+  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+    const updateQuery = `
+      UPDATE users 
+      SET password = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    await query(updateQuery, [hashedPassword, userId]);
+  }
+
+  async getRecentPasswordResetAttempts(userId: string): Promise<number> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const countQuery = `
+      SELECT COUNT(*) as count 
+      FROM password_reset_tokens 
+      WHERE user_id = ? AND created_at > ?
+    `;
+    const result = await query(countQuery, [userId, oneHourAgo]);
+    return result.rows[0]?.count || 0;
+  }
 }

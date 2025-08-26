@@ -12,6 +12,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import LeaderboardPage from './pages/LeaderboardPage';
 import LearnPage from './pages/LearnPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -89,6 +91,22 @@ function App() {
           element={
             <AuthGuard requireAuth={false}>
               <VerifyEmail />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/forgot-password" 
+          element={
+            <AuthGuard requireAuth={false}>
+              <ForgotPassword />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/reset-password/:token" 
+          element={
+            <AuthGuard requireAuth={false}>
+              <ResetPassword />
             </AuthGuard>
           } 
         />
