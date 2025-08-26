@@ -187,23 +187,42 @@ app.get('/debug/tables', async (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../public');
   
+  // Log the frontend path for debugging
+  console.log('Frontend static files path:', frontendPath);
+  
   // IMPORTANT: Serve static files with explicit options
+  // This MUST come before the catch-all route
   app.use(express.static(frontendPath, {
     maxAge: '1d',
     setHeaders: (res, filePath) => {
       // Set proper content types for assets
       if (filePath.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
       } else if (filePath.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+      } else if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json; charset=UTF-8');
       }
-    }
+    },
+    index: false // Don't automatically serve index.html
   }));
   
-  // Handle React Router - serve index.html for all non-API routes
-  // The static middleware above will handle asset files
+  // Explicitly handle asset requests to ensure they don't fall through
+  app.get('/assets/*', (req, res) => {
+    // If we reach here, the asset wasn't found
+    res.status(404).send('Asset not found');
+  });
+  
+  // Handle React Router - serve index.html for all non-API and non-asset routes
   app.get('*', (req, res) => {
-    return res.sendFile(path.join(frontendPath, 'index.html'));
+    // Don't serve index.html for API routes or assets
+    if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
+      return res.status(404).send('Not found');
+    }
+    
+    const indexPath = path.join(frontendPath, 'index.html');
+    console.log('Serving index.html from:', indexPath);
+    return res.sendFile(indexPath);
   });
 }
 
