@@ -74,17 +74,29 @@ const authSchema = Joi.object({
       'string.max': 'Username cannot exceed 20 characters'
     }),
   
+  // For login, we use 'identifier' which can be email or username
+  identifier: Joi.string()
+    .max(255)
+    .when('$isRegister', { is: false, then: Joi.required() })
+    .messages({
+      'string.empty': 'Please provide username or email',
+      'any.required': 'Username or email is required'
+    }),
+  
   email: Joi.string()
     .email({ tlds: { allow: true } })
     .max(100)
-    .required()
+    .when('$isRegister', { is: true, then: Joi.required() })
     .custom((value, helpers) => {
-      if (!validator.isEmail(value)) {
+      if (value && !validator.isEmail(value)) {
         return helpers.error('any.invalid', { message: 'Invalid email format' });
       }
-      const error = validateAgainstPatterns(value, 'Email');
-      if (error) return helpers.error('any.invalid', { message: error });
-      return validator.normalizeEmail(value) || value;
+      if (value) {
+        const error = validateAgainstPatterns(value, 'Email');
+        if (error) return helpers.error('any.invalid', { message: error });
+        return validator.normalizeEmail(value) || value;
+      }
+      return value;
     })
     .messages({
       'string.email': 'Please provide a valid email address',
@@ -284,9 +296,10 @@ const mapSchema = Joi.object({
  */
 
 export const validateAuth = (req: Request, res: Response, next: NextFunction) => {
-  const isRegister = req.path === '/register';
+  const isRegister = req.path === '/register' || req.path.endsWith('/register');
+  const isLogin = req.path === '/login' || req.path.endsWith('/login');
   const { error, value } = authSchema.validate(req.body, { 
-    context: { isRegister },
+    context: { isRegister, isLogin },
     abortEarly: false
   });
   

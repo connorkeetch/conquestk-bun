@@ -1,6 +1,5 @@
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
-import { io } from '../index';
 
 export interface CapitalGameState {
   gameId: string;
