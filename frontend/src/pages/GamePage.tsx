@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard';
+import type React from 'react'
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 
 const GamePage: React.FC = () => {
-  const { gameId } = useParams<{ gameId: string }>();
-  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'history' | 'stats'>('board');
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const { gameId } = useParams<{ gameId: string }>()
+  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'history' | 'stats'>('board')
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   // Mock game data
   const gameData = {
@@ -18,20 +19,20 @@ const GamePage: React.FC = () => {
       { id: '1', name: 'You', color: '#3b82f6', territories: 18, armies: 45 },
       { id: '2', name: 'Player 2', color: '#ef4444', territories: 12, armies: 32 },
       { id: '3', name: 'Player 3', color: '#10b981', territories: 8, armies: 24 },
-      { id: '4', name: 'Player 4', color: '#f59e0b', territories: 4, armies: 16 }
-    ]
-  };
+      { id: '4', name: 'Player 4', color: '#f59e0b', territories: 4, armies: 16 },
+    ],
+  }
 
   // Full-screen toggle
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullScreen(true);
+      document.documentElement.requestFullscreen()
+      setIsFullScreen(true)
     } else {
-      document.exitFullscreen();
-      setIsFullScreen(false);
+      document.exitFullscreen()
+      setIsFullScreen(false)
     }
-  };
+  }
 
   return (
     <div className={`${isFullScreen ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`}>
@@ -40,7 +41,10 @@ const GamePage: React.FC = () => {
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             {!isFullScreen && (
-              <Link to="/games/active" className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+              <Link
+                to="/games/active"
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+              >
                 ← My Games
               </Link>
             )}
@@ -49,7 +53,9 @@ const GamePage: React.FC = () => {
                 {gameData.name}
               </h1>
               {!isFullScreen && (
-                <p className="text-sm text-gray-400">Turn {gameData.turn} • {gameData.currentPlayer}'s turn</p>
+                <p className="text-sm text-gray-400">
+                  Turn {gameData.turn} • {gameData.currentPlayer}'s turn
+                </p>
               )}
             </div>
           </div>
@@ -58,7 +64,7 @@ const GamePage: React.FC = () => {
             {/* Game Navigation - Only show in full-screen */}
             {isFullScreen && (
               <div className="flex gap-1">
-                <button 
+                <button
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'board' ? 'bg-blue-600' : 'bg-gray-700'
                   }`}
@@ -66,7 +72,7 @@ const GamePage: React.FC = () => {
                 >
                   Board
                 </button>
-                <button 
+                <button
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'chat' ? 'bg-blue-600' : 'bg-gray-700'
                   }`}
@@ -74,7 +80,7 @@ const GamePage: React.FC = () => {
                 >
                   Chat
                 </button>
-                <button 
+                <button
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'stats' ? 'bg-blue-600' : 'bg-gray-700'
                   }`}
@@ -86,14 +92,18 @@ const GamePage: React.FC = () => {
             )}
 
             {/* Game Actions */}
-            <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">⚙️</button>
-            <button 
+            <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+              ⚙️
+            </button>
+            <button
               className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
               onClick={toggleFullScreen}
             >
               {isFullScreen ? '🗗' : '🗖'}
             </button>
-            <button className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">🏳️</button>
+            <button className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+              🏳️
+            </button>
           </div>
         </div>
       </div>
@@ -105,15 +115,17 @@ const GamePage: React.FC = () => {
           <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-700">
-              <button 
+              <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'board' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+                  activeTab === 'board'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setActiveTab('board')}
               >
                 Board
               </button>
-              <button 
+              <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'chat' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
                 }`}
@@ -121,9 +133,11 @@ const GamePage: React.FC = () => {
               >
                 Chat
               </button>
-              <button 
+              <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'stats' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+                  activeTab === 'stats'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setActiveTab('stats')}
               >
@@ -141,8 +155,12 @@ const GamePage: React.FC = () => {
                       <div className="font-bold">ATTACK PHASE</div>
                       <div className="text-sm">Click territories to attack</div>
                     </div>
-                    <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">End Attack Phase</button>
-                    <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">View Help</button>
+                    <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                      End Attack Phase
+                    </button>
+                    <button className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+                      View Help
+                    </button>
                   </div>
                 </div>
               )}
@@ -161,10 +179,13 @@ const GamePage: React.FC = () => {
                 <div>
                   <h3 className="font-bold mb-4">Live Statistics</h3>
                   <div className="space-y-3">
-                    {gameData.players.map(player => (
-                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-700 rounded">
+                    {gameData.players.map((player) => (
+                      <div
+                        key={player.id}
+                        className="flex items-center justify-between p-2 bg-gray-700 rounded"
+                      >
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className="w-4 h-4 rounded-full"
                             style={{ backgroundColor: player.color }}
                           ></div>
@@ -186,12 +207,8 @@ const GamePage: React.FC = () => {
         <div className="flex-1 relative">
           {/* Game Board */}
           <div className="h-full relative overflow-hidden">
-            <SimpleRiskGameBoard 
-              onTerritoryClick={(territoryId) => {
-                console.log('Territory clicked:', territoryId);
-              }}
-            />
-            
+            <SimpleRiskGameBoard onTerritoryClick={(_territoryId) => {}} />
+
             {/* Full-screen overlay content */}
             {isFullScreen && activeTab !== 'board' && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
@@ -205,15 +222,18 @@ const GamePage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {activeTab === 'stats' && (
                     <div>
                       <h3 className="text-xl font-bold mb-4">Live Statistics</h3>
                       <div className="space-y-3">
-                        {gameData.players.map(player => (
-                          <div key={player.id} className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        {gameData.players.map((player) => (
+                          <div
+                            key={player.id}
+                            className="flex items-center justify-between p-3 bg-gray-700 rounded"
+                          >
                             <div className="flex items-center gap-3">
-                              <div 
+                              <div
                                 className="w-6 h-6 rounded-full"
                                 style={{ backgroundColor: player.color }}
                               ></div>
@@ -234,7 +254,7 @@ const GamePage: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default GamePage;
+export default GamePage

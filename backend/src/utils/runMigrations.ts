@@ -1,10 +1,10 @@
-import { query } from '../config/database';
-import fs from 'fs/promises';
-import path from 'path';
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { query } from '../config/database'
 
 async function runMigrations() {
-  const migrationsDir = path.join(__dirname, '../../migrations');
-  
+  const migrationsDir = path.join(__dirname, '../../migrations')
+
   try {
     // Create migrations tracking table if it doesn't exist
     await query(`
@@ -13,63 +13,55 @@ async function runMigrations() {
         filename VARCHAR(255) NOT NULL UNIQUE,
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    
+    `)
+
     // Get list of migration files
-    const files = await fs.readdir(migrationsDir);
-    const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
-    
+    const files = await fs.readdir(migrationsDir)
+    const sqlFiles = files.filter((f) => f.endsWith('.sql')).sort()
+
     // Get executed migrations
-    const executed = await query('SELECT filename FROM migrations');
-    const executedFiles = new Set(executed.rows.map(r => r.filename));
-    
+    const executed = await query('SELECT filename FROM migrations')
+    const executedFiles = new Set(executed.rows.map((r) => r.filename))
+
     // Run pending migrations
     for (const file of sqlFiles) {
       if (!executedFiles.has(file)) {
-        console.log(`Running migration: ${file}`);
-        
-        const sqlContent = await fs.readFile(
-          path.join(migrationsDir, file),
-          'utf-8'
-        );
-        
+        const sqlContent = await fs.readFile(path.join(migrationsDir, file), 'utf-8')
+
         // Split by semicolon and execute each statement
         const statements = sqlContent
           .split(';')
-          .map(s => s.trim())
-          .filter(s => s.length > 0);
-        
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+
         for (const statement of statements) {
           try {
-            await query(statement);
+            await query(statement)
           } catch (err: any) {
             // SQLite doesn't support IF NOT EXISTS for ALTER TABLE
             // Skip errors about duplicate columns
-            if (err.message?.includes('duplicate column') || 
-                err.message?.includes('syntax error') && statement.includes('IF NOT EXISTS')) {
-              console.log(`  ⚠️ Skipping (column may exist): ${statement.substring(0, 50)}...`);
+            if (
+              err.message?.includes('duplicate column') ||
+              (err.message?.includes('syntax error') && statement.includes('IF NOT EXISTS'))
+            ) {
             } else {
-              throw err;
+              throw err
             }
           }
         }
-        
+
         // Record migration as executed
-        await query('INSERT INTO migrations (filename) VALUES (?)', [file]);
-        console.log(`✓ Migration ${file} completed`);
+        await query('INSERT INTO migrations (filename) VALUES (?)', [file])
       }
     }
-    
-    console.log('All migrations completed successfully');
-  } catch (error) {
-    console.error('Migration error:', error);
-    process.exit(1);
+  } catch (_error) {
+    process.exit(1)
   }
 }
 
 // Run migrations if called directly
 if (require.main === module) {
-  runMigrations().then(() => process.exit(0));
+  runMigrations().then(() => process.exit(0))
 }
 
-export default runMigrations;
+export default runMigrations

@@ -1,77 +1,78 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import authService from '../services/authService';
+import type React from 'react'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import authService from '../services/authService'
 
 const ResetPassword: React.FC = () => {
-  const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const { token } = useParams<{ token: string }>()
+  const navigate = useNavigate()
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
-      return 'Password must be at least 8 characters long';
+      return 'Password must be at least 8 characters long'
     }
     if (!/[A-Z]/.test(password)) {
-      return 'Password must contain at least one uppercase letter';
+      return 'Password must contain at least one uppercase letter'
     }
     if (!/[a-z]/.test(password)) {
-      return 'Password must contain at least one lowercase letter';
+      return 'Password must contain at least one lowercase letter'
     }
     if (!/[0-9]/.test(password)) {
-      return 'Password must contain at least one number';
+      return 'Password must contain at least one number'
     }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      return 'Password must contain at least one special character';
+      return 'Password must contain at least one special character'
     }
-    return null;
-  };
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     // Validate password
-    const passwordError = validatePassword(password);
+    const passwordError = validatePassword(password)
     if (passwordError) {
-      setError(passwordError);
-      return;
+      setError(passwordError)
+      return
     }
 
     // Check passwords match
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+      setError('Passwords do not match')
+      return
     }
 
     if (!token) {
-      setError('Invalid reset link');
-      return;
+      setError('Invalid reset link')
+      return
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
-      await authService.resetPassword(token, password);
-      setSuccess(true);
-      
+      await authService.resetPassword(token, password)
+      setSuccess(true)
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/login', { 
-          state: { message: 'Password reset successfully! You can now log in.' } 
-        });
-      }, 3000);
+        navigate('/login', {
+          state: { message: 'Password reset successfully! You can now log in.' },
+        })
+      }, 3000)
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to reset password';
-      setError(errorMessage);
+      const errorMessage = error.response?.data?.message || 'Failed to reset password'
+      setError(errorMessage)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   if (success) {
     return (
@@ -79,17 +80,29 @@ const ResetPassword: React.FC = () => {
         <div className="bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-700">
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-green-400 mb-2">Password Reset Successfully!</h2>
+            <h2 className="text-xl font-semibold text-green-400 mb-2">
+              Password Reset Successfully!
+            </h2>
             <p className="text-gray-300 mb-4">Your password has been reset.</p>
             <p className="text-sm text-gray-400">Redirecting to login...</p>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -136,7 +149,10 @@ const ResetPassword: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-gray-300 text-sm font-medium mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-gray-300 text-sm font-medium mb-2"
+            >
               Confirm New Password
             </label>
             <input
@@ -170,7 +186,7 @@ const ResetPassword: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ResetPassword;
+export default ResetPassword

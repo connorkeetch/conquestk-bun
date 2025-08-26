@@ -1,150 +1,149 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { gameService, GameRoom } from '../services/gameService';
-import { useAppSelector } from '../hooks/redux';
-import authService from '../services/authService';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAppSelector } from '../hooks/redux'
+import authService from '../services/authService'
+import { type GameRoom, gameService } from '../services/gameService'
 
 const LobbyPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAppSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState<'browse' | 'private' | 'tournaments'>('browse');
-  const [publicGames, setPublicGames] = useState<GameRoom[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [privateGameCode, setPrivateGameCode] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
-  const [resendMessage, setResendMessage] = useState('');
+  const navigate = useNavigate()
+  const { user } = useAppSelector((state) => state.auth)
+  const [activeTab, setActiveTab] = useState<'browse' | 'private' | 'tournaments'>('browse')
+  const [publicGames, setPublicGames] = useState<GameRoom[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [privateGameCode, setPrivateGameCode] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
+  const [resendMessage, setResendMessage] = useState('')
   const [filters, setFilters] = useState({
     showFull: true,
     showInProgress: true,
     minPlayers: 2,
-    maxPlayers: 12
-  });
+    maxPlayers: 12,
+  })
 
   useEffect(() => {
     if (activeTab === 'browse') {
-      loadPublicGames();
+      loadPublicGames()
     }
-  }, [activeTab]);
-  
+  }, [activeTab, loadPublicGames])
+
   useEffect(() => {
     // Check email verification status
     const checkVerificationStatus = async () => {
       try {
-        const response = await authService.getProfile();
-        setEmailVerified(response.user?.email_verified);
-      } catch (error) {
-        console.error('Failed to check verification status:', error);
-      }
-    };
-    
+        const response = await authService.getProfile()
+        setEmailVerified(response.user?.email_verified)
+      } catch (_error) {}
+    }
+
     if (user) {
-      checkVerificationStatus();
+      checkVerificationStatus()
     }
-  }, [user]);
-  
+  }, [user])
+
   const handleResendVerification = async () => {
-    if (!user?.email) return;
-    
+    if (!user?.email) return
+
     try {
-      await authService.resendVerification(user.email);
-      setResendMessage('Verification email sent! Please check your inbox.');
-      setTimeout(() => setResendMessage(''), 5000);
+      await authService.resendVerification(user.email)
+      setResendMessage('Verification email sent! Please check your inbox.')
+      setTimeout(() => setResendMessage(''), 5000)
     } catch (error: any) {
-      setResendMessage(error.response?.data?.message || 'Failed to resend verification email');
-      setTimeout(() => setResendMessage(''), 5000);
+      setResendMessage(error.response?.data?.message || 'Failed to resend verification email')
+      setTimeout(() => setResendMessage(''), 5000)
     }
-  };
+  }
 
   const loadPublicGames = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await gameService.getPublicGames();
-      setPublicGames(response.rooms || []);
-    } catch (err: any) {
-      console.error('Error loading public games:', err);
-      setError('Failed to load games');
+      setLoading(true)
+      setError(null)
+      const response = await gameService.getPublicGames()
+      setPublicGames(response.rooms || [])
+    } catch (_err: any) {
+      setError('Failed to load games')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleJoinGame = async (roomId: string) => {
     try {
-      const response = await gameService.joinRoom(roomId);
+      const response = await gameService.joinRoom(roomId)
       if (response.room) {
-        navigate(`/room/${roomId}`);
+        navigate(`/room/${roomId}`)
       }
     } catch (err: any) {
-      console.error('Error joining game:', err);
-      setError('Failed to join game: ' + (err.response?.data?.message || err.message));
+      setError(`Failed to join game: ${err.response?.data?.message || err.message}`)
     }
-  };
+  }
 
   const handleJoinPrivateGame = async () => {
-    const trimmedCode = privateGameCode.trim().toUpperCase();
-    
+    const trimmedCode = privateGameCode.trim().toUpperCase()
+
     if (!trimmedCode) {
-      setError('Please enter a game code');
-      return;
+      setError('Please enter a game code')
+      return
     }
 
     if (trimmedCode.length < 4) {
-      setError('Game code must be at least 4 characters');
-      return;
+      setError('Game code must be at least 4 characters')
+      return
     }
 
     try {
-      setError(null);
-      setLoading(true);
-      
+      setError(null)
+      setLoading(true)
+
       // Try to join the room with the provided code
-      const response = await gameService.joinRoom(trimmedCode);
+      const response = await gameService.joinRoom(trimmedCode)
       if (response.room) {
-        navigate(`/room/${trimmedCode}`);
+        navigate(`/room/${trimmedCode}`)
       }
     } catch (err: any) {
-      console.error('Error joining private game:', err);
-      
       // Provide specific error messages based on the error
       if (err.response?.status === 404) {
-        setError(`No game found with code "${trimmedCode}". Please check the code and try again.`);
+        setError(`No game found with code "${trimmedCode}". Please check the code and try again.`)
       } else if (err.response?.status === 403) {
-        setError('This game is full or already started.');
+        setError('This game is full or already started.')
       } else if (err.response?.status === 401) {
-        setError('You need to be logged in to join games.');
+        setError('You need to be logged in to join games.')
       } else {
-        setError(err.response?.data?.message || 'Failed to join game. Please try again.');
+        setError(err.response?.data?.message || 'Failed to join game. Please try again.')
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const getGameStatusColor = (status: string) => {
     switch (status) {
-      case 'waiting': return 'text-green-400';
-      case 'active': return 'text-yellow-400';
-      case 'completed': return 'text-gray-400';
-      default: return 'text-gray-400';
+      case 'waiting':
+        return 'text-green-400'
+      case 'active':
+        return 'text-yellow-400'
+      case 'completed':
+        return 'text-gray-400'
+      default:
+        return 'text-gray-400'
     }
-  };
+  }
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  };
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    return `${diffDays}d ago`
+  }
 
   return (
     <div className="container mx-auto px-8 py-8">
@@ -153,17 +152,24 @@ const LobbyPage: React.FC = () => {
         <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-yellow-400 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
               </svg>
               <div>
                 <h3 className="text-yellow-300 font-medium">Verify Your Email</h3>
                 <p className="text-gray-300 text-sm mt-1">
-                  Please verify your email address to access all features. Check your inbox for the verification link.
+                  Please verify your email address to access all features. Check your inbox for the
+                  verification link.
                 </p>
-                {resendMessage && (
-                  <p className="text-green-400 text-sm mt-2">{resendMessage}</p>
-                )}
+                {resendMessage && <p className="text-green-400 text-sm mt-2">{resendMessage}</p>}
               </div>
             </div>
             <button
@@ -183,10 +189,13 @@ const LobbyPage: React.FC = () => {
           <p className="text-gray-400">Find and join games, or create your own</p>
         </div>
         <div className="flex gap-3">
-          <Link to="/create" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+          <Link
+            to="/create"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+          >
             🎮 Create Game
           </Link>
-          <button 
+          <button
             onClick={() => setShowFilters(!showFilters)}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
           >
@@ -205,7 +214,7 @@ const LobbyPage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={filters.showFull}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showFull: e.target.checked }))}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, showFull: e.target.checked }))}
                   className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Show Full Games</span>
@@ -216,7 +225,9 @@ const LobbyPage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={filters.showInProgress}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showInProgress: e.target.checked }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, showInProgress: e.target.checked }))
+                  }
                   className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Show In Progress</span>
@@ -230,7 +241,12 @@ const LobbyPage: React.FC = () => {
                   min="2"
                   max="12"
                   value={filters.minPlayers}
-                  onChange={(e) => setFilters(prev => ({ ...prev, minPlayers: parseInt(e.target.value) || 2 }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      minPlayers: parseInt(e.target.value, 10) || 2,
+                    }))
+                  }
                   className="w-full mt-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
                 />
               </label>
@@ -243,7 +259,12 @@ const LobbyPage: React.FC = () => {
                   min="2"
                   max="12"
                   value={filters.maxPlayers}
-                  onChange={(e) => setFilters(prev => ({ ...prev, maxPlayers: parseInt(e.target.value) || 12 }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      maxPlayers: parseInt(e.target.value, 10) || 12,
+                    }))
+                  }
                   className="w-full mt-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
                 />
               </label>
@@ -254,30 +275,30 @@ const LobbyPage: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="flex gap-2 mb-8 border-b border-gray-700">
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'browse' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'browse'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('browse')}
         >
           🌍 Browse Public Games
         </button>
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'private' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'private'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('private')}
         >
           🔒 Join Private Game
         </button>
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'tournaments' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'tournaments'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('tournaments')}
@@ -294,10 +315,7 @@ const LobbyPage: React.FC = () => {
               <span className="text-red-400">❌</span>
               <span className="text-red-400">{error}</span>
             </div>
-            <button 
-              onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-300"
-            >
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
               ×
             </button>
           </div>
@@ -310,7 +328,7 @@ const LobbyPage: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">Public Games</h2>
-              <button 
+              <button
                 onClick={loadPublicGames}
                 disabled={loading}
                 className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
@@ -329,7 +347,10 @@ const LobbyPage: React.FC = () => {
                 <div className="text-6xl mb-4">🎲</div>
                 <p className="text-lg mb-2">No public games available</p>
                 <p className="text-sm mb-6">Be the first to create a game for others to join!</p>
-                <Link to="/create" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-block">
+                <Link
+                  to="/create"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-block"
+                >
                   🎮 Create Game
                 </Link>
               </div>
@@ -338,68 +359,83 @@ const LobbyPage: React.FC = () => {
                 {(() => {
                   const filteredGames = publicGames.filter((game) => {
                     // Apply filters
-                    if (!filters.showFull && game.currentPlayers >= game.maxPlayers) return false;
-                    if (!filters.showInProgress && game.status !== 'waiting') return false;
-                    if (game.maxPlayers < filters.minPlayers || game.maxPlayers > filters.maxPlayers) return false;
-                    return true;
-                  });
-                  
+                    if (!filters.showFull && game.currentPlayers >= game.maxPlayers) return false
+                    if (!filters.showInProgress && game.status !== 'waiting') return false
+                    if (
+                      game.maxPlayers < filters.minPlayers ||
+                      game.maxPlayers > filters.maxPlayers
+                    )
+                      return false
+                    return true
+                  })
+
                   if (filteredGames.length === 0) {
                     return (
                       <div className="text-center text-gray-400 py-16">
                         <div className="text-6xl mb-4">🔍</div>
                         <p className="text-lg mb-2 text-gray-300">No games match your filters</p>
-                        <p className="text-sm mb-6">Try adjusting your filter settings or create a new game</p>
+                        <p className="text-sm mb-6">
+                          Try adjusting your filter settings or create a new game
+                        </p>
                         <button
-                          onClick={() => setFilters({ showFull: true, showInProgress: true, minPlayers: 2, maxPlayers: 12 })}
+                          onClick={() =>
+                            setFilters({
+                              showFull: true,
+                              showInProgress: true,
+                              minPlayers: 2,
+                              maxPlayers: 12,
+                            })
+                          }
                           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                         >
                           Reset Filters
                         </button>
                       </div>
-                    );
+                    )
                   }
-                  
+
                   return filteredGames.map((game) => (
-                  <div key={game.id} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-white">{game.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
-                          {game.mapName && <span>• {game.mapName}</span>}
-                          <span className={getGameStatusColor(game.status)}>
-                            • {game.status}
-                          </span>
-                          <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                    <div
+                      key={game.id}
+                      className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-white">{game.name}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <span>
+                              {game.currentPlayers}/{game.maxPlayers} players
+                            </span>
+                            {game.mapName && <span>• {game.mapName}</span>}
+                            <span className={getGameStatusColor(game.status)}>• {game.status}</span>
+                            <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {game.hostUsername && (
+                            <div className="text-sm text-gray-400">by {game.hostUsername}</div>
+                          )}
+                          <button
+                            onClick={() => handleJoinGame(game.id)}
+                            disabled={
+                              game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
+                            }
+                            className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
+                              game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
+                                ? 'bg-gray-700 text-gray-400 opacity-50 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
+                          >
+                            {game.currentPlayers >= game.maxPlayers
+                              ? '🚫 Full'
+                              : game.status !== 'waiting'
+                                ? '👁️ Spectate'
+                                : '🎮 Join Game'}
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        {game.hostUsername && (
-                          <div className="text-sm text-gray-400">
-                            by {game.hostUsername}
-                          </div>
-                        )}
-                        <button
-                          onClick={() => handleJoinGame(game.id)}
-                          disabled={game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'}
-                          className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
-                            game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
-                              ? 'bg-gray-700 text-gray-400 opacity-50 cursor-not-allowed'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white'
-                          }`}
-                        >
-                          {game.currentPlayers >= game.maxPlayers 
-                            ? '🚫 Full'
-                            : game.status !== 'waiting'
-                            ? '👁️ Spectate'
-                            : '🎮 Join Game'
-                          }
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                  ));
+                  ))
                 })()}
               </div>
             )}
@@ -412,17 +448,19 @@ const LobbyPage: React.FC = () => {
             <div className="max-w-md mx-auto text-center py-16">
               <div className="text-6xl mb-4">🔐</div>
               <p className="text-lg text-gray-300 mb-2">Enter game code to join private game</p>
-              <p className="text-sm text-gray-400 mb-6">You'll need the invite code from the game host</p>
+              <p className="text-sm text-gray-400 mb-6">
+                You'll need the invite code from the game host
+              </p>
               <div className="space-y-4">
-                <input 
-                  type="text" 
-                  placeholder="ENTER CODE (e.g., GAME123)" 
+                <input
+                  type="text"
+                  placeholder="ENTER CODE (e.g., GAME123)"
                   value={privateGameCode}
                   onChange={(e) => setPrivateGameCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinPrivateGame()}
                   className="w-full text-center text-lg bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-gray-600 focus:border-blue-500 focus:outline-none tracking-wider font-mono"
                 />
-                <button 
+                <button
                   onClick={handleJoinPrivateGame}
                   disabled={!privateGameCode.trim()}
                   className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -440,13 +478,15 @@ const LobbyPage: React.FC = () => {
             <div className="text-center text-gray-400 py-16">
               <div className="text-6xl mb-4">🏆</div>
               <p className="text-lg text-gray-300">Tournament system coming soon!</p>
-              <p className="text-sm mt-2">This will show active tournaments, brackets, and registration</p>
+              <p className="text-sm mt-2">
+                This will show active tournaments, brackets, and registration
+              </p>
             </div>
           </div>
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LobbyPage;
+export default LobbyPage

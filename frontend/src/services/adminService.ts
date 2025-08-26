@@ -83,11 +83,9 @@ class AdminService {
 
   // ============= USER MANAGEMENT =============
 
-  async getUsers(params: {
-    limit?: number
-    offset?: number
-    search?: string
-  } = {}): Promise<{ users: User[]; total: number }> {
+  async getUsers(
+    params: { limit?: number; offset?: number; search?: string } = {},
+  ): Promise<{ users: User[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/users`, { params })
     return response.data
   }
@@ -96,29 +94,25 @@ class AdminService {
     userId: string,
     status: 'active' | 'suspended' | 'banned',
     reason?: string,
-    expiresAt?: string
+    expiresAt?: string,
   ): Promise<void> {
     await apiClient.put(`${this.baseUrl}/users/${userId}/status`, {
       status,
       reason,
-      expiresAt
+      expiresAt,
     })
   }
 
   async resetUserPassword(userId: string, newPassword: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/users/${userId}/reset-password`, {
-      newPassword
+      newPassword,
     })
   }
 
-  async assignAdminRole(
-    userId: string,
-    roleId: string,
-    expiresAt?: string
-  ): Promise<void> {
+  async assignAdminRole(userId: string, roleId: string, expiresAt?: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/users/${userId}/admin-roles`, {
       roleId,
-      expiresAt
+      expiresAt,
     })
   }
 
@@ -128,23 +122,22 @@ class AdminService {
 
   // ============= CONTENT MODERATION =============
 
-  async getContentApprovalQueue(params: {
-    limit?: number
-    offset?: number
-  } = {}): Promise<{ items: ContentApprovalItem[]; total: number }> {
+  async getContentApprovalQueue(
+    params: { limit?: number; offset?: number } = {},
+  ): Promise<{ items: ContentApprovalItem[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/content/approval-queue`, { params })
     return response.data
   }
 
   async approveContent(queueId: string, notes?: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/content/approval-queue/${queueId}/approve`, {
-      notes
+      notes,
     })
   }
 
   async rejectContent(queueId: string, reason: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/content/approval-queue/${queueId}/reject`, {
-      reason
+      reason,
     })
   }
 
@@ -157,47 +150,43 @@ class AdminService {
 
   async toggleFeatureFlag(flagName: string, enabled: boolean): Promise<void> {
     await apiClient.put(`${this.baseUrl}/feature-flags/${flagName}`, {
-      enabled
+      enabled,
     })
   }
 
   // ============= ACTIVITY LOGS =============
 
-  async getAdminActivityLogs(params: {
-    limit?: number
-    offset?: number
-  } = {}): Promise<AdminActivityLog[]> {
+  async getAdminActivityLogs(
+    params: { limit?: number; offset?: number } = {},
+  ): Promise<AdminActivityLog[]> {
     const response = await apiClient.get(`${this.baseUrl}/logs/admin-activity`, { params })
     return response.data
   }
 
   // ============= GAME MANAGEMENT =============
 
-  async getGames(params: {
-    limit?: number
-    offset?: number
-    status?: string
-    search?: string
-  } = {}): Promise<{ games: any[]; total: number }> {
+  async getGames(
+    params: { limit?: number; offset?: number; status?: string; search?: string } = {},
+  ): Promise<{ games: any[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/games`, { params })
     return response.data
   }
 
   async forceEndGame(gameId: string, reason: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/games/${gameId}/force-end`, {
-      reason
+      reason,
     })
   }
 
   async pauseGame(gameId: string, reason?: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/games/${gameId}/pause`, {
-      reason
+      reason,
     })
   }
 
   async resumeGame(gameId: string, reason?: string): Promise<void> {
     await apiClient.post(`${this.baseUrl}/games/${gameId}/resume`, {
-      reason
+      reason,
     })
   }
 
@@ -214,7 +203,7 @@ class AdminService {
     try {
       await this.getAdminInfo()
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }
@@ -249,17 +238,17 @@ class AdminService {
 
   formatActionType(actionType: string): string {
     const actionMap: Record<string, string> = {
-      'user_status_change': 'User Status Changed',
-      'password_reset': 'Password Reset',
-      'admin_role_assigned': 'Admin Role Assigned',
-      'admin_role_removed': 'Admin Role Removed',
-      'content_approved': 'Content Approved',
-      'content_rejected': 'Content Rejected',
-      'feature_flag_toggle': 'Feature Flag Toggled',
-      'user_edit': 'User Edited',
-      'content_moderate': 'Content Moderated',
-      'game_manage': 'Game Managed',
-      'system_admin': 'System Administration'
+      user_status_change: 'User Status Changed',
+      password_reset: 'Password Reset',
+      admin_role_assigned: 'Admin Role Assigned',
+      admin_role_removed: 'Admin Role Removed',
+      content_approved: 'Content Approved',
+      content_rejected: 'Content Rejected',
+      feature_flag_toggle: 'Feature Flag Toggled',
+      user_edit: 'User Edited',
+      content_moderate: 'Content Moderated',
+      game_manage: 'Game Managed',
+      system_admin: 'System Administration',
     }
 
     return actionMap[actionType] || actionType

@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { gameService } from '../services/gameService'
-import { GameRoom } from '../types/gameRoom'
+import type { GameRoom } from '../types/gameRoom'
 
 interface RoomState {
   rooms: GameRoom[]
@@ -26,24 +26,18 @@ export const createRoom = createAsyncThunk(
   async (roomData: { name: string; maxPlayers: number; isPrivate: boolean }) => {
     const response = await gameService.createRoom(roomData)
     return response.room
-  }
+  },
 )
 
-export const joinRoom = createAsyncThunk(
-  'room/joinRoom',
-  async (roomId: string) => {
-    await gameService.joinRoom(roomId)
-    return roomId
-  }
-)
+export const joinRoom = createAsyncThunk('room/joinRoom', async (roomId: string) => {
+  await gameService.joinRoom(roomId)
+  return roomId
+})
 
-export const leaveRoom = createAsyncThunk(
-  'room/leaveRoom',
-  async (roomId: string) => {
-    await gameService.leaveRoom(roomId)
-    return roomId
-  }
-)
+export const leaveRoom = createAsyncThunk('room/leaveRoom', async (roomId: string) => {
+  await gameService.leaveRoom(roomId)
+  return roomId
+})
 
 const roomSlice = createSlice({
   name: 'room',
@@ -56,15 +50,15 @@ const roomSlice = createSlice({
       if (state.currentRoom) {
         state.currentRoom = { ...state.currentRoom, ...action.payload }
       }
-      
-      const roomIndex = state.rooms.findIndex(room => room.id === action.payload.id)
+
+      const roomIndex = state.rooms.findIndex((room) => room.id === action.payload.id)
       if (roomIndex !== -1) {
         state.rooms[roomIndex] = { ...state.rooms[roomIndex], ...action.payload }
       }
     },
     addPlayerToRoom: (state, action: PayloadAction<{ roomId: string; player: any }>) => {
       const { roomId, player } = action.payload
-      
+
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players = state.currentRoom.players || []
         state.currentRoom.players.push(player)
@@ -72,11 +66,10 @@ const roomSlice = createSlice({
     },
     removePlayerFromRoom: (state, action: PayloadAction<{ roomId: string; playerId: string }>) => {
       const { roomId, playerId } = action.payload
-      
+
       if (state.currentRoom && state.currentRoom.id === roomId) {
-        state.currentRoom.players = state.currentRoom.players?.filter(
-          player => player.userId !== playerId
-        ) || []
+        state.currentRoom.players =
+          state.currentRoom.players?.filter((player) => player.userId !== playerId) || []
       }
     },
     clearError: (state) => {
@@ -107,12 +100,7 @@ const roomSlice = createSlice({
   },
 })
 
-export const { 
-  setCurrentRoom, 
-  updateRoom, 
-  addPlayerToRoom, 
-  removePlayerFromRoom, 
-  clearError 
-} = roomSlice.actions
+export const { setCurrentRoom, updateRoom, addPlayerToRoom, removePlayerFromRoom, clearError } =
+  roomSlice.actions
 
 export default roomSlice.reducer

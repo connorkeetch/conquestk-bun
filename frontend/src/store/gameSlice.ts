@@ -1,102 +1,110 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { GameState } from '../types/game'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { GameState } from '../types/game'
 
 // Helper function to check if territories are connected through owned territories
 const isConnectedThroughOwnedTerritories = (
   fromId: string,
   toId: string,
   gameState: GameState,
-  playerId: string
+  playerId: string,
 ): boolean => {
-  if (fromId === toId) return true;
-  
-  const ownedTerritories = gameState.board.filter(t => t.ownerId === playerId);
-  const visited = new Set<string>();
-  const queue = [fromId];
-  
+  if (fromId === toId) return true
+
+  const ownedTerritories = gameState.board.filter((t) => t.ownerId === playerId)
+  const visited = new Set<string>()
+  const queue = [fromId]
+
   while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    
+    const currentId = queue.shift()!
+
     if (currentId === toId) {
-      return true;
+      return true
     }
-    
+
     if (visited.has(currentId)) {
-      continue;
+      continue
     }
-    
-    visited.add(currentId);
-    
-    const currentTerritory = ownedTerritories.find(t => t.id === currentId);
-    if (!currentTerritory) continue;
-    
+
+    visited.add(currentId)
+
+    const currentTerritory = ownedTerritories.find((t) => t.id === currentId)
+    if (!currentTerritory) continue
+
     // Add adjacent owned territories to queue
     for (const adjacentId of currentTerritory.adjacentTerritories) {
       if (!visited.has(adjacentId)) {
-        const adjacentTerritory = ownedTerritories.find(t => t.id === adjacentId);
+        const adjacentTerritory = ownedTerritories.find((t) => t.id === adjacentId)
         if (adjacentTerritory) {
-          queue.push(adjacentId);
+          queue.push(adjacentId)
         }
       }
     }
   }
-  
-  return false;
+
+  return false
 }
 
 // Helper function to calculate valid targets based on game phase
 const calculateValidTargets = (
   gameState: GameState,
   selectedTerritoryId: string,
-  currentPlayerId: string
+  currentPlayerId: string,
 ): string[] => {
-  const selectedTerritory = gameState.board.find(t => t.id === selectedTerritoryId)
+  const selectedTerritory = gameState.board.find((t) => t.id === selectedTerritoryId)
   if (!selectedTerritory) return []
 
   switch (gameState.phase) {
     case 'reinforcement':
       // Can only deploy to own territories
       return selectedTerritory.ownerId === currentPlayerId ? [selectedTerritoryId] : []
-    
+
     case 'attack':
       // Can attack adjacent territories owned by other players
       if (selectedTerritory.ownerId !== currentPlayerId || selectedTerritory.armies <= 1) {
         return []
       }
-      return selectedTerritory.adjacentTerritories.filter(adjId => {
-        const adjTerritory = gameState.board.find(t => t.id === adjId)
+      return selectedTerritory.adjacentTerritories.filter((adjId) => {
+        const adjTerritory = gameState.board.find((t) => t.id === adjId)
         return adjTerritory && adjTerritory.ownerId !== currentPlayerId
       })
-    
-    case 'fortify':
+
+    case 'fortify': {
       // Calculate valid targets based on movement type
       if (selectedTerritory.ownerId !== currentPlayerId || selectedTerritory.armies <= 1) {
         return []
       }
-      
-      const movementType = gameState.gameConfig?.movementType || 'classic_adjacent';
-      
+
+      const movementType = gameState.gameConfig?.movementType || 'classic_adjacent'
+
       switch (movementType) {
         case 'classic_adjacent':
         case 'adjacent_multi':
           // Adjacent territories only
-          return selectedTerritory.adjacentTerritories.filter(adjId => {
-            const adjTerritory = gameState.board.find(t => t.id === adjId)
+          return selectedTerritory.adjacentTerritories.filter((adjId) => {
+            const adjTerritory = gameState.board.find((t) => t.id === adjId)
             return adjTerritory && adjTerritory.ownerId === currentPlayerId
           })
-          
+
         case 'path_single':
         case 'path_multi':
           // Any connected territory through owned territories
           return gameState.board
-            .filter(t => t.ownerId === currentPlayerId && t.id !== selectedTerritoryId)
-            .filter(t => isConnectedThroughOwnedTerritories(selectedTerritoryId, t.id, gameState, currentPlayerId))
-            .map(t => t.id)
-            
+            .filter((t) => t.ownerId === currentPlayerId && t.id !== selectedTerritoryId)
+            .filter((t) =>
+              isConnectedThroughOwnedTerritories(
+                selectedTerritoryId,
+                t.id,
+                gameState,
+                currentPlayerId,
+              ),
+            )
+            .map((t) => t.id)
+
         default:
           return []
       }
-    
+    }
+
     default:
       return []
   }
@@ -162,17 +170,19 @@ const gameSlice = createSlice({
     selectTerritory: (state, action: PayloadAction<string | null>) => {
       state.selectedTerritory = action.payload
       state.selectedTargetTerritory = null
-      
+
       // Calculate valid targets based on current game phase and selected territory
       if (action.payload && state.currentGame) {
-        const territory = state.currentGame.board.find(t => t.id === action.payload)
-        const currentPlayer = state.currentGame.players.find(p => p.id === state.currentGame!.currentPlayer)
-        
+        const territory = state.currentGame.board.find((t) => t.id === action.payload)
+        const currentPlayer = state.currentGame.players.find(
+          (p) => p.id === state.currentGame?.currentPlayer,
+        )
+
         if (territory && currentPlayer) {
           state.validTargets = calculateValidTargets(
             state.currentGame,
             action.payload,
-            currentPlayer.id
+            currentPlayer.id,
           )
         }
       } else {
@@ -190,9 +200,12 @@ const gameSlice = createSlice({
         state.validTargets = []
       }
     },
-    updateTerritory: (state, action: PayloadAction<{ territoryId: string; armies?: number; ownerId?: string }>) => {
+    updateTerritory: (
+      state,
+      action: PayloadAction<{ territoryId: string; armies?: number; ownerId?: string }>,
+    ) => {
       if (state.currentGame) {
-        const territory = state.currentGame.board.find(t => t.id === action.payload.territoryId)
+        const territory = state.currentGame.board.find((t) => t.id === action.payload.territoryId)
         if (territory) {
           if (action.payload.armies !== undefined) {
             territory.armies = action.payload.armies
@@ -207,7 +220,7 @@ const gameSlice = createSlice({
       state.territoryActionHistory.push({
         territoryId: action.payload.territoryId,
         action: action.payload.action,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
       // Keep only last 10 actions
       if (state.territoryActionHistory.length > 10) {
@@ -226,11 +239,11 @@ const gameSlice = createSlice({
   },
 })
 
-export const { 
-  setGameState, 
-  updateGameState, 
-  setLoading, 
-  setError, 
+export const {
+  setGameState,
+  updateGameState,
+  setLoading,
+  setError,
   clearGame,
   selectTerritory,
   selectTargetTerritory,
@@ -239,7 +252,7 @@ export const {
   addTerritoryAction,
   setValidTargets,
   setBattleResult,
-  setReinforcementArmies
+  setReinforcementArmies,
 } = gameSlice.actions
 
 export default gameSlice.reducer

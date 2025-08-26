@@ -1,6 +1,6 @@
-import rateLimit from 'express-rate-limit';
-import slowDown from 'express-slow-down';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express'
+import rateLimit from 'express-rate-limit'
+import slowDown from 'express-slow-down'
 
 /**
  * Rate limiting configurations for different endpoint types
@@ -8,26 +8,26 @@ import { Request, Response } from 'express';
 
 // Helper to create custom error messages
 const createMessage = (endpoint: string, limit: number, window: string) => {
-  return `Too many requests to ${endpoint}. Limited to ${limit} requests per ${window}. Please try again later.`;
-};
+  return `Too many requests to ${endpoint}. Limited to ${limit} requests per ${window}. Please try again later.`
+}
 
 // Store for tracking attempts (in production, use Redis)
-const loginAttemptsStore = new Map<string, number[]>();
+const loginAttemptsStore = new Map<string, number[]>()
 
 // Clean up old entries periodically
 setInterval(() => {
-  const now = Date.now();
-  const fifteenMinutes = 15 * 60 * 1000;
-  
+  const now = Date.now()
+  const fifteenMinutes = 15 * 60 * 1000
+
   loginAttemptsStore.forEach((attempts, key) => {
-    const recentAttempts = attempts.filter(time => now - time < fifteenMinutes);
+    const recentAttempts = attempts.filter((time) => now - time < fifteenMinutes)
     if (recentAttempts.length === 0) {
-      loginAttemptsStore.delete(key);
+      loginAttemptsStore.delete(key)
     } else {
-      loginAttemptsStore.set(key, recentAttempts);
+      loginAttemptsStore.set(key, recentAttempts)
     }
-  });
-}, 60 * 1000); // Clean every minute
+  })
+}, 60 * 1000) // Clean every minute
 
 /**
  * Strict rate limiter for authentication endpoints
@@ -39,8 +39,8 @@ export const authLimiter = rateLimit({
   message: createMessage('authentication endpoints', 5, '15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false // Count all requests
-});
+  skipSuccessfulRequests: false, // Count all requests
+})
 
 /**
  * Progressive slow down for failed login attempts
@@ -52,7 +52,7 @@ export const loginSlowDown = slowDown({
   delayMs: (hits) => hits * 1000, // Add 1 second delay per attempt
   maxDelayMs: 5000, // Maximum 5 second delay
   skipSuccessfulRequests: true, // Only count failed attempts
-});
+})
 
 /**
  * Rate limiter for game creation
@@ -63,8 +63,8 @@ export const gameCreationLimiter = rateLimit({
   max: 10, // 10 games per hour
   message: createMessage('game creation', 10, 'hour'),
   standardHeaders: true,
-  legacyHeaders: false
-});
+  legacyHeaders: false,
+})
 
 /**
  * Rate limiter for messaging/chat
@@ -76,8 +76,8 @@ export const messageLimiter = rateLimit({
   message: createMessage('messaging', 30, 'minute'),
   standardHeaders: true,
   legacyHeaders: false,
-  skipFailedRequests: true // Don't count failed requests
-});
+  skipFailedRequests: true, // Don't count failed requests
+})
 
 /**
  * Strict limiter for password reset requests
@@ -88,8 +88,8 @@ export const passwordResetLimiter = rateLimit({
   max: 3, // 3 requests per hour
   message: 'Too many password reset requests. Please check your email or try again later.',
   standardHeaders: true,
-  legacyHeaders: false
-});
+  legacyHeaders: false,
+})
 
 /**
  * Rate limiter for map uploads
@@ -100,8 +100,8 @@ export const mapUploadLimiter = rateLimit({
   max: 5, // 5 maps per day
   message: createMessage('map uploads', 5, 'day'),
   standardHeaders: true,
-  legacyHeaders: false
-});
+  legacyHeaders: false,
+})
 
 /**
  * General API rate limiter
@@ -113,8 +113,8 @@ export const generalApiLimiter = rateLimit({
   message: 'Too many requests, please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
-  skipFailedRequests: false
-});
+  skipFailedRequests: false,
+})
 
 /**
  * Strict rate limiter for admin operations
@@ -125,8 +125,8 @@ export const adminLimiter = rateLimit({
   max: 30, // 30 requests per minute
   message: 'Admin operation rate limit exceeded.',
   standardHeaders: true,
-  legacyHeaders: false
-});
+  legacyHeaders: false,
+})
 
 /**
  * Socket connection rate limiter
@@ -137,61 +137,59 @@ export const socketConnectionLimiter = rateLimit({
   max: 5, // 5 connection attempts
   message: 'Too many socket connection attempts.',
   standardHeaders: true,
-  legacyHeaders: false
-});
+  legacyHeaders: false,
+})
 
 /**
  * Custom rate limiter for tracking suspicious activity
  * Blocks IPs that repeatedly hit rate limits
  */
 export class SuspiciousActivityTracker {
-  private suspiciousIPs = new Map<string, number>();
-  private blockedIPs = new Set<string>();
-  private readonly THRESHOLD = 10; // 10 rate limit violations
-  private readonly BLOCK_DURATION = 60 * 60 * 1000; // 1 hour block
+  private suspiciousIPs = new Map<string, number>()
+  private blockedIPs = new Set<string>()
+  private readonly THRESHOLD = 10 // 10 rate limit violations
+  private readonly BLOCK_DURATION = 60 * 60 * 1000 // 1 hour block
 
   recordViolation(ip: string) {
-    const violations = (this.suspiciousIPs.get(ip) || 0) + 1;
-    this.suspiciousIPs.set(ip, violations);
+    const violations = (this.suspiciousIPs.get(ip) || 0) + 1
+    this.suspiciousIPs.set(ip, violations)
 
     if (violations >= this.THRESHOLD) {
-      this.blockIP(ip);
+      this.blockIP(ip)
     }
   }
 
   blockIP(ip: string) {
-    this.blockedIPs.add(ip);
-    console.warn(`IP ${ip} has been temporarily blocked due to suspicious activity`);
-    
+    this.blockedIPs.add(ip)
+
     // Automatically unblock after duration
     setTimeout(() => {
-      this.blockedIPs.delete(ip);
-      this.suspiciousIPs.delete(ip);
-      console.info(`IP ${ip} has been unblocked`);
-    }, this.BLOCK_DURATION);
+      this.blockedIPs.delete(ip)
+      this.suspiciousIPs.delete(ip)
+    }, this.BLOCK_DURATION)
   }
 
   isBlocked(ip: string): boolean {
-    return this.blockedIPs.has(ip);
+    return this.blockedIPs.has(ip)
   }
 
   middleware() {
     return (req: Request, res: Response, next: Function): any => {
-      const ip = req.ip || 'unknown';
-      
+      const ip = req.ip || 'unknown'
+
       if (this.isBlocked(ip)) {
         return res.status(403).json({
           error: 'Forbidden',
-          message: 'Your IP has been temporarily blocked due to suspicious activity.'
-        });
+          message: 'Your IP has been temporarily blocked due to suspicious activity.',
+        })
       }
-      
-      return next();
-    };
+
+      return next()
+    }
   }
 }
 
-export const suspiciousActivityTracker = new SuspiciousActivityTracker();
+export const suspiciousActivityTracker = new SuspiciousActivityTracker()
 
 /**
  * Standard rate limiter for general protected routes
@@ -203,5 +201,5 @@ export const standardLimiter = rateLimit({
   message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skipFailedRequests: false
-});
+  skipFailedRequests: false,
+})

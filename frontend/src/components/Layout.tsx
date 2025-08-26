@@ -1,55 +1,61 @@
-import React, { ReactNode } from 'react';
-import Header from './Header';
+import type { ReactNode } from 'react'
+import Header from './Header'
 
 interface LayoutProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 interface MenuSection {
-  id: string;
-  title: string;
-  icon: string;
-  items: MenuItem[];
+  id: string
+  title: string
+  icon: string
+  items: MenuItem[]
 }
 
 interface MenuItem {
-  path: string;
-  label: string;
-  icon: string;
+  path: string
+  label: string
+  icon: string
 }
 
 export default function Layout({ children }: LayoutProps) {
-
   return (
     <>
       <Header />
-      
+
       {/* Main Content with consistent background */}
       <main className="min-h-screen relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
         {/* Grid pattern overlay - consistent across all pages */}
         <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
-          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <svg
+            className="absolute inset-0 w-full h-full"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMidYMid slice"
+          >
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="1"/>
+                <path
+                  d="M 40 0 L 0 0 0 40"
+                  fill="none"
+                  stroke="rgba(255,255,255,.08)"
+                  strokeWidth="1"
+                />
               </pattern>
               <radialGradient id="glow" cx="50%" cy="40%" r="80%">
-                <stop offset="0%" stopColor="#6ee7ff" stopOpacity=".12"/>
-                <stop offset="100%" stopColor="#000000" stopOpacity="0"/>
+                <stop offset="0%" stopColor="#6ee7ff" stopOpacity=".12" />
+                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
               </radialGradient>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)"/>
-            <rect width="100%" height="100%" fill="url(#glow)"/>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+            <rect width="100%" height="100%" fill="url(#glow)" />
           </svg>
         </div>
-        
+
         {/* Content with proper z-index */}
-        <div className="relative z-10">
-          {children}
-        </div>
+        <div className="relative z-10">{children}</div>
       </main>
     </>
-  );
+  )
 }
 
 /* Original menu sections kept for reference

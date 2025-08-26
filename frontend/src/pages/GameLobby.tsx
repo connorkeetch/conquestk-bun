@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { fetchRooms, createRoom } from '../store/roomSlice'
 import { socketService } from '../services/socketService'
+import { createRoom, fetchRooms } from '../store/roomSlice'
 
 export default function GameLobby() {
   const [showCreateRoom, setShowCreateRoom] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [isPrivate, setIsPrivate] = useState(false)
-  
+
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { rooms, isLoading } = useAppSelector((state) => state.room)
@@ -17,7 +17,7 @@ export default function GameLobby() {
   useEffect(() => {
     dispatch(fetchRooms())
     socketService.connect()
-    
+
     return () => {
       socketService.disconnect()
     }
@@ -83,13 +83,12 @@ export default function GameLobby() {
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="mr-2"
               />
-              <label htmlFor="private" className="text-sm">Private Room</label>
+              <label htmlFor="private" className="text-sm">
+                Private Room
+              </label>
             </div>
             <div className="flex space-x-2">
-              <button
-                type="submit"
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-              >
+              <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                 Create
               </button>
               <button
@@ -108,7 +107,9 @@ export default function GameLobby() {
         {isLoading ? (
           <div className="text-center">Loading rooms...</div>
         ) : rooms.length === 0 ? (
-          <div className="text-center text-gray-400">No rooms available. Create one to get started!</div>
+          <div className="text-center text-gray-400">
+            No rooms available. Create one to get started!
+          </div>
         ) : (
           rooms.map((room) => (
             <div key={room.id} className="bg-gray-800 p-4 rounded-lg">
@@ -116,13 +117,14 @@ export default function GameLobby() {
                 <div>
                   <h3 className="text-lg font-semibold">{room.name}</h3>
                   <p className="text-gray-400">
-                    Players: {room.players?.length || 0}/{room.maxPlayers} | 
-                    Status: {room.status}
+                    Players: {room.players?.length || 0}/{room.maxPlayers} | Status: {room.status}
                   </p>
                 </div>
                 <button
                   onClick={() => handleJoinRoom(room.id)}
-                  disabled={room.status !== 'waiting' || (room.players?.length || 0) >= room.maxPlayers}
+                  disabled={
+                    room.status !== 'waiting' || (room.players?.length || 0) >= room.maxPlayers
+                  }
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded"
                 >
                   Join

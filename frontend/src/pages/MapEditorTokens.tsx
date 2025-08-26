@@ -1,15 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import TerritoryToken from '../components/TerritoryToken'
-import ImageProcessor from '../components/ImageProcessor'
-import { v4 as uuidv4 } from 'uuid'
 import axios from 'axios'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+import ImageProcessor from '../components/ImageProcessor'
+import TerritoryToken from '../components/TerritoryToken'
 
 interface Territory {
   id: string
   name: string
   x: number
   y: number
-  continentId: string | null  // Allow null for unassigned territories
+  continentId: string | null // Allow null for unassigned territories
   armies: number
   isCapital?: boolean
   connections: string[] // IDs of connected territories
@@ -40,7 +40,7 @@ export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const [state, setState] = useState<MapState>({
     name: 'New Map',
     imageUrl: undefined,
@@ -49,7 +49,7 @@ export default function MapEditorTokens() {
     selectedTerritoryId: null,
     draggedTerritoryId: null,
     mapWidth: 1200,
-    mapHeight: 800
+    mapHeight: 800,
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
@@ -63,7 +63,7 @@ export default function MapEditorTokens() {
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
   const [showGrid, setShowGrid] = useState(false)
-  
+
   // New continent form
   const [newContinentName, setNewContinentName] = useState('')
   const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
@@ -95,14 +95,15 @@ export default function MapEditorTokens() {
   // Handle map click based on mode
   const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (state.draggedTerritoryId) return
-    
+
     const rect = event.currentTarget.getBoundingClientRect()
     const scrollLeft = mapContainerRef.current?.scrollLeft || 0
     const scrollTop = mapContainerRef.current?.scrollTop || 0
     const x = event.clientX - rect.left + scrollLeft
     const y = event.clientY - rect.top + scrollTop
 
-    if (editorMode === 'territories' && isPlacingTerritory) {  // Allow placing without continent
+    if (editorMode === 'territories' && isPlacingTerritory) {
+      // Allow placing without continent
       const newTerritory: Territory = {
         id: uuidv4(),
         name: `Territory ${state.territories.length + 1}`,
@@ -110,13 +111,13 @@ export default function MapEditorTokens() {
         y,
         continentId: selectedContinentId,
         armies: 1,
-        connections: []
+        connections: [],
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         territories: [...prev.territories, newTerritory],
-        selectedTerritoryId: newTerritory.id
+        selectedTerritoryId: newTerritory.id,
       }))
     }
   }
@@ -124,91 +125,100 @@ export default function MapEditorTokens() {
   // Handle token click based on mode
   const handleTokenClick = (territoryId: string, event: React.MouseEvent) => {
     event.stopPropagation()
-    
+
     if (editorMode === 'connections') {
       if (!isConnecting || !connectingFromId) {
         setIsConnecting(true)
         setConnectingFromId(territoryId)
-        setState(prev => ({ ...prev, selectedTerritoryId: territoryId }))
+        setState((prev) => ({ ...prev, selectedTerritoryId: territoryId }))
       } else if (connectingFromId !== territoryId) {
         // Create bidirectional connection
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          territories: prev.territories.map(t => {
+          territories: prev.territories.map((t) => {
             if (t.id === connectingFromId) {
               return {
                 ...t,
-                connections: t.connections.includes(territoryId) 
-                  ? t.connections.filter(id => id !== territoryId)
-                  : [...t.connections, territoryId]
+                connections: t.connections.includes(territoryId)
+                  ? t.connections.filter((id) => id !== territoryId)
+                  : [...t.connections, territoryId],
               }
             }
             if (t.id === territoryId) {
               return {
                 ...t,
                 connections: t.connections.includes(connectingFromId)
-                  ? t.connections.filter(id => id !== connectingFromId)
-                  : [...t.connections, connectingFromId]
+                  ? t.connections.filter((id) => id !== connectingFromId)
+                  : [...t.connections, connectingFromId],
               }
             }
             return t
           }),
-          selectedTerritoryId: null
+          selectedTerritoryId: null,
         }))
         setIsConnecting(false)
         setConnectingFromId(null)
       }
     } else {
-      setState(prev => ({ ...prev, selectedTerritoryId: territoryId }))
+      setState((prev) => ({ ...prev, selectedTerritoryId: territoryId }))
     }
   }
 
   // Handle token drag
   const handleTokenMouseDown = (territoryId: string, event: React.MouseEvent) => {
     if (editorMode === 'connections') return
-    
+
     event.stopPropagation()
     const rect = containerRef.current?.getBoundingClientRect()
     if (!rect) return
 
     const scrollLeft = mapContainerRef.current?.scrollLeft || 0
     const scrollTop = mapContainerRef.current?.scrollTop || 0
-    const territory = state.territories.find(t => t.id === territoryId)
+    const territory = state.territories.find((t) => t.id === territoryId)
     if (!territory) return
 
     setDragOffset({
       x: event.clientX - rect.left + scrollLeft - territory.x,
-      y: event.clientY - rect.top + scrollTop - territory.y
+      y: event.clientY - rect.top + scrollTop - territory.y,
     })
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       draggedTerritoryId: territoryId,
-      selectedTerritoryId: territoryId
+      selectedTerritoryId: territoryId,
     }))
   }
 
   // Handle mouse move for dragging
-  const handleMouseMove = useCallback((event: MouseEvent) => {
-    if (!state.draggedTerritoryId || !containerRef.current) return
+  const handleMouseMove = useCallback(
+    (event: MouseEvent) => {
+      if (!state.draggedTerritoryId || !containerRef.current) return
 
-    const rect = containerRef.current.getBoundingClientRect()
-    const scrollLeft = mapContainerRef.current?.scrollLeft || 0
-    const scrollTop = mapContainerRef.current?.scrollTop || 0
-    const x = Math.max(0, Math.min(state.mapWidth - 30, event.clientX - rect.left + scrollLeft - dragOffset.x))
-    const y = Math.max(0, Math.min(state.mapHeight - 30, event.clientY - rect.top + scrollTop - dragOffset.y))
-
-    setState(prev => ({
-      ...prev,
-      territories: prev.territories.map(t =>
-        t.id === prev.draggedTerritoryId ? { ...t, x, y } : t
+      const rect = containerRef.current.getBoundingClientRect()
+      const scrollLeft = mapContainerRef.current?.scrollLeft || 0
+      const scrollTop = mapContainerRef.current?.scrollTop || 0
+      const x = Math.max(
+        0,
+        Math.min(state.mapWidth - 30, event.clientX - rect.left + scrollLeft - dragOffset.x),
       )
-    }))
-  }, [state.draggedTerritoryId, state.mapWidth, state.mapHeight, dragOffset])
+      const y = Math.max(
+        0,
+        Math.min(state.mapHeight - 30, event.clientY - rect.top + scrollTop - dragOffset.y),
+      )
+
+      setState((prev) => ({
+        ...prev,
+        territories: prev.territories.map((t) =>
+          t.id === prev.draggedTerritoryId ? { ...t, x, y } : t,
+        ),
+      }))
+    },
+    [state.draggedTerritoryId, state.mapWidth, state.mapHeight, dragOffset],
+  )
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
-    setState(prev => ({ ...prev, draggedTerritoryId: null }))
+    setState((prev) => ({ ...prev, draggedTerritoryId: null }))
   }, [])
 
   // Add mouse event listeners
@@ -231,29 +241,29 @@ export default function MapEditorTokens() {
       id: uuidv4(),
       name: newContinentName,
       color: newContinentColor,
-      bonus: newContinentBonus
+      bonus: newContinentBonus,
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      continents: [...prev.continents, newContinent]
+      continents: [...prev.continents, newContinent],
     }))
 
     setNewContinentName('')
-    setNewContinentColor('#' + Math.floor(Math.random()*16777215).toString(16))
+    setNewContinentColor(`#${Math.floor(Math.random() * 16777215).toString(16)}`)
     setNewContinentBonus(3)
     setSelectedContinentId(newContinent.id)
   }
 
   // Handle continent update
   const handleUpdateContinent = (continentId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      continents: prev.continents.map(c =>
+      continents: prev.continents.map((c) =>
         c.id === continentId
           ? { ...c, name: newContinentName, color: newContinentColor, bonus: newContinentBonus }
-          : c
-      )
+          : c,
+      ),
     }))
     setEditingContinentId(null)
     setNewContinentName('')
@@ -261,14 +271,14 @@ export default function MapEditorTokens() {
 
   // Handle continent deletion
   const handleDeleteContinent = (continentId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      continents: prev.continents.filter(c => c.id !== continentId),
-      territories: prev.territories.map(t => 
-        t.continentId === continentId 
-          ? { ...t, continentId: null }  // Unassign territories instead of deleting
-          : t
-      )
+      continents: prev.continents.filter((c) => c.id !== continentId),
+      territories: prev.territories.map((t) =>
+        t.continentId === continentId
+          ? { ...t, continentId: null } // Unassign territories instead of deleting
+          : t,
+      ),
     }))
     if (selectedContinentId === continentId) {
       setSelectedContinentId(null)
@@ -277,9 +287,9 @@ export default function MapEditorTokens() {
 
   // Get continent for territory
   const getContinentForTerritory = (territoryId: string) => {
-    const territory = state.territories.find(t => t.id === territoryId)
+    const territory = state.territories.find((t) => t.id === territoryId)
     if (!territory || !territory.continentId) return null
-    return state.continents.find(c => c.id === territory.continentId)
+    return state.continents.find((c) => c.id === territory.continentId)
   }
 
   // Save map to database
@@ -293,46 +303,46 @@ export default function MapEditorTokens() {
         alert('Please add at least 1 continent before saving')
         return
       }
-      
+
       // Prepare map data for API
       const formData = new FormData()
       formData.append('name', state.name)
-      formData.append('description', `Map with ${state.territories.length} territories and ${state.continents.length} continents`)
+      formData.append(
+        'description',
+        `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
+      )
       formData.append('isPublic', 'true')
       formData.append('tags', JSON.stringify(['custom', 'user-created']))
-      
+
       // Store territories and continents as metadata
       const metadata = {
         territories: state.territories,
         continents: state.continents,
         width: state.mapWidth,
-        height: state.mapHeight
+        height: state.mapHeight,
       }
       formData.append('metadata', JSON.stringify(metadata))
-      
+
       // If there's an image, convert data URL to blob and append
       if (state.imageUrl) {
         const response = await fetch(state.imageUrl)
         const blob = await response.blob()
         formData.append('image', blob, 'map-background.png')
       }
-      
+
       // Save to backend
-      const result = await axios.post('/api/maps', formData, {
+      const _result = await axios.post('/api/maps', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
       })
-      
-      console.log('Map saved successfully:', result.data)
       alert('Map saved successfully! It will appear in the Create Game map selection.')
-    } catch (error) {
-      console.error('Error saving map:', error)
+    } catch (_error) {
       alert('Failed to save map. Please try again.')
     }
   }
-  
+
   // Export map data as JSON file for backup/sharing
   const handleExport = () => {
     const mapData = {
@@ -341,12 +351,12 @@ export default function MapEditorTokens() {
       width: state.mapWidth,
       height: state.mapHeight,
       territories: state.territories,
-      continents: state.continents
+      continents: state.continents,
     }
-    
+
     const dataStr = JSON.stringify(mapData, null, 2)
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
-    
+    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`
+
     const link = document.createElement('a')
     link.setAttribute('href', dataUri)
     link.setAttribute('download', `${state.name.replace(/\s+/g, '_')}.json`)
@@ -357,9 +367,10 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      <div className="w-full max-w-[1920px] mx-auto">  {/* Full width with max limit */}
+      <div className="w-full max-w-[1920px] mx-auto">
+        {' '}
+        {/* Full width with max limit */}
         <h1 className="text-3xl font-bold mb-6">Map Editor</h1>
-        
         {/* Toolbar */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -414,7 +425,9 @@ export default function MapEditorTokens() {
               <input
                 type="number"
                 value={state.mapWidth}
-                onChange={(e) => setState(prev => ({ ...prev, mapWidth: parseInt(e.target.value) || 1200 }))}
+                onChange={(e) =>
+                  setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1200 }))
+                }
                 className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
                 min="800"
                 max="2000"
@@ -423,7 +436,9 @@ export default function MapEditorTokens() {
               <input
                 type="number"
                 value={state.mapHeight}
-                onChange={(e) => setState(prev => ({ ...prev, mapHeight: parseInt(e.target.value) || 800 }))}
+                onChange={(e) =>
+                  setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 800 }))
+                }
                 className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
                 min="600"
                 max="1500"
@@ -470,8 +485,10 @@ export default function MapEditorTokens() {
                   className="px-3 py-1 bg-gray-700 rounded text-white"
                 >
                   <option value="">No Continent (Unassigned)</option>
-                  {state.continents.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  {state.continents.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -484,9 +501,11 @@ export default function MapEditorTokens() {
               {state.selectedTerritoryId && (
                 <button
                   onClick={() => {
-                    setState(prev => ({
+                    setState((prev) => ({
                       ...prev,
-                      territories: prev.territories.filter(t => t.id !== state.selectedTerritoryId)
+                      territories: prev.territories.filter(
+                        (t) => t.id !== state.selectedTerritoryId,
+                      ),
                     }))
                   }}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
@@ -517,7 +536,7 @@ export default function MapEditorTokens() {
                   type="number"
                   placeholder="Bonus"
                   value={newContinentBonus}
-                  onChange={(e) => setNewContinentBonus(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 0)}
                   className="w-20 px-3 py-1 bg-gray-700 rounded text-white"
                   min="0"
                   max="10"
@@ -549,16 +568,18 @@ export default function MapEditorTokens() {
                   </button>
                 )}
               </div>
-              
+
               {/* Continent List */}
               <div className="flex flex-wrap gap-2">
-                {state.continents.map(c => (
+                {state.continents.map((c) => (
                   <div
                     key={c.id}
                     className="flex items-center gap-2 px-3 py-1 rounded"
-                    style={{ backgroundColor: c.color + '40', border: `2px solid ${c.color}` }}
+                    style={{ backgroundColor: `${c.color}40`, border: `2px solid ${c.color}` }}
                   >
-                    <span>{c.name} (+{c.bonus})</span>
+                    <span>
+                      {c.name} (+{c.bonus})
+                    </span>
                     <button
                       onClick={() => {
                         setEditingContinentId(c.id)
@@ -572,7 +593,11 @@ export default function MapEditorTokens() {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Delete continent "${c.name}"? Territories will become unassigned.`)) {
+                        if (
+                          confirm(
+                            `Delete continent "${c.name}"? Territories will become unassigned.`,
+                          )
+                        ) {
                           handleDeleteContinent(c.id)
                         }
                       }}
@@ -590,7 +615,7 @@ export default function MapEditorTokens() {
             <div className="mt-4">
               <p className="text-sm text-gray-400">
                 {isConnecting && connectingFromId
-                  ? `Click another territory to connect/disconnect from ${state.territories.find(t => t.id === connectingFromId)?.name}`
+                  ? `Click another territory to connect/disconnect from ${state.territories.find((t) => t.id === connectingFromId)?.name}`
                   : 'Click a territory to start connecting'}
               </p>
               {isConnecting && (
@@ -607,11 +632,10 @@ export default function MapEditorTokens() {
             </div>
           )}
         </div>
-
         {/* Main Editor Area - Full width with right sidebar */}
         <div className="flex gap-4">
           {/* Map Canvas - Main area taking most space */}
-          <div 
+          <div
             ref={mapContainerRef}
             className="flex-1 bg-gray-800 rounded-lg overflow-auto"
             style={{ height: 'calc(100vh - 280px)' }}
@@ -625,7 +649,7 @@ export default function MapEditorTokens() {
                 backgroundImage: state.imageUrl ? `url(${state.imageUrl})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
+                backgroundRepeat: 'no-repeat',
               }}
               onClick={handleMapClick}
               onDragOver={(e) => {
@@ -645,18 +669,22 @@ export default function MapEditorTokens() {
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px)',
-                    backgroundSize: '50px 50px'
+                    backgroundImage:
+                      'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px)',
+                    backgroundSize: '50px 50px',
                   }}
                 />
               )}
 
               {/* Connection Lines */}
               {editorMode === 'connections' && (
-                <svg className="absolute inset-0 pointer-events-none" style={{ width: state.mapWidth, height: state.mapHeight }}>
-                  {state.territories.map(territory => (
-                    territory.connections.map(targetId => {
-                      const target = state.territories.find(t => t.id === targetId)
+                <svg
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ width: state.mapWidth, height: state.mapHeight }}
+                >
+                  {state.territories.map((territory) =>
+                    territory.connections.map((targetId) => {
+                      const target = state.territories.find((t) => t.id === targetId)
                       if (!target) return null
                       return (
                         <line
@@ -670,23 +698,23 @@ export default function MapEditorTokens() {
                           strokeDasharray="5,5"
                         />
                       )
-                    })
-                  ))}
+                    }),
+                  )}
                 </svg>
               )}
 
               {/* Territory Tokens */}
-              {state.territories.map(territory => {
+              {state.territories.map((territory) => {
                 const continent = getContinentForTerritory(territory.id)
-                
+
                 return (
                   <div
                     key={territory.id}
                     className="absolute cursor-pointer"
                     style={{
-                      left: territory.x - 10,  // Adjust for smaller tokens
+                      left: territory.x - 10, // Adjust for smaller tokens
                       top: territory.y - 10,
-                      transform: 'translate(-50%, -50%)'
+                      transform: 'translate(-50%, -50%)',
                     }}
                     onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
                     onClick={(e) => handleTokenClick(territory.id, e)}
@@ -695,12 +723,12 @@ export default function MapEditorTokens() {
                       x={0}
                       y={0}
                       armies={territory.armies}
-                      color={continent?.color || '#808080'}  // Gray for unassigned
-                      outlineColor={continent?.color}  // Continent color for outline
+                      color={continent?.color || '#808080'} // Gray for unassigned
+                      outlineColor={continent?.color} // Continent color for outline
                       shape={tokenShape}
                       isSelected={state.selectedTerritoryId === territory.id}
                       isDragging={state.draggedTerritoryId === territory.id}
-                      size={20}  // Smaller tokens
+                      size={20} // Smaller tokens
                       opacity={0.7}
                     />
                     {state.selectedTerritoryId === territory.id && (
@@ -735,16 +763,19 @@ export default function MapEditorTokens() {
           </div>
 
           {/* Properties Panel - Fixed right sidebar */}
-          <div className="w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0 overflow-y-auto" style={{ height: 'calc(100vh - 280px)' }}>
+          <div
+            className="w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
+            style={{ height: 'calc(100vh - 280px)' }}
+          >
             <h2 className="text-xl font-bold mb-4">Properties</h2>
-            
+
             {/* Map Name */}
             <div className="mb-4">
               <label className="block text-sm mb-1">Map Name</label>
               <input
                 type="text"
                 value={state.name}
-                onChange={(e) => setState(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-1 bg-gray-700 rounded text-white"
               />
             </div>
@@ -753,7 +784,10 @@ export default function MapEditorTokens() {
             <div className="mb-4 text-sm space-y-1">
               <p>Territories: {state.territories.length}</p>
               <p>Continents: {state.continents.length}</p>
-              <p>Connections: {state.territories.reduce((acc, t) => acc + t.connections.length, 0) / 2}</p>
+              <p>
+                Connections:{' '}
+                {state.territories.reduce((acc, t) => acc + t.connections.length, 0) / 2}
+              </p>
             </div>
 
             {/* Selected Territory */}
@@ -761,23 +795,25 @@ export default function MapEditorTokens() {
               <div className="mb-4 p-3 bg-gray-700 rounded">
                 <h3 className="font-bold mb-2">Selected Territory</h3>
                 {(() => {
-                  const territory = state.territories.find(t => t.id === state.selectedTerritoryId)
-                  const continent = territory ? getContinentForTerritory(territory.id) : null
+                  const territory = state.territories.find(
+                    (t) => t.id === state.selectedTerritoryId,
+                  )
+                  const _continent = territory ? getContinentForTerritory(territory.id) : null
                   if (!territory) return null
-                  
+
                   return (
                     <>
                       <input
                         type="text"
                         value={territory.name}
                         onChange={(e) => {
-                          setState(prev => ({
+                          setState((prev) => ({
                             ...prev,
-                            territories: prev.territories.map(t =>
+                            territories: prev.territories.map((t) =>
                               t.id === state.selectedTerritoryId
                                 ? { ...t, name: e.target.value }
-                                : t
-                            )
+                                : t,
+                            ),
                           }))
                         }}
                         className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
@@ -787,47 +823,66 @@ export default function MapEditorTokens() {
                         <select
                           value={territory.continentId || ''}
                           onChange={(e) => {
-                            setState(prev => ({
+                            setState((prev) => ({
                               ...prev,
-                              territories: prev.territories.map(t =>
+                              territories: prev.territories.map((t) =>
                                 t.id === state.selectedTerritoryId
                                   ? { ...t, continentId: e.target.value || null }
-                                  : t
-                              )
+                                  : t,
+                              ),
                             }))
                           }}
                           className="w-full px-2 py-1 bg-gray-600 rounded text-white text-sm"
                         >
                           <option value="">Unassigned</option>
-                          {state.continents.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
+                          {state.continents.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
                           ))}
                         </select>
                       </div>
-                      <p className="text-sm text-gray-400">Position: ({Math.round(territory.x)}, {Math.round(territory.y)})</p>
-                      <p className="text-sm text-gray-400">Connections: {territory.connections.length}</p>
+                      <p className="text-sm text-gray-400">
+                        Position: ({Math.round(territory.x)}, {Math.round(territory.y)})
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Connections: {territory.connections.length}
+                      </p>
                       {territory.connections.length > 0 && (
                         <div className="mt-2">
                           <p className="text-xs text-gray-400 mb-1">Connected to:</p>
                           <div className="space-y-1">
-                            {territory.connections.map(connId => {
-                              const connTerritory = state.territories.find(t => t.id === connId)
+                            {territory.connections.map((connId) => {
+                              const connTerritory = state.territories.find((t) => t.id === connId)
                               return connTerritory ? (
-                                <div key={connId} className="flex items-center justify-between text-xs bg-gray-600 px-2 py-1 rounded">
+                                <div
+                                  key={connId}
+                                  className="flex items-center justify-between text-xs bg-gray-600 px-2 py-1 rounded"
+                                >
                                   <span>{connTerritory.name}</span>
                                   <button
                                     onClick={() => {
-                                      setState(prev => ({
+                                      setState((prev) => ({
                                         ...prev,
-                                        territories: prev.territories.map(t => {
+                                        territories: prev.territories.map((t) => {
                                           if (t.id === territory.id) {
-                                            return { ...t, connections: t.connections.filter(id => id !== connId) }
+                                            return {
+                                              ...t,
+                                              connections: t.connections.filter(
+                                                (id) => id !== connId,
+                                              ),
+                                            }
                                           }
                                           if (t.id === connId) {
-                                            return { ...t, connections: t.connections.filter(id => id !== territory.id) }
+                                            return {
+                                              ...t,
+                                              connections: t.connections.filter(
+                                                (id) => id !== territory.id,
+                                              ),
+                                            }
                                           }
                                           return t
-                                        })
+                                        }),
                                       }))
                                     }}
                                     className="text-red-400 hover:text-red-300"
@@ -847,7 +902,6 @@ export default function MapEditorTokens() {
             )}
           </div>
         </div>
-
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -856,17 +910,16 @@ export default function MapEditorTokens() {
           onChange={handleImageUpload}
           className="hidden"
         />
-
         {/* Image Processor Modal */}
         {showProcessor && tempImageUrl && (
           <ImageProcessor
             imageUrl={tempImageUrl}
             onComplete={(processedUrl, dimensions) => {
-              setState(prev => ({ 
-                ...prev, 
+              setState((prev) => ({
+                ...prev,
                 imageUrl: processedUrl,
                 mapWidth: dimensions.width,
-                mapHeight: dimensions.height
+                mapHeight: dimensions.height,
               }))
               setShowProcessor(false)
               setTempImageUrl(null)

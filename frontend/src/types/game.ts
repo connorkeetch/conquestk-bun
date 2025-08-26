@@ -39,7 +39,14 @@ export interface Card {
 }
 
 export interface GameAction {
-  type: 'deploy' | 'attack' | 'fortify' | 'end_turn' | 'trade_cards' | 'go_back_to_reinforcement' | 'begin_turn'
+  type:
+    | 'deploy'
+    | 'attack'
+    | 'fortify'
+    | 'end_turn'
+    | 'trade_cards'
+    | 'go_back_to_reinforcement'
+    | 'begin_turn'
   roomId: string
   playerId: string
   payload: any

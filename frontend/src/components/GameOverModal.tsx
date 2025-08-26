@@ -1,13 +1,13 @@
-import React from 'react';
-import { GamePlayer } from '../types/game';
+import type React from 'react'
+import type { GamePlayer } from '../types/game'
 
 interface GameOverModalProps {
-  isOpen: boolean;
-  winner: GamePlayer | null;
-  eliminatedPlayers: string[];
-  onClose: () => void;
-  onNewGame?: () => void;
-  onBackToMenu?: () => void;
+  isOpen: boolean
+  winner: GamePlayer | null
+  eliminatedPlayers: string[]
+  onClose: () => void
+  onNewGame?: () => void
+  onBackToMenu?: () => void
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -16,20 +16,22 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   eliminatedPlayers,
   onClose,
   onNewGame,
-  onBackToMenu
+  onBackToMenu,
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
         {/* Header */}
-        <div className={`p-6 text-center ${
-          winner ? 'bg-gradient-to-r from-yellow-400 to-orange-500' : 'bg-gradient-to-r from-gray-600 to-gray-700'
-        }`}>
-          <div className="text-6xl mb-4">
-            {winner ? '🏆' : '🏳️'}
-          </div>
+        <div
+          className={`p-6 text-center ${
+            winner
+              ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+              : 'bg-gradient-to-r from-gray-600 to-gray-700'
+          }`}
+        >
+          <div className="text-6xl mb-4">{winner ? '🏆' : '🏳️'}</div>
           <h2 className="text-3xl font-bold text-white mb-2">
             {winner ? 'Victory!' : 'Game Over'}
           </h2>
@@ -42,13 +44,13 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <div className="p-6">
           {winner && (
             <div className="text-center mb-6">
-              <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white shadow-lg`}
-                   style={{ backgroundColor: winner.color }}>
+              <div
+                className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white shadow-lg`}
+                style={{ backgroundColor: winner.color }}
+              >
                 {winner.username.charAt(0).toUpperCase()}
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">
-                Champion: {winner.username}
-              </h3>
+              <h3 className="text-xl font-bold text-white mb-2">Champion: {winner.username}</h3>
               <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -71,8 +73,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </h4>
               <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4">
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {eliminatedPlayers.map(playerId => (
-                    <div key={playerId} className="bg-red-800/50 text-red-300 px-3 py-1 rounded-full text-sm">
+                  {eliminatedPlayers.map((playerId) => (
+                    <div
+                      key={playerId}
+                      className="bg-red-800/50 text-red-300 px-3 py-1 rounded-full text-sm"
+                    >
                       Player eliminated
                     </div>
                   ))}
@@ -99,7 +104,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             {onNewGame && (
-              <button 
+              <button
                 onClick={onNewGame}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
               >
@@ -107,14 +112,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </button>
             )}
             {onBackToMenu && (
-              <button 
+              <button
                 onClick={onBackToMenu}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
               >
                 🏠 Back to Menu
               </button>
             )}
-            <button 
+            <button
               onClick={onClose}
               className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
             >
@@ -124,5 +129,5 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

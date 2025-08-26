@@ -1,100 +1,88 @@
-import webpush from 'web-push';
+import webpush from 'web-push'
 
 // Check if VAPID keys are configured
 const isNotificationServiceEnabled = !!(
-  process.env.VAPID_PUBLIC_KEY && 
-  process.env.VAPID_PRIVATE_KEY
-);
+  process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
+)
 
 // Only configure web-push if VAPID keys are available
 if (isNotificationServiceEnabled) {
   try {
     webpush.setVapidDetails(
       process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com',
-      process.env.VAPID_PUBLIC_KEY!,  // We know these exist because of the check above
-      process.env.VAPID_PRIVATE_KEY!
-    );
-    console.log('Push notification service initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize push notification service:', error);
-  }
+      process.env.VAPID_PUBLIC_KEY!, // We know these exist because of the check above
+      process.env.VAPID_PRIVATE_KEY!,
+    )
+  } catch (_error) {}
 } else {
-  console.warn('Push notification service disabled: VAPID keys not configured');
 }
 
 // Store subscriptions in memory for now (should be in database in production)
-const subscriptions = new Map<number, webpush.PushSubscription>();
+const subscriptions = new Map<number, webpush.PushSubscription>()
 
 export interface NotificationPayload {
-  title: string;
-  body: string;
-  icon?: string;
-  badge?: string;
-  tag?: string;
+  title: string
+  body: string
+  icon?: string
+  badge?: string
+  tag?: string
   data?: {
-    gameId?: number;
-    url?: string;
-    [key: string]: any;
-  };
+    gameId?: number
+    url?: string
+    [key: string]: any
+  }
   actions?: Array<{
-    action: string;
-    title: string;
-  }>;
+    action: string
+    title: string
+  }>
 }
 
 class NotificationService {
   // Save subscription for a user
   async saveSubscription(userId: number, subscription: webpush.PushSubscription): Promise<void> {
     // In production, save to database
-    subscriptions.set(userId, subscription);
-    console.log(`Saved push subscription for user ${userId}`);
+    subscriptions.set(userId, subscription)
   }
 
   // Remove subscription for a user
   async removeSubscription(userId: number): Promise<void> {
-    subscriptions.delete(userId);
-    console.log(`Removed push subscription for user ${userId}`);
+    subscriptions.delete(userId)
   }
 
   // Get subscription for a user
   async getSubscription(userId: number): Promise<webpush.PushSubscription | undefined> {
-    return subscriptions.get(userId);
+    return subscriptions.get(userId)
   }
 
   // Send notification to a specific user
   async sendToUser(userId: number, payload: NotificationPayload): Promise<boolean> {
     // Skip if notification service is not enabled
     if (!isNotificationServiceEnabled) {
-      console.debug(`Notification service disabled, skipping notification to user ${userId}`);
-      return false;
+      return false
     }
 
-    const subscription = await this.getSubscription(userId);
+    const subscription = await this.getSubscription(userId)
     if (!subscription) {
-      console.log(`No push subscription found for user ${userId}`);
-      return false;
+      return false
     }
 
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(payload));
-      console.log(`Push notification sent to user ${userId}:`, payload.title);
-      return true;
+      await webpush.sendNotification(subscription, JSON.stringify(payload))
+      return true
     } catch (error) {
-      console.error(`Failed to send push notification to user ${userId}:`, error);
-      
       // If subscription is invalid, remove it
       if ((error as any).statusCode === 410) {
-        await this.removeSubscription(userId);
+        await this.removeSubscription(userId)
       }
-      
-      return false;
+
+      return false
     }
   }
 
   // Send notification to multiple users
   async sendToUsers(userIds: number[], payload: NotificationPayload): Promise<void> {
-    const promises = userIds.map(userId => this.sendToUser(userId, payload));
-    await Promise.allSettled(promises);
+    const promises = userIds.map((userId) => this.sendToUser(userId, payload))
+    await Promise.allSettled(promises)
   }
 
   // Notification event handlers
@@ -111,12 +99,12 @@ class NotificationService {
         { action: 'view', title: 'Join Game' },
         { action: 'close', title: 'Later' },
       ],
-    };
+    }
 
-    await this.sendToUsers(playerIds, payload);
+    await this.sendToUsers(playerIds, payload)
   }
 
-  async notifyTurnStart(gameId: number, userId: number, username: string): Promise<void> {
+  async notifyTurnStart(gameId: number, userId: number, _username: string): Promise<void> {
     const payload: NotificationPayload = {
       title: "⚔️ It's Your Turn!",
       body: `It's your turn in the Risk game. Make your move!`,
@@ -129,14 +117,14 @@ class NotificationService {
         { action: 'view', title: 'Play Now' },
         { action: 'close', title: 'Later' },
       ],
-    };
+    }
 
-    await this.sendToUser(userId, payload);
+    await this.sendToUser(userId, payload)
   }
 
   async notifyGameEnd(gameId: number, winnerId: number, playerIds: number[]): Promise<void> {
     // In production, fetch winner name from database
-    const winnerName = `Player ${winnerId}`;
+    const winnerName = `Player ${winnerId}`
 
     const payloadForWinner: NotificationPayload = {
       title: '🏆 Victory!',
@@ -146,7 +134,7 @@ class NotificationService {
         gameId,
         url: `/game/${gameId}`,
       },
-    };
+    }
 
     const payloadForOthers: NotificationPayload = {
       title: '🎮 Game Over',
@@ -156,12 +144,12 @@ class NotificationService {
         gameId,
         url: `/game/${gameId}`,
       },
-    };
+    }
 
     // Send different notifications to winner and other players
     for (const playerId of playerIds) {
-      const payload = playerId === winnerId ? payloadForWinner : payloadForOthers;
-      await this.sendToUser(playerId, payload);
+      const payload = playerId === winnerId ? payloadForWinner : payloadForOthers
+      await this.sendToUser(playerId, payload)
     }
   }
 
@@ -178,35 +166,35 @@ class NotificationService {
         { action: 'view', title: 'Accept' },
         { action: 'close', title: 'Decline' },
       ],
-    };
+    }
 
-    await this.sendToUser(userId, payload);
+    await this.sendToUser(userId, payload)
   }
 
   // Test notification
   async sendTestNotification(userId: number): Promise<boolean> {
     const payload: NotificationPayload = {
       title: '🔔 Test Notification',
-      body: 'Push notifications are working! You\'ll receive game updates here.',
+      body: "Push notifications are working! You'll receive game updates here.",
       tag: 'test-notification',
       data: {
         url: '/settings',
       },
-    };
+    }
 
-    return await this.sendToUser(userId, payload);
+    return await this.sendToUser(userId, payload)
   }
 
   // Get VAPID public key for client
   getVapidPublicKey(): string {
-    return process.env.VAPID_PUBLIC_KEY || '';
+    return process.env.VAPID_PUBLIC_KEY || ''
   }
 
   // Check if notification service is enabled
   isEnabled(): boolean {
-    return isNotificationServiceEnabled;
+    return isNotificationServiceEnabled
   }
 }
 
-export const notificationService = new NotificationService();
-export default notificationService;
+export const notificationService = new NotificationService()
+export default notificationService

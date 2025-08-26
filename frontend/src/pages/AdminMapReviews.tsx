@@ -1,80 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 interface ApprovalRequest {
-  id: string;
-  versionId: string;
-  requesterId: string;
-  assignedModeratorId?: string;
-  submissionNotes?: string;
-  priorityLevel: string;
-  estimatedReviewTime?: number;
-  reviewStartedAt?: string;
-  createdAt: string;
-  versionName: string;
-  versionNumber: string;
-  requesterUsername: string;
-  assignedModeratorUsername?: string;
+  id: string
+  versionId: string
+  requesterId: string
+  assignedModeratorId?: string
+  submissionNotes?: string
+  priorityLevel: string
+  estimatedReviewTime?: number
+  reviewStartedAt?: string
+  createdAt: string
+  versionName: string
+  versionNumber: string
+  requesterUsername: string
+  assignedModeratorUsername?: string
 }
 
 interface ApprovalStats {
-  total_requests: number;
-  approved: number;
-  rejected: number;
-  pending: number;
-  avg_review_hours: number;
+  total_requests: number
+  approved: number
+  rejected: number
+  pending: number
+  avg_review_hours: number
 }
 
 export const AdminMapReviews: React.FC = () => {
-  const navigate = useNavigate();
-  
-  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
-  const [stats, setStats] = useState<ApprovalStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<'assign' | 'priority' | ''>('');
+  const navigate = useNavigate()
+
+  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([])
+  const [stats, setStats] = useState<ApprovalStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState<'assign' | 'priority' | ''>('')
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [loadData])
 
   const loadData = async () => {
     try {
-      setLoading(true);
-      
+      setLoading(true)
+
       // Load pending approval requests
       const requestsResponse = await fetch('/api/map-approval/approval-requests', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!requestsResponse.ok) {
-        throw new Error('Failed to load approval requests');
+        throw new Error('Failed to load approval requests')
       }
-      
-      const requestsData = await requestsResponse.json();
-      setApprovalRequests(requestsData.requests || []);
-      
+
+      const requestsData = await requestsResponse.json()
+      setApprovalRequests(requestsData.requests || [])
+
       // Load approval statistics
       const statsResponse = await fetch('/api/map-approval/stats/approvals', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData.stats);
+        const statsData = await statsResponse.json()
+        setStats(statsData.stats)
       }
-      
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleAssignToSelf = async (requestId: string) => {
     try {
@@ -82,59 +82,63 @@ export const AdminMapReviews: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to assign request');
+        throw new Error('Failed to assign request')
       }
-      
+
       // Reload data to reflect changes
-      await loadData();
-      
+      await loadData()
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     }
-  };
+  }
 
   const handleRequestSelection = (requestId: string, selected: boolean) => {
-    const newSelection = new Set(selectedRequests);
+    const newSelection = new Set(selectedRequests)
     if (selected) {
-      newSelection.add(requestId);
+      newSelection.add(requestId)
     } else {
-      newSelection.delete(requestId);
+      newSelection.delete(requestId)
     }
-    setSelectedRequests(newSelection);
-  };
+    setSelectedRequests(newSelection)
+  }
 
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
-      setSelectedRequests(new Set(approvalRequests.map(r => r.id)));
+      setSelectedRequests(new Set(approvalRequests.map((r) => r.id)))
     } else {
-      setSelectedRequests(new Set());
+      setSelectedRequests(new Set())
     }
-  };
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'normal': return 'bg-blue-100 text-blue-800';
-      case 'low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'urgent':
+        return 'bg-red-100 text-red-800'
+      case 'high':
+        return 'bg-orange-100 text-orange-800'
+      case 'normal':
+        return 'bg-blue-100 text-blue-800'
+      case 'low':
+        return 'bg-gray-100 text-gray-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
-  };
+  }
 
   const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
-  };
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+
+    if (diffInHours < 1) return 'Just now'
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    return `${Math.floor(diffInHours / 24)}d ago`
+  }
 
   if (loading) {
     return (
@@ -144,7 +148,7 @@ export const AdminMapReviews: React.FC = () => {
           <p className="text-gray-600">Loading review queue...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -154,14 +158,9 @@ export const AdminMapReviews: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Map Review Queue</h1>
-            <p className="text-gray-600 mt-1">
-              Review and approve submitted maps for publication
-            </p>
+            <p className="text-gray-600 mt-1">Review and approve submitted maps for publication</p>
           </div>
-          <Link
-            to="/admin"
-            className="text-gray-600 hover:text-gray-800 font-medium"
-          >
+          <Link to="/admin" className="text-gray-600 hover:text-gray-800 font-medium">
             ← Back to Admin Dashboard
           </Link>
         </div>
@@ -214,12 +213,10 @@ export const AdminMapReviews: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900">
               Pending Reviews ({approvalRequests.length})
             </h2>
-            
+
             {selectedRequests.size > 0 && (
               <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-600">
-                  {selectedRequests.size} selected
-                </span>
+                <span className="text-sm text-gray-600">{selectedRequests.size} selected</span>
                 <select
                   value={bulkAction}
                   onChange={(e) => setBulkAction(e.target.value as any)}
@@ -237,9 +234,7 @@ export const AdminMapReviews: React.FC = () => {
         {approvalRequests.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-gray-400 text-6xl mb-4">📋</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Pending Reviews
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Pending Reviews</h3>
             <p className="text-gray-600">
               All maps have been reviewed! Check back later for new submissions.
             </p>
@@ -293,9 +288,7 @@ export const AdminMapReviews: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900">
                           {request.versionName}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          v{request.versionNumber}
-                        </div>
+                        <div className="text-sm text-gray-500">v{request.versionNumber}</div>
                         {request.submissionNotes && (
                           <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
                             "{request.submissionNotes}"
@@ -307,16 +300,16 @@ export const AdminMapReviews: React.FC = () => {
                       <div className="text-sm text-gray-900">{request.requesterUsername}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        getPriorityColor(request.priorityLevel)
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
+                          request.priorityLevel,
+                        )}`}
+                      >
                         {request.priorityLevel}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {getTimeAgo(request.createdAt)}
-                      </div>
+                      <div className="text-sm text-gray-900">{getTimeAgo(request.createdAt)}</div>
                     </td>
                     <td className="px-6 py-4">
                       {request.assignedModeratorId ? (
@@ -368,34 +361,28 @@ export const AdminMapReviews: React.FC = () => {
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">Review Criteria</div>
-            <div className="text-xs text-gray-500 mt-1">
-              Manage standardized review criteria
-            </div>
+            <div className="text-xs text-gray-500 mt-1">Manage standardized review criteria</div>
           </button>
-          
+
           <button
             onClick={() => navigate('/admin/maps')}
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">All Maps</div>
-            <div className="text-xs text-gray-500 mt-1">
-              View and manage all maps in the system
-            </div>
+            <div className="text-xs text-gray-500 mt-1">View and manage all maps in the system</div>
           </button>
-          
+
           <button
             onClick={() => navigate('/admin/map-analytics')}
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">Analytics</div>
-            <div className="text-xs text-gray-500 mt-1">
-              View map usage and review statistics
-            </div>
+            <div className="text-xs text-gray-500 mt-1">View map usage and review statistics</div>
           </button>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AdminMapReviews;
+export default AdminMapReviews

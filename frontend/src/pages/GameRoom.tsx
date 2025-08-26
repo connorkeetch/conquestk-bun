@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
 import { socketService } from '../services/socketService'
-import { RiskGameBoard } from '../components/RiskGameBoard'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -42,10 +42,7 @@ export default function GameRoom() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">{currentRoom.name}</h1>
-        <button
-          onClick={handleLeaveRoom}
-          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
-        >
+        <button onClick={handleLeaveRoom} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
           Leave Room
         </button>
       </div>
@@ -56,8 +53,7 @@ export default function GameRoom() {
           <div className="h-[600px]">
             {currentGame ? (
               <RiskGameBoard
-                onTerritoryClick={(territoryId) => {
-                  console.log('Territory clicked:', territoryId);
+                onTerritoryClick={(_territoryId) => {
                   // TODO: Handle territory interactions based on game phase
                 }}
               />
@@ -67,11 +63,7 @@ export default function GameRoom() {
                   <h2 className="text-xl font-bold mb-4">Waiting for game to start...</h2>
                   <p>Need at least 2 players to begin</p>
                   <div className="mt-6">
-                    <RiskGameBoard
-                      onTerritoryClick={(territoryId) => {
-                        console.log('Preview territory clicked:', territoryId);
-                      }}
-                    />
+                    <RiskGameBoard onTerritoryClick={(_territoryId) => {}} />
                   </div>
                 </div>
               </div>
@@ -83,7 +75,9 @@ export default function GameRoom() {
         <div className="space-y-4">
           {/* Players */}
           <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})</h3>
+            <h3 className="text-lg font-bold mb-3">
+              Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
+            </h3>
             <div className="space-y-2">
               {currentRoom.players?.map((player) => (
                 <div key={player.userId} className="flex items-center space-x-2">

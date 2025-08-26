@@ -1,171 +1,182 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 interface ReviewCriteria {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  isRequired: boolean;
-  weight: number;
+  id: string
+  name: string
+  description: string
+  category: string
+  isRequired: boolean
+  weight: number
 }
 
 interface ReviewResult {
-  criteriaId: string;
-  status: 'pass' | 'fail' | 'warning' | 'not_applicable';
-  reviewerNotes?: string;
+  criteriaId: string
+  status: 'pass' | 'fail' | 'warning' | 'not_applicable'
+  reviewerNotes?: string
 }
 
 interface ApprovalRequest {
-  id: string;
-  versionId: string;
-  requesterId: string;
-  submissionNotes?: string;
-  priorityLevel: string;
-  createdAt: string;
-  versionName: string;
-  versionNumber: string;
-  requesterUsername: string;
+  id: string
+  versionId: string
+  requesterId: string
+  submissionNotes?: string
+  priorityLevel: string
+  createdAt: string
+  versionName: string
+  versionNumber: string
+  requesterUsername: string
 }
 
 export const AdminMapReview: React.FC = () => {
-  const { requestId } = useParams<{ requestId: string }>();
-  const navigate = useNavigate();
-  
-  const [approvalRequest, setApprovalRequest] = useState<ApprovalRequest | null>(null);
-  const [criteria, setCriteria] = useState<ReviewCriteria[]>([]);
-  const [reviewResults, setReviewResults] = useState<ReviewResult[]>([]);
-  const [decision, setDecision] = useState<'approved' | 'rejected' | 'needs_changes'>('approved');
-  const [moderatorFeedback, setModeratorFeedback] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { requestId } = useParams<{ requestId: string }>()
+  const navigate = useNavigate()
+
+  const [approvalRequest, setApprovalRequest] = useState<ApprovalRequest | null>(null)
+  const [criteria, setCriteria] = useState<ReviewCriteria[]>([])
+  const [reviewResults, setReviewResults] = useState<ReviewResult[]>([])
+  const [decision, setDecision] = useState<'approved' | 'rejected' | 'needs_changes'>('approved')
+  const [moderatorFeedback, setModeratorFeedback] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (requestId) {
-      loadData();
+      loadData()
     }
-  }, [requestId]);
+  }, [requestId, loadData])
 
   const loadData = async () => {
     try {
-      setLoading(true);
-      
+      setLoading(true)
+
       // Load approval request details
       const requestResponse = await fetch(`/api/map-approval/approval-requests/${requestId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!requestResponse.ok) {
-        throw new Error('Failed to load approval request');
+        throw new Error('Failed to load approval request')
       }
-      
-      const requestData = await requestResponse.json();
-      setApprovalRequest(requestData.approvalRequest);
-      
+
+      const requestData = await requestResponse.json()
+      setApprovalRequest(requestData.approvalRequest)
+
       // Load review criteria
       const criteriaResponse = await fetch('/api/map-approval/review-criteria', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!criteriaResponse.ok) {
-        throw new Error('Failed to load review criteria');
+        throw new Error('Failed to load review criteria')
       }
-      
-      const criteriaData = await criteriaResponse.json();
-      setCriteria(criteriaData.criteria);
-      
+
+      const criteriaData = await criteriaResponse.json()
+      setCriteria(criteriaData.criteria)
+
       // Initialize review results
       const initialResults = criteriaData.criteria.map((criterion: ReviewCriteria) => ({
         criteriaId: criterion.id,
         status: 'pass' as const,
-        reviewerNotes: ''
-      }));
-      
-      setReviewResults(initialResults);
-      
+        reviewerNotes: '',
+      }))
+
+      setReviewResults(initialResults)
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const updateReviewResult = (criteriaId: string, field: keyof ReviewResult, value: any) => {
-    setReviewResults(prev => prev.map(result => 
-      result.criteriaId === criteriaId 
-        ? { ...result, [field]: value }
-        : result
-    ));
-  };
+    setReviewResults((prev) =>
+      prev.map((result) =>
+        result.criteriaId === criteriaId ? { ...result, [field]: value } : result,
+      ),
+    )
+  }
 
   const handleSubmitReview = async () => {
     try {
-      setSubmitting(true);
-      setError(null);
-      
+      setSubmitting(true)
+      setError(null)
+
       // Validate required criteria
-      const requiredCriteria = criteria.filter(c => c.isRequired);
-      const failedRequired = reviewResults.filter(r => {
-        const criterion = criteria.find(c => c.id === r.criteriaId);
-        return criterion?.isRequired && r.status === 'fail';
-      });
-      
+      const _requiredCriteria = criteria.filter((c) => c.isRequired)
+      const failedRequired = reviewResults.filter((r) => {
+        const criterion = criteria.find((c) => c.id === r.criteriaId)
+        return criterion?.isRequired && r.status === 'fail'
+      })
+
       if (failedRequired.length > 0 && decision === 'approved') {
-        setError('Cannot approve map with failed required criteria. Please change decision to rejected or needs_changes.');
-        return;
+        setError(
+          'Cannot approve map with failed required criteria. Please change decision to rejected or needs_changes.',
+        )
+        return
       }
-      
+
       const response = await fetch(`/api/map-approval/approval-requests/${requestId}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           results: reviewResults,
           decision,
-          moderatorFeedback
-        })
-      });
-      
+          moderatorFeedback,
+        }),
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to submit review');
+        throw new Error('Failed to submit review')
       }
-      
+
       // Navigate back to review queue
-      navigate('/admin/map-reviews');
-      
+      navigate('/admin/map-reviews')
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pass': return 'text-green-600 bg-green-50 border-green-200';
-      case 'fail': return 'text-red-600 bg-red-50 border-red-200';
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'not_applicable': return 'text-gray-600 bg-gray-50 border-gray-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'pass':
+        return 'text-green-600 bg-green-50 border-green-200'
+      case 'fail':
+        return 'text-red-600 bg-red-50 border-red-200'
+      case 'warning':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      case 'not_applicable':
+        return 'text-gray-600 bg-gray-50 border-gray-200'
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200'
     }
-  };
+  }
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'technical': return 'bg-blue-100 text-blue-800';
-      case 'gameplay': return 'bg-purple-100 text-purple-800';
-      case 'content': return 'bg-green-100 text-green-800';
-      case 'visual': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'technical':
+        return 'bg-blue-100 text-blue-800'
+      case 'gameplay':
+        return 'bg-purple-100 text-purple-800'
+      case 'content':
+        return 'bg-green-100 text-green-800'
+      case 'visual':
+        return 'bg-orange-100 text-orange-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -175,7 +186,7 @@ export const AdminMapReview: React.FC = () => {
           <p className="text-gray-600">Loading review data...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error && !approvalRequest) {
@@ -191,7 +202,7 @@ export const AdminMapReview: React.FC = () => {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -201,9 +212,7 @@ export const AdminMapReview: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Map Review</h1>
-            <p className="text-gray-600 mt-1">
-              Review submission for approval and publication
-            </p>
+            <p className="text-gray-600 mt-1">Review submission for approval and publication</p>
           </div>
           <button
             onClick={() => navigate('/admin/map-reviews')}
@@ -233,11 +242,15 @@ export const AdminMapReview: React.FC = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Priority</label>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                approvalRequest.priorityLevel === 'high' ? 'bg-red-100 text-red-800' :
-                approvalRequest.priorityLevel === 'urgent' ? 'bg-red-200 text-red-900' :
-                'bg-blue-100 text-blue-800'
-              }`}>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  approvalRequest.priorityLevel === 'high'
+                    ? 'bg-red-100 text-red-800'
+                    : approvalRequest.priorityLevel === 'urgent'
+                      ? 'bg-red-200 text-red-900'
+                      : 'bg-blue-100 text-blue-800'
+                }`}
+              >
                 {approvalRequest.priorityLevel}
               </span>
             </div>
@@ -256,7 +269,7 @@ export const AdminMapReview: React.FC = () => {
       {/* Review Criteria */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Review Criteria</h2>
-        
+
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex">
@@ -271,15 +284,17 @@ export const AdminMapReview: React.FC = () => {
 
         <div className="space-y-4">
           {criteria.map((criterion) => {
-            const result = reviewResults.find(r => r.criteriaId === criterion.id);
-            
+            const result = reviewResults.find((r) => r.criteriaId === criterion.id)
+
             return (
               <div key={criterion.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-medium text-gray-900">{criterion.name}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(criterion.category)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(criterion.category)}`}
+                      >
                         {criterion.category}
                       </span>
                       {criterion.isRequired && (
@@ -291,7 +306,7 @@ export const AdminMapReview: React.FC = () => {
                     <p className="text-sm text-gray-600">{criterion.description}</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -310,14 +325,16 @@ export const AdminMapReview: React.FC = () => {
                       <option value="not_applicable">➖ Not Applicable</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Reviewer Notes (optional)
                     </label>
                     <textarea
                       value={result?.reviewerNotes || ''}
-                      onChange={(e) => updateReviewResult(criterion.id, 'reviewerNotes', e.target.value)}
+                      onChange={(e) =>
+                        updateReviewResult(criterion.id, 'reviewerNotes', e.target.value)
+                      }
                       placeholder="Add notes about this criterion..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       rows={2}
@@ -325,7 +342,7 @@ export const AdminMapReview: React.FC = () => {
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       </div>
@@ -333,12 +350,10 @@ export const AdminMapReview: React.FC = () => {
       {/* Final Decision */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Final Decision</h2>
-        
+
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Decision
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Decision</label>
             <select
               value={decision}
               onChange={(e) => setDecision(e.target.value as any)}
@@ -349,7 +364,7 @@ export const AdminMapReview: React.FC = () => {
               <option value="rejected">❌ Reject Submission</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Feedback for Creator {decision !== 'approved' && '(Required)'}
@@ -358,7 +373,7 @@ export const AdminMapReview: React.FC = () => {
               value={moderatorFeedback}
               onChange={(e) => setModeratorFeedback(e.target.value)}
               placeholder={
-                decision === 'approved' 
+                decision === 'approved'
                   ? 'Optional feedback for the creator...'
                   : 'Please provide specific feedback about what needs to be changed or why this was rejected...'
               }
@@ -376,7 +391,7 @@ export const AdminMapReview: React.FC = () => {
           <div className="text-sm text-gray-600">
             Once submitted, the creator will be notified of the decision and any feedback provided.
           </div>
-          
+
           <div className="flex space-x-3">
             <button
               onClick={() => navigate('/admin/map-reviews')}
@@ -396,7 +411,7 @@ export const AdminMapReview: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AdminMapReview;
+export default AdminMapReview

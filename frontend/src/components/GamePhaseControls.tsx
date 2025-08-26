@@ -1,100 +1,122 @@
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../store';
-import { deployArmies, executeAttack, executeFortify, goBackToReinforcement } from '../store/gameActions';
-import { selectTerritory, selectTargetTerritory, setPendingAction, setBattleResult } from '../store/gameSlice';
-import { BattleModal } from './BattleModal';
-import { getContinentBonusArmies, calculatePlayerContinentStatus } from '../utils/continentBonuses';
+import type React from 'react'
+import { useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch, RootState } from '../store'
+import {
+  deployArmies,
+  executeAttack,
+  executeFortify,
+  goBackToReinforcement,
+} from '../store/gameActions'
+import {
+  selectTargetTerritory,
+  selectTerritory,
+  setBattleResult,
+  setPendingAction,
+} from '../store/gameSlice'
+import { calculatePlayerContinentStatus, getContinentBonusArmies } from '../utils/continentBonuses'
+import { BattleModal } from './BattleModal'
 
 interface GamePhaseControlsProps {
-  onEndTurn: () => void;
+  onEndTurn: () => void
 }
 
 export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn }) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const gameState = useSelector((state: RootState) => state.game.currentGame);
-  const selectedTerritory = useSelector((state: RootState) => state.game.selectedTerritory);
-  const selectedTargetTerritory = useSelector((state: RootState) => state.game.selectedTargetTerritory);
-  const pendingAction = useSelector((state: RootState) => state.game.pendingAction);
-  const validTargets = useSelector((state: RootState) => state.game.validTargets);
-  const battleResult = useSelector((state: RootState) => state.game.battleResult);
-  const reinforcementArmiesFromStore = useSelector((state: RootState) => state.game.reinforcementArmies);
-  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const dispatch = useDispatch<AppDispatch>()
+  const gameState = useSelector((state: RootState) => state.game.currentGame)
+  const selectedTerritory = useSelector((state: RootState) => state.game.selectedTerritory)
+  const selectedTargetTerritory = useSelector(
+    (state: RootState) => state.game.selectedTargetTerritory,
+  )
+  const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
+  const validTargets = useSelector((state: RootState) => state.game.validTargets)
+  const battleResult = useSelector((state: RootState) => state.game.battleResult)
+  const reinforcementArmiesFromStore = useSelector(
+    (state: RootState) => state.game.reinforcementArmies,
+  )
+  const currentUser = useSelector((state: RootState) => state.auth.user)
 
-  const [reinforcementArmies, setReinforcementArmies] = useState(1);
-  const [fortifyArmies, setFortifyArmies] = useState(1);
+  const [reinforcementArmies, setReinforcementArmies] = useState(1)
+  const [fortifyArmies, setFortifyArmies] = useState(1)
 
-  if (!gameState || !currentUser) return null;
+  if (!gameState || !currentUser) return null
 
-  const isCurrentPlayerTurn = gameState.currentPlayer === currentUser.id;
-  const currentPlayer = gameState.players.find(p => p.id === currentUser.id);
-  
+  const isCurrentPlayerTurn = gameState.currentPlayer === currentUser.id
+  const currentPlayer = gameState.players.find((p) => p.id === currentUser.id)
+
   // Calculate reinforcement armies
   const calculateReinforcementArmies = () => {
     if (reinforcementArmiesFromStore > 0) {
-      return reinforcementArmiesFromStore;
+      return reinforcementArmiesFromStore
     }
-    
-    if (!currentPlayer) return 0;
-    
-    const territoryCount = gameState.board.filter(t => t.ownerId === currentPlayer.id).length;
-    const baseArmies = Math.max(3, Math.floor(territoryCount / 3));
-    
+
+    if (!currentPlayer) return 0
+
+    const territoryCount = gameState.board.filter((t) => t.ownerId === currentPlayer.id).length
+    const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
+
     // Add continent bonuses
-    const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board);
-    
-    return baseArmies + continentBonuses;
-  };
+    const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board)
+
+    return baseArmies + continentBonuses
+  }
 
   // Get detailed continent status for current player
-  const currentPlayerContinentStatus = currentPlayer ? 
-    calculatePlayerContinentStatus(currentPlayer.id, gameState.board) : null;
+  const currentPlayerContinentStatus = currentPlayer
+    ? calculatePlayerContinentStatus(currentPlayer.id, gameState.board)
+    : null
 
-  const selectedTerritoryData = selectedTerritory ? 
-    gameState.board.find(t => t.id === selectedTerritory) : null;
-  const selectedTargetData = selectedTargetTerritory ? 
-    gameState.board.find(t => t.id === selectedTargetTerritory) : null;
+  const selectedTerritoryData = selectedTerritory
+    ? gameState.board.find((t) => t.id === selectedTerritory)
+    : null
+  const selectedTargetData = selectedTargetTerritory
+    ? gameState.board.find((t) => t.id === selectedTargetTerritory)
+    : null
 
   const handleDeploy = () => {
     if (selectedTerritory && reinforcementArmies > 0) {
-      dispatch(deployArmies({ territoryId: selectedTerritory, armies: reinforcementArmies }));
+      dispatch(deployArmies({ territoryId: selectedTerritory, armies: reinforcementArmies }))
     }
-  };
+  }
 
   const handleAttack = () => {
     if (selectedTerritory && selectedTargetTerritory) {
-      dispatch(executeAttack({ 
-        fromTerritoryId: selectedTerritory, 
-        toTerritoryId: selectedTargetTerritory 
-      }));
+      dispatch(
+        executeAttack({
+          fromTerritoryId: selectedTerritory,
+          toTerritoryId: selectedTargetTerritory,
+        }),
+      )
     }
-  };
+  }
 
   const handleFortify = () => {
     if (selectedTerritory && selectedTargetTerritory && fortifyArmies > 0) {
-      dispatch(executeFortify({ 
-        fromTerritoryId: selectedTerritory, 
-        toTerritoryId: selectedTargetTerritory,
-        armies: fortifyArmies
-      }));
+      dispatch(
+        executeFortify({
+          fromTerritoryId: selectedTerritory,
+          toTerritoryId: selectedTargetTerritory,
+          armies: fortifyArmies,
+        }),
+      )
     }
-  };
+  }
 
   const handleClearSelection = () => {
-    dispatch(selectTerritory(null));
-    dispatch(selectTargetTerritory(null));
-    dispatch(setPendingAction(null));
-  };
+    dispatch(selectTerritory(null))
+    dispatch(selectTargetTerritory(null))
+    dispatch(setPendingAction(null))
+  }
 
   if (!isCurrentPlayerTurn) {
     return (
       <div className="bg-slate-800 border border-slate-600 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-2 text-gray-300">Waiting for Turn</h3>
         <p className="text-sm text-gray-400">
-          It's {gameState.players.find(p => p.id === gameState.currentPlayer)?.username}'s turn
+          It's {gameState.players.find((p) => p.id === gameState.currentPlayer)?.username}'s turn
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -121,15 +143,20 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
               <p className="font-medium mb-2">
                 You have {calculateReinforcementArmies()} new armies to deploy this turn
               </p>
-              
+
               {/* Army breakdown */}
               <div className="text-xs space-y-1 bg-green-800/30 p-2 rounded">
                 {(() => {
-                  if (!currentPlayer) return null;
-                  const territoryCount = gameState.board.filter(t => t.ownerId === currentPlayer.id).length;
-                  const baseArmies = Math.max(3, Math.floor(territoryCount / 3));
-                  const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board);
-                  
+                  if (!currentPlayer) return null
+                  const territoryCount = gameState.board.filter(
+                    (t) => t.ownerId === currentPlayer.id,
+                  ).length
+                  const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
+                  const continentBonuses = getContinentBonusArmies(
+                    currentPlayer.id,
+                    gameState.board,
+                  )
+
                   return (
                     <>
                       <div className="flex justify-between">
@@ -147,39 +174,39 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                         <span>{baseArmies + continentBonuses}</span>
                       </div>
                     </>
-                  );
+                  )
                 })()}
               </div>
 
               {/* Continent control details */}
-              {currentPlayerContinentStatus && currentPlayerContinentStatus.totalBonusArmies > 0 && (
-                <div className="mt-2 text-xs">
-                  <div className="font-medium text-green-300 mb-1">Controlled Continents:</div>
-                  <div className="space-y-1">
-                    {currentPlayerContinentStatus.controlledContinents
-                      .filter(cc => cc.controlled)
-                      .map(cc => (
-                        <div key={cc.continent.id} className="flex justify-between items-center">
-                          <span className="flex items-center">
-                            <div 
-                              className="w-3 h-3 rounded-full mr-2" 
-                              style={{ backgroundColor: cc.continent.color }}
-                            />
-                            {cc.continent.name}
-                          </span>
-                          <span className="font-medium">+{cc.continent.bonusArmies}</span>
-                        </div>
-                      ))
-                    }
+              {currentPlayerContinentStatus &&
+                currentPlayerContinentStatus.totalBonusArmies > 0 && (
+                  <div className="mt-2 text-xs">
+                    <div className="font-medium text-green-300 mb-1">Controlled Continents:</div>
+                    <div className="space-y-1">
+                      {currentPlayerContinentStatus.controlledContinents
+                        .filter((cc) => cc.controlled)
+                        .map((cc) => (
+                          <div key={cc.continent.id} className="flex justify-between items-center">
+                            <span className="flex items-center">
+                              <div
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: cc.continent.color }}
+                              />
+                              {cc.continent.name}
+                            </span>
+                            <span className="font-medium">+{cc.continent.bonusArmies}</span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
-            
+
             {selectedTerritory ? (
               <div className="space-y-2">
                 <p className="text-sm">
-                  Deploying to: <strong>{selectedTerritoryData?.name}</strong> 
+                  Deploying to: <strong>{selectedTerritoryData?.name}</strong>
                   (Current: {selectedTerritoryData?.armies} armies)
                 </p>
                 <div className="flex items-center space-x-2">
@@ -189,7 +216,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                     min="1"
                     max={calculateReinforcementArmies()}
                     value={reinforcementArmies}
-                    onChange={(e) => setReinforcementArmies(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setReinforcementArmies(parseInt(e.target.value, 10) || 1)}
                     className="w-20 px-2 py-1 border border-slate-600 bg-slate-700 text-white rounded text-center"
                   />
                   <button
@@ -226,10 +253,10 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
               </p>
             </div>
           )}
-          
+
           <div className="bg-red-900/30 border border-red-600/50 p-3 rounded">
             <h4 className="font-medium text-red-300 mb-2">Attack Territories</h4>
-            
+
             {!selectedTerritory ? (
               <p className="text-sm text-red-400">
                 Select one of your territories with 2+ armies to attack from
@@ -237,21 +264,21 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
             ) : !selectedTargetTerritory ? (
               <div className="space-y-2">
                 <p className="text-sm">
-                  Attacking from: <strong>{selectedTerritoryData?.name}</strong> 
-                  ({selectedTerritoryData?.armies} armies)
+                  Attacking from: <strong>{selectedTerritoryData?.name}</strong>(
+                  {selectedTerritoryData?.armies} armies)
                 </p>
                 <p className="text-sm text-red-400">
-                  {validTargets.length > 0 
+                  {validTargets.length > 0
                     ? `Select a target territory (${validTargets.length} available)`
-                    : 'No adjacent enemy territories to attack'
-                  }
+                    : 'No adjacent enemy territories to attack'}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm">
-                  <strong>{selectedTerritoryData?.name}</strong> ({selectedTerritoryData?.armies} armies) 
-                  attacking <strong>{selectedTargetData?.name}</strong> ({selectedTargetData?.armies} armies)
+                  <strong>{selectedTerritoryData?.name}</strong> ({selectedTerritoryData?.armies}{' '}
+                  armies) attacking <strong>{selectedTargetData?.name}</strong> (
+                  {selectedTargetData?.armies} armies)
                 </p>
                 <div className="flex space-x-2">
                   <button
@@ -280,26 +307,31 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
           <div className="bg-indigo-900/30 border border-indigo-600/50 p-2 rounded">
             <div className="text-xs font-medium text-indigo-300 mb-1">Movement Rules:</div>
             <div className="text-xs text-indigo-200">
-              {gameState.gameConfig?.movementType === 'classic_adjacent' && 'One territory → Adjacent only (1 move per turn)'}
-              {gameState.gameConfig?.movementType === 'adjacent_multi' && 'Multiple territories → Adjacent only'}
-              {gameState.gameConfig?.movementType === 'path_single' && 'One territory → Any connected territory (1 move per turn)'}
-              {gameState.gameConfig?.movementType === 'path_multi' && 'Multiple territories → Any connected territories'}
+              {gameState.gameConfig?.movementType === 'classic_adjacent' &&
+                'One territory → Adjacent only (1 move per turn)'}
+              {gameState.gameConfig?.movementType === 'adjacent_multi' &&
+                'Multiple territories → Adjacent only'}
+              {gameState.gameConfig?.movementType === 'path_single' &&
+                'One territory → Any connected territory (1 move per turn)'}
+              {gameState.gameConfig?.movementType === 'path_multi' &&
+                'Multiple territories → Any connected territories'}
             </div>
           </div>
-          
+
           <div className="bg-blue-900/30 border border-blue-600/50 p-3 rounded">
             <h4 className="font-medium text-blue-300 mb-2">Fortify Territories</h4>
-            
+
             {/* Show movement restrictions */}
-            {(gameState.gameConfig?.movementType === 'classic_adjacent' || gameState.gameConfig?.movementType === 'path_single') && 
-             Object.keys(gameState.movementTracking || {}).length > 0 && (
-              <div className="bg-yellow-900/30 border border-yellow-600/50 rounded p-2 mb-3">
-                <p className="text-xs text-yellow-300 font-medium">
-                  ⚠️ Only one move allowed per fortify phase (already used)
-                </p>
-              </div>
-            )}
-            
+            {(gameState.gameConfig?.movementType === 'classic_adjacent' ||
+              gameState.gameConfig?.movementType === 'path_single') &&
+              Object.keys(gameState.movementTracking || {}).length > 0 && (
+                <div className="bg-yellow-900/30 border border-yellow-600/50 rounded p-2 mb-3">
+                  <p className="text-xs text-yellow-300 font-medium">
+                    ⚠️ Only one move allowed per fortify phase (already used)
+                  </p>
+                </div>
+              )}
+
             {!selectedTerritory ? (
               <div className="space-y-2">
                 <p className="text-sm text-blue-400">
@@ -308,36 +340,38 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                 {Object.keys(gameState.movementTracking || {}).length > 0 && (
                   <div className="text-xs text-gray-400">
                     <strong>Already moved:</strong>{' '}
-                    {Object.keys(gameState.movementTracking || {}).map(territoryId => {
-                      const territory = gameState.board.find(t => t.id === territoryId);
-                      return territory?.name;
-                    }).join(', ')}
+                    {Object.keys(gameState.movementTracking || {})
+                      .map((territoryId) => {
+                        const territory = gameState.board.find((t) => t.id === territoryId)
+                        return territory?.name
+                      })
+                      .join(', ')}
                   </div>
                 )}
               </div>
             ) : !selectedTargetTerritory ? (
               <div className="space-y-2">
                 <p className="text-sm">
-                  Moving from: <strong>{selectedTerritoryData?.name}</strong> 
-                  ({selectedTerritoryData?.armies} armies)
+                  Moving from: <strong>{selectedTerritoryData?.name}</strong>(
+                  {selectedTerritoryData?.armies} armies)
                   {gameState.movementTracking?.[selectedTerritory] && (
                     <span className="ml-2 text-xs bg-yellow-200 px-1 rounded">Already moved</span>
                   )}
                 </p>
                 <p className="text-sm text-blue-400">
-                  {validTargets.length > 0 
+                  {validTargets.length > 0
                     ? `Select a destination territory (${validTargets.length} available)`
-                    : gameState.gameConfig?.movementType?.includes('path') 
+                    : gameState.gameConfig?.movementType?.includes('path')
                       ? 'No connected territories to fortify'
-                      : 'No adjacent territories to fortify'
-                  }
+                      : 'No adjacent territories to fortify'}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-sm">
-                  Moving from <strong>{selectedTerritoryData?.name}</strong> ({selectedTerritoryData?.armies} armies) 
-                  to <strong>{selectedTargetData?.name}</strong> ({selectedTargetData?.armies} armies)
+                  Moving from <strong>{selectedTerritoryData?.name}</strong> (
+                  {selectedTerritoryData?.armies} armies) to{' '}
+                  <strong>{selectedTargetData?.name}</strong> ({selectedTargetData?.armies} armies)
                 </p>
                 <div className="flex items-center space-x-2">
                   <label className="text-sm">Armies to move:</label>
@@ -346,7 +380,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                     min="1"
                     max={(selectedTerritoryData?.armies || 1) - 1}
                     value={fortifyArmies}
-                    onChange={(e) => setFortifyArmies(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setFortifyArmies(parseInt(e.target.value, 10) || 1)}
                     className="w-20 px-2 py-1 border border-slate-600 bg-slate-700 text-white rounded text-center"
                   />
                   <button
@@ -374,8 +408,9 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         battleResult={battleResult}
         onClose={() => dispatch(setBattleResult(null))}
         onContinueAttack={
-          selectedTerritory && selectedTargetTerritory && 
-          battleResult?.fromTerritory?.armies > 1 && 
+          selectedTerritory &&
+          selectedTargetTerritory &&
+          battleResult?.fromTerritory?.armies > 1 &&
           !battleResult?.conquered
             ? handleAttack
             : undefined
@@ -391,5 +426,5 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         </div>
       )}
     </div>
-  );
-};
+  )
+}

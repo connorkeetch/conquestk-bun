@@ -1,17 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { logout } from '../../store/authSlice';
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '../../hooks/redux'
+import { logout } from '../../store/authSlice'
 
 interface UserMenuProps {
-  className?: string;
+  className?: string
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({ className = "" }) => {
-  const { user } = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
+  const { user } = useAppSelector((state) => state.auth)
+  const dispatch = useAppDispatch()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const userMenuItems = [
     { path: '/profile', label: 'Profile', icon: '📊' },
@@ -19,39 +20,39 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = "" }) => {
     { path: '/profile/achievements', label: 'Achievements', icon: '🏆' },
     { path: '/profile/history', label: 'Game History', icon: '🎮' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
-  ];
+  ]
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
+        setIsMenuOpen(false)
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleLogout = () => {
-    dispatch(logout());
-    setIsMenuOpen(false);
-  };
+    dispatch(logout())
+    setIsMenuOpen(false)
+  }
 
   const getUserInitial = () => {
-    return user?.username?.charAt(0).toUpperCase() || 'U';
-  };
+    return user?.username?.charAt(0).toUpperCase() || 'U'
+  }
 
   const getUserStats = () => {
     // TODO: Replace with real data from user profile API
     return {
       level: 1,
       gamesWon: 0,
-      winRate: 0
-    };
-  };
+      winRate: 0,
+    }
+  }
 
-  const stats = getUserStats();
+  const stats = getUserStats()
 
   return (
     <div className={`relative ${className}`} ref={menuRef}>
@@ -67,12 +68,12 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = "" }) => {
           <div className="text-sm font-medium text-white">{user?.username}</div>
           <div className="text-xs text-gray-400">Level {stats.level}</div>
         </div>
-        <svg 
+        <svg
           className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
             isMenuOpen ? 'rotate-180' : ''
-          }`} 
-          fill="none" 
-          stroke="currentColor" 
+          }`}
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -128,7 +129,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = "" }) => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default UserMenu;
+export default UserMenu

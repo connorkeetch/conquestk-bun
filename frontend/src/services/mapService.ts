@@ -23,7 +23,7 @@ api.interceptors.response.use(
       error.message = error.response.data.error
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 // Types matching our backend
@@ -171,7 +171,7 @@ export interface FullMapData {
 
 export const mapService = {
   // ============= MAP OPERATIONS =============
-  
+
   async searchMaps(filters: MapSearchFilters = {}): Promise<MapSearchResult> {
     const params = new URLSearchParams()
     if (filters.search) params.append('search', filters.search)
@@ -247,7 +247,10 @@ export const mapService = {
     return response.data
   },
 
-  async createContinent(mapId: string, continentData: CreateContinentRequest): Promise<MapContinent> {
+  async createContinent(
+    mapId: string,
+    continentData: CreateContinentRequest,
+  ): Promise<MapContinent> {
     const response = await api.post(`/maps/${mapId}/continents`, continentData)
     return response.data
   },
@@ -281,14 +284,21 @@ export const mapService = {
   getImageUrl(imageUrl?: string): string {
     if (!imageUrl) return ''
     // Return data URLs, http URLs, and blob URLs as-is
-    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
+    if (
+      imageUrl.startsWith('http') ||
+      imageUrl.startsWith('blob:') ||
+      imageUrl.startsWith('data:')
+    ) {
       return imageUrl
     }
     // Convert relative URLs to absolute
     return `${API_URL.replace('/api', '')}${imageUrl}`
   },
 
-  validateMapData(territories: MapTerritory[], adjacencies: TerritoryAdjacency[]): {
+  validateMapData(
+    territories: MapTerritory[],
+    adjacencies: TerritoryAdjacency[],
+  ): {
     isValid: boolean
     errors: string[]
   } {
@@ -296,12 +306,12 @@ export const mapService = {
 
     // Check if all territories have at least one connection
     const connectedTerritories = new Set<string>()
-    adjacencies.forEach(adj => {
+    adjacencies.forEach((adj) => {
       connectedTerritories.add(adj.fromTerritoryId)
       connectedTerritories.add(adj.toTerritoryId)
     })
 
-    territories.forEach(territory => {
+    territories.forEach((territory) => {
       if (!connectedTerritories.has(territory.id)) {
         errors.push(`Territory "${territory.name}" has no connections`)
       }
@@ -311,19 +321,23 @@ export const mapService = {
     if (territories.length > 0) {
       const visited = new Set<string>()
       const queue = [territories[0].id]
-      
+
       while (queue.length > 0) {
         const current = queue.shift()!
         if (visited.has(current)) continue
-        
+
         visited.add(current)
-        
+
         // Find adjacent territories
-        adjacencies.forEach(adj => {
+        adjacencies.forEach((adj) => {
           if (adj.fromTerritoryId === current && !visited.has(adj.toTerritoryId)) {
             queue.push(adj.toTerritoryId)
           }
-          if (adj.isBidirectional && adj.toTerritoryId === current && !visited.has(adj.fromTerritoryId)) {
+          if (
+            adj.isBidirectional &&
+            adj.toTerritoryId === current &&
+            !visited.has(adj.fromTerritoryId)
+          ) {
             queue.push(adj.fromTerritoryId)
           }
         })
@@ -336,7 +350,7 @@ export const mapService = {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     }
-  }
+  },
 }

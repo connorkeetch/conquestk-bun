@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
+import type React from 'react'
+import { useEffect } from 'react'
 
 interface CapitalEliminationNotificationProps {
-  conquerorName: string;
-  conquerorColor: string;
-  eliminatedName: string;
-  eliminatedColor: string;
-  capitalName: string;
-  territoriesGained: number;
-  troopsGained: number;
-  onClose: () => void;
+  conquerorName: string
+  conquerorColor: string
+  eliminatedName: string
+  eliminatedColor: string
+  capitalName: string
+  territoriesGained: number
+  troopsGained: number
+  onClose: () => void
 }
 
 const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationProps> = ({
@@ -19,13 +20,13 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
   capitalName,
   territoriesGained,
   troopsGained,
-  onClose
+  onClose,
 }) => {
   useEffect(() => {
     // Auto-close after 8 seconds
-    const timer = setTimeout(onClose, 8000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
+    const timer = setTimeout(onClose, 8000)
+    return () => clearTimeout(timer)
+  }, [onClose])
 
   return (
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slideDown">
@@ -42,15 +43,12 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
         <div className="bg-black/40 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div 
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: conquerorColor }}
-              />
+              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: conquerorColor }} />
               <span className="text-white font-bold">{conquerorName}</span>
             </div>
             <span className="text-gray-400">⚔️ CONQUERED ⚔️</span>
             <div className="flex items-center gap-2">
-              <div 
+              <div
                 className="w-4 h-4 rounded-full opacity-50 line-through"
                 style={{ backgroundColor: eliminatedColor }}
               />
@@ -58,9 +56,7 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
             </div>
           </div>
 
-          <div className="text-center text-yellow-400 font-semibold">
-            Capital: {capitalName}
-          </div>
+          <div className="text-center text-yellow-400 font-semibold">Capital: {capitalName}</div>
         </div>
 
         {/* Gains */}
@@ -91,7 +87,7 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CapitalEliminationNotification;
+export default CapitalEliminationNotification

@@ -1,24 +1,24 @@
-import React from 'react';
+import type React from 'react'
 
 interface CapitalMarkerProps {
-  x: number;
-  y: number;
-  color?: string;
-  isUnderAttack?: boolean;
-  size?: number;
-  fogOfWar?: boolean;  // When true, shows crown without ownership color
+  x: number
+  y: number
+  color?: string
+  isUnderAttack?: boolean
+  size?: number
+  fogOfWar?: boolean // When true, shows crown without ownership color
 }
 
-const CapitalMarker: React.FC<CapitalMarkerProps> = ({ 
-  x, 
-  y, 
-  color = '#FFD700',  // Default gold color
+const CapitalMarker: React.FC<CapitalMarkerProps> = ({
+  x,
+  y,
+  color = '#FFD700', // Default gold color
   isUnderAttack = false,
   size = 24,
-  fogOfWar = false
+  fogOfWar = false,
 }) => {
   // In fog of war, always show neutral gold color
-  const displayColor = fogOfWar ? '#FFD700' : color;
+  const displayColor = fogOfWar ? '#FFD700' : color
   return (
     <div
       className={`absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 ${
@@ -38,7 +38,7 @@ const CapitalMarker: React.FC<CapitalMarkerProps> = ({
         xmlns="http://www.w3.org/2000/svg"
         className={`w-full h-full ${isUnderAttack ? 'animate-bounce' : 'animate-pulse'}`}
         style={{
-          filter: `drop-shadow(0 0 4px ${displayColor})`
+          filter: `drop-shadow(0 0 4px ${displayColor})`,
         }}
       >
         {/* Crown outline */}
@@ -56,7 +56,7 @@ const CapitalMarker: React.FC<CapitalMarkerProps> = ({
         {/* Crown base */}
         <rect x="5" y="16" width="14" height="3" fill={displayColor} />
       </svg>
-      
+
       {/* Attack warning overlay */}
       {isUnderAttack && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -64,7 +64,7 @@ const CapitalMarker: React.FC<CapitalMarkerProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default CapitalMarker;
+export default CapitalMarker

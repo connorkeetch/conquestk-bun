@@ -66,7 +66,13 @@
       "Bash(env)",
       "Bash(./switch-env.sh:*)",
       "Bash(DB_TYPE=sqlite npm run dev)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(npm install:*)",
+      "Bash(npx biome migrate:*)",
+      "Bash(npx:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": [],

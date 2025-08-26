@@ -154,7 +154,9 @@
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
@@ -204,7 +206,9 @@
   padding: 1.5rem;
   display: flex;
   gap: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .achievement-card.unlocked {
@@ -328,7 +332,9 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .game-card.won {
@@ -407,31 +413,31 @@
   .profile-overview {
     padding: 1rem;
   }
-  
+
   .profile-header {
     flex-direction: column;
     text-align: center;
     gap: 1.5rem;
   }
-  
+
   .xp-bar {
     width: 100%;
   }
-  
+
   .quick-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .achievements-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .game-card {
     flex-direction: column;
     text-align: center;
     gap: 1rem;
   }
-  
+
   .game-details {
     justify-content: center;
     flex-wrap: wrap;
