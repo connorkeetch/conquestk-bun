@@ -223,10 +223,12 @@ CREATE TABLE IF NOT EXISTS map_comments (
 );
 
 -- Update main maps table to reference current version and status
-ALTER TABLE maps ADD COLUMN IF NOT EXISTS current_version_id TEXT 
+-- Note: SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we just add the columns
+-- The migration runner will handle if they already exist
+ALTER TABLE maps ADD COLUMN current_version_id TEXT 
     REFERENCES map_versions(id) ON DELETE SET NULL;
-ALTER TABLE maps ADD COLUMN IF NOT EXISTS status_id TEXT 
-    REFERENCES map_status(id) DEFAULT (SELECT id FROM map_status WHERE name = 'draft');
+ALTER TABLE maps ADD COLUMN status_id TEXT 
+    REFERENCES map_status(id);
 
 -- Add useful indexes for performance
 CREATE INDEX IF NOT EXISTS idx_map_versions_map_id ON map_versions(map_id);

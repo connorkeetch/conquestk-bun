@@ -15,13 +15,55 @@ export async function runMigration(migrationFile: string) {
       
     if (dbType === 'sqlite') {
       migrationSQL = migrationSQL.replace(/JSONB/g, 'TEXT');
+      // Keep SQLite UUID generation function
+    } else if (dbType === 'postgresql') {
+      // Replace SQLite UUID generation with PostgreSQL UUID
+      migrationSQL = migrationSQL.replace(
+        /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)\)/g,
+        'DEFAULT uuid_generate_v4()'
+      );
+      // Convert TEXT PRIMARY KEY to UUID for PostgreSQL
+      migrationSQL = migrationSQL.replace(/id TEXT PRIMARY KEY DEFAULT uuid_generate_v4\(\)/g, 'id UUID PRIMARY KEY DEFAULT uuid_generate_v4()');
+      migrationSQL = migrationSQL.replace(/user_id TEXT/g, 'user_id UUID');
     }
     
-    // Split by semicolon and execute each statement
-    const statements = migrationSQL
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0);
+    // Split by semicolon but preserve triggers/functions with BEGIN...END blocks
+    const statements: string[] = [];
+    let currentStatement = '';
+    let inTrigger = false;
+    
+    const lines = migrationSQL.split('\n');
+    for (const line of lines) {
+      const upperLine = line.trim().toUpperCase();
+      
+      // Check if we're entering a trigger/function block
+      if (upperLine.includes('CREATE TRIGGER') || upperLine.includes('CREATE FUNCTION') || upperLine.includes('CREATE PROCEDURE')) {
+        inTrigger = true;
+      }
+      
+      currentStatement += line + '\n';
+      
+      // Check if statement ends with semicolon and we're not in a trigger
+      if (line.trim().endsWith(';')) {
+        if (inTrigger) {
+          // Check if this is the END; statement
+          if (upperLine === 'END;' || upperLine.startsWith('END;')) {
+            statements.push(currentStatement.trim());
+            currentStatement = '';
+            inTrigger = false;
+          }
+        } else {
+          // Normal statement, add it
+          statements.push(currentStatement.trim());
+          currentStatement = '';
+        }
+      }
+    }
+    
+    // Add any remaining statement
+    if (currentStatement.trim()) {
+      statements.push(currentStatement.trim());
+    }
     
     logger.info(`Running migration: ${migrationFile} (DB: ${dbType})`);
     
@@ -34,12 +76,16 @@ export async function runMigration(migrationFile: string) {
           const errorMessage = (error as any).message || '';
           if (statement.includes('DROP TABLE IF EXISTS') || 
               statement.includes('INSERT OR IGNORE') ||
+              statement.includes('INSERT INTO map_status') ||
               statement.includes('CREATE INDEX IF NOT EXISTS') ||
+              statement.includes('ALTER TABLE') ||
               errorMessage.includes('already exists') ||
               errorMessage.includes('duplicate column name') ||
-              errorMessage.includes('no such column')) {
-            logger.debug(`Skipping statement (already applied): ${statement.substring(0, 50)}...`);
+              errorMessage.includes('no such column') ||
+              errorMessage.includes('duplicate column')) {
+            logger.debug(`Skipping statement (column may already exist): ${statement.substring(0, 50)}...`);
           } else {
+            logger.error('Failed statement:', statement.substring(0, 200));
             throw error;
           }
         }
@@ -58,7 +104,13 @@ export async function runMigrations() {
     '001_extended_maps_schema.sql',
     '002_user_profiles_schema.sql',
     '003_admin_system.sql',
-    '004_game_room_settings.sql'
+    '004_game_room_settings.sql',
+    '005_map_approval_versioning.sql',
+    '006_add_email_verification.sql',
+    '007_auth_improvements.sql'
+    // Temporarily skip 008 and 009 due to SQLite issues
+    // '008_capitals_system.sql',
+    // '009_map_approval_workflow.sql'
   ];
   
   for (const migration of migrations) {
