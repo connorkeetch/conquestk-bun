@@ -95,13 +95,13 @@ export class CapitalGameService {
 
       this.gameStates.set(gameId, gameState);
 
-      // Emit capital initialization event
-      io.to(gameId).emit('capitalsInitialized', {
-        capitals: Array.from(gameState.capitals.entries()).map(([playerId, territoryId]) => ({
-          playerId,
-          territoryId
-        }))
-      });
+      // TODO: Emit capital initialization event from socket service
+      // io.to(gameId).emit('capitalsInitialized', {
+      //   capitals: Array.from(gameState.capitals.entries()).map(([playerId, territoryId]) => ({
+      //     playerId,
+      //     territoryId
+      //   }))
+      // });
     } catch (error) {
       logger.error('Error initializing capitals:', error);
       throw error;
@@ -192,20 +192,21 @@ export class CapitalGameService {
   private emitCapitalElimination(gameId: string, result: CapitalAttackResult): void {
     if (!result.capitalElimination) return;
 
-    io.to(gameId).emit('capitalElimination', {
-      eliminatedPlayerId: result.capitalElimination.eliminatedPlayer,
-      conquerorPlayerId: result.attackerId,
-      capitalTerritoryId: result.territoryId,
-      territoriesGained: result.capitalElimination.territoriesGained,
-      troopsGained: result.capitalElimination.troopsGained,
-      timestamp: new Date()
-    });
+    // TODO: Emit capital elimination event from socket service
+    // io.to(gameId).emit('capitalElimination', {
+    //   eliminatedPlayerId: result.capitalElimination.eliminatedPlayer,
+    //   conquerorPlayerId: result.attackerId,
+    //   capitalTerritoryId: result.territoryId,
+    //   territoriesGained: result.capitalElimination.territoriesGained,
+    //   troopsGained: result.capitalElimination.troopsGained,
+    //   timestamp: new Date()
+    // });
 
-    // Special notification for eliminated player
-    io.to(result.capitalElimination.eliminatedPlayer).emit('youWereEliminated', {
-      conquerorId: result.attackerId,
-      capitalLost: result.territoryId
-    });
+    // TODO: Special notification for eliminated player from socket service
+    // io.to(result.capitalElimination.eliminatedPlayer).emit('youWereEliminated', {
+    //   conquerorId: result.attackerId,
+    //   capitalLost: result.territoryId
+    // });
   }
 
   emitCapitalUnderAttack(gameId: string, defenderId: string, territoryId: number): void {
@@ -214,15 +215,17 @@ export class CapitalGameService {
 
     const defenderCapital = gameState.capitals.get(defenderId);
     if (defenderCapital === territoryId) {
-      io.to(defenderId).emit('capitalUnderAttack', {
-        territoryId,
-        warning: '⚠️ YOUR CAPITAL IS UNDER ATTACK!'
-      });
+      // TODO: Emit capital under attack warning from socket service
+      // io.to(defenderId).emit('capitalUnderAttack', {
+      //   territoryId,
+      //   warning: '⚠️ YOUR CAPITAL IS UNDER ATTACK!'
+      // });
 
-      io.to(gameId).emit('capitalBattle', {
-        territoryId,
-        defenderId
-      });
+      // TODO: Emit capital battle event from socket service
+      // io.to(gameId).emit('capitalBattle', {
+      //   territoryId,
+      //   defenderId
+      // });
     }
   }
 
