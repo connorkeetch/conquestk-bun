@@ -16,14 +16,19 @@ export class UserService {
           RETURNING id, username, email, email_verified, created_at, updated_at
         `;
         
-        const result = await query(pgQuery, [
+        const values = [
           userData.username,
           userData.email,
           userData.password,
-          userData.email_verified || false,
+          userData.email_verified === true ? true : false,
           userData.verification_token || null,
           userData.verification_sent_at || null
-        ]);
+        ];
+        
+        console.log('PostgreSQL query:', pgQuery);
+        console.log('PostgreSQL values:', values);
+        
+        const result = await query(pgQuery, values);
         
         return result.rows[0];
       } catch (error: any) {
