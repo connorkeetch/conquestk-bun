@@ -1,29 +1,29 @@
-import { query } from '../config/database';
-import { logger } from '../utils/logger';
+import { query } from '../config/database'
+import { logger } from '../utils/logger'
 
 export interface TerritoryModifierTemplate {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  defense_bonus: number;
-  attack_bonus: number;
-  troop_generation_bonus: number;
-  movement_restriction: boolean;
-  supply_line_bonus: boolean;
-  description?: string;
+  id: string
+  name: string
+  icon: string
+  color: string
+  defense_bonus: number
+  attack_bonus: number
+  troop_generation_bonus: number
+  movement_restriction: boolean
+  supply_line_bonus: boolean
+  description?: string
 }
 
 export interface GameTerritoryModifier {
-  territory_id: string;
-  defense_bonus: number;
-  attack_bonus: number;
-  troop_generation_bonus: number;
-  movement_restriction: boolean;
-  supply_line_bonus: boolean;
-  icon: string;
-  color: string;
-  name: string;
+  territory_id: string
+  defense_bonus: number
+  attack_bonus: number
+  troop_generation_bonus: number
+  movement_restriction: boolean
+  supply_line_bonus: boolean
+  icon: string
+  color: string
+  name: string
 }
 
 export class TerritoryModifierService {
@@ -31,8 +31,8 @@ export class TerritoryModifierService {
    * Get all available modifier templates
    */
   async getModifierTemplates(): Promise<TerritoryModifierTemplate[]> {
-    const result = await query('SELECT * FROM territory_modifier_templates ORDER BY name');
-    return result.rows;
+    const result = await query('SELECT * FROM territory_modifier_templates ORDER BY name')
+    return result.rows
   }
 
   /**
@@ -54,9 +54,9 @@ export class TerritoryModifierService {
       FROM map_territory_modifiers mtm
       JOIN territory_modifier_templates tmt ON mtm.modifier_template_id = tmt.id
       WHERE mtm.map_id = ?
-    `;
-    const result = await query(sql, [mapId]);
-    return result.rows;
+    `
+    const result = await query(sql, [mapId])
+    return result.rows
   }
 
   /**
@@ -66,33 +66,35 @@ export class TerritoryModifierService {
    * @param distribution - How modifiers should be distributed (none, sparse, balanced, abundant)
    */
   async initializeGameModifiers(
-    gameId: string, 
-    mapId: string, 
-    distribution: string = 'balanced',
-    territories: string[]
+    gameId: string,
+    mapId: string,
+    distribution: string,
+    territories: string[],
   ): Promise<void> {
     try {
       // If distribution is 'none', don't add any modifiers
       if (distribution === 'none') {
-        logger.info(`No modifiers for game ${gameId}`);
-        return;
+        logger.info(`No modifiers for game ${gameId}`)
+        return
       }
 
       // Get map-specific modifiers if they exist
-      const mapModifiers = await this.getMapModifiers(mapId);
-      
+      const mapModifiers = await this.getMapModifiers(mapId)
+
       if (mapModifiers.length > 0) {
         // Use predefined map modifiers
-        await this.applyMapModifiers(gameId, mapModifiers);
+        await this.applyMapModifiers(gameId, mapModifiers)
       } else {
         // Generate random modifiers based on distribution
-        await this.generateRandomModifiers(gameId, territories, distribution);
+        await this.generateRandomModifiers(gameId, territories, distribution)
       }
 
-      logger.info(`Initialized territory modifiers for game ${gameId} with distribution: ${distribution}`);
+      logger.info(
+        `Initialized territory modifiers for game ${gameId} with distribution: ${distribution}`,
+      )
     } catch (error) {
-      logger.error('Failed to initialize game modifiers:', error);
-      throw error;
+      logger.error('Failed to initialize game modifiers:', error)
+      throw error
     }
   }
 
@@ -107,8 +109,8 @@ export class TerritoryModifierService {
           troop_generation_bonus, movement_restriction, supply_line_bonus,
           icon, color, name
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      
+      `
+
       await query(sql, [
         gameId,
         modifier.territory_id,
@@ -119,8 +121,8 @@ export class TerritoryModifierService {
         modifier.supply_line_bonus,
         modifier.icon,
         modifier.color,
-        modifier.name
-      ]);
+        modifier.name,
+      ])
     }
   }
 
@@ -128,39 +130,40 @@ export class TerritoryModifierService {
    * Generate random modifiers for territories
    */
   private async generateRandomModifiers(
-    gameId: string, 
-    territories: string[], 
-    distribution: string
+    gameId: string,
+    territories: string[],
+    distribution: string,
   ): Promise<void> {
     // Get all modifier templates
-    const templates = await this.getModifierTemplates();
-    if (templates.length === 0) return;
+    const templates = await this.getModifierTemplates()
+    if (templates.length === 0) return
 
     // Determine how many territories should have modifiers
-    const modifierPercentage = {
-      sparse: 0.15,    // 15% of territories
-      balanced: 0.30,  // 30% of territories
-      abundant: 0.50   // 50% of territories
-    }[distribution] || 0.30;
+    const modifierPercentage =
+      {
+        sparse: 0.15, // 15% of territories
+        balanced: 0.3, // 30% of territories
+        abundant: 0.5, // 50% of territories
+      }[distribution] || 0.3
 
-    const numModifiers = Math.floor(territories.length * modifierPercentage);
-    
+    const numModifiers = Math.floor(territories.length * modifierPercentage)
+
     // Randomly select territories to modify
-    const shuffled = [...territories].sort(() => Math.random() - 0.5);
-    const selectedTerritories = shuffled.slice(0, numModifiers);
+    const shuffled = [...territories].sort(() => Math.random() - 0.5)
+    const selectedTerritories = shuffled.slice(0, numModifiers)
 
     // Assign random modifiers to selected territories
     for (const territoryId of selectedTerritories) {
-      const template = templates[Math.floor(Math.random() * templates.length)];
-      
+      const template = templates[Math.floor(Math.random() * templates.length)]
+
       const sql = `
         INSERT INTO game_territory_modifiers (
           game_id, territory_id, defense_bonus, attack_bonus, 
           troop_generation_bonus, movement_restriction, supply_line_bonus,
           icon, color, name
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      
+      `
+
       await query(sql, [
         gameId,
         territoryId,
@@ -171,8 +174,8 @@ export class TerritoryModifierService {
         template.supply_line_bonus,
         template.icon,
         template.color,
-        template.name
-      ]);
+        template.name,
+      ])
     }
   }
 
@@ -183,10 +186,10 @@ export class TerritoryModifierService {
     const sql = `
       SELECT * FROM game_territory_modifiers 
       WHERE game_id = ?
-    `;
-    const result = await query(sql, [gameId]);
-    
-    const modifierMap = new Map<string, GameTerritoryModifier>();
+    `
+    const result = await query(sql, [gameId])
+
+    const modifierMap = new Map<string, GameTerritoryModifier>()
     for (const row of result.rows) {
       modifierMap.set(row.territory_id, {
         territory_id: row.territory_id,
@@ -197,26 +200,29 @@ export class TerritoryModifierService {
         supply_line_bonus: row.supply_line_bonus,
         icon: row.icon,
         color: row.color,
-        name: row.name
-      });
+        name: row.name,
+      })
     }
-    
-    return modifierMap;
+
+    return modifierMap
   }
 
   /**
    * Get modifier for a specific territory in a game
    */
-  async getTerritoryModifier(gameId: string, territoryId: string): Promise<GameTerritoryModifier | null> {
+  async getTerritoryModifier(
+    gameId: string,
+    territoryId: string,
+  ): Promise<GameTerritoryModifier | null> {
     const sql = `
       SELECT * FROM game_territory_modifiers 
       WHERE game_id = ? AND territory_id = ?
-    `;
-    const result = await query(sql, [gameId, territoryId]);
-    
-    if (result.rows.length === 0) return null;
-    
-    const row = result.rows[0];
+    `
+    const result = await query(sql, [gameId, territoryId])
+
+    if (result.rows.length === 0) return null
+
+    const row = result.rows[0]
     return {
       territory_id: row.territory_id,
       defense_bonus: row.defense_bonus,
@@ -226,9 +232,9 @@ export class TerritoryModifierService {
       supply_line_bonus: row.supply_line_bonus,
       icon: row.icon,
       color: row.color,
-      name: row.name
-    };
+      name: row.name,
+    }
   }
 }
 
-export default new TerritoryModifierService();
+export default new TerritoryModifierService()

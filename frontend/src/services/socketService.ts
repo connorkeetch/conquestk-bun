@@ -1,15 +1,15 @@
-import { io, Socket } from 'socket.io-client'
+import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
-import { 
-  setGameState, 
-  updateGameState, 
-  updateTerritory, 
-  selectTerritory,
+import {
   selectTargetTerritory,
-  setPendingAction,
+  selectTerritory,
   setBattleResult,
+  setError,
+  setGameState,
+  setPendingAction,
   setReinforcementArmies,
-  setError 
+  updateGameState,
+  updateTerritory,
 } from '../store/gameSlice'
 import { addPlayerToRoom, removePlayerFromRoom, updateRoom } from '../store/roomSlice'
 
@@ -80,26 +80,26 @@ class SocketService {
   private setupEventListeners() {
     if (!this.socket) return
 
-    this.socket.on('connect', () => {
-      console.log('Connected to server')
-    })
+    this.socket.on('connect', () => {})
 
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from server')
-    })
+    this.socket.on('disconnect', () => {})
 
     this.socket.on('player-joined', (data) => {
-      store.dispatch(addPlayerToRoom({
-        roomId: data.roomId,
-        player: data.player,
-      }))
+      store.dispatch(
+        addPlayerToRoom({
+          roomId: data.roomId,
+          player: data.player,
+        }),
+      )
     })
 
     this.socket.on('player-left', (data) => {
-      store.dispatch(removePlayerFromRoom({
-        roomId: data.roomId,
-        playerId: data.userId,
-      }))
+      store.dispatch(
+        removePlayerFromRoom({
+          roomId: data.roomId,
+          playerId: data.userId,
+        }),
+      )
     })
 
     this.socket.on('game-update', (gameState) => {
@@ -112,19 +112,23 @@ class SocketService {
 
     // Game-specific event listeners
     this.socket.on('territoryUpdated', (data) => {
-      store.dispatch(updateTerritory({
-        territoryId: data.territoryId,
-        armies: data.armies,
-        ownerId: data.ownerId
-      }))
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.territoryId,
+          armies: data.armies,
+          ownerId: data.ownerId,
+        }),
+      )
     })
 
     this.socket.on('gamePhaseChanged', (data) => {
-      store.dispatch(updateGameState({
-        phase: data.phase,
-        currentPlayer: data.currentPlayer
-      }))
-      
+      store.dispatch(
+        updateGameState({
+          phase: data.phase,
+          currentPlayer: data.currentPlayer,
+        }),
+      )
+
       // Clear selections when phase changes
       store.dispatch(selectTerritory(null))
       store.dispatch(selectTargetTerritory(null))
@@ -132,11 +136,13 @@ class SocketService {
     })
 
     this.socket.on('playerTurnChanged', (data) => {
-      store.dispatch(updateGameState({
-        currentPlayer: data.currentPlayer,
-        turn: data.turn
-      }))
-      
+      store.dispatch(
+        updateGameState({
+          currentPlayer: data.currentPlayer,
+          turn: data.turn,
+        }),
+      )
+
       // Clear selections when turn changes
       store.dispatch(selectTerritory(null))
       store.dispatch(selectTargetTerritory(null))
@@ -144,24 +150,30 @@ class SocketService {
     })
 
     this.socket.on('armiesDeployed', (data) => {
-      store.dispatch(updateTerritory({
-        territoryId: data.territoryId,
-        armies: data.armies
-      }))
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.territoryId,
+          armies: data.armies,
+        }),
+      )
     })
 
     this.socket.on('attackResult', (data) => {
       // Update both attacking and defending territories
-      store.dispatch(updateTerritory({
-        territoryId: data.fromTerritory.id,
-        armies: data.fromTerritory.armies
-      }))
-      
-      store.dispatch(updateTerritory({
-        territoryId: data.toTerritory.id,
-        armies: data.toTerritory.armies,
-        ownerId: data.toTerritory.ownerId // In case territory was conquered
-      }))
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.fromTerritory.id,
+          armies: data.fromTerritory.armies,
+        }),
+      )
+
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.toTerritory.id,
+          armies: data.toTerritory.armies,
+          ownerId: data.toTerritory.ownerId, // In case territory was conquered
+        }),
+      )
 
       // Show battle results
       store.dispatch(setBattleResult(data))
@@ -171,16 +183,18 @@ class SocketService {
     })
 
     this.socket.on('phaseChanged', (data) => {
-      store.dispatch(updateGameState({
-        phase: data.phase,
-        currentPlayer: data.currentPlayer
-      }))
-      
+      store.dispatch(
+        updateGameState({
+          phase: data.phase,
+          currentPlayer: data.currentPlayer,
+        }),
+      )
+
       // Set reinforcement armies when entering reinforcement phase
       if (data.phase === 'reinforcement' && data.reinforcementArmies) {
         store.dispatch(setReinforcementArmies(data.reinforcementArmies))
       }
-      
+
       // Clear selections when phase changes
       store.dispatch(selectTerritory(null))
       store.dispatch(selectTargetTerritory(null))
@@ -188,50 +202,53 @@ class SocketService {
     })
 
     this.socket.on('territoriesFortified', (data) => {
-      store.dispatch(updateTerritory({
-        territoryId: data.fromTerritoryId,
-        armies: data.fromArmies
-      }))
-      
-      store.dispatch(updateTerritory({
-        territoryId: data.toTerritoryId,
-        armies: data.toArmies
-      }))
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.fromTerritoryId,
+          armies: data.fromArmies,
+        }),
+      )
+
+      store.dispatch(
+        updateTerritory({
+          territoryId: data.toTerritoryId,
+          armies: data.toArmies,
+        }),
+      )
     })
 
     // Capital-specific events
     this.socket.on('capitalAttackCheck', (data) => {
       // Store this result for when player clicks attack
-      store.dispatch(updateGameState({
-        pendingCapitalAttack: data.isCapital ? data.territoryId : null
-      }))
+      store.dispatch(
+        updateGameState({
+          pendingCapitalAttack: data.isCapital ? data.territoryId : null,
+        }),
+      )
     })
 
     this.socket.on('capitalElimination', (data) => {
       // Show capital elimination notification
-      store.dispatch(updateGameState({
-        capitalElimination: {
-          conqueror: data.conqueror,
-          eliminated: data.eliminated,
-          capitalTerritory: data.capitalTerritory,
-          territoriesGained: data.territoriesGained,
-          troopsGained: data.troopsGained
-        }
-      }))
+      store.dispatch(
+        updateGameState({
+          capitalElimination: {
+            conqueror: data.conqueror,
+            eliminated: data.eliminated,
+            capitalTerritory: data.capitalTerritory,
+            territoriesGained: data.territoriesGained,
+            troopsGained: data.troopsGained,
+          },
+        }),
+      )
     })
 
     this.socket.on('gameError', (error) => {
       store.dispatch(setError(error.message))
-      console.error('Game error:', error)
     })
 
-    this.socket.on('chat-message', (data) => {
-      // Handle chat messages
-      console.log('Chat message:', data)
-    })
+    this.socket.on('chat-message', (_data) => {})
 
-    this.socket.on('error', (error) => {
-      console.error('Socket error:', error)
+    this.socket.on('error', (_error) => {
       store.dispatch(setError('Connection error'))
     })
   }

@@ -3,7 +3,7 @@
   /* Custom section spacing for consistent layout */
   --section-spacing: 3rem; /* 48px spacing between major sections */
   --section-spacing-sm: 2rem; /* 32px for smaller gaps */
-  
+
   /* Custom colors for the Risk game */
   --color-brand: oklch(62.3% 0.214 259.815);
   --color-brand-dark: oklch(45% 0.2 259);
@@ -16,23 +16,23 @@
     padding-top: var(--section-spacing);
     padding-bottom: var(--section-spacing);
   }
-  
+
   .section-spacing-sm {
     padding-top: var(--section-spacing-sm);
     padding-bottom: var(--section-spacing-sm);
   }
-  
+
   .glass {
     backdrop-filter: blur(10px);
     background-color: rgba(0, 0, 0, 0.5);
   }
-  
+
   /* Force white text in buttons */
   .btn-white-text,
   .btn-white-text * {
-    color: white !important;
+    color: white;
   }
-  
+
   .glass-light {
     backdrop-filter: blur(10px);
     background-color: rgba(255, 255, 255, 0.1);

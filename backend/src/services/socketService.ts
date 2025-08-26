@@ -1,89 +1,99 @@
-import { Server, Socket } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import { logger } from '../utils/logger';
-import { GameService } from './gameService';
+import jwt from 'jsonwebtoken'
+import type { Server, Socket } from 'socket.io'
+import { logger } from '../utils/logger'
+import { GameService } from './gameService'
 
 interface AuthenticatedSocket extends Socket {
-  userId?: string;
-  username?: string;
+  userId?: string
+  username?: string
 }
 
 export function setupSocketHandlers(io: Server) {
-  const gameService = new GameService();
+  const gameService = new GameService()
 
   io.use((socket: AuthenticatedSocket, next) => {
-    const token = socket.handshake.auth.token;
-    
+    const token = socket.handshake.auth.token
+
     if (!token) {
-      return next(new Error('Authentication error'));
+      return next(new Error('Authentication error'))
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-      socket.userId = decoded.userId;
-      next();
-    } catch (error) {
-      next(new Error('Authentication error'));
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+      socket.userId = decoded.userId
+      next()
+    } catch (_error) {
+      next(new Error('Authentication error'))
     }
-  });
+  })
 
   io.on('connection', (socket: AuthenticatedSocket) => {
-    logger.info(`User ${socket.userId} connected`);
+    logger.info(`User ${socket.userId} connected`)
 
     socket.on('join-room', async (roomId: string) => {
       try {
-        await socket.join(roomId);
-        socket.to(roomId).emit('player-joined', { 
+        await socket.join(roomId)
+        socket.to(roomId).emit('player-joined', {
           userId: socket.userId,
-          socketId: socket.id 
-        });
-        logger.info(`User ${socket.userId} joined room ${roomId}`);
+          socketId: socket.id,
+        })
+        logger.info(`User ${socket.userId} joined room ${roomId}`)
       } catch (error) {
-        logger.error('Join room error:', error);
-        socket.emit('error', { message: 'Failed to join room' });
+        logger.error('Join room error:', error)
+        socket.emit('error', { message: 'Failed to join room' })
       }
-    });
+    })
 
     socket.on('leave-room', async (roomId: string) => {
       try {
-        await socket.leave(roomId);
-        socket.to(roomId).emit('player-left', { 
+        await socket.leave(roomId)
+        socket.to(roomId).emit('player-left', {
           userId: socket.userId,
-          socketId: socket.id 
-        });
-        logger.info(`User ${socket.userId} left room ${roomId}`);
+          socketId: socket.id,
+        })
+        logger.info(`User ${socket.userId} left room ${roomId}`)
       } catch (error) {
-        logger.error('Leave room error:', error);
+        logger.error('Leave room error:', error)
       }
-    });
+    })
 
     socket.on('game-action', async (data) => {
       try {
-        const result = await gameService.processGameAction(data, socket.userId!);
-        socket.to(data.roomId).emit('game-update', result);
+        const result = await gameService.processGameAction(data, socket.userId!)
+        socket.to(data.roomId).emit('game-update', result)
       } catch (error) {
-        logger.error('Game action error:', error);
-        socket.emit('error', { message: 'Invalid game action' });
+        logger.error('Game action error:', error)
+        socket.emit('error', { message: 'Invalid game action' })
       }
-    });
+    })
 
     // Deployment phase
     socket.on('deployArmies', async (data) => {
       try {
-        const result = await gameService.deployArmies(data.roomId, socket.userId!, data.territoryId, data.armies);
-        io.to(data.roomId).emit('armiesDeployed', result);
-        io.to(data.roomId).emit('game-update', result.gameState);
+        const result = await gameService.deployArmies(
+          data.roomId,
+          socket.userId!,
+          data.territoryId,
+          data.armies,
+        )
+        io.to(data.roomId).emit('armiesDeployed', result)
+        io.to(data.roomId).emit('game-update', result.gameState)
       } catch (error) {
-        logger.error('Deploy armies error:', error);
-        socket.emit('gameError', { message: 'Failed to deploy armies' });
+        logger.error('Deploy armies error:', error)
+        socket.emit('gameError', { message: 'Failed to deploy armies' })
       }
-    });
+    })
 
     // Attack phase
     socket.on('attack', async (data) => {
       try {
-        const result = await gameService.attack(data.roomId, socket.userId!, data.fromTerritoryId, data.toTerritoryId);
-        
+        const result = await gameService.attack(
+          data.roomId,
+          socket.userId!,
+          data.fromTerritoryId,
+          data.toTerritoryId,
+        )
+
         // Check if this was a capital attack that resulted in elimination
         if (result.capitalElimination) {
           io.to(data.roomId).emit('capitalElimination', {
@@ -91,74 +101,80 @@ export function setupSocketHandlers(io: Server) {
             eliminated: result.capitalElimination.eliminated,
             capitalTerritory: result.capitalElimination.capitalTerritory,
             territoriesGained: result.capitalElimination.territoriesGained,
-            troopsGained: result.capitalElimination.troopsGained
-          });
+            troopsGained: result.capitalElimination.troopsGained,
+          })
         }
-        
-        io.to(data.roomId).emit('attackResult', result);
-        io.to(data.roomId).emit('game-update', result.gameState);
+
+        io.to(data.roomId).emit('attackResult', result)
+        io.to(data.roomId).emit('game-update', result.gameState)
       } catch (error) {
-        logger.error('Attack error:', error);
-        socket.emit('gameError', { message: 'Failed to execute attack' });
+        logger.error('Attack error:', error)
+        socket.emit('gameError', { message: 'Failed to execute attack' })
       }
-    });
+    })
 
     // Capital warning check
     socket.on('checkCapitalAttack', async (data) => {
       try {
-        const { roomId, targetTerritoryId } = data;
+        const { roomId, targetTerritoryId } = data
         // Check if target territory is a capital
         // This would need to be implemented in gameService
-        const isCapital = await gameService.isCapitalTerritory(roomId, targetTerritoryId);
-        socket.emit('capitalAttackCheck', { 
-          territoryId: targetTerritoryId, 
-          isCapital 
-        });
+        const isCapital = await gameService.isCapitalTerritory(roomId, targetTerritoryId)
+        socket.emit('capitalAttackCheck', {
+          territoryId: targetTerritoryId,
+          isCapital,
+        })
       } catch (error) {
-        logger.error('Capital check error:', error);
-        socket.emit('gameError', { message: 'Failed to check capital status' });
+        logger.error('Capital check error:', error)
+        socket.emit('gameError', { message: 'Failed to check capital status' })
       }
-    });
+    })
 
     // Fortification phase
     socket.on('fortify', async (data) => {
       try {
-        const result = await gameService.fortify(data.roomId, socket.userId!, data.fromTerritoryId, data.toTerritoryId, data.armies);
-        io.to(data.roomId).emit('territoriesFortified', result);
-        io.to(data.roomId).emit('game-update', result.gameState);
+        const result = await gameService.fortify(
+          data.roomId,
+          socket.userId!,
+          data.fromTerritoryId,
+          data.toTerritoryId,
+          data.armies,
+        )
+        io.to(data.roomId).emit('territoriesFortified', result)
+        io.to(data.roomId).emit('game-update', result.gameState)
       } catch (error) {
-        logger.error('Fortify error:', error);
-        socket.emit('gameError', { message: 'Failed to fortify' });
+        logger.error('Fortify error:', error)
+        socket.emit('gameError', { message: 'Failed to fortify' })
       }
-    });
+    })
 
     // End turn
     socket.on('endTurn', async (data) => {
       try {
-        const result = await gameService.endTurn(data.roomId, socket.userId!);
+        const result = await gameService.endTurn(data.roomId, socket.userId!)
         io.to(data.roomId).emit('phaseChanged', {
           phase: result.gameState.phase,
           currentPlayer: result.gameState.currentPlayer,
           turn: result.gameState.turn,
-          reinforcementArmies: result.reinforcementArmies
-        });
-        io.to(data.roomId).emit('game-update', result.gameState);
+          reinforcementArmies: result.reinforcementArmies,
+        })
+        io.to(data.roomId).emit('game-update', result.gameState)
       } catch (error) {
-        logger.error('End turn error:', error);
-        socket.emit('gameError', { message: 'Failed to end turn' });
+        logger.error('End turn error:', error)
+        socket.emit('gameError', { message: 'Failed to end turn' })
       }
-    });
+    })
 
     socket.on('chat-message', (data) => {
       socket.to(data.roomId).emit('chat-message', {
         userId: socket.userId,
         message: data.message,
-        timestamp: new Date().toISOString()
-      });
-    });
+        timestamp: new Date().toISOString(),
+      })
+    })
 
     socket.on('disconnect', () => {
-      logger.info(`User ${socket.userId} disconnected`);
-    });
-  });
+      logger.info(`User ${socket.userId} disconnected`)
+    })
+  })
 }

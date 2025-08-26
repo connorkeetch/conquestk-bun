@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import type React from 'react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+
 // import Breadcrumb from '../components/Breadcrumb';
 
 const Maps: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('official');
-
+  const [activeTab, setActiveTab] = useState('official')
 
   const tabs = [
     { id: 'official', label: 'Official Maps', icon: '🌎' },
     { id: 'featured', label: 'Featured', icon: '⭐' },
     { id: 'trending', label: 'Trending', icon: '🔥' },
     { id: 'recent', label: 'Recent', icon: '🆕' },
-    { id: 'my-maps', label: 'My Maps', icon: '💝' }
-  ];
+    { id: 'my-maps', label: 'My Maps', icon: '💝' },
+  ]
 
   // Note: Mock maps removed - will be populated from backend when maps are implemented
 
@@ -20,7 +21,6 @@ const Maps: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -78,9 +78,9 @@ const Maps: React.FC = () => {
           <div className="text-8xl mb-8">🗺️</div>
           <h2 className="text-3xl font-bold text-white mb-4">Maps Coming Soon</h2>
           <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-            We're working on building an amazing collection of strategic battlefields. 
-            Soon you'll be able to play on classic maps, browse community creations, 
-            and even build your own territories with our map editor.
+            We're working on building an amazing collection of strategic battlefields. Soon you'll
+            be able to play on classic maps, browse community creations, and even build your own
+            territories with our map editor.
           </p>
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700/50">
             <h3 className="text-xl font-bold text-white mb-4">What's Coming:</h3>
@@ -118,7 +118,7 @@ const Maps: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Maps;
+export default Maps

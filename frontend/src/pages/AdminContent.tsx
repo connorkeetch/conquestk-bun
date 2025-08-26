@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { adminService, ContentApprovalItem } from '../services/adminService'
+import { useEffect, useState } from 'react'
+import { adminService, type ContentApprovalItem } from '../services/adminService'
 
 interface ContentModal {
   item: ContentApprovalItem
@@ -12,18 +12,18 @@ export default function AdminContent() {
   const [totalItems, setTotalItems] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const [limit] = useState(20)
-  
+
   // Modal state
   const [actionModal, setActionModal] = useState<ContentModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
 
   useEffect(() => {
     loadContentQueue()
-  }, [currentPage])
+  }, [loadContentQueue])
 
   const loadContentQueue = async () => {
     try {
@@ -33,13 +33,12 @@ export default function AdminContent() {
       const offset = (currentPage - 1) * limit
       const result = await adminService.getContentApprovalQueue({
         limit,
-        offset
+        offset,
       })
 
       setContentQueue(result.items)
       setTotalItems(result.total)
     } catch (err: any) {
-      console.error('Error loading content queue:', err)
       setError(err.message || 'Failed to load content queue')
     } finally {
       setLoading(false)
@@ -64,7 +63,6 @@ export default function AdminContent() {
       setActionModal(null)
       setActionNotes('')
     } catch (err: any) {
-      console.error('Error processing content action:', err)
       alert(`Failed to ${actionModal.action} content: ${err.message}`)
     }
   }
@@ -88,14 +86,9 @@ export default function AdminContent() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">🔍 Content Moderation</h1>
-            <div className="text-gray-400">
-              Review and moderate user-generated content
-            </div>
+            <div className="text-gray-400">Review and moderate user-generated content</div>
           </div>
-          <a 
-            href="/admin"
-            className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
-          >
+          <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
             ← Back to Dashboard
           </a>
         </div>
@@ -118,7 +111,7 @@ export default function AdminContent() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-blue-400">
-                  {contentQueue.filter(item => item.contentType === 'map').length}
+                  {contentQueue.filter((item) => item.contentType === 'map').length}
                 </div>
                 <div className="text-sm text-gray-400">Maps to Review</div>
               </div>
@@ -130,7 +123,7 @@ export default function AdminContent() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
-                  {contentQueue.filter(item => item.contentType !== 'map').length}
+                  {contentQueue.filter((item) => item.contentType !== 'map').length}
                 </div>
                 <div className="text-sm text-gray-400">Other Content</div>
               </div>
@@ -162,7 +155,7 @@ export default function AdminContent() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4 text-red-400">❌</div>
               <div className="text-red-400 mb-4">{error}</div>
-              <button 
+              <button
                 onClick={loadContentQueue}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
               >
@@ -190,7 +183,8 @@ export default function AdminContent() {
                             {item.contentName || 'Unnamed Content'}
                           </div>
                           <div className="text-sm text-gray-400">
-                            by {item.submitterUsername} • {new Date(item.submittedAt).toLocaleDateString()}
+                            by {item.submitterUsername} •{' '}
+                            {new Date(item.submittedAt).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
@@ -219,9 +213,13 @@ export default function AdminContent() {
                         <div className="mt-4 p-4 bg-gray-700 rounded-lg">
                           <div className="text-sm text-gray-400 mb-2">Map Preview</div>
                           <div className="text-sm">
-                            <div><strong>Map ID:</strong> {item.contentId}</div>
-                            <div><strong>Name:</strong> {item.contentName || 'Unnamed Map'}</div>
-                            <a 
+                            <div>
+                              <strong>Map ID:</strong> {item.contentId}
+                            </div>
+                            <div>
+                              <strong>Name:</strong> {item.contentName || 'Unnamed Map'}
+                            </div>
+                            <a
                               href={`/map-editor?id=${item.contentId}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -259,7 +257,8 @@ export default function AdminContent() {
             <div className="px-6 py-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-400">
-                  Showing {((currentPage - 1) * limit) + 1} to {Math.min(currentPage * limit, totalItems)} of {totalItems} items
+                  Showing {(currentPage - 1) * limit + 1} to{' '}
+                  {Math.min(currentPage * limit, totalItems)} of {totalItems} items
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -293,18 +292,21 @@ export default function AdminContent() {
             <h3 className="text-xl font-bold mb-4">
               {actionModal.action === 'approve' ? '✅ Approve Content' : '❌ Reject Content'}
             </h3>
-            
+
             <div className="mb-4 p-4 bg-gray-700 rounded">
               <div className="font-medium">{actionModal.item.contentName || 'Unnamed Content'}</div>
               <div className="text-sm text-gray-400">
-                {adminService.formatContentType(actionModal.item.contentType)} by {actionModal.item.submitterUsername}
+                {adminService.formatContentType(actionModal.item.contentType)} by{' '}
+                {actionModal.item.submitterUsername}
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  {actionModal.action === 'approve' ? 'Notes (optional)' : 'Reason for rejection (required)'}
+                  {actionModal.action === 'approve'
+                    ? 'Notes (optional)'
+                    : 'Reason for rejection (required)'}
                 </label>
                 <textarea
                   value={actionNotes}
@@ -312,7 +314,7 @@ export default function AdminContent() {
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded resize-none"
                   rows={4}
                   placeholder={
-                    actionModal.action === 'approve' 
+                    actionModal.action === 'approve'
                       ? 'Optional notes about the approval...'
                       : 'Please explain why this content is being rejected...'
                   }

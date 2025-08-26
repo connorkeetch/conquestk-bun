@@ -1,15 +1,15 @@
-import React from 'react';
+import type React from 'react'
 
 interface SimpleMapSVGProps {
-  territories: { [key: string]: any };
-  onTerritoryClick: (territoryId: string) => void;
-  onTerritoryHover: (territoryId: string | null) => void;
-  getTerritoryColor: (territoryId: string) => string;
-  hoveredTerritory: string | null;
-  selectedTerritory: string | null;
-  selectedTargetTerritory: string | null;
-  validTargets: string[];
-  pendingAction: string | null;
+  territories: { [key: string]: any }
+  onTerritoryClick: (territoryId: string) => void
+  onTerritoryHover: (territoryId: string | null) => void
+  getTerritoryColor: (territoryId: string) => string
+  hoveredTerritory: string | null
+  selectedTerritory: string | null
+  selectedTargetTerritory: string | null
+  validTargets: string[]
+  pendingAction: string | null
 }
 
 export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
@@ -62,42 +62,38 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
     return {
       className: `${baseClasses} ${extraClasses}`,
       strokeWidth,
-      stroke: strokeColor
+      stroke: strokeColor,
     }
   }
 
   // Simple geometric territory shapes for the fantasy map
   const territoryPaths: { [key: string]: string } = {
     // Northern Lands (top row)
-    frozen_wastes: "M 50 50 L 200 40 L 220 100 L 180 120 L 80 110 Z",
-    ice_peaks: "M 220 40 L 380 50 L 400 110 L 350 130 L 240 120 L 220 100 Z", 
-    tundra_plains: "M 120 110 L 320 120 L 340 170 L 280 180 L 140 170 Z",
-    
+    frozen_wastes: 'M 50 50 L 200 40 L 220 100 L 180 120 L 80 110 Z',
+    ice_peaks: 'M 220 40 L 380 50 L 400 110 L 350 130 L 240 120 L 220 100 Z',
+    tundra_plains: 'M 120 110 L 320 120 L 340 170 L 280 180 L 140 170 Z',
+
     // Central Kingdoms (middle area)
-    forest_realm: "M 50 170 L 180 160 L 200 220 L 160 240 L 70 230 Z",
-    mountain_pass: "M 200 150 L 380 140 L 420 200 L 380 220 L 220 210 Z",
-    river_valley: "M 30 230 L 120 220 L 140 280 L 90 300 L 50 290 Z",
-    golden_fields: "M 320 210 L 450 200 L 470 260 L 430 280 L 340 270 Z",
-    
+    forest_realm: 'M 50 170 L 180 160 L 200 220 L 160 240 L 70 230 Z',
+    mountain_pass: 'M 200 150 L 380 140 L 420 200 L 380 220 L 220 210 Z',
+    river_valley: 'M 30 230 L 120 220 L 140 280 L 90 300 L 50 290 Z',
+    golden_fields: 'M 320 210 L 450 200 L 470 260 L 430 280 L 340 270 Z',
+
     // Southern Realms (lower middle)
-    crystal_caverns: "M 70 290 L 200 280 L 220 340 L 180 360 L 90 350 Z",
-    coastal_haven: "M 30 350 L 120 340 L 140 400 L 90 420 L 50 410 Z",
-    burning_sands: "M 140 360 L 280 350 L 320 410 L 260 430 L 160 420 Z",
-    trade_crossroads: "M 280 350 L 450 340 L 480 400 L 430 420 L 300 410 Z",
-    
+    crystal_caverns: 'M 70 290 L 200 280 L 220 340 L 180 360 L 90 350 Z',
+    coastal_haven: 'M 30 350 L 120 340 L 140 400 L 90 420 L 50 410 Z',
+    burning_sands: 'M 140 360 L 280 350 L 320 410 L 260 430 L 160 420 Z',
+    trade_crossroads: 'M 280 350 L 450 340 L 480 400 L 430 420 L 300 410 Z',
+
     // Eastern Empire (right side)
-    dragon_spine: "M 420 200 L 520 190 L 540 280 L 500 300 L 440 290 L 430 250 Z",
-    jade_peaks: "M 430 320 L 520 310 L 540 380 L 500 400 L 450 390 Z",
-    mystic_isles: "M 520 290 L 580 280 L 600 340 L 570 360 L 540 350 Z"
+    dragon_spine: 'M 420 200 L 520 190 L 540 280 L 500 300 L 440 290 L 430 250 Z',
+    jade_peaks: 'M 430 320 L 520 310 L 540 380 L 500 400 L 450 390 Z',
+    mystic_isles: 'M 520 290 L 580 280 L 600 340 L 570 360 L 540 350 Z',
   }
 
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-blue-100 to-green-100 rounded-lg overflow-hidden">
-      <svg
-        viewBox="0 0 600 450"
-        className="w-full h-full"
-        style={{ maxHeight: '70vh' }}
-      >
+      <svg viewBox="0 0 600 450" className="w-full h-full" style={{ maxHeight: '70vh' }}>
         {/* Background elements for visual appeal */}
         <defs>
           <radialGradient id="mountainGradient" cx="50%" cy="50%" r="50%">
@@ -105,7 +101,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
             <stop offset="100%" stopColor="#d0d0d0" />
           </radialGradient>
           <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.3"/>
+            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.3" />
           </filter>
         </defs>
 
@@ -113,9 +109,9 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
         {Object.keys(territories).map((territoryId) => {
           const styles = getTerritoryStyles(territoryId)
           const pathData = territoryPaths[territoryId]
-          
+
           if (!pathData) return null
-          
+
           return (
             <g key={territoryId}>
               <path
@@ -130,7 +126,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
                 onMouseEnter={() => onTerritoryHover(territoryId)}
                 onMouseLeave={() => onTerritoryHover(null)}
               />
-              
+
               {/* Territory name label on hover */}
               {hoveredTerritory === territoryId && (
                 <text
@@ -152,12 +148,12 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
         <circle cx="550" cy="400" r="3" fill="#9C27B0" opacity="0.5" />
         <circle cx="300" cy="225" r="2" fill="#FF9800" opacity="0.5" />
       </svg>
-      
+
       {/* Map title overlay */}
       <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white px-3 py-1 rounded-lg text-sm font-semibold">
         Fantasy Realms
       </div>
-      
+
       {/* Legend overlay */}
       <div className="absolute bottom-4 right-4 bg-white bg-opacity-90 p-2 rounded-lg text-xs">
         <div className="font-semibold mb-1">Continents:</div>
@@ -179,5 +175,5 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

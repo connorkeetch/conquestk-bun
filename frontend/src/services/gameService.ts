@@ -87,7 +87,7 @@ export const gameService = {
     const rooms = response.data.rooms || []
     return {
       ...response.data,
-      rooms: rooms.filter((room: GameRoom) => !room.isPrivate)
+      rooms: rooms.filter((room: GameRoom) => !room.isPrivate),
     }
-  }
+  },
 }

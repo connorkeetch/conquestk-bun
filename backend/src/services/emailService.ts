@@ -1,70 +1,63 @@
-import nodemailer from 'nodemailer';
-import sgMail from '@sendgrid/mail';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import fs from 'fs/promises';
+import sgMail from '@sendgrid/mail'
+import nodemailer from 'nodemailer'
+import { v4 as uuidv4 } from 'uuid'
 
 interface EmailOptions {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
+  to: string
+  subject: string
+  html: string
+  text: string
 }
 
 interface VerificationEmailData {
-  username: string;
-  email: string;
-  verificationLink: string;
-  expiresIn: string;
+  username: string
+  email: string
+  verificationLink: string
+  expiresIn: string
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
-  private useSendGrid: boolean = false;
-  private emailEnabled: boolean = false;
+  private transporter: nodemailer.Transporter | null = null
+  private useSendGrid: boolean = false
+  private emailEnabled: boolean = false
 
   constructor() {
-    this.initialize();
+    this.initialize()
   }
 
   private async initialize() {
-    const emailProvider = process.env.EMAIL_PROVIDER || 'smtp';
-    this.emailEnabled = process.env.EMAIL_ENABLED === 'true';
+    const emailProvider = process.env.EMAIL_PROVIDER || 'smtp'
+    this.emailEnabled = process.env.EMAIL_ENABLED === 'true'
 
     if (!this.emailEnabled) {
-      console.log('Email service is disabled');
-      return;
+      return
     }
 
     if (emailProvider === 'sendgrid') {
-      const apiKey = process.env.SENDGRID_API_KEY;
+      const apiKey = process.env.SENDGRID_API_KEY
       if (apiKey) {
-        sgMail.setApiKey(apiKey);
-        this.useSendGrid = true;
-        console.log('Email service initialized with SendGrid');
+        sgMail.setApiKey(apiKey)
+        this.useSendGrid = true
       } else {
-        console.error('SendGrid API key not found');
       }
     } else {
       // Configure SMTP
       this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
-      });
+      })
 
       // Verify SMTP connection
       if (this.transporter && process.env.SMTP_USER) {
         try {
-          await this.transporter.verify();
-          console.log('Email service initialized with SMTP');
-        } catch (error) {
-          console.error('SMTP connection failed:', error);
-          this.emailEnabled = false;
+          await this.transporter.verify()
+        } catch (_error) {
+          this.emailEnabled = false
         }
       }
     }
@@ -72,12 +65,11 @@ class EmailService {
 
   private async sendEmail(options: EmailOptions): Promise<boolean> {
     if (!this.emailEnabled) {
-      console.log('Email service disabled, skipping email:', options.subject);
-      return false;
+      return false
     }
 
-    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com';
-    const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game';
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com'
+    const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game'
 
     try {
       if (this.useSendGrid) {
@@ -90,8 +82,8 @@ class EmailService {
           subject: options.subject,
           text: options.text,
           html: options.html,
-        };
-        await sgMail.send(msg);
+        }
+        await sgMail.send(msg)
       } else if (this.transporter) {
         await this.transporter.sendMail({
           from: `"${fromName}" <${fromEmail}>`,
@@ -99,27 +91,23 @@ class EmailService {
           subject: options.subject,
           text: options.text,
           html: options.html,
-        });
+        })
       } else {
-        console.error('No email provider configured');
-        return false;
+        return false
       }
-      
-      console.log(`Email sent successfully to ${options.to}`);
-      return true;
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      return false;
+      return true
+    } catch (_error) {
+      return false
     }
   }
 
   public generateVerificationToken(): string {
-    return uuidv4();
+    return uuidv4()
   }
 
   public async sendVerificationEmail(data: VerificationEmailData): Promise<boolean> {
-    const subject = 'Verify Your ConquestK Account';
-    
+    const subject = 'Verify Your ConquestK Account'
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -231,7 +219,7 @@ class EmailService {
         </div>
       </body>
       </html>
-    `;
+    `
 
     const text = `
 Welcome to ConquestK, ${data.username}!
@@ -246,24 +234,24 @@ This link expires in ${data.expiresIn}.
 If you didn't create an account, you can safely ignore this email.
 
 © 2024 ConquestK. All rights reserved.
-    `.trim();
+    `.trim()
 
     return await this.sendEmail({
       to: data.email,
       subject,
       html,
       text,
-    });
+    })
   }
 
   public async sendPasswordResetEmail(data: {
-    username: string;
-    email: string;
-    resetLink: string;
-    expiresIn: string;
+    username: string
+    email: string
+    resetLink: string
+    expiresIn: string
   }): Promise<boolean> {
-    const subject = 'Reset Your ConquestK Password';
-    
+    const subject = 'Reset Your ConquestK Password'
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -373,7 +361,7 @@ If you didn't create an account, you can safely ignore this email.
         </div>
       </body>
       </html>
-    `;
+    `
 
     const text = `
 Password Reset for ${data.username}
@@ -388,19 +376,19 @@ This link expires in ${data.expiresIn} and can only be used once.
 If you didn't request a password reset, please ignore this email. Your password won't be changed.
 
 © 2024 ConquestK. All rights reserved.
-    `.trim();
+    `.trim()
 
     return await this.sendEmail({
       to: data.email,
       subject,
       html,
       text,
-    });
+    })
   }
 
   public isEnabled(): boolean {
-    return this.emailEnabled;
+    return this.emailEnabled
   }
 }
 
-export default new EmailService();
+export default new EmailService()

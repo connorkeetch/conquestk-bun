@@ -1,29 +1,28 @@
-import { query } from '../config/database';
-import { logger } from './logger';
+import { query } from '../config/database'
+import { logger } from './logger'
 
 export async function ensureTablesExist(): Promise<void> {
   try {
-    logger.info('🔧 Checking if database tables exist...');
-    
+    logger.info('🔧 Checking if database tables exist...')
+
     // First check if we can connect and if tables exist
-    const result = await query('SELECT 1 FROM users LIMIT 1');
-    logger.info('✅ Database tables already exist');
-    return;
-  } catch (error) {
-    logger.warn('⚠️  Tables not found, creating them now...');
-    
+    const _result = await query('SELECT 1 FROM users LIMIT 1')
+    logger.info('✅ Database tables already exist')
+    return
+  } catch (_error) {
+    logger.warn('⚠️  Tables not found, creating them now...')
+
     try {
       // Create PostgreSQL tables
-      await createPostgreSQLTables();
-      logger.info('✅ Successfully created all PostgreSQL tables');
-      
+      await createPostgreSQLTables()
+      logger.info('✅ Successfully created all PostgreSQL tables')
+
       // Verify tables were created
-      await query('SELECT 1 FROM users LIMIT 1');
-      logger.info('✅ Table creation verified');
-      
+      await query('SELECT 1 FROM users LIMIT 1')
+      logger.info('✅ Table creation verified')
     } catch (createError) {
-      logger.error('❌ Failed to create tables:', createError);
-      throw new Error(`Database table creation failed: ${createError}`);
+      logger.error('❌ Failed to create tables:', createError)
+      throw new Error(`Database table creation failed: ${createError}`)
     }
   }
 }
@@ -31,7 +30,7 @@ export async function ensureTablesExist(): Promise<void> {
 async function createPostgreSQLTables(): Promise<void> {
   const statements = [
     'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"',
-    
+
     `CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -40,7 +39,7 @@ async function createPostgreSQLTables(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS game_rooms (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
@@ -51,7 +50,7 @@ async function createPostgreSQLTables(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS room_players (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
@@ -59,7 +58,7 @@ async function createPostgreSQLTables(): Promise<void> {
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(room_id, user_id)
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS game_states (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
@@ -70,7 +69,7 @@ async function createPostgreSQLTables(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS game_moves (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         game_state_id UUID NOT NULL REFERENCES game_states(id) ON DELETE CASCADE,
@@ -79,7 +78,7 @@ async function createPostgreSQLTables(): Promise<void> {
         move_data JSONB NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS custom_maps (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
@@ -89,7 +88,7 @@ async function createPostgreSQLTables(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    
+
     `CREATE TABLE IF NOT EXISTS player_stats (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -101,7 +100,7 @@ async function createPostgreSQLTables(): Promise<void> {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id)
     )`,
-    
+
     // Create indexes
     'CREATE INDEX IF NOT EXISTS idx_game_rooms_status ON game_rooms(status)',
     'CREATE INDEX IF NOT EXISTS idx_game_rooms_host_id ON game_rooms(host_id)',
@@ -113,7 +112,7 @@ async function createPostgreSQLTables(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_custom_maps_creator_id ON custom_maps(creator_id)',
     'CREATE INDEX IF NOT EXISTS idx_custom_maps_public ON custom_maps(is_public)',
     'CREATE INDEX IF NOT EXISTS idx_player_stats_user_id ON player_stats(user_id)',
-    
+
     // Function for updating timestamps
     `CREATE OR REPLACE FUNCTION update_updated_at_column()
     RETURNS TRIGGER AS $$
@@ -122,7 +121,7 @@ async function createPostgreSQLTables(): Promise<void> {
         RETURN NEW;
     END;
     $$ language 'plpgsql'`,
-    
+
     // Triggers
     `DO $$ BEGIN
         CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
@@ -130,46 +129,46 @@ async function createPostgreSQLTables(): Promise<void> {
     EXCEPTION
         WHEN duplicate_object THEN null;
     END $$`,
-    
+
     `DO $$ BEGIN
         CREATE TRIGGER update_game_rooms_updated_at BEFORE UPDATE ON game_rooms
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     EXCEPTION
         WHEN duplicate_object THEN null;
     END $$`,
-    
+
     `DO $$ BEGIN
         CREATE TRIGGER update_game_states_updated_at BEFORE UPDATE ON game_states
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     EXCEPTION
         WHEN duplicate_object THEN null;
     END $$`,
-    
+
     `DO $$ BEGIN
         CREATE TRIGGER update_custom_maps_updated_at BEFORE UPDATE ON custom_maps
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     EXCEPTION
         WHEN duplicate_object THEN null;
     END $$`,
-    
+
     `DO $$ BEGIN
         CREATE TRIGGER update_player_stats_updated_at BEFORE UPDATE ON player_stats
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     EXCEPTION
         WHEN duplicate_object THEN null;
-    END $$`
-  ];
+    END $$`,
+  ]
 
   for (const statement of statements) {
     try {
-      await query(statement);
-      logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`);
+      await query(statement)
+      logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`)
     } catch (error: any) {
       if (error.message.includes('already exists') || error.message.includes('duplicate')) {
-        logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`);
+        logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`)
       } else {
-        logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`);
-        throw error;
+        logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`)
+        throw error
       }
     }
   }

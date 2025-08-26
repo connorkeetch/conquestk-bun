@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { authService } from '../services/authService'
-import { User } from '../types/user'
+import type { User } from '../types/user'
 
 interface AuthState {
   user: User | null
@@ -24,7 +24,7 @@ export const login = createAsyncThunk(
     const response = await authService.login(credentials)
     localStorage.setItem('token', response.token)
     return response
-  }
+  },
 )
 
 export const register = createAsyncThunk(
@@ -33,13 +33,13 @@ export const register = createAsyncThunk(
     const response = await authService.register(userData)
     localStorage.setItem('token', response.token)
     return response
-  }
+  },
 )
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
   const token = localStorage.getItem('token')
   if (!token) throw new Error('No token found')
-  
+
   try {
     const response = await authService.getProfile()
     return { user: response.user, token }

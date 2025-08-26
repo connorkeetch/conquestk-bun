@@ -1,53 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface SettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
-type SettingsTab = 'account' | 'game' | 'audio' | 'display' | 'notifications' | 'privacy' | 'advanced';
+type SettingsTab =
+  | 'account'
+  | 'game'
+  | 'audio'
+  | 'display'
+  | 'notifications'
+  | 'privacy'
+  | 'advanced'
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const modalRef = useRef<HTMLDivElement>(null)
 
   // Handle keyboard shortcuts and escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        onClose()
       }
-    };
+    }
 
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'hidden'
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen, onClose])
 
   // Handle clicking outside modal
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
+        onClose()
       }
-    };
+    }
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, onClose])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   const settingsTabs = [
     { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
@@ -56,8 +64,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     { id: 'display' as SettingsTab, label: 'Display', icon: '🖥️' },
     { id: 'notifications' as SettingsTab, label: 'Notifications', icon: '🔔' },
     { id: 'privacy' as SettingsTab, label: 'Privacy', icon: '🛡️' },
-    { id: 'advanced' as SettingsTab, label: 'Advanced', icon: '⚙️' }
-  ];
+    { id: 'advanced' as SettingsTab, label: 'Advanced', icon: '⚙️' },
+  ]
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -69,25 +77,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                    placeholder="Enter username" 
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="Enter username"
                     defaultValue="Player123"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                    placeholder="Enter email" 
+                  <input
+                    type="email"
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="Enter email"
                     defaultValue="player@example.com"
                   />
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Avatar</h3>
               <div className="flex items-center gap-4">
@@ -95,7 +103,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   P
                 </div>
                 <div>
-                  <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg mb-2 transition-colors">📁 Upload New Avatar</button>
+                  <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg mb-2 transition-colors">
+                    📁 Upload New Avatar
+                  </button>
                   <p className="text-xs text-gray-400">Recommended: 256x256px, JPG or PNG</p>
                 </div>
               </div>
@@ -116,7 +126,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'game':
         return (
@@ -127,18 +137,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Auto-end Turn</label>
-                    <p className="text-xs text-gray-400">Automatically end turn when no moves available</p>
+                    <p className="text-xs text-gray-400">
+                      Automatically end turn when no moves available
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-gray-300">Show Attack Animations</label>
-                    <p className="text-xs text-gray-400">Display dice rolling and battle animations</p>
+                    <label className="text-sm font-medium text-gray-300">
+                      Show Attack Animations
+                    </label>
+                    <p className="text-xs text-gray-400">
+                      Display dice rolling and battle animations
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -149,7 +165,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Fast Battle Mode</label>
-                    <p className="text-xs text-gray-400">Skip individual dice animations for faster gameplay</p>
+                    <p className="text-xs text-gray-400">
+                      Skip individual dice animations for faster gameplay
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" />
@@ -163,10 +181,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Turn Timer</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Default Turn Time (seconds)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Default Turn Time (seconds)
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="60">60 seconds</option>
-                    <option value="120" selected>120 seconds</option>
+                    <option value="120" selected>
+                      120 seconds
+                    </option>
                     <option value="180">180 seconds</option>
                     <option value="300">300 seconds</option>
                     <option value="0">No limit</option>
@@ -179,17 +201,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Map Preferences</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Map Style</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Preferred Map Style
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="classic">Classic Risk</option>
-                    <option value="custom" selected>Custom Maps</option>
+                    <option value="custom" selected>
+                      Custom Maps
+                    </option>
                     <option value="both">Both</option>
                   </select>
                 </div>
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'audio':
         return (
@@ -198,20 +224,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Volume Controls</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Master Volume</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Master Volume
+                  </label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="75" />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Sound Effects</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Sound Effects
+                  </label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="60" />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Background Music</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Background Music
+                  </label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="40" />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Voice Chat</label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="80" />
@@ -225,17 +257,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Mute When Minimized</label>
-                    <p className="text-xs text-gray-400">Automatically mute when game window is not active</p>
+                    <p className="text-xs text-gray-400">
+                      Automatically mute when game window is not active
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-gray-300">Battle Sound Effects</label>
+                    <label className="text-sm font-medium text-gray-300">
+                      Battle Sound Effects
+                    </label>
                     <p className="text-xs text-gray-400">Play sounds during dice battles</p>
                   </div>
                   <label className="toggle">
@@ -246,7 +282,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'display':
         return (
@@ -282,7 +318,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">High Contrast Mode</label>
@@ -311,17 +347,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Map Display</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Territory Label Size</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Territory Label Size
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="small">Small</option>
-                    <option value="medium" selected>Medium</option>
+                    <option value="medium" selected>
+                      Medium
+                    </option>
                     <option value="large">Large</option>
                   </select>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-gray-300">Show Territory Names</label>
+                    <label className="text-sm font-medium text-gray-300">
+                      Show Territory Names
+                    </label>
                     <p className="text-xs text-gray-400">Display territory names on map</p>
                   </div>
                   <label className="toggle">
@@ -332,7 +374,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'notifications':
         return (
@@ -350,7 +392,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Game Invitations</label>
@@ -388,7 +430,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Messages</label>
@@ -415,7 +457,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Tournament Updates</label>
@@ -429,7 +471,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'privacy':
         return (
@@ -438,18 +480,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Profile Visibility</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Profile Visibility</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Profile Visibility
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                    <option value="public" selected>Public - Anyone can view</option>
+                    <option value="public" selected>
+                      Public - Anyone can view
+                    </option>
                     <option value="friends">Friends Only</option>
                     <option value="private">Private - Hidden</option>
                   </select>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-gray-300">Show Game Statistics</label>
-                    <p className="text-xs text-gray-400">Allow others to see your win/loss record</p>
+                    <label className="text-sm font-medium text-gray-300">
+                      Show Game Statistics
+                    </label>
+                    <p className="text-xs text-gray-400">
+                      Allow others to see your win/loss record
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -474,18 +524,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Communication</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Who can message you</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Who can message you
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="everyone">Everyone</option>
-                    <option value="friends" selected>Friends Only</option>
+                    <option value="friends" selected>
+                      Friends Only
+                    </option>
                     <option value="nobody">Nobody</option>
                   </select>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Who can invite you to games</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Who can invite you to games
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                    <option value="everyone" selected>Everyone</option>
+                    <option value="everyone" selected>
+                      Everyone
+                    </option>
                     <option value="friends">Friends Only</option>
                     <option value="nobody">Nobody</option>
                   </select>
@@ -506,11 +564,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Performance Metrics</label>
-                    <p className="text-xs text-gray-400">Share performance data to help optimize the game</p>
+                    <p className="text-xs text-gray-400">
+                      Share performance data to help optimize the game
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -520,7 +580,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       case 'advanced':
         return (
@@ -529,19 +589,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Performance</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Graphics Quality</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Graphics Quality
+                  </label>
                   <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
+                    <option value="medium" selected>
+                      Medium
+                    </option>
                     <option value="high">High</option>
                     <option value="ultra">Ultra</option>
                   </select>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-gray-300">Hardware Acceleration</label>
-                    <p className="text-xs text-gray-400">Use GPU for rendering (requires restart)</p>
+                    <label className="text-sm font-medium text-gray-300">
+                      Hardware Acceleration
+                    </label>
+                    <p className="text-xs text-gray-400">
+                      Use GPU for rendering (requires restart)
+                    </p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -575,7 +643,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-sm font-medium text-gray-300">Console Logging</label>
@@ -607,16 +675,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        );
+        )
 
       default:
-        return <div>Settings content not found</div>;
+        return <div>Settings content not found</div>
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
-      <div 
+      <div
         ref={modalRef}
         className="bg-gray-800 rounded-xl border border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
       >
@@ -633,7 +701,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div className="text-xs text-gray-400 hidden md:block">
               Press <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">Esc</kbd> to close
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="w-10 h-10 flex items-center justify-center hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
             >
@@ -668,29 +736,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-8">
-              {renderTabContent()}
-            </div>
+            <div className="p-8">{renderTabContent()}</div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-700 bg-gray-900">
-          <div className="text-sm text-gray-400">
-            Changes are saved automatically
-          </div>
+          <div className="text-sm text-gray-400">Changes are saved automatically</div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+            >
               Cancel
             </button>
-            <button onClick={onClose} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
               Save & Close
             </button>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SettingsModal;
+export default SettingsModal

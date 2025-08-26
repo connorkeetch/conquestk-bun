@@ -1,110 +1,167 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 interface NavItem {
-  path: string;
-  label: string;
-  icon: string;
-  dropdown?: DropdownItem[];
+  path: string
+  label: string
+  icon: string
+  dropdown?: DropdownItem[]
 }
 
 interface DropdownItem {
-  path: string;
-  label: string;
-  icon: string;
-  description?: string;
-  comingSoon?: boolean;
+  path: string
+  label: string
+  icon: string
+  description?: string
+  comingSoon?: boolean
 }
 
 const PrimaryNav: React.FC = () => {
-  const location = useLocation();
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const location = useLocation()
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Navigation items with dropdowns
   const navItems: NavItem[] = [
     {
       path: '/dashboard',
       label: 'Dashboard',
-      icon: '🏠'
+      icon: '🏠',
     },
     {
       path: '/play',
       label: 'Play',
       icon: '🎮',
       dropdown: [
-        { path: '/play/quick-match', label: 'Quick Match', icon: '🚀', description: 'Find a game fast' },
+        {
+          path: '/play/quick-match',
+          label: 'Quick Match',
+          icon: '🚀',
+          description: 'Find a game fast',
+        },
         { path: '/play/ranked', label: 'Ranked', icon: '🏆', description: 'Competitive play' },
-        { path: '/play/create', label: 'Create Lobby', icon: '➕', description: 'Host custom game' },
-        { path: '/play/browse', label: 'Browse Lobbies', icon: '🔍', description: 'Join existing games' },
+        {
+          path: '/play/create',
+          label: 'Create Lobby',
+          icon: '➕',
+          description: 'Host custom game',
+        },
+        {
+          path: '/play/browse',
+          label: 'Browse Lobbies',
+          icon: '🔍',
+          description: 'Join existing games',
+        },
         { path: '/play/ai', label: 'vs AI', icon: '🤖', description: 'Single player' },
-        { path: '/play/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' }
-      ]
+        { path: '/play/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
+      ],
     },
     {
       path: '/maps',
       label: 'Maps',
       icon: '🗺️',
       dropdown: [
-        { path: '/maps/official', label: 'Official Maps', icon: '🌎', description: 'Classic Risk territories' },
-        { path: '/maps/featured', label: 'Featured', icon: '⭐', description: 'Community highlights' },
+        {
+          path: '/maps/official',
+          label: 'Official Maps',
+          icon: '🌎',
+          description: 'Classic Risk territories',
+        },
+        {
+          path: '/maps/featured',
+          label: 'Featured',
+          icon: '⭐',
+          description: 'Community highlights',
+        },
         { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
         { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
         { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
-        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' }
-      ]
+        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' },
+      ],
     },
     {
       path: '/community',
       label: 'Community',
       icon: '👥',
       dropdown: [
-        { path: '/community/leaderboards', label: 'Leaderboards', icon: '🏆', description: 'Top players' },
-        { path: '/community/tournaments', label: 'Tournaments', icon: '🎪', description: 'Organized events' },
-        { path: '/community/friends', label: 'Friends', icon: '👫', description: 'Friend management' },
-        { path: '/community/chat', label: 'Chat Rooms', icon: '💬', description: 'General discussion' },
-        { path: '/community/news', label: 'News', icon: '📰', description: 'Updates & announcements' },
-        { path: '/community/support', label: 'Support', icon: '🆘', description: 'Help & feedback' }
-      ]
-    }
-  ];
+        {
+          path: '/community/leaderboards',
+          label: 'Leaderboards',
+          icon: '🏆',
+          description: 'Top players',
+        },
+        {
+          path: '/community/tournaments',
+          label: 'Tournaments',
+          icon: '🎪',
+          description: 'Organized events',
+        },
+        {
+          path: '/community/friends',
+          label: 'Friends',
+          icon: '👫',
+          description: 'Friend management',
+        },
+        {
+          path: '/community/chat',
+          label: 'Chat Rooms',
+          icon: '💬',
+          description: 'General discussion',
+        },
+        {
+          path: '/community/news',
+          label: 'News',
+          icon: '📰',
+          description: 'Updates & announcements',
+        },
+        {
+          path: '/community/support',
+          label: 'Support',
+          icon: '🆘',
+          description: 'Help & feedback',
+        },
+      ],
+    },
+  ]
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
+        setActiveDropdown(null)
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
-      return location.pathname === '/' || location.pathname === '/dashboard';
+      return location.pathname === '/' || location.pathname === '/dashboard'
     }
-    return location.pathname.startsWith(path);
-  };
+    return location.pathname.startsWith(path)
+  }
 
   const getNavItemClass = (path: string) => {
-    const baseClass = "relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer";
-    
+    const baseClass =
+      'relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer'
+
     if (isActive(path)) {
-      return `${baseClass} bg-blue-600 text-white shadow-lg`;
+      return `${baseClass} bg-blue-600 text-white shadow-lg`
     }
-    return `${baseClass} text-gray-300 hover:text-white hover:bg-gray-700`;
-  };
+    return `${baseClass} text-gray-300 hover:text-white hover:bg-gray-700`
+  }
 
   const handleNavItemClick = (item: NavItem, e: React.MouseEvent) => {
     if (item.dropdown) {
-      e.preventDefault();
-      setActiveDropdown(activeDropdown === item.path ? null : item.path);
+      e.preventDefault()
+      setActiveDropdown(activeDropdown === item.path ? null : item.path)
     } else {
-      setActiveDropdown(null);
+      setActiveDropdown(null)
     }
-  };
+  }
 
   return (
     <div className="hidden md:flex items-center space-x-1" ref={dropdownRef}>
@@ -117,15 +174,20 @@ const PrimaryNav: React.FC = () => {
             >
               <span>{item.icon}</span>
               <span>{item.label}</span>
-              <svg 
+              <svg
                 className={`w-4 h-4 transition-transform duration-200 ${
                   activeDropdown === item.path ? 'rotate-180' : ''
-                }`} 
-                fill="none" 
-                stroke="currentColor" 
+                }`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </div>
           ) : (
@@ -142,7 +204,7 @@ const PrimaryNav: React.FC = () => {
           {/* Dropdown Menu */}
           {item.dropdown && activeDropdown === item.path && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 py-2 z-50">
-              {item.dropdown.map((dropdownItem) => (
+              {item.dropdown.map((dropdownItem) =>
                 dropdownItem.comingSoon ? (
                   <div
                     key={dropdownItem.path}
@@ -157,7 +219,9 @@ const PrimaryNav: React.FC = () => {
                         </span>
                       </div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-gray-500 mt-0.5">{dropdownItem.description}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {dropdownItem.description}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -172,18 +236,20 @@ const PrimaryNav: React.FC = () => {
                     <div className="flex-1">
                       <div className="font-medium text-white">{dropdownItem.label}</div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-gray-400 mt-0.5">{dropdownItem.description}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {dropdownItem.description}
+                        </div>
                       )}
                     </div>
                   </Link>
-                )
-              ))}
+                ),
+              )}
             </div>
           )}
         </div>
       ))}
     </div>
-  );
-};
+  )
+}
 
-export default PrimaryNav;
+export default PrimaryNav

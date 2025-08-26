@@ -1,222 +1,220 @@
-import React, { useState, useEffect } from 'react';
-import { useAppSelector } from '../../hooks/redux';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { useAppSelector } from '../../hooks/redux'
 
 interface ProfileData {
-  username: string;
-  email: string;
+  username: string
+  email: string
 }
 
 const EditableProfile: React.FC = () => {
-  const user = useAppSelector(state => state.auth.user);
-  const [isEditing, setIsEditing] = useState(false);
+  const _user = useAppSelector((state) => state.auth.user)
+  const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<ProfileData>({
     username: '',
-    email: ''
-  });
+    email: '',
+  })
   const [editedProfile, setEditedProfile] = useState<ProfileData>({
     username: '',
-    email: ''
-  });
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
+    email: '',
+  })
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [checkingUsername, setCheckingUsername] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
-    confirm: ''
-  });
+    confirm: '',
+  })
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    fetchProfile()
+  }, [fetchProfile])
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('authToken')
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
       const response = await fetch(`${apiUrl}/users/profile`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json()
         setProfile({
           username: data.username,
-          email: data.email
-        });
+          email: data.email,
+        })
         setEditedProfile({
           username: data.username,
-          email: data.email
-        });
+          email: data.email,
+        })
       }
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
-    }
-  };
+    } catch (_error) {}
+  }
 
   const checkUsernameAvailability = async (username: string) => {
     if (username === profile.username) {
-      setUsernameAvailable(true);
-      return;
+      setUsernameAvailable(true)
+      return
     }
 
     if (username.length < 3) {
-      setUsernameAvailable(false);
-      return;
+      setUsernameAvailable(false)
+      return
     }
 
-    setCheckingUsername(true);
+    setCheckingUsername(true)
     try {
-      const token = localStorage.getItem('authToken');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('authToken')
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
       const response = await fetch(`${apiUrl}/users/check-username`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ username })
-      });
-      
-      const data = await response.json();
-      setUsernameAvailable(data.available);
-    } catch (error) {
-      console.error('Failed to check username:', error);
+        body: JSON.stringify({ username }),
+      })
+
+      const data = await response.json()
+      setUsernameAvailable(data.available)
+    } catch (_error) {
     } finally {
-      setCheckingUsername(false);
+      setCheckingUsername(false)
     }
-  };
+  }
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = e.target.value;
-    setEditedProfile(prev => ({ ...prev, username: newUsername }));
-    
+    const newUsername = e.target.value
+    setEditedProfile((prev) => ({ ...prev, username: newUsername }))
+
     // Debounce username checking
     const timeoutId = setTimeout(() => {
-      checkUsernameAvailability(newUsername);
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  };
+      checkUsernameAvailability(newUsername)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }
 
   const handleSave = async () => {
-    setError(null);
-    setSuccess(null);
-    
+    setError(null)
+    setSuccess(null)
+
     // Validate
     if (editedProfile.username.length < 3) {
-      setError('Username must be at least 3 characters');
-      return;
-    }
-    
-    if (!editedProfile.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setError('Invalid email format');
-      return;
-    }
-    
-    if (usernameAvailable === false) {
-      setError('Username is not available');
-      return;
+      setError('Username must be at least 3 characters')
+      return
     }
 
-    setSaving(true);
+    if (!editedProfile.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setError('Invalid email format')
+      return
+    }
+
+    if (usernameAvailable === false) {
+      setError('Username is not available')
+      return
+    }
+
+    setSaving(true)
     try {
-      const token = localStorage.getItem('authToken');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('authToken')
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
       const response = await fetch(`${apiUrl}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(editedProfile)
-      });
-      
-      const data = await response.json();
-      
+        body: JSON.stringify(editedProfile),
+      })
+
+      const data = await response.json()
+
       if (response.ok) {
-        setProfile(editedProfile);
-        setIsEditing(false);
-        setSuccess('Profile updated successfully');
-        setTimeout(() => setSuccess(null), 3000);
+        setProfile(editedProfile)
+        setIsEditing(false)
+        setSuccess('Profile updated successfully')
+        setTimeout(() => setSuccess(null), 3000)
       } else {
-        setError(data.error || 'Failed to update profile');
+        setError(data.error || 'Failed to update profile')
       }
-    } catch (error) {
-      setError('Failed to update profile');
+    } catch (_error) {
+      setError('Failed to update profile')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handlePasswordChange = async () => {
-    setError(null);
-    
+    setError(null)
+
     if (passwords.new !== passwords.confirm) {
-      setError('New passwords do not match');
-      return;
-    }
-    
-    if (passwords.new.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
+      setError('New passwords do not match')
+      return
     }
 
-    setSaving(true);
+    if (passwords.new.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
+    setSaving(true)
     try {
-      const token = localStorage.getItem('authToken');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('authToken')
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
       const response = await fetch(`${apiUrl}/users/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           currentPassword: passwords.current,
-          newPassword: passwords.new
-        })
-      });
-      
-      const data = await response.json();
-      
+          newPassword: passwords.new,
+        }),
+      })
+
+      const data = await response.json()
+
       if (response.ok) {
-        setSuccess('Password changed successfully');
-        setShowPasswordChange(false);
-        setPasswords({ current: '', new: '', confirm: '' });
-        setTimeout(() => setSuccess(null), 3000);
+        setSuccess('Password changed successfully')
+        setShowPasswordChange(false)
+        setPasswords({ current: '', new: '', confirm: '' })
+        setTimeout(() => setSuccess(null), 3000)
       } else {
-        setError(data.error || 'Failed to change password');
+        setError(data.error || 'Failed to change password')
       }
-    } catch (error) {
-      setError('Failed to change password');
+    } catch (_error) {
+      setError('Failed to change password')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleCancel = () => {
-    setEditedProfile(profile);
-    setIsEditing(false);
-    setError(null);
-    setUsernameAvailable(null);
-  };
+    setEditedProfile(profile)
+    setIsEditing(false)
+    setError(null)
+    setUsernameAvailable(null)
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold text-white mb-6">Account Settings</h2>
-      
+
       {error && (
         <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
-      
+
       {success && (
         <div className="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-4">
           {success}
@@ -227,9 +225,7 @@ const EditableProfile: React.FC = () => {
         <div className="space-y-6">
           {/* Username Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Username
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
             <div className="relative">
               <input
                 type="text"
@@ -237,8 +233,8 @@ const EditableProfile: React.FC = () => {
                 onChange={handleUsernameChange}
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 bg-gray-900/50 border rounded-lg text-white transition-all duration-200 ${
-                  isEditing 
-                    ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500' 
+                  isEditing
+                    ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
                     : 'border-gray-700 cursor-not-allowed opacity-75'
                 }`}
               />
@@ -261,17 +257,15 @@ const EditableProfile: React.FC = () => {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
             <input
               type="email"
               value={isEditing ? editedProfile.email : profile.email}
-              onChange={(e) => setEditedProfile(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setEditedProfile((prev) => ({ ...prev, email: e.target.value }))}
               disabled={!isEditing}
               className={`w-full px-4 py-2 bg-gray-900/50 border rounded-lg text-white transition-all duration-200 ${
-                isEditing 
-                  ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500' 
+                isEditing
+                  ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
                   : 'border-gray-700 cursor-not-allowed opacity-75'
               }`}
             />
@@ -326,18 +320,16 @@ const EditableProfile: React.FC = () => {
                 <input
                   type="password"
                   value={passwords.current}
-                  onChange={(e) => setPasswords(prev => ({ ...prev, current: e.target.value }))}
+                  onChange={(e) => setPasswords((prev) => ({ ...prev, current: e.target.value }))}
                   className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  New Password
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
                 <input
                   type="password"
                   value={passwords.new}
-                  onChange={(e) => setPasswords(prev => ({ ...prev, new: e.target.value }))}
+                  onChange={(e) => setPasswords((prev) => ({ ...prev, new: e.target.value }))}
                   className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -348,16 +340,16 @@ const EditableProfile: React.FC = () => {
                 <input
                   type="password"
                   value={passwords.confirm}
-                  onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
+                  onChange={(e) => setPasswords((prev) => ({ ...prev, confirm: e.target.value }))}
                   className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    setShowPasswordChange(false);
-                    setPasswords({ current: '', new: '', confirm: '' });
-                    setError(null);
+                    setShowPasswordChange(false)
+                    setPasswords({ current: '', new: '', confirm: '' })
+                    setError(null)
                   }}
                   className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
@@ -376,7 +368,7 @@ const EditableProfile: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default EditableProfile;
+export default EditableProfile

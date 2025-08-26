@@ -6,7 +6,7 @@
       "color": "#4CAF50"
     },
     "central_kingdoms": {
-      "name": "Central Kingdoms", 
+      "name": "Central Kingdoms",
       "bonus": 4,
       "color": "#2196F3"
     },
@@ -54,7 +54,13 @@
       "id": "mountain_pass",
       "name": "Mountain Pass",
       "continent": "central_kingdoms",
-      "adjacentTerritories": ["ice_peaks", "tundra_plains", "forest_realm", "golden_fields", "dragon_spine"],
+      "adjacentTerritories": [
+        "ice_peaks",
+        "tundra_plains",
+        "forest_realm",
+        "golden_fields",
+        "dragon_spine"
+      ],
       "armyPosition": { "x": 300, "y": 200 }
     },
     "river_valley": {
@@ -96,14 +102,26 @@
       "id": "trade_crossroads",
       "name": "Trade Crossroads",
       "continent": "southern_realms",
-      "adjacentTerritories": ["golden_fields", "burning_sands", "dragon_spine", "jade_peaks", "mystic_isles"],
+      "adjacentTerritories": [
+        "golden_fields",
+        "burning_sands",
+        "dragon_spine",
+        "jade_peaks",
+        "mystic_isles"
+      ],
       "armyPosition": { "x": 375, "y": 380 }
     },
     "dragon_spine": {
       "id": "dragon_spine",
       "name": "Dragon Spine",
       "continent": "eastern_empire",
-      "adjacentTerritories": ["mountain_pass", "golden_fields", "trade_crossroads", "jade_peaks", "mystic_isles"],
+      "adjacentTerritories": [
+        "mountain_pass",
+        "golden_fields",
+        "trade_crossroads",
+        "jade_peaks",
+        "mystic_isles"
+      ],
       "armyPosition": { "x": 450, "y": 260 }
     },
     "jade_peaks": {

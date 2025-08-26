@@ -1,55 +1,63 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '../hooks/redux';
-import pushNotificationService from '../services/pushNotificationService';
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import pushNotificationService from '../services/pushNotificationService'
 import {
-  setShowAttackAnimations,
-  setConfirmAttacks,
-  setTheme,
-  setDebugMode,
-  setBetaFeatures,
   clearCache,
   exportSettings,
   importSettings,
   resetSettings,
-} from '../store/settingsSlice';
+  setBetaFeatures,
+  setConfirmAttacks,
+  setDebugMode,
+  setShowAttackAnimations,
+  setTheme,
+} from '../store/settingsSlice'
 
-type SettingsTab = 'account' | 'game' | 'audio' | 'display' | 'notifications' | 'privacy' | 'advanced';
+type SettingsTab =
+  | 'account'
+  | 'game'
+  | 'audio'
+  | 'display'
+  | 'notifications'
+  | 'privacy'
+  | 'advanced'
 
 interface SettingItem {
-  id: string;
-  label: string;
-  description: string;
-  type: 'toggle' | 'select' | 'range' | 'button' | 'input';
-  isWorking: boolean;
-  defaultValue?: any;
-  options?: { value: string; label: string }[];
-  buttonText?: string;
-  buttonVariant?: 'primary' | 'secondary' | 'danger';
-  onChange?: (value: any) => void;
-  onClick?: () => void;
+  id: string
+  label: string
+  description: string
+  type: 'toggle' | 'select' | 'range' | 'button' | 'input'
+  isWorking: boolean
+  defaultValue?: any
+  options?: { value: string; label: string }[]
+  buttonText?: string
+  buttonVariant?: 'primary' | 'secondary' | 'danger'
+  onChange?: (value: any) => void
+  onClick?: () => void
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
-  const { user } = useAppSelector((state) => state.auth);
-  const settings = useAppSelector((state) => state.settings);
-  const dispatch = useAppDispatch();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default');
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const { user } = useAppSelector((state) => state.auth)
+  const settings = useAppSelector((state) => state.settings)
+  const dispatch = useAppDispatch()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default')
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  const [saveStatus, setSaveStatus] = useState<string | null>(null)
 
   useEffect(() => {
     // Initialize push notification service and check status
     const initNotifications = async () => {
-      await pushNotificationService.initialize();
-      setNotificationStatus(pushNotificationService.getPermissionStatus());
-      setIsSubscribed(pushNotificationService.isEnabled());
-    };
-    initNotifications();
-  }, []);
+      await pushNotificationService.initialize()
+      setNotificationStatus(pushNotificationService.getPermissionStatus())
+      setIsSubscribed(pushNotificationService.isEnabled())
+    }
+    initNotifications()
+  }, [])
 
   const settingsTabs = [
     { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
@@ -58,24 +66,22 @@ export default function Settings() {
     { id: 'display' as SettingsTab, label: 'Display', icon: '🖥️' },
     { id: 'notifications' as SettingsTab, label: 'Notifications', icon: '🔔' },
     { id: 'privacy' as SettingsTab, label: 'Privacy', icon: '🛡️' },
-    { id: 'advanced' as SettingsTab, label: 'Advanced', icon: '⚙️' }
-  ];
+    { id: 'advanced' as SettingsTab, label: 'Advanced', icon: '⚙️' },
+  ]
 
   // Unified settings renderer
   const renderSetting = (setting: SettingItem) => {
     const baseContainerClass = `p-4 rounded-lg border transition-all ${
-      setting.isWorking 
-        ? 'bg-slate-800/50 border-slate-600 hover:border-slate-500' 
+      setting.isWorking
+        ? 'bg-slate-800/50 border-slate-600 hover:border-slate-500'
         : 'bg-slate-800/20 border-slate-700/50 opacity-60'
-    }`;
+    }`
 
     const labelClass = `text-base font-medium ${
       setting.isWorking ? 'text-gray-200' : 'text-gray-400'
-    }`;
+    }`
 
-    const descriptionClass = `text-sm mt-1 ${
-      setting.isWorking ? 'text-gray-400' : 'text-gray-500'
-    }`;
+    const descriptionClass = `text-sm mt-1 ${setting.isWorking ? 'text-gray-400' : 'text-gray-500'}`
 
     const renderComingSoonBadge = () => {
       if (!setting.isWorking) {
@@ -83,34 +89,34 @@ export default function Settings() {
           <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
             Coming Soon
           </div>
-        );
+        )
       }
-      return null;
-    };
+      return null
+    }
 
     const renderControl = () => {
       switch (setting.type) {
         case 'toggle':
           return (
             <label className="toggle">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={setting.defaultValue}
                 disabled={!setting.isWorking}
                 onChange={(e) => {
                   if (setting.isWorking && setting.onChange) {
-                    setting.onChange(e.target.checked);
+                    setting.onChange(e.target.checked)
                   }
                 }}
                 className={!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}
               />
               <span className={`slider ${!setting.isWorking ? 'opacity-50' : ''}`}></span>
             </label>
-          );
-        
+          )
+
         case 'select':
           return (
-            <select 
+            <select
               className={`px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${
                 !setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''
               }`}
@@ -118,56 +124,55 @@ export default function Settings() {
               value={setting.defaultValue}
               onChange={(e) => {
                 if (setting.isWorking && setting.onChange) {
-                  setting.onChange(e.target.value);
+                  setting.onChange(e.target.value)
                 }
               }}
             >
-              {setting.options?.map(option => (
+              {setting.options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
-          );
-        
+          )
+
         case 'range':
           return (
             <div className="w-32">
-              <input 
-                type="range" 
-                min="0" 
-                max="100" 
+              <input
+                type="range"
+                min="0"
+                max="100"
                 defaultValue={setting.defaultValue}
                 disabled={!setting.isWorking}
                 className={`w-full ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
-              <div className="text-xs text-gray-400 text-center mt-1">
-                {setting.defaultValue}%
-              </div>
+              <div className="text-xs text-gray-400 text-center mt-1">{setting.defaultValue}%</div>
             </div>
-          );
+          )
 
-        case 'button':
+        case 'button': {
           const buttonClass = `btn ${
             setting.buttonVariant === 'danger' ? 'btn-danger' : 'btn-secondary'
-          } text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`;
-          
+          } text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+
           return (
-            <button 
+            <button
               className={buttonClass}
               disabled={!setting.isWorking}
               onClick={() => {
                 if (setting.isWorking && setting.onClick) {
-                  setting.onClick();
+                  setting.onClick()
                 }
               }}
             >
               {setting.buttonText}
             </button>
-          );
+          )
+        }
 
-        case 'input':
-          const isEditing = editingField === setting.id;
+        case 'input': {
+          const isEditing = editingField === setting.id
           return (
             <div className="flex items-center gap-2">
               {!isEditing ? (
@@ -178,11 +183,11 @@ export default function Settings() {
                   {setting.isWorking && (
                     <button
                       onClick={() => {
-                        setEditingField(setting.id);
-                        setFieldValues(prev => ({
+                        setEditingField(setting.id)
+                        setFieldValues((prev) => ({
                           ...prev,
-                          [setting.id]: setting.defaultValue || ''
-                        }));
+                          [setting.id]: setting.defaultValue || '',
+                        }))
                       }}
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
                     >
@@ -192,22 +197,23 @@ export default function Settings() {
                 </>
               ) : (
                 <>
-                  <input 
+                  <input
                     type={setting.id === 'email' ? 'email' : 'text'}
                     className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm w-48"
                     value={fieldValues[setting.id] || ''}
-                    onChange={(e) => setFieldValues(prev => ({
-                      ...prev,
-                      [setting.id]: e.target.value
-                    }))}
-                    autoFocus
+                    onChange={(e) =>
+                      setFieldValues((prev) => ({
+                        ...prev,
+                        [setting.id]: e.target.value,
+                      }))
+                    }
                   />
                   <button
                     onClick={() => {
                       // Here you would save to backend
-                      setSaveStatus(`${setting.label} updated successfully!`);
-                      setTimeout(() => setSaveStatus(null), 3000);
-                      setEditingField(null);
+                      setSaveStatus(`${setting.label} updated successfully!`)
+                      setTimeout(() => setSaveStatus(null), 3000)
+                      setEditingField(null)
                     }}
                     className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
                   >
@@ -215,12 +221,12 @@ export default function Settings() {
                   </button>
                   <button
                     onClick={() => {
-                      setEditingField(null);
-                      setFieldValues(prev => {
-                        const newValues = { ...prev };
-                        delete newValues[setting.id];
-                        return newValues;
-                      });
+                      setEditingField(null)
+                      setFieldValues((prev) => {
+                        const newValues = { ...prev }
+                        delete newValues[setting.id]
+                        return newValues
+                      })
                     }}
                     className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
                   >
@@ -229,12 +235,13 @@ export default function Settings() {
                 </>
               )}
             </div>
-          );
+          )
+        }
 
         default:
-          return null;
+          return null
       }
-    };
+    }
 
     return (
       <div key={setting.id} className={`relative ${baseContainerClass}`}>
@@ -244,13 +251,11 @@ export default function Settings() {
             <label className={labelClass}>{setting.label}</label>
             <p className={descriptionClass}>{setting.description}</p>
           </div>
-          <div className="flex-shrink-0">
-            {renderControl()}
-          </div>
+          <div className="flex-shrink-0">{renderControl()}</div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   // Settings data definitions
   const getSettingsForTab = (tab: SettingsTab): SettingItem[] => {
@@ -263,7 +268,7 @@ export default function Settings() {
             description: 'Your display name in games',
             type: 'input',
             isWorking: true,
-            defaultValue: user?.username || 'Player123'
+            defaultValue: user?.username || 'Player123',
           },
           {
             id: 'email',
@@ -271,7 +276,7 @@ export default function Settings() {
             description: 'Your account email for notifications and recovery',
             type: 'input',
             isWorking: true,
-            defaultValue: user?.email || 'player@example.com'
+            defaultValue: user?.email || 'player@example.com',
           },
           {
             id: 'avatar',
@@ -279,7 +284,7 @@ export default function Settings() {
             description: 'Change your profile picture',
             type: 'button',
             isWorking: false,
-            buttonText: '📁 Upload New Avatar'
+            buttonText: '📁 Upload New Avatar',
           },
           {
             id: 'change-password',
@@ -287,7 +292,7 @@ export default function Settings() {
             description: 'Update your account password',
             type: 'button',
             isWorking: false,
-            buttonText: '🔑 Change Password'
+            buttonText: '🔑 Change Password',
           },
           {
             id: 'two-factor',
@@ -295,7 +300,7 @@ export default function Settings() {
             description: 'Enable 2FA for extra security',
             type: 'button',
             isWorking: false,
-            buttonText: '📱 Enable 2FA'
+            buttonText: '📱 Enable 2FA',
           },
           {
             id: 'delete-account',
@@ -304,9 +309,9 @@ export default function Settings() {
             type: 'button',
             isWorking: false,
             buttonText: '🗑️ Delete Account',
-            buttonVariant: 'danger'
-          }
-        ];
+            buttonVariant: 'danger',
+          },
+        ]
 
       case 'game':
         return [
@@ -317,7 +322,7 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.game.showAttackAnimations,
-            onChange: (value: boolean) => dispatch(setShowAttackAnimations(value))
+            onChange: (value: boolean) => dispatch(setShowAttackAnimations(value)),
           },
           {
             id: 'confirm-attacks',
@@ -326,9 +331,9 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.game.confirmAttacks,
-            onChange: (value: boolean) => dispatch(setConfirmAttacks(value))
-          }
-        ];
+            onChange: (value: boolean) => dispatch(setConfirmAttacks(value)),
+          },
+        ]
 
       case 'audio':
         return [
@@ -338,7 +343,7 @@ export default function Settings() {
             description: 'Overall audio volume level',
             type: 'range',
             isWorking: false,
-            defaultValue: 75
+            defaultValue: 75,
           },
           {
             id: 'sfx-volume',
@@ -346,7 +351,7 @@ export default function Settings() {
             description: 'Volume for game sound effects',
             type: 'range',
             isWorking: false,
-            defaultValue: 80
+            defaultValue: 80,
           },
           {
             id: 'music-volume',
@@ -354,7 +359,7 @@ export default function Settings() {
             description: 'Volume for background music',
             type: 'range',
             isWorking: false,
-            defaultValue: 50
+            defaultValue: 50,
           },
           {
             id: 'dice-sounds',
@@ -362,17 +367,17 @@ export default function Settings() {
             description: 'Play sound effects during battles',
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
+            defaultValue: true,
           },
           {
             id: 'turn-notifications',
             label: 'Turn Notifications',
-            description: 'Play sound when it\'s your turn',
+            description: "Play sound when it's your turn",
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
-          }
-        ];
+            defaultValue: true,
+          },
+        ]
 
       case 'display':
         return [
@@ -386,32 +391,37 @@ export default function Settings() {
             onChange: (value: 'dark' | 'light') => dispatch(setTheme(value)),
             options: [
               { value: 'dark', label: '🌙 Dark Theme' },
-              { value: 'light', label: '☀️ Light Theme' }
-            ]
-          }
-        ];
+              { value: 'light', label: '☀️ Light Theme' },
+            ],
+          },
+        ]
 
       case 'notifications':
         return [
           {
             id: 'browser-notifications',
             label: 'Browser Push Notifications',
-            description: notificationStatus === 'granted' 
-              ? (isSubscribed ? 'Push notifications are enabled' : 'Click to enable push notifications')
-              : (notificationStatus === 'denied' ? 'Notifications blocked - please enable in browser settings' : 'Enable notifications for game updates'),
+            description:
+              notificationStatus === 'granted'
+                ? isSubscribed
+                  ? 'Push notifications are enabled'
+                  : 'Click to enable push notifications'
+                : notificationStatus === 'denied'
+                  ? 'Notifications blocked - please enable in browser settings'
+                  : 'Enable notifications for game updates',
             type: 'toggle',
             isWorking: true,
             defaultValue: isSubscribed,
             onChange: async (value: boolean) => {
               if (value) {
-                const success = await pushNotificationService.subscribe();
-                setIsSubscribed(success);
-                setNotificationStatus(pushNotificationService.getPermissionStatus());
+                const success = await pushNotificationService.subscribe()
+                setIsSubscribed(success)
+                setNotificationStatus(pushNotificationService.getPermissionStatus())
               } else {
-                await pushNotificationService.unsubscribe();
-                setIsSubscribed(false);
+                await pushNotificationService.unsubscribe()
+                setIsSubscribed(false)
               }
-            }
+            },
           },
           {
             id: 'test-notification',
@@ -425,27 +435,27 @@ export default function Settings() {
                 const response = await fetch('/api/notifications/test', {
                   method: 'POST',
                   headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
                   },
-                });
-                const result = await response.json();
+                })
+                const result = await response.json()
                 if (result.success) {
-                  alert('Test notification sent! Check your notifications.');
+                  alert('Test notification sent! Check your notifications.')
                 } else {
-                  alert(result.error || 'Failed to send test notification');
+                  alert(result.error || 'Failed to send test notification')
                 }
               } else {
-                alert('Please enable browser notifications first');
+                alert('Please enable browser notifications first')
               }
-            }
+            },
           },
           {
             id: 'turn-reminders',
             label: 'Turn Reminders',
-            description: 'Notify when it\'s your turn',
+            description: "Notify when it's your turn",
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
+            defaultValue: true,
           },
           {
             id: 'game-invites',
@@ -453,7 +463,7 @@ export default function Settings() {
             description: 'Notify about new game invitations',
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
+            defaultValue: true,
           },
           {
             id: 'game-results',
@@ -461,7 +471,7 @@ export default function Settings() {
             description: 'Notify about game outcomes',
             type: 'toggle',
             isWorking: false,
-            defaultValue: false
+            defaultValue: false,
           },
           {
             id: 'weekly-summary',
@@ -469,7 +479,7 @@ export default function Settings() {
             description: 'Receive weekly game activity summary',
             type: 'toggle',
             isWorking: false,
-            defaultValue: false
+            defaultValue: false,
           },
           {
             id: 'marketing-updates',
@@ -477,9 +487,9 @@ export default function Settings() {
             description: 'Receive news and feature updates',
             type: 'toggle',
             isWorking: false,
-            defaultValue: false
-          }
-        ];
+            defaultValue: false,
+          },
+        ]
 
       case 'privacy':
         return [
@@ -489,7 +499,7 @@ export default function Settings() {
             description: 'Make your profile visible to other players',
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
+            defaultValue: true,
           },
           {
             id: 'show-statistics',
@@ -497,15 +507,15 @@ export default function Settings() {
             description: 'Display your game stats on profile',
             type: 'toggle',
             isWorking: false,
-            defaultValue: true
+            defaultValue: true,
           },
           {
             id: 'online-status',
             label: 'Online Status',
-            description: 'Show when you\'re online',
+            description: "Show when you're online",
             type: 'toggle',
             isWorking: false,
-            defaultValue: false
+            defaultValue: false,
           },
           {
             id: 'download-data',
@@ -513,7 +523,7 @@ export default function Settings() {
             description: 'Export your account data',
             type: 'button',
             isWorking: false,
-            buttonText: '📊 Download Data'
+            buttonText: '📊 Download Data',
           },
           {
             id: 'privacy-policy',
@@ -521,9 +531,9 @@ export default function Settings() {
             description: 'View our privacy policy',
             type: 'button',
             isWorking: false,
-            buttonText: '🔒 Privacy Policy'
-          }
-        ];
+            buttonText: '🔒 Privacy Policy',
+          },
+        ]
 
       case 'advanced':
         return [
@@ -534,7 +544,7 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.advanced.debugMode,
-            onChange: (value: boolean) => dispatch(setDebugMode(value))
+            onChange: (value: boolean) => dispatch(setDebugMode(value)),
           },
           {
             id: 'beta-features',
@@ -543,7 +553,7 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.advanced.betaFeatures,
-            onChange: (value: boolean) => dispatch(setBetaFeatures(value))
+            onChange: (value: boolean) => dispatch(setBetaFeatures(value)),
           },
           {
             id: 'clear-cache',
@@ -553,9 +563,9 @@ export default function Settings() {
             isWorking: true,
             buttonText: '🗂️ Clear Cache',
             onClick: () => {
-              dispatch(clearCache());
-              alert('Cache cleared successfully!');
-            }
+              dispatch(clearCache())
+              alert('Cache cleared successfully!')
+            },
           },
           {
             id: 'export-settings',
@@ -564,7 +574,7 @@ export default function Settings() {
             type: 'button',
             isWorking: true,
             buttonText: '💾 Export Settings',
-            onClick: () => dispatch(exportSettings())
+            onClick: () => dispatch(exportSettings()),
           },
           {
             id: 'import-settings',
@@ -573,7 +583,7 @@ export default function Settings() {
             type: 'button',
             isWorking: true,
             buttonText: '📁 Import Settings',
-            onClick: () => fileInputRef.current?.click()
+            onClick: () => fileInputRef.current?.click(),
           },
           {
             id: 'reset-settings',
@@ -585,21 +595,21 @@ export default function Settings() {
             buttonVariant: 'danger',
             onClick: () => {
               if (confirm('Are you sure you want to reset all settings to default?')) {
-                dispatch(resetSettings());
-                alert('Settings reset to default!');
+                dispatch(resetSettings())
+                alert('Settings reset to default!')
               }
-            }
-          }
-        ];
+            },
+          },
+        ]
 
       default:
-        return [];
+        return []
     }
-  };
+  }
 
   const renderTabContent = () => {
-    const settings = getSettingsForTab(activeTab);
-    
+    const settings = getSettingsForTab(activeTab)
+
     if (activeTab === 'account') {
       return (
         <div className="space-y-8">
@@ -610,11 +620,9 @@ export default function Settings() {
           )}
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Account Information</h3>
-            <div className="space-y-4">
-              {settings.slice(0, 2).map(renderSetting)}
-            </div>
+            <div className="space-y-4">{settings.slice(0, 2).map(renderSetting)}</div>
           </div>
-          
+
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Avatar</h3>
             <div className="flex items-center gap-6 mb-8">
@@ -623,7 +631,10 @@ export default function Settings() {
               </div>
               <div>
                 <div className="relative">
-                  <button className="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed" disabled>
+                  <button
+                    className="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
                     📁 Upload New Avatar
                   </button>
                   <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
@@ -638,57 +649,55 @@ export default function Settings() {
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Security</h3>
             <div className="space-y-4">
-              {settings.slice(3).map(setting => renderSetting(setting))}
+              {settings.slice(3).map((setting) => renderSetting(setting))}
             </div>
           </div>
         </div>
-      );
+      )
     }
 
     return (
       <div className="space-y-6">
         <h3 className="text-xl font-semibold text-white mb-6">
-          {settingsTabs.find(tab => tab.id === activeTab)?.label} Settings
+          {settingsTabs.find((tab) => tab.id === activeTab)?.label} Settings
         </h3>
-        <div className="space-y-4">
-          {settings.map(setting => renderSetting(setting))}
-        </div>
+        <div className="space-y-4">{settings.map((setting) => renderSetting(setting))}</div>
       </div>
-    );
-  };
+    )
+  }
 
   // Handle file import
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
-      const reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = (e) => {
-        const content = e.target?.result as string;
+        const content = e.target?.result as string
         try {
-          dispatch(importSettings(content));
-          alert('Settings imported successfully!');
-        } catch (error) {
-          alert('Failed to import settings. Please check the file format.');
+          dispatch(importSettings(content))
+          alert('Settings imported successfully!')
+        } catch (_error) {
+          alert('Failed to import settings. Please check the file format.')
         }
-      };
-      reader.readAsText(file);
+      }
+      reader.readAsText(file)
     }
-  };
+  }
 
   return (
     <div className="container mx-auto px-6 py-8">
       {/* Hidden file input for import */}
-      <input 
+      <input
         ref={fileInputRef}
         type="file"
         accept=".json"
         style={{ display: 'none' }}
         onChange={handleFileImport}
       />
-      
+
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 gradient-text">Settings</h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Settings Navigation */}
           <div className="lg:col-span-1">
@@ -721,5 +730,5 @@ export default function Settings() {
         </div>
       </div>
     </div>
-  );
+  )
 }

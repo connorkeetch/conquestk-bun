@@ -1,61 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import type React from 'react'
+import { useEffect, useState } from 'react'
 
 interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-  bio?: string;
-  level: number;
-  experiencePoints: number;
-  joinDate: string;
-  lastActive: string;
+  id: string
+  username: string
+  email: string
+  avatarUrl?: string
+  bio?: string
+  level: number
+  experiencePoints: number
+  joinDate: string
+  lastActive: string
   preferences: {
-    theme: string;
-    notifications: boolean;
-    publicProfile: boolean;
-  };
+    theme: string
+    notifications: boolean
+    publicProfile: boolean
+  }
 }
 
 interface UserStats {
-  gamesPlayed: number;
-  gamesWon: number;
-  gamesLost: number;
-  winRate: number;
-  averageGameDuration: number;
-  favoriteMap: string;
-  totalPlayTime: number;
-  ranking: number;
+  gamesPlayed: number
+  gamesWon: number
+  gamesLost: number
+  winRate: number
+  averageGameDuration: number
+  favoriteMap: string
+  totalPlayTime: number
+  ranking: number
 }
 
 interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  iconUrl: string;
-  points: number;
-  unlockedAt?: string;
-  progress?: number;
-  maxProgress?: number;
+  id: string
+  name: string
+  description: string
+  iconUrl: string
+  points: number
+  unlockedAt?: string
+  progress?: number
+  maxProgress?: number
 }
 
 interface RecentGame {
-  id: string;
-  mapName: string;
-  gameMode: string;
-  result: 'won' | 'lost' | 'draw';
-  duration: number;
-  playedAt: string;
-  playerCount: number;
+  id: string
+  mapName: string
+  gameMode: string
+  result: 'won' | 'lost' | 'draw'
+  duration: number
+  playedAt: string
+  playerCount: number
 }
 
 const ProfileOverview: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, _setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Mock data for now - will be replaced with API calls
@@ -72,9 +73,9 @@ const ProfileOverview: React.FC = () => {
       preferences: {
         theme: 'dark',
         notifications: true,
-        publicProfile: true
-      }
-    };
+        publicProfile: true,
+      },
+    }
 
     const mockStats: UserStats = {
       gamesPlayed: 147,
@@ -84,8 +85,8 @@ const ProfileOverview: React.FC = () => {
       averageGameDuration: 45,
       favoriteMap: 'Classic World',
       totalPlayTime: 6825,
-      ranking: 342
-    };
+      ranking: 342,
+    }
 
     const mockAchievements: Achievement[] = [
       {
@@ -94,7 +95,7 @@ const ProfileOverview: React.FC = () => {
         description: 'Win your first game',
         iconUrl: '🏆',
         points: 100,
-        unlockedAt: '2024-01-20'
+        unlockedAt: '2024-01-20',
       },
       {
         id: '2',
@@ -102,7 +103,7 @@ const ProfileOverview: React.FC = () => {
         description: 'Control all territories on the world map',
         iconUrl: '🌍',
         points: 500,
-        unlockedAt: '2024-02-15'
+        unlockedAt: '2024-02-15',
       },
       {
         id: '3',
@@ -110,7 +111,7 @@ const ProfileOverview: React.FC = () => {
         description: 'Win a game in under 30 minutes',
         iconUrl: '⚡',
         points: 200,
-        unlockedAt: '2024-03-10'
+        unlockedAt: '2024-03-10',
       },
       {
         id: '4',
@@ -119,7 +120,7 @@ const ProfileOverview: React.FC = () => {
         iconUrl: '⏰',
         points: 300,
         progress: 68,
-        maxProgress: 100
+        maxProgress: 100,
       },
       {
         id: '5',
@@ -128,9 +129,9 @@ const ProfileOverview: React.FC = () => {
         iconUrl: '🗺️',
         points: 400,
         progress: 2,
-        maxProgress: 5
-      }
-    ];
+        maxProgress: 5,
+      },
+    ]
 
     const mockRecentGames: RecentGame[] = [
       {
@@ -140,7 +141,7 @@ const ProfileOverview: React.FC = () => {
         result: 'won',
         duration: 52,
         playedAt: '2024-08-17T20:30:00Z',
-        playerCount: 4
+        playerCount: 4,
       },
       {
         id: '2',
@@ -149,7 +150,7 @@ const ProfileOverview: React.FC = () => {
         result: 'lost',
         duration: 38,
         playedAt: '2024-08-16T19:15:00Z',
-        playerCount: 6
+        playerCount: 6,
       },
       {
         id: '3',
@@ -158,50 +159,50 @@ const ProfileOverview: React.FC = () => {
         result: 'won',
         duration: 41,
         playedAt: '2024-08-15T21:45:00Z',
-        playerCount: 3
-      }
-    ];
+        playerCount: 3,
+      },
+    ]
 
     // Simulate API loading
     setTimeout(() => {
-      setProfile(mockProfile);
-      setStats(mockStats);
-      setAchievements(mockAchievements);
-      setRecentGames(mockRecentGames);
-      setLoading(false);
-    }, 1000);
-  }, []);
+      setProfile(mockProfile)
+      setStats(mockStats)
+      setAchievements(mockAchievements)
+      setRecentGames(mockRecentGames)
+      setLoading(false)
+    }, 1000)
+  }, [])
 
   const formatDuration = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+  }
 
   const formatPlayTime = (hours: number): string => {
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    return days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`;
-  };
+    const days = Math.floor(hours / 24)
+    const remainingHours = hours % 24
+    return days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`
+  }
 
   const getExperienceToNextLevel = (currentXP: number, level: number): number => {
-    const nextLevelXP = level * 1000; // Simple formula: level * 1000
-    return Math.max(0, nextLevelXP - currentXP);
-  };
+    const nextLevelXP = level * 1000 // Simple formula: level * 1000
+    return Math.max(0, nextLevelXP - currentXP)
+  }
 
   const getExperienceProgress = (currentXP: number, level: number): number => {
-    const currentLevelXP = (level - 1) * 1000;
-    const nextLevelXP = level * 1000;
-    const progress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-    return Math.min(100, Math.max(0, progress));
-  };
+    const currentLevelXP = (level - 1) * 1000
+    const nextLevelXP = level * 1000
+    const progress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
+    return Math.min(100, Math.max(0, progress))
+  }
 
   if (loading) {
     return (
       <div className="profile-overview loading">
         <div className="loading-spinner">🎲 Loading profile...</div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -209,7 +210,7 @@ const ProfileOverview: React.FC = () => {
       <div className="profile-overview error">
         <div className="error-message">❌ {error}</div>
       </div>
-    );
+    )
   }
 
   if (!profile || !stats) {
@@ -217,7 +218,7 @@ const ProfileOverview: React.FC = () => {
       <div className="profile-overview error">
         <div className="error-message">❌ Profile not found</div>
       </div>
-    );
+    )
   }
 
   return (
@@ -234,24 +235,29 @@ const ProfileOverview: React.FC = () => {
           </div>
           <button className="edit-avatar-btn">📷 Change</button>
         </div>
-        
+
         <div className="profile-info">
           <h1 className="username">{profile.username}</h1>
           <div className="level-info">
             <span className="level">Level {profile.level}</span>
             <div className="xp-bar">
-              <div 
-                className="xp-progress" 
-                style={{ width: `${getExperienceProgress(profile.experiencePoints, profile.level)}%` }}
+              <div
+                className="xp-progress"
+                style={{
+                  width: `${getExperienceProgress(profile.experiencePoints, profile.level)}%`,
+                }}
               ></div>
             </div>
             <span className="xp-text">
-              {profile.experiencePoints} XP ({getExperienceToNextLevel(profile.experiencePoints, profile.level)} to next level)
+              {profile.experiencePoints} XP (
+              {getExperienceToNextLevel(profile.experiencePoints, profile.level)} to next level)
             </span>
           </div>
           <p className="bio">{profile.bio}</p>
           <div className="profile-meta">
-            <span className="join-date">⏰ Joined {new Date(profile.joinDate).toLocaleDateString()}</span>
+            <span className="join-date">
+              ⏰ Joined {new Date(profile.joinDate).toLocaleDateString()}
+            </span>
             <span className="ranking">🏆 Rank #{stats.ranking}</span>
           </div>
         </div>
@@ -285,8 +291,11 @@ const ProfileOverview: React.FC = () => {
       <div className="recent-achievements">
         <h2>🏅 Recent Achievements</h2>
         <div className="achievements-grid">
-          {achievements.slice(0, 6).map(achievement => (
-            <div key={achievement.id} className={`achievement-card ${achievement.unlockedAt ? 'unlocked' : 'locked'}`}>
+          {achievements.slice(0, 6).map((achievement) => (
+            <div
+              key={achievement.id}
+              className={`achievement-card ${achievement.unlockedAt ? 'unlocked' : 'locked'}`}
+            >
               <div className="achievement-icon">{achievement.iconUrl}</div>
               <div className="achievement-info">
                 <h3 className="achievement-name">{achievement.name}</h3>
@@ -298,12 +307,16 @@ const ProfileOverview: React.FC = () => {
                 ) : achievement.progress !== undefined ? (
                   <div className="achievement-progress">
                     <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{ width: `${(achievement.progress! / achievement.maxProgress!) * 100}%` }}
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${(achievement.progress! / achievement.maxProgress!) * 100}%`,
+                        }}
                       ></div>
                     </div>
-                    <span className="progress-text">{achievement.progress}/{achievement.maxProgress}</span>
+                    <span className="progress-text">
+                      {achievement.progress}/{achievement.maxProgress}
+                    </span>
                   </div>
                 ) : (
                   <div className="achievement-locked">🔒 Locked</div>
@@ -320,7 +333,7 @@ const ProfileOverview: React.FC = () => {
       <div className="recent-games">
         <h2>📊 Recent Games</h2>
         <div className="games-list">
-          {recentGames.map(game => (
+          {recentGames.map((game) => (
             <div key={game.id} className={`game-card ${game.result}`}>
               <div className="game-result">
                 {game.result === 'won' ? '🏆' : game.result === 'lost' ? '❌' : '🤝'}
@@ -333,16 +346,14 @@ const ProfileOverview: React.FC = () => {
                   <span className="game-duration">{formatDuration(game.duration)}</span>
                 </div>
               </div>
-              <div className="game-date">
-                {new Date(game.playedAt).toLocaleDateString()}
-              </div>
+              <div className="game-date">{new Date(game.playedAt).toLocaleDateString()}</div>
             </div>
           ))}
         </div>
         <button className="view-game-history">View Full Game History</button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProfileOverview;
+export default ProfileOverview

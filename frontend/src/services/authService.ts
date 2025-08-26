@@ -22,12 +22,13 @@ export const authService = {
     } catch (error: any) {
       // Handle verification errors specifically
       if (error.response?.data?.requiresVerification) {
-        throw error.response.data;
+        throw error.response.data
       }
       // Extract the error message from the backend response
-      const message = error.response?.data?.message || 
-                     error.response?.data?.error || 
-                     'Login failed. Please check your credentials.'
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Login failed. Please check your credentials.'
       throw new Error(message)
     }
   },
@@ -37,35 +38,36 @@ export const authService = {
       const response = await api.post('/auth/register', userData)
       return response.data
     } catch (error: any) {
-      // Log the full error for debugging
-      console.error('Registration error:', error.response?.data || error)
-      
       // Extract the error message from the backend response
       const errorData = error.response?.data
-      
+
       // Check for technical details (database schema errors)
       if (errorData?.technicalDetails) {
         const technicalMsg = errorData.technicalDetails
-        if (technicalMsg.includes('email_verified') || technicalMsg.includes('verification_token')) {
-          throw new Error('Database schema error: Please restart the server to apply migrations. If the issue persists, delete the database file and restart.')
+        if (
+          technicalMsg.includes('email_verified') ||
+          technicalMsg.includes('verification_token')
+        ) {
+          throw new Error(
+            'Database schema error: Please restart the server to apply migrations. If the issue persists, delete the database file and restart.',
+          )
         }
         throw new Error(`Database error: ${technicalMsg}`)
       }
-      
+
       // Handle field-specific errors
       if (errorData?.field) {
         throw new Error(errorData.message)
       }
-      
+
       // Include field-specific details if available
       const details = errorData?.details
       if (details && details.length > 0) {
         throw new Error(details[0].message)
       }
-      
-      const message = errorData?.message || 
-                     errorData?.error || 
-                     'Registration failed. Please try again.'
+
+      const message =
+        errorData?.message || errorData?.error || 'Registration failed. Please try again.'
       throw new Error(message)
     }
   },

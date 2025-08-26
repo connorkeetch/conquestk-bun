@@ -1,19 +1,19 @@
-import React from 'react'
+import type React from 'react'
 
 export type TokenShape = 'hexagon' | 'square' | 'circle'
 
 export interface TerritoryTokenProps {
-  x: number                 
-  y: number                 
-  armies?: number           
-  color: string            
-  outlineColor?: string     // Optional outline color for continent
+  x: number
+  y: number
+  armies?: number
+  color: string
+  outlineColor?: string // Optional outline color for continent
   shape?: TokenShape
-  isSelected?: boolean     
-  isDragging?: boolean     
+  isSelected?: boolean
+  isDragging?: boolean
   onClick?: () => void
   onMouseDown?: (e: React.MouseEvent) => void
-  size?: number  
+  size?: number
   opacity?: number
 }
 
@@ -29,9 +29,8 @@ export default function TerritoryToken({
   onClick,
   onMouseDown,
   size = 30,
-  opacity = 0.6
+  opacity = 0.6,
 }: TerritoryTokenProps) {
-  
   const getShapeStyle = (): React.CSSProperties => {
     const baseStyle: React.CSSProperties = {
       width: `${size}px`,
@@ -44,15 +43,15 @@ export default function TerritoryToken({
       cursor: isDragging ? 'grabbing' : 'pointer',
       transition: isDragging ? 'none' : 'all 0.2s ease',
       transform: isSelected ? 'scale(1.15)' : 'scale(1)',
-      boxShadow: isSelected 
-        ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)' 
+      boxShadow: isSelected
+        ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
         : '0 2px 4px rgba(0,0,0,0.3)',
-      zIndex: isDragging ? 1000 : (isSelected ? 100 : 10),
+      zIndex: isDragging ? 1000 : isSelected ? 100 : 10,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       userSelect: 'none',
-      border: outlineColor ? `2px solid ${outlineColor}` : `1px solid rgba(255,255,255,0.2)`
+      border: outlineColor ? `2px solid ${outlineColor}` : `1px solid rgba(255,255,255,0.2)`,
     }
 
     switch (shape) {
@@ -84,13 +83,13 @@ export default function TerritoryToken({
       role="button"
       aria-label={`Territory: ${armies} armies`}
     >
-      <span 
-        style={{ 
+      <span
+        style={{
           color: 'white',
           fontSize: `${size * 0.4}px`,
           fontWeight: 'bold',
           textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
         }}
       >
         {armies}

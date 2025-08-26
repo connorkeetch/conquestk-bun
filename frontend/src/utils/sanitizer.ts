@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import DOMPurify from 'dompurify'
 
 /**
  * Sanitize user-generated HTML content to prevent XSS attacks
@@ -8,8 +8,8 @@ import DOMPurify from 'dompurify';
 export function sanitizeHTML(dirty: string): string {
   return DOMPurify.sanitize(dirty, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'span'],
-    ALLOWED_ATTR: []
-  });
+    ALLOWED_ATTR: [],
+  })
 }
 
 /**
@@ -19,21 +19,21 @@ export function sanitizeHTML(dirty: string): string {
  * @returns Sanitized plain text
  */
 export function sanitizeText(text: string): string {
-  if (!text) return '';
-  
+  if (!text) return ''
+
   // Remove all HTML tags
-  const cleaned = DOMPurify.sanitize(text, { 
+  const cleaned = DOMPurify.sanitize(text, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],
-    KEEP_CONTENT: true 
-  });
-  
+    KEEP_CONTENT: true,
+  })
+
   // Additional sanitization for special characters that could be used in attacks
   return cleaned
     .replace(/[<>]/g, '') // Remove any remaining angle brackets
     .replace(/javascript:/gi, '') // Remove javascript: protocol
     .replace(/on\w+=/gi, '') // Remove event handlers
-    .trim();
+    .trim()
 }
 
 /**
@@ -42,14 +42,14 @@ export function sanitizeText(text: string): string {
  * @returns Sanitized message with limited formatting
  */
 export function sanitizeChatMessage(message: string): string {
-  if (!message) return '';
-  
+  if (!message) return ''
+
   return DOMPurify.sanitize(message, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br'],
     ALLOWED_ATTR: [],
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'link'],
-    FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick']
-  });
+    FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick'],
+  })
 }
 
 /**
@@ -58,27 +58,27 @@ export function sanitizeChatMessage(message: string): string {
  * @returns Sanitized profile data
  */
 export function sanitizeProfileData(data: any): any {
-  if (!data) return data;
-  
-  const sanitized = { ...data };
-  
+  if (!data) return data
+
+  const sanitized = { ...data }
+
   // Sanitize text fields
-  if (sanitized.username) sanitized.username = sanitizeText(sanitized.username);
-  if (sanitized.bio) sanitized.bio = sanitizeText(sanitized.bio);
-  if (sanitized.location) sanitized.location = sanitizeText(sanitized.location);
+  if (sanitized.username) sanitized.username = sanitizeText(sanitized.username)
+  if (sanitized.bio) sanitized.bio = sanitizeText(sanitized.bio)
+  if (sanitized.location) sanitized.location = sanitizeText(sanitized.location)
   if (sanitized.website) {
     // Validate and sanitize URL
     try {
-      const url = new URL(sanitized.website);
+      const url = new URL(sanitized.website)
       if (!['http:', 'https:'].includes(url.protocol)) {
-        sanitized.website = '';
+        sanitized.website = ''
       }
     } catch {
-      sanitized.website = '';
+      sanitized.website = ''
     }
   }
-  
-  return sanitized;
+
+  return sanitized
 }
 
 /**
@@ -87,9 +87,9 @@ export function sanitizeProfileData(data: any): any {
  * @returns Escaped text
  */
 export function escapeHTML(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
 }
 
 /**
@@ -98,16 +98,16 @@ export function escapeHTML(text: string): string {
  * @returns Sanitized name
  */
 export function sanitizeGameName(name: string): string {
-  if (!name) return '';
-  
+  if (!name) return ''
+
   // Remove any HTML and limit to alphanumeric, spaces, and basic punctuation
-  const sanitized = sanitizeText(name);
-  
+  const sanitized = sanitizeText(name)
+
   // Further restrict to safe characters for game names
   return sanitized
     .replace(/[^a-zA-Z0-9\s\-_'.!]/g, '')
     .slice(0, 50) // Limit length
-    .trim();
+    .trim()
 }
 
 /**
@@ -116,28 +116,28 @@ export function sanitizeGameName(name: string): string {
  * @returns Sanitized map data
  */
 export function sanitizeMapData(mapData: any): any {
-  if (!mapData) return mapData;
-  
-  const sanitized = { ...mapData };
-  
+  if (!mapData) return mapData
+
+  const sanitized = { ...mapData }
+
   // Sanitize string fields
-  if (sanitized.name) sanitized.name = sanitizeText(sanitized.name);
-  if (sanitized.description) sanitized.description = sanitizeText(sanitized.description);
-  if (sanitized.creator) sanitized.creator = sanitizeText(sanitized.creator);
-  
+  if (sanitized.name) sanitized.name = sanitizeText(sanitized.name)
+  if (sanitized.description) sanitized.description = sanitizeText(sanitized.description)
+  if (sanitized.creator) sanitized.creator = sanitizeText(sanitized.creator)
+
   // Sanitize territory names
   if (sanitized.territories && Array.isArray(sanitized.territories)) {
     sanitized.territories = sanitized.territories.map((territory: any) => ({
       ...territory,
       name: territory.name ? sanitizeText(territory.name) : '',
-      continent: territory.continent ? sanitizeText(territory.continent) : ''
-    }));
+      continent: territory.continent ? sanitizeText(territory.continent) : '',
+    }))
   }
-  
+
   // Sanitize tags
   if (sanitized.tags && Array.isArray(sanitized.tags)) {
-    sanitized.tags = sanitized.tags.map((tag: string) => sanitizeText(tag));
+    sanitized.tags = sanitized.tags.map((tag: string) => sanitizeText(tag))
   }
-  
-  return sanitized;
+
+  return sanitized
 }

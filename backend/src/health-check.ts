@@ -1,4 +1,4 @@
-import http from 'http';
+import http from 'node:http'
 
 const options = {
   hostname: 'localhost',
@@ -6,22 +6,22 @@ const options = {
   path: '/health',
   method: 'GET',
   timeout: 2000,
-};
+}
 
 const healthCheck = http.request(options, (res) => {
   if (res.statusCode === 200) {
-    process.exit(0);
+    process.exit(0)
   } else {
-    process.exit(1);
+    process.exit(1)
   }
-});
+})
 
 healthCheck.on('error', () => {
-  process.exit(1);
-});
+  process.exit(1)
+})
 
 healthCheck.on('timeout', () => {
-  process.exit(1);
-});
+  process.exit(1)
+})
 
-healthCheck.end();
+healthCheck.end()

@@ -1,57 +1,52 @@
 // Push Notification Service
-import { API_URL } from '../config';
+import { API_URL } from '../config'
 
 class PushNotificationService {
-  private registration: ServiceWorkerRegistration | null = null;
-  private subscription: PushSubscription | null = null;
+  private registration: ServiceWorkerRegistration | null = null
+  private subscription: PushSubscription | null = null
 
   // Initialize the service
   async initialize(): Promise<boolean> {
     try {
       // Check if browser supports notifications
       if (!('Notification' in window)) {
-        console.log('This browser does not support notifications');
-        return false;
+        return false
       }
 
       if (!('serviceWorker' in navigator)) {
-        console.log('Service Workers are not supported');
-        return false;
+        return false
       }
 
       if (!('PushManager' in window)) {
-        console.log('Push notifications are not supported');
-        return false;
+        return false
       }
 
       // Get service worker registration
-      this.registration = await navigator.serviceWorker.ready;
-      
+      this.registration = await navigator.serviceWorker.ready
+
       // Check current subscription
-      this.subscription = await this.registration.pushManager.getSubscription();
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize push notifications:', error);
-      return false;
+      this.subscription = await this.registration.pushManager.getSubscription()
+
+      return true
+    } catch (_error) {
+      return false
     }
   }
 
   // Request permission for notifications
   async requestPermission(): Promise<NotificationPermission> {
-    const permission = await Notification.requestPermission();
-    console.log('Notification permission:', permission);
-    return permission;
+    const permission = await Notification.requestPermission()
+    return permission
   }
 
   // Check if notifications are enabled
   isEnabled(): boolean {
-    return Notification.permission === 'granted' && this.subscription !== null;
+    return Notification.permission === 'granted' && this.subscription !== null
   }
 
   // Get current permission status
   getPermissionStatus(): NotificationPermission {
-    return Notification.permission;
+    return Notification.permission
   }
 
   // Subscribe to push notifications
@@ -59,49 +54,44 @@ class PushNotificationService {
     try {
       // First ensure we have permission
       if (Notification.permission !== 'granted') {
-        const permission = await this.requestPermission();
+        const permission = await this.requestPermission()
         if (permission !== 'granted') {
-          console.log('Notification permission denied');
-          return false;
+          return false
         }
       }
 
       if (!this.registration) {
-        await this.initialize();
+        await this.initialize()
       }
 
       if (!this.registration) {
-        console.error('No service worker registration available');
-        return false;
+        return false
       }
 
       // Get public VAPID key from environment or fallback to server
-      let publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      
+      let publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+
       if (!publicKey) {
         // Fallback to fetching from server if not in environment
-        const response = await fetch(`${API_URL}/notifications/vapid-public-key`);
-        const data = await response.json();
-        publicKey = data.publicKey;
+        const response = await fetch(`${API_URL}/notifications/vapid-public-key`)
+        const data = await response.json()
+        publicKey = data.publicKey
       }
 
       // Convert the public key to Uint8Array
-      const convertedVapidKey = this.urlBase64ToUint8Array(publicKey);
+      const convertedVapidKey = this.urlBase64ToUint8Array(publicKey)
 
       // Subscribe to push notifications
       this.subscription = await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedVapidKey,
-      });
+      })
 
       // Send subscription to backend
-      await this.sendSubscriptionToServer(this.subscription);
-
-      console.log('Successfully subscribed to push notifications');
-      return true;
-    } catch (error) {
-      console.error('Failed to subscribe to push notifications:', error);
-      return false;
+      await this.sendSubscriptionToServer(this.subscription)
+      return true
+    } catch (_error) {
+      return false
     }
   }
 
@@ -109,65 +99,61 @@ class PushNotificationService {
   async unsubscribe(): Promise<boolean> {
     try {
       if (!this.subscription) {
-        console.log('No subscription to unsubscribe from');
-        return false;
+        return false
       }
 
       // Unsubscribe from push manager
-      await this.subscription.unsubscribe();
+      await this.subscription.unsubscribe()
 
       // Remove subscription from backend
-      await this.removeSubscriptionFromServer();
+      await this.removeSubscriptionFromServer()
 
-      this.subscription = null;
-      console.log('Successfully unsubscribed from push notifications');
-      return true;
-    } catch (error) {
-      console.error('Failed to unsubscribe from push notifications:', error);
-      return false;
+      this.subscription = null
+      return true
+    } catch (_error) {
+      return false
     }
   }
 
   // Send subscription to backend
   private async sendSubscriptionToServer(subscription: PushSubscription): Promise<void> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token')
     if (!token) {
-      throw new Error('No authentication token available');
+      throw new Error('No authentication token available')
     }
 
     await fetch(`${API_URL}/notifications/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         subscription: subscription.toJSON(),
       }),
-    });
+    })
   }
 
   // Remove subscription from backend
   private async removeSubscriptionFromServer(): Promise<void> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token')
     if (!token) {
-      throw new Error('No authentication token available');
+      throw new Error('No authentication token available')
     }
 
     await fetch(`${API_URL}/notifications/unsubscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-    });
+    })
   }
 
   // Test notification (local only, doesn't go through push service)
   async testNotification(): Promise<void> {
     if (Notification.permission !== 'granted') {
-      console.log('Notifications not permitted');
-      return;
+      return
     }
 
     const notification = new Notification('Risk Game Test', {
@@ -176,31 +162,29 @@ class PushNotificationService {
       badge: '/badge-72.png',
       vibrate: [100, 50, 100],
       tag: 'test-notification',
-    });
+    })
 
     notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
+      window.focus()
+      notification.close()
+    }
   }
 
   // Utility function to convert VAPID key
   private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
 
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
 
     for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+      outputArray[i] = rawData.charCodeAt(i)
     }
-    return outputArray;
+    return outputArray
   }
 }
 
 // Export singleton instance
-export const pushNotificationService = new PushNotificationService();
-export default pushNotificationService;
+export const pushNotificationService = new PushNotificationService()
+export default pushNotificationService

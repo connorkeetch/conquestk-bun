@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import ProfileOverview from '../components/profile/ProfileOverview';
-import EditableProfile from '../components/profile/EditableProfile';
-import '../components/profile/ProfileOverview.css';
+import type React from 'react'
+import ProfileOverview from '../components/profile/ProfileOverview'
+import '../components/profile/ProfileOverview.css'
 
 const Profile: React.FC = () => {
   return (
@@ -10,7 +9,7 @@ const Profile: React.FC = () => {
         <ProfileOverview />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Profile;
+export default Profile

@@ -1,372 +1,362 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAppDispatch } from './hooks/redux';
-import { checkAuth } from './store/authSlice';
-
+import { useEffect } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import AuthGuard from './components/AuthGuard'
 // Layout
-import Layout from './components/Layout';
-import AuthGuard from './components/AuthGuard';
-
+import Layout from './components/Layout'
+import { useAppDispatch } from './hooks/redux'
+import CommunityPage from './pages/CommunityPage'
+import CreateGamePage from './pages/CreateGamePage'
+import Dashboard from './pages/Dashboard'
+import ForgotPassword from './pages/ForgotPassword'
+import GameListPage from './pages/GameListPage'
+import GamePage from './pages/GamePage'
+import GameRoom from './pages/GameRoom'
 // Public Pages
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import LeaderboardPage from './pages/LeaderboardPage';
-import LearnPage from './pages/LearnPage';
-import NotFoundPage from './pages/NotFoundPage';
-
+import Home from './pages/Home'
+import LeaderboardPage from './pages/LeaderboardPage'
+import LearnPage from './pages/LearnPage'
 // Protected Pages
-import LobbyPage from './pages/LobbyPage';
-import GameListPage from './pages/GameListPage';
-import GamePage from './pages/GamePage';
-import CreateGamePage from './pages/CreateGamePage';
-import CommunityPage from './pages/CommunityPage';
-import Profile from './pages/Profile';
-import Statistics from './pages/Statistics';
-import Settings from './pages/Settings';
-
-// Existing Pages (Legacy)
-import GameLobby from './pages/GameLobby';
-import GameRoom from './pages/GameRoom';
-import ComingSoon from './pages/ComingSoon';
-import Dashboard from './pages/Dashboard';
-import Play from './pages/Play';
-import Maps from './pages/Maps';
-import MapEditor from './pages/MapEditor';
-import MapEditorTokens from './pages/MapEditorTokens';
+import LobbyPage from './pages/LobbyPage'
+import Login from './pages/Login'
+import MapEditor from './pages/MapEditor'
+import MapEditorTokens from './pages/MapEditorTokens'
+import Maps from './pages/Maps'
+import NotFoundPage from './pages/NotFoundPage'
+import Play from './pages/Play'
+import Profile from './pages/Profile'
+import Register from './pages/Register'
+import ResetPassword from './pages/ResetPassword'
+import Settings from './pages/Settings'
+import Statistics from './pages/Statistics'
+import VerifyEmail from './pages/VerifyEmail'
+import { checkAuth } from './store/authSlice'
 
 function App() {
-  const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch()
 
   useEffect(() => {
-    dispatch(checkAuth());
-    
+    dispatch(checkAuth())
+
     // Apply saved theme on app load
-    const savedSettings = localStorage.getItem('userSettings');
+    const savedSettings = localStorage.getItem('userSettings')
     if (savedSettings) {
       try {
-        const settings = JSON.parse(savedSettings);
+        const settings = JSON.parse(savedSettings)
         if (settings.display?.theme) {
-          document.documentElement.setAttribute('data-theme', settings.display.theme);
+          document.documentElement.setAttribute('data-theme', settings.display.theme)
         }
-      } catch (error) {
-        console.error('Failed to apply saved theme:', error);
-      }
+      } catch (_error) {}
     }
-  }, [dispatch]);
+  }, [dispatch])
 
   return (
     <Layout>
       <Routes>
         {/* Public Routes */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <AuthGuard requireAuth={false}>
               <Home />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <AuthGuard requireAuth={false}>
               <Login />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/register" 
+        <Route
+          path="/register"
           element={
             <AuthGuard requireAuth={false}>
               <Register />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/verify-email/:token" 
+        <Route
+          path="/verify-email/:token"
           element={
             <AuthGuard requireAuth={false}>
               <VerifyEmail />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/forgot-password" 
+        <Route
+          path="/forgot-password"
           element={
             <AuthGuard requireAuth={false}>
               <ForgotPassword />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/reset-password/:token" 
+        <Route
+          path="/reset-password/:token"
           element={
             <AuthGuard requireAuth={false}>
               <ResetPassword />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/leaderboard" 
+        <Route
+          path="/leaderboard"
           element={
             <AuthGuard requireAuth={false}>
               <LeaderboardPage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/leaderboard/:type" 
+        <Route
+          path="/leaderboard/:type"
           element={
             <AuthGuard requireAuth={false}>
               <LeaderboardPage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/learn" 
+        <Route
+          path="/learn"
           element={
             <AuthGuard requireAuth={false}>
               <LearnPage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/learn/:section" 
+        <Route
+          path="/learn/:section"
           element={
             <AuthGuard requireAuth={false}>
               <LearnPage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Profile Routes (Public but with user-specific content) */}
-        <Route 
-          path="/profile/:userId" 
+        <Route
+          path="/profile/:userId"
           element={
             <AuthGuard requireAuth={false}>
               <Profile />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/profile/:userId/:section" 
+        <Route
+          path="/profile/:userId/:section"
           element={
             <AuthGuard requireAuth={false}>
               <Profile />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Protected Routes - Main App Flow */}
-        <Route 
-          path="/lobby" 
+        <Route
+          path="/lobby"
           element={
             <AuthGuard>
               <LobbyPage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/lobby/:section" 
+        <Route
+          path="/lobby/:section"
           element={
             <AuthGuard>
               <LobbyPage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Games Management */}
-        <Route 
-          path="/games" 
+        <Route
+          path="/games"
           element={
             <AuthGuard>
               <Navigate to="/games/active" replace />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/games/:section" 
+        <Route
+          path="/games/:section"
           element={
             <AuthGuard>
               <GameListPage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Individual Game (Full-screen) */}
-        <Route 
-          path="/game/:gameId" 
+        <Route
+          path="/game/:gameId"
           element={
             <AuthGuard>
               <GamePage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/game/:gameId/:section" 
+        <Route
+          path="/game/:gameId/:section"
           element={
             <AuthGuard>
               <GamePage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Game Creation */}
-        <Route 
-          path="/create" 
+        <Route
+          path="/create"
           element={
             <AuthGuard>
               <CreateGamePage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/create/:type" 
+        <Route
+          path="/create/:type"
           element={
             <AuthGuard>
               <CreateGamePage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Map Editor */}
-        <Route 
-          path="/editor" 
+        <Route
+          path="/editor"
           element={
             <AuthGuard>
               <Navigate to="/editor/new" replace />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/editor/new" 
+        <Route
+          path="/editor/new"
           element={
             <AuthGuard>
               <MapEditor />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/editor/:mapId" 
+        <Route
+          path="/editor/:mapId"
           element={
             <AuthGuard>
               <MapEditor />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/editor/browse" 
+        <Route
+          path="/editor/browse"
           element={
             <AuthGuard>
               <Maps />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Community */}
-        <Route 
-          path="/community" 
+        <Route
+          path="/community"
           element={
             <AuthGuard>
               <CommunityPage />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/community/:section" 
+        <Route
+          path="/community/:section"
           element={
             <AuthGuard>
               <CommunityPage />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* User Profile & Stats (when authenticated) */}
-        <Route 
-          path="/profile" 
+        <Route
+          path="/profile"
           element={
             <AuthGuard>
               <Profile />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/profile/stats" 
+        <Route
+          path="/profile/stats"
           element={
             <AuthGuard>
               <Statistics />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/settings" 
+        <Route
+          path="/settings"
           element={
             <AuthGuard>
               <Settings />
             </AuthGuard>
-          } 
+          }
         />
 
         {/* Legacy Routes - Backward Compatibility */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <AuthGuard>
               <Dashboard />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/play" 
+        <Route
+          path="/play"
           element={
             <AuthGuard>
               <Play />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/maps" 
+        <Route
+          path="/maps"
           element={
             <AuthGuard>
               <Maps />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/map-editor" 
+        <Route
+          path="/map-editor"
           element={
             <AuthGuard>
               <MapEditorTokens />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/map-editor-polygon" 
+        <Route
+          path="/map-editor-polygon"
           element={
             <AuthGuard>
               <MapEditor />
             </AuthGuard>
-          } 
+          }
         />
-        <Route 
-          path="/room/:roomId" 
+        <Route
+          path="/room/:roomId"
           element={
             <AuthGuard>
               <GameRoom />
             </AuthGuard>
-          } 
+          }
         />
-
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Layout>
-  );
+  )
 }
 
-export default App;
+export default App

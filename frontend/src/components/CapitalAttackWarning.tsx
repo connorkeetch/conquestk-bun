@@ -1,17 +1,17 @@
-import React from 'react';
+import type React from 'react'
 
 interface CapitalAttackWarningProps {
-  defenderName: string;
-  territoryName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  defenderName: string
+  territoryName: string
+  onConfirm: () => void
+  onCancel: () => void
 }
 
 const CapitalAttackWarning: React.FC<CapitalAttackWarningProps> = ({
   defenderName,
   territoryName,
   onConfirm,
-  onCancel
+  onCancel,
 }) => {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeIn">
@@ -24,24 +24,22 @@ const CapitalAttackWarning: React.FC<CapitalAttackWarningProps> = ({
 
         <div className="space-y-4 text-center">
           <p className="text-white text-lg">
-            You are attacking <span className="font-bold text-yellow-400">{defenderName}'s</span> capital at
+            You are attacking <span className="font-bold text-yellow-400">{defenderName}'s</span>{' '}
+            capital at
           </p>
-          <p className="text-2xl font-bold text-red-400">
-            👑 {territoryName}
-          </p>
-          
+          <p className="text-2xl font-bold text-red-400">👑 {territoryName}</p>
+
           <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 my-6">
-            <p className="text-red-300 font-semibold text-lg mb-2">
-              ⚔️ INSTANT ELIMINATION
-            </p>
+            <p className="text-red-300 font-semibold text-lg mb-2">⚔️ INSTANT ELIMINATION</p>
             <p className="text-gray-300">
-              If you capture this capital, {defenderName} will be <span className="text-red-400 font-bold">immediately eliminated</span> from the game!
+              If you capture this capital, {defenderName} will be{' '}
+              <span className="text-red-400 font-bold">immediately eliminated</span> from the game!
             </p>
             <p className="text-gray-300 mt-2">
-              You will gain <span className="text-green-400 font-bold">ALL</span> their territories and troops.
+              You will gain <span className="text-green-400 font-bold">ALL</span> their territories
+              and troops.
             </p>
           </div>
-
         </div>
 
         <div className="flex gap-4 mt-8">
@@ -60,7 +58,7 @@ const CapitalAttackWarning: React.FC<CapitalAttackWarningProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CapitalAttackWarning;
+export default CapitalAttackWarning

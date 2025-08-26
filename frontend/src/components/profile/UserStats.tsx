@@ -1,66 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import type React from 'react'
+import { useEffect, useState } from 'react'
 
 interface StatsPeriod {
-  period: 'week' | 'month' | 'year' | 'all';
-  label: string;
+  period: 'week' | 'month' | 'year' | 'all'
+  label: string
 }
 
 interface DetailedStats {
   general: {
-    gamesPlayed: number;
-    gamesWon: number;
-    gamesLost: number;
-    winRate: number;
-    averageGameDuration: number;
-    totalPlayTime: number;
-    ranking: number;
-    rankingChange: number;
-    longestWinStreak: number;
-    currentWinStreak: number;
-  };
+    gamesPlayed: number
+    gamesWon: number
+    gamesLost: number
+    winRate: number
+    averageGameDuration: number
+    totalPlayTime: number
+    ranking: number
+    rankingChange: number
+    longestWinStreak: number
+    currentWinStreak: number
+  }
   performance: {
-    territoriesConquered: number;
-    territoriesLost: number;
-    armiesDeployed: number;
-    battlesWon: number;
-    battlesLost: number;
-    averageArmiesPerGame: number;
-    quickestVictory: number;
-    comebackWins: number;
-  };
+    territoriesConquered: number
+    territoriesLost: number
+    armiesDeployed: number
+    battlesWon: number
+    battlesLost: number
+    averageArmiesPerGame: number
+    quickestVictory: number
+    comebackWins: number
+  }
   maps: {
-    favoriteMap: string;
+    favoriteMap: string
     mapStats: Array<{
-      mapName: string;
-      gamesPlayed: number;
-      winRate: number;
-    }>;
-  };
+      mapName: string
+      gamesPlayed: number
+      winRate: number
+    }>
+  }
   gameModes: {
-    classicWins: number;
-    capitalConquestWins: number;
-    navalSupremacyWins: number;
-    resourceWarWins: number;
-    asymmetricWins: number;
-  };
+    classicWins: number
+    capitalConquestWins: number
+    navalSupremacyWins: number
+    resourceWarWins: number
+    asymmetricWins: number
+  }
   monthly: {
-    labels: string[];
-    gamesPlayed: number[];
-    winRate: number[];
-  };
+    labels: string[]
+    gamesPlayed: number[]
+    winRate: number[]
+  }
 }
 
 const UserStats: React.FC = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
-  const [stats, setStats] = useState<DetailedStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month')
+  const [stats, setStats] = useState<DetailedStats | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const periods: StatsPeriod[] = [
     { period: 'week', label: 'This Week' },
     { period: 'month', label: 'This Month' },
     { period: 'year', label: 'This Year' },
-    { period: 'all', label: 'All Time' }
-  ];
+    { period: 'all', label: 'All Time' },
+  ]
 
   useEffect(() => {
     // TODO: Replace with real API calls when backend is ready
@@ -75,7 +76,7 @@ const UserStats: React.FC = () => {
         ranking: 0,
         rankingChange: 0,
         longestWinStreak: 0,
-        currentWinStreak: 0
+        currentWinStreak: 0,
       },
       performance: {
         territoriesConquered: 0,
@@ -85,64 +86,64 @@ const UserStats: React.FC = () => {
         battlesLost: 0,
         averageArmiesPerGame: 0,
         quickestVictory: 0,
-        comebackWins: 0
+        comebackWins: 0,
       },
       maps: {
         favoriteMap: 'None',
-        mapStats: []
+        mapStats: [],
       },
       gameModes: {
         classicWins: 0,
         capitalConquestWins: 0,
         navalSupremacyWins: 0,
         resourceWarWins: 0,
-        asymmetricWins: 0
+        asymmetricWins: 0,
       },
       monthly: {
         labels: [],
         gamesPlayed: [],
-        winRate: []
-      }
-    };
+        winRate: [],
+      },
+    }
 
     // Simulate API loading
     setTimeout(() => {
-      setStats(emptyStats);
-      setLoading(false);
-    }, 300);
-  }, [selectedPeriod]);
+      setStats(emptyStats)
+      setLoading(false)
+    }, 300)
+  }, [])
 
   const formatDuration = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+  }
 
   const formatPlayTime = (hours: number): string => {
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    return days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`;
-  };
+    const days = Math.floor(hours / 24)
+    const remainingHours = hours % 24
+    return days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`
+  }
 
   const getWinRateColor = (winRate: number): string => {
-    if (winRate >= 70) return '#00ff88';
-    if (winRate >= 60) return '#4a9eff';
-    if (winRate >= 50) return '#ffd700';
-    return '#ff6b6b';
-  };
+    if (winRate >= 70) return '#00ff88'
+    if (winRate >= 60) return '#4a9eff'
+    if (winRate >= 50) return '#ffd700'
+    return '#ff6b6b'
+  }
 
   const getTrendIcon = (change: number): string => {
-    if (change > 0) return '📈';
-    if (change < 0) return '📉';
-    return '➡️';
-  };
+    if (change > 0) return '📈'
+    if (change < 0) return '📉'
+    return '➡️'
+  }
 
   if (loading) {
     return (
       <div className="user-stats loading">
         <div className="loading-spinner">🎲 Loading statistics...</div>
       </div>
-    );
+    )
   }
 
   if (!stats) {
@@ -150,7 +151,7 @@ const UserStats: React.FC = () => {
       <div className="user-stats error">
         <div className="error-message">❌ Unable to load statistics</div>
       </div>
-    );
+    )
   }
 
   return (
@@ -159,7 +160,7 @@ const UserStats: React.FC = () => {
       <div className="stats-header">
         <h1>📊 Statistics & Analytics</h1>
         <div className="period-selector">
-          {periods.map(period => (
+          {periods.map((period) => (
             <button
               key={period.period}
               className={`period-btn ${selectedPeriod === period.period ? 'active' : ''}`}
@@ -185,7 +186,7 @@ const UserStats: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="stat-card">
             <div className="stat-icon">🎲</div>
             <div className="stat-content">
@@ -251,7 +252,12 @@ const UserStats: React.FC = () => {
               <div className="stat-value">{stats.performance.battlesWon}</div>
               <div className="stat-label">Battles Won</div>
               <div className="stat-sublabel">
-                {Math.round((stats.performance.battlesWon / (stats.performance.battlesWon + stats.performance.battlesLost)) * 100)}% win rate
+                {Math.round(
+                  (stats.performance.battlesWon /
+                    (stats.performance.battlesWon + stats.performance.battlesLost)) *
+                    100,
+                )}
+                % win rate
               </div>
             </div>
           </div>
@@ -261,9 +267,7 @@ const UserStats: React.FC = () => {
             <div className="stat-content">
               <div className="stat-value">{stats.performance.armiesDeployed.toLocaleString()}</div>
               <div className="stat-label">Armies Deployed</div>
-              <div className="stat-sublabel">
-                {stats.performance.averageArmiesPerGame} avg/game
-              </div>
+              <div className="stat-sublabel">{stats.performance.averageArmiesPerGame} avg/game</div>
             </div>
           </div>
 
@@ -360,12 +364,14 @@ const UserStats: React.FC = () => {
             {stats.monthly.labels.map((month, index) => (
               <div key={month} className="chart-bar">
                 <div className="bar-container">
-                  <div 
-                    className="bar games" 
-                    style={{ height: `${(stats.monthly.gamesPlayed[index] / Math.max(...stats.monthly.gamesPlayed)) * 100}%` }}
+                  <div
+                    className="bar games"
+                    style={{
+                      height: `${(stats.monthly.gamesPlayed[index] / Math.max(...stats.monthly.gamesPlayed)) * 100}%`,
+                    }}
                   ></div>
-                  <div 
-                    className="bar winrate" 
+                  <div
+                    className="bar winrate"
                     style={{ height: `${stats.monthly.winRate[index]}%` }}
                   ></div>
                 </div>
@@ -380,7 +386,7 @@ const UserStats: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default UserStats;
+export default UserStats

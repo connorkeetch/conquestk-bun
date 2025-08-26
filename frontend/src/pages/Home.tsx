@@ -1,44 +1,43 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useAppSelector } from '../hooks/redux';
+import type React from 'react'
+import { Link } from 'react-router-dom'
+import { useAppSelector } from '../hooks/redux'
 
 interface Feature {
-  icon: string;
-  title: string;
-  description: string;
-  status: 'available' | 'coming-soon';
+  icon: string
+  title: string
+  description: string
+  status: 'available' | 'coming-soon'
 }
 
 const Home: React.FC = () => {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated } = useAppSelector((state) => state.auth)
 
   const features: Feature[] = [
     {
       icon: '⚔️',
       title: 'Strategic Battles',
       description: 'Authentic dice mechanics with tactical combat',
-      status: 'available'
+      status: 'available',
     },
     {
       icon: '🎨',
       title: 'Map Editor',
       description: 'Design custom battlefields with advanced tools',
-      status: 'available'
+      status: 'available',
     },
     {
       icon: '👥',
       title: 'Massive Multiplayer Wars',
       description: 'Epic battles with up to 12 conquerors',
-      status: 'available'
+      status: 'available',
     },
     {
       icon: '🏆',
       title: 'Tournaments',
       description: 'Ranked seasons and competitive events',
-      status: 'coming-soon'
-    }
-  ];
-
+      status: 'coming-soon',
+    },
+  ]
 
   return (
     <div className="min-h-screen">
@@ -46,7 +45,6 @@ const Home: React.FC = () => {
       <section className="overflow-hidden section-spacing">
         {/* Constrained Content Container */}
         <div className="relative container mx-auto px-6 max-w-6xl flex flex-col items-center">
-
           {/* Standardized Hero Title */}
           <h1 className="mt-2 text-[clamp(2rem,3.8vw,3.5rem)] font-bold leading-tight text-white text-center">
             Strategic Warfare{' '}
@@ -54,7 +52,7 @@ const Home: React.FC = () => {
               Redefined
             </span>
           </h1>
-          
+
           {/* Tighter Value Proposition */}
           <p className="mt-3 mx-auto max-w-[42ch] text-white/80 text-center text-lg md:text-xl">
             Command armies. Conquer territories. Dominate the battlefield.
@@ -64,8 +62,8 @@ const Home: React.FC = () => {
           <div className="mt-7 flex items-center justify-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link 
-                  to="/lobby" 
+                <Link
+                  to="/lobby"
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
                            bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
                            shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
@@ -75,8 +73,8 @@ const Home: React.FC = () => {
                 >
                   ⚡ Start Playing →
                 </Link>
-                <Link 
-                  to="/map-editor" 
+                <Link
+                  to="/map-editor"
                   className="px-5 py-3 rounded-xl border border-white/15 text-white/80 hover:text-white hover:bg-white/5 transition"
                 >
                   Map Editor
@@ -84,8 +82,8 @@ const Home: React.FC = () => {
               </>
             ) : (
               <>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
                            bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
                            shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
@@ -95,8 +93,8 @@ const Home: React.FC = () => {
                 >
                   Join the War →
                 </Link>
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="px-5 py-3 rounded-xl border border-white/15 text-white/80 hover:text-white hover:bg-white/5 transition"
                 >
                   Login
@@ -104,7 +102,6 @@ const Home: React.FC = () => {
               </>
             )}
           </div>
-
         </div>
       </section>
 
@@ -112,25 +109,30 @@ const Home: React.FC = () => {
       <section className="relative z-10 section-spacing-sm overflow-hidden">
         <div className="container mx-auto px-6 max-w-6xl">
           {/* Single container with all effects */}
-          <div className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 bg-white/[.04] p-12
+          <div
+            className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 bg-white/[.04] p-12
                       bg-gradient-to-br from-gray-900/50 via-red-900/20 to-gray-900/50
                       shadow-[inset_0_1px_0_0_rgba(255,255,255,.06)]
                       before:absolute before:inset-0 before:rounded-2xl
                       before:bg-gradient-to-br before:from-white/[.04] before:to-transparent
                       after:pointer-events-none after:absolute after:-inset-1 after:rounded-3xl
                       after:bg-[radial-gradient(800px_380px_at_50%_-10%,rgba(56,189,248,.12),transparent)]
-                      flex items-center justify-center overflow-hidden">
+                      flex items-center justify-center overflow-hidden"
+          >
             {/* Animated battle scene background effect */}
             <div className="absolute inset-0 opacity-30">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `
                   radial-gradient(circle at 20% 50%, rgba(239, 68, 68, 0.3) 0%, transparent 50%),
                   radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.2) 0%, transparent 50%),
                   radial-gradient(circle at 40% 20%, rgba(217, 70, 239, 0.2) 0%, transparent 50%)
-                `
-              }}></div>
+                `,
+                }}
+              ></div>
             </div>
-            
+
             {/* Battle Text Overlay */}
             <div className="relative z-10 text-center px-8">
               <div className="text-5xl md:text-7xl mb-4">⚔️</div>
@@ -143,7 +145,7 @@ const Home: React.FC = () => {
                 Deploy armies • Capture territories • Achieve total domination
               </p>
             </div>
-            
+
             {/* Animated elements */}
             <div className="absolute top-10 left-10 text-4xl animate-pulse">🏰</div>
             <div className="absolute top-20 right-20 text-4xl animate-pulse delay-100">🗡️</div>
@@ -161,32 +163,26 @@ const Home: React.FC = () => {
               <span className="gradient-text">Core Features</span>
             </h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {features.map((feature, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="group min-h-[96px] rounded-xl border border-white/10 bg-white/[.05] p-5
                          hover:bg-white/[.07] hover:-translate-y-0.5 transition will-change-transform"
               >
                 <div className="flex items-start gap-3">
-                  <div className="text-2xl flex-shrink-0">
-                    {feature.icon}
-                  </div>
+                  <div className="text-2xl flex-shrink-0">{feature.icon}</div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-white font-medium">
-                        {feature.title}
-                      </h4>
+                      <h4 className="text-white font-medium">{feature.title}</h4>
                       {feature.status === 'coming-soon' && (
                         <span className="ml-auto text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded">
                           Coming Soon
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-white/70">
-                      {feature.description}
-                    </p>
+                    <p className="mt-1 text-sm text-white/70">{feature.description}</p>
                   </div>
                 </div>
               </div>
@@ -205,10 +201,10 @@ const Home: React.FC = () => {
             <p className="text-gray-300 mb-6 max-w-2xl text-center">
               Be among the first commanders to experience next-generation strategic warfare.
             </p>
-            
+
             {!isAuthenticated && (
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
                          bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
                          shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
@@ -260,15 +256,13 @@ const Home: React.FC = () => {
                 3
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Claim Victory</h3>
-              <p className="text-white/70 text-sm">
-                Adapt your strategy and conquer the world
-              </p>
+              <p className="text-white/70 text-sm">Adapt your strategy and conquer the world</p>
             </div>
           </div>
         </div>
       </section>
     </div>
-  );
-};
+  )
+}
 
-export default Home;
+export default Home

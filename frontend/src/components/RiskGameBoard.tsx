@@ -1,39 +1,39 @@
-import React, { useState, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { WorldMapSVG } from './WorldMapSVG';
-import { GamePhaseControls } from './GamePhaseControls';
-import { TerritoryModifierIcon } from './TerritoryModifierIcon';
-import { TerritoryModifierLegend } from './TerritoryModifierLegend';
-import territoryData from '../data/territories-classic.json';
-import { RootState, AppDispatch } from '../store';
-import { selectTerritory, selectTargetTerritory, setPendingAction } from '../store/gameSlice';
-import { endTurn } from '../store/gameActions';
-import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses';
-import type { TerritoryModifier } from '../types/game';
+import type React from 'react'
+import { useCallback, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import territoryData from '../data/territories-classic.json'
+import type { AppDispatch, RootState } from '../store'
+import { endTurn } from '../store/gameActions'
+import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
+import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses'
+import { GamePhaseControls } from './GamePhaseControls'
+import { TerritoryModifierIcon } from './TerritoryModifierIcon'
+import { TerritoryModifierLegend } from './TerritoryModifierLegend'
+import { WorldMapSVG } from './WorldMapSVG'
 
 interface TerritoryDisplay {
-  id: string;
-  name: string;
-  continent: string;
-  adjacentTerritories: string[];
-  armyPosition: { x: number; y: number };
-  owner?: string;
-  armies?: number;
+  id: string
+  name: string
+  continent: string
+  adjacentTerritories: string[]
+  armyPosition: { x: number; y: number }
+  owner?: string
+  armies?: number
 }
 
 interface RiskGameBoardProps {
-  onTerritoryClick?: (territoryId: string) => void;
+  onTerritoryClick?: (territoryId: string) => void
 }
 
 // Helper function to convert Redux territories to display format
 const createTerritoryDisplayMap = (
-  territories: any[], 
-  territoryData: any
+  territories: any[],
+  territoryData: any,
 ): { [key: string]: TerritoryDisplay } => {
-  const displayMap: { [key: string]: TerritoryDisplay } = {};
-  
-  territories.forEach(territory => {
-    const staticData = territoryData.territories[territory.id];
+  const displayMap: { [key: string]: TerritoryDisplay } = {}
+
+  territories.forEach((territory) => {
+    const staticData = territoryData.territories[territory.id]
     if (staticData) {
       displayMap[territory.id] = {
         id: territory.id,
@@ -43,25 +43,25 @@ const createTerritoryDisplayMap = (
         armyPosition: staticData.armyPosition,
         owner: territory.ownerId,
         armies: territory.armies,
-      };
+      }
     }
-  });
-  
-  return displayMap;
-};
+  })
 
-export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
-  onTerritoryClick,
-}) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const gameState = useSelector((state: RootState) => state.game.currentGame);
-  const selectedTerritory = useSelector((state: RootState) => state.game.selectedTerritory);
-  const selectedTargetTerritory = useSelector((state: RootState) => state.game.selectedTargetTerritory);
-  const validTargets = useSelector((state: RootState) => state.game.validTargets);
-  const pendingAction = useSelector((state: RootState) => state.game.pendingAction);
-  
-  const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null);
-  
+  return displayMap
+}
+
+export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }) => {
+  const dispatch = useDispatch<AppDispatch>()
+  const gameState = useSelector((state: RootState) => state.game.currentGame)
+  const selectedTerritory = useSelector((state: RootState) => state.game.selectedTerritory)
+  const selectedTargetTerritory = useSelector(
+    (state: RootState) => state.game.selectedTargetTerritory,
+  )
+  const validTargets = useSelector((state: RootState) => state.game.validTargets)
+  const pendingAction = useSelector((state: RootState) => state.game.pendingAction)
+
+  const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null)
+
   // Early return if no game state
   if (!gameState) {
     return (
@@ -71,63 +71,69 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           <p className="text-gray-500">Join a game room to start playing!</p>
         </div>
       </div>
-    );
+    )
   }
-  
-  const territories = createTerritoryDisplayMap(gameState.board, territoryData);
-  const players = gameState.players;
-  const currentPlayer = gameState.currentPlayer;
-  const currentPhase = gameState.phase;
-  
+
+  const territories = createTerritoryDisplayMap(gameState.board, territoryData)
+  const players = gameState.players
+  const currentPlayer = gameState.currentPlayer
+  const currentPhase = gameState.phase
+
   // Calculate continent control status for all players
-  const allPlayersContinentStatus = calculateAllPlayersContinentStatus(players, gameState.board);
+  const allPlayersContinentStatus = calculateAllPlayersContinentStatus(players, gameState.board)
 
-  const getTerritoryColor = useCallback((territoryId: string): string => {
-    const territory = territories[territoryId];
-    if (!territory || !territory.owner) {
-      return '#E0E0E0'; // Neutral color
-    }
-    
-    const player = players.find(p => p.id === territory.owner);
-    return player?.color || '#E0E0E0';
-  }, [territories, players]);
-
-  const handleTerritoryClick = useCallback((territoryId: string) => {
-    // If clicking the same territory, deselect it
-    if (selectedTerritory === territoryId) {
-      dispatch(selectTerritory(null));
-      return;
-    }
-    
-    // If we have a selected territory and this is a valid target, select as target
-    if (selectedTerritory && validTargets.includes(territoryId)) {
-      dispatch(selectTargetTerritory(territoryId));
-      // Set pending action based on current phase
-      if (currentPhase === 'reinforcement') {
-        dispatch(setPendingAction('deploy'));
-      } else if (currentPhase === 'attack') {
-        dispatch(setPendingAction('attack'));
-      } else if (currentPhase === 'fortify') {
-        dispatch(setPendingAction('fortify'));
+  const getTerritoryColor = useCallback(
+    (territoryId: string): string => {
+      const territory = territories[territoryId]
+      if (!territory || !territory.owner) {
+        return '#E0E0E0' // Neutral color
       }
-    } else {
-      // Select this territory
-      dispatch(selectTerritory(territoryId));
-      dispatch(selectTargetTerritory(null));
-    }
-    
-    onTerritoryClick?.(territoryId);
-  }, [selectedTerritory, validTargets, currentPhase, dispatch, onTerritoryClick]);
+
+      const player = players.find((p) => p.id === territory.owner)
+      return player?.color || '#E0E0E0'
+    },
+    [territories, players],
+  )
+
+  const handleTerritoryClick = useCallback(
+    (territoryId: string) => {
+      // If clicking the same territory, deselect it
+      if (selectedTerritory === territoryId) {
+        dispatch(selectTerritory(null))
+        return
+      }
+
+      // If we have a selected territory and this is a valid target, select as target
+      if (selectedTerritory && validTargets.includes(territoryId)) {
+        dispatch(selectTargetTerritory(territoryId))
+        // Set pending action based on current phase
+        if (currentPhase === 'reinforcement') {
+          dispatch(setPendingAction('deploy'))
+        } else if (currentPhase === 'attack') {
+          dispatch(setPendingAction('attack'))
+        } else if (currentPhase === 'fortify') {
+          dispatch(setPendingAction('fortify'))
+        }
+      } else {
+        // Select this territory
+        dispatch(selectTerritory(territoryId))
+        dispatch(selectTargetTerritory(null))
+      }
+
+      onTerritoryClick?.(territoryId)
+    },
+    [selectedTerritory, validTargets, currentPhase, dispatch, onTerritoryClick],
+  )
 
   const handleEndTurn = useCallback(() => {
-    dispatch(endTurn());
-  }, [dispatch]);
+    dispatch(endTurn())
+  }, [dispatch])
 
   const handleTerritoryHover = useCallback((territoryId: string | null) => {
-    setHoveredTerritory(territoryId);
-  }, []);
+    setHoveredTerritory(territoryId)
+  }, [])
 
-  const currentPlayerInfo = players.find(p => p.id === currentPlayer);
+  const currentPlayerInfo = players.find((p) => p.id === currentPlayer)
 
   return (
     <div className="flex flex-col h-full bg-blue-50 rounded-lg overflow-hidden">
@@ -137,7 +143,8 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           <div>
             <h2 className="text-xl font-bold">Risk Game Board</h2>
             <div className="text-sm opacity-75 mt-1">
-              Phase: {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} | Turn: {gameState.turn}
+              Phase: {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} | Turn:{' '}
+              {gameState.turn}
             </div>
           </div>
           {currentPlayerInfo && (
@@ -169,12 +176,12 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
               validTargets={validTargets}
               pendingAction={pendingAction}
             />
-            
+
             {/* Army Count Overlays */}
             {Object.entries(territories).map(([territoryId, territory]) => {
-              if (!territory.armies) return null;
-              const modifier = gameState.territoryModifiers?.[territoryId];
-              
+              if (!territory.armies) return null
+              const modifier = gameState.territoryModifiers?.[territoryId]
+
               return (
                 <div
                   key={`army-${territoryId}`}
@@ -190,21 +197,17 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                       {territory.armies}
                     </div>
                     {modifier && (
-                      <TerritoryModifierIcon 
-                        modifier={modifier} 
-                        size="small"
-                        showTooltip={true}
-                      />
+                      <TerritoryModifierIcon modifier={modifier} size="small" showTooltip={true} />
                     )}
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
-          
+
           {/* Territory Modifiers Legend */}
           {gameState.territoryModifiers && Object.keys(gameState.territoryModifiers).length > 0 && (
-            <TerritoryModifierLegend 
+            <TerritoryModifierLegend
               modifiers={new Map(Object.entries(gameState.territoryModifiers))}
               position="bottom-right"
               collapsible={true}
@@ -225,11 +228,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             <div className="space-y-2">
               {players.map((player) => {
                 const territoriesOwned = Object.values(territories).filter(
-                  t => t.owner === player.id
-                ).length;
+                  (t) => t.owner === player.id,
+                ).length
                 const totalArmies = Object.values(territories)
-                  .filter(t => t.owner === player.id)
-                  .reduce((sum, t) => sum + (t.armies || 0), 0);
+                  .filter((t) => t.owner === player.id)
+                  .reduce((sum, t) => sum + (t.armies || 0), 0)
 
                 return (
                   <div
@@ -251,7 +254,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                       <span>{totalArmies} armies</span>
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
           </div>
@@ -293,11 +296,14 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             <div className="p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold mb-2">Territory Info</h3>
               {(() => {
-                const territoryId = hoveredTerritory || selectedTerritory;
-                const territory = territories[territoryId!];
-                const owner = players.find(p => p.id === territory?.owner);
-                const continentInfo = territoryData.continents[territory?.continent as keyof typeof territoryData.continents];
-                
+                const territoryId = hoveredTerritory || selectedTerritory
+                const territory = territories[territoryId!]
+                const owner = players.find((p) => p.id === territory?.owner)
+                const continentInfo =
+                  territoryData.continents[
+                    territory?.continent as keyof typeof territoryData.continents
+                  ]
+
                 return (
                   <div className="space-y-2">
                     <div>
@@ -316,14 +322,12 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                         <span className="text-sm font-medium">{owner.username}</span>
                       </div>
                     )}
-                    <div className="text-sm">
-                      Armies: {territory?.armies || 0}
-                    </div>
+                    <div className="text-sm">Armies: {territory?.armies || 0}</div>
                     <div className="text-sm text-gray-600">
                       Adjacent to: {territory?.adjacentTerritories.length} territories
                     </div>
                   </div>
-                );
+                )
               })()}
             </div>
           )}
@@ -334,26 +338,28 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             <div className="space-y-3">
               {Object.entries(territoryData.continents).map(([continentId, continent]) => {
                 // Find which player controls this continent (if any)
-                const controllingPlayer = allPlayersContinentStatus.find(playerStatus =>
-                  playerStatus.controlledContinents.some(cc => 
-                    cc.continent.id === continentId && cc.controlled
-                  )
-                );
-                
-                const continentStatus = controllingPlayer?.controlledContinents.find(cc => 
-                  cc.continent.id === continentId
-                );
+                const controllingPlayer = allPlayersContinentStatus.find((playerStatus) =>
+                  playerStatus.controlledContinents.some(
+                    (cc) => cc.continent.id === continentId && cc.controlled,
+                  ),
+                )
+
+                const _continentStatus = controllingPlayer?.controlledContinents.find(
+                  (cc) => cc.continent.id === continentId,
+                )
 
                 return (
                   <div
                     key={continentId}
                     className={`p-3 rounded-lg border ${
-                      controllingPlayer ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'
+                      controllingPlayer
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-gray-200 bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center">
-                        <div 
+                        <div
                           className="w-4 h-4 rounded-full mr-2 border border-gray-300"
                           style={{ backgroundColor: continent.color }}
                         />
@@ -363,17 +369,20 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                         +{continent.bonus} armies
                       </span>
                     </div>
-                    
+
                     {controllingPlayer ? (
                       <div className="flex items-center text-sm">
                         <div
                           className="w-3 h-3 rounded-full mr-2 border border-gray-400"
-                          style={{ 
-                            backgroundColor: players.find(p => p.id === controllingPlayer.playerId)?.color 
+                          style={{
+                            backgroundColor: players.find(
+                              (p) => p.id === controllingPlayer.playerId,
+                            )?.color,
                           }}
                         />
                         <span className="font-medium">
-                          Controlled by {players.find(p => p.id === controllingPlayer.playerId)?.username}
+                          Controlled by{' '}
+                          {players.find((p) => p.id === controllingPlayer.playerId)?.username}
                         </span>
                       </div>
                     ) : (
@@ -381,14 +390,17 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                         <div className="mb-1">Not controlled by any player</div>
                         <div className="text-xs">
                           {/* Show partial control status */}
-                          {allPlayersContinentStatus.map(playerStatus => {
-                            const partialControl = playerStatus.controlledContinents.find(cc => 
-                              cc.continent.id === continentId && !cc.controlled && cc.controlledTerritories > 0
-                            );
-                            
-                            if (!partialControl) return null;
-                            
-                            const player = players.find(p => p.id === playerStatus.playerId);
+                          {allPlayersContinentStatus.map((playerStatus) => {
+                            const partialControl = playerStatus.controlledContinents.find(
+                              (cc) =>
+                                cc.continent.id === continentId &&
+                                !cc.controlled &&
+                                cc.controlledTerritories > 0,
+                            )
+
+                            if (!partialControl) return null
+
+                            const player = players.find((p) => p.id === playerStatus.playerId)
                             return (
                               <div key={playerStatus.playerId} className="flex items-center mb-1">
                                 <div
@@ -396,29 +408,33 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                                   style={{ backgroundColor: player?.color }}
                                 />
                                 <span>
-                                  {player?.username}: {partialControl.controlledTerritories}/{partialControl.totalTerritories}
+                                  {player?.username}: {partialControl.controlledTerritories}/
+                                  {partialControl.totalTerritories}
                                 </span>
                               </div>
-                            );
+                            )
                           })}
                         </div>
                       </div>
                     )}
                   </div>
-                );
+                )
               })}
             </div>
-            
+
             {/* Total Bonuses Summary */}
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <h4 className="font-medium text-blue-800 mb-2">Current Turn Bonuses</h4>
               <div className="space-y-1 text-sm">
                 {allPlayersContinentStatus
-                  .filter(playerStatus => playerStatus.totalBonusArmies > 0)
-                  .map(playerStatus => {
-                    const player = players.find(p => p.id === playerStatus.playerId);
+                  .filter((playerStatus) => playerStatus.totalBonusArmies > 0)
+                  .map((playerStatus) => {
+                    const player = players.find((p) => p.id === playerStatus.playerId)
                     return (
-                      <div key={playerStatus.playerId} className="flex items-center justify-between">
+                      <div
+                        key={playerStatus.playerId}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex items-center">
                           <div
                             className="w-3 h-3 rounded-full mr-2 border border-gray-400"
@@ -430,9 +446,9 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
                           +{playerStatus.totalBonusArmies}
                         </span>
                       </div>
-                    );
+                    )
                   })}
-                {allPlayersContinentStatus.every(ps => ps.totalBonusArmies === 0) && (
+                {allPlayersContinentStatus.every((ps) => ps.totalBonusArmies === 0) && (
                   <div className="text-gray-500 italic">No continent bonuses this turn</div>
                 )}
               </div>
@@ -441,5 +457,5 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

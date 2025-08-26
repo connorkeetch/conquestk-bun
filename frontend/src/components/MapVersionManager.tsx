@@ -1,180 +1,190 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 
 interface MapVersion {
-  id: string;
-  mapId: string;
-  versionNumber: string;
-  versionMajor: number;
-  versionMinor: number;
-  versionPatch: number;
-  isCurrent: boolean;
-  statusId: string;
-  name: string;
-  description?: string;
-  changelog?: string;
-  createdBy: string;
-  createdAt: string;
-  publishedAt?: string;
-  statusName?: string;
-  statusColor?: string;
+  id: string
+  mapId: string
+  versionNumber: string
+  versionMajor: number
+  versionMinor: number
+  versionPatch: number
+  isCurrent: boolean
+  statusId: string
+  name: string
+  description?: string
+  changelog?: string
+  createdBy: string
+  createdAt: string
+  publishedAt?: string
+  statusName?: string
+  statusColor?: string
 }
 
 interface VersionCreationData {
-  name: string;
-  description: string;
-  changelog: string;
-  versionType: 'major' | 'minor' | 'patch';
-  tags: string[];
+  name: string
+  description: string
+  changelog: string
+  versionType: 'major' | 'minor' | 'patch'
+  tags: string[]
 }
 
 export const MapVersionManager: React.FC = () => {
-  const { mapId } = useParams<{ mapId: string }>();
-  
-  const [versions, setVersions] = useState<MapVersion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const { mapId } = useParams<{ mapId: string }>()
+
+  const [versions, setVersions] = useState<MapVersion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [newVersionData, setNewVersionData] = useState<VersionCreationData>({
     name: '',
     description: '',
     changelog: '',
     versionType: 'patch',
-    tags: []
-  });
+    tags: [],
+  })
 
   useEffect(() => {
     if (mapId) {
-      loadVersions();
+      loadVersions()
     }
-  }, [mapId]);
+  }, [mapId, loadVersions])
 
   const loadVersions = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
       const response = await fetch(`/api/map-approval/maps/${mapId}/versions`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to load versions');
+        throw new Error('Failed to load versions')
       }
-      
-      const data = await response.json();
-      setVersions(data.versions || []);
+
+      const data = await response.json()
+      setVersions(data.versions || [])
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleCreateVersion = async () => {
     try {
-      setCreating(true);
-      setError(null);
-      
+      setCreating(true)
+      setError(null)
+
       const response = await fetch(`/api/map-approval/maps/${mapId}/versions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(newVersionData)
-      });
-      
+        body: JSON.stringify(newVersionData),
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to create version');
+        throw new Error('Failed to create version')
       }
-      
+
       // Reset form and close modal
       setNewVersionData({
         name: '',
         description: '',
         changelog: '',
         versionType: 'patch',
-        tags: []
-      });
-      setShowCreateModal(false);
-      
+        tags: [],
+      })
+      setShowCreateModal(false)
+
       // Reload versions
-      await loadVersions();
-      
+      await loadVersions()
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setCreating(false);
+      setCreating(false)
     }
-  };
+  }
 
   const handleSetCurrent = async (versionId: string) => {
     try {
       const response = await fetch(`/api/map-approval/versions/${versionId}/current`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to set current version');
+        throw new Error('Failed to set current version')
       }
-      
-      await loadVersions();
+
+      await loadVersions()
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     }
-  };
+  }
 
   const handleSubmitForApproval = async (versionId: string) => {
     try {
-      const submissionNotes = prompt('Optional notes for the reviewers:');
-      
+      const submissionNotes = prompt('Optional notes for the reviewers:')
+
       const response = await fetch(`/api/map-approval/versions/${versionId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ submissionNotes })
-      });
-      
+        body: JSON.stringify({ submissionNotes }),
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to submit for approval');
+        throw new Error('Failed to submit for approval')
       }
-      
-      await loadVersions();
-      alert('Version submitted for approval! You will be notified once it has been reviewed.');
+
+      await loadVersions()
+      alert('Version submitted for approval! You will be notified once it has been reviewed.')
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     }
-  };
+  }
 
   const getStatusBadge = (version: MapVersion) => {
     const getStatusColor = (statusName: string) => {
       switch (statusName) {
-        case 'draft': return 'bg-gray-100 text-gray-800';
-        case 'submitted': return 'bg-blue-100 text-blue-800';
-        case 'under_review': return 'bg-yellow-100 text-yellow-800';
-        case 'approved': return 'bg-green-100 text-green-800';
-        case 'published': return 'bg-green-200 text-green-900 font-semibold';
-        case 'rejected': return 'bg-red-100 text-red-800';
-        case 'archived': return 'bg-gray-200 text-gray-600';
-        default: return 'bg-gray-100 text-gray-800';
+        case 'draft':
+          return 'bg-gray-100 text-gray-800'
+        case 'submitted':
+          return 'bg-blue-100 text-blue-800'
+        case 'under_review':
+          return 'bg-yellow-100 text-yellow-800'
+        case 'approved':
+          return 'bg-green-100 text-green-800'
+        case 'published':
+          return 'bg-green-200 text-green-900 font-semibold'
+        case 'rejected':
+          return 'bg-red-100 text-red-800'
+        case 'archived':
+          return 'bg-gray-200 text-gray-600'
+        default:
+          return 'bg-gray-100 text-gray-800'
       }
-    };
+    }
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        getStatusColor(version.statusName || '')
-      }`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+          version.statusName || '',
+        )}`}
+      >
         {version.statusName?.replace('_', ' ')}
       </span>
-    );
-  };
+    )
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -182,9 +192,9 @@ export const MapVersionManager: React.FC = () => {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+      minute: '2-digit',
+    })
+  }
 
   if (loading) {
     return (
@@ -194,7 +204,7 @@ export const MapVersionManager: React.FC = () => {
           <p className="text-gray-600">Loading versions...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -270,7 +280,10 @@ export const MapVersionManager: React.FC = () => {
               </thead>
               <tbody className="bg-slate-800 divide-y divide-slate-600">
                 {versions.map((version) => (
-                  <tr key={version.id} className={version.isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}>
+                  <tr
+                    key={version.id}
+                    className={version.isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">
@@ -285,23 +298,15 @@ export const MapVersionManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {version.name}
-                        </div>
+                        <div className="text-sm font-medium text-gray-900">{version.name}</div>
                         {version.description && (
-                          <div className="text-sm text-gray-500">
-                            {version.description}
-                          </div>
+                          <div className="text-sm text-gray-500">{version.description}</div>
                         )}
                       </div>
                     </td>
+                    <td className="px-6 py-4">{getStatusBadge(version)}</td>
                     <td className="px-6 py-4">
-                      {getStatusBadge(version)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(version.createdAt)}
-                      </div>
+                      <div className="text-sm text-gray-900">{formatDate(version.createdAt)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
@@ -343,21 +348,19 @@ export const MapVersionManager: React.FC = () => {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Create New Version
-            </h3>
-            
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Version</h3>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Version Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Version Type</label>
                 <select
                   value={newVersionData.versionType}
-                  onChange={(e) => setNewVersionData(prev => ({ 
-                    ...prev, 
-                    versionType: e.target.value as 'major' | 'minor' | 'patch'
-                  }))}
+                  onChange={(e) =>
+                    setNewVersionData((prev) => ({
+                      ...prev,
+                      versionType: e.target.value as 'major' | 'minor' | 'patch',
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="patch">Patch (bug fixes, minor changes)</option>
@@ -365,48 +368,48 @@ export const MapVersionManager: React.FC = () => {
                   <option value="major">Major (significant changes, breaking changes)</option>
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Version Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Version Name</label>
                 <input
                   type="text"
                   value={newVersionData.name}
-                  onChange={(e) => setNewVersionData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setNewVersionData((prev) => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., Updated Europe layout"
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Description (optional)
                 </label>
                 <textarea
                   value={newVersionData.description}
-                  onChange={(e) => setNewVersionData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setNewVersionData((prev) => ({ ...prev, description: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   rows={2}
                   placeholder="Brief description of this version..."
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Changelog
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Changelog</label>
                 <textarea
                   value={newVersionData.changelog}
-                  onChange={(e) => setNewVersionData(prev => ({ ...prev, changelog: e.target.value }))}
+                  onChange={(e) =>
+                    setNewVersionData((prev) => ({ ...prev, changelog: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   rows={3}
                   placeholder="- Fixed territory adjacency issues&#10;- Improved continent balance&#10;- Added new special abilities"
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -427,7 +430,7 @@ export const MapVersionManager: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default MapVersionManager;
+export default MapVersionManager

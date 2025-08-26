@@ -6,7 +6,7 @@
       "color": "#4CAF50"
     },
     "south_america": {
-      "name": "South America", 
+      "name": "South America",
       "bonus": 2,
       "color": "#FF9800"
     },
@@ -40,7 +40,7 @@
       "armyPosition": { "x": 80, "y": 120 }
     },
     "northwest_territory": {
-      "id": "northwest_territory", 
+      "id": "northwest_territory",
       "name": "Northwest Territory",
       "continent": "north_america",
       "adjacentTerritories": ["alaska", "alberta", "ontario", "greenland"],
@@ -49,7 +49,7 @@
     "greenland": {
       "id": "greenland",
       "name": "Greenland",
-      "continent": "north_america", 
+      "continent": "north_america",
       "adjacentTerritories": ["northwest_territory", "ontario", "quebec", "iceland"],
       "armyPosition": { "x": 280, "y": 80 }
     },
@@ -62,9 +62,16 @@
     },
     "ontario": {
       "id": "ontario",
-      "name": "Ontario", 
+      "name": "Ontario",
       "continent": "north_america",
-      "adjacentTerritories": ["northwest_territory", "greenland", "quebec", "alberta", "western_united_states", "eastern_united_states"],
+      "adjacentTerritories": [
+        "northwest_territory",
+        "greenland",
+        "quebec",
+        "alberta",
+        "western_united_states",
+        "eastern_united_states"
+      ],
       "armyPosition": { "x": 180, "y": 160 }
     },
     "quebec": {
@@ -91,7 +98,7 @@
     "central_america": {
       "id": "central_america",
       "name": "Central America",
-      "continent": "north_america", 
+      "continent": "north_america",
       "adjacentTerritories": ["western_united_states", "eastern_united_states", "venezuela"],
       "armyPosition": { "x": 160, "y": 240 }
     },
@@ -103,7 +110,7 @@
       "armyPosition": { "x": 200, "y": 280 }
     },
     "brazil": {
-      "id": "brazil", 
+      "id": "brazil",
       "name": "Brazil",
       "continent": "south_america",
       "adjacentTerritories": ["venezuela", "peru", "argentina", "north_africa"],
@@ -111,7 +118,7 @@
     },
     "peru": {
       "id": "peru",
-      "name": "Peru", 
+      "name": "Peru",
       "continent": "south_america",
       "adjacentTerritories": ["venezuela", "brazil", "argentina"],
       "armyPosition": { "x": 200, "y": 340 }
@@ -148,40 +155,72 @@
       "id": "ukraine",
       "name": "Ukraine",
       "continent": "europe",
-      "adjacentTerritories": ["scandinavia", "northern_europe", "southern_europe", "ural", "afghanistan", "middle_east"],
+      "adjacentTerritories": [
+        "scandinavia",
+        "northern_europe",
+        "southern_europe",
+        "ural",
+        "afghanistan",
+        "middle_east"
+      ],
       "armyPosition": { "x": 420, "y": 160 }
     },
     "northern_europe": {
       "id": "northern_europe",
-      "name": "Northern Europe", 
+      "name": "Northern Europe",
       "continent": "europe",
-      "adjacentTerritories": ["great_britain", "scandinavia", "ukraine", "southern_europe", "western_europe"],
+      "adjacentTerritories": [
+        "great_britain",
+        "scandinavia",
+        "ukraine",
+        "southern_europe",
+        "western_europe"
+      ],
       "armyPosition": { "x": 380, "y": 160 }
     },
     "western_europe": {
       "id": "western_europe",
       "name": "Western Europe",
       "continent": "europe",
-      "adjacentTerritories": ["great_britain", "northern_europe", "southern_europe", "north_africa"],
+      "adjacentTerritories": [
+        "great_britain",
+        "northern_europe",
+        "southern_europe",
+        "north_africa"
+      ],
       "armyPosition": { "x": 340, "y": 200 }
     },
     "southern_europe": {
       "id": "southern_europe",
       "name": "Southern Europe",
       "continent": "europe",
-      "adjacentTerritories": ["ukraine", "northern_europe", "western_europe", "north_africa", "egypt", "middle_east"],
+      "adjacentTerritories": [
+        "ukraine",
+        "northern_europe",
+        "western_europe",
+        "north_africa",
+        "egypt",
+        "middle_east"
+      ],
       "armyPosition": { "x": 380, "y": 200 }
     },
     "north_africa": {
       "id": "north_africa",
       "name": "North Africa",
       "continent": "africa",
-      "adjacentTerritories": ["brazil", "western_europe", "southern_europe", "egypt", "east_africa", "congo"],
+      "adjacentTerritories": [
+        "brazil",
+        "western_europe",
+        "southern_europe",
+        "egypt",
+        "east_africa",
+        "congo"
+      ],
       "armyPosition": { "x": 360, "y": 260 }
     },
     "egypt": {
       "id": "egypt",
-      "name": "Egypt", 
+      "name": "Egypt",
       "continent": "africa",
       "adjacentTerritories": ["southern_europe", "north_africa", "east_africa", "middle_east"],
       "armyPosition": { "x": 400, "y": 280 }
@@ -190,7 +229,14 @@
       "id": "east_africa",
       "name": "East Africa",
       "continent": "africa",
-      "adjacentTerritories": ["north_africa", "egypt", "congo", "south_africa", "madagascar", "middle_east"],
+      "adjacentTerritories": [
+        "north_africa",
+        "egypt",
+        "congo",
+        "south_africa",
+        "madagascar",
+        "middle_east"
+      ],
       "armyPosition": { "x": 420, "y": 320 }
     },
     "congo": {
@@ -218,7 +264,14 @@
       "id": "middle_east",
       "name": "Middle East",
       "continent": "asia",
-      "adjacentTerritories": ["ukraine", "southern_europe", "egypt", "east_africa", "afghanistan", "india"],
+      "adjacentTerritories": [
+        "ukraine",
+        "southern_europe",
+        "egypt",
+        "east_africa",
+        "afghanistan",
+        "india"
+      ],
       "armyPosition": { "x": 460, "y": 240 }
     },
     "afghanistan": {

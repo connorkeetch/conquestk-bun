@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { adminService } from '../services/adminService'
 
 interface Game {
@@ -38,23 +38,23 @@ export default function AdminGames() {
   const [totalGames, setTotalGames] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const [limit] = useState(20)
-  
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  
+
   // Modal state
   const [actionModal, setActionModal] = useState<GameActionModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
 
   useEffect(() => {
     loadGames()
-  }, [currentPage, statusFilter, searchTerm])
+  }, [loadGames])
 
   const loadGames = async () => {
     try {
@@ -66,13 +66,12 @@ export default function AdminGames() {
         limit,
         offset,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        search: searchTerm || undefined
+        search: searchTerm || undefined,
       })
 
       setGames(result.games)
       setTotalGames(result.total)
     } catch (err: any) {
-      console.error('Error loading games:', err)
       setError(err.message || 'Failed to load games')
     } finally {
       setLoading(false)
@@ -117,7 +116,6 @@ export default function AdminGames() {
       setActionModal(null)
       setActionNotes('')
     } catch (err: any) {
-      console.error('Error processing game action:', err)
       alert(`Failed to ${actionModal.action.replace('_', ' ')} game: ${err.message}`)
     }
   }
@@ -134,12 +132,18 @@ export default function AdminGames() {
 
   const getGameStatusColor = (status: string) => {
     switch (status) {
-      case 'waiting': return 'text-yellow-400'
-      case 'active': return 'text-green-400'
-      case 'paused': return 'text-orange-400'
-      case 'completed': return 'text-blue-400'
-      case 'abandoned': return 'text-red-400'
-      default: return 'text-gray-400'
+      case 'waiting':
+        return 'text-yellow-400'
+      case 'active':
+        return 'text-green-400'
+      case 'paused':
+        return 'text-orange-400'
+      case 'completed':
+        return 'text-blue-400'
+      case 'abandoned':
+        return 'text-red-400'
+      default:
+        return 'text-gray-400'
     }
   }
 
@@ -148,7 +152,7 @@ export default function AdminGames() {
     const last = new Date(lastActivity)
     const diffMs = now.getTime() - last.getTime()
     const diffMins = Math.floor(diffMs / (1000 * 60))
-    
+
     if (diffMins < 1) return 'Just now'
     if (diffMins < 60) return `${diffMins}m ago`
     const diffHours = Math.floor(diffMins / 60)
@@ -166,14 +170,9 @@ export default function AdminGames() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">🎮 Game Management</h1>
-            <div className="text-gray-400">
-              Monitor and manage active games
-            </div>
+            <div className="text-gray-400">Monitor and manage active games</div>
           </div>
-          <a 
-            href="/admin"
-            className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
-          >
+          <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
             ← Back to Dashboard
           </a>
         </div>
@@ -184,7 +183,7 @@ export default function AdminGames() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
-                  {games.filter(game => game.status === 'active').length}
+                  {games.filter((game) => game.status === 'active').length}
                 </div>
                 <div className="text-sm text-gray-400">Active Games</div>
               </div>
@@ -196,7 +195,7 @@ export default function AdminGames() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
-                  {games.filter(game => game.status === 'waiting').length}
+                  {games.filter((game) => game.status === 'waiting').length}
                 </div>
                 <div className="text-sm text-gray-400">Waiting for Players</div>
               </div>
@@ -208,7 +207,7 @@ export default function AdminGames() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-orange-400">
-                  {games.filter(game => game.status === 'paused').length}
+                  {games.filter((game) => game.status === 'paused').length}
                 </div>
                 <div className="text-sm text-gray-400">Paused Games</div>
               </div>
@@ -220,12 +219,14 @@ export default function AdminGames() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
-                  {games.filter(game => {
-                    const lastActivity = new Date(game.lastActivity)
-                    const now = new Date()
-                    const diffHours = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60)
-                    return game.status === 'active' && diffHours > 2
-                  }).length}
+                  {
+                    games.filter((game) => {
+                      const lastActivity = new Date(game.lastActivity)
+                      const now = new Date()
+                      const diffHours = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60)
+                      return game.status === 'active' && diffHours > 2
+                    }).length
+                  }
                 </div>
                 <div className="text-sm text-gray-400">Potentially Stuck</div>
               </div>
@@ -245,14 +246,11 @@ export default function AdminGames() {
                 placeholder="Search games by name, map, or player..."
                 className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
               />
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg"
-              >
+              <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg">
                 🔍 Search
               </button>
             </form>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -289,9 +287,7 @@ export default function AdminGames() {
         <div className="bg-gray-800 rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-700">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">
-                Games ({totalGames.toLocaleString()})
-              </h2>
+              <h2 className="text-xl font-bold">Games ({totalGames.toLocaleString()})</h2>
               <button
                 onClick={loadGames}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
@@ -310,7 +306,7 @@ export default function AdminGames() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4 text-red-400">❌</div>
               <div className="text-red-400 mb-4">{error}</div>
-              <button 
+              <button
                 onClick={loadGames}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
               >
@@ -346,11 +342,15 @@ export default function AdminGames() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
                         <div>
                           <div className="text-gray-400">Players</div>
-                          <div>{game.players.length}/{game.maxPlayers}</div>
+                          <div>
+                            {game.players.length}/{game.maxPlayers}
+                          </div>
                         </div>
                         <div>
                           <div className="text-gray-400">Turn</div>
-                          <div>#{game.turnCount} ({game.phase})</div>
+                          <div>
+                            #{game.turnCount} ({game.phase})
+                          </div>
                         </div>
                         <div>
                           <div className="text-gray-400">Current Player</div>
@@ -378,17 +378,15 @@ export default function AdminGames() {
                               ({player.territoriesCount}T, {player.armiesCount}A)
                             </span>
                             {player.status !== 'active' && (
-                              <span className="text-yellow-400 text-xs">
-                                {player.status}
-                              </span>
+                              <span className="text-yellow-400 text-xs">{player.status}</span>
                             )}
                           </div>
                         ))}
                       </div>
 
                       <div className="text-xs text-gray-400">
-                        Created: {new Date(game.createdAt).toLocaleString()} • 
-                        Updated: {new Date(game.updatedAt).toLocaleString()}
+                        Created: {new Date(game.createdAt).toLocaleString()} • Updated:{' '}
+                        {new Date(game.updatedAt).toLocaleString()}
                       </div>
                     </div>
 
@@ -399,7 +397,7 @@ export default function AdminGames() {
                       >
                         👁️ Spectate
                       </button>
-                      
+
                       {game.status === 'active' && (
                         <button
                           onClick={() => openActionModal(game, 'pause')}
@@ -408,7 +406,7 @@ export default function AdminGames() {
                           ⏸️ Pause
                         </button>
                       )}
-                      
+
                       {game.status === 'paused' && (
                         <button
                           onClick={() => openActionModal(game, 'resume')}
@@ -417,7 +415,7 @@ export default function AdminGames() {
                           ▶️ Resume
                         </button>
                       )}
-                      
+
                       {['active', 'paused', 'waiting'].includes(game.status) && (
                         <button
                           onClick={() => openActionModal(game, 'force_end')}
@@ -438,7 +436,8 @@ export default function AdminGames() {
             <div className="px-6 py-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-400">
-                  Showing {((currentPage - 1) * limit) + 1} to {Math.min(currentPage * limit, totalGames)} of {totalGames} games
+                  Showing {(currentPage - 1) * limit + 1} to{' '}
+                  {Math.min(currentPage * limit, totalGames)} of {totalGames} games
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -476,7 +475,7 @@ export default function AdminGames() {
               {actionModal.action === 'resume' && '▶️ Resume Game'}
               {actionModal.action === 'adjust_settings' && '⚙️ Adjust Game Settings'}
             </h3>
-            
+
             <div className="mb-4 p-4 bg-gray-700 rounded">
               <div className="font-medium">
                 {actionModal.game.name || `Game ${actionModal.game.id.slice(0, 8)}`}
@@ -498,7 +497,7 @@ export default function AdminGames() {
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded resize-none"
                     rows={3}
                     placeholder={
-                      actionModal.action === 'force_end' 
+                      actionModal.action === 'force_end'
                         ? 'Explain why this game is being force-ended...'
                         : 'Optional notes about this action...'
                     }
@@ -518,11 +517,15 @@ export default function AdminGames() {
                 onClick={handleGameAction}
                 disabled={actionModal.action === 'force_end' && !actionNotes.trim()}
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
-                  actionModal.action === 'spectate' ? 'bg-blue-600 hover:bg-blue-700' :
-                  actionModal.action === 'force_end' ? 'bg-red-600 hover:bg-red-700' :
-                  actionModal.action === 'pause' ? 'bg-orange-600 hover:bg-orange-700' :
-                  actionModal.action === 'resume' ? 'bg-green-600 hover:bg-green-700' :
-                  'bg-gray-600 hover:bg-gray-700'
+                  actionModal.action === 'spectate'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : actionModal.action === 'force_end'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : actionModal.action === 'pause'
+                        ? 'bg-orange-600 hover:bg-orange-700'
+                        : actionModal.action === 'resume'
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : 'bg-gray-600 hover:bg-gray-700'
                 }`}
               >
                 {actionModal.action === 'spectate' && '👁️ Open Spectator View'}

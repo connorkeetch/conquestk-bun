@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { adminService } from '../services/adminService'
 
 interface SystemStatus {
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+  }, [loadDashboardData])
 
   const loadDashboardData = async () => {
     try {
@@ -39,13 +39,12 @@ export default function AdminDashboard() {
 
       const [statusData, adminData] = await Promise.all([
         adminService.getSystemStatus(),
-        adminService.getAdminInfo()
+        adminService.getAdminInfo(),
       ])
 
       setSystemStatus(statusData)
       setAdminInfo(adminData)
     } catch (err: any) {
-      console.error('Error loading admin dashboard:', err)
       setError(err.message || 'Failed to load dashboard data')
     } finally {
       setLoading(false)
@@ -57,7 +56,6 @@ export default function AdminDashboard() {
       await adminService.toggleFeatureFlag(flagName, enabled)
       await loadDashboardData() // Refresh data
     } catch (err: any) {
-      console.error('Error toggling feature flag:', err)
       alert(`Failed to toggle feature flag: ${err.message}`)
     }
   }
@@ -79,7 +77,7 @@ export default function AdminDashboard() {
         <div className="text-center text-red-400">
           <div className="text-2xl mb-4">❌</div>
           <div>Error: {error}</div>
-          <button 
+          <button
             onClick={loadDashboardData}
             className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
           >
@@ -97,7 +95,7 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">🛡️ Admin Dashboard</h1>
           <div className="text-gray-400">
-            Welcome back, {adminInfo?.adminRoles.map(r => r.roleName).join(', ')} admin
+            Welcome back, {adminInfo?.adminRoles.map((r) => r.roleName).join(', ')} admin
           </div>
         </div>
 
@@ -157,34 +155,38 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
             <div className="space-y-3">
-              <a 
-                href="/admin/users" 
+              <a
+                href="/admin/users"
                 className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">User Management</div>
-                    <div className="text-sm text-gray-400">Manage user accounts, roles, and permissions</div>
+                    <div className="text-sm text-gray-400">
+                      Manage user accounts, roles, and permissions
+                    </div>
                   </div>
                   <div className="text-2xl">👥</div>
                 </div>
               </a>
 
-              <a 
-                href="/admin/content" 
+              <a
+                href="/admin/content"
                 className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">Content Moderation</div>
-                    <div className="text-sm text-gray-400">Review and approve user-generated content</div>
+                    <div className="text-sm text-gray-400">
+                      Review and approve user-generated content
+                    </div>
                   </div>
                   <div className="text-2xl">🔍</div>
                 </div>
               </a>
 
-              <a 
-                href="/admin/games" 
+              <a
+                href="/admin/games"
                 className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
@@ -196,8 +198,8 @@ export default function AdminDashboard() {
                 </div>
               </a>
 
-              <a 
-                href="/admin/logs" 
+              <a
+                href="/admin/logs"
                 className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
@@ -215,27 +217,29 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">🚩 Feature Flags</h2>
             <div className="space-y-3">
-              {systemStatus && Object.entries(systemStatus.featureFlags).map(([flagName, isEnabled]) => (
-                <div key={flagName} className="flex items-center justify-between bg-gray-700 rounded-lg p-4">
-                  <div>
-                    <div className="font-medium capitalize">
-                      {flagName.replace(/_/g, ' ')}
+              {systemStatus &&
+                Object.entries(systemStatus.featureFlags).map(([flagName, isEnabled]) => (
+                  <div
+                    key={flagName}
+                    className="flex items-center justify-between bg-gray-700 rounded-lg p-4"
+                  >
+                    <div>
+                      <div className="font-medium capitalize">{flagName.replace(/_/g, ' ')}</div>
+                      <div className="text-sm text-gray-400">
+                        {isEnabled ? 'Enabled' : 'Disabled'}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {isEnabled ? 'Enabled' : 'Disabled'}
-                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={(e) => toggleFeatureFlag(flagName, e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isEnabled}
-                      onChange={(e) => toggleFeatureFlag(flagName, e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </div>

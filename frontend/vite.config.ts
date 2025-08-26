@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -30,9 +30,9 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           redux: ['@reduxjs/toolkit', 'react-redux'],
-          ui: ['lucide-react']
-        }
-      }
+          ui: ['lucide-react'],
+        },
+      },
     },
     chunkSizeWarningLimit: 1000,
   },

@@ -100,7 +100,9 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   position: relative;
 }
 
@@ -238,7 +240,9 @@
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .gamemode-item:hover {
@@ -374,35 +378,35 @@
   .user-stats {
     padding: 1rem;
   }
-  
+
   .stats-header {
     flex-direction: column;
     gap: 1.5rem;
     text-align: center;
   }
-  
+
   .period-selector {
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-card.large {
     grid-column: span 1;
   }
-  
+
   .gamemode-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .chart-container {
     height: 150px;
     overflow-x: auto;
   }
-  
+
   .chart-legend {
     flex-direction: column;
     align-items: center;
@@ -414,16 +418,16 @@
   .stats-header h1 {
     font-size: 2rem;
   }
-  
+
   .period-btn {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
   }
-  
+
   .gamemode-stats {
     grid-template-columns: 1fr;
   }
-  
+
   .map-stat-item {
     flex-direction: column;
     text-align: center;

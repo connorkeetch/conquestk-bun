@@ -1,56 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { gameService, GameRoom } from '../services/gameService';
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { type GameRoom, gameService } from '../services/gameService'
 
 const GameListPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'spectate'>('active');
-  const [userGames, setUserGames] = useState<GameRoom[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'spectate'>('active')
+  const [userGames, setUserGames] = useState<GameRoom[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadUserGames();
-  }, []);
+    loadUserGames()
+  }, [loadUserGames])
 
   const loadUserGames = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await gameService.getUserGames();
-      setUserGames(response.rooms || []);
-    } catch (err: any) {
-      console.error('Error loading user games:', err);
-      setError('Failed to load your games');
+      setLoading(true)
+      setError(null)
+      const response = await gameService.getUserGames()
+      setUserGames(response.rooms || [])
+    } catch (_err: any) {
+      setError('Failed to load your games')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const getGameStatusColor = (status: string) => {
     switch (status) {
-      case 'waiting': return 'text-yellow-400';
-      case 'active': return 'text-green-400';
-      case 'completed': return 'text-blue-400';
-      default: return 'text-gray-400';
+      case 'waiting':
+        return 'text-yellow-400'
+      case 'active':
+        return 'text-green-400'
+      case 'completed':
+        return 'text-blue-400'
+      default:
+        return 'text-gray-400'
     }
-  };
+  }
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  };
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
 
-  const activeGames = userGames.filter(game => game.status === 'waiting' || game.status === 'active');
-  const completedGames = userGames.filter(game => game.status === 'completed');
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    return `${diffDays}d ago`
+  }
+
+  const activeGames = userGames.filter(
+    (game) => game.status === 'waiting' || game.status === 'active',
+  )
+  const completedGames = userGames.filter((game) => game.status === 'completed')
 
   return (
     <div className="container mx-auto px-8 py-8">
@@ -61,10 +67,13 @@ const GameListPage: React.FC = () => {
           <p className="text-gray-400">Manage your active and completed games</p>
         </div>
         <div className="flex gap-3">
-          <Link to="/lobby" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+          <Link
+            to="/lobby"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+          >
             🎮 New Game
           </Link>
-          <button 
+          <button
             onClick={loadUserGames}
             disabled={loading}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -82,10 +91,7 @@ const GameListPage: React.FC = () => {
               <span className="text-red-400">❌</span>
               <span className="text-red-400">{error}</span>
             </div>
-            <button 
-              onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-300"
-            >
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
               ×
             </button>
           </div>
@@ -94,10 +100,10 @@ const GameListPage: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="flex gap-2 mb-8 border-b border-gray-700">
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors relative ${
-            activeTab === 'active' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'active'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('active')}
@@ -109,20 +115,20 @@ const GameListPage: React.FC = () => {
             </span>
           )}
         </button>
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'completed' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'completed'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('completed')}
         >
           ✅ Completed
         </button>
-        <button 
+        <button
           className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'spectate' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
+            activeTab === 'spectate'
+              ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('spectate')}
@@ -145,7 +151,10 @@ const GameListPage: React.FC = () => {
                 <div className="text-6xl mb-4">🎮</div>
                 <p className="text-lg mb-2">No active games</p>
                 <p className="text-sm mb-6">Create or join a game to get started!</p>
-                <Link to="/lobby" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                <Link
+                  to="/lobby"
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                >
                   🎮 Find Games
                 </Link>
               </div>
@@ -157,26 +166,28 @@ const GameListPage: React.FC = () => {
                       <div className="flex-1">
                         <h3 className="card-title">{game.name}</h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
-                          {game.mapName && <span>• {game.mapName}</span>}
-                          <span className={getGameStatusColor(game.status)}>
-                            • {game.status}
+                          <span>
+                            {game.currentPlayers}/{game.maxPlayers} players
                           </span>
+                          {game.mapName && <span>• {game.mapName}</span>}
+                          <span className={getGameStatusColor(game.status)}>• {game.status}</span>
                           <span>• Updated {formatTimeAgo(game.updatedAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
                           <div className={`text-lg font-bold ${getGameStatusColor(game.status)}`}>
-                            {game.status === 'waiting' ? 'Waiting for Players' : 
-                             game.status === 'active' ? 'Game in Progress' : 
-                             game.status}
+                            {game.status === 'waiting'
+                              ? 'Waiting for Players'
+                              : game.status === 'active'
+                                ? 'Game in Progress'
+                                : game.status}
                           </div>
                           <div className="text-sm text-gray-400">
                             Created {formatTimeAgo(game.createdAt)}
                           </div>
                         </div>
-                        <Link 
+                        <Link
                           to={`/room/${game.id}`}
                           className={`btn ${
                             game.status === 'waiting' ? 'btn-primary' : 'btn-secondary'
@@ -204,7 +215,9 @@ const GameListPage: React.FC = () => {
               <div className="text-center text-gray-400 py-16">
                 <div className="text-6xl mb-4">📚</div>
                 <p className="text-lg">No completed games yet</p>
-                <p className="text-sm mt-2">Your game history will appear here once you finish games</p>
+                <p className="text-sm mt-2">
+                  Your game history will appear here once you finish games
+                </p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -214,7 +227,9 @@ const GameListPage: React.FC = () => {
                       <div className="flex-1">
                         <h3 className="card-title">{game.name}</h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-400">
-                          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
+                          <span>
+                            {game.currentPlayers}/{game.maxPlayers} players
+                          </span>
                           {game.mapName && <span>• {game.mapName}</span>}
                           <span className="text-blue-400">• Completed</span>
                           <span>• Finished {formatTimeAgo(game.updatedAt)}</span>
@@ -222,14 +237,12 @@ const GameListPage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-blue-400">
-                            Game Completed
-                          </div>
+                          <div className="text-lg font-bold text-blue-400">Game Completed</div>
                           <div className="text-sm text-gray-400">
                             Duration: {formatTimeAgo(game.createdAt)}
                           </div>
                         </div>
-                        <Link 
+                        <Link
                           to={`/room/${game.id}`}
                           className="px-3 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-sm"
                         >
@@ -253,7 +266,7 @@ const GameListPage: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default GameListPage;
+export default GameListPage

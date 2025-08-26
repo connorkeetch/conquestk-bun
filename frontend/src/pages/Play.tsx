@@ -1,57 +1,56 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import type React from 'react'
+import { Link } from 'react-router-dom'
+
 // import Breadcrumb from '../components/Breadcrumb';
 
 const Play: React.FC = () => {
-
   const gameOptions = [
     {
       title: 'Quick Match',
       description: 'Jump into a game instantly',
       icon: '🚀',
       path: '/play/quick-match',
-      color: 'from-blue-600 to-purple-600'
+      color: 'from-blue-600 to-purple-600',
     },
     {
       title: 'Ranked',
       description: 'Competitive ladder games',
       icon: '🏆',
       path: '/play/ranked',
-      color: 'from-yellow-600 to-orange-600'
+      color: 'from-yellow-600 to-orange-600',
     },
     {
       title: 'Create Lobby',
       description: 'Host a custom game',
       icon: '➕',
       path: '/play/create',
-      color: 'from-green-600 to-teal-600'
+      color: 'from-green-600 to-teal-600',
     },
     {
       title: 'Browse Lobbies',
       description: 'Join existing games',
       icon: '🔍',
       path: '/play/browse',
-      color: 'from-indigo-600 to-blue-600'
+      color: 'from-indigo-600 to-blue-600',
     },
     {
       title: 'vs AI',
       description: 'Single player practice',
       icon: '🤖',
       path: '/play/ai',
-      color: 'from-purple-600 to-pink-600'
+      color: 'from-purple-600 to-pink-600',
     },
     {
       title: 'Tutorial',
       description: 'Learn to play Risk',
       icon: '📚',
       path: '/play/tutorial',
-      color: 'from-red-600 to-pink-600'
-    }
-  ];
+      color: 'from-red-600 to-pink-600',
+    },
+  ]
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-4">🎮 Choose Your Battle</h1>
@@ -67,7 +66,9 @@ const Play: React.FC = () => {
             className={`group relative bg-white/5 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-2xl border border-white/10 hover:border-white/20 overflow-hidden`}
           >
             {/* Gradient accent */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${option.color} opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${option.color} opacity-20 group-hover:opacity-30 transition-opacity duration-300`}
+            ></div>
             <div className="relative text-center">
               <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">
                 {option.icon}
@@ -91,7 +92,7 @@ const Play: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Play;
+export default Play
