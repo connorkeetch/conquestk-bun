@@ -65,7 +65,8 @@ const authSchema = Joi.object({
     .custom((value, helpers) => {
       const error = validateAgainstPatterns(value, 'Username');
       if (error) return helpers.error('any.invalid', { message: error });
-      return sanitizeInput(value);
+      // Don't HTML escape username, just trim whitespace
+      return value.trim();
     })
     .when('$isRegister', { is: true, then: Joi.required() })
     .messages({
@@ -78,6 +79,7 @@ const authSchema = Joi.object({
   identifier: Joi.string()
     .max(255)
     .when('$isRegister', { is: false, then: Joi.required() })
+    // Don't sanitize identifier - it could be username or email
     .messages({
       'string.empty': 'Please provide username or email',
       'any.required': 'Username or email is required'
@@ -108,6 +110,7 @@ const authSchema = Joi.object({
     .max(128)
     .pattern(passwordPattern)
     .required()
+    // IMPORTANT: Don't apply any sanitization/escaping to passwords - they get hashed as-is
     .messages({
       'string.pattern.base': 'Password must contain at least 8 characters, including 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character',
       'string.min': 'Password must be at least 8 characters',
