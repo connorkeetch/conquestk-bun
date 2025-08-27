@@ -32,6 +32,8 @@ npm run dev
 - **🗺️ Interactive World Map**: Click-based territory selection with visual feedback
 - **⚡ Real-time Multiplayer**: Up to 6 players with live Socket.io synchronization
 - **🎮 Phase-specific UI**: Different controls and instructions for each game phase
+- **🏆 Command Points System**: ELO-based skill rating with ranked matchmaking
+- **📊 Leaderboards**: Global rankings with skill tiers from Bronze to Grandmaster
 
 ### 🛠️ Modern Tech Stack
 - **Frontend**: React 18 + TypeScript + Redux Toolkit + Vite
@@ -58,6 +60,9 @@ npm run dev
 - [x] **Battle System**: Animated dice with proper high-to-low comparison
 - [x] **Territory Control**: Visual feedback for selections and valid targets
 - [x] **Game State Persistence**: Complete Redux store with action history
+- [x] **Command Points (ELO) System**: Skill-based matchmaking with 6 tiers
+- [x] **Ranked Games**: Competitive mode with skill requirements
+- [x] **Leaderboards**: Global rankings, tier filtering, and pagination
 
 ### 🚧 Planned Features
 - [ ] **Continent Bonuses**: Additional armies for controlling entire continents

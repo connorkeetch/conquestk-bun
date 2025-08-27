@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
+import audioService from './audioService'
 import {
   selectTargetTerritory,
   selectTerritory,
@@ -107,6 +108,15 @@ class SocketService {
     })
 
     this.socket.on('room-update', (roomData) => {
+      const previousRoom = store.getState().room.currentRoom
+      
+      // Play game start sound when game status changes to 'playing'
+      if (previousRoom?.status === 'waiting' && roomData.status === 'playing') {
+        audioService.playEffect('gamestart')
+        // Start background music
+        audioService.playMusic()
+      }
+      
       store.dispatch(updateRoom(roomData))
     })
 
@@ -136,6 +146,13 @@ class SocketService {
     })
 
     this.socket.on('playerTurnChanged', (data) => {
+      const currentUserId = store.getState().auth.user?.id
+      
+      // Play sound if it's now the current user's turn
+      if (data.currentPlayer === currentUserId) {
+        audioService.playEffect('yourturn')
+      }
+      
       store.dispatch(
         updateGameState({
           currentPlayer: data.currentPlayer,
@@ -159,6 +176,9 @@ class SocketService {
     })
 
     this.socket.on('attackResult', (data) => {
+      // Play dice sound for battle
+      audioService.playEffect('dice')
+
       // Update both attacking and defending territories
       store.dispatch(
         updateTerritory({
@@ -174,6 +194,31 @@ class SocketService {
           ownerId: data.toTerritory.ownerId, // In case territory was conquered
         }),
       )
+
+      // Play victory/defeat sound based on outcome
+      const currentUserId = store.getState().auth.user?.id
+      const attackerId = data.attackerId
+      const conquered = data.conquered
+      
+      if (currentUserId === attackerId) {
+        // Current user is attacking
+        if (conquered) {
+          audioService.playEffect('capture')
+        } else if (data.attackerLosses < data.defenderLosses) {
+          audioService.playEffect('victory')
+        } else {
+          audioService.playEffect('defeat')
+        }
+      } else if (currentUserId === data.defenderId) {
+        // Current user is defending
+        if (conquered) {
+          audioService.playEffect('defeat')
+        } else if (data.defenderLosses < data.attackerLosses) {
+          audioService.playEffect('victory')
+        } else {
+          audioService.playEffect('defeat')
+        }
+      }
 
       // Show battle results
       store.dispatch(setBattleResult(data))
