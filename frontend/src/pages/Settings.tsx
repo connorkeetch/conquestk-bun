@@ -2,6 +2,7 @@ import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import pushNotificationService from '../services/pushNotificationService'
+import audioService from '../services/audioService'
 import {
   clearCache,
   exportSettings,
@@ -48,6 +49,7 @@ export default function Settings() {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
+  const [audioPrefs, setAudioPrefs] = useState(audioService.getPreferences())
 
   useEffect(() => {
     // Initialize push notification service and check status
@@ -143,8 +145,13 @@ export default function Settings() {
                 type="range"
                 min="0"
                 max="100"
-                defaultValue={setting.defaultValue}
+                value={setting.defaultValue}
                 disabled={!setting.isWorking}
+                onChange={(e) => {
+                  if (setting.isWorking && setting.onChange) {
+                    setting.onChange(Number(e.target.value))
+                  }
+                }}
                 className={`w-full ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               <div className="text-xs text-gray-400 text-center mt-1">{setting.defaultValue}%</div>
@@ -338,44 +345,70 @@ export default function Settings() {
       case 'audio':
         return [
           {
+            id: 'enable-sounds',
+            label: 'Enable Sounds',
+            description: 'Master toggle for all audio',
+            type: 'toggle',
+            isWorking: true,
+            defaultValue: audioPrefs.enabled,
+            onChange: (value: boolean) => {
+              audioService.setEnabled(value)
+              setAudioPrefs(audioService.getPreferences())
+            },
+          },
+          {
             id: 'master-volume',
             label: 'Master Volume',
             description: 'Overall audio volume level',
             type: 'range',
-            isWorking: false,
-            defaultValue: 75,
+            isWorking: true,
+            defaultValue: audioPrefs.masterVolume,
+            onChange: (value: number) => {
+              audioService.setVolume('master', value)
+              setAudioPrefs(audioService.getPreferences())
+            },
           },
           {
             id: 'sfx-volume',
             label: 'Sound Effects',
             description: 'Volume for game sound effects',
             type: 'range',
-            isWorking: false,
-            defaultValue: 80,
+            isWorking: true,
+            defaultValue: audioPrefs.effectsVolume,
+            onChange: (value: number) => {
+              audioService.setVolume('effects', value)
+              setAudioPrefs(audioService.getPreferences())
+            },
           },
           {
             id: 'music-volume',
             label: 'Background Music',
             description: 'Volume for background music',
             type: 'range',
-            isWorking: false,
-            defaultValue: 50,
+            isWorking: true,
+            defaultValue: audioPrefs.musicVolume,
+            onChange: (value: number) => {
+              audioService.setVolume('music', value)
+              setAudioPrefs(audioService.getPreferences())
+            },
           },
           {
-            id: 'dice-sounds',
-            label: 'Dice Roll Sounds',
-            description: 'Play sound effects during battles',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
+            id: 'test-effects',
+            label: 'Test Sound Effects',
+            description: 'Play a sample sound effect',
+            type: 'button',
+            isWorking: true,
+            buttonText: '🔊 Test Effects',
+            onClick: () => audioService.testEffect(),
           },
           {
-            id: 'turn-notifications',
-            label: 'Turn Notifications',
-            description: "Play sound when it's your turn",
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
+            id: 'test-music',
+            label: 'Test Background Music',
+            description: 'Play a sample music track',
+            type: 'button',
+            isWorking: true,
+            buttonText: '🎵 Test Music',
+            onClick: () => audioService.testMusic(),
           },
         ]
 

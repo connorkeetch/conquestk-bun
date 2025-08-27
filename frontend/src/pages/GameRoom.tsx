@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
 import { socketService } from '../services/socketService'
+import audioService from '../services/audioService'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -10,6 +11,7 @@ export default function GameRoom() {
   const { currentRoom } = useAppSelector((state) => state.room)
   const { currentGame } = useAppSelector((state) => state.game)
   const { user } = useAppSelector((state) => state.auth)
+  const [isMuted, setIsMuted] = useState(audioService.isMutedState())
 
   useEffect(() => {
     if (!roomId) {
@@ -30,6 +32,11 @@ export default function GameRoom() {
     navigate('/lobby')
   }
 
+  const handleToggleMute = () => {
+    audioService.toggleMute()
+    setIsMuted(audioService.isMutedState())
+  }
+
   if (!currentRoom) {
     return (
       <div className="text-center">
@@ -42,9 +49,18 @@ export default function GameRoom() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">{currentRoom.name}</h1>
-        <button onClick={handleLeaveRoom} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
-          Leave Room
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleToggleMute}
+            className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded flex items-center gap-2"
+            title={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
+          </button>
+          <button onClick={handleLeaveRoom} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+            Leave Room
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

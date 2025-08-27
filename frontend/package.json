@@ -23,6 +23,7 @@
     "axios": "^1.7.2",
     "dompurify": "^3.2.6",
     "framer-motion": "12.23.12",
+    "howler": "^2.2.4",
     "lucide-react": "0.542.0",
     "preline": "^3.2.3",
     "react": "^19.0.0",
