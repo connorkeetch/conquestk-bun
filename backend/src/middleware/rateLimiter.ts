@@ -49,7 +49,7 @@ export const authLimiter = rateLimit({
 export const loginSlowDown = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: 2, // Start slowing after 2 requests
-  delayMs: (hits) => hits * 1000, // Add 1 second delay per attempt
+  delayMs: 1000, // Add 1 second delay per attempt
   maxDelayMs: 5000, // Maximum 5 second delay
   skipSuccessfulRequests: true, // Only count failed attempts
 })
