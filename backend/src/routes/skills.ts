@@ -42,7 +42,7 @@ router.get('/users/:userId/rating', async (req, res) => {
       ? (user.ranked_wins / user.total_ranked_games * 100).toFixed(1)
       : 0
 
-    res.json({
+    return res.json({
       userId: user.id,
       username: user.username,
       skillRating: user.skill_rating || 1000,
@@ -62,7 +62,7 @@ router.get('/users/:userId/rating', async (req, res) => {
     })
   } catch (error) {
     console.error('Error fetching user rating:', error)
-    res.status(500).json({ error: 'Failed to fetch user rating' })
+    return res.status(500).json({ error: 'Failed to fetch user rating' })
   }
 })
 
@@ -172,17 +172,17 @@ router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
   try {
     // Check if user is admin
     const userQuery = `SELECT is_admin FROM users WHERE id = ?`
-    const userResult = await query(userQuery, [req.user?.userId])
+    const userResult = await query(userQuery, [(req as any).userId])
     
     if (!userResult.rows[0]?.is_admin) {
       return res.status(403).json({ error: 'Admin access required' })
     }
 
     await eloService.updateLeaderboardCache()
-    res.json({ message: 'Leaderboard cache refreshed successfully' })
+    return res.json({ message: 'Leaderboard cache refreshed successfully' })
   } catch (error) {
     console.error('Error refreshing leaderboard:', error)
-    res.status(500).json({ error: 'Failed to refresh leaderboard' })
+    return res.status(500).json({ error: 'Failed to refresh leaderboard' })
   }
 })
 
