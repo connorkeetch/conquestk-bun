@@ -57,6 +57,7 @@ const CreateGamePage: React.FC = () => {
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
   >('balanced')
+  const [isRanked, setIsRanked] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,10 +67,27 @@ const CreateGamePage: React.FC = () => {
       const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
       const teamText = teams > 0 ? `${teams} Teams` : 'FFA'
       const playerText = `${maxPlayers}P`
-      const autoName = `${playerText} ${teamText} - ${mapName}`
+      const rankedText = isRanked ? '[RANKED] ' : ''
+      const autoName = `${rankedText}${playerText} ${teamText} - ${mapName}`
       setGameName(autoName)
     }
-  }, [maxPlayers, teams, selectedMap, gameName])
+  }, [maxPlayers, teams, selectedMap, gameName, isRanked])
+
+  // Validate ranked game settings
+  useEffect(() => {
+    if (isRanked) {
+      // Enforce ranked game requirements
+      if (maxPlayers < 3) {
+        setMaxPlayers(3)
+      }
+      if (gameVisibility === 'private') {
+        setGameVisibility('public')
+      }
+      if (teams > 0) {
+        setTeams(0)
+      }
+    }
+  }, [isRanked, maxPlayers, gameVisibility, teams])
 
   // Save invite code when it changes
   useEffect(() => {
@@ -87,6 +105,7 @@ const CreateGamePage: React.FC = () => {
         name: gameName || 'Custom Game',
         maxPlayers,
         isPrivate: gameVisibility === 'private',
+        isRanked,
         gameType: 'custom',
         mapId: selectedMap,
         movementType: 'classic_adjacent' as MovementType,
@@ -230,6 +249,42 @@ const CreateGamePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Ranked Game Toggle */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-lg border border-blue-500/30">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRanked}
+                    onChange={(e) => setIsRanked(e.target.checked)}
+                    className="mr-3 h-5 w-5"
+                  />
+                  <div>
+                    <span className="text-lg font-bold text-white">⚔️ Ranked Game</span>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Compete for Command Points (CP) and climb the skill leaderboard
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {isRanked && (
+              <div className="mt-4 p-3 bg-yellow-900/30 rounded-lg border border-yellow-600/50">
+                <p className="text-sm font-semibold text-yellow-400 mb-2">Ranked Requirements:</p>
+                <ul className="text-xs text-gray-300 space-y-1">
+                  <li>• Minimum 3 players required</li>
+                  <li>• No AI players allowed</li>
+                  <li>• Must be a public game</li>
+                  <li>• No team play</li>
+                  <li>• Rating changes based on final position</li>
+                  <li>• Skill difference limit: ±500 CP</li>
+                </ul>
+              </div>
+            )}
+          </div>
+
           {/* Randomize Settings */}
           <div className="mt-4 flex items-center gap-4">
             <label className="flex items-center cursor-pointer">
@@ -243,8 +298,11 @@ const CreateGamePage: React.FC = () => {
                   }
                 }}
                 className="mr-2"
+                disabled={isRanked}
               />
-              <span className="text-sm text-gray-300">🎲 Randomize Settings</span>
+              <span className={`text-sm ${isRanked ? 'text-gray-500' : 'text-gray-300'}`}>
+                🎲 Randomize Settings {isRanked && '(Disabled for ranked)'}
+              </span>
             </label>
           </div>
         </div>
