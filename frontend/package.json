@@ -16,17 +16,17 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.7.0",
+    "@hookform/resolvers": "5.2.1",
     "@reduxjs/toolkit": "^2.2.6",
     "@tailwindcss/vite": "^4.1.12",
     "@types/dompurify": "^3.0.5",
     "axios": "^1.7.2",
     "dompurify": "^3.2.6",
-    "framer-motion": "^11.2.12",
-    "lucide-react": "^0.400.0",
+    "framer-motion": "12.23.12",
+    "lucide-react": "0.542.0",
     "preline": "^3.2.3",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-hook-form": "^7.52.1",
     "react-hot-toast": "^2.4.1",
     "react-redux": "^9.1.2",
@@ -38,16 +38,16 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
-    "@types/react": "19.1.11",
-    "@types/react-dom": "19.1.8",
-    "@vitejs/plugin-react": "^4.3.1",
-    "@vitest/ui": "^1.6.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "5.0.1",
+    "@vitest/ui": "3.2.4",
     "autoprefixer": "^10.4.21",
-    "jsdom": "^24.1.0",
-    "postcss": "^8.4.49",
+    "jsdom": "26.1.0",
+    "postcss": "8.5.6",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.5.3",
     "vite": "^5.3.3",
-    "vitest": "^1.6.0"
+    "vitest": "3.2.4"
   }
 }
