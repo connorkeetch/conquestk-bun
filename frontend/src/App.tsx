@@ -32,10 +32,18 @@ import VerifyEmail from './pages/VerifyEmail'
 import { checkAuth } from './store/authSlice'
 
 function App() {
+  console.log('[APP] App component rendering...')
   const dispatch = useAppDispatch()
 
   useEffect(() => {
-    dispatch(checkAuth())
+    console.log('[APP] App useEffect running...')
+    // Only check auth if we have a token
+    const token = localStorage.getItem('token')
+    console.log('[APP] Token exists:', !!token)
+    if (token) {
+      console.log('[APP] Dispatching checkAuth...')
+      dispatch(checkAuth())
+    }
 
     // Apply saved theme on app load
     const savedSettings = localStorage.getItem('userSettings')
@@ -45,7 +53,9 @@ function App() {
         if (settings.display?.theme) {
           document.documentElement.setAttribute('data-theme', settings.display.theme)
         }
-      } catch (_error) {}
+      } catch (_error) {
+        // Silently ignore theme loading errors
+      }
     }
   }, [dispatch])
 

@@ -13,8 +13,20 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   requireAuth = true,
   requireAdmin = false,
 }) => {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth)
+  const { isAuthenticated, user, isLoading } = useAppSelector((state) => state.auth)
   const location = useLocation()
+
+  // If auth is still loading, show a loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
+        <div className="text-center">
+          <div className="spinner mb-4"></div>
+          <div className="text-white text-lg">Loading...</div>
+        </div>
+      </div>
+    )
+  }
 
   // If route requires authentication and user is not authenticated
   if (requireAuth && !isAuthenticated) {
