@@ -83,7 +83,7 @@ app.use(express.json({ limit: '10mb' }))
 app.use(suspiciousActivityTracker.middleware())
 
 // Apply general rate limiting to all API routes
-app.use('/api/', generalApiLimiter)
+app.use('/api', generalApiLimiter as any)
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
