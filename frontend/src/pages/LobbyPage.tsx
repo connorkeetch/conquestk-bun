@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import authService from '../services/authService'
@@ -22,6 +22,20 @@ const LobbyPage: React.FC = () => {
     minPlayers: 2,
     maxPlayers: 12,
   })
+
+  // Memoize the loadPublicGames function to prevent infinite re-renders
+  const loadPublicGames = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await gameService.getPublicGames()
+      setPublicGames(response.rooms || [])
+    } catch (_err: any) {
+      setError('Failed to load games')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (activeTab === 'browse') {
@@ -56,18 +70,6 @@ const LobbyPage: React.FC = () => {
     }
   }
 
-  const loadPublicGames = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await gameService.getPublicGames()
-      setPublicGames(response.rooms || [])
-    } catch (_err: any) {
-      setError('Failed to load games')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleJoinGame = async (roomId: string) => {
     try {

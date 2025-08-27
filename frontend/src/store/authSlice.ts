@@ -10,12 +10,19 @@ interface AuthState {
   isAuthenticated: boolean
 }
 
+const getInitialToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token')
+  }
+  return null
+}
+
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem('token'),
+  token: getInitialToken(),
   isLoading: false,
   error: null,
-  isAuthenticated: !!localStorage.getItem('token'),
+  isAuthenticated: !!getInitialToken(),
 }
 
 export const login = createAsyncThunk(
@@ -36,21 +43,23 @@ export const register = createAsyncThunk(
   },
 )
 
-export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('No token found')
-
+export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
   try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      return rejectWithValue('No token found')
+    }
+
     const response = await authService.getProfile()
     return { user: response.user, token }
   } catch (error: any) {
     // If it's a 401, the token is invalid
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      throw error
+      return rejectWithValue('Invalid token')
     }
     // For other errors (network, server down), keep the token but throw error
-    throw error
+    return rejectWithValue(error.message || 'Auth check failed')
   }
 })
 
@@ -109,13 +118,13 @@ const authSlice = createSlice({
       })
       .addCase(checkAuth.rejected, (state, action) => {
         state.isLoading = false
-        // Only clear auth if it was a 401 (handled in the thunk)
-        // For other errors, keep the existing state
-        if (action.error.message === 'No token found') {
+        // Only clear auth if it was a 401 or no token
+        if (action.payload === 'No token found' || action.payload === 'Invalid token') {
           state.user = null
           state.token = null
           state.isAuthenticated = false
         }
+        // For network errors, keep existing auth state
       })
   },
 })
