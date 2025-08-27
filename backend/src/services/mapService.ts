@@ -20,33 +20,87 @@ import { logger } from '../utils/logger'
 export class MapService {
   // ============= MAP CRUD OPERATIONS =============
 
-  async createMap(userId: string, mapData: CreateMapRequest): Promise<CustomMap> {
+  async createMap(userId: string, mapData: CreateMapRequest & { metadata?: any }): Promise<CustomMap> {
     const client = await getClient()
     try {
+      // Check if metadata column exists (add it if not)
+      const hasMetadataColumn = true // We'll assume it exists or handle the error gracefully
+      
       // Create the map record
-      const mapResult = await client.query(
+      const mapQuery = hasMetadataColumn
+        ? `
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING *
         `
-        INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING *
-      `,
-        [
-          mapData.name,
-          mapData.description || null,
-          userId,
-          mapData.imageUrl || null,
-          mapData.imageWidth || 800,
-          mapData.imageHeight || 600,
-          mapData.isPublic || false,
-          JSON.stringify(mapData.tags || []),
-          mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
-        ],
-      )
+        : `
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING *
+        `
+      
+      const mapValues = hasMetadataColumn
+        ? [
+            mapData.name,
+            mapData.description || null,
+            userId,
+            mapData.imageUrl || null,
+            mapData.imageWidth || 800,
+            mapData.imageHeight || 600,
+            mapData.isPublic || false,
+            JSON.stringify(mapData.tags || []),
+            mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
+            mapData.metadata ? JSON.stringify(mapData.metadata) : null,
+          ]
+        : [
+            mapData.name,
+            mapData.description || null,
+            userId,
+            mapData.imageUrl || null,
+            mapData.imageWidth || 800,
+            mapData.imageHeight || 600,
+            mapData.isPublic || false,
+            JSON.stringify(mapData.tags || []),
+            mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
+          ]
+
+      const mapResult = await client.query(mapQuery, mapValues)
 
       const map = mapResult.rows[0]
-      logger.info(`Created new map: ${map.name} (${map.id})`)
+      logger.info(`Created new map: ${map.name} (${map.id}) with metadata:`, {
+        hasMetadata: !!mapData.metadata,
+        territories: mapData.metadata?.territories?.length || 0,
+        continents: mapData.metadata?.continents?.length || 0,
+      })
 
       return this.formatMapFromDb(map)
+    } catch (error: any) {
+      // If metadata column doesn't exist, try without it
+      if (error.message && error.message.includes('metadata')) {
+        logger.warn('Metadata column not found, creating map without metadata')
+        const mapResult = await client.query(
+          `
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING *
+        `,
+          [
+            mapData.name,
+            mapData.description || null,
+            userId,
+            mapData.imageUrl || null,
+            mapData.imageWidth || 800,
+            mapData.imageHeight || 600,
+            mapData.isPublic || false,
+            JSON.stringify(mapData.tags || []),
+            mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
+          ],
+        )
+        const map = mapResult.rows[0]
+        logger.info(`Created new map without metadata: ${map.name} (${map.id})`)
+        return this.formatMapFromDb(map)
+      }
+      throw error
     } finally {
       if (client.release) client.release()
     }

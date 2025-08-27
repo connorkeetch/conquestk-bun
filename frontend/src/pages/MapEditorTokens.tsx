@@ -331,15 +331,52 @@ export default function MapEditorTokens() {
       }
 
       // Save to backend
-      const _result = await axios.post('/api/maps', formData, {
+      console.log('Uploading map with data:', {
+        name: state.name,
+        territoriesCount: state.territories.length,
+        continentsCount: state.continents.length,
+        hasImage: !!state.imageUrl,
+      })
+      
+      const result = await axios.post('/api/maps', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       })
+      
+      console.log('Map upload successful:', result.data)
       alert('Map saved successfully! It will appear in the Create Game map selection.')
-    } catch (_error) {
-      alert('Failed to save map. Please try again.')
+    } catch (error: any) {
+      console.error('Map upload failed:', error)
+      
+      // Provide detailed error message
+      let errorMessage = 'Failed to save map.'
+      
+      if (error.response) {
+        // Server responded with error
+        console.error('Server error response:', error.response.data)
+        errorMessage += `\n\nServer error: ${error.response.data.error || error.response.data.message || 'Unknown server error'}`
+        errorMessage += `\nStatus: ${error.response.status}`
+        
+        // Check for specific validation errors
+        if (error.response.data.errors) {
+          errorMessage += '\n\nValidation errors:'
+          error.response.data.errors.forEach((err: any) => {
+            errorMessage += `\n- ${err.msg || err.message}`
+          })
+        }
+      } else if (error.request) {
+        // Request was made but no response
+        console.error('No response from server:', error.request)
+        errorMessage += '\n\nNo response from server. Check your connection.'
+      } else {
+        // Error in request setup
+        console.error('Request setup error:', error.message)
+        errorMessage += `\n\nError: ${error.message}`
+      }
+      
+      alert(errorMessage)
     }
   }
 
