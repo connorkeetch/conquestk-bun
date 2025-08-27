@@ -233,7 +233,7 @@ router.get('/abilities/list', async (_req: Request, res: Response) => {
 router.post(
   '/',
   authenticateToken,
-  upload.single('image'),
+  upload.single('image') as any,
   handleMulterError,
   validateCreateMap,
   checkValidation,
@@ -275,7 +275,7 @@ router.post(
 router.put(
   '/:mapId',
   authenticateToken,
-  upload.single('image'),
+  upload.single('image') as any,
   validateUpdateMap,
   checkValidation,
   async (req: Request, res: Response) => {
