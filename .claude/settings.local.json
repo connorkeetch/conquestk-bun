@@ -86,7 +86,8 @@
       "Bash(sqlite3:*)",
       "Bash(grep:*)",
       "Bash(git reset:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "mcp__zen__planner"
     ],
     "deny": [],
     "ask": [],

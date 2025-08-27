@@ -33,6 +33,7 @@ export interface CreateGameData {
   name: string
   maxPlayers: number
   isPrivate?: boolean
+  isRanked?: boolean
   mapId?: string
   movementType?: string
   allowTeamPlay?: boolean

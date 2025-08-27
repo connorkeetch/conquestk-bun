@@ -12,6 +12,7 @@ export interface CreateRoomData {
   movementType?: string
   allowTeamPlay?: boolean
   capitalsEnabled?: boolean
+  isRanked?: boolean
   gameSettings?: any
 }
 
@@ -19,6 +20,19 @@ export class GameRoomService {
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
     const id = uuidv4()
     const isPostgres = process.env.DB_TYPE !== 'sqlite'
+
+    // Validate ranked game requirements
+    if (roomData.isRanked) {
+      if (roomData.maxPlayers < 3) {
+        throw new Error('Ranked games require at least 3 players')
+      }
+      if (roomData.isPrivate) {
+        throw new Error('Ranked games cannot be private')
+      }
+      if (roomData.allowTeamPlay) {
+        throw new Error('Ranked games cannot have team play enabled')
+      }
+    }
 
     // Include capitalsEnabled in game settings
     const gameSettings = {
@@ -28,8 +42,8 @@ export class GameRoomService {
 
     if (isPostgres) {
       const pgQuery = `
-        INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, game_settings, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'waiting')
+        INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'waiting')
         RETURNING *
       `
 
@@ -42,14 +56,15 @@ export class GameRoomService {
         roomData.gameType || 'quick',
         roomData.movementType || 'classic_adjacent',
         roomData.allowTeamPlay || false,
+        roomData.isRanked || false,
         JSON.stringify(gameSettings),
       ])
 
       return result.rows[0]
     }
     const sqliteQuery = `
-        INSERT INTO game_rooms (id, name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, game_settings, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting')
+        INSERT INTO game_rooms (id, name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting')
       `
 
     await query(sqliteQuery, [
@@ -62,6 +77,7 @@ export class GameRoomService {
       roomData.gameType || 'quick',
       roomData.movementType || 'classic_adjacent',
       roomData.allowTeamPlay || false,
+      roomData.isRanked || false,
       JSON.stringify(gameSettings),
     ])
 
@@ -74,13 +90,15 @@ export class GameRoomService {
       SELECT gr.*, 
              COUNT(rp.user_id) as current_players,
              u.username as host_username,
+             u.skill_rating as host_skill_rating,
+             u.current_tier as host_tier,
              m.name as map_name
       FROM game_rooms gr
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON gr.host_id = u.id
       LEFT JOIN maps m ON gr.map_id = m.id
       WHERE gr.status IN ('waiting', 'active')
-      GROUP BY gr.id, u.username, m.name
+      GROUP BY gr.id, u.username, u.skill_rating, u.current_tier, m.name
       ORDER BY gr.created_at DESC
     `
 
@@ -89,6 +107,8 @@ export class GameRoomService {
       ...row,
       currentPlayers: parseInt(row.current_players, 10) || 0,
       hostUsername: row.host_username,
+      hostSkillRating: row.host_skill_rating,
+      hostTier: row.host_tier,
       mapName: row.map_name,
     }))
   }
@@ -104,6 +124,8 @@ export class GameRoomService {
                  json_build_object(
                    'userId', u.id,
                    'username', u.username,
+                   'skill_rating', u.skill_rating,
+                   'current_tier', u.current_tier,
                    'joinedAt', rp.joined_at
                  )
                ) as players
@@ -121,7 +143,10 @@ export class GameRoomService {
         SELECT gr.*,
                '[' || GROUP_CONCAT(
                  CASE WHEN u.id IS NOT NULL THEN
-                   '{"userId":"' || u.id || '","username":"' || u.username || '","joinedAt":"' || rp.joined_at || '"}'
+                   '{"userId":"' || u.id || '","username":"' || u.username || 
+                   '","skill_rating":' || COALESCE(u.skill_rating, 1000) || 
+                   ',"current_tier":"' || COALESCE(u.current_tier, 'Gold') || 
+                   '","joinedAt":"' || rp.joined_at || '"}'
                  END
                ) || ']' as players
         FROM game_rooms gr
@@ -179,6 +204,65 @@ export class GameRoomService {
 
       if (currentPlayers >= room.max_players) {
         throw new Error('Room is full')
+      }
+
+      // Check skill rating gap for ranked games
+      if (room.is_ranked) {
+        // Get the user's skill rating
+        const userQuery = `SELECT skill_rating FROM users WHERE id = ?`
+        const userResult = await client.query(userQuery, [userId])
+        
+        if (userResult.rows.length === 0) {
+          throw new Error('User not found')
+        }
+        
+        const userRating = userResult.rows[0].skill_rating || 1000
+        
+        // Get current players' average rating
+        const playersQuery = `
+          SELECT AVG(u.skill_rating) as avg_rating,
+                 MIN(u.skill_rating) as min_rating,
+                 MAX(u.skill_rating) as max_rating
+          FROM room_players rp
+          JOIN users u ON rp.user_id = u.id
+          WHERE rp.room_id = ?
+        `
+        const playersResult = await client.query(playersQuery, [roomId])
+        
+        if (playersResult.rows[0].avg_rating) {
+          const avgRating = parseFloat(playersResult.rows[0].avg_rating)
+          const minRating = parseFloat(playersResult.rows[0].min_rating)
+          const maxRating = parseFloat(playersResult.rows[0].max_rating)
+          
+          // Check if the skill gap is too large (500 points)
+          if (Math.abs(userRating - avgRating) > 500) {
+            throw new Error(`Skill rating difference too large. Your rating: ${userRating}, Room average: ${Math.round(avgRating)}`)
+          }
+          
+          // Update room's average rating
+          const newAvgRating = Math.round((avgRating * currentPlayers + userRating) / (currentPlayers + 1))
+          const newMinRating = Math.min(minRating, userRating)
+          const newMaxRating = Math.max(maxRating, userRating)
+          
+          const updateRoomQuery = `
+            UPDATE game_rooms
+            SET avg_skill_rating = ?,
+                min_skill_rating = ?,
+                max_skill_rating = ?
+            WHERE id = ?
+          `
+          await client.query(updateRoomQuery, [newAvgRating, newMinRating, newMaxRating, roomId])
+        } else {
+          // First player joining, set initial ratings
+          const updateRoomQuery = `
+            UPDATE game_rooms
+            SET avg_skill_rating = ?,
+                min_skill_rating = ?,
+                max_skill_rating = ?
+            WHERE id = ?
+          `
+          await client.query(updateRoomQuery, [userRating, userRating, userRating, roomId])
+        }
       }
 
       if (isPostgres) {
