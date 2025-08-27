@@ -80,12 +80,14 @@
       "Bash(timeout 5 curl -s http://localhost:5175/src/main.tsx)",
       "Bash(lsof:*)",
       "Bash(npm update)",
-      "Bash(npm:*)"
+      "Bash(npm:*)",
+      "mcp__zen__chat"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "github",
     "memory",
@@ -94,7 +96,8 @@
     "puppeteer",
     "fetch",
     "sequential-thinking",
-    "serena"
+    "serena",
+    "zen"
   ],
   "hooks": {
     "SessionStart": [
@@ -118,15 +121,6 @@
       }
     ],
     "PostToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Tool: $CLAUDE_TOOL_NAME completed\" with title \"Claude Code\"'; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' \"Tool: $CLAUDE_TOOL_NAME completed\"; fi"
-          }
-        ]
-      },
       {
         "matcher": "Edit|MultiEdit",
         "hooks": [
@@ -178,6 +172,17 @@
           {
             "type": "command",
             "command": "if [[ -f package.json ]] && npm run test:quick --silent >/dev/null 2>&1; then echo '✅ Tests passed'; else echo '⚠️ Tests may need attention'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Ready for input\" with title \"Claude Code\"'; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Ready for input'; fi"
           }
         ]
       }

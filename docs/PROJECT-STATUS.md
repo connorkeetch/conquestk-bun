@@ -111,6 +111,28 @@
 - [x] **Image Upload**: Background map images
 - [x] **Map Validation**: Connectivity and overlap checking
 
+### 👥 Community Features (Planned)
+
+These features are tracked in the navigation menu as "Coming Soon":
+
+#### Social & Profile
+- [ ] **User Profiles**: Display stats, achievements, game history
+- [ ] **Friends System**: Add friends, see online status, invite to games
+- [ ] **Match History**: Detailed records with replay capability
+- [ ] **Achievements**: Unlock badges for gameplay milestones
+- [ ] **Tournaments**: Organized competitive events with brackets
+
+#### Communication
+- [ ] **Global Chat**: Community-wide chat rooms
+- [ ] **Game Chat**: In-game messaging during matches
+- [ ] **Forums**: Discussion boards for strategy
+- [ ] **News & Updates**: Official announcements
+
+#### Content Discovery
+- [ ] **Map Ratings**: Rate and review community maps
+- [ ] **Featured Content**: Spotlight on top maps/creators
+- [ ] **Territory Heatmaps**: Visual conquest statistics
+
 ### 🚧 Future Enhancements
 
 #### Game Features

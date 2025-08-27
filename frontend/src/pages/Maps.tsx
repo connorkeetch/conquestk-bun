@@ -22,10 +22,10 @@ const Maps: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-4">🗺️ Maps Gallery</h1>
-          <p className="text-gray-400 text-lg">Discover battlefields from around the world</p>
+          <h1 className="text-4xl font-bold gradient-text mb-2">Maps Gallery</h1>
+          <p className="text-gray-400">Discover battlefields from around the world</p>
         </div>
         <Link
           to="/map-editor"
