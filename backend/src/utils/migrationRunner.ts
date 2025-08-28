@@ -6,10 +6,12 @@ import { logger } from './logger'
 export async function runMigration(migrationFile: string) {
   try {
     // Determine which migration file to use based on database type
-    const dbType = process.env.DATABASE_URL
-      ? 'mysql'
-      : (process.env.DB_TYPE as string) ||
-        (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite')
+    const dbType = process.env.DB_TYPE === 'sqlite'
+      ? 'sqlite'
+      : process.env.DATABASE_URL?.includes('mysql') || process.env.DATABASE_URL?.includes('railway')
+        ? 'mysql'
+        : (process.env.DB_TYPE as string) ||
+          (process.env.NODE_ENV === 'production' ? 'mysql' : 'sqlite')
 
     // Try to use MySQL-specific migration if it exists
     let actualMigrationFile = migrationFile
@@ -135,6 +137,9 @@ export async function runMigrations() {
     // Temporarily skip 008 and 009 due to SQLite issues
     // '008_capitals_system.sql',
     // '009_map_approval_workflow.sql'
+    '010_add_metadata_to_maps.sql',
+    '011_skill_rating_system.sql',
+    '012_add_admin_user_fields.sql',
   ]
 
   for (const migration of migrations) {

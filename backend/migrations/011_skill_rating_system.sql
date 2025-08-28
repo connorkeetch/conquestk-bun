@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_users_skill_rating ON users(skill_rating DESC);
 CREATE INDEX IF NOT EXISTS idx_season_ratings_user ON season_ratings(user_id, season_id);
 
 -- Insert initial season (optional)
-INSERT INTO rating_seasons (season_number, season_name, start_date, is_active) 
+INSERT OR IGNORE INTO rating_seasons (season_number, season_name, start_date, is_active) 
 VALUES (1, 'Inaugural Season', CURRENT_TIMESTAMP, TRUE);
 
 -- Trigger to update user's highest rating

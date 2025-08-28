@@ -29,6 +29,7 @@ import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
 import Statistics from './pages/Statistics'
 import VerifyEmail from './pages/VerifyEmail'
+import AdminPage from './pages/AdminPage'
 import { checkAuth } from './store/authSlice'
 
 function App() {
@@ -308,6 +309,16 @@ function App() {
           element={
             <AuthGuard>
               <Settings />
+            </AuthGuard>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AuthGuard>
+              <AdminPage />
             </AuthGuard>
           }
         />
