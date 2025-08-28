@@ -5,12 +5,27 @@ import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
 import authService from '../services/authService'
 import { type GameRoom, gameService } from '../services/gameService'
+import api from '../services/api'
+import { Clock, Trophy, Gamepad2 } from 'lucide-react'
+
+interface GameInfo {
+  id: string
+  name: string
+  status: 'active' | 'finished' | 'waiting'
+  playerCount: number
+  maxPlayers: number
+  isYourTurn?: boolean
+  winner?: string
+  createdAt: string
+}
 
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
-  const [activeTab, setActiveTab] = useState<'browse' | 'private' | 'tournaments'>('browse')
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private' | 'tournaments'>('browse')
   const [publicGames, setPublicGames] = useState<GameRoom[]>([])
+  const [myGames, setMyGames] = useState<GameInfo[]>([])
+  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'waiting' | 'finished'>('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [privateGameCode, setPrivateGameCode] = useState('')
@@ -38,11 +53,30 @@ const LobbyPage: React.FC = () => {
     }
   }, [])
 
+  // Load user's games
+  const loadMyGames = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.get('/game/my-games')
+      setMyGames(response.data.games || [])
+    } catch (_err: any) {
+      setError('Failed to load your games')
+      setMyGames([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
   useEffect(() => {
     if (activeTab === 'browse') {
       loadPublicGames()
+    } else if (activeTab === 'my-games') {
+      loadMyGames()
     }
-  }, [activeTab, loadPublicGames])
+  }, [activeTab, loadPublicGames, loadMyGames])
 
   useEffect(() => {
     // Check email verification status
@@ -276,29 +310,41 @@ const LobbyPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-700">
+      <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto">
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'browse'
               ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('browse')}
         >
-          🌍 Browse Public Games
+          🌍 Browse Games
         </button>
+        {user && (
+          <button
+            className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'my-games'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            onClick={() => setActiveTab('my-games')}
+          >
+            🎮 My Games
+          </button>
+        )}
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'private'
               ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
           }`}
           onClick={() => setActiveTab('private')}
         >
-          🔒 Join Private Game
+          🔒 Private Game
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'tournaments'
               ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-white'
@@ -433,6 +479,174 @@ const LobbyPage: React.FC = () => {
                                 ? '👁️ Spectate'
                                 : '🎮 Join Game'}
                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'my-games' && user && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">My Games</h2>
+              <button
+                onClick={loadMyGames}
+                disabled={loading}
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {loading ? '🔄 Loading...' : '🔄 Refresh'}
+              </button>
+            </div>
+
+            {/* Filter buttons for My Games */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setMyGamesFilter('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  myGamesFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                All Games
+              </button>
+              <button
+                onClick={() => setMyGamesFilter('active')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  myGamesFilter === 'active'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <Gamepad2 className="inline w-4 h-4 mr-1" />
+                Active
+              </button>
+              <button
+                onClick={() => setMyGamesFilter('waiting')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  myGamesFilter === 'waiting'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <Clock className="inline w-4 h-4 mr-1" />
+                Waiting
+              </button>
+              <button
+                onClick={() => setMyGamesFilter('finished')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  myGamesFilter === 'finished'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <Trophy className="inline w-4 h-4 mr-1" />
+                Finished
+              </button>
+            </div>
+
+            {loading ? (
+              <SkeletonGroup count={6} className="grid gap-4">
+                {() => <GameCardSkeleton />}
+              </SkeletonGroup>
+            ) : myGames.length === 0 ? (
+              <div className="text-center text-gray-400 py-16">
+                <div className="text-6xl mb-4">🎮</div>
+                <p className="text-lg mb-2">No games yet</p>
+                <p className="text-sm mb-6">Join or create a game to get started!</p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => setActiveTab('browse')}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    🌍 Browse Games
+                  </button>
+                  <Link
+                    to="/create"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-block"
+                  >
+                    ➕ Create Game
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {(() => {
+                  const filteredGames = myGames.filter((game) => {
+                    if (myGamesFilter === 'all') return true
+                    return game.status === myGamesFilter
+                  })
+
+                  if (filteredGames.length === 0) {
+                    return (
+                      <div className="text-center text-gray-400 py-16">
+                        <div className="text-6xl mb-4">
+                          {myGamesFilter === 'active' ? '🎮' : myGamesFilter === 'waiting' ? '⏰' : '🏆'}
+                        </div>
+                        <p className="text-lg mb-2 text-gray-300">
+                          No {myGamesFilter === 'all' ? '' : myGamesFilter} games
+                        </p>
+                        <button
+                          onClick={() => setMyGamesFilter('all')}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                        >
+                          Show All Games
+                        </button>
+                      </div>
+                    )
+                  }
+
+                  return filteredGames.map((game) => (
+                    <div
+                      key={game.id}
+                      className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-white">{game.name}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <span>
+                              {game.playerCount}/{game.maxPlayers} players
+                            </span>
+                            <span className={getGameStatusColor(game.status)}>• {game.status}</span>
+                            {game.isYourTurn && (
+                              <span className="text-red-500 font-semibold animate-pulse">
+                                • Your Turn!
+                              </span>
+                            )}
+                            {game.winner && (
+                              <span className="text-yellow-400">• Winner: {game.winner}</span>
+                            )}
+                            <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div>
+                          {game.status === 'waiting' ? (
+                            <Link
+                              to={`/room/${game.id}`}
+                              className="px-3 py-1 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                            >
+                              📋 View Lobby
+                            </Link>
+                          ) : game.status === 'active' ? (
+                            <Link
+                              to={`/game/${game.id}`}
+                              className="px-3 py-1 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                            >
+                              {game.isYourTurn ? '🎯 Play Turn' : '👁️ View Game'}
+                            </Link>
+                          ) : (
+                            <Link
+                              to={`/game/${game.id}`}
+                              className="px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                            >
+                              📊 View Results
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>

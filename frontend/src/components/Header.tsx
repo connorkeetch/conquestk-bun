@@ -25,7 +25,8 @@ export default function Header() {
     { path: '/create', label: 'Create Game', icon: '➕' },
     { path: '/maps', label: 'Maps', icon: '🗺️' },
     { path: '/map-editor', label: 'Map Editor', icon: '✏️' },
-    { path: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
+    { path: '/community', label: 'Community', icon: '👥' },
+    { path: '/tutorial', label: 'How to Play', icon: '📚' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
     ...(user?.isAdmin ? [{ path: '/admin', label: 'Admin', icon: '🛡️' }] : []),
   ]
@@ -89,10 +90,16 @@ export default function Header() {
                   Maps
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/leaderboard' ? 'text-white' : 'text-white/70 hover:text-white'}`}
-                  to="/leaderboard"
+                  className={`transition ${location.pathname === '/community' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  to="/community"
                 >
-                  Leaderboard
+                  Community
+                </Link>
+                <Link
+                  className={`transition ${location.pathname === '/tutorial' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  to="/tutorial"
+                >
+                  How to Play
                 </Link>
                 {user?.isAdmin && (
                   <Link
@@ -114,8 +121,11 @@ export default function Header() {
                 <Link className="text-white/70 hover:text-white transition" to="/maps">
                   Browse Maps
                 </Link>
-                <Link className="text-white/70 hover:text-white transition" to="/leaderboard">
-                  Leaderboard
+                <Link className="text-white/70 hover:text-white transition" to="/community">
+                  Community
+                </Link>
+                <Link className="text-white/70 hover:text-white transition" to="/tutorial">
+                  How to Play
                 </Link>
               </>
             )}

@@ -13,7 +13,6 @@ import GamePage from './pages/GamePage'
 import GameRoom from './pages/GameRoom'
 // Public Pages
 import Home from './pages/Home'
-import LeaderboardPage from './pages/LeaderboardPage'
 import LearnPage from './pages/LearnPage'
 // Protected Pages
 import LobbyPage from './pages/LobbyPage'
@@ -28,6 +27,7 @@ import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
 import Statistics from './pages/Statistics'
+import TutorialPage from './pages/TutorialPage'
 import VerifyEmail from './pages/VerifyEmail'
 import AdminPage from './pages/AdminPage'
 import { checkAuth } from './store/authSlice'
@@ -113,18 +113,22 @@ function App() {
           }
         />
         <Route
-          path="/leaderboard"
+          path="/community"
           element={
             <AuthGuard requireAuth={false}>
-              <LeaderboardPage />
+              <CommunityPage />
             </AuthGuard>
           }
         />
         <Route
-          path="/leaderboard/:type"
+          path="/leaderboard"
+          element={<Navigate to="/community" replace />}
+        />
+        <Route
+          path="/tutorial"
           element={
             <AuthGuard requireAuth={false}>
-              <LeaderboardPage />
+              <TutorialPage />
             </AuthGuard>
           }
         />
