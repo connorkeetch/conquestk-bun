@@ -15,6 +15,7 @@ export default function Header() {
   const dispatch = useAppDispatch()
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
 
   // Simplified flat menu structure
   const menuItems: MenuItem[] = [
@@ -28,7 +29,6 @@ export default function Header() {
   
   // Future community features (keeping track for later)
   const futureItems: MenuItem[] = [
-    { path: '/profile', label: 'Profile', icon: '👤' },
     { path: '/achievements', label: 'Achievements', icon: '🎖️' },
     { path: '/history', label: 'Match History', icon: '📋' },
     { path: '/friends', label: 'Friends', icon: '👥' },
@@ -91,12 +91,6 @@ export default function Header() {
                 >
                   Leaderboard
                 </Link>
-                <Link
-                  className={`transition ${location.pathname === '/profile' ? 'text-white' : 'text-white/70 hover:text-white'}`}
-                  to="/profile"
-                >
-                  Profile
-                </Link>
               </>
             ) : (
               <>
@@ -119,17 +113,55 @@ export default function Header() {
           {/* Right auth */}
           <div className="flex items-center gap-2 justify-end">
             {isAuthenticated ? (
-              <>
-                <span className="hidden sm:inline text-sm text-white/70 mr-2">
-                  {user?.username ? sanitizeText(user.username) : ''}
-                </span>
+              <div className="relative">
                 <button
-                  onClick={handleLogout}
-                  className="px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
                 >
-                  Logout
+                  <span className="hidden sm:inline">
+                    {user?.username ? sanitizeText(user.username) : ''}
+                  </span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" className="fill-current">
+                    <path d="M7 10l5 5 5-5z" />
+                  </svg>
                 </button>
-              </>
+                
+                {/* User Dropdown Menu */}
+                {isUserDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsUserDropdownOpen(false)} 
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-lg shadow-xl z-50">
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                      >
+                        <span>👤</span> View Profile
+                      </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                      >
+                        <span>⚙️</span> Settings
+                      </Link>
+                      <hr className="border-gray-800 my-1" />
+                      <button
+                        onClick={() => {
+                          handleLogout()
+                          setIsUserDropdownOpen(false)
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800 transition-colors text-left"
+                      >
+                        <span>🚪</span> Logout
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
               <>
                 <Link
