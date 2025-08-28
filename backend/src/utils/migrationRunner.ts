@@ -64,12 +64,28 @@ export class MigrationRunner {
       
       // Read migration file
       const migrationPath = join(this.migrationsPath, migrationFile)
-      migrationSQL = readFileSync(migrationPath, 'utf8')
+      const originalSQL = readFileSync(migrationPath, 'utf8')
+      
+      // Log original SQL characteristics
+      logger.info(`📄 Processing migration: ${migrationFile}`)
+      logger.info(`  Original SQL length: ${originalSQL.length} characters`)
+      logger.info(`  Contains SQLite UUID patterns: ${originalSQL.includes('randomblob') ? 'YES' : 'NO'}`)
+      logger.info(`  Contains TEXT PRIMARY KEY: ${originalSQL.includes('TEXT PRIMARY KEY') ? 'YES' : 'NO'}`)
       
       // Convert SQLite syntax to PostgreSQL if needed
-      migrationSQL = this.convertSqliteToPostgreSQL(migrationSQL)
+      migrationSQL = this.convertSqliteToPostgreSQL(originalSQL)
       
-      logger.info(`🔧 Running migration: ${migrationFile}`)
+      // Log conversion results
+      logger.info(`  Converted SQL length: ${migrationSQL.length} characters`)
+      logger.info(`  UUID conversions applied: ${originalSQL !== migrationSQL ? 'YES' : 'NO'}`)
+      
+      // Log first 500 chars of converted SQL for debugging (without sensitive data)
+      if (originalSQL !== migrationSQL) {
+        const preview = migrationSQL.substring(0, 500).replace(/\n/g, ' ')
+        logger.info(`  Converted SQL preview: ${preview}...`)
+      }
+      
+      logger.info(`🔧 Executing migration: ${migrationFile}`)
       
       // Execute migration in a transaction
       await this.executeInTransaction(migrationSQL, migrationFile)
@@ -135,8 +151,25 @@ export class MigrationRunner {
   private convertSqliteToPostgreSQL(migrationSQL: string): string {
     let convertedSQL = migrationSQL
     
-    // Convert SQLite TEXT fields to PostgreSQL types where appropriate
-    convertedSQL = convertedSQL.replace(/id TEXT PRIMARY KEY/g, 'id UUID PRIMARY KEY DEFAULT uuid_generate_v4()')
+    // IMPORTANT: Convert UUID generation patterns FIRST, before changing TEXT to UUID
+    // This prevents double DEFAULT clauses
+    
+    // Convert complex SQLite UUID v4 pattern to PostgreSQL
+    const sqliteUuidV4Regex = /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)\)/g
+    convertedSQL = convertedSQL.replace(sqliteUuidV4Regex, 'DEFAULT uuid_generate_v4()')
+    
+    // Convert simple SQLite UUID pattern (randomblob(16)) to PostgreSQL
+    const sqliteSimpleUuidRegex = /DEFAULT \(lower\(hex\(randomblob\(16\)\)\)\)/g
+    convertedSQL = convertedSQL.replace(sqliteSimpleUuidRegex, 'DEFAULT uuid_generate_v4()')
+    
+    // Now convert TEXT PRIMARY KEY fields to UUID PRIMARY KEY
+    // Handle cases WITH existing DEFAULT clause (already converted above)
+    convertedSQL = convertedSQL.replace(/(\w+) TEXT PRIMARY KEY DEFAULT uuid_generate_v4\(\)/g, '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()')
+    
+    // Handle cases WITHOUT DEFAULT clause
+    convertedSQL = convertedSQL.replace(/(\w+) TEXT PRIMARY KEY(?! DEFAULT)/g, '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()')
+    
+    // Convert foreign key TEXT fields to UUID
     convertedSQL = convertedSQL.replace(/user_id TEXT/g, 'user_id UUID')
     convertedSQL = convertedSQL.replace(/creator_id TEXT/g, 'creator_id UUID')
     convertedSQL = convertedSQL.replace(/room_id TEXT/g, 'room_id UUID')
@@ -148,12 +181,11 @@ export class MigrationRunner {
     convertedSQL = convertedSQL.replace(/from_territory_id TEXT/g, 'from_territory_id UUID')
     convertedSQL = convertedSQL.replace(/to_territory_id TEXT/g, 'to_territory_id UUID')
     
-    // Convert SQLite UUID generation to PostgreSQL
-    const sqliteUuidRegex = /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)/g
-    convertedSQL = convertedSQL.replace(sqliteUuidRegex, 'DEFAULT uuid_generate_v4()')
-    
     // Remove AUTOINCREMENT (PostgreSQL uses SERIAL)
     convertedSQL = convertedSQL.replace(/AUTOINCREMENT/g, '')
+    
+    // Convert DATETIME to TIMESTAMP (PostgreSQL standard)
+    convertedSQL = convertedSQL.replace(/DATETIME/g, 'TIMESTAMP')
     
     // Convert TEXT to appropriate PostgreSQL types for JSON fields
     convertedSQL = convertedSQL.replace(/TEXT DEFAULT '\[\]'/g, 'JSONB DEFAULT \'[]\'')
@@ -182,23 +214,39 @@ export class MigrationRunner {
     
     try {
       // Enable uuid-ossp extension if not exists (for UUID generation)
+      logger.info('  Enabling uuid-ossp extension...')
       await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
       
       // Split migration into individual statements
       const statements = this.splitMigrationStatements(migrationSQL)
+      logger.info(`  Migration contains ${statements.length} SQL statements`)
       
       // Execute each statement
+      let statementCount = 0
       for (const statement of statements) {
         if (statement.trim()) {
+          statementCount++
+          const statementPreview = statement.substring(0, 100).replace(/\n/g, ' ')
+          
           try {
+            logger.debug(`  Executing statement ${statementCount}/${statements.length}: ${statementPreview}...`)
             await query(statement)
           } catch (error) {
             // Check if it's an acceptable error (table exists, etc.)
             const errorMessage = (error as any).message || ''
+            const errorCode = (error as any).code || ''
+            
             if (this.isAcceptableError(errorMessage, statement)) {
-              logger.debug(`⏭️  Skipped expected error in ${migrationFile}: ${errorMessage}`)
+              logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`)
               continue
             }
+            
+            // Log detailed error information
+            logger.error(`  ❌ Statement ${statementCount} failed:`)
+            logger.error(`     Error code: ${errorCode}`)
+            logger.error(`     Error message: ${errorMessage}`)
+            logger.error(`     Statement preview: ${statementPreview}`)
+            logger.error(`     Full statement (first 500 chars): ${statement.substring(0, 500)}`)
             throw error
           }
         }

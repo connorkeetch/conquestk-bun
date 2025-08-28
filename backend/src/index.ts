@@ -23,6 +23,7 @@ import { setupSocketHandlers } from './services/socketService'
 import { ensureTablesExist } from './utils/initTables'
 import { MigrationRunner } from './utils/migrationRunner'
 import { logger } from './utils/logger'
+import { logStartupDiagnostics, testDatabaseConnection, testMigrationFiles } from './debugStartup'
 
 const app = express()
 const server = createServer(app)
@@ -100,6 +101,17 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
+
+// Simple test endpoint that doesn't require database
+app.get('/test', (_req, res) => {
+  res.json({
+    message: 'Server is running!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'unknown',
+    nodeVersion: process.version,
+    memory: process.memoryUsage()
+  })
+})
 
 app.get('/health', async (_req, res) => {
   let databaseStatus = 'unknown'
@@ -331,21 +343,39 @@ async function testMySQLConnection() {
 }
 
 async function startServer() {
-  logger.info('🚀 Starting Risk Game server...')
-  
-  // Always start the server first, then handle database setup
-  server.listen(PORT, () => {
-    logger.info(`🚀 Server running on port ${PORT}`)
-    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-    logger.info(`📊 Health check: http://localhost:${PORT}/health`)
-    logger.info(`📅 Deployed: ${new Date().toISOString()}`)
+  try {
+    logger.info('🚀 Starting Risk Game server...')
     
-    // Don't await database setup - let it happen in background
-    setImmediate(async () => {
-      try {
-        logger.info('🔄 Attempting database connection...')
-        await initDatabase()
-        logger.info('✅ Database connection established')
+    // Log comprehensive diagnostics
+    logStartupDiagnostics()
+    
+    // Start the HTTP server first (should always work)
+    server.listen(PORT, () => {
+      logger.info(`✅ HTTP Server successfully listening on port ${PORT}`)
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+      logger.info(`📊 Test endpoint: http://localhost:${PORT}/test`)
+      logger.info(`📊 Health check: http://localhost:${PORT}/health`)
+      logger.info(`📅 Server started at: ${new Date().toISOString()}`)
+      
+      // Don't await database setup - let it happen in background
+      setImmediate(async () => {
+        try {
+          // First, test if we can even connect to the database
+          logger.info('🔄 Testing database connection...')
+          const canConnect = await testDatabaseConnection()
+          
+          if (!canConnect) {
+            logger.error('❌ Cannot connect to database - server running without database')
+            return
+          }
+          
+          // Check migration files exist
+          await testMigrationFiles()
+          
+          // Now try the actual initialization
+          logger.info('🔄 Initializing database connection pool...')
+          await initDatabase()
+          logger.info('✅ Database connection pool established')
 
         // Ensure basic tables exist (fallback)
         await ensureTablesExist()
@@ -377,18 +407,48 @@ async function startServer() {
           logger.error('💡 Some features may not work correctly until database is properly configured')
         }
       } catch (dbError) {
-        logger.error('❌ Database connection failed:', dbError)
+        logger.error('❌ Database initialization failed:', dbError)
+        logger.error(`  Error type: ${dbError.constructor.name}`)
+        logger.error(`  Error message: ${dbError.message}`)
+        if (dbError.stack) {
+          logger.error(`  Stack trace: ${dbError.stack}`)
+        }
         logger.warn('⚠️  Server running without database connection')
-        logger.error('💡 Database features unavailable until PostgreSQL is configured')
-        logger.error('💡 Check Railway dashboard - ensure PostgreSQL plugin is added')
-        logger.error('💡 Visit /debug/env to check environment variable status')
+        logger.error('💡 Database features unavailable')
+        logger.error('💡 Check /test endpoint to verify server is running')
+        logger.error('💡 Check /debug/env for environment variables')
         
         if (process.env.NODE_ENV === 'production') {
-          logger.info('🚧 Server in degraded mode - waiting for Railway PostgreSQL setup')
+          logger.info('🚧 Server in degraded mode - database unavailable')
         }
-      }
+      })
     })
-  })
+  } catch (startupError) {
+    logger.error('💥 FATAL: Server startup failed completely:', startupError)
+    if (startupError instanceof Error) {
+      logger.error(`  Error: ${startupError.message}`)
+      logger.error(`  Stack: ${startupError.stack}`)
+    }
+    // In production, exit so Railway can restart
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Exiting with code 1 for Railway to restart...')
+      process.exit(1)
+    }
+  }
 }
+
+// Catch any uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('💥 UNCAUGHT EXCEPTION:', error)
+  logger.error(`  Message: ${error.message}`)
+  logger.error(`  Stack: ${error.stack}`)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('💥 UNHANDLED REJECTION at:', promise)
+  logger.error('  Reason:', reason)
+  process.exit(1)
+})
 
 startServer()
