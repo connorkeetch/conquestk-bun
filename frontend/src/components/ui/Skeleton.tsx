@@ -18,7 +18,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   rounded = false,
 }) => {
   const baseClasses = 'bg-gray-700/50'
-  
+
   const animationClasses = {
     pulse: 'animate-pulse',
     wave: 'animate-shimmer bg-gradient-to-r from-gray-700/50 via-gray-600/50 to-gray-700/50 bg-[length:200%_100%]',
@@ -52,7 +52,11 @@ interface SkeletonGroupProps {
   children: (index: number) => React.ReactNode
 }
 
-export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({ count, className = '', children }) => {
+export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({
+  count,
+  className = '',
+  children,
+}) => {
   return (
     <div className={className}>
       {Array.from({ length: count }, (_, i) => (

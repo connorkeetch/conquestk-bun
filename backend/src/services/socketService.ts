@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken'
 import type { Server, Socket } from 'socket.io'
-import { logger } from '../utils/logger'
-import { GameService } from './gameService'
-import { eloService, PlayerRating } from './eloService'
 import { query } from '../config/database'
+import { logger } from '../utils/logger'
+import { eloService, type PlayerRating } from './eloService'
+import { GameService } from './gameService'
 
 interface AuthenticatedSocket extends Socket {
   userId?: string
@@ -193,7 +193,7 @@ export function setupSocketHandlers(io: Server) {
       // Check if this is a ranked game
       const roomQuery = `SELECT is_ranked FROM game_rooms WHERE id = ?`
       const roomResult = await query(roomQuery, [roomId])
-      
+
       if (!roomResult.rows[0]?.is_ranked) {
         return // Not a ranked game, no rating updates needed
       }
@@ -201,13 +201,13 @@ export function setupSocketHandlers(io: Server) {
       // Get all players with their final positions
       const players = gameState.players
       const playerRatings: PlayerRating[] = []
-      
+
       // Sort players by elimination order and territory count to determine positions
       const sortedPlayers = [...players].sort((a, b) => {
         // Winner (not eliminated) comes first
         if (!a.isEliminated && b.isEliminated) return -1
         if (a.isEliminated && !b.isEliminated) return 1
-        
+
         // Among eliminated players, more territories = better position
         const aTerritories = gameState.board.filter((t: any) => t.ownerId === a.id).length
         const bTerritories = gameState.board.filter((t: any) => t.ownerId === b.id).length
@@ -217,23 +217,23 @@ export function setupSocketHandlers(io: Server) {
       // Fetch current ratings and prepare player rating data
       for (let i = 0; i < sortedPlayers.length; i++) {
         const player = sortedPlayers[i]
-        
+
         // Skip AI players in ranked games (shouldn't happen due to validation)
         if (player.id.startsWith('ai-')) continue
-        
+
         const userQuery = `
           SELECT skill_rating, total_ranked_games 
           FROM users 
           WHERE id = ?
         `
         const userResult = await query(userQuery, [player.id])
-        
+
         if (userResult.rows.length > 0) {
           playerRatings.push({
             userId: player.id,
             currentRating: userResult.rows[0].skill_rating || 1000,
             gamesPlayed: userResult.rows[0].total_ranked_games || 0,
-            position: i + 1 // Position is 1-indexed
+            position: i + 1, // Position is 1-indexed
           })
         }
       }
@@ -241,20 +241,20 @@ export function setupSocketHandlers(io: Server) {
       // Calculate rating changes
       if (playerRatings.length >= 3) {
         const ratingChanges = eloService.calculateRatingChanges(playerRatings)
-        
+
         // Apply rating changes to database
         await eloService.applyRatingChanges(roomId, ratingChanges)
-        
+
         // Emit rating updates to all players in the room
         io.to(roomId).emit('ratingUpdate', {
-          changes: ratingChanges.map(change => ({
+          changes: ratingChanges.map((change) => ({
             userId: change.userId,
-            username: sortedPlayers.find(p => p.id === change.userId)?.username,
+            username: sortedPlayers.find((p) => p.id === change.userId)?.username,
             oldRating: change.oldRating,
             newRating: change.newRating,
             change: change.change,
-            tier: eloService.getSkillTier(change.newRating).name
-          }))
+            tier: eloService.getSkillTier(change.newRating).name,
+          })),
         })
 
         // Update room status to finished
@@ -264,7 +264,7 @@ export function setupSocketHandlers(io: Server) {
           WHERE id = ?
         `
         await query(updateRoomQuery, [roomId])
-        
+
         logger.info(`Ranked game ${roomId} completed, ELO ratings updated`)
       }
     } catch (error) {

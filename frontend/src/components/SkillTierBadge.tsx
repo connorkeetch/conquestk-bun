@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 export interface SkillTier {
   name: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Master' | 'Grandmaster'
@@ -25,46 +25,39 @@ const SKILL_TIERS: SkillTier[] = [
   { name: 'Grandmaster', minRating: 1600, maxRating: 9999, icon: '⚔️', color: 'text-red-600' },
 ]
 
-const SkillTierBadge: React.FC<SkillTierBadgeProps> = ({ 
-  rating, 
-  tier, 
-  showRating = true, 
+const SkillTierBadge: React.FC<SkillTierBadgeProps> = ({
+  rating,
+  tier,
+  showRating = true,
   size = 'md',
-  className = '' 
+  className = '',
 }) => {
   // Get tier based on rating
-  const skillTier = SKILL_TIERS.find(t => 
-    rating >= t.minRating && rating <= t.maxRating
-  ) || SKILL_TIERS[2] // Default to Gold
+  const skillTier =
+    SKILL_TIERS.find((t) => rating >= t.minRating && rating <= t.maxRating) || SKILL_TIERS[2] // Default to Gold
 
   const currentTier = tier || skillTier.name
 
   const sizeClasses = {
     sm: 'text-sm px-2 py-1',
     md: 'text-base px-3 py-1.5',
-    lg: 'text-lg px-4 py-2'
+    lg: 'text-lg px-4 py-2',
   }
 
   const iconSizes = {
     sm: 'text-lg',
     md: 'text-xl',
-    lg: 'text-2xl'
+    lg: 'text-2xl',
   }
 
   return (
-    <div className={`inline-flex items-center gap-1.5 rounded-full bg-gray-800 border border-gray-700 ${sizeClasses[size]} ${className}`}>
-      <span className={`${iconSizes[size]} ${skillTier.color}`}>
-        {skillTier.icon}
-      </span>
+    <div
+      className={`inline-flex items-center gap-1.5 rounded-full bg-gray-800 border border-gray-700 ${sizeClasses[size]} ${className}`}
+    >
+      <span className={`${iconSizes[size]} ${skillTier.color}`}>{skillTier.icon}</span>
       <div className="flex flex-col">
-        <span className={`font-semibold ${skillTier.color}`}>
-          {currentTier}
-        </span>
-        {showRating && (
-          <span className="text-xs text-gray-400">
-            {rating} CP
-          </span>
-        )}
+        <span className={`font-semibold ${skillTier.color}`}>{currentTier}</span>
+        {showRating && <span className="text-xs text-gray-400">{rating} CP</span>}
       </div>
     </div>
   )

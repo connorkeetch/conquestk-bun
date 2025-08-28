@@ -27,7 +27,7 @@ export default function Header() {
     { path: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
-  
+
   // Future community features (keeping track for later)
   const futureItems: MenuItem[] = [
     { path: '/achievements', label: 'Achievements', icon: '🎖️' },
@@ -48,9 +48,9 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 glass border-b border-white/10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 grid grid-cols-3 items-center relative">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between relative">
           {/* Left */}
-          <div className="flex items-center gap-3 justify-start">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               aria-label="Menu"
               className="p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
@@ -71,7 +71,7 @@ export default function Header() {
           </div>
 
           {/* Center nav - hidden on mobile, visible on desktop */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm justify-center">
+          <nav className="hidden lg:flex items-center gap-6 text-sm absolute left-1/2 transform -translate-x-1/2">
             {isAuthenticated ? (
               <>
                 <Link
@@ -112,62 +112,62 @@ export default function Header() {
           </nav>
 
           {/* Right auth */}
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-1 sm:gap-2">
             {isAuthenticated ? (
               <>
                 {/* Notification Dropdown */}
                 <NotificationDropdown />
-                
+
                 {/* User Dropdown */}
                 <div className="relative">
-                <button
-                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
-                >
-                  <span className="hidden sm:inline">
-                    {user?.username ? sanitizeText(user.username) : ''}
-                  </span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" className="fill-current">
-                    <path d="M7 10l5 5 5-5z" />
-                  </svg>
-                </button>
-                
-                {/* User Dropdown Menu */}
-                {isUserDropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setIsUserDropdownOpen(false)} 
-                    />
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-lg shadow-xl z-50">
-                      <Link
-                        to="/profile"
+                  <button
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
+                  >
+                    <span className="hidden sm:inline">
+                      {user?.username ? sanitizeText(user.username) : ''}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" className="fill-current">
+                      <path d="M7 10l5 5 5-5z" />
+                    </svg>
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {isUserDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
                         onClick={() => setIsUserDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-                      >
-                        <span>👤</span> View Profile
-                      </Link>
-                      <Link
-                        to="/settings"
-                        onClick={() => setIsUserDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-                      >
-                        <span>⚙️</span> Settings
-                      </Link>
-                      <hr className="border-gray-800 my-1" />
-                      <button
-                        onClick={() => {
-                          handleLogout()
-                          setIsUserDropdownOpen(false)
-                        }}
-                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800 transition-colors text-left"
-                      >
-                        <span>🚪</span> Logout
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+                      />
+                      <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-lg shadow-xl z-50">
+                        <Link
+                          to="/profile"
+                          onClick={() => setIsUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                        >
+                          <span>👤</span> View Profile
+                        </Link>
+                        <Link
+                          to="/settings"
+                          onClick={() => setIsUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                        >
+                          <span>⚙️</span> Settings
+                        </Link>
+                        <hr className="border-gray-800 my-1" />
+                        <button
+                          onClick={() => {
+                            handleLogout()
+                            setIsUserDropdownOpen(false)
+                          }}
+                          className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800 transition-colors text-left"
+                        >
+                          <span>🚪</span> Logout
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </>
             ) : (
               <>

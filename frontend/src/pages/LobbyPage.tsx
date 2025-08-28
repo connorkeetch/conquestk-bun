@@ -1,10 +1,10 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
 import authService from '../services/authService'
 import { type GameRoom, gameService } from '../services/gameService'
-import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
@@ -70,7 +70,6 @@ const LobbyPage: React.FC = () => {
       setTimeout(() => setResendMessage(''), 5000)
     }
   }
-
 
   const handleJoinGame = async (roomId: string) => {
     try {
@@ -149,7 +148,7 @@ const LobbyPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-8 py-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Email Verification Banner */}
       {emailVerified === false && (
         <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -341,10 +340,7 @@ const LobbyPage: React.FC = () => {
             </div>
 
             {loading ? (
-              <SkeletonGroup 
-                count={6} 
-                className="grid gap-4"
-              >
+              <SkeletonGroup count={6} className="grid gap-4">
                 {() => <GameCardSkeleton />}
               </SkeletonGroup>
             ) : publicGames.length === 0 ? (

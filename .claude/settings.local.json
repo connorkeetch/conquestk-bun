@@ -87,7 +87,8 @@
       "Bash(grep:*)",
       "Bash(git reset:*)",
       "Bash(git rm:*)",
-      "mcp__zen__planner"
+      "mcp__zen__planner",
+      "Bash(./scripts/start-dev.sh:*)"
     ],
     "deny": [],
     "ask": [],

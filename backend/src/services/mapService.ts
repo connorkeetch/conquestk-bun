@@ -20,12 +20,15 @@ import { logger } from '../utils/logger'
 export class MapService {
   // ============= MAP CRUD OPERATIONS =============
 
-  async createMap(userId: string, mapData: CreateMapRequest & { metadata?: any }): Promise<CustomMap> {
+  async createMap(
+    userId: string,
+    mapData: CreateMapRequest & { metadata?: any },
+  ): Promise<CustomMap> {
     const client = await getClient()
     try {
       // Check if metadata column exists (add it if not)
       const hasMetadataColumn = true // We'll assume it exists or handle the error gracefully
-      
+
       // Create the map record
       const mapQuery = hasMetadataColumn
         ? `
@@ -38,7 +41,7 @@ export class MapService {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING *
         `
-      
+
       const mapValues = hasMetadataColumn
         ? [
             mapData.name,

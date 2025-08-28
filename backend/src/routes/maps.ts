@@ -250,25 +250,26 @@ router.post(
         name: req.body.name,
         description: req.body.description,
         isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
-        tags: typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : (req.body.tags || []),
+        tags: typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags || [],
       }
 
       // Parse metadata if provided
       let metadata: any = null
       if (req.body.metadata) {
         try {
-          metadata = typeof req.body.metadata === 'string' 
-            ? JSON.parse(req.body.metadata) 
-            : req.body.metadata
+          metadata =
+            typeof req.body.metadata === 'string'
+              ? JSON.parse(req.body.metadata)
+              : req.body.metadata
           logger.info('Parsed metadata:', {
             territories: metadata.territories?.length || 0,
             continents: metadata.continents?.length || 0,
           })
         } catch (parseError) {
           logger.error('Failed to parse metadata:', parseError)
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid metadata format',
-            details: 'The map data (territories and continents) could not be parsed'
+            details: 'The map data (territories and continents) could not be parsed',
           })
         }
       }
@@ -291,26 +292,26 @@ router.post(
 
       // Store metadata in the map data (will be saved as JSONB)
       if (metadata) {
-        (mapData as any).metadata = metadata
+        ;(mapData as any).metadata = metadata
       }
 
       const map = await mapService.createMap((req as any).userId, mapData)
-      
+
       logger.info('Map created successfully:', {
         mapId: map.id,
         name: map.name,
       })
-      
+
       return res.status(201).json(map)
     } catch (error) {
       logger.error('Error creating map:', error)
-      
+
       // Provide more detailed error response
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Failed to create map',
         message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error : undefined
+        details: process.env.NODE_ENV === 'development' ? error : undefined,
       })
     }
   },

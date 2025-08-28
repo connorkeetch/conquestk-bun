@@ -19,4 +19,4 @@ export const PLAYER_COLORS = [
   'indigo',
 ] as const
 
-export type PlayerColor = typeof PLAYER_COLORS[number]
+export type PlayerColor = (typeof PLAYER_COLORS)[number]

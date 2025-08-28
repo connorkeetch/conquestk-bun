@@ -87,7 +87,20 @@ export class GameEngine {
   }
 
   private createPlayers(playerIds: string[]): GamePlayer[] {
-    const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan', 'pink', 'brown', 'lime', 'teal', 'indigo']
+    const colors = [
+      'red',
+      'blue',
+      'green',
+      'yellow',
+      'purple',
+      'orange',
+      'cyan',
+      'pink',
+      'brown',
+      'lime',
+      'teal',
+      'indigo',
+    ]
 
     return playerIds.map((id, index) => ({
       id,

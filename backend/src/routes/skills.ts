@@ -1,7 +1,7 @@
 import { Router } from 'express'
+import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import { eloService } from '../services/eloService'
-import { query } from '../config/database'
 
 const router = Router()
 
@@ -29,18 +29,19 @@ router.get('/users/:userId/rating', async (req, res) => {
     `
 
     const result = await query(userQuery, [userId])
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
     const user = result.rows[0]
     const tier = eloService.getSkillTier(user.skill_rating || 1000)
-    
+
     // Calculate win rate
-    const winRate = user.total_ranked_games > 0
-      ? (user.ranked_wins / user.total_ranked_games * 100).toFixed(1)
-      : 0
+    const winRate =
+      user.total_ranked_games > 0
+        ? ((user.ranked_wins / user.total_ranked_games) * 100).toFixed(1)
+        : 0
 
     return res.json({
       userId: user.id,
@@ -49,16 +50,16 @@ router.get('/users/:userId/rating', async (req, res) => {
       confidence: user.skill_confidence || 0,
       tier: {
         ...tier,
-        current: user.current_tier || 'Gold'
+        current: user.current_tier || 'Gold',
       },
       stats: {
         totalGames: user.total_ranked_games || 0,
         wins: user.ranked_wins || 0,
         losses: user.ranked_losses || 0,
         winRate: parseFloat(winRate as string),
-        highestRating: user.highest_skill_rating || 1000
+        highestRating: user.highest_skill_rating || 1000,
       },
-      lastRankedGame: user.last_ranked_game_at
+      lastRankedGame: user.last_ranked_game_at,
     })
   } catch (error) {
     console.error('Error fetching user rating:', error)
@@ -77,7 +78,7 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
     const history = await eloService.getRatingHistory(userId, limit)
 
     res.json({
-      history: history.map(entry => ({
+      history: history.map((entry) => ({
         gameId: entry.game_id,
         gameName: entry.game_name,
         gameDate: entry.game_date,
@@ -85,8 +86,8 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
         ratingAfter: entry.rating_after,
         change: entry.rating_change,
         position: entry.position,
-        totalPlayers: entry.total_players
-      }))
+        totalPlayers: entry.total_players,
+      })),
     })
   } catch (error) {
     console.error('Error fetching rating history:', error)
@@ -116,8 +117,8 @@ router.get('/leaderboards/skill', async (req, res) => {
         totalGames: entry.total_ranked_games,
         winRate: entry.win_rate,
         recentTrend: entry.recent_trend,
-        lastChange: entry.last_game_change
-      }))
+        lastChange: entry.last_game_change,
+      })),
     })
   } catch (error) {
     console.error('Error fetching leaderboard:', error)
@@ -157,7 +158,7 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
     res.json({
       rank,
       totalPlayers: total,
-      percentile: ((total - rank + 1) / total * 100).toFixed(1)
+      percentile: (((total - rank + 1) / total) * 100).toFixed(1),
     })
   } catch (error) {
     console.error('Error fetching user rank:', error)
@@ -173,7 +174,7 @@ router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
     // Check if user is admin
     const userQuery = `SELECT is_admin FROM users WHERE id = ?`
     const userResult = await query(userQuery, [(req as any).userId])
-    
+
     if (!userResult.rows[0]?.is_admin) {
       return res.status(403).json({ error: 'Admin access required' })
     }

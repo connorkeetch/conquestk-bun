@@ -1,17 +1,17 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import {
+  COLOR_CLASSES,
+  COLOR_DISPLAY_NAMES,
+  COLOR_HEX_VALUES,
+  isPremiumColor,
+  PLAYER_COLORS,
+  PREMIUM_COLORS,
+  STANDARD_COLORS,
+} from '../constants/colors'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
-import { 
-  STANDARD_COLORS, 
-  PREMIUM_COLORS,
-  PLAYER_COLORS, 
-  COLOR_CLASSES, 
-  COLOR_HEX_VALUES,
-  COLOR_DISPLAY_NAMES,
-  isPremiumColor 
-} from '../constants/colors'
 
 // Reusable OptionCard component
 interface OptionCardProps {
@@ -25,14 +25,14 @@ interface OptionCardProps {
   settingName?: string
 }
 
-const OptionCard: React.FC<OptionCardProps> = ({ 
-  number, 
-  title, 
-  children, 
+const OptionCard: React.FC<OptionCardProps> = ({
+  number,
+  title,
+  children,
   comingSoon = false,
   lockable = false,
   isLocked = false,
-  onToggleLock
+  onToggleLock,
 }) => (
   <div
     className={`bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl hover:shadow-2xl ${comingSoon ? 'opacity-50' : ''}`}
@@ -49,8 +49,8 @@ const OptionCard: React.FC<OptionCardProps> = ({
           <button
             onClick={onToggleLock}
             className={`p-1.5 rounded transition-all ${
-              isLocked 
-                ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30' 
+              isLocked
+                ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30'
                 : 'text-gray-400 bg-gray-600/20 hover:bg-gray-600/30'
             }`}
             title={isLocked ? 'Locked from randomization' : 'Click to lock from randomization'}
@@ -113,26 +113,26 @@ const CreateGamePage: React.FC = () => {
   const generateSmartName = () => {
     const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
     const playerText = `${maxPlayers}P`
-    
+
     // Build descriptive elements
     const elements = []
-    
+
     // Ranked indicator
     if (isRanked) elements.push('[RANKED]')
-    
+
     // Player count
     elements.push(playerText)
-    
+
     // Team configuration
     if (teams > 0) {
       elements.push(`${teams}v${Math.floor(maxPlayers / teams)}`)
     } else {
       elements.push('FFA')
     }
-    
+
     // Map name
     elements.push(mapName)
-    
+
     // Special rules (only include if not default)
     const specialRules = []
     if (gameMode === 'capitals') specialRules.push('Capitals')
@@ -145,11 +145,11 @@ const CreateGamePage: React.FC = () => {
     if (fortification === 'chained') specialRules.push('ChainedMove')
     if (turnTimeLimit !== 'none') specialRules.push(turnTimeLimit)
     if (useTerritoryModifiers) specialRules.push('Modifiers')
-    
+
     if (specialRules.length > 0) {
       elements.push(`[${specialRules.join('+')}]`)
     }
-    
+
     return elements.join(' ')
   }
 
@@ -158,8 +158,17 @@ const CreateGamePage: React.FC = () => {
     if (!gameName) {
       setGameName(generateSmartName())
     }
-  }, [maxPlayers, teams, selectedMap, gameMode, fogOfWar, fortification, useTerritoryModifiers, isRanked])
-  
+  }, [
+    maxPlayers,
+    teams,
+    selectedMap,
+    gameMode,
+    fogOfWar,
+    fortification,
+    useTerritoryModifiers,
+    isRanked,
+  ])
+
   // Update placeholder to show what auto-name would be
   const gameNamePlaceholder = generateSmartName()
 
@@ -198,7 +207,9 @@ const CreateGamePage: React.FC = () => {
         isRanked,
         gameType: 'custom',
         mapId: selectedMap,
-        movementType: (movementType === 'classic' ? 'classic_adjacent' : movementType) as MovementType,
+        movementType: (movementType === 'classic'
+          ? 'classic_adjacent'
+          : movementType) as MovementType,
         allowTeamPlay: teams > 0,
         capitalsEnabled: gameMode === 'capitals',
         useTerritoryModifiers,
@@ -248,7 +259,9 @@ const CreateGamePage: React.FC = () => {
       }
     }
     if (!lockedSettings.has('cardTradeBonus')) {
-      const newBonus = ['progressive', 'fixed', 'increasing', 'static'][Math.floor(Math.random() * 4)]
+      const newBonus = ['progressive', 'fixed', 'increasing', 'static'][
+        Math.floor(Math.random() * 4)
+      ]
       setCardTradeBonus(newBonus)
       if (newBonus === 'static') {
         setStaticBonusValue(Math.floor(Math.random() * 20) + 5)
@@ -257,7 +270,7 @@ const CreateGamePage: React.FC = () => {
   }
 
   const toggleLock = (settingName: string) => {
-    setLockedSettings(prev => {
+    setLockedSettings((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(settingName)) {
         newSet.delete(settingName)
@@ -436,8 +449,8 @@ const CreateGamePage: React.FC = () => {
               onClick={handleRandomizeSettings}
               disabled={isRanked}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-                isRanked 
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                isRanked
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
               }`}
             >
@@ -452,8 +465,8 @@ const CreateGamePage: React.FC = () => {
       {/* Responsive Grid Container */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {/* 1. Number of Players Card */}
-        <OptionCard 
-          number="1" 
+        <OptionCard
+          number="1"
           title="Number of Players"
           lockable={!isRanked}
           isLocked={lockedSettings.has('maxPlayers')}
@@ -522,8 +535,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 3. Fog of War Card */}
-        <OptionCard 
-          number="3" 
+        <OptionCard
+          number="3"
           title="Fog of War"
           lockable={!isRanked}
           isLocked={lockedSettings.has('fogOfWar')}
@@ -541,9 +554,7 @@ const CreateGamePage: React.FC = () => {
               />
               <div className="flex-1">
                 <span className="text-white">🌞 No Fog</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  See entire map at all times
-                </p>
+                <p className="text-xs text-gray-400 mt-1">See entire map at all times</p>
               </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -557,9 +568,7 @@ const CreateGamePage: React.FC = () => {
               />
               <div className="flex-1">
                 <span className="text-white">🌫️ Adjacent Only</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Only see territories next to your own
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Only see territories next to your own</p>
               </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -582,8 +591,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 4. Teams Card */}
-        <OptionCard 
-          number="4" 
+        <OptionCard
+          number="4"
           title="Teams"
           lockable={!isRanked}
           isLocked={lockedSettings.has('teams')}
@@ -648,8 +657,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 5. Fortification Card */}
-        <OptionCard 
-          number="5" 
+        <OptionCard
+          number="5"
           title="Fortification"
           lockable={!isRanked}
           isLocked={lockedSettings.has('fortification')}
@@ -693,8 +702,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 6. Movement System Card */}
-        <OptionCard 
-          number="6" 
+        <OptionCard
+          number="6"
           title="Movement System"
           lockable={!isRanked}
           isLocked={lockedSettings.has('movementType')}
@@ -712,9 +721,7 @@ const CreateGamePage: React.FC = () => {
               />
               <div className="flex-1">
                 <span className="text-white">⚔️ Classic Adjacent</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Attack only neighboring territories
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Attack only neighboring territories</p>
               </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -728,9 +735,7 @@ const CreateGamePage: React.FC = () => {
               />
               <div className="flex-1">
                 <span className="text-white">🌊 Sea Connections</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Naval routes connect distant regions
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Naval routes connect distant regions</p>
               </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -760,9 +765,7 @@ const CreateGamePage: React.FC = () => {
               />
               <div className="flex-1">
                 <span className="text-white">🚀 Unlimited Range</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Attack any territory from anywhere
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Attack any territory from anywhere</p>
               </div>
             </label>
           </div>
@@ -786,9 +789,9 @@ const CreateGamePage: React.FC = () => {
                           ? 'border-white scale-105 shadow-lg ring-2 ring-white/50'
                           : 'border-gray-600 hover:border-gray-400 hover:scale-102'
                       }`}
-                      style={{ 
+                      style={{
                         background: isGradient ? hexValue : undefined,
-                        backgroundColor: !isGradient ? hexValue : undefined 
+                        backgroundColor: !isGradient ? hexValue : undefined,
                       }}
                       onClick={() => setSelectedColor(color)}
                     >
@@ -816,7 +819,7 @@ const CreateGamePage: React.FC = () => {
                   const isPulse = color === 'pulse'
                   const isNeon = color === 'neon'
                   const isMetallic = color === 'metallic'
-                  
+
                   return (
                     <button
                       key={color}
@@ -827,14 +830,15 @@ const CreateGamePage: React.FC = () => {
                       } ${isPulse ? 'animate-pulse' : ''} ${
                         isNeon ? 'shadow-[0_0_10px_rgba(57,255,20,0.5)]' : ''
                       }`}
-                      style={{ 
-                        background: isGradient || isMetallic 
-                          ? hexValue.includes('linear-gradient') 
-                            ? hexValue 
-                            : isMetallic 
-                              ? 'linear-gradient(135deg, #B8860B, #FFD700, #B8860B)' 
-                              : hexValue
-                          : undefined,
+                      style={{
+                        background:
+                          isGradient || isMetallic
+                            ? hexValue.includes('linear-gradient')
+                              ? hexValue
+                              : isMetallic
+                                ? 'linear-gradient(135deg, #B8860B, #FFD700, #B8860B)'
+                                : hexValue
+                            : undefined,
                         backgroundColor: !isGradient && !isMetallic ? hexValue : undefined,
                       }}
                       onClick={() => setSelectedColor(color)}
@@ -863,14 +867,14 @@ const CreateGamePage: React.FC = () => {
               <div className="mt-3 p-3 bg-gray-800 rounded-lg">
                 <p className="text-xs text-gray-400 mb-1">Selected:</p>
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className={`w-8 h-8 rounded ${COLOR_CLASSES[selectedColor]}`}
                     style={{
-                      background: COLOR_HEX_VALUES[selectedColor].includes('gradient') 
-                        ? COLOR_HEX_VALUES[selectedColor] 
+                      background: COLOR_HEX_VALUES[selectedColor].includes('gradient')
+                        ? COLOR_HEX_VALUES[selectedColor]
                         : undefined,
-                      backgroundColor: !COLOR_HEX_VALUES[selectedColor].includes('gradient') 
-                        ? COLOR_HEX_VALUES[selectedColor] 
+                      backgroundColor: !COLOR_HEX_VALUES[selectedColor].includes('gradient')
+                        ? COLOR_HEX_VALUES[selectedColor]
                         : undefined,
                     }}
                   />
@@ -882,8 +886,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 8. Spoils of War Card */}
-        <OptionCard 
-          number="8" 
+        <OptionCard
+          number="8"
           title="Spoils of War"
           lockable={!isRanked}
           isLocked={lockedSettings.has('cardTradeBonus')}
@@ -1029,8 +1033,8 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 10. Turn Timer Card */}
-        <OptionCard 
-          number="10" 
+        <OptionCard
+          number="10"
           title="Turn Time Limits"
           lockable={!isRanked}
           isLocked={lockedSettings.has('turnTimeLimit')}
@@ -1105,9 +1109,7 @@ const CreateGamePage: React.FC = () => {
                     />
                     <div className="flex-1">
                       <span className="text-white">⏱️ 5 Minutes</span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Fast-paced competitive gameplay
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Fast-paced competitive gameplay</p>
                     </div>
                   </label>
                   <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -1121,9 +1123,7 @@ const CreateGamePage: React.FC = () => {
                     />
                     <div className="flex-1">
                       <span className="text-white">⏰ 10 Minutes</span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Strategic with time pressure
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Strategic with time pressure</p>
                     </div>
                   </label>
                 </>
@@ -1158,9 +1158,7 @@ const CreateGamePage: React.FC = () => {
                     />
                     <div className="flex-1">
                       <span className="text-white">🕰️ 12 Hours</span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Balanced async gameplay
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Balanced async gameplay</p>
                     </div>
                   </label>
                   <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -1174,9 +1172,7 @@ const CreateGamePage: React.FC = () => {
                     />
                     <div className="flex-1">
                       <span className="text-white">📆 24 Hours</span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Relaxed pace - one turn per day
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Relaxed pace - one turn per day</p>
                     </div>
                   </label>
                 </>
@@ -1186,9 +1182,15 @@ const CreateGamePage: React.FC = () => {
             <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
               <p className="text-xs text-blue-300">
                 {gameSpeed === 'realtime' ? (
-                  <>⚡ Real-time games require active participation. Turn automatically passes if time expires.</>
+                  <>
+                    ⚡ Real-time games require active participation. Turn automatically passes if
+                    time expires.
+                  </>
                 ) : (
-                  <>📅 Async games send notifications when it's your turn. Perfect for playing throughout the day.</>
+                  <>
+                    📅 Async games send notifications when it's your turn. Perfect for playing
+                    throughout the day.
+                  </>
                 )}
               </p>
             </div>

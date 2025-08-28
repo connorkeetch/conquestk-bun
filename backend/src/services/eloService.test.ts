@@ -1,8 +1,8 @@
-import { EloService, PlayerRating, RatingChange } from './eloService'
+import { EloService, type PlayerRating, RatingChange } from './eloService'
 
 // Mock the database query function
 jest.mock('../config/database', () => ({
-  query: jest.fn().mockResolvedValue({ rows: [] })
+  query: jest.fn().mockResolvedValue({ rows: [] }),
 }))
 
 describe('EloService', () => {
@@ -21,23 +21,23 @@ describe('EloService', () => {
       ]
 
       const changes = eloService.calculateRatingChanges(players)
-      
+
       expect(changes).toHaveLength(3)
-      
+
       // Winner should gain rating
-      const winnerChange = changes.find(c => c.userId === 'p1')
+      const winnerChange = changes.find((c) => c.userId === 'p1')
       expect(winnerChange!.change).toBeGreaterThan(0)
-      
+
       // Others should lose rating
-      const secondChange = changes.find(c => c.userId === 'p2')
+      const secondChange = changes.find((c) => c.userId === 'p2')
       expect(secondChange!.change).toBeLessThan(0)
-      
-      const thirdChange = changes.find(c => c.userId === 'p3')
+
+      const thirdChange = changes.find((c) => c.userId === 'p3')
       expect(thirdChange!.change).toBeLessThan(0)
-      
+
       // Second place should lose less than third
       expect(Math.abs(secondChange!.change)).toBeLessThan(Math.abs(thirdChange!.change))
-      
+
       // Sum of all changes should be close to zero (zero-sum game)
       const totalChange = changes.reduce((sum, c) => sum + c.change, 0)
       expect(Math.abs(totalChange)).toBeLessThan(3) // Allow small rounding differences
@@ -58,10 +58,10 @@ describe('EloService', () => {
 
       const newPlayerChanges = eloService.calculateRatingChanges(newPlayers)
       const experiencedChanges = eloService.calculateRatingChanges(experiencedPlayers)
-      
-      const newWinnerChange = newPlayerChanges.find(c => c.userId === 'p1')!.change
-      const expWinnerChange = experiencedChanges.find(c => c.userId === 'p1')!.change
-      
+
+      const newWinnerChange = newPlayerChanges.find((c) => c.userId === 'p1')!.change
+      const expWinnerChange = experiencedChanges.find((c) => c.userId === 'p1')!.change
+
       // New player should have larger rating change due to higher K-factor
       expect(Math.abs(newWinnerChange)).toBeGreaterThan(Math.abs(expWinnerChange))
     })
@@ -74,13 +74,13 @@ describe('EloService', () => {
       ]
 
       const changes = eloService.calculateRatingChanges(players)
-      
-      const underdogChange = changes.find(c => c.userId === 'p1')!
-      const favoriteChange = changes.find(c => c.userId === 'p2')!
-      
+
+      const underdogChange = changes.find((c) => c.userId === 'p1')!
+      const favoriteChange = changes.find((c) => c.userId === 'p2')!
+
       // Underdog should gain more for winning
       expect(underdogChange.change).toBeGreaterThan(20)
-      
+
       // Favorite should lose more for not winning
       expect(favoriteChange.change).toBeLessThan(-10)
     })
@@ -106,10 +106,10 @@ describe('EloService', () => {
 
       const fourPlayerChanges = eloService.calculateRatingChanges(fourPlayers)
       const eightPlayerChanges = eloService.calculateRatingChanges(eightPlayers)
-      
-      const fourWinner = fourPlayerChanges.find(c => c.userId === 'p1')!
-      const eightWinner = eightPlayerChanges.find(c => c.userId === 'p1')!
-      
+
+      const fourWinner = fourPlayerChanges.find((c) => c.userId === 'p1')!
+      const eightWinner = eightPlayerChanges.find((c) => c.userId === 'p1')!
+
       // K-factor should be different based on player count
       expect(fourWinner.kFactor).toBe(24) // 24 * (4/4) = 24
       expect(eightWinner.kFactor).toBe(48) // 24 * (8/4) = 48
@@ -124,24 +124,24 @@ describe('EloService', () => {
       ]
 
       const changes = eloService.calculateRatingChanges(players)
-      
-      const firstPlace = changes.find(c => c.userId === 'p1')!
-      const secondPlace = changes.find(c => c.userId === 'p2')!
-      const thirdPlace = changes.find(c => c.userId === 'p3')!
-      const fourthPlace = changes.find(c => c.userId === 'p4')!
-      
+
+      const firstPlace = changes.find((c) => c.userId === 'p1')!
+      const secondPlace = changes.find((c) => c.userId === 'p2')!
+      const thirdPlace = changes.find((c) => c.userId === 'p3')!
+      const fourthPlace = changes.find((c) => c.userId === 'p4')!
+
       // First place should have actual score of 1.0
       expect(firstPlace.actualScore).toBe(1.0)
-      
+
       // Position-based adjustments should be applied
       // 2nd place gets 75% of base score
-      expect(secondPlace.actualScore).toBeCloseTo(0.75 * (3/3), 2)
-      
-      // 3rd place gets 50% of base score  
-      expect(thirdPlace.actualScore).toBeCloseTo(0.5 * (2/3), 2)
-      
+      expect(secondPlace.actualScore).toBeCloseTo(0.75 * (3 / 3), 2)
+
+      // 3rd place gets 50% of base score
+      expect(thirdPlace.actualScore).toBeCloseTo(0.5 * (2 / 3), 2)
+
       // 4th place gets 25% of base score
-      expect(fourthPlace.actualScore).toBeCloseTo(0.25 * (1/3), 2)
+      expect(fourthPlace.actualScore).toBeCloseTo(0.25 * (1 / 3), 2)
     })
 
     it('should never allow rating to go below 0', () => {
@@ -152,9 +152,9 @@ describe('EloService', () => {
       ]
 
       const changes = eloService.calculateRatingChanges(players)
-      
+
       // Even with large losses, ratings should not go below 0
-      changes.forEach(change => {
+      changes.forEach((change) => {
         expect(change.newRating).toBeGreaterThanOrEqual(0)
       })
     })
@@ -166,7 +166,7 @@ describe('EloService', () => {
       ]
 
       expect(() => eloService.calculateRatingChanges(players)).toThrow(
-        'Ranked games require at least 3 players'
+        'Ranked games require at least 3 players',
       )
     })
   })

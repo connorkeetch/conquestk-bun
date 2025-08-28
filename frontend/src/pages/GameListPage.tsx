@@ -59,7 +59,7 @@ const GameListPage: React.FC = () => {
   const completedGames = userGames.filter((game) => game.status === 'completed')
 
   return (
-    <div className="container mx-auto px-8 py-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
