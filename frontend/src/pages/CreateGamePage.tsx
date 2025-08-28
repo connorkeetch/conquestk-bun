@@ -79,6 +79,8 @@ const CreateGamePage: React.FC = () => {
   const [fortification, setFortification] = useState('adjacent')
   const [movementType, setMovementType] = useState('classic')
   const [selectedColor, setSelectedColor] = useState('red')
+  const [turnTimeLimit, setTurnTimeLimit] = useState('none')
+  const [gameSpeed, setGameSpeed] = useState<'realtime' | 'async'>('realtime')
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
   const [staticBonusValue, setStaticBonusValue] = useState(10)
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState(false)
@@ -133,6 +135,7 @@ const CreateGamePage: React.FC = () => {
     if (movementType === 'unlimited') specialRules.push('GlobalReach')
     if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
     if (fortification === 'chained') specialRules.push('ChainedMove')
+    if (turnTimeLimit !== 'none') specialRules.push(turnTimeLimit)
     if (useTerritoryModifiers) specialRules.push('Modifiers')
     
     if (specialRules.length > 0) {
@@ -225,6 +228,16 @@ const CreateGamePage: React.FC = () => {
     if (!lockedSettings.has('movementType')) {
       const movementOptions = ['classic', 'sea', 'airports', 'unlimited']
       setMovementType(movementOptions[Math.floor(Math.random() * movementOptions.length)])
+    }
+    if (!lockedSettings.has('turnTimeLimit')) {
+      const timeLimitOptions = ['none', '5min', '10min', '6h', '12h', '24h']
+      setTurnTimeLimit(timeLimitOptions[Math.floor(Math.random() * timeLimitOptions.length)])
+      // Set game speed based on time limit
+      if (['5min', '10min'].includes(turnTimeLimit)) {
+        setGameSpeed('realtime')
+      } else if (['6h', '12h', '24h'].includes(turnTimeLimit)) {
+        setGameSpeed('async')
+      }
     }
     if (!lockedSettings.has('cardTradeBonus')) {
       const newBonus = ['progressive', 'fixed', 'increasing', 'static'][Math.floor(Math.random() * 4)]
@@ -916,6 +929,173 @@ const CreateGamePage: React.FC = () => {
             )}
           </div>
         </OptionCard>
+
+        {/* 10. Turn Timer Card */}
+        <OptionCard 
+          number="10" 
+          title="Turn Time Limits"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('turnTimeLimit')}
+          onToggleLock={() => toggleLock('turnTimeLimit')}
+        >
+          <div className="space-y-3">
+            {/* Game Speed Toggle */}
+            <div className="flex gap-2 p-1 bg-gray-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setGameSpeed('realtime')
+                  if (!['none', '5min', '10min'].includes(turnTimeLimit)) {
+                    setTurnTimeLimit('none')
+                  }
+                }}
+                className={`flex-1 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+                  gameSpeed === 'realtime'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                ⚡ Real-time
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGameSpeed('async')
+                  if (!['none', '6h', '12h', '24h'].includes(turnTimeLimit)) {
+                    setTurnTimeLimit('none')
+                  }
+                }}
+                className={`flex-1 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+                  gameSpeed === 'async'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                📅 Async
+              </button>
+            </div>
+
+            {/* Time Limit Options */}
+            <div className="space-y-2">
+              <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                <input
+                  type="radio"
+                  name="timeLimit"
+                  value="none"
+                  checked={turnTimeLimit === 'none'}
+                  onChange={(e) => setTurnTimeLimit(e.target.value)}
+                  className="mr-3 accent-blue-500"
+                />
+                <div className="flex-1">
+                  <span className="text-white">♾️ No Time Limit</span>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Players can take as long as they need
+                  </p>
+                </div>
+              </label>
+
+              {gameSpeed === 'realtime' && (
+                <>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                    <input
+                      type="radio"
+                      name="timeLimit"
+                      value="5min"
+                      checked={turnTimeLimit === '5min'}
+                      onChange={(e) => setTurnTimeLimit(e.target.value)}
+                      className="mr-3 accent-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white">⏱️ 5 Minutes</span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Fast-paced competitive gameplay
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                    <input
+                      type="radio"
+                      name="timeLimit"
+                      value="10min"
+                      checked={turnTimeLimit === '10min'}
+                      onChange={(e) => setTurnTimeLimit(e.target.value)}
+                      className="mr-3 accent-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white">⏰ 10 Minutes</span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Strategic with time pressure
+                      </p>
+                    </div>
+                  </label>
+                </>
+              )}
+
+              {gameSpeed === 'async' && (
+                <>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                    <input
+                      type="radio"
+                      name="timeLimit"
+                      value="6h"
+                      checked={turnTimeLimit === '6h'}
+                      onChange={(e) => setTurnTimeLimit(e.target.value)}
+                      className="mr-3 accent-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white">🕐 6 Hours</span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Quick async - multiple turns per day
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                    <input
+                      type="radio"
+                      name="timeLimit"
+                      value="12h"
+                      checked={turnTimeLimit === '12h'}
+                      onChange={(e) => setTurnTimeLimit(e.target.value)}
+                      className="mr-3 accent-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white">🕰️ 12 Hours</span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Balanced async gameplay
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                    <input
+                      type="radio"
+                      name="timeLimit"
+                      value="24h"
+                      checked={turnTimeLimit === '24h'}
+                      onChange={(e) => setTurnTimeLimit(e.target.value)}
+                      className="mr-3 accent-blue-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-white">📆 24 Hours</span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Relaxed pace - one turn per day
+                      </p>
+                    </div>
+                  </label>
+                </>
+              )}
+            </div>
+
+            <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+              <p className="text-xs text-blue-300">
+                {gameSpeed === 'realtime' ? (
+                  <>⚡ Real-time games require active participation. Turn automatically passes if time expires.</>
+                ) : (
+                  <>📅 Async games send notifications when it's your turn. Perfect for playing throughout the day.</>
+                )}
+              </p>
+            </div>
+          </div>
+        </OptionCard>
       </div>
 
       {/* Map Selector - Full Width */}
@@ -923,7 +1103,7 @@ const CreateGamePage: React.FC = () => {
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
             <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              9
+              11
             </span>
             <span className="text-white">Select Map</span>
           </h2>
