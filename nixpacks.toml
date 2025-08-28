@@ -5,4 +5,4 @@ cmd = "npm ci && npm run build"
 cmd = "node backend/dist/index.js"
 
 [variables]
-NODE_VERSION = "18"
+NODE_VERSION = "20"
