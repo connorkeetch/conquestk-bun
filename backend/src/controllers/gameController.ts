@@ -91,4 +91,30 @@ export class GameController {
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
+
+  getMyGames = async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId
+
+      // Get user's games from the service
+      const games = await this.gameRoomService.getUserGames(userId)
+      
+      // Format games for the frontend
+      const formattedGames = games.map(game => ({
+        id: game.id,
+        name: game.name,
+        status: game.status || (game.gameStarted ? 'active' : 'waiting'),
+        playerCount: game.playerCount || game.players?.length || 0,
+        maxPlayers: game.maxPlayers,
+        isYourTurn: game.currentTurnUserId === userId,
+        winner: game.winner || null,
+        createdAt: game.createdAt
+      }))
+
+      return res.json({ games: formattedGames })
+    } catch (error) {
+      logger.error('Get my games error:', error)
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
 }
