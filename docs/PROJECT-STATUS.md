@@ -15,12 +15,22 @@
 
 ## 🎯 Recent Major Achievements (Dec 2024)
 
+### **UI/UX Improvements & Data Cleanup** ✅ (Aug 28, 2025)
+- Renamed Leaderboard page to Community hub with proper tabs
+- Added "My Games" tab to lobby with filters (active/waiting/finished)
+- Created comprehensive Tutorial/How-to-Play page with tabs
+- Removed all fake data from notifications and profile
+- Set up real-time data fetching from APIs
+- Cleaned up navigation menus and removed unused options
+- Implemented rank system (Bronze to Master) based on ELO ratings
+
 ### **Admin Dashboard System** ✅ (Aug 28, 2025)
 - Complete admin dashboard with user management, map approval, game monitoring
 - Role-based permission system with super_admin support
 - Admin users retain full player capabilities
 - Integrated admin authentication and API endpoints
 - Fixed Playwright MCP server connection for E2E testing
+- Added ActiveGamesDropdown component for quick game access
 
 ### **Major Technology Stack Upgrade** ✅ (Dec 27, 2024)
 - Upgraded React from 18.3.1 to 19.1.1

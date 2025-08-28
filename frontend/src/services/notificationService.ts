@@ -6,8 +6,9 @@ class NotificationService {
   private listeners: Set<(notifications: Notification[]) => void> = new Set()
 
   private constructor() {
-    // Load mock notifications for development
-    this.loadMockNotifications()
+    // Initialize with empty notifications
+    // Real notifications will be added via socket events or API calls
+    this.notifications = []
   }
 
   public static getInstance(): NotificationService {
@@ -15,84 +16,6 @@ class NotificationService {
       NotificationService.instance = new NotificationService()
     }
     return NotificationService.instance
-  }
-
-  private loadMockNotifications() {
-    // Mock notifications for demonstration
-    const now = new Date()
-    const hourAgo = new Date(now.getTime() - 60 * 60 * 1000)
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
-
-    this.notifications = [
-      {
-        id: '1',
-        type: 'turn_reminder',
-        title: 'Your Turn!',
-        message: 'It\'s your turn in "6P FFA Classic World"',
-        timestamp: new Date(now.getTime() - 5 * 60 * 1000), // 5 min ago
-        read: false,
-        actionUrl: '/room/game123',
-        actionLabel: 'Play Now',
-        icon: '⚔️',
-        metadata: { gameId: 'game123' },
-      },
-      {
-        id: '2',
-        type: 'game_invite',
-        title: 'Game Invitation',
-        message: 'PlayerOne invited you to play Risk',
-        timestamp: new Date(now.getTime() - 30 * 60 * 1000), // 30 min ago
-        read: false,
-        actionUrl: '/room/game456',
-        actionLabel: 'Join Game',
-        icon: '📨',
-        metadata: { gameId: 'game456', userId: 'player1' },
-      },
-      {
-        id: '3',
-        type: 'achievement',
-        title: 'Achievement Unlocked!',
-        message: 'First Victory - Win your first game',
-        timestamp: hourAgo,
-        read: true,
-        icon: '🏆',
-        metadata: { achievementId: 'first_victory' },
-      },
-      {
-        id: '4',
-        type: 'friend_request',
-        title: 'Friend Request',
-        message: 'StrategicMaster wants to be your friend',
-        timestamp: yesterday,
-        read: true,
-        actionUrl: '/friends',
-        actionLabel: 'View Request',
-        icon: '👥',
-        metadata: { userId: 'strategic_master', friendUsername: 'StrategicMaster' },
-      },
-      {
-        id: '5',
-        type: 'game_ended',
-        title: 'Game Finished',
-        message: 'You placed 2nd in "Ranked Europe Campaign"',
-        timestamp: yesterday,
-        read: true,
-        actionUrl: '/history/game789',
-        actionLabel: 'View Results',
-        icon: '🎯',
-        metadata: { gameId: 'game789' },
-      },
-      {
-        id: '6',
-        type: 'system',
-        title: 'Server Maintenance',
-        message: 'Scheduled maintenance at 3 AM UTC',
-        timestamp: twoDaysAgo,
-        read: true,
-        icon: '⚙️',
-      },
-    ]
   }
 
   public getNotifications(): Notification[] {
