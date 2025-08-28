@@ -304,4 +304,42 @@ export class GameRoomService {
     const deleteQuery = `DELETE FROM room_players WHERE room_id = ? AND user_id = ?`
     await query(deleteQuery, [roomId, userId])
   }
+
+  async getUserGames(userId: string): Promise<any[]> {
+    const isPostgres = process.env.DB_TYPE !== 'sqlite'
+    
+    // Query for all games the user is involved in
+    const gamesQuery = isPostgres
+      ? `
+        SELECT DISTINCT gr.*, 
+          (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
+          CASE 
+            WHEN gr.status = 'in_progress' THEN 'active'
+            WHEN gr.status = 'finished' THEN 'finished'
+            ELSE 'waiting'
+          END as status
+        FROM game_rooms gr
+        INNER JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = $1
+        ORDER BY gr.created_at DESC
+        LIMIT 50
+      `
+      : `
+        SELECT DISTINCT gr.*, 
+          (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
+          CASE 
+            WHEN gr.status = 'in_progress' THEN 'active'
+            WHEN gr.status = 'finished' THEN 'finished'
+            ELSE 'waiting'
+          END as status
+        FROM game_rooms gr
+        INNER JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = ?
+        ORDER BY gr.created_at DESC
+        LIMIT 50
+      `
+    
+    const result = await query(gamesQuery, [userId])
+    return result.rows
+  }
 }

@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { logout } from '../store/authSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import NotificationDropdown from './NotificationDropdown'
+import ActiveGamesDropdown from './ActiveGamesDropdown'
 
 interface MenuItem {
   path: string
@@ -124,6 +125,9 @@ export default function Header() {
           <div className="flex items-center gap-1 sm:gap-2">
             {isAuthenticated ? (
               <>
+                {/* Active Games Dropdown */}
+                <ActiveGamesDropdown />
+                
                 {/* Notification Dropdown */}
                 <NotificationDropdown />
 

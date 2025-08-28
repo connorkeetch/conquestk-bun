@@ -15,6 +15,13 @@
 
 ## 🎯 Recent Major Achievements (Dec 2024)
 
+### **Admin Dashboard System** ✅ (Aug 28, 2025)
+- Complete admin dashboard with user management, map approval, game monitoring
+- Role-based permission system with super_admin support
+- Admin users retain full player capabilities
+- Integrated admin authentication and API endpoints
+- Fixed Playwright MCP server connection for E2E testing
+
 ### **Major Technology Stack Upgrade** ✅ (Dec 27, 2024)
 - Upgraded React from 18.3.1 to 19.1.1
 - Upgraded Vite from 5.4.19 to 7.1.3 (Rollover)

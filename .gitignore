@@ -114,3 +114,7 @@ CLAUDE-*.md
 
 # Claude Code configuration (machine-specific)
 .claude/
+# Playwright test results
+test-results/
+tests/
+*.test.ts
