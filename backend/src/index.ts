@@ -377,49 +377,50 @@ async function startServer() {
           await initDatabase()
           logger.info('✅ Database connection pool established')
 
-        // Ensure basic tables exist (fallback)
-        await ensureTablesExist()
-        logger.info('✅ Basic tables verified')
+          // Ensure basic tables exist (fallback)
+          await ensureTablesExist()
+          logger.info('✅ Basic tables verified')
 
-        // Run our enhanced migration system
-        const migrationRunner = new MigrationRunner()
-        logger.info('🔄 Starting migration system...')
-        
-        try {
-          await migrationRunner.runPendingMigrations()
+          // Run our enhanced migration system
+          const migrationRunner = new MigrationRunner()
+          logger.info('🔄 Starting migration system...')
           
-          // Validate schema integrity after migrations
-          const isValid = await migrationRunner.validateSchemaIntegrity()
-          if (!isValid) {
-            throw new Error('Schema validation failed after migrations')
+          try {
+            await migrationRunner.runPendingMigrations()
+            
+            // Validate schema integrity after migrations
+            const isValid = await migrationRunner.validateSchemaIntegrity()
+            if (!isValid) {
+              throw new Error('Schema validation failed after migrations')
+            }
+            
+            logger.info('✅ All migrations completed and schema validated')
+            logger.info('🗄️  Database: PostgreSQL with migration tracking')
+            
+            if (process.env.NODE_ENV === 'production') {
+              logger.info('🌐 Production deployment ready at https://conquestk.com')
+              logger.info('🎮 All game features and admin functionality should be available')
+            }
+          } catch (migrationError) {
+            logger.error('❌ Migration system failed:', migrationError)
+            logger.warn('⚠️  Server running with potential schema issues...')
+            logger.error('💡 Some features may not work correctly until database is properly configured')
           }
-          
-          logger.info('✅ All migrations completed and schema validated')
-          logger.info('🗄️  Database: PostgreSQL with migration tracking')
+        } catch (dbError: any) {
+          logger.error('❌ Database initialization failed:', dbError)
+          logger.error(`  Error type: ${dbError.constructor.name}`)
+          logger.error(`  Error message: ${dbError.message}`)
+          if (dbError.stack) {
+            logger.error(`  Stack trace: ${dbError.stack}`)
+          }
+          logger.warn('⚠️  Server running without database connection')
+          logger.error('💡 Database features unavailable')
+          logger.error('💡 Check /test endpoint to verify server is running')
+          logger.error('💡 Check /debug/env for environment variables')
           
           if (process.env.NODE_ENV === 'production') {
-            logger.info('🌐 Production deployment ready at https://conquestk.com')
-            logger.info('🎮 All game features and admin functionality should be available')
+            logger.info('🚧 Server in degraded mode - database unavailable')
           }
-        } catch (migrationError) {
-          logger.error('❌ Migration system failed:', migrationError)
-          logger.warn('⚠️  Server running with potential schema issues...')
-          logger.error('💡 Some features may not work correctly until database is properly configured')
-        }
-      } catch (dbError) {
-        logger.error('❌ Database initialization failed:', dbError)
-        logger.error(`  Error type: ${dbError.constructor.name}`)
-        logger.error(`  Error message: ${dbError.message}`)
-        if (dbError.stack) {
-          logger.error(`  Stack trace: ${dbError.stack}`)
-        }
-        logger.warn('⚠️  Server running without database connection')
-        logger.error('💡 Database features unavailable')
-        logger.error('💡 Check /test endpoint to verify server is running')
-        logger.error('💡 Check /debug/env for environment variables')
-        
-        if (process.env.NODE_ENV === 'production') {
-          logger.info('🚧 Server in degraded mode - database unavailable')
         }
       })
     })
