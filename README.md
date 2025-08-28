@@ -30,10 +30,16 @@ npm run dev
 - **🔄 Full Turn Flow**: Reinforcement → Attack → Fortify phases
 - **🎲 Real Dice Mechanics**: Authentic Risk-style battle system with animated results
 - **🗺️ Interactive World Map**: Click-based territory selection with visual feedback
-- **⚡ Real-time Multiplayer**: Up to 6 players with live Socket.io synchronization
+- **⚡ Real-time Multiplayer**: Up to 12 players with live Socket.io synchronization
 - **🎮 Phase-specific UI**: Different controls and instructions for each game phase
 - **🏆 Command Points System**: ELO-based skill rating with ranked matchmaking
 - **📊 Leaderboards**: Global rankings with skill tiers from Bronze to Grandmaster
+- **🔔 Smart Notifications**: Real-time game alerts, turn reminders, and achievements
+- **🎨 12 Player Colors**: Extended color palette for larger games
+- **⏱️ Turn Timers**: Real-time (5-10 min) or async (6-24 hour) game modes
+- **🌫️ Fog of War**: Three visibility modes including persistent vision
+- **✈️ Movement Systems**: Classic, sea routes, airports, or unlimited range
+- **🔒 Setting Locks**: Lock individual settings from randomization
 
 ### 🛠️ Modern Tech Stack
 - **Frontend**: React 18 + TypeScript + Redux Toolkit + Vite
@@ -52,17 +58,21 @@ npm run dev
 ## 🎮 Game Features
 
 ### ✅ Implemented
-- [x] **Reinforcement Phase**: Calculate and deploy new armies based on territory count
-- [x] **Attack Phase**: Dice rolling battles with realistic Risk mechanics
-- [x] **Fortification Phase**: Move armies between connected owned territories
-- [x] **Turn Management**: Automatic phase progression and player rotation
-- [x] **Real-time Sync**: All players see updates instantly via Socket.io
-- [x] **Battle System**: Animated dice with proper high-to-low comparison
-- [x] **Territory Control**: Visual feedback for selections and valid targets
-- [x] **Game State Persistence**: Complete Redux store with action history
-- [x] **Command Points (ELO) System**: Skill-based matchmaking with 6 tiers
-- [x] **Ranked Games**: Competitive mode with skill requirements
-- [x] **Leaderboards**: Global rankings, tier filtering, and pagination
+- [x] **Core Game Mechanics**: All Risk phases with dice battles and territory control
+- [x] **Real-time Multiplayer**: Socket.io powered synchronization for up to 12 players
+- [x] **Ranked System**: ELO-based Command Points with 6 skill tiers
+- [x] **Smart Game Creation**: Intelligent naming, setting locks, and randomization
+- [x] **Advanced Game Modes**: 
+  - Fog of War (3 types: off, adjacent only, persistent vision)
+  - Movement Systems (4 types: classic, sea routes, airports, unlimited)
+  - Turn Timers (real-time 5-10 min, async 6-24 hours)
+- [x] **UI/UX Features**:
+  - Notification system with 8 notification types
+  - 12 distinct player colors
+  - Responsive design with Tailwind CSS v4
+  - User profiles with dropdown navigation
+- [x] **Map Editor**: Canvas-based territory creation with image processor
+- [x] **Audio System**: Background music and sound effects (ready for assets)
 
 ### 🚧 Planned Features
 - [ ] **Continent Bonuses**: Additional armies for controlling entire continents

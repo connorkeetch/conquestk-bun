@@ -1,6 +1,6 @@
 # 📋 Risk Game - Development TODO List
 
-## 🔴 Priority 1 - Immediate Needs
+## 🔴 Priority 1 - Core Features
 
 ### Audio System
 - [ ] **Replace placeholder audio files with real sounds**
@@ -15,157 +15,117 @@
   - [ ] Error/invalid move sound
   - **Resources**: Suno AI, Freesound.org, OpenGameArt
 
-### Game Creation UI Improvements
-- [ ] **Change randomize from checkbox to button**
-  - [ ] Convert to action button "Randomize Settings"
-  - [ ] One-click randomization of all unlocked settings
-  
-- [ ] **Add lock buttons for each setting**
-  - [ ] Lock icon next to each setting
-  - [ ] Prevents that setting from being randomized
-  - [ ] Visual indicator when locked
-  
-- [ ] **Game name improvements**
-  - [ ] Show placeholder "Game_[random_id]" during creation
-  - [ ] Auto-generate descriptive name after creation
-  - [ ] Format: "[PlayerCount]P [Mode] - [Map]"
-  - [ ] Example: "6P FFA - Classic World"
+### Game Mechanics
+- [ ] **Continent Bonuses**
+  - [ ] Calculate bonus armies for controlling entire continents
+  - [ ] Visual indicators for continent control
+  - [ ] Continent ownership notifications
 
-### Fog of War Enhancements
-- [ ] **Two fog modes**
-  - [ ] "Persistent Vision" - Once seen, stays visible
-  - [ ] "Adjacent Only" - Only see adjacent territories
-  - [ ] Add toggle in game settings
-  - [ ] Visual indicators for fog coverage
+- [ ] **Card System**
+  - [ ] Territory cards earned after conquest
+  - [ ] Card trading for bonus armies
+  - [ ] Set combinations (infantry, cavalry, artillery)
+  - [ ] Wild cards implementation
 
-### Movement System Overhaul
-- [ ] **Four movement types**
-  1. [ ] "Adjacent Single" - Move to one adjacent territory
-  2. [ ] "Adjacent Multiple" - Move to adjacent, but each troop can only move once
-  3. [ ] "Chain Single" - Move through connected owned territories (one move)
-  4. [ ] "Chain Unlimited" - Move through connected owned territories (unlimited)
-  - [ ] Track which troops have moved (for type 2)
-  - [ ] UI indicators for moved vs unmoved troops
+- [ ] **AI Players**
+  - [ ] Basic AI with random valid moves
+  - [ ] Strategic AI with territory prioritization
+  - [ ] Difficulty levels (Easy, Medium, Hard)
+  - [ ] AI personality types (Aggressive, Defensive, Balanced)
 
-### Player Colors
-- [ ] **Add 6 additional distinct colors**
-  - [ ] Current: Red, Blue, Green, Yellow, Purple, Orange
-  - [ ] Add: Cyan, Pink, Brown, Lime, Teal, Indigo
-  - [ますVisual color picker in game creation
-  - [ ] High contrast requirements for accessibility
+## 🟡 Priority 2 - Enhanced Features
 
-### Turn Time Limits
-- [ ] **Add timer system**
-  - [ ] Real-time games: 5, 10 minutes
-  - [ ] Async games: 6, 12, 24 hours
-  - [ ] Setting in game creation (at the top)
-  - [ ] Visual countdown timer during turn
-  - [ ] Auto-end turn when time expires
-  - [ ] Warning notifications at 1 minute/1 hour remaining
+### Multiplayer & Social
+- [ ] **Friends System**
+  - [ ] Add/remove friends
+  - [ ] Online status indicators
+  - [ ] Friend invites to games
+  - [ ] Friend leaderboards
 
-## 🟡 Priority 2 - UI/UX Improvements
+- [ ] **Chat System**
+  - [ ] In-game chat
+  - [ ] Lobby chat
+  - [ ] Private messages
+  - [ ] Chat moderation tools
 
-### Notification System
-- [ ] **Notification dropdown (top right)**
-  - [ ] Bell icon with unread count badge
-  - [ ] Dropdown panel with notification list
-  - [ ] Notification types:
-    - [ ] Game invites
-    - [ ] Your turn alerts
-    - [ ] Turn timer warnings
-    - [ ] Messages received
-    - [ ] Game ended
-    - [ ] Achievement unlocked
-  - [ ] Mark as read functionality
-  - [ ] Clear all button
+- [ ] **Tournament Mode**
+  - [ ] Multi-round tournaments
+  - [ ] Swiss/elimination formats
+  - [ ] Tournament brackets
+  - [ ] Prize pools and rewards
 
-### Navigation Updates
-- [ ] **Profile button improvements**
-  - [ ] Make username clickable → profile
-  - [ ] Remove "Profile" from main nav
-  - [ ] Remove from hamburger menu
-  - [ ] Add dropdown on username click with:
-    - [ ] View Profile
-    - [ ] Settings
-    - [ ] Logout
+### Game Modes
+- [ ] **Custom Maps**
+  - [ ] Community map sharing
+  - [ ] Map ratings and reviews
+  - [ ] Featured maps section
+  - [ ] Map categories and tags
 
-## 🟢 Priority 3 - Features & Enhancements
+- [ ] **Spectator Mode**
+  - [ ] Watch live games
+  - [ ] Replay system
+  - [ ] Commentary features
+  - [ ] Learning mode with tips
 
-### Completed Features (Reference)
-- [x] Command Points (ELO) system
-- [x] Skill tiers and leaderboards
-- [x] Audio system infrastructure
-- [x] Ranked matchmaking
-- [x] Settings persistence
+## 🟢 Priority 3 - Polish & QoL
 
-### Future Enhancements
-- [ ] Spectator mode
-- [ ] Replay system
-- [ ] Tournament brackets
-- [ ] Custom map editor (visual)
-- [ ] Alliance/diplomacy system
-- [ ] Card trading system
-- [ ] AI opponents
-- [ ] Mobile app
-- [ ] Discord integration
+### User Experience
+- [ ] **Statistics & Analytics**
+  - [ ] Personal statistics dashboard
+  - [ ] Win/loss ratios by map
+  - [ ] Territory control heatmaps
+  - [ ] Average game duration tracking
 
-## 🔧 Technical Debt
+- [ ] **Achievements System**
+  - [ ] Achievement categories
+  - [ ] Progress tracking
+  - [ ] Unlockable rewards
+  - [ ] Achievement showcase on profile
 
-- [ ] Add comprehensive error boundaries
-- [ ] Implement proper WebSocket reconnection
-- [ ] Add database indexes for performance
-- [ ] Set up CI/CD pipeline
-- [ ] Add E2E tests with Playwright
-- [ ] Implement rate limiting on all endpoints
-- [ ] Add request validation middleware
-- [ ] Set up monitoring/alerting (Sentry)
-- [ ] Database backup automation
+- [ ] **Mobile Optimization**
+  - [ ] Touch-optimized controls
+  - [ ] Responsive game board
+  - [ ] Mobile-specific UI adjustments
+  - [ ] PWA implementation
 
-## 📝 Documentation Needs
+### Monetization (Future)
+- [ ] **Premium Features**
+  - [ ] Custom avatars
+  - [ ] Exclusive maps
+  - [ ] Statistics insights
+  - [ ] Tournament entry
 
-- [ ] API documentation (OpenAPI/Swagger)
-- [ ] Deployment guide updates
-- [ ] Contributing guidelines
+- [ ] **Cosmetics**
+  - [ ] Army skins
+  - [ ] Dice animations
+  - [ ] Victory celebrations
+  - [ ] Profile themes
+
+## 📝 Notes
+
+### Recently Completed (Dec 2024)
+✅ Navigation cleanup with user dropdown
+✅ Randomize settings button
+✅ Lock icons for settings
+✅ 12 player colors
+✅ Smart game naming
+✅ Fog of war modes (3 types)
+✅ Movement system types (4 types)
+✅ Turn timer system
+✅ Notification dropdown with 8 types
+
+### Technical Debt
+- [ ] Improve test coverage (currently 37 tests)
+- [ ] Optimize Socket.io event handling
+- [ ] Implement proper error boundaries
+- [ ] Add comprehensive logging system
+- [ ] Performance monitoring and optimization
+
+### Documentation
+- [ ] API documentation
 - [ ] Game rules documentation
-- [ ] Video tutorials
-
-## 🐛 Known Bugs
-
-- [ ] Socket reconnection sometimes loses game state
-- [ ] Mobile viewport issues on game board
-- [ ] Chat messages sometimes appear duplicated
-- [ ] Rating change animation can overlap
-
-## 💡 Ideas for Discussion
-
-- **Progressive Web App** - Offline play capability?
-- **Seasons/Leagues** - Reset ratings periodically?
-- **Achievements System** - Badges and rewards?
-- **Friends List** - Social features?
-- **Game Modes** - Capture the flag? King of the hill?
-- **Power-ups** - Temporary advantages?
-- **Daily Challenges** - Engagement features?
+- [ ] Contributing guidelines
+- [ ] Deployment guide
 
 ---
-
-## 📅 Sprint Planning
-
-### Current Sprint (Priority 1 items)
-1. Game creation UI improvements (randomize button, locks)
-2. Game naming system
-3. Fog of war modes
-4. Movement system types
-5. Additional player colors
-6. Turn timer system
-7. Notification dropdown
-8. Navigation cleanup
-
-### Next Sprint
-- Audio file acquisition and integration
-- Testing and bug fixes
-- Performance optimization
-
----
-
-*Last Updated: August 27, 2025*
-*Use this document to track progress and collaborate on remaining work*
+*Last updated: December 2024*
