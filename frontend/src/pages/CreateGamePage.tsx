@@ -91,17 +91,62 @@ const CreateGamePage: React.FC = () => {
   // Settings lock state for randomization
   const [lockedSettings, setLockedSettings] = useState<Set<string>>(new Set())
 
-  // Generate auto game name
+  // Mock maps data (moved here so it's available for generateSmartName)
+  const maps = [
+    { id: 'classic', name: 'Classic World', territories: 42, players: '2-6', size: 'Large' },
+    { id: 'europe', name: 'Europe', territories: 24, players: '2-4', size: 'Medium' },
+    { id: 'asia', name: 'Asia', territories: 30, players: '2-5', size: 'Large' },
+  ]
+
+  // Generate smart game name
+  const generateSmartName = () => {
+    const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
+    const playerText = `${maxPlayers}P`
+    
+    // Build descriptive elements
+    const elements = []
+    
+    // Ranked indicator
+    if (isRanked) elements.push('[RANKED]')
+    
+    // Player count
+    elements.push(playerText)
+    
+    // Team configuration
+    if (teams > 0) {
+      elements.push(`${teams}v${Math.floor(maxPlayers / teams)}`)
+    } else {
+      elements.push('FFA')
+    }
+    
+    // Map name
+    elements.push(mapName)
+    
+    // Special rules (only include if not default)
+    const specialRules = []
+    if (gameMode === 'capitals') specialRules.push('Capitals')
+    if (fogOfWar === 'adjacent') specialRules.push('Fog')
+    if (fogOfWar === 'persistent') specialRules.push('PersistentFog')
+    if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
+    if (fortification === 'chained') specialRules.push('ChainedMove')
+    if (useTerritoryModifiers) specialRules.push('Modifiers')
+    
+    if (specialRules.length > 0) {
+      elements.push(`[${specialRules.join('+')}]`)
+    }
+    
+    return elements.join(' ')
+  }
+
+  // Auto-generate game name
   useEffect(() => {
     if (!gameName) {
-      const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
-      const teamText = teams > 0 ? `${teams} Teams` : 'FFA'
-      const playerText = `${maxPlayers}P`
-      const rankedText = isRanked ? '[RANKED] ' : ''
-      const autoName = `${rankedText}${playerText} ${teamText} - ${mapName}`
-      setGameName(autoName)
+      setGameName(generateSmartName())
     }
-  }, [maxPlayers, teams, selectedMap, gameName, isRanked])
+  }, [maxPlayers, teams, selectedMap, gameMode, fogOfWar, fortification, useTerritoryModifiers, isRanked])
+  
+  // Update placeholder to show what auto-name would be
+  const gameNamePlaceholder = generateSmartName()
 
   // Validate ranked game settings
   useEffect(() => {
@@ -167,7 +212,8 @@ const CreateGamePage: React.FC = () => {
       setTeams(Math.floor(Math.random() * 4))
     }
     if (!lockedSettings.has('fogOfWar')) {
-      setFogOfWar(Math.random() > 0.5 ? 'on' : 'off')
+      const fogOptions = ['off', 'adjacent', 'persistent']
+      setFogOfWar(fogOptions[Math.floor(Math.random() * fogOptions.length)])
     }
     if (!lockedSettings.has('fortification')) {
       setFortification(['adjacent', 'chained', 'unlimited'][Math.floor(Math.random() * 3)])
@@ -192,13 +238,6 @@ const CreateGamePage: React.FC = () => {
       return newSet
     })
   }
-
-  // Mock maps data
-  const maps = [
-    { id: 'classic', name: 'Classic World', territories: 42, players: '2-6', size: 'Large' },
-    { id: 'europe', name: 'Europe', territories: 24, players: '2-4', size: 'Medium' },
-    { id: 'asia', name: 'Asia', territories: 30, players: '2-5', size: 'Large' },
-  ]
 
   // Use colors from constants
   const colors = PLAYER_COLORS
@@ -238,14 +277,38 @@ const CreateGamePage: React.FC = () => {
             {/* Game Name */}
             <div>
               <label className="block text-sm font-medium mb-2 text-white">Game Name</label>
-              <input
-                type="text"
-                placeholder="Auto-generated if empty"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-all duration-200"
-                value={gameName}
-                onChange={(e) => setGameName(e.target.value)}
-              />
-              <p className="text-xs text-gray-400 mt-1">Leave empty for auto-generated name</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={gameNamePlaceholder}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-all duration-200 pr-20"
+                  value={gameName}
+                  onChange={(e) => setGameName(e.target.value)}
+                />
+                <div className="absolute right-1 top-1 flex gap-1">
+                  {gameName && (
+                    <button
+                      type="button"
+                      onClick={() => setGameName('')}
+                      className="p-1.5 text-gray-400 hover:text-white bg-gray-600 hover:bg-gray-500 rounded transition-all"
+                      title="Clear custom name"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setGameName(generateSmartName())}
+                    className="p-1.5 text-blue-400 hover:text-blue-300 bg-blue-900/30 hover:bg-blue-900/50 rounded transition-all"
+                    title="Generate smart name"
+                  >
+                    ✨
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                {gameName ? 'Using custom name' : 'Auto-generated based on settings'}
+              </p>
             </div>
 
             {/* Game Visibility */}
@@ -447,18 +510,44 @@ const CreateGamePage: React.FC = () => {
                 onChange={(e) => setFogOfWar(e.target.value)}
                 className="mr-3 accent-blue-500"
               />
-              <span className="text-white">Off - See entire map</span>
+              <div className="flex-1">
+                <span className="text-white">🌞 No Fog</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  See entire map at all times
+                </p>
+              </div>
             </label>
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input
                 type="radio"
                 name="fog"
-                value="on"
-                checked={fogOfWar === 'on'}
+                value="adjacent"
+                checked={fogOfWar === 'adjacent'}
                 onChange={(e) => setFogOfWar(e.target.value)}
                 className="mr-3 accent-blue-500"
               />
-              <span className="text-white">On - See only adjacent territories</span>
+              <div className="flex-1">
+                <span className="text-white">🌫️ Adjacent Only</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Only see territories next to your own
+                </p>
+              </div>
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="fog"
+                value="persistent"
+                checked={fogOfWar === 'persistent'}
+                onChange={(e) => setFogOfWar(e.target.value)}
+                className="mr-3 accent-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-white">🗺️ Persistent Vision</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Once revealed, territories stay visible
+                </p>
+              </div>
             </label>
           </div>
         </OptionCard>
