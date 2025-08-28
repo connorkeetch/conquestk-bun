@@ -1,5 +1,7 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
+import { useAppSelector } from '../../hooks/redux'
+import api from '../../services/api'
 
 interface UserProfile {
   id: string
@@ -7,8 +9,7 @@ interface UserProfile {
   email: string
   avatarUrl?: string
   bio?: string
-  level: number
-  experiencePoints: number
+  elo: number
   joinDate: string
   lastActive: string
   preferences: {
@@ -29,17 +30,6 @@ interface UserStats {
   ranking: number
 }
 
-interface Achievement {
-  id: string
-  name: string
-  description: string
-  iconUrl: string
-  points: number
-  unlockedAt?: string
-  progress?: number
-  maxProgress?: number
-}
-
 interface RecentGame {
   id: string
   mapName: string
@@ -51,127 +41,78 @@ interface RecentGame {
 }
 
 const ProfileOverview: React.FC = () => {
+  const { user } = useAppSelector((state) => state.auth)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
-  const [achievements, setAchievements] = useState<Achievement[]>([])
   const [recentGames, setRecentGames] = useState<RecentGame[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, _setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Mock data for now - will be replaced with API calls
-    const mockProfile: UserProfile = {
-      id: '1',
-      username: 'RiskCommander',
-      email: 'user@example.com',
-      avatarUrl: '/avatars/default.png',
-      bio: 'Veteran Risk player with a passion for strategic warfare. Always looking for challenging opponents!',
-      level: 15,
-      experiencePoints: 12450,
-      joinDate: '2024-01-15',
-      lastActive: new Date().toISOString(),
-      preferences: {
-        theme: 'dark',
-        notifications: true,
-        publicProfile: true,
-      },
-    }
+    fetchProfileData()
+  }, [user])
 
-    const mockStats: UserStats = {
-      gamesPlayed: 147,
-      gamesWon: 89,
-      gamesLost: 58,
-      winRate: 60.5,
-      averageGameDuration: 45,
-      favoriteMap: 'Classic World',
-      totalPlayTime: 6825,
-      ranking: 342,
-    }
-
-    const mockAchievements: Achievement[] = [
-      {
-        id: '1',
-        name: 'First Victory',
-        description: 'Win your first game',
-        iconUrl: '🏆',
-        points: 100,
-        unlockedAt: '2024-01-20',
-      },
-      {
-        id: '2',
-        name: 'World Conqueror',
-        description: 'Control all territories on the world map',
-        iconUrl: '🌍',
-        points: 500,
-        unlockedAt: '2024-02-15',
-      },
-      {
-        id: '3',
-        name: 'Speed Demon',
-        description: 'Win a game in under 30 minutes',
-        iconUrl: '⚡',
-        points: 200,
-        unlockedAt: '2024-03-10',
-      },
-      {
-        id: '4',
-        name: 'Marathon Master',
-        description: 'Play for 100 hours total',
-        iconUrl: '⏰',
-        points: 300,
-        progress: 68,
-        maxProgress: 100,
-      },
-      {
-        id: '5',
-        name: 'Map Creator',
-        description: 'Create and publish 5 custom maps',
-        iconUrl: '🗺️',
-        points: 400,
-        progress: 2,
-        maxProgress: 5,
-      },
-    ]
-
-    const mockRecentGames: RecentGame[] = [
-      {
-        id: '1',
-        mapName: 'Classic World',
-        gameMode: 'Classic',
-        result: 'won',
-        duration: 52,
-        playedAt: '2024-08-17T20:30:00Z',
-        playerCount: 4,
-      },
-      {
-        id: '2',
-        mapName: 'Europe',
-        gameMode: 'Capital Conquest',
-        result: 'lost',
-        duration: 38,
-        playedAt: '2024-08-16T19:15:00Z',
-        playerCount: 6,
-      },
-      {
-        id: '3',
-        mapName: 'Custom Islands',
-        gameMode: 'Naval Supremacy',
-        result: 'won',
-        duration: 41,
-        playedAt: '2024-08-15T21:45:00Z',
-        playerCount: 3,
-      },
-    ]
-
-    // Simulate API loading
-    setTimeout(() => {
-      setProfile(mockProfile)
-      setStats(mockStats)
-      setAchievements(mockAchievements)
-      setRecentGames(mockRecentGames)
+  const fetchProfileData = async () => {
+    if (!user) {
+      setError('Please log in to view your profile')
       setLoading(false)
-    }, 1000)
-  }, [])
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Fetch user profile
+      const profileResponse = await api.get('/auth/profile')
+      const userData = profileResponse.data.user
+      
+      const userProfile: UserProfile = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        avatarUrl: userData.avatar_url,
+        bio: userData.bio || '',
+        elo: userData.elo || 1200,
+        joinDate: userData.created_at,
+        lastActive: userData.last_active || new Date().toISOString(),
+        preferences: {
+          theme: 'dark',
+          notifications: true,
+          publicProfile: true,
+        },
+      }
+      
+      // Calculate stats from user data
+      const userStats: UserStats = {
+        gamesPlayed: userData.games_played || 0,
+        gamesWon: userData.wins || 0,
+        gamesLost: userData.losses || 0,
+        winRate: userData.games_played > 0 ? ((userData.wins || 0) / userData.games_played * 100) : 0,
+        averageGameDuration: 0,
+        favoriteMap: 'Classic World',
+        totalPlayTime: 0,
+        ranking: 0,
+      }
+
+      setProfile(userProfile)
+      setStats(userStats)
+      
+      // Try to fetch recent games (endpoint might not exist yet)
+      try {
+        const gamesResponse = await api.get('/game/recent')
+        setRecentGames(gamesResponse.data.games || [])
+      } catch {
+        // No recent games yet
+        setRecentGames([])
+      }
+      
+    } catch (err: any) {
+      console.error('Failed to fetch profile:', err)
+      setError('Failed to load profile data')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const formatDuration = (minutes: number): string => {
     const hours = Math.floor(minutes / 60)
@@ -185,16 +126,13 @@ const ProfileOverview: React.FC = () => {
     return days > 0 ? `${days}d ${remainingHours}h` : `${remainingHours}h`
   }
 
-  const getExperienceToNextLevel = (currentXP: number, level: number): number => {
-    const nextLevelXP = level * 1000 // Simple formula: level * 1000
-    return Math.max(0, nextLevelXP - currentXP)
-  }
-
-  const getExperienceProgress = (currentXP: number, level: number): number => {
-    const currentLevelXP = (level - 1) * 1000
-    const nextLevelXP = level * 1000
-    const progress = ((currentXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
-    return Math.min(100, Math.max(0, progress))
+  const getRankTitle = (elo: number): { rank: string; color: string } => {
+    if (elo < 1000) return { rank: 'Bronze', color: '#CD7F32' }
+    if (elo < 1200) return { rank: 'Silver', color: '#C0C0C0' }
+    if (elo < 1500) return { rank: 'Gold', color: '#FFD700' }
+    if (elo < 1800) return { rank: 'Platinum', color: '#E5E4E2' }
+    if (elo < 2100) return { rank: 'Diamond', color: '#B9F2FF' }
+    return { rank: 'Master', color: '#FF69B4' }
   }
 
   if (loading) {
@@ -221,6 +159,8 @@ const ProfileOverview: React.FC = () => {
     )
   }
 
+  const { rank, color } = getRankTitle(profile.elo)
+
   return (
     <div className="profile-overview">
       {/* Profile Header */}
@@ -238,27 +178,20 @@ const ProfileOverview: React.FC = () => {
 
         <div className="profile-info">
           <h1 className="username">{profile.username}</h1>
-          <div className="level-info">
-            <span className="level">Level {profile.level}</span>
-            <div className="xp-bar">
-              <div
-                className="xp-progress"
-                style={{
-                  width: `${getExperienceProgress(profile.experiencePoints, profile.level)}%`,
-                }}
-              ></div>
-            </div>
-            <span className="xp-text">
-              {profile.experiencePoints} XP (
-              {getExperienceToNextLevel(profile.experiencePoints, profile.level)} to next level)
+          <div className="rank-info">
+            <span className="rank-badge" style={{ color }}>
+              {rank}
             </span>
+            <span className="elo-score">ELO: {profile.elo}</span>
           </div>
-          <p className="bio">{profile.bio}</p>
+          {profile.bio && <p className="bio">{profile.bio}</p>}
           <div className="profile-meta">
             <span className="join-date">
               ⏰ Joined {new Date(profile.joinDate).toLocaleDateString()}
             </span>
-            <span className="ranking">🏆 Rank #{stats.ranking}</span>
+            {stats.ranking > 0 && (
+              <span className="ranking">🏆 Rank #{stats.ranking}</span>
+            )}
           </div>
         </div>
       </div>
@@ -271,86 +204,82 @@ const ProfileOverview: React.FC = () => {
           <div className="stat-label">Games Played</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🏆</div>
-          <div className="stat-value">{stats.winRate}%</div>
+          <div className="stat-icon">✅</div>
+          <div className="stat-value">{stats.gamesWon}</div>
+          <div className="stat-label">Wins</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">❌</div>
+          <div className="stat-value">{stats.gamesLost}</div>
+          <div className="stat-label">Losses</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📊</div>
+          <div className="stat-value">
+            {stats.gamesPlayed > 0 ? `${stats.winRate.toFixed(1)}%` : 'N/A'}
+          </div>
           <div className="stat-label">Win Rate</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">⏱️</div>
-          <div className="stat-value">{formatPlayTime(stats.totalPlayTime)}</div>
-          <div className="stat-label">Play Time</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">🗺️</div>
-          <div className="stat-value">{stats.favoriteMap}</div>
-          <div className="stat-label">Favorite Map</div>
-        </div>
-      </div>
-
-      {/* Recent Achievements */}
-      <div className="recent-achievements">
-        <h2>🏅 Recent Achievements</h2>
-        <div className="achievements-grid">
-          {achievements.slice(0, 6).map((achievement) => (
-            <div
-              key={achievement.id}
-              className={`achievement-card ${achievement.unlockedAt ? 'unlocked' : 'locked'}`}
-            >
-              <div className="achievement-icon">{achievement.iconUrl}</div>
-              <div className="achievement-info">
-                <h3 className="achievement-name">{achievement.name}</h3>
-                <p className="achievement-description">{achievement.description}</p>
-                {achievement.unlockedAt ? (
-                  <div className="achievement-unlocked">
-                    ✅ Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
-                  </div>
-                ) : achievement.progress !== undefined ? (
-                  <div className="achievement-progress">
-                    <div className="progress-bar">
-                      <div
-                        className="progress-fill"
-                        style={{
-                          width: `${(achievement.progress! / achievement.maxProgress!) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <span className="progress-text">
-                      {achievement.progress}/{achievement.maxProgress}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="achievement-locked">🔒 Locked</div>
-                )}
-                <div className="achievement-points">+{achievement.points} XP</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button className="view-all-achievements">View All Achievements</button>
       </div>
 
       {/* Recent Games */}
       <div className="recent-games">
         <h2>📊 Recent Games</h2>
-        <div className="games-list">
-          {recentGames.map((game) => (
-            <div key={game.id} className={`game-card ${game.result}`}>
-              <div className="game-result">
-                {game.result === 'won' ? '🏆' : game.result === 'lost' ? '❌' : '🤝'}
-              </div>
-              <div className="game-info">
-                <h3 className="game-map">{game.mapName}</h3>
-                <div className="game-details">
-                  <span className="game-mode">{game.gameMode}</span>
-                  <span className="game-players">{game.playerCount} players</span>
-                  <span className="game-duration">{formatDuration(game.duration)}</span>
+        {recentGames.length > 0 ? (
+          <>
+            <div className="games-list">
+              {recentGames.map((game) => (
+                <div key={game.id} className={`game-card ${game.result}`}>
+                  <div className="game-result">
+                    {game.result === 'won' ? '🏆' : game.result === 'lost' ? '❌' : '🤝'}
+                  </div>
+                  <div className="game-info">
+                    <h3 className="game-map">{game.mapName}</h3>
+                    <div className="game-details">
+                      <span className="game-mode">{game.gameMode}</span>
+                      <span className="game-players">{game.playerCount} players</span>
+                      <span className="game-duration">{formatDuration(game.duration)}</span>
+                    </div>
+                  </div>
+                  <div className="game-date">{new Date(game.playedAt).toLocaleDateString()}</div>
                 </div>
-              </div>
-              <div className="game-date">{new Date(game.playedAt).toLocaleDateString()}</div>
+              ))}
             </div>
-          ))}
+            <button className="view-game-history">View Full Game History</button>
+          </>
+        ) : (
+          <div className="no-games">
+            <p className="text-gray-400">No games played yet</p>
+            <p className="text-sm text-gray-500 mt-2">Start playing to see your game history!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Coming Soon Section */}
+      <div className="coming-soon-section">
+        <h2>🚀 Coming Soon</h2>
+        <div className="coming-soon-grid">
+          <div className="coming-soon-card">
+            <div className="icon">🏅</div>
+            <h3>Achievements</h3>
+            <p>Unlock achievements and earn rewards</p>
+          </div>
+          <div className="coming-soon-card">
+            <div className="icon">👥</div>
+            <h3>Friends</h3>
+            <p>Add friends and challenge them to battles</p>
+          </div>
+          <div className="coming-soon-card">
+            <div className="icon">📈</div>
+            <h3>Detailed Stats</h3>
+            <p>Track your progress with advanced analytics</p>
+          </div>
+          <div className="coming-soon-card">
+            <div className="icon">🎨</div>
+            <h3>Custom Avatars</h3>
+            <p>Personalize your profile with unique avatars</p>
+          </div>
         </div>
-        <button className="view-game-history">View Full Game History</button>
       </div>
     </div>
   )

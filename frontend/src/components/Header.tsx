@@ -31,12 +31,11 @@ export default function Header() {
     ...(user?.isAdmin ? [{ path: '/admin', label: 'Admin', icon: '🛡️' }] : []),
   ]
 
-  // Future community features (keeping track for later)
+  // Future features (keeping track for later)
   const futureItems: MenuItem[] = [
-    { path: '/achievements', label: 'Achievements', icon: '🎖️' },
-    { path: '/history', label: 'Match History', icon: '📋' },
     { path: '/friends', label: 'Friends', icon: '👥' },
     { path: '/tournaments', label: 'Tournaments', icon: '🏅' },
+    { path: '/achievements', label: 'Achievements', icon: '🎖️' },
   ]
 
   const handleLogout = () => {
