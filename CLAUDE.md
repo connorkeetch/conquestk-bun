@@ -78,7 +78,7 @@ npm run build                  # Build for production
 ### Backend Stack
 - **Node.js** + **Express 4.21.2** + **TypeScript**
 - **Socket.io** for WebSocket connections
-- **PostgreSQL** (production) / **SQLite** (development)
+- **MySQL** (production) / **SQLite** (development)
 - **JWT** authentication
 - **Redis** for sessions (optional)
 
