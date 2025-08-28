@@ -35,7 +35,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // If route requires admin and user is not admin
-  if (requireAdmin && (!user || user.role !== 'admin')) {
+  if (requireAdmin && (!user || !user.isAdmin)) {
     return <Navigate to="/" replace />
   }
 
