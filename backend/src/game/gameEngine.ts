@@ -87,12 +87,12 @@ export class GameEngine {
   }
 
   private createPlayers(playerIds: string[]): GamePlayer[] {
-    const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
+    const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan', 'pink', 'brown', 'lime', 'teal', 'indigo']
 
     return playerIds.map((id, index) => ({
       id,
       username: `Player ${index + 1}`,
-      color: colors[index],
+      color: colors[index % colors.length],
       armies: this.calculateInitialArmies(playerIds.length),
       territories: [],
       cards: [],

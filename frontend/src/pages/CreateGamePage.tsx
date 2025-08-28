@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
+import { PLAYER_COLORS, COLOR_CLASSES, COLOR_HEX_VALUES } from '../constants/colors'
 
 // Reusable OptionCard component
 interface OptionCardProps {
@@ -10,9 +11,21 @@ interface OptionCardProps {
   title: string
   children: React.ReactNode
   comingSoon?: boolean
+  lockable?: boolean
+  isLocked?: boolean
+  onToggleLock?: () => void
+  settingName?: string
 }
 
-const OptionCard: React.FC<OptionCardProps> = ({ number, title, children, comingSoon = false }) => (
+const OptionCard: React.FC<OptionCardProps> = ({ 
+  number, 
+  title, 
+  children, 
+  comingSoon = false,
+  lockable = false,
+  isLocked = false,
+  onToggleLock
+}) => (
   <div
     className={`bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl hover:shadow-2xl ${comingSoon ? 'opacity-50' : ''}`}
   >
@@ -23,11 +36,26 @@ const OptionCard: React.FC<OptionCardProps> = ({ number, title, children, coming
         </span>
         <span className="text-white">{title}</span>
       </h2>
-      {comingSoon && (
-        <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
-          Coming Soon
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {lockable && onToggleLock && (
+          <button
+            onClick={onToggleLock}
+            className={`p-1.5 rounded transition-all ${
+              isLocked 
+                ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30' 
+                : 'text-gray-400 bg-gray-600/20 hover:bg-gray-600/30'
+            }`}
+            title={isLocked ? 'Locked from randomization' : 'Click to lock from randomization'}
+          >
+            {isLocked ? '🔒' : '🔓'}
+          </button>
+        )}
+        {comingSoon && (
+          <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
+            Coming Soon
+          </span>
+        )}
+      </div>
     </div>
     <div className={comingSoon ? 'pointer-events-none' : ''}>{children}</div>
   </div>
@@ -41,7 +69,6 @@ const CreateGamePage: React.FC = () => {
     'public',
   )
   const [inviteCode, setInviteCode] = useState(localStorage.getItem('lastInviteCode') || '')
-  const [randomizeSettings, setRandomizeSettings] = useState(false)
   const [gameName, setGameName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [selectedMap, setSelectedMap] = useState('classic')
@@ -60,6 +87,9 @@ const CreateGamePage: React.FC = () => {
   const [isRanked, setIsRanked] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Settings lock state for randomization
+  const [lockedSettings, setLockedSettings] = useState<Set<string>>(new Set())
 
   // Generate auto game name
   useEffect(() => {
@@ -130,16 +160,37 @@ const CreateGamePage: React.FC = () => {
   }
 
   const handleRandomizeSettings = () => {
-    setMaxPlayers(Math.floor(Math.random() * 6) + 2)
-    setTeams(Math.floor(Math.random() * 4))
-    setFogOfWar(Math.random() > 0.5 ? 'on' : 'off')
-    setFortification(['adjacent', 'chained', 'unlimited'][Math.floor(Math.random() * 3)])
-    setCardTradeBonus(
-      ['progressive', 'fixed', 'increasing', 'static'][Math.floor(Math.random() * 4)],
-    )
-    if (cardTradeBonus === 'static') {
-      setStaticBonusValue(Math.floor(Math.random() * 20) + 5)
+    if (!lockedSettings.has('maxPlayers')) {
+      setMaxPlayers(Math.floor(Math.random() * 6) + 2)
     }
+    if (!lockedSettings.has('teams')) {
+      setTeams(Math.floor(Math.random() * 4))
+    }
+    if (!lockedSettings.has('fogOfWar')) {
+      setFogOfWar(Math.random() > 0.5 ? 'on' : 'off')
+    }
+    if (!lockedSettings.has('fortification')) {
+      setFortification(['adjacent', 'chained', 'unlimited'][Math.floor(Math.random() * 3)])
+    }
+    if (!lockedSettings.has('cardTradeBonus')) {
+      const newBonus = ['progressive', 'fixed', 'increasing', 'static'][Math.floor(Math.random() * 4)]
+      setCardTradeBonus(newBonus)
+      if (newBonus === 'static') {
+        setStaticBonusValue(Math.floor(Math.random() * 20) + 5)
+      }
+    }
+  }
+
+  const toggleLock = (settingName: string) => {
+    setLockedSettings(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(settingName)) {
+        newSet.delete(settingName)
+      } else {
+        newSet.add(settingName)
+      }
+      return newSet
+    })
   }
 
   // Mock maps data
@@ -149,7 +200,8 @@ const CreateGamePage: React.FC = () => {
     { id: 'asia', name: 'Asia', territories: 30, players: '2-5', size: 'Large' },
   ]
 
-  const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan', 'pink']
+  // Use colors from constants
+  const colors = PLAYER_COLORS
 
   return (
     <div className="min-h-screen text-white p-6">
@@ -287,23 +339,20 @@ const CreateGamePage: React.FC = () => {
 
           {/* Randomize Settings */}
           <div className="mt-4 flex items-center gap-4">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={randomizeSettings}
-                onChange={(e) => {
-                  setRandomizeSettings(e.target.checked)
-                  if (e.target.checked) {
-                    handleRandomizeSettings()
-                  }
-                }}
-                className="mr-2"
-                disabled={isRanked}
-              />
-              <span className={`text-sm ${isRanked ? 'text-gray-500' : 'text-gray-300'}`}>
-                🎲 Randomize Settings {isRanked && '(Disabled for ranked)'}
-              </span>
-            </label>
+            <button
+              type="button"
+              onClick={handleRandomizeSettings}
+              disabled={isRanked}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+                isRanked 
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
+              }`}
+            >
+              <span>🎲</span>
+              <span>Randomize Settings</span>
+              {isRanked && <span className="text-xs">(Disabled for ranked)</span>}
+            </button>
           </div>
         </div>
       </div>
@@ -311,7 +360,13 @@ const CreateGamePage: React.FC = () => {
       {/* Responsive Grid Container */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {/* 1. Number of Players Card */}
-        <OptionCard number="1" title="Number of Players">
+        <OptionCard 
+          number="1" 
+          title="Number of Players"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('maxPlayers')}
+          onToggleLock={() => toggleLock('maxPlayers')}
+        >
           <div className="grid grid-cols-4 gap-2">
             {[...Array(12)].map((_, i) => {
               const playerCount = i + 1
@@ -375,7 +430,13 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 3. Fog of War Card */}
-        <OptionCard number="3" title="Fog of War">
+        <OptionCard 
+          number="3" 
+          title="Fog of War"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('fogOfWar')}
+          onToggleLock={() => toggleLock('fogOfWar')}
+        >
           <div className="space-y-2">
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input
@@ -403,7 +464,13 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 4. Teams Card */}
-        <OptionCard number="4" title="Teams">
+        <OptionCard 
+          number="4" 
+          title="Teams"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('teams')}
+          onToggleLock={() => toggleLock('teams')}
+        >
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -463,7 +530,13 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 5. Fortification Card */}
-        <OptionCard number="5" title="Fortification">
+        <OptionCard 
+          number="5" 
+          title="Fortification"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('fortification')}
+          onToggleLock={() => toggleLock('fortification')}
+        >
           <div className="space-y-2">
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input
@@ -509,19 +582,29 @@ const CreateGamePage: React.FC = () => {
                 key={color}
                 className={`h-12 rounded border-2 transition ${
                   selectedColor === color
-                    ? 'border-white scale-110'
+                    ? 'border-white scale-110 shadow-lg'
                     : 'border-transparent hover:border-gray-400'
                 }`}
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: COLOR_HEX_VALUES[color as keyof typeof COLOR_HEX_VALUES] }}
                 onClick={() => setSelectedColor(color)}
                 title={color.charAt(0).toUpperCase() + color.slice(1)}
-              />
+              >
+                {selectedColor === color && (
+                  <span className="text-white text-xs font-bold drop-shadow-lg">✓</span>
+                )}
+              </button>
             ))}
           </div>
         </OptionCard>
 
         {/* 7. Spoils of War Card */}
-        <OptionCard number="7" title="Spoils of War">
+        <OptionCard 
+          number="7" 
+          title="Spoils of War"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('cardTradeBonus')}
+          onToggleLock={() => toggleLock('cardTradeBonus')}
+        >
           <div className="space-y-3">
             <div>
               <p className="text-sm text-gray-400 mb-2">Card Trade Bonus:</p>
