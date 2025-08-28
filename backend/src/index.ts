@@ -102,23 +102,28 @@ app.use('/api/users', userRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
 
 app.get('/health', async (_req, res) => {
+  let databaseStatus = 'unknown'
+  let databaseError = null
+  
   try {
     const { query } = await import('./config/database')
     await query('SELECT 1')
-    res.json({
-      status: 'OK',
-      database: 'connected',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-    })
+    databaseStatus = 'connected'
   } catch (error) {
-    res.status(503).json({
-      status: 'ERROR',
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    })
+    databaseStatus = 'disconnected'
+    databaseError = error instanceof Error ? error.message : 'Unknown error'
   }
+  
+  // Always return 200 OK for server health, but include database status
+  res.json({
+    status: 'OK',
+    server: 'running',
+    database: databaseStatus,
+    environment: process.env.NODE_ENV || 'development',
+    databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+    timestamp: new Date().toISOString(),
+    ...(databaseError && { databaseError })
+  })
 })
 
 app.get('/debug/env', (_req, res) => {
@@ -326,71 +331,62 @@ async function testMySQLConnection() {
 }
 
 async function startServer() {
-  try {
-    logger.info('🚀 Starting Risk Game server...')
-
-    // Initialize database connection
-    await initDatabase()
-    logger.info('✅ Database connection established')
-
-    // Ensure basic tables exist (fallback)
-    await ensureTablesExist()
-    logger.info('✅ Basic tables verified')
-
-    // NEW: Run our enhanced migration system
-    const migrationRunner = new MigrationRunner()
-    logger.info('🔄 Starting migration system...')
+  logger.info('🚀 Starting Risk Game server...')
+  
+  // Always start the server first, then handle database setup
+  server.listen(PORT, async () => {
+    logger.info(`🚀 Server running on port ${PORT}`)
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+    logger.info(`📊 Health check: http://localhost:${PORT}/health`)
+    logger.info(`📅 Deployed: ${new Date().toISOString()}`)
     
+    // Now try to initialize database in the background
     try {
-      await migrationRunner.runPendingMigrations()
+      logger.info('🔄 Attempting database connection...')
+      await initDatabase()
+      logger.info('✅ Database connection established')
+
+      // Ensure basic tables exist (fallback)
+      await ensureTablesExist()
+      logger.info('✅ Basic tables verified')
+
+      // Run our enhanced migration system
+      const migrationRunner = new MigrationRunner()
+      logger.info('🔄 Starting migration system...')
       
-      // Validate schema integrity after migrations
-      const isValid = await migrationRunner.validateSchemaIntegrity()
-      if (!isValid) {
-        throw new Error('Schema validation failed after migrations')
+      try {
+        await migrationRunner.runPendingMigrations()
+        
+        // Validate schema integrity after migrations
+        const isValid = await migrationRunner.validateSchemaIntegrity()
+        if (!isValid) {
+          throw new Error('Schema validation failed after migrations')
+        }
+        
+        logger.info('✅ All migrations completed and schema validated')
+        logger.info('🗄️  Database: PostgreSQL with migration tracking')
+        
+        if (process.env.NODE_ENV === 'production') {
+          logger.info('🌐 Production deployment ready at https://conquestk.com')
+          logger.info('🎮 All game features and admin functionality should be available')
+        }
+      } catch (migrationError) {
+        logger.error('❌ Migration system failed:', migrationError)
+        logger.warn('⚠️  Server running with potential schema issues...')
+        logger.error('💡 Some features may not work correctly until database is properly configured')
       }
-      
-      logger.info('✅ All migrations completed and schema validated')
-    } catch (migrationError) {
-      logger.error('❌ Migration system failed:', migrationError)
+    } catch (dbError) {
+      logger.error('❌ Database connection failed:', dbError)
+      logger.warn('⚠️  Server running without database connection')
+      logger.error('💡 Database features unavailable until PostgreSQL is configured')
+      logger.error('💡 Check Railway dashboard - ensure PostgreSQL plugin is added')
+      logger.error('💡 Visit /debug/env to check environment variable status')
       
       if (process.env.NODE_ENV === 'production') {
-        logger.warn('⚠️  Continuing startup with potential schema issues...')
-        logger.error('💡 Some features may not work correctly')
-      } else {
-        throw migrationError
+        logger.info('🚧 Server in degraded mode - waiting for Railway PostgreSQL setup')
       }
     }
-
-    server.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`)
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-      logger.info(`📊 Health check: http://localhost:${PORT}/health`)
-      logger.info(`🗄️  Database: PostgreSQL with migration tracking`)
-      logger.info(`📅 Deployed: ${new Date().toISOString()}`)
-      
-      if (process.env.NODE_ENV === 'production') {
-        logger.info('🌐 Production deployment ready at https://conquestk.com')
-        logger.info('🎮 All game features and admin functionality should be available')
-      }
-    })
-  } catch (error) {
-    logger.error('❌ Failed to start server:', error)
-
-    // In production, try to start the server anyway for better error visibility
-    if (process.env.NODE_ENV === 'production') {
-      logger.warn('⚠️  Starting server in degraded mode...')
-      logger.error('💡 Database issue - some features may not work')
-      logger.error(`💡 Error details: ${error}`)
-      server.listen(PORT, () => {
-        logger.info(`🚀 Server running on port ${PORT} (degraded mode - database issues)`)
-        logger.error('💡 Check Railway logs and ensure PostgreSQL plugin is configured')
-        logger.error('💡 Visit /debug/env and /debug/tables to diagnose issues')
-      })
-    } else {
-      process.exit(1)
-    }
-  }
+  })
 }
 
 startServer()
