@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import authService from '../services/authService'
 import { type GameRoom, gameService } from '../services/gameService'
+import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
@@ -340,10 +341,12 @@ const LobbyPage: React.FC = () => {
             </div>
 
             {loading ? (
-              <div className="text-center text-gray-400 py-16">
-                <div className="text-4xl mb-4">🔄</div>
-                <p className="text-lg">Loading games...</p>
-              </div>
+              <SkeletonGroup 
+                count={6} 
+                className="grid gap-4"
+              >
+                {() => <GameCardSkeleton />}
+              </SkeletonGroup>
             ) : publicGames.length === 0 ? (
               <div className="text-center text-gray-400 py-16">
                 <div className="text-6xl mb-4">🎲</div>
