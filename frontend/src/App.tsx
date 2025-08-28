@@ -30,6 +30,8 @@ import Statistics from './pages/Statistics'
 import TutorialPage from './pages/TutorialPage'
 import VerifyEmail from './pages/VerifyEmail'
 import AdminPage from './pages/AdminPage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import { checkAuth } from './store/authSlice'
 
 function App() {
@@ -129,6 +131,22 @@ function App() {
           element={
             <AuthGuard requireAuth={false}>
               <TutorialPage />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <AuthGuard requireAuth={false}>
+              <TermsPage />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <AuthGuard requireAuth={false}>
+              <PrivacyPage />
             </AuthGuard>
           }
         />

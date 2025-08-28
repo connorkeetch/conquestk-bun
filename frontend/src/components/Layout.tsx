@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Header from './Header'
+import Footer from './Footer'
 
 interface LayoutProps {
   children: ReactNode
@@ -20,11 +21,11 @@ interface MenuItem {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header />
 
       {/* Main Content with consistent background */}
-      <main className="min-h-screen relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
+      <main className="flex-1 relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
         {/* Grid pattern overlay - consistent across all pages */}
         <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
           <svg
@@ -54,7 +55,9 @@ export default function Layout({ children }: LayoutProps) {
         {/* Content with proper z-index */}
         <div className="relative z-10">{children}</div>
       </main>
-    </>
+
+      <Footer />
+    </div>
   )
 }
 
