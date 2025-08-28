@@ -9,6 +9,20 @@ const router = Router()
 
 // Apply authentication to all admin routes
 router.use(authenticateToken)
+
+// Status endpoint - check if user is admin (doesn't require admin permission)
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId
+    const isAdmin = await adminService.isAdmin(userId)
+    res.json({ isAdmin })
+  } catch (error) {
+    logger.error('Error checking admin status:', error)
+    res.status(500).json({ error: 'Failed to check admin status' })
+  }
+})
+
+// Apply admin requirement to all other routes
 router.use(requireAdmin)
 
 // Validation middleware
@@ -21,6 +35,25 @@ const checkValidation = (req: Request, res: Response, next: any) => {
 }
 
 // ============= ADMIN INFO =============
+
+// Get admin dashboard stats
+router.get('/stats', async (req: Request, res: Response) => {
+  try {
+    // Get various stats for the dashboard
+    const stats = {
+      totalUsers: 0,
+      activeGames: 0,
+      mapsPending: 0,
+      reports: 0
+    }
+    
+    // You can implement actual queries here
+    res.json(stats)
+  } catch (error) {
+    logger.error('Error getting admin stats:', error)
+    res.status(500).json({ error: 'Failed to get stats' })
+  }
+})
 
 // Get current admin user info
 router.get('/me', async (req: Request, res: Response) => {

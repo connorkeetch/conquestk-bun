@@ -7,6 +7,8 @@ export interface User {
   verification_token?: string | null
   verification_sent_at?: Date | null
   is_admin?: boolean
+  admin_level?: number
+  admin_since?: Date
   skill_rating?: number
   skill_confidence?: number
   total_ranked_games?: number

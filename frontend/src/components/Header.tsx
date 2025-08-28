@@ -26,6 +26,7 @@ export default function Header() {
     { path: '/map-editor', label: 'Map Editor', icon: '✏️' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
+    ...(user?.isAdmin ? [{ path: '/admin', label: 'Admin', icon: '🛡️' }] : []),
   ]
 
   // Future community features (keeping track for later)
@@ -92,6 +93,14 @@ export default function Header() {
                 >
                   Leaderboard
                 </Link>
+                {user?.isAdmin && (
+                  <Link
+                    className={`transition ${location.pathname === '/admin' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                    to="/admin"
+                  >
+                    Admin
+                  </Link>
+                )}
               </>
             ) : (
               <>
