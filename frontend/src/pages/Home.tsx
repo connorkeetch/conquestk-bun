@@ -108,34 +108,26 @@ const Home: React.FC = () => {
       {/* Epic Battle Image Section - Simplified */}
       <section className="relative z-10 section-spacing-sm overflow-hidden">
         <div className="container mx-auto px-6 max-w-6xl">
-          {/* Single container with all effects */}
+          {/* Single container with world map background */}
           <div
-            className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 bg-white/[.04] p-12
-                      bg-gradient-to-br from-gray-900/50 via-red-900/20 to-gray-900/50
+            className="relative h-80 md:h-[500px] rounded-2xl border border-white/10 p-12
                       shadow-[inset_0_1px_0_0_rgba(255,255,255,.06)]
-                      before:absolute before:inset-0 before:rounded-2xl
-                      before:bg-gradient-to-br before:from-white/[.04] before:to-transparent
-                      after:pointer-events-none after:absolute after:-inset-1 after:rounded-3xl
-                      after:bg-[radial-gradient(800px_380px_at_50%_-10%,rgba(56,189,248,.12),transparent)]
                       flex items-center justify-center overflow-hidden"
+            style={{
+              backgroundImage: `url('/world-map-hero.jpg')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
           >
-            {/* Animated battle scene background effect */}
-            <div className="absolute inset-0 opacity-30">
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: `
-                  radial-gradient(circle at 20% 50%, rgba(239, 68, 68, 0.3) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.2) 0%, transparent 50%),
-                  radial-gradient(circle at 40% 20%, rgba(217, 70, 239, 0.2) 0%, transparent 50%)
-                `,
-                }}
-              ></div>
-            </div>
+            {/* Dark overlay for better text contrast */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/80 rounded-2xl"></div>
+            
+            {/* Subtle gradient overlay for depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-2xl"></div>
 
             {/* Battle Text Overlay */}
             <div className="relative z-10 text-center px-8">
-              <div className="text-5xl md:text-7xl mb-4">⚔️</div>
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
                 <span className="bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
                   CONQUER THE WORLD
@@ -145,12 +137,6 @@ const Home: React.FC = () => {
                 Deploy armies • Capture territories • Achieve total domination
               </p>
             </div>
-
-            {/* Animated elements */}
-            <div className="absolute top-10 left-10 text-4xl animate-pulse">🏰</div>
-            <div className="absolute top-20 right-20 text-4xl animate-pulse delay-100">🗡️</div>
-            <div className="absolute bottom-10 left-20 text-4xl animate-pulse delay-200">🛡️</div>
-            <div className="absolute bottom-20 right-10 text-4xl animate-pulse delay-300">🏴</div>
           </div>
         </div>
       </section>
