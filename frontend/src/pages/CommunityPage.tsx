@@ -1,57 +1,291 @@
+import { Trophy, Medal, Users, Calendar, TrendingUp, MessageSquare, Shield, CalendarDays, Crown } from 'lucide-react'
 import type React from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import api from '../services/api'
+
+interface LeaderboardEntry {
+  id: string
+  username: string
+  elo: number
+  wins: number
+  losses: number
+  winRate: number
+  rank: number
+  gamesPlayed?: number
+}
 
 const CommunityPage: React.FC = () => {
-  const [activeTab, _setActiveTab] = useState<'forum' | 'clans' | 'events'>('forum')
+  const [activeTab, setActiveTab] = useState<'leaderboard' | 'clans' | 'forums' | 'events'>('leaderboard')
+  const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'monthly' | 'friends'>('global')
+  const [globalLeaderboard, setGlobalLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (activeTab === 'leaderboard') {
+      fetchLeaderboardData()
+    }
+  }, [leaderboardTab])
+
+  const fetchLeaderboardData = async () => {
+    setLoading(true)
+    try {
+      const endpoint = leaderboardTab === 'monthly' 
+        ? '/leaderboard/monthly'
+        : leaderboardTab === 'friends'
+        ? '/leaderboard/friends'
+        : '/leaderboard/global'
+        
+      const response = await api.get(endpoint)
+      
+      if (leaderboardTab === 'global') {
+        setGlobalLeaderboard(response.data.leaderboard || [])
+      } else if (leaderboardTab === 'monthly') {
+        setMonthlyLeaderboard(response.data.leaderboard || [])
+      } else {
+        setFriendsLeaderboard(response.data.leaderboard || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error)
+      // Set empty arrays on error
+      if (leaderboardTab === 'global') setGlobalLeaderboard([])
+      else if (leaderboardTab === 'monthly') setMonthlyLeaderboard([])
+      else setFriendsLeaderboard([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const renderRankBadge = (rank: number) => {
+    if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />
+    if (rank === 2) return <Medal className="w-6 h-6 text-gray-300" />
+    if (rank === 3) return <Medal className="w-6 h-6 text-orange-400" />
+    return <span className="text-gray-500 font-medium">#{rank}</span>
+  }
+
+  const currentLeaderboard = 
+    leaderboardTab === 'monthly' ? monthlyLeaderboard :
+    leaderboardTab === 'friends' ? friendsLeaderboard :
+    globalLeaderboard
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Community</h1>
-          <p className="text-gray-400">Connect with other players and join discussions</p>
+          <h1 className="text-4xl font-bold gradient-text mb-2">Community Hub</h1>
+          <p className="text-gray-400">Connect, compete, and celebrate with fellow commanders</p>
         </div>
       </div>
 
-      <div className="flex gap-2 mb-8 border-b border-gray-700">
+      {/* Main Navigation Tabs */}
+      <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto">
         <button
-          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
-            activeTab === 'forum' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500'
+          onClick={() => setActiveTab('leaderboard')}
+          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'leaderboard' 
+              ? 'text-blue-400 border-b-2 border-blue-400' 
+              : 'text-gray-400 hover:text-white'
           }`}
-          disabled
         >
-          💬 Forum
+          <Trophy className="w-4 h-4" />
+          Leaderboard
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
-            activeTab === 'clans' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500'
+          onClick={() => setActiveTab('clans')}
+          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'clans' 
+              ? 'text-blue-400 border-b-2 border-blue-400' 
+              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
           }`}
           disabled
         >
-          ⚔️ Clans
+          <Shield className="w-4 h-4" />
+          Clans
+          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors cursor-not-allowed ${
-            activeTab === 'events' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500'
+          onClick={() => setActiveTab('forums')}
+          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'forums' 
+              ? 'text-blue-400 border-b-2 border-blue-400' 
+              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
           }`}
           disabled
         >
-          🎉 Events
+          <MessageSquare className="w-4 h-4" />
+          Forums
+          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('events')}
+          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'events' 
+              ? 'text-blue-400 border-b-2 border-blue-400' 
+              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
+          }`}
+          disabled
+        >
+          <CalendarDays className="w-4 h-4" />
+          Events
+          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
         </button>
       </div>
 
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-8 border border-slate-700 text-center">
-        <div className="text-6xl mb-4">👥</div>
-        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4 mb-4">
-          <span className="bg-yellow-600/80 text-yellow-100 px-3 py-1 rounded-full text-sm font-medium">
-            Coming Soon
-          </span>
+      {/* Leaderboard Content */}
+      {activeTab === 'leaderboard' && (
+        <>
+          {/* Leaderboard Sub-tabs */}
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={() => setLeaderboardTab('global')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                leaderboardTab === 'global'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <Trophy className="inline w-4 h-4 mr-2" />
+              Global Rankings
+            </button>
+            <button
+              onClick={() => setLeaderboardTab('monthly')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                leaderboardTab === 'monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <Calendar className="inline w-4 h-4 mr-2" />
+              This Month
+            </button>
+            <button
+              onClick={() => setLeaderboardTab('friends')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                leaderboardTab === 'friends'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <Users className="inline w-4 h-4 mr-2" />
+              Friends
+            </button>
+          </div>
+
+          {/* Leaderboard Table */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            {loading ? (
+              <div className="p-16 text-center">
+                <div className="text-gray-400">Loading leaderboard...</div>
+              </div>
+            ) : currentLeaderboard.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-900">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Rank
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Player
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        ELO
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Games
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Wins
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Win Rate
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {currentLeaderboard.map((player, index) => (
+                      <tr
+                        key={player.id}
+                        className={`hover:bg-gray-700 transition-colors ${
+                          index < 3 ? 'bg-gray-800/50' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {renderRankBadge(player.rank || index + 1)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="ml-2">
+                              <div className="text-sm font-medium text-white">
+                                {player.username}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                            <span className="text-white font-medium">{player.elo}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-gray-300">
+                          {player.gamesPlayed || player.wins + player.losses}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-green-400">
+                          {player.wins}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className={`font-medium ${
+                            player.winRate > 60 ? 'text-green-400' :
+                            player.winRate > 50 ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {player.winRate.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-16 text-center">
+                <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg mb-2">No rankings available yet</p>
+                <p className="text-gray-500 text-sm">Play ranked games to appear on the leaderboard</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Clans Content */}
+      {activeTab === 'clans' && (
+        <div className="bg-gray-800 rounded-lg p-16 text-center">
+          <Shield className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400 text-lg mb-2">Clans Coming Soon</p>
+          <p className="text-gray-500 text-sm">Form alliances and compete as a team</p>
         </div>
-        <p className="text-lg text-gray-300 mb-2">Community features will be implemented here</p>
-        <p className="text-sm text-gray-400">
-          This will include forums, clans, events, and social features
-        </p>
-      </div>
+      )}
+
+      {/* Forums Content */}
+      {activeTab === 'forums' && (
+        <div className="bg-gray-800 rounded-lg p-16 text-center">
+          <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400 text-lg mb-2">Forums Coming Soon</p>
+          <p className="text-gray-500 text-sm">Discuss strategies and connect with players</p>
+        </div>
+      )}
+
+      {/* Events Content */}
+      {activeTab === 'events' && (
+        <div className="bg-gray-800 rounded-lg p-16 text-center">
+          <CalendarDays className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400 text-lg mb-2">Events & Tournaments Coming Soon</p>
+          <p className="text-gray-500 text-sm">Compete in special events for exclusive rewards</p>
+        </div>
+      )}
     </div>
   )
 }
