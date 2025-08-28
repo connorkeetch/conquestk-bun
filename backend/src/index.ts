@@ -278,69 +278,6 @@ if (process.env.NODE_ENV === 'production') {
 
 setupSocketHandlers(io)
 
-// Test MySQL connection with detailed logging
-async function testMySQLConnection() {
-  if (process.env.NODE_ENV !== 'production') {
-    return
-  }
-
-  const mysql = require('mysql2/promise')
-
-  // Test different connection methods
-  const connectionConfigs = []
-
-  // Method 1: MYSQL_URL if available
-  if (process.env.MYSQL_URL) {
-    connectionConfigs.push({
-      name: 'MYSQL_URL',
-      config: process.env.MYSQL_URL,
-    })
-  }
-
-  // Method 2: DATABASE_URL if available
-  if (process.env.DATABASE_URL) {
-    connectionConfigs.push({
-      name: 'DATABASE_URL',
-      config: process.env.DATABASE_URL,
-    })
-  }
-
-  // Method 3: Individual variables
-  if (process.env.MYSQLHOST && process.env.MYSQLDATABASE) {
-    connectionConfigs.push({
-      name: 'Individual Variables',
-      config: {
-        host: process.env.MYSQLHOST,
-        port: parseInt(process.env.MYSQLPORT || '3306', 10),
-        database: process.env.MYSQLDATABASE,
-        user: process.env.MYSQLUSER || 'root',
-        password: process.env.MYSQLPASSWORD || '',
-      },
-    })
-  }
-
-  for (const { name, config } of connectionConfigs) {
-    try {
-      if (typeof config === 'string') {
-      } else {
-      }
-
-      const connection = await mysql.createConnection(config)
-      const [_rows] = await connection.execute('SELECT 1 as test')
-
-      await connection.end()
-      break // If one works, we're good
-    } catch (error: any) {
-      if (error.code === 'ECONNREFUSED') {
-      } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      } else if (error.code === 'ENOTFOUND') {
-      }
-    }
-  }
-
-  if (connectionConfigs.length === 0) {
-  }
-}
 
 async function startServer() {
   try {
