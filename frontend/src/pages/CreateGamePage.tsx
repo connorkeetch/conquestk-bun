@@ -77,6 +77,7 @@ const CreateGamePage: React.FC = () => {
   const [teams, setTeams] = useState(0)
   const [teamAssignment, setTeamAssignment] = useState('random')
   const [fortification, setFortification] = useState('adjacent')
+  const [movementType, setMovementType] = useState('classic')
   const [selectedColor, setSelectedColor] = useState('red')
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
   const [staticBonusValue, setStaticBonusValue] = useState(10)
@@ -127,6 +128,9 @@ const CreateGamePage: React.FC = () => {
     if (gameMode === 'capitals') specialRules.push('Capitals')
     if (fogOfWar === 'adjacent') specialRules.push('Fog')
     if (fogOfWar === 'persistent') specialRules.push('PersistentFog')
+    if (movementType === 'sea') specialRules.push('SeaRoutes')
+    if (movementType === 'airports') specialRules.push('Airports')
+    if (movementType === 'unlimited') specialRules.push('GlobalReach')
     if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
     if (fortification === 'chained') specialRules.push('ChainedMove')
     if (useTerritoryModifiers) specialRules.push('Modifiers')
@@ -183,7 +187,7 @@ const CreateGamePage: React.FC = () => {
         isRanked,
         gameType: 'custom',
         mapId: selectedMap,
-        movementType: 'classic_adjacent' as MovementType,
+        movementType: (movementType === 'classic' ? 'classic_adjacent' : movementType) as MovementType,
         allowTeamPlay: teams > 0,
         capitalsEnabled: gameMode === 'capitals',
         useTerritoryModifiers,
@@ -217,6 +221,10 @@ const CreateGamePage: React.FC = () => {
     }
     if (!lockedSettings.has('fortification')) {
       setFortification(['adjacent', 'chained', 'unlimited'][Math.floor(Math.random() * 3)])
+    }
+    if (!lockedSettings.has('movementType')) {
+      const movementOptions = ['classic', 'sea', 'airports', 'unlimited']
+      setMovementType(movementOptions[Math.floor(Math.random() * movementOptions.length)])
     }
     if (!lockedSettings.has('cardTradeBonus')) {
       const newBonus = ['progressive', 'fixed', 'increasing', 'static'][Math.floor(Math.random() * 4)]
@@ -663,8 +671,84 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 6. Player Color Card */}
-        <OptionCard number="6" title="Choose Your Color">
+        {/* 6. Movement System Card */}
+        <OptionCard 
+          number="6" 
+          title="Movement System"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('movementType')}
+          onToggleLock={() => toggleLock('movementType')}
+        >
+          <div className="space-y-2">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="movement"
+                value="classic"
+                checked={movementType === 'classic'}
+                onChange={(e) => setMovementType(e.target.value)}
+                className="mr-3 accent-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-white">⚔️ Classic Adjacent</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Attack only neighboring territories
+                </p>
+              </div>
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="movement"
+                value="sea"
+                checked={movementType === 'sea'}
+                onChange={(e) => setMovementType(e.target.value)}
+                className="mr-3 accent-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-white">🌊 Sea Connections</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Naval routes connect distant regions
+                </p>
+              </div>
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="movement"
+                value="airports"
+                checked={movementType === 'airports'}
+                onChange={(e) => setMovementType(e.target.value)}
+                className="mr-3 accent-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-white">✈️ Airport Hubs</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Strategic airports allow long-range attacks
+                </p>
+              </div>
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="movement"
+                value="unlimited"
+                checked={movementType === 'unlimited'}
+                onChange={(e) => setMovementType(e.target.value)}
+                className="mr-3 accent-blue-500"
+              />
+              <div className="flex-1">
+                <span className="text-white">🚀 Unlimited Range</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Attack any territory from anywhere
+                </p>
+              </div>
+            </label>
+          </div>
+        </OptionCard>
+
+        {/* 7. Player Color Card */}
+        <OptionCard number="7" title="Choose Your Color">
           <div className="grid grid-cols-4 gap-3">
             {colors.map((color) => (
               <button
@@ -686,9 +770,9 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 7. Spoils of War Card */}
+        {/* 8. Spoils of War Card */}
         <OptionCard 
-          number="7" 
+          number="8" 
           title="Spoils of War"
           lockable={!isRanked}
           isLocked={lockedSettings.has('cardTradeBonus')}
@@ -739,8 +823,8 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 8. Territory Modifiers Card */}
-        <OptionCard number="8" title="Territory Modifiers">
+        {/* 9. Territory Modifiers Card */}
+        <OptionCard number="9" title="Territory Modifiers">
           <div className="space-y-3">
             <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
               <input
