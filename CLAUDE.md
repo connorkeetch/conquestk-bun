@@ -1,4 +1,6 @@
-# 🎮 Risk Game - Claude AI Quick Reference
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 🚀 Quick Start
 ```bash
@@ -63,6 +65,42 @@ npm run build                  # Build for production
 3. **Map Editor** - ImageProcessor enhanced
 
 *For detailed roadmap and feature status, see `docs/PROJECT-STATUS.md`*
+
+## 🏗️ Architecture Overview
+
+### Frontend Stack
+- **React 19.1.1** + **TypeScript 5.5.3**
+- **Vite 7.1.3** for build/dev
+- **Redux Toolkit** for state management
+- **Socket.io-client** for real-time updates
+- **Tailwind CSS v4** (NO DaisyUI)
+
+### Backend Stack
+- **Node.js** + **Express 4.21.2** + **TypeScript**
+- **Socket.io** for WebSocket connections
+- **PostgreSQL** (production) / **SQLite** (development)
+- **JWT** authentication
+- **Redis** for sessions (optional)
+
+### Key Game Engine Components
+- `backend/src/game/gameEngine.ts` - Core game logic, turn phases
+- `backend/src/game/worldMap.ts` - Territory definitions and adjacencies
+- `backend/src/services/GameService.ts` - Game state management
+- `backend/src/socket/gameHandlers.ts` - Real-time event handling
+
+### Database Schema Highlights
+- **maps** - Custom map definitions
+- **map_territories** - Territory polygons and metadata
+- **territory_adjacencies** - Connection graph
+- **games** - Active game sessions
+- **users** - Player accounts with ELO ratings
+- **game_modes** - Rule variations (Classic, Capitals, etc.)
+
+### Real-time Flow
+1. Client action → Socket.io event → `gameHandlers.ts`
+2. Handler validates → Updates `GameService` state
+3. State change → Broadcast to room participants
+4. Redux store update → React re-render
 
 ## 🔧 MCP Servers Available
 Your toolkit of powerful MCP servers - **USE THEM PROACTIVELY!**
