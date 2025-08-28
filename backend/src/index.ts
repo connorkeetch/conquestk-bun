@@ -21,6 +21,7 @@ import skillsRoutes from './routes/skills'
 import userRoutes from './routes/users'
 import { setupSocketHandlers } from './services/socketService'
 import { ensureTablesExist } from './utils/initTables'
+import { MigrationRunner } from './utils/migrationRunner'
 import { logger } from './utils/logger'
 
 const app = express()
@@ -147,6 +148,7 @@ app.get('/debug/tables', async (_req, res) => {
     `)
 
     let userCount = null
+    let adminCount = null
     try {
       const userCountResult = await query('SELECT COUNT(*) as count FROM users')
       userCount = userCountResult.rows[0]?.count || 0
@@ -154,11 +156,35 @@ app.get('/debug/tables', async (_req, res) => {
       userCount = 'Table does not exist'
     }
 
+    try {
+      const adminCountResult = await query(`
+        SELECT COUNT(*) as count 
+        FROM users u 
+        JOIN user_admin_roles uar ON u.id = uar.user_id 
+        WHERE uar.is_active = true
+      `)
+      adminCount = adminCountResult.rows[0]?.count || 0
+    } catch (_e) {
+      adminCount = 'Admin tables do not exist'
+    }
+
+    // Get migration status
+    let migrationStatus = null
+    try {
+      const migrationRunner = new MigrationRunner()
+      migrationStatus = await migrationRunner.getMigrationStatus()
+    } catch (_e) {
+      migrationStatus = 'Migration system not available'
+    }
+
     res.json({
       status: 'OK',
       tables: tableCheck.rows.map((row) => row.table_name),
+      tableCount: tableCheck.rows.length,
       userCount,
-      databaseType: process.env.DB_TYPE || 'postgresql',
+      adminCount,
+      migrationStatus,
+      databaseType: 'postgresql',
       databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
       timestamp: new Date().toISOString(),
     })
@@ -166,8 +192,27 @@ app.get('/debug/tables', async (_req, res) => {
     res.status(500).json({
       status: 'ERROR',
       error: error instanceof Error ? error.message : 'Unknown error',
-      databaseType: process.env.DB_TYPE || 'postgresql',
+      databaseType: 'postgresql',
       databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
+      timestamp: new Date().toISOString(),
+    })
+  }
+})
+
+app.get('/debug/migrations', async (_req, res) => {
+  try {
+    const migrationRunner = new MigrationRunner()
+    const migrationStatus = await migrationRunner.getMigrationStatus()
+    
+    res.json({
+      status: 'OK',
+      migrations: migrationStatus,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     })
   }
@@ -282,22 +327,52 @@ async function testMySQLConnection() {
 
 async function startServer() {
   try {
-    // Test MySQL connection first
-    await testMySQLConnection()
+    logger.info('🚀 Starting Risk Game server...')
 
     // Initialize database connection
     await initDatabase()
+    logger.info('✅ Database connection established')
 
-    // Ensure all required tables exist (this will create them if missing)
+    // Ensure basic tables exist (fallback)
     await ensureTablesExist()
+    logger.info('✅ Basic tables verified')
+
+    // NEW: Run our enhanced migration system
+    const migrationRunner = new MigrationRunner()
+    logger.info('🔄 Starting migration system...')
+    
+    try {
+      await migrationRunner.runPendingMigrations()
+      
+      // Validate schema integrity after migrations
+      const isValid = await migrationRunner.validateSchemaIntegrity()
+      if (!isValid) {
+        throw new Error('Schema validation failed after migrations')
+      }
+      
+      logger.info('✅ All migrations completed and schema validated')
+    } catch (migrationError) {
+      logger.error('❌ Migration system failed:', migrationError)
+      
+      if (process.env.NODE_ENV === 'production') {
+        logger.warn('⚠️  Continuing startup with potential schema issues...')
+        logger.error('💡 Some features may not work correctly')
+      } else {
+        throw migrationError
+      }
+    }
 
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`)
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
       logger.info(`📊 Health check: http://localhost:${PORT}/health`)
-      logger.info(`📋 Database: ${process.env.DB_TYPE || 'postgresql'} tables ready`)
+      logger.info(`🗄️  Database: PostgreSQL with migration tracking`)
       logger.info(`📅 Deployed: ${new Date().toISOString()}`)
-      logger.info(`🎨 Tailwind v4 with glass morphism header deployed`)
+      
+      if (process.env.NODE_ENV === 'production') {
+        logger.info('🌐 Production deployment ready at https://conquestk.com')
+        logger.info('🎮 All game features and admin functionality should be available')
+      }
     })
   } catch (error) {
     logger.error('❌ Failed to start server:', error)
@@ -309,7 +384,8 @@ async function startServer() {
       logger.error(`💡 Error details: ${error}`)
       server.listen(PORT, () => {
         logger.info(`🚀 Server running on port ${PORT} (degraded mode - database issues)`)
-        logger.error('💡 Check Railway logs and ensure PostgreSQL plugin is added')
+        logger.error('💡 Check Railway logs and ensure PostgreSQL plugin is configured')
+        logger.error('💡 Visit /debug/env and /debug/tables to diagnose issues')
       })
     } else {
       process.exit(1)

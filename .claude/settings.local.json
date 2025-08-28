@@ -89,7 +89,8 @@
       "Bash(git rm:*)",
       "mcp__zen__planner",
       "Bash(./scripts/start-dev.sh:*)",
-      "Read(/home/keetch/Documents/**)"
+      "Read(/home/keetch/Documents/**)",
+      "WebFetch(domain:conquestk.com)"
     ],
     "deny": [],
     "ask": [],
