@@ -1,56 +1,94 @@
 import mysql from 'mysql2/promise'
-import type { Database } from 'sqlite3'
+import { Client, Pool } from 'pg'
+import BetterSqlite3 from 'better-sqlite3'
 import { logger } from '../utils/logger'
-import { runMigrations } from '../utils/migrationRunner'
 
-type DatabaseType = 'mysql' | 'sqlite'
+type DatabaseType = 'postgresql' | 'mysql' | 'sqlite'
 
-// Check for MySQL environment variables (Railway format or custom)
-const hasMySQLURL = process.env.MYSQL_URL && process.env.MYSQL_URL !== ''
-const hasRailwayMySQL = process.env.MYSQLHOST && process.env.MYSQLDATABASE
-const hasCustomMySQL = process.env.DB_HOST && process.env.DB_NAME
-const hasDatabaseURL =
-  process.env.DATABASE_URL &&
-  process.env.DATABASE_URL !== '' &&
-  !process.env.DATABASE_URL.startsWith('sqlite:')
+// Auto-detect database type from DATABASE_URL
+function detectDatabaseType(): DatabaseType {
+  // If DB_TYPE is explicitly set, use it (but convert 'postgres' to 'postgresql')
+  if (process.env.DB_TYPE) {
+    const dbType = process.env.DB_TYPE.toLowerCase()
+    if (dbType === 'postgres' || dbType === 'postgresql') return 'postgresql'
+    if (dbType === 'mysql') return 'mysql'
+    if (dbType === 'sqlite') return 'sqlite'
+  }
 
-// Use MySQL in production, SQLite in development
-// Prioritize MYSQL_URL first since it's Railway's preferred format
-// If DB_TYPE is explicitly set, use that first
-const DB_TYPE: DatabaseType =
-  (process.env.DB_TYPE as DatabaseType) ||
-  (hasMySQLURL || hasRailwayMySQL || hasCustomMySQL || hasDatabaseURL
-    ? 'mysql'
-    : process.env.NODE_ENV === 'production'
-      ? 'mysql'
-      : 'sqlite')
+  // Auto-detect from DATABASE_URL
+  const databaseUrl = process.env.DATABASE_URL
+  if (databaseUrl) {
+    if (databaseUrl.startsWith('postgresql://') || databaseUrl.startsWith('postgres://')) {
+      return 'postgresql'
+    }
+    if (databaseUrl.startsWith('mysql://')) {
+      return 'mysql'
+    }
+    if (databaseUrl.startsWith('sqlite://')) {
+      return 'sqlite'
+    }
+  }
+
+  // Check for MySQL-specific env vars
+  if (process.env.MYSQL_URL || process.env.MYSQLHOST) {
+    return 'mysql'
+  }
+
+  // Default to SQLite for development, PostgreSQL for production
+  return process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite'
+}
+
+const DB_TYPE = detectDatabaseType()
 
 // Log database configuration for debugging
 logger.info('🔧 Database Configuration:', {
   DB_TYPE,
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
-  MYSQL_URL: process.env.MYSQL_URL ? 'SET' : 'NOT_SET',
-  MYSQLHOST: process.env.MYSQLHOST || 'NOT_SET',
-  MYSQLDATABASE: process.env.MYSQLDATABASE || 'NOT_SET',
-  DB_HOST: process.env.DB_HOST || 'NOT_SET',
-  DB_NAME: process.env.DB_NAME || 'NOT_SET',
+  DATABASE_URL_PREFIX: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + '...' : 'N/A',
 })
 
+let pgPool: Pool | null = null
 let mysqlPool: mysql.Pool | null = null
-let sqliteDb: Database | null = null
+let sqliteDb: BetterSqlite3.Database | null = null
 
-if (DB_TYPE === 'mysql') {
+// Initialize PostgreSQL
+if (DB_TYPE === 'postgresql') {
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    logger.error('❌ DATABASE_URL is required for PostgreSQL connection')
+  } else {
+    logger.info('🔧 Initializing PostgreSQL connection pool')
+    pgPool = new Pool({
+      connectionString: databaseUrl,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    })
+    
+    // Test the connection
+    pgPool.query('SELECT 1', (err) => {
+      if (err) {
+        logger.error('❌ PostgreSQL connection test failed:', err)
+      } else {
+        logger.info('✅ PostgreSQL connection established')
+      }
+    })
+  }
+}
+
+// Initialize MySQL
+else if (DB_TYPE === 'mysql') {
   // Try MYSQL_URL first (Railway's preferred format)
-  if (hasMySQLURL) {
+  if (process.env.MYSQL_URL) {
     logger.info('🔧 Using MYSQL_URL for MySQL connection')
-    const url = new URL(process.env.MYSQL_URL!)
+    const url = new URL(process.env.MYSQL_URL)
     mysqlPool = mysql.createPool({
       host: url.hostname,
       port: parseInt(url.port || '3306', 10),
       user: url.username,
       password: url.password,
-      database: url.pathname.substring(1), // Remove leading /
+      database: url.pathname.substring(1),
       waitForConnections: true,
       connectionLimit: 20,
       queueLimit: 0,
@@ -59,12 +97,12 @@ if (DB_TYPE === 'mysql') {
     })
   }
   // Railway MySQL format (separate variables)
-  else if (hasRailwayMySQL) {
+  else if (process.env.MYSQLHOST && process.env.MYSQLDATABASE) {
     logger.info('🔧 Using Railway MySQL configuration (individual variables)')
     mysqlPool = mysql.createPool({
-      host: process.env.MYSQLHOST!,
+      host: process.env.MYSQLHOST,
       port: parseInt(process.env.MYSQLPORT || '3306', 10),
-      database: process.env.MYSQLDATABASE!,
+      database: process.env.MYSQLDATABASE,
       user: process.env.MYSQLUSER || 'root',
       password: process.env.MYSQLPASSWORD || '',
       waitForConnections: true,
@@ -74,16 +112,16 @@ if (DB_TYPE === 'mysql') {
       keepAliveInitialDelay: 0,
     })
   }
-  // Parse DATABASE_URL if available (standard format mysql://user:pass@host:port/database)
-  else if (hasDatabaseURL) {
-    logger.info('🔧 Using DATABASE_URL for MySQL')
-    const url = new URL(process.env.DATABASE_URL!)
+  // Try DATABASE_URL as MySQL
+  else if (process.env.DATABASE_URL) {
+    logger.info('🔧 Using DATABASE_URL for MySQL connection')
+    const url = new URL(process.env.DATABASE_URL)
     mysqlPool = mysql.createPool({
       host: url.hostname,
       port: parseInt(url.port || '3306', 10),
       user: url.username,
       password: url.password,
-      database: url.pathname.substring(1), // Remove leading /
+      database: url.pathname.substring(1),
       waitForConnections: true,
       connectionLimit: 20,
       queueLimit: 0,
@@ -91,15 +129,15 @@ if (DB_TYPE === 'mysql') {
       keepAliveInitialDelay: 0,
     })
   }
-  // Use custom individual env vars
-  else {
-    logger.info('🔧 Using custom MySQL environment variables')
+  // Custom MySQL configuration
+  else if (process.env.DB_HOST && process.env.DB_NAME) {
+    logger.info('🔧 Using custom MySQL configuration (DB_HOST/DB_NAME)')
     mysqlPool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
+      host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '3306', 10),
-      database: process.env.DB_NAME || 'risk_game',
+      database: process.env.DB_NAME,
       user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password',
+      password: process.env.DB_PASSWORD || '',
       waitForConnections: true,
       connectionLimit: 20,
       queueLimit: 0,
@@ -107,472 +145,179 @@ if (DB_TYPE === 'mysql') {
       keepAliveInitialDelay: 0,
     })
   }
-} else {
-  const sqlite3 = require('sqlite3').verbose()
-  const dbPath = process.env.SQLITE_DB_PATH || './risk_game.db'
-  sqliteDb = new sqlite3.Database(dbPath)
 }
 
-export interface DatabaseResult {
-  rows: any[]
-  rowCount?: number
-  lastID?: number
-  insertId?: number
+// Initialize SQLite
+else if (DB_TYPE === 'sqlite') {
+  const dbPath = process.env.DATABASE_PATH || './game.db'
+  logger.info(`🔧 Using SQLite database at: ${dbPath}`)
+  sqliteDb = new BetterSqlite3(dbPath)
+  sqliteDb.pragma('journal_mode = WAL')
+  sqliteDb.pragma('foreign_keys = ON')
 }
 
-export interface DatabaseClient {
-  query(text: string, params?: any[]): Promise<DatabaseResult>
-  release?(): void
-  beginTransaction?(): Promise<void>
-  commit?(): Promise<void>
-  rollback?(): Promise<void>
-}
-
-class SqliteClient implements DatabaseClient {
-  constructor(private db: Database) {}
-
-  async query(text: string, params: any[] = []): Promise<DatabaseResult> {
-    return new Promise((resolve, reject) => {
-      const isSelect =
-        text.trim().toLowerCase().startsWith('select') ||
-        text.trim().toLowerCase().startsWith('with')
-
-      if (isSelect) {
-        this.db.all(text, params, (err, rows) => {
-          if (err) reject(err)
-          else resolve({ rows: rows || [], rowCount: rows?.length || 0 })
-        })
+// Generic query function that works with all database types
+export async function query(sql: string, params?: any[]): Promise<any> {
+  try {
+    // PostgreSQL
+    if (DB_TYPE === 'postgresql' && pgPool) {
+      const result = await pgPool.query(sql, params)
+      return {
+        rows: result.rows,
+        rowCount: result.rowCount,
+      }
+    }
+    
+    // MySQL
+    if (DB_TYPE === 'mysql' && mysqlPool) {
+      const [rows] = await mysqlPool.execute(sql, params || [])
+      return {
+        rows: Array.isArray(rows) ? rows : [rows],
+        rowCount: (rows as any).affectedRows || (rows as any[]).length || 0,
+      }
+    }
+    
+    // SQLite
+    if (DB_TYPE === 'sqlite' && sqliteDb) {
+      // Handle different query types
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        const rows = sqliteDb.prepare(sql).all(...(params || []))
+        return {
+          rows,
+          rowCount: rows.length,
+        }
+      } else if (
+        sql.trim().toUpperCase().startsWith('INSERT') ||
+        sql.trim().toUpperCase().startsWith('UPDATE') ||
+        sql.trim().toUpperCase().startsWith('DELETE')
+      ) {
+        const stmt = sqliteDb.prepare(sql)
+        const result = stmt.run(...(params || []))
+        return {
+          rows: [],
+          rowCount: result.changes,
+          lastInsertRowid: result.lastInsertRowid,
+        }
       } else {
-        this.db.run(text, params, function (err) {
-          if (err) reject(err)
-          else resolve({ rows: [], rowCount: this.changes, lastID: this.lastID })
-        })
-      }
-    })
-  }
-
-  async beginTransaction(): Promise<void> {
-    await this.query('BEGIN TRANSACTION')
-  }
-
-  async commit(): Promise<void> {
-    await this.query('COMMIT')
-  }
-
-  async rollback(): Promise<void> {
-    await this.query('ROLLBACK')
-  }
-}
-
-class MySQLClient implements DatabaseClient {
-  constructor(private connection: mysql.PoolConnection) {}
-
-  async query(text: string, params: any[] = []): Promise<DatabaseResult> {
-    try {
-      const [result] = await this.connection.execute(text, params)
-
-      if (Array.isArray(result)) {
-        // SELECT query
+        // For CREATE TABLE, DROP TABLE, etc.
+        sqliteDb.exec(sql)
         return {
-          rows: result,
-          rowCount: result.length,
+          rows: [],
+          rowCount: 0,
         }
       }
-      // INSERT, UPDATE, DELETE query
-      const resultSetHeader = result as mysql.ResultSetHeader
-      return {
-        rows: [],
-        rowCount: resultSetHeader.affectedRows,
-        insertId: resultSetHeader.insertId,
-      }
-    } catch (error: any) {
-      logger.error('MySQL query error:', {
-        message: error.message,
-        code: error.code,
-        sqlMessage: error.sqlMessage,
-        query: text,
-        params: params,
-      })
-      throw error
     }
-  }
-
-  async beginTransaction(): Promise<void> {
-    await this.connection.beginTransaction()
-  }
-
-  async commit(): Promise<void> {
-    await this.connection.commit()
-  }
-
-  async rollback(): Promise<void> {
-    await this.connection.rollback()
-  }
-
-  release() {
-    this.connection.release()
+    
+    throw new Error(`No database connection available for ${DB_TYPE}`)
+  } catch (error) {
+    logger.error(`Database query failed (${DB_TYPE}):`, error)
+    logger.error('SQL:', sql)
+    logger.error('Params:', params)
+    throw error
   }
 }
 
-export const query = async (text: string, params: any[] = []): Promise<DatabaseResult> => {
-  if (DB_TYPE === 'mysql' && mysqlPool) {
-    try {
-      const [result] = await mysqlPool.execute(text, params)
-
-      if (Array.isArray(result)) {
-        // SELECT query
-        return {
-          rows: result,
-          rowCount: result.length,
-        }
-      }
-      // INSERT, UPDATE, DELETE query
-      const resultSetHeader = result as mysql.ResultSetHeader
-      return {
-        rows: [],
-        rowCount: resultSetHeader.affectedRows,
-        insertId: resultSetHeader.insertId,
-      }
-    } catch (error: any) {
-      logger.error('MySQL query error:', {
-        message: error.message,
-        code: error.code,
-        sqlMessage: error.sqlMessage,
-        query: text,
-        params: params,
-      })
-      throw error
-    }
-  } else if (DB_TYPE === 'sqlite' && sqliteDb) {
-    const client = new SqliteClient(sqliteDb)
-    return await client.query(text, params)
-  } else {
-    throw new Error('No database connection available')
-  }
-}
-
-export const getClient = async (): Promise<DatabaseClient> => {
-  if (DB_TYPE === 'mysql' && mysqlPool) {
+// Transaction support
+export async function beginTransaction(): Promise<void> {
+  if (DB_TYPE === 'postgresql' && pgPool) {
+    await pgPool.query('BEGIN')
+  } else if (DB_TYPE === 'mysql' && mysqlPool) {
     const connection = await mysqlPool.getConnection()
-    return new MySQLClient(connection)
+    await connection.beginTransaction()
+    // Store connection for commit/rollback
+    ;(global as any).__dbTransaction = connection
+  } else if (DB_TYPE === 'sqlite' && sqliteDb) {
+    sqliteDb.exec('BEGIN')
+  }
+}
+
+export async function commitTransaction(): Promise<void> {
+  if (DB_TYPE === 'postgresql' && pgPool) {
+    await pgPool.query('COMMIT')
+  } else if (DB_TYPE === 'mysql' && (global as any).__dbTransaction) {
+    const connection = (global as any).__dbTransaction
+    await connection.commit()
+    connection.release()
+    delete (global as any).__dbTransaction
+  } else if (DB_TYPE === 'sqlite' && sqliteDb) {
+    sqliteDb.exec('COMMIT')
+  }
+}
+
+export async function rollbackTransaction(): Promise<void> {
+  if (DB_TYPE === 'postgresql' && pgPool) {
+    await pgPool.query('ROLLBACK')
+  } else if (DB_TYPE === 'mysql' && (global as any).__dbTransaction) {
+    const connection = (global as any).__dbTransaction
+    await connection.rollback()
+    connection.release()
+    delete (global as any).__dbTransaction
+  } else if (DB_TYPE === 'sqlite' && sqliteDb) {
+    sqliteDb.exec('ROLLBACK')
+  }
+}
+
+// Close database connections
+export async function closeDatabase(): Promise<void> {
+  if (DB_TYPE === 'postgresql' && pgPool) {
+    await pgPool.end()
+    pgPool = null
+  }
+  if (DB_TYPE === 'mysql' && mysqlPool) {
+    await mysqlPool.end()
+    mysqlPool = null
   }
   if (DB_TYPE === 'sqlite' && sqliteDb) {
-    return new SqliteClient(sqliteDb)
+    sqliteDb.close()
+    sqliteDb = null
   }
-  throw new Error('No database connection available')
 }
 
-export async function initDatabase() {
+// Initialize database connection
+export async function initDatabase(): Promise<void> {
   try {
     logger.info(`Initializing ${DB_TYPE.toUpperCase()} database...`)
-
-    if (DB_TYPE === 'mysql') {
-      if (!mysqlPool) {
-        throw new Error(
-          'MySQL pool not initialized. Check your DATABASE_URL or DB_* environment variables.',
-        )
-      }
-
-      const testResult = await query('SELECT NOW() as current_time')
-      logger.info('✅ MySQL database connected successfully')
-      logger.info('  Connection test result:', testResult.rows[0])
-
-      // Test if tables exist and create them if not
-      try {
-        await query('SELECT 1 FROM users LIMIT 1')
-        logger.info('✅ Database tables found')
-      } catch (_tableError) {
-        logger.warn('⚠️  Database tables not found, attempting to create them...')
-        await createMySQLTables()
-        logger.info('✅ MySQL tables created successfully')
-      }
-
-      // Run additional migrations for MySQL too
-      await runMigrations()
-      logger.info('✅ MySQL migrations applied')
-    } else if (DB_TYPE === 'sqlite') {
-      if (!sqliteDb) {
-        throw new Error(
-          'SQLite database not initialized. Check your SQLITE_DB_PATH environment variable.',
-        )
-      }
-
-      await query('SELECT 1')
-      logger.info('✅ SQLite database connected successfully')
-      await initializeSqliteTables()
-      logger.info('✅ SQLite tables initialized')
-
-      // Run additional migrations
-      await runMigrations()
-      logger.info('✅ Extended map schema applied')
-    } else {
-      throw new Error(`Unsupported database type: ${DB_TYPE}. Use 'mysql' or 'sqlite'.`)
-    }
-
-    logger.info('🎯 Database initialization complete')
+    
+    // Test the connection
+    await query('SELECT 1')
+    logger.info(`✅ ${DB_TYPE.toUpperCase()} database connected successfully`)
   } catch (error) {
-    logger.error('❌ Database initialization failed:', error)
-
-    if (DB_TYPE === 'mysql') {
-      logger.error(`
-🔧 MySQL Connection Troubleshooting:
-  1. Is MySQL server running? Try: mysql --version
-  2. Check connection string: ${process.env.DATABASE_URL || 'Not set'}
-  3. Verify credentials and database exists
-  4. Try: CREATE DATABASE risk_game;
-  5. Alternative: Set DB_TYPE=sqlite to use SQLite instead
-      `)
+    logger.error(`❌ Failed to initialize ${DB_TYPE} database:`, error)
+    
+    if (DB_TYPE === 'postgresql') {
+      logger.error('PostgreSQL connection help:')
+      logger.error('  1. Check DATABASE_URL is set correctly')
+      logger.error('  2. Format: postgresql://user:password@host:port/database')
+      logger.error('  3. Ensure PostgreSQL server is running')
+      logger.error('  4. Check network connectivity to database server')
+    } else if (DB_TYPE === 'mysql') {
+      logger.error('MySQL connection help:')
+      logger.error('  1. Check MySQL environment variables are set correctly')
+      logger.error('  2. MYSQL_URL or MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD')
+      logger.error('  3. Ensure MySQL server is running on port 3306')
+      logger.error('  4. Check user permissions for the database')
     } else if (DB_TYPE === 'sqlite') {
-      logger.error(`
-🔧 SQLite Connection Troubleshooting:
-  1. Check file permissions for: ${process.env.SQLITE_DB_PATH || './risk_game.db'}
-  2. Ensure directory exists and is writable
-  3. Try deleting the database file to recreate it
-      `)
+      logger.error('SQLite connection help:')
+      logger.error('  1. Check file permissions for database file')
+      logger.error('  2. Ensure directory exists and is writable')
     }
-
-    // In production, log the error but don't crash the server immediately
-    // This allows Railway to display better error logs
-    logger.warn('⚠️  Running without database - some features will be limited')
-    logger.warn('🔧 Fix database issues above and restart to enable full functionality')
-
-    if (process.env.NODE_ENV === 'production') {
-      logger.error('💡 To fix in Railway: Ensure MySQL database is added and DATABASE_URL is set')
-      // Don't throw in production - let the app start so we can see logs
-      // throw error;
-    }
+    
+    throw error
   }
 }
 
-async function createMySQLTables() {
-  const createTables = [
-    // Users table
-    `CREATE TABLE IF NOT EXISTS users (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        email_verified BOOLEAN DEFAULT FALSE,
-        verification_token VARCHAR(255),
-        verification_sent_at TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )`,
-
-    // Game rooms table
-    `CREATE TABLE IF NOT EXISTS game_rooms (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        name VARCHAR(100) NOT NULL,
-        host_id VARCHAR(36) NOT NULL,
-        max_players INTEGER NOT NULL DEFAULT 6,
-        is_private BOOLEAN DEFAULT FALSE,
-        status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'finished')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE
-    )`,
-
-    // Room players table
-    `CREATE TABLE IF NOT EXISTS room_players (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        room_id VARCHAR(36) NOT NULL,
-        user_id VARCHAR(36) NOT NULL,
-        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (room_id) REFERENCES game_rooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_room_user (room_id, user_id)
-    )`,
-
-    // Game states table
-    `CREATE TABLE IF NOT EXISTS game_states (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        room_id VARCHAR(36) NOT NULL,
-        game_data JSON NOT NULL,
-        turn_number INTEGER DEFAULT 1,
-        current_player_id VARCHAR(36),
-        phase VARCHAR(20) DEFAULT 'setup' CHECK (phase IN ('setup', 'reinforcement', 'attack', 'fortify', 'finished')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (room_id) REFERENCES game_rooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (current_player_id) REFERENCES users(id)
-    )`,
-
-    // Game moves table
-    `CREATE TABLE IF NOT EXISTS game_moves (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        game_state_id VARCHAR(36) NOT NULL,
-        player_id VARCHAR(36) NOT NULL,
-        move_type VARCHAR(50) NOT NULL,
-        move_data JSON NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (game_state_id) REFERENCES game_states(id) ON DELETE CASCADE,
-        FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
-    )`,
-
-    // Custom maps table
-    `CREATE TABLE IF NOT EXISTS custom_maps (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        name VARCHAR(100) NOT NULL,
-        creator_id VARCHAR(36) NOT NULL,
-        map_data JSON NOT NULL,
-        is_public BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
-    )`,
-
-    // Player statistics table
-    `CREATE TABLE IF NOT EXISTS player_stats (
-        id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
-        user_id VARCHAR(36) NOT NULL UNIQUE,
-        games_played INTEGER DEFAULT 0,
-        games_won INTEGER DEFAULT 0,
-        games_lost INTEGER DEFAULT 0,
-        total_playtime_minutes INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`,
-
-    // Create indexes
-    `CREATE INDEX IF NOT EXISTS idx_game_rooms_status ON game_rooms(status)`,
-    `CREATE INDEX IF NOT EXISTS idx_game_rooms_host_id ON game_rooms(host_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_room_players_room_id ON room_players(room_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_room_players_user_id ON room_players(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_game_states_room_id ON game_states(room_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_game_moves_game_state_id ON game_moves(game_state_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_game_moves_player_id ON game_moves(player_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_custom_maps_creator_id ON custom_maps(creator_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_custom_maps_public ON custom_maps(is_public)`,
-    `CREATE INDEX IF NOT EXISTS idx_player_stats_user_id ON player_stats(user_id)`,
-  ]
-
-  for (const statement of createTables) {
-    try {
-      await query(statement)
-    } catch (error: any) {
-      // Log but don't fail on duplicate indexes
-      if (!error.message.includes('already exists') && !error.message.includes('Duplicate')) {
-        logger.error('Error creating table/index:', error)
-        throw error
-      }
-    }
+// Legacy function for compatibility
+export async function getClient() {
+  // Return a mock client that uses the query function
+  return {
+    query: async (sql: string, params?: any[]) => {
+      const result = await query(sql, params)
+      return result
+    },
+    release: () => {
+      // No-op for compatibility
+    },
   }
 }
 
-async function initializeSqliteTables() {
-  const createTables = `
-    -- Users table
-    CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        email_verified BOOLEAN DEFAULT FALSE,
-        verification_token VARCHAR(255),
-        verification_sent_at TIMESTAMP,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Game rooms table
-    CREATE TABLE IF NOT EXISTS game_rooms (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        name TEXT NOT NULL,
-        host_id TEXT NOT NULL,
-        max_players INTEGER NOT NULL DEFAULT 6,
-        is_private BOOLEAN DEFAULT FALSE,
-        status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'finished')),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    -- Room players table
-    CREATE TABLE IF NOT EXISTS room_players (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        room_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (room_id) REFERENCES game_rooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(room_id, user_id)
-    );
-
-    -- Game states table
-    CREATE TABLE IF NOT EXISTS game_states (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        room_id TEXT NOT NULL,
-        game_data TEXT NOT NULL,
-        turn_number INTEGER DEFAULT 1,
-        current_player_id TEXT,
-        phase TEXT DEFAULT 'setup' CHECK (phase IN ('setup', 'reinforcement', 'attack', 'fortify', 'finished')),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (room_id) REFERENCES game_rooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (current_player_id) REFERENCES users(id)
-    );
-
-    -- Game moves table
-    CREATE TABLE IF NOT EXISTS game_moves (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        game_state_id TEXT NOT NULL,
-        player_id TEXT NOT NULL,
-        move_type TEXT NOT NULL,
-        move_data TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (game_state_id) REFERENCES game_states(id) ON DELETE CASCADE,
-        FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    -- Custom maps table
-    CREATE TABLE IF NOT EXISTS custom_maps (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        name TEXT NOT NULL,
-        creator_id TEXT NOT NULL,
-        map_data TEXT NOT NULL,
-        is_public BOOLEAN DEFAULT FALSE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    -- Player statistics table
-    CREATE TABLE IF NOT EXISTS player_stats (
-        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('ab89',1+abs(random())%4,1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-        user_id TEXT NOT NULL UNIQUE,
-        games_played INTEGER DEFAULT 0,
-        games_won INTEGER DEFAULT 0,
-        games_lost INTEGER DEFAULT 0,
-        total_playtime_minutes INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
-    -- Create indexes
-    CREATE INDEX IF NOT EXISTS idx_game_rooms_status ON game_rooms(status);
-    CREATE INDEX IF NOT EXISTS idx_game_rooms_host_id ON game_rooms(host_id);
-    CREATE INDEX IF NOT EXISTS idx_room_players_room_id ON room_players(room_id);
-    CREATE INDEX IF NOT EXISTS idx_room_players_user_id ON room_players(user_id);
-    CREATE INDEX IF NOT EXISTS idx_game_states_room_id ON game_states(room_id);
-    CREATE INDEX IF NOT EXISTS idx_game_moves_game_state_id ON game_moves(game_state_id);
-    CREATE INDEX IF NOT EXISTS idx_game_moves_player_id ON game_moves(player_id);
-    CREATE INDEX IF NOT EXISTS idx_custom_maps_creator_id ON custom_maps(creator_id);
-    CREATE INDEX IF NOT EXISTS idx_custom_maps_public ON custom_maps(is_public);
-    CREATE INDEX IF NOT EXISTS idx_player_stats_user_id ON player_stats(user_id);
-  `
-
-  const statements = createTables.split(';').filter((stmt) => stmt.trim())
-  for (const statement of statements) {
-    if (statement.trim()) {
-      await query(statement.trim())
-    }
-  }
-}
-
-// Legacy export for backward compatibility
-export const pool = {
-  query,
-  connect: getClient,
-}
+export { DB_TYPE }
