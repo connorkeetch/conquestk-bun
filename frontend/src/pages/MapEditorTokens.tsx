@@ -402,6 +402,55 @@ export default function MapEditorTokens() {
     document.body.removeChild(link)
   }
 
+  // Import map data from JSON file
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const mapData = JSON.parse(content)
+
+        // Validate the imported data structure
+        if (!mapData.territories || !Array.isArray(mapData.territories)) {
+          throw new Error('Invalid map data: missing territories')
+        }
+
+        // Load the imported map data
+        setState({
+          name: mapData.name || 'Imported Map',
+          imageUrl: mapData.imageUrl || '',
+          mapWidth: mapData.width || 1200,
+          mapHeight: mapData.height || 800,
+          territories: mapData.territories.map((t: any) => ({
+            id: t.id,
+            name: t.name || `Territory ${t.id}`,
+            x: t.x || 0,
+            y: t.y || 0,
+            armies: t.armies || 1,
+            connections: t.connections || [],
+            continentId: t.continentId || null,
+          })),
+          continents: mapData.continents || [],
+          selectedTerritoryId: null,
+          draggedTerritoryId: null,
+        })
+
+        alert('Map imported successfully!')
+      } catch (error) {
+        console.error('Failed to import map:', error)
+        alert('Failed to import map. Please check the file format.')
+      }
+    }
+
+    reader.readAsText(file)
+    
+    // Reset the input so the same file can be imported again
+    event.target.value = ''
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="w-full max-w-[1920px] mx-auto">
@@ -508,6 +557,12 @@ export default function MapEditorTokens() {
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
             >
               📥 Export JSON
+            </button>
+            <button
+              onClick={() => document.getElementById('json-import')?.click()}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
+            >
+              📤 Import JSON
             </button>
           </div>
 
@@ -939,12 +994,20 @@ export default function MapEditorTokens() {
             )}
           </div>
         </div>
-        {/* Hidden file input */}
+        {/* Hidden file input for images */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleImageUpload}
+          className="hidden"
+        />
+        {/* Hidden file input for JSON import */}
+        <input
+          id="json-import"
+          type="file"
+          accept="application/json,.json"
+          onChange={handleImport}
           className="hidden"
         />
         {/* Image Processor Modal */}

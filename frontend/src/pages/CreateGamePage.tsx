@@ -3,7 +3,15 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
-import { PLAYER_COLORS, COLOR_CLASSES, COLOR_HEX_VALUES } from '../constants/colors'
+import { 
+  STANDARD_COLORS, 
+  PREMIUM_COLORS,
+  PLAYER_COLORS, 
+  COLOR_CLASSES, 
+  COLOR_HEX_VALUES,
+  COLOR_DISPLAY_NAMES,
+  isPremiumColor 
+} from '../constants/colors'
 
 // Reusable OptionCard component
 interface OptionCardProps {
@@ -762,24 +770,114 @@ const CreateGamePage: React.FC = () => {
 
         {/* 7. Player Color Card */}
         <OptionCard number="7" title="Choose Your Color">
-          <div className="grid grid-cols-4 gap-3">
-            {colors.map((color) => (
-              <button
-                key={color}
-                className={`h-12 rounded border-2 transition ${
-                  selectedColor === color
-                    ? 'border-white scale-110 shadow-lg'
-                    : 'border-transparent hover:border-gray-400'
-                }`}
-                style={{ backgroundColor: COLOR_HEX_VALUES[color as keyof typeof COLOR_HEX_VALUES] }}
-                onClick={() => setSelectedColor(color)}
-                title={color.charAt(0).toUpperCase() + color.slice(1)}
-              >
-                {selectedColor === color && (
-                  <span className="text-white text-xs font-bold drop-shadow-lg">✓</span>
-                )}
-              </button>
-            ))}
+          <div className="space-y-4">
+            {/* Standard Colors */}
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Standard Colors</p>
+              <div className="grid grid-cols-4 gap-2">
+                {STANDARD_COLORS.map((color) => {
+                  const hexValue = COLOR_HEX_VALUES[color]
+                  const isGradient = hexValue.includes('gradient')
+                  return (
+                    <button
+                      key={color}
+                      className={`group relative h-14 rounded-lg border-2 transition-all ${
+                        selectedColor === color
+                          ? 'border-white scale-105 shadow-lg ring-2 ring-white/50'
+                          : 'border-gray-600 hover:border-gray-400 hover:scale-102'
+                      }`}
+                      style={{ 
+                        background: isGradient ? hexValue : undefined,
+                        backgroundColor: !isGradient ? hexValue : undefined 
+                      }}
+                      onClick={() => setSelectedColor(color)}
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        {selectedColor === color && (
+                          <span className="text-white text-lg font-bold drop-shadow-lg">✓</span>
+                        )}
+                        <span className="text-[10px] text-white/90 font-medium drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                          {COLOR_DISPLAY_NAMES[color].replace(' ⭐', '')}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Premium Colors */}
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Premium Colors (Conquest Pass)</p>
+              <div className="grid grid-cols-3 gap-2">
+                {PREMIUM_COLORS.map((color) => {
+                  const hexValue = COLOR_HEX_VALUES[color]
+                  const isGradient = hexValue.includes('gradient')
+                  const isPulse = color === 'pulse'
+                  const isNeon = color === 'neon'
+                  const isMetallic = color === 'metallic'
+                  
+                  return (
+                    <button
+                      key={color}
+                      className={`group relative h-14 rounded-lg border-2 transition-all ${
+                        selectedColor === color
+                          ? 'border-yellow-400 scale-105 shadow-lg ring-2 ring-yellow-400/50'
+                          : 'border-gray-600 hover:border-yellow-600 hover:scale-102'
+                      } ${isPulse ? 'animate-pulse' : ''} ${
+                        isNeon ? 'shadow-[0_0_10px_rgba(57,255,20,0.5)]' : ''
+                      }`}
+                      style={{ 
+                        background: isGradient || isMetallic 
+                          ? hexValue.includes('linear-gradient') 
+                            ? hexValue 
+                            : isMetallic 
+                              ? 'linear-gradient(135deg, #B8860B, #FFD700, #B8860B)' 
+                              : hexValue
+                          : undefined,
+                        backgroundColor: !isGradient && !isMetallic ? hexValue : undefined,
+                      }}
+                      onClick={() => setSelectedColor(color)}
+                      disabled={false} // Will be disabled for non-premium users
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-yellow-400 text-xs mb-0.5">⭐</span>
+                        {selectedColor === color && (
+                          <span className="text-white text-lg font-bold drop-shadow-lg">✓</span>
+                        )}
+                        <span className="text-[10px] text-white/90 font-medium drop-shadow-md">
+                          {COLOR_DISPLAY_NAMES[color].replace(' ⭐', '')}
+                        </span>
+                      </div>
+                      {isMetallic && (
+                        <div className="absolute inset-0 rounded-lg opacity-30 bg-gradient-to-t from-transparent via-white to-transparent animate-shimmer pointer-events-none" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Selected Color Preview */}
+            {selectedColor && (
+              <div className="mt-3 p-3 bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-400 mb-1">Selected:</p>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className={`w-8 h-8 rounded ${COLOR_CLASSES[selectedColor]}`}
+                    style={{
+                      background: COLOR_HEX_VALUES[selectedColor].includes('gradient') 
+                        ? COLOR_HEX_VALUES[selectedColor] 
+                        : undefined,
+                      backgroundColor: !COLOR_HEX_VALUES[selectedColor].includes('gradient') 
+                        ? COLOR_HEX_VALUES[selectedColor] 
+                        : undefined,
+                    }}
+                  />
+                  <span className="text-sm font-medium">{COLOR_DISPLAY_NAMES[selectedColor]}</span>
+                </div>
+              </div>
+            )}
           </div>
         </OptionCard>
 
