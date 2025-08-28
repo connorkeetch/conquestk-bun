@@ -35,7 +35,7 @@ class NotificationService {
         actionUrl: '/room/game123',
         actionLabel: 'Play Now',
         icon: '⚔️',
-        metadata: { gameId: 'game123' }
+        metadata: { gameId: 'game123' },
       },
       {
         id: '2',
@@ -47,7 +47,7 @@ class NotificationService {
         actionUrl: '/room/game456',
         actionLabel: 'Join Game',
         icon: '📨',
-        metadata: { gameId: 'game456', userId: 'player1' }
+        metadata: { gameId: 'game456', userId: 'player1' },
       },
       {
         id: '3',
@@ -57,7 +57,7 @@ class NotificationService {
         timestamp: hourAgo,
         read: true,
         icon: '🏆',
-        metadata: { achievementId: 'first_victory' }
+        metadata: { achievementId: 'first_victory' },
       },
       {
         id: '4',
@@ -69,7 +69,7 @@ class NotificationService {
         actionUrl: '/friends',
         actionLabel: 'View Request',
         icon: '👥',
-        metadata: { userId: 'strategic_master', friendUsername: 'StrategicMaster' }
+        metadata: { userId: 'strategic_master', friendUsername: 'StrategicMaster' },
       },
       {
         id: '5',
@@ -81,7 +81,7 @@ class NotificationService {
         actionUrl: '/history/game789',
         actionLabel: 'View Results',
         icon: '🎯',
-        metadata: { gameId: 'game789' }
+        metadata: { gameId: 'game789' },
       },
       {
         id: '6',
@@ -90,23 +90,21 @@ class NotificationService {
         message: 'Scheduled maintenance at 3 AM UTC',
         timestamp: twoDaysAgo,
         read: true,
-        icon: '⚙️'
-      }
+        icon: '⚙️',
+      },
     ]
   }
 
   public getNotifications(): Notification[] {
-    return [...this.notifications].sort((a, b) => 
-      b.timestamp.getTime() - a.timestamp.getTime()
-    )
+    return [...this.notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
   }
 
   public getUnreadCount(): number {
-    return this.notifications.filter(n => !n.read).length
+    return this.notifications.filter((n) => !n.read).length
   }
 
   public markAsRead(notificationId: string): void {
-    const notification = this.notifications.find(n => n.id === notificationId)
+    const notification = this.notifications.find((n) => n.id === notificationId)
     if (notification) {
       notification.read = true
       this.notifyListeners()
@@ -114,12 +112,12 @@ class NotificationService {
   }
 
   public markAllAsRead(): void {
-    this.notifications.forEach(n => n.read = true)
+    this.notifications.forEach((n) => (n.read = true))
     this.notifyListeners()
   }
 
   public deleteNotification(notificationId: string): void {
-    this.notifications = this.notifications.filter(n => n.id !== notificationId)
+    this.notifications = this.notifications.filter((n) => n.id !== notificationId)
     this.notifyListeners()
   }
 
@@ -132,7 +130,7 @@ class NotificationService {
     const newNotification: Notification = {
       ...notification,
       id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date()
+      timestamp: new Date(),
     }
     this.notifications.unshift(newNotification)
     this.notifyListeners()
@@ -144,7 +142,7 @@ class NotificationService {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener(this.getNotifications()))
+    this.listeners.forEach((listener) => listener(this.getNotifications()))
   }
 
   // Group notifications by date for display
@@ -154,7 +152,7 @@ class NotificationService {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
 
-    this.getNotifications().forEach(notification => {
+    this.getNotifications().forEach((notification) => {
       const notifDate = new Date(notification.timestamp)
       let dateKey: string
 
@@ -163,10 +161,10 @@ class NotificationService {
       } else if (notifDate >= yesterday) {
         dateKey = 'Yesterday'
       } else {
-        dateKey = notifDate.toLocaleDateString('en-US', { 
-          month: 'short', 
+        dateKey = notifDate.toLocaleDateString('en-US', {
+          month: 'short',
           day: 'numeric',
-          year: notifDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+          year: notifDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
         })
       }
 
@@ -178,7 +176,7 @@ class NotificationService {
 
     return Array.from(groups.entries()).map(([date, notifications]) => ({
       date,
-      notifications
+      notifications,
     }))
   }
 }

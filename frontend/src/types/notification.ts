@@ -1,4 +1,4 @@
-export type NotificationType = 
+export type NotificationType =
   | 'game_invite'
   | 'turn_reminder'
   | 'game_started'

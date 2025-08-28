@@ -337,28 +337,28 @@ export default function MapEditorTokens() {
         continentsCount: state.continents.length,
         hasImage: !!state.imageUrl,
       })
-      
+
       const result = await axios.post('/api/maps', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       })
-      
+
       console.log('Map upload successful:', result.data)
       alert('Map saved successfully! It will appear in the Create Game map selection.')
     } catch (error: any) {
       console.error('Map upload failed:', error)
-      
+
       // Provide detailed error message
       let errorMessage = 'Failed to save map.'
-      
+
       if (error.response) {
         // Server responded with error
         console.error('Server error response:', error.response.data)
         errorMessage += `\n\nServer error: ${error.response.data.error || error.response.data.message || 'Unknown server error'}`
         errorMessage += `\nStatus: ${error.response.status}`
-        
+
         // Check for specific validation errors
         if (error.response.data.errors) {
           errorMessage += '\n\nValidation errors:'
@@ -375,7 +375,7 @@ export default function MapEditorTokens() {
         console.error('Request setup error:', error.message)
         errorMessage += `\n\nError: ${error.message}`
       }
-      
+
       alert(errorMessage)
     }
   }
@@ -446,7 +446,7 @@ export default function MapEditorTokens() {
     }
 
     reader.readAsText(file)
-    
+
     // Reset the input so the same file can be imported again
     event.target.value = ''
   }

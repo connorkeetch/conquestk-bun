@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
-import { socketService } from '../services/socketService'
 import audioService from '../services/audioService'
+import { socketService } from '../services/socketService'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -57,7 +57,10 @@ export default function GameRoom() {
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
           </button>
-          <button onClick={handleLeaveRoom} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+          <button
+            onClick={handleLeaveRoom}
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+          >
             Leave Room
           </button>
         </div>

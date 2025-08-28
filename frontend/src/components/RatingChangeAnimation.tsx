@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import type React from 'react'
+import { useEffect, useState } from 'react'
 
 interface RatingChangeAnimationProps {
   change: number
@@ -6,10 +7,10 @@ interface RatingChangeAnimationProps {
   className?: string
 }
 
-const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({ 
-  change, 
+const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({
+  change,
   onComplete,
-  className = '' 
+  className = '',
 }) => {
   const [isVisible, setIsVisible] = useState(true)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -37,10 +38,12 @@ const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({
   const isPositive = change > 0
   const sign = isPositive ? '+' : ''
   const colorClass = isPositive ? 'text-green-400' : 'text-red-400'
-  const glowClass = isPositive ? 'drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]' : 'drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]'
+  const glowClass = isPositive
+    ? 'drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]'
+    : 'drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]'
 
   return (
-    <div 
+    <div
       className={`
         fixed top-1/2 left-1/2 z-50 
         transform -translate-x-1/2 
@@ -50,7 +53,8 @@ const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({
       `}
     >
       <div className={`text-6xl font-bold ${colorClass} ${glowClass}`}>
-        {sign}{change} CP
+        {sign}
+        {change} CP
       </div>
       <div className="text-center mt-2 text-lg text-gray-300">
         Command Points {isPositive ? 'Gained' : 'Lost'}

@@ -5,7 +5,7 @@ const CommunityPage: React.FC = () => {
   const [activeTab, _setActiveTab] = useState<'forum' | 'clans' | 'events'>('forum')
 
   return (
-    <div className="container mx-auto px-8 py-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold gradient-text mb-2">Community</h1>

@@ -43,7 +43,11 @@ export class EloService {
    * Calculate K-factor based on games played and current rating
    * Lower K-factor for more experienced players, higher for new players
    */
-  private calculateKFactor(gamesPlayed: number, currentRating: number, numberOfPlayers: number): number {
+  private calculateKFactor(
+    gamesPlayed: number,
+    currentRating: number,
+    numberOfPlayers: number,
+  ): number {
     // Base K-factor depends on experience
     let baseK: number
     if (gamesPlayed < 30) {
@@ -62,7 +66,8 @@ export class EloService {
     // Additional adjustment for high-rated players (slower changes at the top)
     if (currentRating > 1800) {
       return adjustedK * 0.8
-    } else if (currentRating > 1600) {
+    }
+    if (currentRating > 1600) {
       return adjustedK * 0.9
     }
 
@@ -74,9 +79,9 @@ export class EloService {
    * In multiplayer, we calculate average expected score against all opponents
    */
   private calculateExpectedScore(playerRating: number, opponentRatings: number[]): number {
-    const expectedScores = opponentRatings.map(opponentRating => {
+    const expectedScores = opponentRatings.map((opponentRating) => {
       const ratingDiff = (opponentRating - playerRating) / 400
-      return 1 / (1 + Math.pow(10, ratingDiff))
+      return 1 / (1 + 10 ** ratingDiff)
     })
 
     // Average expected score against all opponents
@@ -95,14 +100,15 @@ export class EloService {
     // Linear scaling for other positions
     // 2nd place gets higher score than 3rd, etc.
     const baseScore = (totalPlayers - position) / (totalPlayers - 1)
-    
+
     // Apply position-based adjustments
     if (position === 2) {
       return baseScore * 0.75 // 2nd place loses 25% less
-    } else if (position === 3) {
+    }
+    if (position === 3) {
       return baseScore * 0.5 // 3rd place loses 50% less
     }
-    
+
     return baseScore * 0.25 // Other positions get minimal score
   }
 
@@ -115,18 +121,18 @@ export class EloService {
     }
 
     const changes: RatingChange[] = []
-    
+
     for (const player of players) {
       // Get opponent ratings (everyone except current player)
       const opponentRatings = players
-        .filter(p => p.userId !== player.userId)
-        .map(p => p.currentRating)
+        .filter((p) => p.userId !== player.userId)
+        .map((p) => p.currentRating)
 
       // Calculate K-factor
       const kFactor = this.calculateKFactor(
         player.gamesPlayed,
         player.currentRating,
-        players.length
+        players.length,
       )
 
       // Calculate expected and actual scores
@@ -144,7 +150,7 @@ export class EloService {
         change: ratingChange,
         expectedScore,
         actualScore,
-        kFactor
+        kFactor,
       })
     }
 
@@ -162,8 +168,10 @@ export class EloService {
 
       for (const change of changes) {
         // Find the position (1 = winner, etc.)
-        const position = changes.sort((a, b) => b.newRating - a.newRating)
-          .findIndex(c => c.userId === change.userId) + 1
+        const position =
+          changes
+            .sort((a, b) => b.newRating - a.newRating)
+            .findIndex((c) => c.userId === change.userId) + 1
 
         // Record rating history
         const insertRatingHistoryQuery = `
@@ -172,7 +180,7 @@ export class EloService {
         position, total_players, k_factor, expected_score, actual_score
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
-        
+
         await query(insertRatingHistoryQuery, [
           change.userId,
           gameId,
@@ -183,7 +191,7 @@ export class EloService {
           changes.length,
           change.kFactor,
           change.expectedScore,
-          change.actualScore
+          change.actualScore,
         ])
 
         // Update user rating
@@ -199,12 +207,12 @@ export class EloService {
         last_ranked_game_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `
-        
+
         await query(updateUserRatingQuery, [
           change.newRating,
           isWinner ? 1 : 0,
           isWinner ? 0 : 1,
-          change.userId
+          change.userId,
         ])
 
         // Update leaderboard cache
@@ -236,25 +244,28 @@ export class EloService {
       FROM users u
       WHERE u.id = ?
     `
-        
+
         await query(updateLeaderboardQuery, [
           change.change, // For trend calculation
           change.change, // For trend calculation
           change.change, // Last game change
-          change.userId
+          change.userId,
         ])
       }
 
       // Update game room with average ratings
       const avgRating = Math.round(
-        changes.reduce((sum, c) => sum + c.newRating, 0) / changes.length
+        changes.reduce((sum, c) => sum + c.newRating, 0) / changes.length,
       )
-      
-      await query(`
+
+      await query(
+        `
         UPDATE game_rooms 
         SET avg_skill_rating = ?
         WHERE id = ?
-      `, [avgRating, gameId])
+      `,
+        [avgRating, gameId],
+      )
 
       // Commit transaction
       await query('COMMIT')
@@ -269,15 +280,20 @@ export class EloService {
    * Get skill tier for a rating
    */
   getSkillTier(rating: number): SkillTier {
-    return SKILL_TIERS.find(tier => 
-      rating >= tier.minRating && rating <= tier.maxRating
-    ) || SKILL_TIERS[0]
+    return (
+      SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
+      SKILL_TIERS[0]
+    )
   }
 
   /**
    * Check if players can join a ranked game (skill gap validation)
    */
-  canJoinRankedGame(playerRating: number, gameAvgRating: number, maxSkillGap: number = 500): boolean {
+  canJoinRankedGame(
+    playerRating: number,
+    gameAvgRating: number,
+    maxSkillGap: number = 500,
+  ): boolean {
     return Math.abs(playerRating - gameAvgRating) <= maxSkillGap
   }
 
@@ -285,7 +301,8 @@ export class EloService {
    * Get rating history for a user
    */
   async getRatingHistory(userId: string, limit: number = 30): Promise<any[]> {
-    const result = await query(`
+    const result = await query(
+      `
       SELECT 
         rh.*,
         gr.name as game_name,
@@ -295,7 +312,9 @@ export class EloService {
       WHERE rh.user_id = ?
       ORDER BY rh.created_at DESC
       LIMIT ?
-    `, [userId, limit])
+    `,
+      [userId, limit],
+    )
 
     return result.rows
   }
@@ -303,7 +322,11 @@ export class EloService {
   /**
    * Get leaderboard
    */
-  async getLeaderboard(limit: number = 100, offset: number = 0, tierFilter?: string): Promise<any[]> {
+  async getLeaderboard(
+    limit: number = 100,
+    offset: number = 0,
+    tierFilter?: string,
+  ): Promise<any[]> {
     let queryStr = `
       SELECT 
         slc.*,

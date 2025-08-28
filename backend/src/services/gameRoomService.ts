@@ -211,13 +211,13 @@ export class GameRoomService {
         // Get the user's skill rating
         const userQuery = `SELECT skill_rating FROM users WHERE id = ?`
         const userResult = await client.query(userQuery, [userId])
-        
+
         if (userResult.rows.length === 0) {
           throw new Error('User not found')
         }
-        
+
         const userRating = userResult.rows[0].skill_rating || 1000
-        
+
         // Get current players' average rating
         const playersQuery = `
           SELECT AVG(u.skill_rating) as avg_rating,
@@ -228,22 +228,26 @@ export class GameRoomService {
           WHERE rp.room_id = ?
         `
         const playersResult = await client.query(playersQuery, [roomId])
-        
+
         if (playersResult.rows[0].avg_rating) {
           const avgRating = parseFloat(playersResult.rows[0].avg_rating)
           const minRating = parseFloat(playersResult.rows[0].min_rating)
           const maxRating = parseFloat(playersResult.rows[0].max_rating)
-          
+
           // Check if the skill gap is too large (500 points)
           if (Math.abs(userRating - avgRating) > 500) {
-            throw new Error(`Skill rating difference too large. Your rating: ${userRating}, Room average: ${Math.round(avgRating)}`)
+            throw new Error(
+              `Skill rating difference too large. Your rating: ${userRating}, Room average: ${Math.round(avgRating)}`,
+            )
           }
-          
+
           // Update room's average rating
-          const newAvgRating = Math.round((avgRating * currentPlayers + userRating) / (currentPlayers + 1))
+          const newAvgRating = Math.round(
+            (avgRating * currentPlayers + userRating) / (currentPlayers + 1),
+          )
           const newMinRating = Math.min(minRating, userRating)
           const newMaxRating = Math.max(maxRating, userRating)
-          
+
           const updateRoomQuery = `
             UPDATE game_rooms
             SET avg_skill_rating = ?,

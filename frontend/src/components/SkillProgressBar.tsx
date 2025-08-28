@@ -1,5 +1,5 @@
-import React from 'react'
-import { SkillTier } from './SkillTierBadge'
+import type React from 'react'
+import type { SkillTier } from './SkillTierBadge'
 
 interface SkillProgressBarProps {
   currentRating: number
@@ -15,17 +15,14 @@ const SKILL_TIERS: SkillTier[] = [
   { name: 'Grandmaster', minRating: 1600, maxRating: 9999, icon: '⚔️', color: 'bg-red-600' },
 ]
 
-const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ 
-  currentRating, 
-  className = '' 
-}) => {
+const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, className = '' }) => {
   // Find current tier
-  const currentTier = SKILL_TIERS.find(t => 
-    currentRating >= t.minRating && currentRating <= t.maxRating
-  ) || SKILL_TIERS[2] // Default to Gold
+  const currentTier =
+    SKILL_TIERS.find((t) => currentRating >= t.minRating && currentRating <= t.maxRating) ||
+    SKILL_TIERS[2] // Default to Gold
 
   // Find next tier
-  const currentTierIndex = SKILL_TIERS.findIndex(t => t.name === currentTier.name)
+  const currentTierIndex = SKILL_TIERS.findIndex((t) => t.name === currentTier.name)
   const nextTier = SKILL_TIERS[currentTierIndex + 1]
 
   // Calculate progress
@@ -75,14 +72,14 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({
       {/* Progress Bar */}
       <div className="relative">
         <div className="w-full h-6 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
-          <div 
+          <div
             className={`h-full transition-all duration-500 ease-out ${currentTier.color} bg-opacity-80`}
             style={{ width: `${progress}%` }}
           >
             <div className="h-full bg-gradient-to-r from-transparent to-white opacity-20"></div>
           </div>
         </div>
-        
+
         {/* Progress Text */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-xs font-bold text-white drop-shadow-lg">
@@ -96,7 +93,8 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({
         <div className="flex justify-between mt-2 text-xs text-gray-500">
           <span>{currentTier.minRating} CP</span>
           <span className="text-gray-400">
-            {currentTier.minRating + Math.floor((nextTier.minRating - currentTier.minRating) / 2)} CP
+            {currentTier.minRating + Math.floor((nextTier.minRating - currentTier.minRating) / 2)}{' '}
+            CP
           </span>
           <span>{nextTier.minRating} CP</span>
         </div>

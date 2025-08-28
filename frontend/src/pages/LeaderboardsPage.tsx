@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import type React from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import SkillTierBadge from '../components/SkillTierBadge'
@@ -36,15 +37,15 @@ const LeaderboardsPage: React.FC = () => {
       setLoading(true)
       const params = new URLSearchParams({
         limit: ITEMS_PER_PAGE.toString(),
-        offset: (currentPage * ITEMS_PER_PAGE).toString()
+        offset: (currentPage * ITEMS_PER_PAGE).toString(),
       })
-      
+
       if (tierFilter !== 'all') {
         params.append('tier', tierFilter)
       }
 
       const response = await fetch(`/api/skills/leaderboards/skill?${params}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch leaderboard')
       }
@@ -76,9 +77,7 @@ const LeaderboardsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Skill Leaderboard</h1>
-          <p className="text-gray-400">
-            Top players ranked by Command Points (CP)
-          </p>
+          <p className="text-gray-400">Top players ranked by Command Points (CP)</p>
         </div>
 
         {/* Tier Filter */}
@@ -109,13 +108,9 @@ const LeaderboardsPage: React.FC = () => {
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : error ? (
-          <div className="text-center py-12 text-red-400">
-            {error}
-          </div>
+          <div className="text-center py-12 text-red-400">{error}</div>
         ) : leaderboard.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            No players found in this tier
-          </div>
+          <div className="text-center py-12 text-gray-400">No players found in this tier</div>
         ) : (
           <div className="bg-gray-900 rounded-lg overflow-hidden">
             <table className="w-full">
@@ -156,13 +151,14 @@ const LeaderboardsPage: React.FC = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <span className={`text-lg font-bold ${
-                            entry.rank <= 3 ? 'text-yellow-400' : 'text-gray-300'
-                          }`}>
+                          <span
+                            className={`text-lg font-bold ${
+                              entry.rank <= 3 ? 'text-yellow-400' : 'text-gray-300'
+                            }`}
+                          >
                             {entry.rank === 1 && '🏆 '}
                             {entry.rank === 2 && '🥈 '}
-                            {entry.rank === 3 && '🥉 '}
-                            #{entry.rank}
+                            {entry.rank === 3 && '🥉 '}#{entry.rank}
                           </span>
                         </div>
                       </td>
@@ -172,26 +168,29 @@ const LeaderboardsPage: React.FC = () => {
                           className="text-blue-400 hover:text-blue-300 font-medium"
                         >
                           {entry.username}
-                          {isCurrentUser && <span className="ml-2 text-xs text-gray-400">(You)</span>}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs text-gray-400">(You)</span>
+                          )}
                         </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <SkillTierBadge 
-                          rating={entry.skillRating} 
+                        <SkillTierBadge
+                          rating={entry.skillRating}
                           tier={entry.tier}
                           showRating={false}
                           size="sm"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-lg font-semibold">
-                          {entry.skillRating}
-                        </span>
+                        <span className="text-lg font-semibold">{entry.skillRating}</span>
                         {entry.lastChange && entry.lastChange !== 0 && (
-                          <span className={`ml-2 text-sm ${
-                            entry.lastChange > 0 ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            ({entry.lastChange > 0 ? '+' : ''}{entry.lastChange})
+                          <span
+                            className={`ml-2 text-sm ${
+                              entry.lastChange > 0 ? 'text-green-400' : 'text-red-400'
+                            }`}
+                          >
+                            ({entry.lastChange > 0 ? '+' : ''}
+                            {entry.lastChange})
                           </span>
                         )}
                       </td>
@@ -199,10 +198,15 @@ const LeaderboardsPage: React.FC = () => {
                         {entry.totalGames}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`font-medium ${
-                          entry.winRate >= 60 ? 'text-green-400' :
-                          entry.winRate >= 40 ? 'text-gray-300' : 'text-red-400'
-                        }`}>
+                        <span
+                          className={`font-medium ${
+                            entry.winRate >= 60
+                              ? 'text-green-400'
+                              : entry.winRate >= 40
+                                ? 'text-gray-300'
+                                : 'text-red-400'
+                          }`}
+                        >
                           {entry.winRate.toFixed(1)}%
                         </span>
                       </td>
@@ -227,9 +231,7 @@ const LeaderboardsPage: React.FC = () => {
             >
               Previous
             </button>
-            <span className="px-4 py-2 text-gray-400">
-              Page {currentPage + 1}
-            </span>
+            <span className="px-4 py-2 text-gray-400">Page {currentPage + 1}</span>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={leaderboard.length < ITEMS_PER_PAGE}

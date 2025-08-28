@@ -4,9 +4,9 @@ import { Toaster } from 'react-hot-toast'
 import { Provider } from 'react-redux'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
-import TestApp from './test-app'
 import ErrorBoundary from './components/ErrorBoundary'
 import { store } from './store'
+import TestApp from './test-app'
 import './index.css'
 
 // Add comprehensive error logging
@@ -25,14 +25,14 @@ window.addEventListener('unhandledrejection', (e) => {
 try {
   console.log('[MAIN] Looking for root element...')
   const rootElement = document.getElementById('root')
-  
+
   if (!rootElement) {
     throw new Error('Root element not found!')
   }
-  
+
   console.log('[MAIN] Root element found, creating React root...')
   const root = ReactDOM.createRoot(rootElement)
-  
+
   console.log('[MAIN] Rendering React app without StrictMode...')
   // Restore full app
   root.render(
@@ -45,7 +45,7 @@ try {
       </Provider>
     </ErrorBoundary>,
   )
-  
+
   console.log('[MAIN] React render call completed')
 } catch (error) {
   console.error('[MAIN] Fatal error during app initialization:', error)

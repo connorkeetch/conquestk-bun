@@ -73,6 +73,8 @@ export default function Login() {
             </h1>
           </Link>
           <p className="text-gray-400">Welcome back, Commander</p>
+          {/* Easter egg for friends */}
+          <p className="text-purple-400 text-sm mt-2 font-medium italic">They always come back</p>
         </div>
 
         {/* Form Card */}

@@ -1,8 +1,8 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import pushNotificationService from '../services/pushNotificationService'
 import audioService from '../services/audioService'
+import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,
   exportSettings,
