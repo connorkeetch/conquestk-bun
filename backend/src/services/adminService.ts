@@ -112,7 +112,7 @@ export class AdminService {
       [userId],
     )
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       userId: row.user_id,
       roleId: row.role_id,
       roleName: row.role_name,
@@ -164,7 +164,7 @@ export class AdminService {
       params,
     )
 
-    const users = result.rows.map((row) => ({
+    const users = result.rows.map((row: any) => ({
       id: row.id,
       username: row.username,
       email: row.email,
@@ -336,7 +336,7 @@ export class AdminService {
     )
 
     return {
-      items: result.rows.map((row) => ({
+      items: result.rows.map((row: any) => ({
         id: row.id,
         contentType: row.content_type,
         contentId: row.content_id,
@@ -427,7 +427,7 @@ export class AdminService {
       SELECT * FROM feature_flags ORDER BY flag_name
     `)
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       flagName: row.flag_name,
       description: row.description,
@@ -527,7 +527,7 @@ export class AdminService {
       [limit, offset],
     )
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       adminUserId: row.admin_user_id,
       adminUsername: row.admin_username,

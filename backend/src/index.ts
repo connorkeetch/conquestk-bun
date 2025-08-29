@@ -196,7 +196,7 @@ app.get('/debug/tables', async (_req, res) => {
 
     res.json({
       status: 'OK',
-      tables: tableCheck.rows.map((row) => row.table_name),
+      tables: tableCheck.rows.map((row: any) => row.table_name),
       tableCount: tableCheck.rows.length,
       userCount,
       adminCount,
