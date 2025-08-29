@@ -4,7 +4,7 @@
 
 **Tech Stack**: React + TypeScript + Node.js + PostgreSQL + Socket.io + Redis  
 **Deployment**: Railway (conquestk.com) with automated CI/CD  
-**Database**: PostgreSQL (production) with SQLite fallback (development)
+**Database**: PostgreSQL (Railway-hosted for both dev and production)
 
 ### Key Components
 - **Frontend**: React/Vite with Redux state management
@@ -48,15 +48,15 @@
 The project uses a multi-environment approach for better development and deployment workflows:
 
 **Available Environments:**
-- **Development** (`.env.development`) - SQLite for fast local development
-- **Production** (`.env.production`) - Railway PostgreSQL for live deployment
+- **Development** (`.env.development`) - Railway PostgreSQL dev database
+- **Production** (`.env.production`) - Railway PostgreSQL production database
 
 **Quick Environment Switching:**
 ```bash
-# Switch to development (SQLite)
+# Switch to development (Railway dev database)
 .\switch-env.ps1 development
 
-# Switch to production (Railway)
+# Switch to production (Railway prod database)
 .\switch-env.ps1 production
 
 # Current environment is always in backend/.env
@@ -74,8 +74,7 @@ VITE_SOCKET_URL=http://localhost:5001
 ```env
 NODE_ENV=development
 PORT=5001
-DB_TYPE=sqlite
-SQLITE_DB_PATH=./risk_game.db
+DATABASE_URL=postgresql://postgres:PBqbJVTSspUSpGsnfIBZuQCKVcbhncJt@yamabiko.proxy.rlwy.net:25470/railway
 JWT_SECRET=your-super-secret-jwt-key-for-development-only
 ```
 
@@ -83,7 +82,6 @@ JWT_SECRET=your-super-secret-jwt-key-for-development-only
 ```env
 NODE_ENV=production
 PORT=${PORT:-5001}
-DB_TYPE=postgresql
 DATABASE_URL=${DATABASE_URL}
 FRONTEND_URL=https://conquestk.com
 ```

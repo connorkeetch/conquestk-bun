@@ -1,6 +1,6 @@
 # 🎮 Risk Game - Multiplayer Board Game
 
-A full-stack Risk-like multiplayer board game built with React, Node.js, Socket.io, and PostgreSQL/SQLite.
+A full-stack Risk-like multiplayer board game built with React, Node.js, Socket.io, and PostgreSQL.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -42,18 +42,18 @@ npm run dev
 - **🔒 Setting Locks**: Lock individual settings from randomization
 
 ### 🛠️ Modern Tech Stack
-- **Frontend**: React 18 + TypeScript + Redux Toolkit + Vite
+- **Frontend**: React 19 + TypeScript + Redux Toolkit + Vite 7
 - **Backend**: Node.js + Express + TypeScript + Socket.io
-- **Database**: PostgreSQL or SQLite (auto-detected)
+- **Database**: PostgreSQL (Railway hosted for both dev and production)
 - **Testing**: Jest (backend) + Vitest (frontend) with comprehensive test coverage
 - **Development**: Hot reloading, automated setup, and professional tooling
 
 ### 🔧 Developer Experience
 - **One-Command Setup**: Automated environment configuration
-- **Flexible Database**: Auto-detects PostgreSQL, falls back to SQLite
+- **PostgreSQL Database**: Railway-hosted for both development and production
 - **Smart Development Tools**: PowerShell automation, dependency management
 - **Type Safety**: Full TypeScript coverage across the stack
-- **Test Coverage**: 37 tests covering core game logic and UI components
+- **Test Coverage**: Comprehensive tests covering core game logic and UI components
 
 ## 🎮 Game Features
 
@@ -99,24 +99,24 @@ risk-game/
 │   └── src/types/         # TypeScript type definitions
 ├── 📄 setup-check.js      # Automated development environment setup
 ├── 📄 start-dev.ps1       # PowerShell development automation
-└── 📄 STATUS.md           # Comprehensive documentation and troubleshooting
+└── 📄 docs/               # Comprehensive documentation
 ```
 
 ## 🎯 Tech Stack Details
 
 ### Frontend
-- **React 18** with TypeScript for type-safe UI development
+- **React 19** with TypeScript for type-safe UI development
 - **Redux Toolkit** for predictable state management
-- **Vite** for lightning-fast development and building
+- **Vite 7** for lightning-fast development and building
 - **Socket.io Client** for real-time multiplayer communication
-- **Tailwind CSS** for responsive, utility-first styling
+- **Tailwind CSS v4** for responsive, utility-first styling
 - **Vitest + React Testing Library** for component testing
 
 ### Backend
 - **Node.js + Express** for robust server architecture
 - **TypeScript** for type safety and better developer experience
 - **Socket.io** for real-time bidirectional communication
-- **PostgreSQL** or **SQLite** for flexible data persistence
+- **PostgreSQL** for robust data persistence
 - **JWT** for secure user authentication
 - **Jest** for comprehensive unit and integration testing
 
@@ -134,7 +134,7 @@ risk-game/
 npm run setup              # Check and configure development environment
 npm run dev                # Start both frontend and backend
 npm run dev:frontend       # Start frontend only (port 5173)
-npm run dev:backend        # Start backend only (port 5000)
+npm run dev:backend        # Start backend only (port 5001)
 npm run dev:quick          # Start without setup check
 ```
 
@@ -142,8 +142,8 @@ npm run dev:quick          # Start without setup check
 ```bash
 npm run build              # Build both frontend and backend
 npm run start              # Start production server
-npm test                   # Run all tests (37 tests)
-npm run lint               # Run all code quality checks
+npm test                   # Run all tests
+npm run lint               # Run code quality checks with Biome
 ```
 
 ### 🧹 Maintenance
@@ -167,9 +167,9 @@ The game follows classic Risk rules with authentic dice mechanics and strategic 
 
 The project includes comprehensive test coverage:
 
-- **Backend**: 20 tests covering game engine, services, and API logic
-- **Frontend**: 17 tests covering Redux state management and UI components
-- **Total**: 37 tests ensuring reliable gameplay and user experience
+- **Backend**: Tests covering game engine, services, and API logic
+- **Frontend**: Tests covering Redux state management and UI components
+- **Total**: Comprehensive test suite ensuring reliable gameplay and user experience
 
 ```bash
 npm test           # Run all tests
@@ -190,10 +190,10 @@ npm run build
 npm start
 ```
 
-### Docker (Optional)
+### Railway Deployment
 ```bash
-npm run docker:up    # Start with Docker Compose
-npm run docker:down  # Stop containers
+# Production is deployed to conquestk.com via Railway
+# Automatic deployments on push to main branch
 ```
 
 ## 🚀 Development Roadmap
@@ -255,16 +255,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Common Issues
 
-**Port conflicts**: Backend (5000) or frontend (5173) ports in use
+**Port conflicts**: Backend (5001) or frontend (5173) ports in use
 ```bash
-netstat -ano | findstr :5000
+netstat -ano | findstr :5001
 # Kill process if needed
 ```
 
-**Database issues**: PostgreSQL not available
+**Database issues**: PostgreSQL connection failed
 ```bash
-# The setup automatically falls back to SQLite
-# Or install PostgreSQL and run: createdb risk_game
+# Check DATABASE_URL in backend/.env
+# Development database is hosted on Railway
+# Contact admin if connection issues persist
 ```
 
 **Dependency issues**: Missing node_modules
