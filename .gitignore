@@ -109,11 +109,21 @@ _archive/
 CLAUDE-*.md
 !CLAUDE.md
 
-# MCP configuration (machine-specific)
+# MCP configuration (machine-specific - contains API keys!)
 .mcp.json
+.mcp/
+mcp.json
 
 # Claude Code configuration (machine-specific)
 .claude/
+.clauderc
+.claude.json
+
+# Other AI/IDE configurations (machine-specific)
+.cursor/
+.continue/
+.aider/
+.copilot/
 # Playwright test results
 test-results/
 tests/
