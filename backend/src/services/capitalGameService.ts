@@ -99,7 +99,7 @@ export class CapitalGameService {
         eliminatedPlayers: new Set(),
       }
 
-      players.forEach((player, i) => {
+      players.forEach((player: any, i: number) => {
         if (i < capitals.length) {
           gameState.capitals.set(player.id, capitals[i])
         }
@@ -158,8 +158,8 @@ export class CapitalGameService {
       )
 
       const territories = territoriesResult.rows
-      const territoryIds = territories.map((t) => t.territory_id)
-      const totalTroops = territories.reduce((sum, t) => sum + t.troop_count, 0)
+      const territoryIds = territories.map((t: any) => t.territory_id)
+      const totalTroops = territories.reduce((sum: number, t: any) => sum + t.troop_count, 0)
 
       // Transfer all territories to the attacker
       await query(
