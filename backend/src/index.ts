@@ -287,11 +287,13 @@ async function startServer() {
     logStartupDiagnostics()
     
     // Start the HTTP server first (should always work)
-    server.listen(PORT, () => {
-      logger.info(`✅ HTTP Server successfully listening on port ${PORT}`)
+    // IMPORTANT: Bind to 0.0.0.0 for Railway deployment
+    const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT
+    server.listen(portNumber, '0.0.0.0', () => {
+      logger.info(`✅ HTTP Server successfully listening on 0.0.0.0:${portNumber}`)
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-      logger.info(`📊 Test endpoint: http://localhost:${PORT}/test`)
-      logger.info(`📊 Health check: http://localhost:${PORT}/health`)
+      logger.info(`📊 Test endpoint: http://localhost:${portNumber}/test`)
+      logger.info(`📊 Health check: http://localhost:${portNumber}/health`)
       logger.info(`📅 Server started at: ${new Date().toISOString()}`)
       
       // Don't await database setup - let it happen in background
