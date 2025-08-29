@@ -2,7 +2,7 @@
 cmd = "npm ci && npm run build"
 
 [start]
-cmd = "node backend/dist/index.js"
+cmd = "cd backend && node dist/index.js"
 
 [variables]
-NODE_VERSION = "20"
+NODE_VERSION = "22"
