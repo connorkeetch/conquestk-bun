@@ -1,11 +1,9 @@
-import { QueryResult as PgQueryResult, Pool } from 'pg'
+import { QueryResult as PgQueryResult, Pool, PoolClient } from 'pg'
 import { logger } from '../utils/logger'
+import type { QueryResult } from '../../shared/types'
 
-// Normalized query result interface
-export interface QueryResult<T = any> {
-  rows: T[]
-  rowCount: number | null
-}
+// Re-export for convenience
+export type { QueryResult }
 
 let pgPool: Pool | null = null
 
@@ -43,7 +41,7 @@ try {
 }
 
 // Generic query function
-export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T = unknown>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
@@ -61,7 +59,7 @@ export async function query<T extends Record<string, any> = any>(text: string, p
 }
 
 // Transaction support
-export async function transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
+export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
@@ -116,12 +114,12 @@ export async function closeDatabase(): Promise<void> {
 // Helper function for parameterized queries
 export function buildUpdateQuery(
   table: string,
-  updates: Record<string, any>,
-  conditions: Record<string, any>,
-): { text: string; values: any[] } {
+  updates: Record<string, unknown>,
+  conditions: Record<string, unknown>,
+): { text: string; values: unknown[] } {
   const updateParts: string[] = []
   const conditionParts: string[] = []
-  const values: any[] = []
+  const values: unknown[] = []
   let paramCounter = 1
 
   // Build SET clause
@@ -150,12 +148,12 @@ export function buildUpdateQuery(
 // Helper for INSERT queries with RETURNING
 export function buildInsertQuery(
   table: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   returning = '*',
-): { text: string; values: any[] } {
+): { text: string; values: unknown[] } {
   const columns: string[] = []
   const placeholders: string[] = []
-  const values: any[] = []
+  const values: unknown[] = []
   let paramCounter = 1
 
   for (const [key, value] of Object.entries(data)) {
