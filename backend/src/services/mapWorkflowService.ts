@@ -45,13 +45,14 @@ export class MapWorkflowService {
           ],
         )
 
-        return (await query('SELECT * FROM map_drafts WHERE id = ?', [draftData.id])).rows[0]
+        return (await query('SELECT * FROM map_drafts WHERE id = $1', [draftData.id])).rows[0]
       }
       // Create new draft
       const result = await query(
         `
           INSERT INTO map_drafts (user_id, map_id, name, description, data, territories, continents, adjacencies, thumbnail_url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING *
         `,
         [
           userId,
@@ -66,8 +67,12 @@ export class MapWorkflowService {
         ],
       )
 
-      const insertedId = result.lastInsertRowid || result.rows?.[0]?.id
-      return (await query('SELECT * FROM map_drafts WHERE id = ?', [insertedId])).rows[0]
+      // For PostgreSQL, we use RETURNING to get the inserted ID
+      const insertedId = result.rows[0]?.id
+      if (!insertedId) {
+        throw new Error('Failed to get inserted draft ID')
+      }
+      return result.rows[0]
     } catch (error) {
       logger.error('Error saving map draft:', error)
       throw error
@@ -223,7 +228,7 @@ export class MapWorkflowService {
    */
   async editMap(mapId: string, userId: string, isAdmin: boolean): Promise<void> {
     try {
-      const map = await query('SELECT * FROM maps WHERE id = ?', [mapId])
+      const map = await query('SELECT * FROM maps WHERE id = $1', [mapId])
       const mapData = map.rows?.[0]
 
       if (!mapData) throw new Error('Map not found')
@@ -252,7 +257,7 @@ export class MapWorkflowService {
       )
 
       // Increment version
-      await query('UPDATE maps SET version = version + 1 WHERE id = ?', [mapId])
+      await query('UPDATE maps SET version = version + 1 WHERE id = $1', [mapId])
 
       // If not admin and map was approved, reset to pending review
       if (!isAdmin && mapData.status === 'approved') {
@@ -375,7 +380,7 @@ export class MapWorkflowService {
    */
   async toggleMapFeatured(mapId: string, adminId: string): Promise<void> {
     try {
-      const result = await query('SELECT is_featured FROM maps WHERE id = ?', [mapId])
+      const result = await query('SELECT is_featured FROM maps WHERE id = $1', [mapId])
       const isFeatured = result.rows?.[0]?.is_featured
 
       await query(

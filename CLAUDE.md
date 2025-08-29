@@ -35,6 +35,16 @@ Frontend: http://localhost:5173 | Backend: http://localhost:5001 | Live: [conque
 - **Robust Error Handling**: Ensure proper error handling and logging
 - **Use MCP Tools**: When stuck, use Zen tools to debug, plan, or get consensus
 
+## 🎨 Code Style (Biome Configuration)
+- **Indentation**: 2 spaces (no tabs)
+- **Quotes**: Single quotes for JS/TS, double quotes for JSX attributes
+- **Semicolons**: As needed (omit when not required)
+- **Line Width**: 100 characters max
+- **Trailing Commas**: Always use for multi-line
+- **No console.log**: Use proper logging (except in tests)
+- **No any**: Avoid TypeScript `any` type
+- **Const over let**: Always use `const` when possible
+
 ## 🛠️ Required Subagents
 - **code-searcher**: Code analysis and debugging (USE OFTEN before implementing)
 - **memory-bank-synchronizer**: Keep docs in sync after architecture changes
@@ -48,15 +58,31 @@ Use `mcp__memory__search_nodes` tool with relevant keywords.
 ## ⚡ Essential Commands
 ```bash
 # Development
-npm run dev                    # Start development servers
-npm test                       # Run tests
-npm run lint                   # Check code quality
-npm run build                  # Build for production
+npm run dev                    # Start both frontend (5173) and backend (5001)
+npm run dev:frontend           # Frontend only
+npm run dev:backend            # Backend only
+npm run dev:quick              # Skip setup check (faster startup)
+
+# Testing
+npm test                       # Run all tests (backend + frontend)
+npm run test:backend           # Jest backend tests only
+npm run test:frontend          # Vitest frontend tests only
+# Run single test file (backend): cd backend && npx jest src/game/gameEngine.test.ts
+# Run single test file (frontend): cd frontend && npx vitest src/store/gameSlice.test.ts
+
+# Code Quality
+npm run lint                   # Biome check for issues
+npm run lint:fix               # Auto-fix linting issues
+npm run format                 # Format code with Biome
+
+# Build & Production
+npm run build                  # Build both frontend and backend
+npm start                      # Start production server
 
 # Environment Switching
-./switch-env.sh development    # Switch to SQLite (Linux)
 .\switch-env.ps1 development   # Switch to SQLite (Windows)
-# Use these to switch between development (SQLite) and production (PostgreSQL)
+.\switch-env.ps1 production    # Switch to PostgreSQL (Windows)
+# Note: Creates backup at backend\.env.backup before switching
 ```
 
 ## 🎯 Current Focus
@@ -71,9 +97,10 @@ npm run build                  # Build for production
 ### Frontend Stack
 - **React 19.1.1** + **TypeScript 5.5.3**
 - **Vite 7.1.3** for build/dev
-- **Redux Toolkit** for state management
+- **Redux Toolkit** for state management (see `frontend/src/store/`)
 - **Socket.io-client** for real-time updates
-- **Tailwind CSS v4** (NO DaisyUI)
+- **Tailwind CSS v4** (NO DaisyUI, NO inline styles)
+- **Path Alias**: `@/` maps to `frontend/src/`
 
 ### Backend Stack
 - **Node.js** + **Express 4.21.2** + **TypeScript**
@@ -101,6 +128,24 @@ npm run build                  # Build for production
 2. Handler validates → Updates `GameService` state
 3. State change → Broadcast to room participants
 4. Redux store update → React re-render
+
+### Testing Architecture
+- **Backend Tests**: Jest with TypeScript, test files alongside source (`*.test.ts`)
+- **Frontend Tests**: Vitest with React Testing Library, setup in `src/test/setup.ts`
+- **Test Database**: SQLite in-memory for backend tests
+- **Coverage**: Run with `--coverage` flag for code coverage reports
+
+### Port Configuration
+- **Frontend Dev**: 5173 (Vite default)
+- **Backend Dev**: 5001 (configured in backend/.env)
+- **Backend API Proxy**: Frontend proxies `/api` to `http://localhost:5001`
+- **Socket.io**: Same as backend port (5001)
+- **PostgreSQL**: 5432 (production only)
+
+### Build Output Structure
+- Frontend builds to `backend/public/` for unified deployment
+- Backend TypeScript compiles to `backend/dist/`
+- Static assets served from Express in production
 
 ## 🔧 MCP Servers Available
 Your toolkit of powerful MCP servers - **USE THEM PROACTIVELY!**
@@ -145,6 +190,43 @@ mcp__zen__consensus - "Should we use WebSockets or SSE?"
 ```
 
 **REMEMBER**: These tools are your superpowers - use them early and often!
+
+## 🔀 Common Development Patterns
+
+### Adding a New API Endpoint
+1. Define route in `backend/src/routes/` 
+2. Implement controller in `backend/src/controllers/`
+3. Add service logic in `backend/src/services/`
+4. Update TypeScript types in `backend/src/types/`
+5. Add frontend API call in `frontend/src/services/api.ts`
+6. Update Redux slice if state management needed
+
+### Adding a New Game Feature
+1. Update game engine in `backend/src/game/gameEngine.ts`
+2. Add Socket.io handler in `backend/src/socket/gameHandlers.ts`
+3. Update game types in both `backend/src/types/game.ts` and `frontend/src/types/game.ts`
+4. Implement UI component in `frontend/src/components/`
+5. Add Redux state management in `frontend/src/store/gameSlice.ts`
+6. Write tests for both backend logic and frontend components
+
+### Working with Socket.io Events
+- **Emit from client**: `socket.emit('event-name', data)`
+- **Listen on server**: `socket.on('event-name', handler)` in `gameHandlers.ts`
+- **Broadcast to room**: `io.to(roomId).emit('event-name', data)`
+- **Update Redux**: Dispatch actions in socket event listeners
+
+### Database Migrations
+- Development: Direct SQLite file modifications OK
+- Production: Create migration scripts in `backend/migrations/`
+- Always update both `.env.development` and `.env.production` examples
+
+## ⚠️ Common Pitfalls to Avoid
+- **Don't mix Tailwind with inline styles** - Use Tailwind classes only
+- **Don't create new files unnecessarily** - Edit existing files when possible
+- **Don't forget to validate user input** - Use express-validator or Joi
+- **Don't skip error handling** - Always handle async errors properly
+- **Don't hardcode ports/URLs** - Use environment variables
+- **Don't commit .env files** - Only .env.example files
 
 ---
 *See docs/ folder for detailed information*

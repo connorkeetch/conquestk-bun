@@ -65,21 +65,11 @@ async function seedUsers() {
       const hashedPassword = await bcrypt.hash(user.password, 10)
 
       // Insert user
-      const isPostgres = process.env.DB_TYPE !== 'sqlite'
-
-      if (isPostgres) {
-        await query(
-          `INSERT INTO users (username, email, password) 
-           VALUES ($1, $2, $3)`,
-          [user.username, user.email, hashedPassword],
-        )
-      } else {
-        await query(
-          `INSERT INTO users (username, email, password) 
-           VALUES (?, ?, ?)`,
-          [user.username, user.email, hashedPassword],
-        )
-      }
+      await query(
+        `INSERT INTO users (username, email, password) 
+         VALUES ($1, $2, $3)`,
+        [user.username, user.email, hashedPassword],
+      )
 
       logger.info(`✅ Created user: ${user.username} (${user.description})`)
       created++

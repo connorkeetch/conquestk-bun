@@ -44,9 +44,9 @@ router.get('/stats', async (req: Request, res: Response) => {
       totalUsers: 0,
       activeGames: 0,
       mapsPending: 0,
-      reports: 0
+      reports: 0,
     }
-    
+
     // You can implement actual queries here
     res.json(stats)
   } catch (error) {

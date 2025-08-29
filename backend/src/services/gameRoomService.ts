@@ -18,9 +18,6 @@ export interface CreateRoomData {
 
 export class GameRoomService {
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
-    const id = uuidv4()
-    const isPostgres = process.env.DB_TYPE !== 'sqlite'
-
     // Validate ranked game requirements
     if (roomData.isRanked) {
       if (roomData.maxPlayers < 3) {
@@ -40,35 +37,13 @@ export class GameRoomService {
       capitalsEnabled: roomData.capitalsEnabled || false,
     }
 
-    if (isPostgres) {
-      const pgQuery = `
-        INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'waiting')
-        RETURNING *
-      `
+    const insertQuery = `
+      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'waiting')
+      RETURNING *
+    `
 
-      const result = await query(pgQuery, [
-        roomData.name,
-        roomData.hostId,
-        roomData.maxPlayers,
-        roomData.isPrivate,
-        roomData.mapId || null,
-        roomData.gameType || 'quick',
-        roomData.movementType || 'classic_adjacent',
-        roomData.allowTeamPlay || false,
-        roomData.isRanked || false,
-        JSON.stringify(gameSettings),
-      ])
-
-      return result.rows[0]
-    }
-    const sqliteQuery = `
-        INSERT INTO game_rooms (id, name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting')
-      `
-
-    await query(sqliteQuery, [
-      id,
+    const result = await query(insertQuery, [
       roomData.name,
       roomData.hostId,
       roomData.maxPlayers,
@@ -81,7 +56,6 @@ export class GameRoomService {
       JSON.stringify(gameSettings),
     ])
 
-    const result = await query('SELECT * FROM game_rooms WHERE id = ?', [id])
     return result.rows[0]
   }
 
@@ -114,78 +88,35 @@ export class GameRoomService {
   }
 
   async getRoomById(roomId: string): Promise<GameRoom | null> {
-    const isPostgres = process.env.DB_TYPE !== 'sqlite'
-    const _paramPlaceholder = isPostgres ? '$1' : '?'
+    const roomQuery = `
+      SELECT gr.*, 
+             json_agg(
+               json_build_object(
+                 'userId', u.id,
+                 'username', u.username,
+                 'skill_rating', u.skill_rating,
+                 'current_tier', u.current_tier,
+                 'joinedAt', rp.joined_at
+               )
+             ) as players
+      FROM game_rooms gr
+      LEFT JOIN room_players rp ON gr.id = rp.room_id
+      LEFT JOIN users u ON rp.user_id = u.id
+      WHERE gr.id = $1
+      GROUP BY gr.id
+    `
 
-    if (isPostgres) {
-      const pgQuery = `
-        SELECT gr.*, 
-               json_agg(
-                 json_build_object(
-                   'userId', u.id,
-                   'username', u.username,
-                   'skill_rating', u.skill_rating,
-                   'current_tier', u.current_tier,
-                   'joinedAt', rp.joined_at
-                 )
-               ) as players
-        FROM game_rooms gr
-        LEFT JOIN room_players rp ON gr.id = rp.room_id
-        LEFT JOIN users u ON rp.user_id = u.id
-        WHERE gr.id = ?
-        GROUP BY gr.id
-      `
-
-      const result = await query(pgQuery, [roomId])
-      return result.rows[0] || null
-    }
-    const sqliteQuery = `
-        SELECT gr.*,
-               '[' || GROUP_CONCAT(
-                 CASE WHEN u.id IS NOT NULL THEN
-                   '{"userId":"' || u.id || '","username":"' || u.username || 
-                   '","skill_rating":' || COALESCE(u.skill_rating, 1000) || 
-                   ',"current_tier":"' || COALESCE(u.current_tier, 'Gold') || 
-                   '","joinedAt":"' || rp.joined_at || '"}'
-                 END
-               ) || ']' as players
-        FROM game_rooms gr
-        LEFT JOIN room_players rp ON gr.id = rp.room_id
-        LEFT JOIN users u ON rp.user_id = u.id
-        WHERE gr.id = ?
-        GROUP BY gr.id
-      `
-
-    const result = await query(sqliteQuery, [roomId])
-    if (result.rows[0]) {
-      const room = result.rows[0]
-      if (room.players && room.players !== '[]') {
-        try {
-          room.players = JSON.parse(room.players)
-        } catch {
-          room.players = []
-        }
-      } else {
-        room.players = []
-      }
-    }
+    const result = await query(roomQuery, [roomId])
     return result.rows[0] || null
   }
 
   async joinRoom(roomId: string, userId: string): Promise<{ success: boolean; message: string }> {
     const client = await getClient()
-    const isPostgres = process.env.DB_TYPE !== 'sqlite'
-    const _param1 = isPostgres ? '$1' : '?'
-    const _param2 = isPostgres ? '$2' : '?'
 
     try {
-      if (isPostgres) {
-        await client.query('BEGIN')
-      } else {
-        await client.query('BEGIN TRANSACTION')
-      }
+      await client.query('BEGIN')
 
-      const roomQuery = `SELECT * FROM game_rooms WHERE id = ?`
+      const roomQuery = `SELECT * FROM game_rooms WHERE id = $1`
       const roomResult = await client.query(roomQuery, [roomId])
 
       if (roomResult.rows.length === 0) {
@@ -198,7 +129,7 @@ export class GameRoomService {
         throw new Error('Room is not accepting new players')
       }
 
-      const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = ?`
+      const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = $1`
       const countResult = await client.query(playerCountQuery, [roomId])
       const currentPlayers = parseInt(countResult.rows[0].count, 10)
 
@@ -209,7 +140,7 @@ export class GameRoomService {
       // Check skill rating gap for ranked games
       if (room.is_ranked) {
         // Get the user's skill rating
-        const userQuery = `SELECT skill_rating FROM users WHERE id = ?`
+        const userQuery = `SELECT skill_rating FROM users WHERE id = $1`
         const userResult = await client.query(userQuery, [userId])
 
         if (userResult.rows.length === 0) {
@@ -225,7 +156,7 @@ export class GameRoomService {
                  MAX(u.skill_rating) as max_rating
           FROM room_players rp
           JOIN users u ON rp.user_id = u.id
-          WHERE rp.room_id = ?
+          WHERE rp.room_id = $1
         `
         const playersResult = await client.query(playersQuery, [roomId])
 
@@ -250,39 +181,31 @@ export class GameRoomService {
 
           const updateRoomQuery = `
             UPDATE game_rooms
-            SET avg_skill_rating = ?,
-                min_skill_rating = ?,
-                max_skill_rating = ?
-            WHERE id = ?
+            SET avg_skill_rating = $1,
+                min_skill_rating = $2,
+                max_skill_rating = $3
+            WHERE id = $4
           `
           await client.query(updateRoomQuery, [newAvgRating, newMinRating, newMaxRating, roomId])
         } else {
           // First player joining, set initial ratings
           const updateRoomQuery = `
             UPDATE game_rooms
-            SET avg_skill_rating = ?,
-                min_skill_rating = ?,
-                max_skill_rating = ?
-            WHERE id = ?
+            SET avg_skill_rating = $1,
+                min_skill_rating = $2,
+                max_skill_rating = $3
+            WHERE id = $4
           `
           await client.query(updateRoomQuery, [userRating, userRating, userRating, roomId])
         }
       }
 
-      if (isPostgres) {
-        const joinQuery = `
-          INSERT INTO room_players (room_id, user_id)
-          VALUES ($1, $2)
-          ON CONFLICT (room_id, user_id) DO NOTHING
-        `
-        await client.query(joinQuery, [roomId, userId])
-      } else {
-        const joinQuery = `
-          INSERT OR IGNORE INTO room_players (id, room_id, user_id)
-          VALUES (?, ?, ?)
-        `
-        await client.query(joinQuery, [uuidv4(), roomId, userId])
-      }
+      const joinQuery = `
+        INSERT INTO room_players (room_id, user_id)
+        VALUES ($1, $2)
+        ON CONFLICT (room_id, user_id) DO NOTHING
+      `
+      await client.query(joinQuery, [roomId, userId])
 
       await client.query('COMMIT')
       return { success: true, message: 'Joined room successfully' }
@@ -297,48 +220,27 @@ export class GameRoomService {
   }
 
   async leaveRoom(roomId: string, userId: string): Promise<void> {
-    const isPostgres = process.env.DB_TYPE !== 'sqlite'
-    const _param1 = isPostgres ? '$1' : '?'
-    const _param2 = isPostgres ? '$2' : '?'
-
-    const deleteQuery = `DELETE FROM room_players WHERE room_id = ? AND user_id = ?`
+    const deleteQuery = `DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`
     await query(deleteQuery, [roomId, userId])
   }
 
   async getUserGames(userId: string): Promise<any[]> {
-    const isPostgres = process.env.DB_TYPE !== 'sqlite'
-    
     // Query for all games the user is involved in
-    const gamesQuery = isPostgres
-      ? `
-        SELECT DISTINCT gr.*, 
-          (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
-          CASE 
-            WHEN gr.status = 'in_progress' THEN 'active'
-            WHEN gr.status = 'finished' THEN 'finished'
-            ELSE 'waiting'
-          END as status
-        FROM game_rooms gr
-        INNER JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = $1
-        ORDER BY gr.created_at DESC
-        LIMIT 50
-      `
-      : `
-        SELECT DISTINCT gr.*, 
-          (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
-          CASE 
-            WHEN gr.status = 'in_progress' THEN 'active'
-            WHEN gr.status = 'finished' THEN 'finished'
-            ELSE 'waiting'
-          END as status
-        FROM game_rooms gr
-        INNER JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = ?
-        ORDER BY gr.created_at DESC
-        LIMIT 50
-      `
-    
+    const gamesQuery = `
+      SELECT DISTINCT gr.*, 
+        (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
+        CASE 
+          WHEN gr.status = 'in_progress' THEN 'active'
+          WHEN gr.status = 'finished' THEN 'finished'
+          ELSE 'waiting'
+        END as status
+      FROM game_rooms gr
+      INNER JOIN room_players rp ON gr.id = rp.room_id
+      WHERE rp.user_id = $1
+      ORDER BY gr.created_at DESC
+      LIMIT 50
+    `
+
     const result = await query(gamesQuery, [userId])
     return result.rows
   }

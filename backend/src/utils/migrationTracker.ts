@@ -79,7 +79,7 @@ export class MigrationTracker {
         WHERE status = 'completed' 
         ORDER BY executed_at ASC
       `)
-      
+
       return result.rows.map((row: any) => row.filename)
     } catch (error) {
       logger.error('❌ Failed to get applied migrations:', error)
@@ -93,7 +93,8 @@ export class MigrationTracker {
     }
 
     try {
-      await query(`
+      await query(
+        `
         INSERT INTO schema_migrations (filename, checksum, executed_at, execution_time_ms, status, rollback_sql)
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (filename) 
@@ -103,14 +104,16 @@ export class MigrationTracker {
           execution_time_ms = EXCLUDED.execution_time_ms,
           status = EXCLUDED.status,
           rollback_sql = EXCLUDED.rollback_sql
-      `, [
-        record.filename,
-        record.checksum,
-        record.executed_at,
-        record.execution_time_ms,
-        record.status,
-        record.rollback_sql
-      ])
+      `,
+        [
+          record.filename,
+          record.checksum,
+          record.executed_at,
+          record.execution_time_ms,
+          record.status,
+          record.rollback_sql,
+        ],
+      )
 
       logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`)
     } catch (error) {
@@ -125,11 +128,14 @@ export class MigrationTracker {
     }
 
     try {
-      const result = await query(`
+      const result = await query(
+        `
         SELECT filename, status, executed_at, execution_time_ms
         FROM schema_migrations 
         WHERE filename = $1
-      `, [filename])
+      `,
+        [filename],
+      )
 
       if (result.rows.length === 0) {
         return { filename, status: 'pending' }
@@ -140,7 +146,7 @@ export class MigrationTracker {
         filename: row.filename,
         status: row.status,
         executed_at: row.executed_at,
-        execution_time_ms: row.execution_time_ms
+        execution_time_ms: row.execution_time_ms,
       }
     } catch (error) {
       logger.error(`❌ Failed to get migration status for ${filename}:`, error)
@@ -159,9 +165,12 @@ export class MigrationTracker {
         return true // New migration, no integrity issues
       }
 
-      const result = await query(`
+      const result = await query(
+        `
         SELECT checksum FROM schema_migrations WHERE filename = $1
-      `, [filename])
+      `,
+        [filename],
+      )
 
       if (result.rows.length === 0) {
         return true
@@ -203,7 +212,7 @@ export class MigrationTracker {
         filename: row.filename,
         status: row.status,
         executed_at: row.executed_at,
-        execution_time_ms: row.execution_time_ms
+        execution_time_ms: row.execution_time_ms,
       }))
     } catch (error) {
       logger.error('❌ Failed to get all migration statuses:', error)
@@ -213,10 +222,13 @@ export class MigrationTracker {
 
   async rollbackMigration(filename: string): Promise<void> {
     try {
-      const result = await query(`
+      const result = await query(
+        `
         SELECT rollback_sql FROM schema_migrations 
         WHERE filename = $1 AND status = 'completed'
-      `, [filename])
+      `,
+        [filename],
+      )
 
       if (result.rows.length === 0) {
         throw new Error(`No completed migration found for rollback: ${filename}`)
@@ -231,11 +243,14 @@ export class MigrationTracker {
       await query(rollbackSql)
 
       // Mark as rolled back
-      await query(`
+      await query(
+        `
         UPDATE schema_migrations 
         SET status = 'rolled_back', executed_at = CURRENT_TIMESTAMP
         WHERE filename = $1
-      `, [filename])
+      `,
+        [filename],
+      )
 
       logger.info(`✅ Rolled back migration: ${filename}`)
     } catch (error) {

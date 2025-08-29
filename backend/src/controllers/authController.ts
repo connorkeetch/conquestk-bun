@@ -123,12 +123,12 @@ export class AuthController {
       return res.status(201).json({
         message: 'User created successfully',
         token,
-        user: { 
-          id: user.id, 
-          username: user.username, 
+        user: {
+          id: user.id,
+          username: user.username,
           email: user.email,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0
+          adminLevel: user.admin_level || 0,
         },
       })
     } catch (error) {
@@ -209,12 +209,12 @@ export class AuthController {
       return res.json({
         message: 'Login successful',
         token,
-        user: { 
-          id: user.id, 
-          username: user.username, 
+        user: {
+          id: user.id,
+          username: user.username,
           email: user.email,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0
+          adminLevel: user.admin_level || 0,
         },
       })
     } catch (error) {
@@ -243,7 +243,7 @@ export class AuthController {
           email: user.email,
           email_verified: user.email_verified,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0
+          adminLevel: user.admin_level || 0,
         },
       })
     } catch (error) {
