@@ -21,7 +21,7 @@ async function runMigrations() {
 
     // Get executed migrations
     const executed = await query('SELECT filename FROM migrations')
-    const executedFiles = new Set(executed.rows.map((r: any) => r.filename))
+    const executedFiles = new Set(executed.rows.map((r) => r.filename))
 
     // Run pending migrations
     for (const file of sqlFiles) {

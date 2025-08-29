@@ -1,9 +1,16 @@
 import mysql from 'mysql2/promise'
-import { Client, Pool } from 'pg'
+import { Client, Pool, QueryResult as PgQueryResult } from 'pg'
 import BetterSqlite3 from 'better-sqlite3'
 import { logger } from '../utils/logger'
 
 type DatabaseType = 'postgresql' | 'mysql' | 'sqlite'
+
+// Normalized query result interface that works across all database types
+export interface QueryResult<T = any> {
+  rows: T[]
+  rowCount: number | null
+  lastInsertRowid?: number | bigint
+}
 
 // Auto-detect database type from DATABASE_URL
 function detectDatabaseType(): DatabaseType {
@@ -157,13 +164,13 @@ else if (DB_TYPE === 'sqlite') {
 }
 
 // Generic query function that works with all database types
-export async function query(sql: string, params?: any[]): Promise<any> {
+export async function query<T = any>(sql: string, params?: any[]): Promise<QueryResult<T>> {
   try {
     // PostgreSQL
     if (DB_TYPE === 'postgresql' && pgPool) {
       const result = await pgPool.query(sql, params)
       return {
-        rows: result.rows,
+        rows: result.rows as T[],
         rowCount: result.rowCount,
       }
     }
@@ -172,7 +179,7 @@ export async function query(sql: string, params?: any[]): Promise<any> {
     if (DB_TYPE === 'mysql' && mysqlPool) {
       const [rows] = await mysqlPool.execute(sql, params || [])
       return {
-        rows: Array.isArray(rows) ? rows : [rows],
+        rows: (Array.isArray(rows) ? rows : [rows]) as T[],
         rowCount: (rows as any).affectedRows || (rows as any[]).length || 0,
       }
     }
@@ -183,7 +190,7 @@ export async function query(sql: string, params?: any[]): Promise<any> {
       if (sql.trim().toUpperCase().startsWith('SELECT')) {
         const rows = sqliteDb.prepare(sql).all(...(params || []))
         return {
-          rows,
+          rows: rows as T[],
           rowCount: rows.length,
         }
       } else if (
@@ -194,7 +201,7 @@ export async function query(sql: string, params?: any[]): Promise<any> {
         const stmt = sqliteDb.prepare(sql)
         const result = stmt.run(...(params || []))
         return {
-          rows: [],
+          rows: [] as T[],
           rowCount: result.changes,
           lastInsertRowid: result.lastInsertRowid,
         }
@@ -202,7 +209,7 @@ export async function query(sql: string, params?: any[]): Promise<any> {
         // For CREATE TABLE, DROP TABLE, etc.
         sqliteDb.exec(sql)
         return {
-          rows: [],
+          rows: [] as T[],
           rowCount: 0,
         }
       }

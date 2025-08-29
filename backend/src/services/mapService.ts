@@ -176,7 +176,7 @@ export class MapService {
       )
 
       const territories = territoriesResult.rows
-      const territoryIds = new Set(territories.map((t: any) => t.id))
+      const territoryIds = new Set(territories.map((t) => t.id))
 
       // Validate each player count configuration
       for (const [playerCount, capitals] of Object.entries(capitalTerritories)) {
@@ -205,8 +205,8 @@ export class MapService {
         // Check capitals are not adjacent (minimum 2 territories apart)
         for (let i = 0; i < capitals.length; i++) {
           for (let j = i + 1; j < capitals.length; j++) {
-            const territory1 = territories.find((t: any) => t.id === capitals[i])
-            const territory2 = territories.find((t: any) => t.id === capitals[j])
+            const territory1 = territories.find((t) => t.id === capitals[i])
+            const territory2 = territories.find((t) => t.id === capitals[j])
 
             if (territory1 && territory2) {
               const adjacencies1 = JSON.parse(territory1.adjacencies || '[]')
@@ -370,7 +370,7 @@ export class MapService {
       queryParams,
     )
 
-    const maps = mapsResult.rows.map((row: any) => this.formatMapFromDb(row))
+    const maps = mapsResult.rows.map((row) => this.formatMapFromDb(row))
     const hasMore = offset + limit < total
 
     return { maps, total, hasMore }
@@ -418,7 +418,7 @@ export class MapService {
       [mapId],
     )
 
-    return result.rows.map((row: any) => this.formatTerritoryFromDb(row))
+    return result.rows.map((row) => this.formatTerritoryFromDb(row))
   }
 
   async updateTerritory(
@@ -502,7 +502,7 @@ export class MapService {
     const result = await query('SELECT * FROM map_continents WHERE map_id = ? ORDER BY name', [
       mapId,
     ])
-    return result.rows.map((row: any) => this.formatContinentFromDb(row))
+    return result.rows.map((row) => this.formatContinentFromDb(row))
   }
 
   async getMapContinentBonuses(mapId: string): Promise<ContinentBonus[]> {
@@ -522,7 +522,7 @@ export class MapService {
       [mapId],
     )
 
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       bonusArmies: row.bonus_armies,
@@ -571,14 +571,14 @@ export class MapService {
       [mapId, mapId],
     )
 
-    return result.rows.map((row: any) => this.formatAdjacencyFromDb(row))
+    return result.rows.map((row) => this.formatAdjacencyFromDb(row))
   }
 
   // ============= GAME MODE OPERATIONS =============
 
   async getGameModes(): Promise<GameMode[]> {
     const result = await query('SELECT * FROM game_modes ORDER BY is_default DESC, name')
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -590,7 +590,7 @@ export class MapService {
 
   async getTerritoryAbilityTypes(): Promise<TerritoryAbilityType[]> {
     const result = await query('SELECT * FROM territory_ability_types ORDER BY name')
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
