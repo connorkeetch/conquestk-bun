@@ -147,49 +147,187 @@ npm start                      # Start production server
 - Backend TypeScript compiles to `backend/dist/`
 - Static assets served from Express in production
 
-## 🔧 MCP Servers Available
-Your toolkit of powerful MCP servers - **USE THEM PROACTIVELY!**
+## 🚀 MCP Servers - USE THEM LIBERALLY!
 
-### Core Tools
-- **context7** (`mcp__context7__`): Get exact library docs & code examples - USE BEFORE implementing!
-- **filesystem** (`mcp__filesystem__`): Advanced file operations
-- **memory** (`mcp__memory__`): Knowledge graph for project context
-- **github** (`mcp__github__`): Repository operations and PR management
-- **fetch** (`mcp__fetch__`): Web content retrieval
-- **puppeteer** (`mcp__puppeteer__`): Browser automation for testing
-- **sequential-thinking** (`mcp__sequential-thinking__`): Step-by-step problem solving
+**CRITICAL**: Your knowledge ended in 2024 - it's now August 2025! Always use these servers, especially context7 for up-to-date package info.
 
-### Zen Tools (Your AI Assistants!)
-When stuck or need help, these are your go-to tools:
-- **chat** (`mcp__zen__chat`): Brainstorm with AI models (Gemini, GPT, etc.)
-- **debug** (`mcp__zen__debug`): Systematic bug hunting - USE when stuck!
-- **thinkdeep** (`mcp__zen__thinkdeep`): Complex problem analysis
-- **planner** (`mcp__zen__planner`): Break down complex tasks
-- **consensus** (`mcp__zen__consensus`): Get multiple AI perspectives
-- **analyze** (`mcp__zen__analyze`): Code architecture analysis
-- **refactor** (`mcp__zen__refactor`): Find improvement opportunities
-- **codereview** (`mcp__zen__codereview`): Comprehensive code review
-- **precommit** (`mcp__zen__precommit`): Validate before committing
-- **secaudit** (`mcp__zen__secaudit`): Security vulnerability scanning
-- **testgen** (`mcp__zen__testgen`): Generate comprehensive tests
-- **tracer** (`mcp__zen__tracer`): Trace code execution paths
-
-### Usage Examples
-```
-# Stuck on a bug? Use debug!
-mcp__zen__debug - "User login fails intermittently"
-
-# Need exact React syntax? Use context7!
-mcp__context7__get-library-docs - "React hooks useEffect"
-
-# Complex feature? Plan it out!
-mcp__zen__planner - "Implement real-time multiplayer"
-
-# Not sure about approach? Get consensus!
-mcp__zen__consensus - "Should we use WebSockets or SSE?"
+### 🧠 Sequential Thinking (`mcp__sequential-thinking__`)
+**When**: Complex problems, debugging, architecture decisions
+**Usage**: Break down problems step-by-step
+```typescript
+// Example: Analyzing a complex bug
+mcp__sequential-thinking__sequentialthinking
+- thought: "User reports game state corruption. Let me analyze: 1) What actions lead to this? 2) Where is state mutated?"
+- nextThoughtNeeded: true
+- thoughtNumber: 1
+- totalThoughts: 5
 ```
 
-**REMEMBER**: These tools are your superpowers - use them early and often!
+### 📚 Context7 (`mcp__context7__`) - USE BEFORE ANY CODE!
+**When**: ALWAYS before implementing ANY library/framework code
+**Why**: Your training ended in 2024 - packages have changed!
+```typescript
+// ALWAYS do this first:
+mcp__context7__resolve-library-id - "React"
+mcp__context7__get-library-docs - "/facebook/react/v19.0.0" - "hooks useState useEffect"
+
+// Before using ANY package:
+mcp__context7__get-library-docs - "Socket.io v4.7" - "emit rooms authentication"
+mcp__context7__get-library-docs - "PostgreSQL pg" - "Pool query transactions"
+```
+
+### 🎭 Playwright (`mcp__playwright__`)
+**When**: Testing UI, E2E tests, verifying user flows
+```typescript
+// Navigate and test
+mcp__playwright__browser_navigate - { url: "http://localhost:5173" }
+mcp__playwright__browser_snapshot // Get page state
+mcp__playwright__browser_click - { element: "Login button", ref: "button[type=submit]" }
+mcp__playwright__browser_type - { element: "Email input", ref: "input[name=email]", text: "test@example.com" }
+mcp__playwright__browser_take_screenshot - { filename: "login-test.png" }
+```
+
+### 💾 Memory (`mcp__memory__`)
+**When**: Store/retrieve project context, decisions, patterns
+```typescript
+// Store important decisions
+mcp__memory__create_entities - [{
+  name: "PostgreSQL Migration",
+  entityType: "Architecture Decision",
+  observations: ["Migrated from SQLite", "Railway hosted", "Connection pooling needed"]
+}]
+
+// Search for context
+mcp__memory__search_nodes - "database performance"
+mcp__memory__open_nodes - ["PostgreSQL Migration"]
+```
+
+### 🌐 Fetch (`mcp__fetch__`)
+**When**: Get latest docs, check package versions, research
+```typescript
+// Get latest package info
+mcp__fetch__fetch - { 
+  url: "https://www.npmjs.com/package/react",
+  raw: false 
+}
+
+// Check latest best practices
+mcp__fetch__fetch - { 
+  url: "https://react.dev/learn/synchronizing-with-effects",
+  max_length: 5000 
+}
+```
+
+### ⏰ Time (`mcp__time__`)
+**When**: ALWAYS for dates/times - you think it's 2024!
+```typescript
+// Always check current time
+mcp__time__get_current_time - { timezone: "America/Denver" }
+// Returns: "2025-08-29T15:30:00-06:00" - NOT 2024!
+
+mcp__time__convert_time - {
+  source_timezone: "America/Denver",
+  target_timezone: "UTC",
+  time: "15:30"
+}
+```
+
+### 📂 Filesystem (`mcp__filesystem__`)
+**When**: Advanced file operations, bulk changes
+```typescript
+// Read multiple files at once
+mcp__filesystem__read_multiple_files - {
+  paths: ["package.json", "backend/package.json", "frontend/package.json"]
+}
+
+// Search for patterns
+mcp__filesystem__search_files - {
+  path: "./src",
+  pattern: "*.test.ts",
+  excludePatterns: ["node_modules"]
+}
+
+// Get file metadata
+mcp__filesystem__get_file_info - { path: "./backend/dist/index.js" }
+```
+
+### 🐙 GitHub (`mcp__github__`)
+**When**: PRs, issues, repository management
+```typescript
+// Create issue for bugs found
+mcp__github__create_issue - {
+  owner: "connorkeetch",
+  repo: "risk-game",
+  title: "Add database indexes for performance",
+  body: "Missing indexes on frequently queried columns",
+  labels: ["enhancement", "performance"]
+}
+
+// Search for similar issues
+mcp__github__search_issues - {
+  q: "repo:connorkeetch/risk-game is:open performance"
+}
+```
+
+### 🔄 Git (`mcp__git__`)
+**When**: Version control operations
+```typescript
+// Check changes before committing
+mcp__git__git_status - { repo_path: "." }
+mcp__git__git_diff_unstaged - { repo_path: ".", context_lines: 3 }
+
+// Create branch for feature
+mcp__git__git_create_branch - {
+  repo_path: ".",
+  branch_name: "feature/add-database-indexes",
+  base_branch: "main"
+}
+```
+
+### 🤖 When to Use Each Server
+
+| Task | Use These Servers |
+|------|-------------------|
+| **Before ANY coding** | `context7` - Get 2025 syntax! |
+| **Debugging** | `sequential-thinking` → `playwright` → `memory` |
+| **New feature** | `sequential-thinking` → `context7` → `memory` |
+| **Testing** | `playwright` → `filesystem` → `git` |
+| **Research** | `fetch` → `context7` → `memory` |
+| **Dates/Times** | `time` - ALWAYS! (it's 2025, not 2024) |
+| **Code review** | `filesystem` → `sequential-thinking` → `github` |
+
+### ⚡ Power Combos
+
+**Feature Implementation**:
+1. `sequential-thinking` - Plan the approach
+2. `context7` - Get latest API docs
+3. `memory` - Store decisions
+4. `filesystem` - Read existing code
+5. Code implementation
+6. `playwright` - Test the feature
+7. `git` - Commit changes
+
+**Debugging Session**:
+1. `sequential-thinking` - Analyze the problem
+2. `filesystem` - Search for related code
+3. `memory` - Check previous similar issues
+4. `playwright` - Reproduce the bug
+5. Fix the issue
+6. `playwright` - Verify the fix
+
+**Package Updates**:
+1. `time` - Check current date (2025!)
+2. `fetch` - Get latest versions from npm
+3. `context7` - Get updated syntax/APIs
+4. `filesystem` - Update package.json files
+5. Test everything
+
+### 🎯 REMEMBER
+- **Your knowledge is outdated** - Use `context7` for EVERYTHING
+- **It's 2025** - Use `time` server for dates
+- **Think step-by-step** - Use `sequential-thinking` for complex tasks
+- **Test everything** - Use `playwright` to verify
+- **Store context** - Use `memory` to remember decisions
 
 ## 🔀 Common Development Patterns
 
@@ -216,9 +354,10 @@ mcp__zen__consensus - "Should we use WebSockets or SSE?"
 - **Update Redux**: Dispatch actions in socket event listeners
 
 ### Database Migrations
-- Development: Direct SQLite file modifications OK
-- Production: Create migration scripts in `backend/migrations/`
-- Always update both `.env.development` and `.env.production` examples
+- PostgreSQL only - no more SQLite
+- Development: Railway dev database
+- Production: Railway production database
+- Migration file: `backend/migrations/postgres/001_complete_schema.sql`
 
 ## ⚠️ Common Pitfalls to Avoid
 - **Don't mix Tailwind with inline styles** - Use Tailwind classes only
