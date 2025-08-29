@@ -3,7 +3,6 @@ import type { User } from '../types/user'
 
 export class UserService {
   async create(userData: any): Promise<User> {
-    // MySQL and SQLite both use ? placeholders
     // Try with email verification columns first
     try {
       const insertQuery = `

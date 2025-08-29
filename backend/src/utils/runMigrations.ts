@@ -9,7 +9,7 @@ async function runMigrations() {
     // Create migrations tracking table if it doesn't exist
     await query(`
       CREATE TABLE IF NOT EXISTS migrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         filename VARCHAR(255) NOT NULL UNIQUE,
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -38,10 +38,10 @@ async function runMigrations() {
           try {
             await query(statement)
           } catch (err: any) {
-            // SQLite doesn't support IF NOT EXISTS for ALTER TABLE
-            // Skip errors about duplicate columns
+            // Skip errors about duplicate columns or existing objects
             if (
               err.message?.includes('duplicate column') ||
+              err.message?.includes('already exists') ||
               (err.message?.includes('syntax error') && statement.includes('IF NOT EXISTS'))
             ) {
             } else {
@@ -51,7 +51,7 @@ async function runMigrations() {
         }
 
         // Record migration as executed
-        await query('INSERT INTO migrations (filename) VALUES (?)', [file])
+        await query('INSERT INTO migrations (filename) VALUES ($1)', [file])
       }
     }
   } catch (_error) {

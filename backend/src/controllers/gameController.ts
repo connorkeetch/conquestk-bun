@@ -98,9 +98,9 @@ export class GameController {
 
       // Get user's games from the service
       const games = await this.gameRoomService.getUserGames(userId)
-      
+
       // Format games for the frontend
-      const formattedGames = games.map(game => ({
+      const formattedGames = games.map((game) => ({
         id: game.id,
         name: game.name,
         status: game.status || (game.gameStarted ? 'active' : 'waiting'),
@@ -108,7 +108,7 @@ export class GameController {
         maxPlayers: game.maxPlayers,
         isYourTurn: game.currentTurnUserId === userId,
         winner: game.winner || null,
-        createdAt: game.createdAt
+        createdAt: game.createdAt,
       }))
 
       return res.json({ games: formattedGames })

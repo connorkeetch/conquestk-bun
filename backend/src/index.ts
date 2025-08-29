@@ -10,6 +10,7 @@ import express from 'express'
 import helmet from 'helmet'
 import { Server } from 'socket.io'
 import { initDatabase } from './config/database'
+import { logStartupDiagnostics, testDatabaseConnection, testMigrationFiles } from './debugStartup'
 import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter'
 import adminRoutes from './routes/admin'
 import { authRoutes } from './routes/auth'
@@ -21,9 +22,8 @@ import skillsRoutes from './routes/skills'
 import userRoutes from './routes/users'
 import { setupSocketHandlers } from './services/socketService'
 import { ensureTablesExist } from './utils/initTables'
-import { MigrationRunner } from './utils/migrationRunner'
 import { logger } from './utils/logger'
-import { logStartupDiagnostics, testDatabaseConnection, testMigrationFiles } from './debugStartup'
+import { MigrationRunner } from './utils/migrationRunner'
 
 const app = express()
 const server = createServer(app)
@@ -109,14 +109,14 @@ app.get('/test', (_req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'unknown',
     nodeVersion: process.version,
-    memory: process.memoryUsage()
+    memory: process.memoryUsage(),
   })
 })
 
 app.get('/health', async (_req, res) => {
   let databaseStatus = 'unknown'
   let databaseError = null
-  
+
   try {
     const { query } = await import('./config/database')
     await query('SELECT 1')
@@ -125,7 +125,7 @@ app.get('/health', async (_req, res) => {
     databaseStatus = 'disconnected'
     databaseError = error instanceof Error ? error.message : 'Unknown error'
   }
-  
+
   // Always return 200 OK for server health, but include database status
   res.json({
     status: 'OK',
@@ -134,14 +134,13 @@ app.get('/health', async (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
     databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
     timestamp: new Date().toISOString(),
-    ...(databaseError && { databaseError })
+    ...(databaseError && { databaseError }),
   })
 })
 
 app.get('/debug/env', (_req, res) => {
   res.json({
     NODE_ENV: process.env.NODE_ENV,
-    DB_TYPE: process.env.DB_TYPE,
     DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
     DB_HOST: process.env.DB_HOST || 'NOT_SET',
     DB_NAME: process.env.DB_NAME || 'NOT_SET',
@@ -220,7 +219,7 @@ app.get('/debug/migrations', async (_req, res) => {
   try {
     const migrationRunner = new MigrationRunner()
     const migrationStatus = await migrationRunner.getMigrationStatus()
-    
+
     res.json({
       status: 'OK',
       migrations: migrationStatus,
@@ -278,14 +277,13 @@ if (process.env.NODE_ENV === 'production') {
 
 setupSocketHandlers(io)
 
-
 async function startServer() {
   try {
     logger.info('🚀 Starting Risk Game server...')
-    
+
     // Log comprehensive diagnostics
     logStartupDiagnostics()
-    
+
     // Start the HTTP server first (should always work)
     // IMPORTANT: Bind to 0.0.0.0 for Railway deployment
     const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT
@@ -295,22 +293,22 @@ async function startServer() {
       logger.info(`📊 Test endpoint: http://localhost:${portNumber}/test`)
       logger.info(`📊 Health check: http://localhost:${portNumber}/health`)
       logger.info(`📅 Server started at: ${new Date().toISOString()}`)
-      
+
       // Don't await database setup - let it happen in background
       setImmediate(async () => {
         try {
           // First, test if we can even connect to the database
           logger.info('🔄 Testing database connection...')
           const canConnect = await testDatabaseConnection()
-          
+
           if (!canConnect) {
             logger.error('❌ Cannot connect to database - server running without database')
             return
           }
-          
+
           // Check migration files exist
           await testMigrationFiles()
-          
+
           // Now try the actual initialization
           logger.info('🔄 Initializing database connection pool...')
           await initDatabase()
@@ -323,19 +321,19 @@ async function startServer() {
           // Run our enhanced migration system
           const migrationRunner = new MigrationRunner()
           logger.info('🔄 Starting migration system...')
-          
+
           try {
             await migrationRunner.runPendingMigrations()
-            
+
             // Validate schema integrity after migrations
             const isValid = await migrationRunner.validateSchemaIntegrity()
             if (!isValid) {
               throw new Error('Schema validation failed after migrations')
             }
-            
+
             logger.info('✅ All migrations completed and schema validated')
             logger.info('🗄️  Database: PostgreSQL with migration tracking')
-            
+
             if (process.env.NODE_ENV === 'production') {
               logger.info('🌐 Production deployment ready at https://conquestk.com')
               logger.info('🎮 All game features and admin functionality should be available')
@@ -343,7 +341,9 @@ async function startServer() {
           } catch (migrationError) {
             logger.error('❌ Migration system failed:', migrationError)
             logger.warn('⚠️  Server running with potential schema issues...')
-            logger.error('💡 Some features may not work correctly until database is properly configured')
+            logger.error(
+              '💡 Some features may not work correctly until database is properly configured',
+            )
           }
         } catch (dbError: any) {
           logger.error('❌ Database initialization failed:', dbError)
@@ -356,7 +356,7 @@ async function startServer() {
           logger.error('💡 Database features unavailable')
           logger.error('💡 Check /test endpoint to verify server is running')
           logger.error('💡 Check /debug/env for environment variables')
-          
+
           if (process.env.NODE_ENV === 'production') {
             logger.info('🚧 Server in degraded mode - database unavailable')
           }

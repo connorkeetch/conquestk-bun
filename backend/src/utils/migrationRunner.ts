@@ -1,8 +1,8 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { query } from '../config/database'
 import { logger } from './logger'
-import { MigrationTracker, type MigrationRecord } from './migrationTracker'
+import { type MigrationRecord, MigrationTracker } from './migrationTracker'
 
 export class MigrationRunner {
   private migrationTracker: MigrationTracker
@@ -16,35 +16,35 @@ export class MigrationRunner {
   async runPendingMigrations(): Promise<void> {
     try {
       logger.info('🔄 Starting migration system...')
-      
+
       // Ensure migration tracking table exists
       await this.migrationTracker.createTrackingTable()
-      
+
       // Get all migration files
       const availableMigrations = this.getAvailableMigrations()
       const appliedMigrations = await this.migrationTracker.getAppliedMigrations()
-      
+
       // Find pending migrations
       const pendingMigrations = availableMigrations.filter(
-        migration => !appliedMigrations.includes(migration)
+        (migration) => !appliedMigrations.includes(migration),
       )
-      
+
       if (pendingMigrations.length === 0) {
         logger.info('✅ All migrations are up to date')
         return
       }
-      
-      logger.info(`📋 Found ${pendingMigrations.length} pending migrations:`,
-        pendingMigrations.map(m => `  - ${m}`).join('\n')
+
+      logger.info(
+        `📋 Found ${pendingMigrations.length} pending migrations:`,
+        pendingMigrations.map((m) => `  - ${m}`).join('\n'),
       )
-      
+
       // Run each pending migration
       for (const migrationFile of pendingMigrations) {
         await this.runSingleMigration(migrationFile)
       }
-      
+
       logger.info('🎯 All pending migrations completed successfully')
-      
     } catch (error) {
       logger.error('❌ Migration system failed:', error)
       throw error
@@ -54,80 +54,85 @@ export class MigrationRunner {
   async runSingleMigration(migrationFile: string): Promise<void> {
     const startTime = Date.now()
     let migrationSQL: string | undefined
-    
+
     try {
       // Validate migration integrity
       const isValid = await this.migrationTracker.validateMigrationIntegrity(migrationFile)
       if (!isValid) {
         throw new Error(`Migration integrity check failed: ${migrationFile}`)
       }
-      
+
       // Read migration file
       const migrationPath = join(this.migrationsPath, migrationFile)
       const originalSQL = readFileSync(migrationPath, 'utf8')
-      
+
       // Log original SQL characteristics
       logger.info(`📄 Processing migration: ${migrationFile}`)
       logger.info(`  Original SQL length: ${originalSQL.length} characters`)
-      logger.info(`  Contains SQLite UUID patterns: ${originalSQL.includes('randomblob') ? 'YES' : 'NO'}`)
-      logger.info(`  Contains TEXT PRIMARY KEY: ${originalSQL.includes('TEXT PRIMARY KEY') ? 'YES' : 'NO'}`)
-      
-      // Convert SQLite syntax to PostgreSQL if needed
-      migrationSQL = this.convertSqliteToPostgreSQL(originalSQL)
-      
+      logger.info(
+        `  Contains legacy UUID patterns: ${originalSQL.includes('randomblob') ? 'YES' : 'NO'}`,
+      )
+      logger.info(
+        `  Contains TEXT PRIMARY KEY: ${originalSQL.includes('TEXT PRIMARY KEY') ? 'YES' : 'NO'}`,
+      )
+
+      // Convert legacy syntax to PostgreSQL if needed
+      migrationSQL = this.convertLegacyToPostgreSQL(originalSQL)
+
       // Log conversion results
       logger.info(`  Converted SQL length: ${migrationSQL.length} characters`)
       logger.info(`  UUID conversions applied: ${originalSQL !== migrationSQL ? 'YES' : 'NO'}`)
-      
+
       // Log first 500 chars of converted SQL for debugging (without sensitive data)
       if (originalSQL !== migrationSQL) {
         const preview = migrationSQL.substring(0, 500).replace(/\n/g, ' ')
         logger.info(`  Converted SQL preview: ${preview}...`)
       }
-      
+
       logger.info(`🔧 Executing migration: ${migrationFile}`)
-      
+
       // Execute migration in a transaction
       await this.executeInTransaction(migrationSQL, migrationFile)
-      
+
       // Record successful migration
       const executionTime = Date.now() - startTime
       const checksum = this.migrationTracker.calculateChecksum(migrationSQL)
-      
+
       const record: MigrationRecord = {
         filename: migrationFile,
         checksum,
         executed_at: new Date(),
         execution_time_ms: executionTime,
         status: 'completed',
-        rollback_sql: this.generateRollbackHints(migrationSQL)
+        rollback_sql: this.generateRollbackHints(migrationSQL),
       }
-      
+
       await this.migrationTracker.markMigrationCompleted(record)
-      
+
       logger.info(`✅ Migration completed: ${migrationFile} (${executionTime}ms)`)
-      
     } catch (error) {
       const executionTime = Date.now() - startTime
-      
+
       logger.error(`❌ Migration failed: ${migrationFile}`, error)
-      
+
       // Record failed migration
       try {
-        const checksum = migrationSQL ? this.migrationTracker.calculateChecksum(migrationSQL) : 'unknown'
+        const checksum = migrationSQL
+          ? this.migrationTracker.calculateChecksum(migrationSQL)
+          : 'unknown'
         const record: MigrationRecord = {
           filename: migrationFile,
           checksum,
           executed_at: new Date(),
           execution_time_ms: executionTime,
-          status: 'failed'
+          status: 'failed',
         }
-        
+
         await this.migrationTracker.markMigrationCompleted(record)
       } catch (trackingError) {
         logger.error('❌ Failed to record migration failure:', trackingError)
       }
-      
+
       throw error
     }
   }
@@ -138,9 +143,11 @@ export class MigrationRunner {
         logger.warn('⚠️  Migrations directory not found')
         return []
       }
-      
+
       return readdirSync(this.migrationsPath)
-        .filter(file => file.endsWith('.sql') && !file.includes('_mysql'))
+        .filter(
+          (file) => file.endsWith('.sql') && !file.includes('_mysql') && !file.includes('_sqlite'),
+        )
         .sort() // Ensure migrations run in order
     } catch (error) {
       logger.error('❌ Failed to read migrations directory:', error)
@@ -148,27 +155,34 @@ export class MigrationRunner {
     }
   }
 
-  private convertSqliteToPostgreSQL(migrationSQL: string): string {
+  private convertLegacyToPostgreSQL(migrationSQL: string): string {
     let convertedSQL = migrationSQL
-    
+
     // IMPORTANT: Convert UUID generation patterns FIRST, before changing TEXT to UUID
     // This prevents double DEFAULT clauses
-    
-    // Convert complex SQLite UUID v4 pattern to PostgreSQL
-    const sqliteUuidV4Regex = /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)\)/g
-    convertedSQL = convertedSQL.replace(sqliteUuidV4Regex, 'DEFAULT uuid_generate_v4()')
-    
-    // Convert simple SQLite UUID pattern (randomblob(16)) to PostgreSQL
-    const sqliteSimpleUuidRegex = /DEFAULT \(lower\(hex\(randomblob\(16\)\)\)\)/g
-    convertedSQL = convertedSQL.replace(sqliteSimpleUuidRegex, 'DEFAULT uuid_generate_v4()')
-    
+
+    // Convert complex legacy UUID v4 pattern to PostgreSQL
+    const legacyUuidV4Regex =
+      /DEFAULT \(lower\(hex\(randomblob\(4\)\)\) \|\| '-' \|\| lower\(hex\(randomblob\(2\)\)\) \|\| '-4' \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| substr\('ab89',1\+abs\(random\(\)\)%4,1\) \|\| substr\(lower\(hex\(randomblob\(2\)\)\),2\) \|\| '-' \|\| lower\(hex\(randomblob\(6\)\)\)\)/g
+    convertedSQL = convertedSQL.replace(legacyUuidV4Regex, 'DEFAULT uuid_generate_v4()')
+
+    // Convert simple legacy UUID pattern (randomblob(16)) to PostgreSQL
+    const legacySimpleUuidRegex = /DEFAULT \(lower\(hex\(randomblob\(16\)\)\)\)/g
+    convertedSQL = convertedSQL.replace(legacySimpleUuidRegex, 'DEFAULT uuid_generate_v4()')
+
     // Now convert TEXT PRIMARY KEY fields to UUID PRIMARY KEY
     // Handle cases WITH existing DEFAULT clause (already converted above)
-    convertedSQL = convertedSQL.replace(/(\w+) TEXT PRIMARY KEY DEFAULT uuid_generate_v4\(\)/g, '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()')
-    
+    convertedSQL = convertedSQL.replace(
+      /(\w+) TEXT PRIMARY KEY DEFAULT uuid_generate_v4\(\)/g,
+      '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()',
+    )
+
     // Handle cases WITHOUT DEFAULT clause
-    convertedSQL = convertedSQL.replace(/(\w+) TEXT PRIMARY KEY(?! DEFAULT)/g, '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()')
-    
+    convertedSQL = convertedSQL.replace(
+      /(\w+) TEXT PRIMARY KEY(?! DEFAULT)/g,
+      '$1 UUID PRIMARY KEY DEFAULT uuid_generate_v4()',
+    )
+
     // Convert foreign key TEXT fields to UUID
     convertedSQL = convertedSQL.replace(/user_id TEXT/g, 'user_id UUID')
     convertedSQL = convertedSQL.replace(/creator_id TEXT/g, 'creator_id UUID')
@@ -180,67 +194,71 @@ export class MigrationRunner {
     convertedSQL = convertedSQL.replace(/ability_type_id TEXT/g, 'ability_type_id UUID')
     convertedSQL = convertedSQL.replace(/from_territory_id TEXT/g, 'from_territory_id UUID')
     convertedSQL = convertedSQL.replace(/to_territory_id TEXT/g, 'to_territory_id UUID')
-    
+
     // Remove AUTOINCREMENT (PostgreSQL uses SERIAL)
     convertedSQL = convertedSQL.replace(/AUTOINCREMENT/g, '')
-    
+
     // Convert DATETIME to TIMESTAMP (PostgreSQL standard)
     convertedSQL = convertedSQL.replace(/DATETIME/g, 'TIMESTAMP')
-    
+
     // Convert TEXT to appropriate PostgreSQL types for JSON fields
-    convertedSQL = convertedSQL.replace(/TEXT DEFAULT '\[\]'/g, 'JSONB DEFAULT \'[]\'')
-    convertedSQL = convertedSQL.replace(/TEXT DEFAULT '\{\}'/g, 'JSONB DEFAULT \'{}\'')
-    
-    // Handle SQLite INSERT OR IGNORE - convert to ON CONFLICT DO NOTHING
+    convertedSQL = convertedSQL.replace(/TEXT DEFAULT '\[\]'/g, "JSONB DEFAULT '[]'")
+    convertedSQL = convertedSQL.replace(/TEXT DEFAULT '\{\}'/g, "JSONB DEFAULT '{}'")
+
+    // Handle legacy INSERT OR IGNORE - convert to ON CONFLICT DO NOTHING
     convertedSQL = convertedSQL.replace(/INSERT OR IGNORE/g, 'INSERT')
-    
+
     // Add ON CONFLICT DO NOTHING for INSERT statements that might conflict
-    if (convertedSQL.includes('INSERT INTO game_modes') || 
-        convertedSQL.includes('INSERT INTO territory_ability_types') ||
-        convertedSQL.includes('INSERT INTO map_status')) {
+    if (
+      convertedSQL.includes('INSERT INTO game_modes') ||
+      convertedSQL.includes('INSERT INTO territory_ability_types') ||
+      convertedSQL.includes('INSERT INTO map_status')
+    ) {
       // These inserts typically have unique constraints
       convertedSQL = convertedSQL.replace(
         /(INSERT INTO (?:game_modes|territory_ability_types|map_status)[^;]+);/g,
-        '$1 ON CONFLICT DO NOTHING;'
+        '$1 ON CONFLICT DO NOTHING;',
       )
     }
-    
+
     return convertedSQL
   }
 
   private async executeInTransaction(migrationSQL: string, migrationFile: string): Promise<void> {
     // Begin transaction
     await query('BEGIN')
-    
+
     try {
       // Enable uuid-ossp extension if not exists (for UUID generation)
       logger.info('  Enabling uuid-ossp extension...')
       await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
-      
+
       // Split migration into individual statements
       const statements = this.splitMigrationStatements(migrationSQL)
       logger.info(`  Migration contains ${statements.length} SQL statements`)
-      
+
       // Execute each statement
       let statementCount = 0
       for (const statement of statements) {
         if (statement.trim()) {
           statementCount++
           const statementPreview = statement.substring(0, 100).replace(/\n/g, ' ')
-          
+
           try {
-            logger.debug(`  Executing statement ${statementCount}/${statements.length}: ${statementPreview}...`)
+            logger.debug(
+              `  Executing statement ${statementCount}/${statements.length}: ${statementPreview}...`,
+            )
             await query(statement)
           } catch (error) {
             // Check if it's an acceptable error (table exists, etc.)
             const errorMessage = (error as any).message || ''
             const errorCode = (error as any).code || ''
-            
+
             if (this.isAcceptableError(errorMessage, statement)) {
               logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`)
               continue
             }
-            
+
             // Log detailed error information
             logger.error(`  ❌ Statement ${statementCount} failed:`)
             logger.error(`     Error code: ${errorCode}`)
@@ -251,10 +269,9 @@ export class MigrationRunner {
           }
         }
       }
-      
+
       // Commit transaction
       await query('COMMIT')
-      
     } catch (error) {
       // Rollback transaction on any error
       await query('ROLLBACK')
@@ -268,26 +285,29 @@ export class MigrationRunner {
     let inFunction = false
     let inTrigger = false
     let dollarQuoteCount = 0
-    
+
     const lines = migrationSQL.split('\n')
     for (const line of lines) {
       const trimmedLine = line.trim().toUpperCase()
-      
+
       // Track dollar-quoted strings (PostgreSQL function syntax)
       const dollarMatches = line.match(/\$\$|\$[a-zA-Z_][a-zA-Z0-9_]*\$/g)
       if (dollarMatches) {
         dollarQuoteCount += dollarMatches.length
       }
-      
+
       // Detect function/trigger blocks
-      if (trimmedLine.includes('CREATE FUNCTION') || trimmedLine.includes('CREATE OR REPLACE FUNCTION')) {
+      if (
+        trimmedLine.includes('CREATE FUNCTION') ||
+        trimmedLine.includes('CREATE OR REPLACE FUNCTION')
+      ) {
         inFunction = true
       } else if (trimmedLine.includes('CREATE TRIGGER')) {
         inTrigger = true
       }
-      
+
       currentStatement += `${line}\n`
-      
+
       // Check for statement end
       if (line.trim().endsWith(';')) {
         if (inFunction && dollarQuoteCount % 2 === 0) {
@@ -310,12 +330,12 @@ export class MigrationRunner {
         }
       }
     }
-    
+
     // Add any remaining statement
     if (currentStatement.trim()) {
       statements.push(currentStatement.trim())
     }
-    
+
     return statements
   }
 
@@ -329,27 +349,27 @@ export class MigrationRunner {
       'constraint already exists',
       'extension "uuid-ossp" already exists',
       'column already exists',
-      'table already exists'
+      'table already exists',
     ]
-    
+
     const acceptableStatements = [
       'CREATE TABLE IF NOT EXISTS',
       'CREATE INDEX IF NOT EXISTS',
-      'INSERT',  // For ON CONFLICT DO NOTHING
+      'INSERT', // For ON CONFLICT DO NOTHING
       'ALTER TABLE',
       'DROP TABLE IF EXISTS',
       'CREATE EXTENSION IF NOT EXISTS',
-      'CREATE OR REPLACE FUNCTION'
+      'CREATE OR REPLACE FUNCTION',
     ]
-    
-    const hasAcceptableError = acceptableErrors.some(error => 
-      errorMessage.toLowerCase().includes(error)
+
+    const hasAcceptableError = acceptableErrors.some((error) =>
+      errorMessage.toLowerCase().includes(error),
     )
-    
-    const hasAcceptableStatement = acceptableStatements.some(stmt => 
-      statement.toUpperCase().includes(stmt)
+
+    const hasAcceptableStatement = acceptableStatements.some((stmt) =>
+      statement.toUpperCase().includes(stmt),
     )
-    
+
     return hasAcceptableError || hasAcceptableStatement
   }
 
@@ -357,10 +377,10 @@ export class MigrationRunner {
     // Generate basic rollback hints (not full rollback SQL)
     const hints: string[] = []
     const lines = migrationSQL.split('\n')
-    
+
     for (const line of lines) {
       const trimmedLine = line.trim().toUpperCase()
-      
+
       if (trimmedLine.startsWith('CREATE TABLE')) {
         const match = trimmedLine.match(/CREATE TABLE (?:IF NOT EXISTS )?([\\w_]+)/)
         if (match) {
@@ -374,7 +394,7 @@ export class MigrationRunner {
         }
       }
     }
-    
+
     return hints.join('\n')
   }
 
@@ -382,22 +402,25 @@ export class MigrationRunner {
     try {
       // Basic validation - check if key tables exist
       const keyTables = ['users', 'game_rooms', 'game_states', 'maps', 'user_admin_roles']
-      
+
       for (const tableName of keyTables) {
-        const result = await query(`
+        const result = await query(
+          `
           SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public' 
             AND table_name = $1
           )
-        `, [tableName])
-        
+        `,
+          [tableName],
+        )
+
         if (!result.rows[0].exists) {
           logger.error(`❌ Schema validation failed: Missing table ${tableName}`)
           return false
         }
       }
-      
+
       logger.info('✅ Schema integrity validation passed')
       return true
     } catch (error) {
@@ -414,15 +437,17 @@ export class MigrationRunner {
 // Legacy function - use MigrationRunner class instead
 export async function runMigrations() {
   logger.warn('⚠️  Using legacy runMigrations - consider using MigrationRunner class')
-  
+
   const migrationRunner = new MigrationRunner()
   await migrationRunner.runPendingMigrations()
 }
 
-// Legacy function - use MigrationRunner class instead  
+// Legacy function - use MigrationRunner class instead
 export async function runMigration(migrationFile: string) {
-  logger.warn(`⚠️  Using legacy runMigration for ${migrationFile} - consider using MigrationRunner class`)
-  
+  logger.warn(
+    `⚠️  Using legacy runMigration for ${migrationFile} - consider using MigrationRunner class`,
+  )
+
   const migrationRunner = new MigrationRunner()
   await migrationRunner.runSingleMigration(migrationFile)
 }
