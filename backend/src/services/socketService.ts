@@ -1,20 +1,28 @@
 import jwt from 'jsonwebtoken'
 import type { Server, Socket } from 'socket.io'
+import type { 
+  ServerToClientEvents, 
+  ClientToServerEvents,
+  GameState,
+  BattleResult,
+  GamePhase
+} from '../../../shared/types'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { eloService, type PlayerRating } from './eloService'
 import { GameService } from './gameService'
 
-interface AuthenticatedSocket extends Socket {
+interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
   username?: string
 }
 
 // Error handler wrapper for socket events
-function handleSocketError(socket: Socket, eventName: string, error: any) {
+function handleSocketError(socket: Socket, eventName: string, error: unknown) {
+  const err = error as Error
   logger.error(`Socket error in ${eventName}:`, {
-    error: error.message || error,
-    stack: error.stack,
+    error: err.message || error,
+    stack: err.stack,
     userId: (socket as AuthenticatedSocket).userId,
     socketId: socket.id,
   })
@@ -22,7 +30,7 @@ function handleSocketError(socket: Socket, eventName: string, error: any) {
   // Send appropriate error message to client
   const errorMessage = process.env.NODE_ENV === 'production' 
     ? 'An error occurred processing your request'
-    : error.message || 'Unknown error'
+    : err.message || 'Unknown error'
 
   socket.emit('error', {
     event: eventName,
@@ -32,12 +40,12 @@ function handleSocketError(socket: Socket, eventName: string, error: any) {
 }
 
 // Wrapper to add error handling to socket event handlers
-function withErrorHandler(
+function withErrorHandler<T extends unknown[]>(
   socket: Socket,
   eventName: string,
-  handler: (...args: any[]) => Promise<void>
+  handler: (...args: T) => Promise<void>
 ) {
-  return async (...args: any[]) => {
+  return async (...args: T) => {
     try {
       await handler(...args)
     } catch (error) {
@@ -46,7 +54,7 @@ function withErrorHandler(
   }
 }
 
-export function setupSocketHandlers(io: Server) {
+export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   const gameService = new GameService()
 
   io.use((socket: AuthenticatedSocket, next) => {
@@ -57,7 +65,7 @@ export function setupSocketHandlers(io: Server) {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as { userId: string; username: string }
       socket.userId = decoded.userId
       next()
     } catch (_error) {
