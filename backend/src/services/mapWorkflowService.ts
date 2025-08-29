@@ -66,7 +66,7 @@ export class MapWorkflowService {
         ],
       )
 
-      const insertedId = result.lastID || result.rows?.[0]?.id
+      const insertedId = result.lastInsertRowid || result.rows?.[0]?.id
       return (await query('SELECT * FROM map_drafts WHERE id = ?', [insertedId])).rows[0]
     } catch (error) {
       logger.error('Error saving map draft:', error)

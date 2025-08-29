@@ -90,7 +90,8 @@
       "mcp__zen__planner",
       "Bash(./scripts/start-dev.sh:*)",
       "Read(/home/keetch/Documents/**)",
-      "WebFetch(domain:conquestk.com)"
+      "WebFetch(domain:conquestk.com)",
+      "mcp__zen__thinkdeep"
     ],
     "deny": [],
     "ask": [],
