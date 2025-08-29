@@ -118,6 +118,8 @@ mcp.json
 .claude/
 .clauderc
 .claude.json
+.claude
+
 
 # Other AI/IDE configurations (machine-specific)
 .cursor/
