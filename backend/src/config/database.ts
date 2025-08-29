@@ -178,7 +178,15 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<Query
   try {
     // PostgreSQL
     if (DB_TYPE === 'postgresql' && pgPool) {
-      const result = await pgPool.query(sql, params)
+      // Convert ? placeholders to $1, $2, etc for PostgreSQL
+      let pgSql = sql
+      let paramIndex = 1
+      while (pgSql.includes('?')) {
+        pgSql = pgSql.replace('?', `$${paramIndex}`)
+        paramIndex++
+      }
+      
+      const result = await pgPool.query(pgSql, params)
       return {
         rows: result.rows as T[],
         rowCount: result.rowCount,
