@@ -59,28 +59,38 @@ let pgPool: Pool | null = null
 let mysqlPool: mysql.Pool | null = null
 let sqliteDb: BetterSqlite3.Database | null = null
 
-// Initialize PostgreSQL
+// Initialize PostgreSQL (deferred to prevent startup crashes)
 if (DB_TYPE === 'postgresql') {
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) {
     logger.error('❌ DATABASE_URL is required for PostgreSQL connection')
+    logger.warn('⚠️  Server will run in degraded mode without database')
   } else {
-    logger.info('🔧 Initializing PostgreSQL connection pool')
-    pgPool = new Pool({
-      connectionString: databaseUrl,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    })
-    
-    // Test the connection
-    pgPool.query('SELECT 1', (err) => {
-      if (err) {
-        logger.error('❌ PostgreSQL connection test failed:', err)
-      } else {
-        logger.info('✅ PostgreSQL connection established')
-      }
-    })
+    try {
+      logger.info('🔧 Initializing PostgreSQL connection pool')
+      pgPool = new Pool({
+        connectionString: databaseUrl,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      })
+      
+      // Test the connection (non-blocking)
+      pgPool.query('SELECT 1', (err) => {
+        if (err) {
+          logger.error('❌ PostgreSQL connection test failed:', err)
+          logger.warn('⚠️  Server running in degraded mode')
+          // Don't crash - let server continue in degraded mode
+          pgPool = null
+        } else {
+          logger.info('✅ PostgreSQL connection established')
+        }
+      })
+    } catch (poolError) {
+      logger.error('❌ Failed to create PostgreSQL pool:', poolError)
+      logger.warn('⚠️  Server will run in degraded mode without database')
+      pgPool = null
+    }
   }
 }
 
@@ -280,10 +290,26 @@ export async function closeDatabase(): Promise<void> {
   }
 }
 
-// Initialize database connection
+// Initialize database connection (safe - won't crash server)
 export async function initDatabase(): Promise<void> {
   try {
     logger.info(`Initializing ${DB_TYPE.toUpperCase()} database...`)
+    
+    // For PostgreSQL, ensure pool exists or create it now
+    if (DB_TYPE === 'postgresql' && !pgPool) {
+      const databaseUrl = process.env.DATABASE_URL
+      if (!databaseUrl) {
+        throw new Error('DATABASE_URL environment variable is not set')
+      }
+      
+      logger.info('🔧 Creating PostgreSQL connection pool (deferred initialization)')
+      pgPool = new Pool({
+        connectionString: databaseUrl,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      })
+    }
     
     // Test the connection
     await query('SELECT 1')
@@ -291,12 +317,18 @@ export async function initDatabase(): Promise<void> {
   } catch (error) {
     logger.error(`❌ Failed to initialize ${DB_TYPE} database:`, error)
     
+    // Clear the pool if it failed
+    if (DB_TYPE === 'postgresql' && pgPool) {
+      pgPool = null
+    }
+    
     if (DB_TYPE === 'postgresql') {
       logger.error('PostgreSQL connection help:')
       logger.error('  1. Check DATABASE_URL is set correctly')
       logger.error('  2. Format: postgresql://user:password@host:port/database')
       logger.error('  3. Ensure PostgreSQL server is running')
       logger.error('  4. Check network connectivity to database server')
+      logger.error('  5. In Railway, check Variables tab for DATABASE_URL')
     } else if (DB_TYPE === 'mysql') {
       logger.error('MySQL connection help:')
       logger.error('  1. Check MySQL environment variables are set correctly')
