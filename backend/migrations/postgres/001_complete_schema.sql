@@ -415,3 +415,32 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 -- Record this migration
 INSERT INTO schema_migrations (version) VALUES ('001_complete_schema')
 ON CONFLICT (version) DO NOTHING;
+
+-- ============================================
+-- PERFORMANCE INDEXES
+-- ============================================
+
+-- Indexes for frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
+CREATE INDEX IF NOT EXISTS idx_games_created_at ON games(created_at);
+CREATE INDEX IF NOT EXISTS idx_games_host_id ON games(host_id);
+
+CREATE INDEX IF NOT EXISTS idx_game_players_game_id ON game_players(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_players_user_id ON game_players(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+CREATE INDEX IF NOT EXISTS idx_maps_is_public ON maps(is_public);
+CREATE INDEX IF NOT EXISTS idx_maps_created_at ON maps(created_at);
+CREATE INDEX IF NOT EXISTS idx_maps_creator_id ON maps(creator_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+
+-- Composite indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_game_players_game_user ON game_players(game_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
