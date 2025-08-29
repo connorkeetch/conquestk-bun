@@ -13,7 +13,6 @@
   - [ ] Player elimination sound
   - [ ] Chat message notification sound
   - [ ] Error/invalid move sound
-  - **Resources**: Suno AI, Freesound.org, OpenGameArt
 
 ### Game Mechanics
 - [ ] **Continent Bonuses**
@@ -32,6 +31,14 @@
   - [ ] Strategic AI with territory prioritization
   - [ ] Difficulty levels (Easy, Medium, Hard)
   - [ ] AI personality types (Aggressive, Defensive, Balanced)
+
+- [ ] **New Game Modes**
+  - [ ] Assassin Mode - Each player has a secret target
+  - [ ] Zombie Apocalypse Mode - AI-controlled territories spread
+  - [ ] King of the Hill Mode - Control center territories
+  - [ ] Sudden Death Mode - No reinforcements
+  - [ ] Battle Royale Mode - Shrinking playable area
+
 
 ## 🟡 Priority 2 - Enhanced Features
 
@@ -103,23 +110,14 @@
 
 ## 📝 Notes
 
-### Recently Completed (Dec 2024)
-✅ Navigation cleanup with user dropdown
-✅ Randomize settings button
-✅ Lock icons for settings
-✅ 12 player colors
-✅ Smart game naming
-✅ Fog of war modes (3 types)
-✅ Movement system types (4 types)
-✅ Turn timer system
-✅ Notification dropdown with 8 types
-
 ### Technical Debt
-- [ ] Improve test coverage (currently 37 tests)
+- [ ] Improve test coverage
 - [ ] Optimize Socket.io event handling
 - [ ] Implement proper error boundaries
 - [ ] Add comprehensive logging system
 - [ ] Performance monitoring and optimization
+- [ ] Add database connection pooling optimization
+- [ ] Implement database query caching layer
 
 ### Documentation
 - [ ] API documentation
@@ -128,4 +126,4 @@
 - [ ] Deployment guide
 
 ---
-*Last updated: December 2024*
+*Last updated: August 29, 2025*

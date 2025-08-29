@@ -13,11 +13,12 @@ netstat -ano | findstr :5173
 taskkill /PID <process-id> /F
 ```
 
-### ❌ "Cannot find module 'sqlite3'"
-**Problem**: SQLite dependency missing
+### ❌ "Cannot connect to PostgreSQL"
+**Problem**: Database connection issues
 ```bash
-cd backend
-npm install sqlite3
+# Check DATABASE_URL in backend/.env
+# Verify Railway database is running
+# Contact admin for connection string if needed
 ```
 
 ### ❌ Frontend won't connect to backend
@@ -28,15 +29,12 @@ npm install sqlite3
 4. **Note**: Frontend runs on port 5173 (Vite default)
 
 ### ❌ Database connection failed
-**Problem**: PostgreSQL not available (switches to SQLite automatically)
+**Problem**: PostgreSQL connection issues
 ```bash
-# Option 1: Use SQLite (default)
-# Nothing to do - already configured
-
-# Option 2: Setup PostgreSQL
-# Install PostgreSQL, then:
-createdb risk_game
-# Set DB_TYPE=postgresql in backend/.env
+# Check DATABASE_URL in backend/.env
+# Development: Railway dev database
+# Production: Railway production database
+# Both URLs provided by Railway platform
 ```
 
 ### ❌ Map Editor Canvas Issues

@@ -80,8 +80,8 @@ npm run build                  # Build both frontend and backend
 npm start                      # Start production server
 
 # Environment Switching
-.\switch-env.ps1 development   # Switch to SQLite (Windows)
-.\switch-env.ps1 production    # Switch to PostgreSQL (Windows)
+.\switch-env.ps1 development   # Switch to dev PostgreSQL (Windows)
+.\switch-env.ps1 production    # Switch to prod PostgreSQL (Windows)
 # Note: Creates backup at backend\.env.backup before switching
 ```
 
@@ -105,7 +105,7 @@ npm start                      # Start production server
 ### Backend Stack
 - **Node.js** + **Express 4.21.2** + **TypeScript**
 - **Socket.io** for WebSocket connections
-- **MySQL** (production) / **SQLite** (development)
+- **PostgreSQL** (Railway-hosted for dev and production)
 - **JWT** authentication
 - **Redis** for sessions (optional)
 
@@ -132,7 +132,7 @@ npm start                      # Start production server
 ### Testing Architecture
 - **Backend Tests**: Jest with TypeScript, test files alongside source (`*.test.ts`)
 - **Frontend Tests**: Vitest with React Testing Library, setup in `src/test/setup.ts`
-- **Test Database**: SQLite in-memory for backend tests
+- **Test Database**: PostgreSQL test database
 - **Coverage**: Run with `--coverage` flag for code coverage reports
 
 ### Port Configuration
@@ -140,7 +140,7 @@ npm start                      # Start production server
 - **Backend Dev**: 5001 (configured in backend/.env)
 - **Backend API Proxy**: Frontend proxies `/api` to `http://localhost:5001`
 - **Socket.io**: Same as backend port (5001)
-- **PostgreSQL**: 5432 (production only)
+- **PostgreSQL**: Railway-hosted (dev and production)
 
 ### Build Output Structure
 - Frontend builds to `backend/public/` for unified deployment
