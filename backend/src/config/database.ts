@@ -20,9 +20,13 @@ try {
   logger.info('🔧 Initializing PostgreSQL connection pool')
   pgPool = new Pool({
     connectionString: databaseUrl,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    max: parseInt(process.env.DB_POOL_MAX || '20'),
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
+    connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '2000'),
+    // Production optimizations
+    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'), // 30s query timeout
+    query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   })
 
   // Test the connection (non-blocking)

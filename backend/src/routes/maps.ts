@@ -31,16 +31,30 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { 
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB default, configurable
+    files: 1, // Only allow 1 file per upload
+    fields: 10, // Limit number of non-file fields
+  },
   fileFilter: (_req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/
-    const extName = allowedTypes.test(path.extname(file.originalname).toLowerCase())
-    const mimeType = allowedTypes.test(file.mimetype)
+    // Strict MIME type checking
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ]
+    
+    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp)$/i
+    const hasValidExtension = allowedExtensions.test(file.originalname)
+    const hasValidMimeType = allowedMimeTypes.includes(file.mimetype)
 
-    if (extName && mimeType) {
+    if (hasValidExtension && hasValidMimeType) {
       return cb(null, true)
     }
-    cb(new Error('Only image files are allowed'))
+    
+    logger.warn(`File upload rejected: ${file.originalname} (${file.mimetype})`)
+    cb(new Error('Only JPEG, PNG, GIF, and WebP images are allowed'))
   },
 })
 
