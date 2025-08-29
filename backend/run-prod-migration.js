@@ -1,6 +1,13 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+
+// Load production environment if available
+if (fs.existsSync('.env.production.local')) {
+  dotenv.config({ path: '.env.production.local' });
+  console.log('📁 Loaded .env.production.local');
+}
 
 // IMPORTANT: This script runs migrations on PRODUCTION database
 // Make sure you have the production DATABASE_URL set
@@ -46,11 +53,19 @@ async function runProductionMigration() {
     console.log(`\n📊 Found ${existingTables.rows.length} existing tables:`);
     existingTables.rows.forEach(row => console.log(`  - ${row.tablename}`));
     
+    // Choose migration based on existing tables
+    let migrationFile = '001_complete_schema.sql';
+    if (existingTables.rows.length > 0) {
+      // Production already has tables, use update migration
+      migrationFile = '002_production_update.sql';
+      console.log('📌 Detected existing tables, using update migration');
+    }
+    
     // Read migration file
-    const migrationPath = path.join(__dirname, 'migrations', 'postgres', '001_complete_schema.sql');
+    const migrationPath = path.join(__dirname, 'migrations', 'postgres', migrationFile);
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
-    console.log('\n🚀 Running migration: 001_complete_schema.sql');
+    console.log(`\n🚀 Running migration: ${migrationFile}`);
     console.log('📝 This will create/update all necessary tables...');
     
     // Run migration
