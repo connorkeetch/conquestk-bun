@@ -3,6 +3,10 @@ import dotenv from 'dotenv'
 // Load environment variables FIRST before any other imports
 dotenv.config()
 
+// Validate environment variables immediately after loading
+import { validateEnvironmentVariables } from './config/validateEnv'
+validateEnvironmentVariables()
+
 import { createServer } from 'node:http'
 import path from 'node:path'
 import cors from 'cors'
