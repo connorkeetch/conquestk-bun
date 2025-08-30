@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
+import ErrorBoundary from './components/ErrorBoundary'
+import GameErrorBoundary from './components/GameErrorBoundary'
 // Layout
 import Layout from './components/Layout'
 import { useAppDispatch } from './hooks/redux'
@@ -63,8 +65,9 @@ function App() {
   }, [dispatch])
 
   return (
-    <Layout>
-      <Routes>
+    <ErrorBoundary level="app">
+      <Layout>
+        <Routes>
         {/* Public Routes */}
         <Route
           path="/"
@@ -226,7 +229,9 @@ function App() {
           path="/game/:gameId"
           element={
             <AuthGuard>
-              <GamePage />
+              <GameErrorBoundary>
+                <GamePage />
+              </GameErrorBoundary>
             </AuthGuard>
           }
         />
@@ -234,7 +239,9 @@ function App() {
           path="/game/:gameId/:section"
           element={
             <AuthGuard>
-              <GamePage />
+              <GameErrorBoundary>
+                <GamePage />
+              </GameErrorBoundary>
             </AuthGuard>
           }
         />
@@ -390,15 +397,18 @@ function App() {
           path="/room/:roomId"
           element={
             <AuthGuard>
-              <GameRoom />
+              <GameErrorBoundary>
+                <GameRoom />
+              </GameErrorBoundary>
             </AuthGuard>
           }
         />
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Layout>
+        </Routes>
+      </Layout>
+    </ErrorBoundary>
   )
 }
 
