@@ -1,9 +1,14 @@
+import dotenv from 'dotenv'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+
+// Load environment variables
+dotenv.config()
+
 import { query } from '../config/database'
 
 async function runMigrations() {
-  const migrationsDir = path.join(__dirname, '../../migrations')
+  const migrationsDir = path.join(__dirname, '../../migrations/postgres')
 
   try {
     // Create migrations tracking table if it doesn't exist
