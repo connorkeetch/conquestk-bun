@@ -1,9 +1,11 @@
-import { QueryResult as PgQueryResult, Pool, PoolClient } from 'pg'
+import { QueryResult as PgQueryResult, Pool, PoolClient, QueryResultRow } from 'pg'
 import { logger } from '../utils/logger'
-import type { QueryResult } from '../../shared/types'
 
-// Re-export for convenience
-export type { QueryResult }
+// Normalized query result interface
+export interface QueryResult<T = any> {
+  rows: T[]
+  rowCount: number | null
+}
 
 let pgPool: Pool | null = null
 
@@ -41,15 +43,15 @@ try {
 }
 
 // Generic query function
-export async function query<T = unknown>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
+export async function query<T = any>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
 
   try {
-    const result = await pgPool.query<T>(text, params)
+    const result = await pgPool.query(text, params)
     return {
-      rows: result.rows,
+      rows: result.rows as T[],
       rowCount: result.rowCount,
     }
   } catch (error) {
@@ -84,7 +86,7 @@ export async function initDatabase(): Promise<void> {
 
   try {
     // Check if users table exists
-    const result = await query(`
+    const result = await query<{ exists: boolean }>(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
@@ -92,7 +94,7 @@ export async function initDatabase(): Promise<void> {
       )
     `)
 
-    if (result.rows[0].exists) {
+    if (result.rows[0]?.exists) {
       logger.info('✅ Database tables verified')
     } else {
       logger.warn('⚠️  Database tables not found. Run migrations to create them.')
