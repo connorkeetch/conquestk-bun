@@ -1,5 +1,4 @@
-import sgMail from '@sendgrid/mail'
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 import { v4 as uuidv4 } from 'uuid'
 
 interface EmailOptions {
@@ -17,86 +16,56 @@ interface VerificationEmailData {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter | null = null
-  private useSendGrid: boolean = false
+  private resend: Resend | null = null
   private emailEnabled: boolean = false
 
   constructor() {
     this.initialize()
   }
 
-  private async initialize() {
-    const emailProvider = process.env.EMAIL_PROVIDER || 'smtp'
-    this.emailEnabled = process.env.EMAIL_ENABLED === 'true'
+  private initialize() {
+    // Use Resend API key from environment or the provided key
+    const apiKey = process.env.RESEND_API_KEY || 're_LAQqfKtd_BZixGnfuWLZgpwTZdCDG4V7s'
+    this.emailEnabled = process.env.EMAIL_ENABLED !== 'false' // Default to enabled
 
-    if (!this.emailEnabled) {
-      return
-    }
-
-    if (emailProvider === 'sendgrid') {
-      const apiKey = process.env.SENDGRID_API_KEY
-      if (apiKey) {
-        sgMail.setApiKey(apiKey)
-        this.useSendGrid = true
-      } else {
-      }
+    if (apiKey) {
+      this.resend = new Resend(apiKey)
+      this.emailEnabled = true
+      console.log('✅ Email service initialized with Resend')
     } else {
-      // Configure SMTP
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      })
-
-      // Verify SMTP connection
-      if (this.transporter && process.env.SMTP_USER) {
-        try {
-          await this.transporter.verify()
-        } catch (_error) {
-          this.emailEnabled = false
-        }
-      }
+      console.log('⚠️ Email service disabled - no Resend API key')
+      this.emailEnabled = false
     }
   }
 
   private async sendEmail(options: EmailOptions): Promise<boolean> {
-    if (!this.emailEnabled) {
+    if (!this.emailEnabled || !this.resend) {
+      console.log('⚠️ Email not sent - service disabled')
       return false
     }
 
-    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com'
+    // For development, use Resend's test email
+    const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev'
     const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game'
 
     try {
-      if (this.useSendGrid) {
-        const msg = {
-          to: options.to,
-          from: {
-            email: fromEmail,
-            name: fromName,
-          },
-          subject: options.subject,
-          text: options.text,
-          html: options.html,
-        }
-        await sgMail.send(msg)
-      } else if (this.transporter) {
-        await this.transporter.sendMail({
-          from: `"${fromName}" <${fromEmail}>`,
-          to: options.to,
-          subject: options.subject,
-          text: options.text,
-          html: options.html,
-        })
-      } else {
+      const { data, error } = await this.resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      })
+
+      if (error) {
+        console.error('❌ Email send error:', error)
         return false
       }
+
+      console.log('✅ Email sent successfully:', data?.id)
       return true
-    } catch (_error) {
+    } catch (error) {
+      console.error('❌ Email service error:', error)
       return false
     }
   }
