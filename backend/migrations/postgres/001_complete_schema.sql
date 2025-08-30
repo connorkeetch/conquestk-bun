@@ -443,4 +443,108 @@ CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
 -- Composite indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_game_players_game_user ON game_players(game_id, user_id);
+
+-- ============================================
+-- GAME HISTORY AND AUDIT TABLES
+-- ============================================
+
+-- Game History Table
+-- Stores every action taken in a game for replay, analysis, and debugging
+CREATE TABLE IF NOT EXISTS game_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  turn_number INTEGER NOT NULL,
+  phase VARCHAR(50) NOT NULL, -- 'placement', 'attack', 'fortify', etc.
+  player_id UUID NOT NULL REFERENCES users(id),
+  action_type VARCHAR(50) NOT NULL, -- 'place_troops', 'attack', 'fortify', 'end_turn', etc.
+  action_data JSONB NOT NULL, -- Detailed action information
+  game_state_before JSONB, -- Optional: Full game state before action
+  game_state_after JSONB, -- Optional: Full game state after action
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  client_timestamp TIMESTAMP WITH TIME ZONE, -- When client initiated the action
+  processing_time_ms INTEGER -- How long the action took to process
+);
+
+-- Indexes for game_history
+CREATE INDEX IF NOT EXISTS idx_game_history_game_id ON game_history(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_history_player_id ON game_history(player_id);
+CREATE INDEX IF NOT EXISTS idx_game_history_timestamp ON game_history(timestamp);
+CREATE INDEX IF NOT EXISTS idx_game_history_action_type ON game_history(action_type);
+CREATE INDEX IF NOT EXISTS idx_game_history_turn ON game_history(game_id, turn_number);
+
+-- Audit Logs Table
+-- Tracks all system changes for security and compliance
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id), -- NULL for system actions
+  action VARCHAR(100) NOT NULL, -- 'user.create', 'user.update', 'game.delete', etc.
+  entity_type VARCHAR(50) NOT NULL, -- 'user', 'game', 'map', 'settings', etc.
+  entity_id UUID, -- ID of the affected entity
+  entity_details JSONB, -- Additional entity information
+  changes JSONB, -- What changed (before/after values)
+  ip_address INET, -- IP address of the request
+  user_agent TEXT, -- Browser/client information
+  session_id VARCHAR(255), -- Session identifier
+  request_id VARCHAR(255), -- Unique request identifier for tracing
+  status VARCHAR(20) DEFAULT 'success', -- 'success', 'failure', 'partial'
+  error_message TEXT, -- Error details if status is 'failure'
+  metadata JSONB, -- Additional context (e.g., admin notes, flags)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Compliance fields
+  retention_date DATE, -- When this record can be deleted
+  gdpr_relevant BOOLEAN DEFAULT FALSE, -- If this contains personal data
+  security_relevant BOOLEAN DEFAULT FALSE -- If this is security-sensitive
+);
+
+-- Indexes for audit_logs
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_ip_address ON audit_logs(ip_address);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_status ON audit_logs(status);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_security ON audit_logs(security_relevant) WHERE security_relevant = TRUE;
+
+-- Game Events Table (for real-time event streaming and notifications)
+CREATE TABLE IF NOT EXISTS game_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  event_type VARCHAR(50) NOT NULL, -- 'player_joined', 'player_left', 'game_started', etc.
+  player_id UUID REFERENCES users(id),
+  event_data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  processed BOOLEAN DEFAULT FALSE,
+  processed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_events_game_id ON game_events(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_events_unprocessed ON game_events(processed, created_at) WHERE processed = FALSE;
+
+-- Player Statistics History (for ELO tracking over time)
+CREATE TABLE IF NOT EXISTS player_stats_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  game_id UUID REFERENCES games(id) ON DELETE SET NULL,
+  elo_before INTEGER,
+  elo_after INTEGER,
+  elo_change INTEGER,
+  wins_before INTEGER,
+  wins_after INTEGER,
+  losses_before INTEGER,
+  losses_after INTEGER,
+  game_mode VARCHAR(50),
+  opponent_elos JSONB, -- Array of opponent ELOs
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_stats_history_user_id ON player_stats_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_player_stats_history_created_at ON player_stats_history(created_at);
+
+-- Add soft delete support to users table if not exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_reason TEXT;
+
+-- Index for soft deletes
+CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
