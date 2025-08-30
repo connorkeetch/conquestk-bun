@@ -1,16 +1,10 @@
-import jwt from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
 import type { Server, Socket } from 'socket.io'
-import type { 
-  ServerToClientEvents, 
-  ClientToServerEvents,
-  GameState,
-  BattleResult,
-  GamePhase
-} from '../../../shared/types'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { eloService, type PlayerRating } from './eloService'
 import { GameService } from './gameService'
+import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -18,7 +12,7 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
 }
 
 // Error handler wrapper for socket events
-function handleSocketError(socket: Socket, eventName: string, error: unknown) {
+function handleSocketError(socket: Socket<ClientToServerEvents, ServerToClientEvents>, eventName: string, error: unknown) {
   const err = error as Error
   logger.error(`Socket error in ${eventName}:`, {
     error: err.message || error,
@@ -41,7 +35,7 @@ function handleSocketError(socket: Socket, eventName: string, error: unknown) {
 
 // Wrapper to add error handling to socket event handlers
 function withErrorHandler<T extends unknown[]>(
-  socket: Socket,
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   eventName: string,
   handler: (...args: T) => Promise<void>
 ) {
@@ -83,7 +77,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       
       await socket.join(roomId)
       socket.to(roomId).emit('player-joined', {
-        userId: socket.userId,
+        userId: socket.userId!,
         socketId: socket.id,
       })
       logger.info(`User ${socket.userId} joined room ${roomId}`)
@@ -96,7 +90,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       
       await socket.leave(roomId)
       socket.to(roomId).emit('player-left', {
-        userId: socket.userId,
+        userId: socket.userId!,
         socketId: socket.id,
       })
       logger.info(`User ${socket.userId} left room ${roomId}`)
@@ -107,7 +101,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         throw new Error('Invalid game action data')
       }
       
-      const result = await gameService.processGameAction(data, socket.userId!)
+      const result = await gameService.processGameAction(data.action, socket.userId!)
       socket.to(data.roomId).emit('game-update', result)
     }))
 
@@ -219,7 +213,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       const sanitizedMessage = data.message.substring(0, 500).replace(/<[^>]*>/g, '')
       
       socket.to(data.roomId).emit('chat-message', {
-        userId: socket.userId,
+        userId: socket.userId!,
         message: sanitizedMessage,
         timestamp: new Date().toISOString(),
       })
@@ -232,7 +226,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socket.rooms.forEach(roomId => {
           if (roomId !== socket.id) {
             socket.to(roomId).emit('player-disconnected', {
-              userId: socket.userId,
+              userId: socket.userId!,
               socketId: socket.id,
             })
           }
@@ -246,7 +240,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   /**
    * Handle ELO rating updates when a ranked game ends
    */
-  async function handleRankedGameEnd(io: Server, roomId: string, gameState: any) {
+  async function handleRankedGameEnd(io: Server<ClientToServerEvents, ServerToClientEvents>, roomId: string, gameState: any) {
     try {
       // Check if this is a ranked game
       const roomQuery = `SELECT is_ranked FROM game_rooms WHERE id = ?`
