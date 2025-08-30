@@ -4,19 +4,26 @@ interface ErrorBoundaryState {
   hasError: boolean
   error?: Error
   errorInfo?: React.ErrorInfo
+  errorCount: number
 }
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
+  fallback?: React.ReactNode
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
+  level?: 'app' | 'page' | 'section' | 'component'
+  resetOnPropsChange?: boolean
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private resetTimeoutId: number | null = null
+
   constructor(props: ErrorBoundaryProps) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, errorCount: 0 }
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     // Update state so the next render will show the fallback UI
     return { hasError: true, error }
   }
@@ -25,32 +32,119 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     console.error('[ERROR_BOUNDARY] React Error Boundary caught an error:', error)
     console.error('[ERROR_BOUNDARY] Error info:', errorInfo)
     console.error('[ERROR_BOUNDARY] Component stack:', errorInfo.componentStack)
-    this.setState({ errorInfo })
+    
+    this.setState(prevState => ({ 
+      errorInfo,
+      errorCount: prevState.errorCount + 1 
+    }))
+
+    // Call custom error handler if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo)
+    }
+
+    // Auto-retry for component-level errors (first 3 attempts)
+    if (this.props.level === 'component' && this.state.errorCount < 3) {
+      this.resetTimeoutId = window.setTimeout(() => {
+        this.resetErrorBoundary()
+      }, 5000)
+    }
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    // Reset on props change if configured
+    if (this.props.resetOnPropsChange && 
+        this.state.hasError && 
+        prevProps.children !== this.props.children) {
+      this.resetErrorBoundary()
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.resetTimeoutId) {
+      clearTimeout(this.resetTimeoutId)
+    }
+  }
+
+  resetErrorBoundary = () => {
+    if (this.resetTimeoutId) {
+      clearTimeout(this.resetTimeoutId)
+      this.resetTimeoutId = null
+    }
+
+    this.setState(prevState => ({
+      hasError: false,
+      error: undefined,
+      errorInfo: undefined,
+      errorCount: prevState.errorCount
+    }))
   }
 
   render() {
     if (this.state.hasError) {
+      // Use custom fallback if provided
+      if (this.props.fallback) {
+        return <>{this.props.fallback}</>
+      }
+
+      const level = this.props.level || 'app'
+      const isFullPage = level === 'app' || level === 'page'
+      
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
+        <div className={`${
+          isFullPage ? 'min-h-screen' : level === 'section' ? 'min-h-[400px]' : 'min-h-[200px]'
+        } flex items-center justify-center ${
+          isFullPage ? 'bg-gradient-to-br from-gray-900 via-purple-900/20 to-black' : ''
+        }`}>
           <div className="text-center p-8 bg-red-900/20 border border-red-500/30 rounded-lg max-w-lg">
-            <h2 className="text-2xl font-bold text-red-400 mb-4">Something went wrong</h2>
+            <div className="text-5xl mb-4">
+              {isFullPage ? '💥' : '⚠️'}
+            </div>
+            <h2 className="text-2xl font-bold text-red-400 mb-4">
+              {isFullPage ? 'Something went wrong' : 'Component Error'}
+            </h2>
             <p className="text-white/80 mb-4">
-              The application encountered an unexpected error. Please refresh the page to try again.
+              {isFullPage 
+                ? 'The application encountered an unexpected error. Please refresh the page to try again.'
+                : 'This component encountered an error. The rest of the app should continue working.'}
             </p>
-            <details className="text-left text-sm text-gray-300 mb-4">
-              <summary className="cursor-pointer text-red-300 hover:text-red-200">
-                Error Details
-              </summary>
-              <pre className="mt-2 p-2 bg-black/30 rounded overflow-auto">
-                {this.state.error?.toString()}
-              </pre>
-            </details>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Refresh Page
-            </button>
+            
+            {/* Show error details in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <details className="text-left text-sm text-gray-300 mb-4">
+                <summary className="cursor-pointer text-red-300 hover:text-red-200">
+                  Error Details (Dev Only)
+                </summary>
+                <pre className="mt-2 p-2 bg-black/30 rounded overflow-auto text-xs">
+                  {this.state.error?.toString()}
+                  {this.state.error?.stack}
+                </pre>
+              </details>
+            )}
+            
+            <div className="space-x-3">
+              <button
+                onClick={this.resetErrorBoundary}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+              
+              {isFullPage && (
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Go Home
+                </button>
+              )}
+            </div>
+
+            {this.state.errorCount > 1 && level === 'component' && (
+              <p className="text-sm text-red-400 mt-3">
+                Retry attempt {this.state.errorCount} of 3
+              </p>
+            )}
           </div>
         </div>
       )
