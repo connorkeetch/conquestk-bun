@@ -305,7 +305,45 @@ INSERT INTO map_tags (name, description) VALUES
     ('Quick', 'Designed for quick games')
 ON CONFLICT (name) DO NOTHING;
 
--- Log migration completion
-INSERT INTO schema_migrations (version, description, executed_at)
-VALUES ('002', 'Add missing map-related tables and user columns', CURRENT_TIMESTAMP)
-ON CONFLICT DO NOTHING;
+-- Log migration completion (handle different schema_migrations table structures)
+DO $$
+DECLARE
+    col_count INTEGER;
+BEGIN
+    -- Check if schema_migrations table exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'schema_migrations') THEN
+        -- Count columns to determine which version we have
+        SELECT COUNT(*) INTO col_count
+        FROM information_schema.columns
+        WHERE table_name = 'schema_migrations';
+        
+        IF col_count >= 3 THEN
+            -- Newer version with description and executed_at
+            INSERT INTO schema_migrations (version, description, executed_at)
+            VALUES ('002', 'Add missing map-related tables and user columns', CURRENT_TIMESTAMP)
+            ON CONFLICT DO NOTHING;
+        ELSIF col_count = 2 THEN
+            -- Check which columns exist
+            IF EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'schema_migrations' AND column_name = 'applied_at') THEN
+                -- Version with applied_at
+                INSERT INTO schema_migrations (version, applied_at)
+                VALUES ('002', CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING;
+            ELSE
+                -- Try just version
+                INSERT INTO schema_migrations (version)
+                VALUES ('002')
+                ON CONFLICT DO NOTHING;
+            END IF;
+        ELSE
+            -- Minimal version - just version column
+            INSERT INTO schema_migrations (version)
+            VALUES ('002')
+            ON CONFLICT DO NOTHING;
+        END IF;
+    END IF;
+    
+    -- If we get here, migration was successful
+    RAISE NOTICE 'Migration 002 completed successfully';
+END $$;
