@@ -7,14 +7,28 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 async function runMigration() {
+  // Use command line argument or environment variable
+  const databaseUrl = process.argv[2] || process.env.DATABASE_URL
+  
+  if (!databaseUrl || databaseUrl === '${DATABASE_URL}') {
+    console.error('❌ No DATABASE_URL provided')
+    console.log('\nUsage:')
+    console.log('  npm run migrate -- "postgresql://user:pass@host:port/db"')
+    console.log('  OR')
+    console.log('  Set DATABASE_URL environment variable')
+    process.exit(1)
+  }
+  
+  console.log('🔗 Connecting to database...')
+  
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: databaseUrl,
+    ssl: databaseUrl.includes('railway') ? { rejectUnauthorized: false } : false
   })
 
   try {
     console.log('🚀 Running database migration...')
-    console.log('📍 Database:', process.env.DATABASE_URL?.split('@')[1]?.split('/')[0])
+    console.log('📍 Database:', databaseUrl?.split('@')[1]?.split('/')[0])
     
     // Read the migration file
     const migrationPath = path.join(__dirname, '../../migrations/postgres/002_add_missing_tables.sql')
