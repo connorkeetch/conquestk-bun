@@ -138,27 +138,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
   return (
     <div className="flex flex-col h-full bg-blue-50 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="bg-blue-900 text-white p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold">Risk Game Board</h2>
-            <div className="text-sm opacity-75 mt-1">
-              Phase: {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} | Turn:{' '}
-              {gameState.turn}
-            </div>
-          </div>
-          {currentPlayerInfo && (
-            <div className="flex items-center space-x-2">
-              <span>Current Turn:</span>
-              <div
-                className="w-4 h-4 rounded-full border-2 border-white"
-                style={{ backgroundColor: currentPlayerInfo.color }}
-              ></div>
-              <span className="font-semibold">{currentPlayerInfo.username}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <GameHeader
+        currentPhase={currentPhase}
+        turn={gameState.turn}
+        currentPlayerInfo={currentPlayerInfo}
+      />
 
       {/* Main Game Area */}
       <div className="flex flex-1 overflow-hidden">
@@ -292,45 +276,13 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
           )}
 
           {/* Territory Info */}
-          {(hoveredTerritory || selectedTerritory) && (
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold mb-2">Territory Info</h3>
-              {(() => {
-                const territoryId = hoveredTerritory || selectedTerritory
-                const territory = territories[territoryId!]
-                const owner = players.find((p) => p.id === territory?.owner)
-                const continentInfo =
-                  territoryData.continents[
-                    territory?.continent as keyof typeof territoryData.continents
-                  ]
-
-                return (
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">{territory?.name}</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Continent: {continentInfo?.name} (+{continentInfo?.bonus} bonus)
-                    </div>
-                    {owner && (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm">Owner:</span>
-                        <div
-                          className="w-3 h-3 rounded-full border border-gray-400"
-                          style={{ backgroundColor: owner.color }}
-                        ></div>
-                        <span className="text-sm font-medium">{owner.username}</span>
-                      </div>
-                    )}
-                    <div className="text-sm">Armies: {territory?.armies || 0}</div>
-                    <div className="text-sm text-gray-600">
-                      Adjacent to: {territory?.adjacentTerritories.length} territories
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          )}
+          <TerritoryInfoPanel
+            hoveredTerritory={hoveredTerritory}
+            selectedTerritory={selectedTerritory}
+            territories={territories}
+            players={players}
+            territoryModifiers={gameState.territoryModifiers}
+          />
 
           {/* Continent Control Status */}
           <div className="p-4 flex-1 overflow-y-auto">
