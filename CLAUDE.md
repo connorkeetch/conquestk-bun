@@ -10,6 +10,8 @@ npm run dev       # Start development servers
 ```
 Frontend: http://localhost:5173 | Backend: http://localhost:5001 | Live: [conquestk.com](https://conquestk.com)
 
+**Environment Validation**: Server automatically validates required env vars on startup and applies defaults where possible.
+
 ## 🔴 CRITICAL RULES
 1. **ALWAYS use Tailwind CSS v4** - NO inline styles, NO regular CSS
 2. **Prefer editing existing files** - Create new files ONLY for clear architectural needs (new components, modules, endpoints)
