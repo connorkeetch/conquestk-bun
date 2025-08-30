@@ -44,8 +44,8 @@ class EmailService {
       return false
     }
 
-    // For development, use Resend's test email
-    const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev'
+    // Use verified domain email
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@mail.conquestk.com'
     const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game'
 
     try {

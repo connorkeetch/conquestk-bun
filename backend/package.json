@@ -14,7 +14,9 @@
     "format": "biome format --write .",
     "seed:users": "ts-node src/scripts/seedUsers.ts",
     "seed": "npm run seed:users",
-    "make-admin": "ts-node src/scripts/makeAdmin.ts"
+    "make-admin": "ts-node src/scripts/makeAdmin.ts",
+    "migrate": "ts-node src/scripts/runMigration.ts",
+    "test:email": "ts-node src/scripts/testEmail.ts"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
