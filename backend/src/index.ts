@@ -1,7 +1,10 @@
 import dotenv from 'dotenv'
 
 // Load environment variables FIRST before any other imports
-dotenv.config()
+// Only load .env file in development - production uses Railway's environment variables
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config()
+}
 
 // Validate environment variables immediately after loading
 import { validateEnvironmentVariables } from './config/validateEnv'

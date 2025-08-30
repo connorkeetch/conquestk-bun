@@ -199,8 +199,23 @@ export function validateEnvironmentVariables(): void {
       warnings.push('⚠️  JWT_SECRET and SESSION_SECRET should be different in production')
     }
     
-    if (!process.env.SMTP_HOST) {
-      warnings.push('⚠️  Email service not configured (SMTP_HOST missing)')
+    if (!process.env.SMTP_HOST && !process.env.RESEND_API_KEY) {
+      warnings.push('⚠️  Email service not configured (SMTP_HOST or RESEND_API_KEY missing)')
+    }
+    
+    // If JWT_SECRET is not set in production, generate a secure default
+    // (Railway should provide this, but we'll generate one if missing to prevent crash)
+    if (!process.env.JWT_SECRET) {
+      const crypto = require('crypto')
+      process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex')
+      warnings.push('⚠️  JWT_SECRET not provided - generated random key (configure in Railway dashboard!)')
+    }
+    
+    // Same for SESSION_SECRET
+    if (!process.env.SESSION_SECRET) {
+      const crypto = require('crypto')
+      process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex')
+      warnings.push('⚠️  SESSION_SECRET not provided - generated random key (configure in Railway dashboard!)')
     }
   }
   
