@@ -7,7 +7,7 @@ export class UserService {
     try {
       const insertQuery = `
         INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `
 
       const values = [
@@ -22,7 +22,7 @@ export class UserService {
       await query(insertQuery, values)
 
       // Get the created user
-      const result = await query('SELECT * FROM users WHERE email = ?', [userData.email])
+      const result = await query('SELECT * FROM users WHERE email = $1', [userData.email])
 
       if (!result.rows || result.rows.length === 0) {
         throw new Error('Failed to retrieve created user')
@@ -38,13 +38,13 @@ export class UserService {
       ) {
         const basicQuery = `
           INSERT INTO users (username, email, password)
-          VALUES (?, ?, ?)
+          VALUES ($1, $2, $3)
         `
 
         await query(basicQuery, [userData.username, userData.email, userData.password])
 
         // Get the created user
-        const result = await query('SELECT * FROM users WHERE email = ?', [userData.email])
+        const result = await query('SELECT * FROM users WHERE email = $1', [userData.email])
 
         if (!result.rows || result.rows.length === 0) {
           throw new Error('Failed to retrieve created user')
@@ -61,27 +61,27 @@ export class UserService {
   }
 
   async findById(id: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE id = ?', [id])
+    const result = await query('SELECT * FROM users WHERE id = $1', [id])
     return result.rows[0] || null
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE email = ?', [email])
+    const result = await query('SELECT * FROM users WHERE email = $1', [email])
     return result.rows[0] || null
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE username = ?', [username])
+    const result = await query('SELECT * FROM users WHERE username = $1', [username])
     return result.rows[0] || null
   }
 
   async updateLastLogin(id: string): Promise<void> {
-    const updateQuery = `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+    const updateQuery = `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`
     await query(updateQuery, [id])
   }
 
   async findByVerificationToken(token: string): Promise<User | null> {
-    const result = await query('SELECT * FROM users WHERE verification_token = ?', [token])
+    const result = await query('SELECT * FROM users WHERE verification_token = $1', [token])
     return result.rows[0] || null
   }
 
@@ -91,7 +91,7 @@ export class UserService {
       SET email_verified = true, 
           verification_token = NULL,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = $1
     `
     await query(updateQuery, [userId])
   }
@@ -99,10 +99,10 @@ export class UserService {
   async updateVerificationToken(userId: string, token: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
-      SET verification_token = ?,
+      SET verification_token = $1,
           verification_sent_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = $2
     `
     await query(updateQuery, [token, userId])
   }
@@ -114,7 +114,7 @@ export class UserService {
   }): Promise<void> {
     const insertQuery = `
       INSERT INTO email_verification_logs (user_id, email, token, created_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
     `
     await query(insertQuery, [data.user_id, data.email, data.token])
   }
@@ -123,7 +123,7 @@ export class UserService {
     const updateQuery = `
       UPDATE email_verification_logs 
       SET verified_at = CURRENT_TIMESTAMP
-      WHERE token = ?
+      WHERE token = $1
     `
     await query(updateQuery, [token])
   }
@@ -133,7 +133,7 @@ export class UserService {
     const countQuery = `
       SELECT COUNT(*) as count 
       FROM email_verification_logs 
-      WHERE user_id = ? AND created_at > ?
+      WHERE user_id = $1 AND created_at > $2
     `
     const result = await query(countQuery, [userId, oneHourAgo])
     return result.rows[0]?.count || 0
@@ -146,7 +146,7 @@ export class UserService {
   }): Promise<void> {
     const insertQuery = `
       INSERT INTO password_reset_tokens (user_id, token, expires_at)
-      VALUES (?, ?, ?)
+      VALUES ($1, $2, $3)
     `
     await query(insertQuery, [data.user_id, data.token, data.expires_at])
   }
@@ -154,7 +154,7 @@ export class UserService {
   async findPasswordResetToken(token: string): Promise<any> {
     const findQuery = `
       SELECT * FROM password_reset_tokens 
-      WHERE token = ?
+      WHERE token = $1
     `
     const result = await query(findQuery, [token])
     return result.rows[0] || null
@@ -165,7 +165,7 @@ export class UserService {
       UPDATE password_reset_tokens 
       SET used = true, 
           used_at = CURRENT_TIMESTAMP
-      WHERE token = ?
+      WHERE token = $1
     `
     await query(updateQuery, [token])
   }
@@ -173,9 +173,9 @@ export class UserService {
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
-      SET password = ?,
+      SET password = $1,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = $2
     `
     await query(updateQuery, [hashedPassword, userId])
   }
@@ -185,7 +185,7 @@ export class UserService {
     const countQuery = `
       SELECT COUNT(*) as count 
       FROM password_reset_tokens 
-      WHERE user_id = ? AND created_at > ?
+      WHERE user_id = $1 AND created_at > $2
     `
     const result = await query(countQuery, [userId, oneHourAgo])
     return result.rows[0]?.count || 0
