@@ -1,0 +1,47 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "branch": "main",
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "${{PORT}}",
+        "DATABASE_URL": "${{DATABASE_URL}}",
+        "REDIS_URL": "${{REDIS_URL}}",
+        "JWT_SECRET": "${{JWT_SECRET}}",
+        "SESSION_SECRET": "${{SESSION_SECRET}}",
+        "RESEND_API_KEY": "${{RESEND_API_KEY}}",
+        "EMAIL_ENABLED": "true",
+        "EMAIL_FROM": "noreply@conquestk.com",
+        "FRONTEND_URL": "https://conquestk.com",
+        "CORS_ORIGIN": "https://conquestk.com",
+        "REQUIRE_EMAIL_VERIFICATION": "true"
+      }
+    },
+    "development": {
+      "branch": "dev",
+      "variables": {
+        "NODE_ENV": "development",
+        "PORT": "${{PORT}}",
+        "DATABASE_URL": "${{DEV_DATABASE_URL}}",
+        "JWT_SECRET": "${{DEV_JWT_SECRET}}",
+        "SESSION_SECRET": "${{DEV_SESSION_SECRET}}",
+        "EMAIL_ENABLED": "false",
+        "FRONTEND_URL": "https://dev.conquestk.com",
+        "CORS_ORIGIN": "https://dev.conquestk.com",
+        "REQUIRE_EMAIL_VERIFICATION": "false",
+        "LOG_LEVEL": "debug"
+      }
+    }
+  }
+}

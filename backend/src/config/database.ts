@@ -18,16 +18,24 @@ if (!databaseUrl) {
 
 try {
   logger.info('🔧 Initializing PostgreSQL connection pool')
+  
+  // Increase timeout for Railway connections
+  const isRailway = databaseUrl.includes('railway')
+  const connectionTimeout = isRailway ? 10000 : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '2000')
+  
   pgPool = new Pool({
     connectionString: databaseUrl,
     max: parseInt(process.env.DB_POOL_MAX || '20'),
     idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
-    connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '2000'),
+    connectionTimeoutMillis: connectionTimeout, // Increased for Railway
     // Production optimizations
     statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'), // 30s query timeout
     query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    // Railway requires SSL
+    ssl: isRailway || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   })
+  
+  logger.info(`📊 Database config: Railway=${isRailway}, Timeout=${connectionTimeout}ms, SSL=${isRailway || process.env.NODE_ENV === 'production'}`)
 
   // Test the connection (non-blocking)
   pgPool.query('SELECT 1', (err) => {
