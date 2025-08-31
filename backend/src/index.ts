@@ -1,36 +1,124 @@
+// First, log the very start of the application
+console.log('🚀 Starting application...')
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
+console.log(`Current directory: ${process.cwd()}`)
+console.log(`Script directory: ${__dirname}`)
+
 import dotenv from 'dotenv'
 
 // Load environment variables FIRST before any other imports
 // Only load .env file in development - production uses Railway's environment variables
 if (process.env.NODE_ENV !== 'production') {
-  dotenv.config()
+  console.log('📋 Loading .env file (development mode)')
+  const result = dotenv.config()
+  if (result.error) {
+    console.error('❌ Error loading .env file:', result.error)
+  } else {
+    console.log(`✅ Loaded .env file with ${Object.keys(result.parsed || {}).length} variables`)
+  }
+} else {
+  console.log('🏭 Production mode - using Railway environment variables')
+  console.log('Environment variables available:')
+  console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.length + ' chars)' : 'NOT SET'}`)
+  console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`)
+  console.log(`  SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`)
+  console.log(`  PORT: ${process.env.PORT || 'NOT SET'}`)
 }
 
 // Validate environment variables immediately after loading
+console.log('🔍 Starting environment validation...')
 import { validateEnvironmentVariables } from './config/validateEnv'
-validateEnvironmentVariables()
+try {
+  validateEnvironmentVariables()
+  console.log('✅ Environment validation completed')
+} catch (error) {
+  console.error('❌ Environment validation failed:', error)
+  process.exit(1)
+}
 
-import { createServer } from 'node:http'
-import path from 'node:path'
-import cors from 'cors'
-import express from 'express'
-import helmet from 'helmet'
-import { Server } from 'socket.io'
-import { initDatabase } from './config/database'
-import { logStartupDiagnostics, testDatabaseConnection, testMigrationFiles } from './debugStartup'
-import { generalApiLimiter, suspiciousActivityTracker } from './middleware/rateLimiter'
-import adminRoutes from './routes/admin'
-import { authRoutes } from './routes/auth'
-import { gameRoutes } from './routes/game'
-import mapRoutes from './routes/maps'
-import notificationRoutes from './routes/notifications'
-import profileRoutes from './routes/profile'
-import skillsRoutes from './routes/skills'
-import userRoutes from './routes/users'
-import { setupSocketHandlers } from './services/socketService'
-import { ensureTablesExist } from './utils/initTables'
-import { logger } from './utils/logger'
-import { MigrationRunner } from './utils/migrationRunner'
+// Import types first
+import type { Request, Response } from 'express'
+
+// Wrap all imports in try-catch to identify which one is failing
+let createServer: any, path: any, cors: any, express: any, helmet: any, Server: any
+let initDatabase: any, logStartupDiagnostics: any, testDatabaseConnection: any, testMigrationFiles: any
+let generalApiLimiter: any, suspiciousActivityTracker: any
+let adminRoutes: any, authRoutes: any, gameRoutes: any, mapRoutes: any
+let notificationRoutes: any, profileRoutes: any, skillsRoutes: any, userRoutes: any
+let setupSocketHandlers: any, ensureTablesExist: any, logger: any, MigrationRunner: any
+
+try {
+  console.log('📦 Loading core modules...')
+  createServer = require('node:http').createServer
+  path = require('node:path')
+  cors = require('cors')
+  express = require('express')
+  helmet = require('helmet')
+  const socketIo = require('socket.io')
+  Server = socketIo.Server
+  console.log('✅ Core modules loaded')
+  
+  console.log('📦 Loading config modules...')
+  const dbModule = require('./config/database')
+  initDatabase = dbModule.initDatabase
+  const debugModule = require('./debugStartup')
+  logStartupDiagnostics = debugModule.logStartupDiagnostics
+  testDatabaseConnection = debugModule.testDatabaseConnection
+  testMigrationFiles = debugModule.testMigrationFiles
+  console.log('✅ Config modules loaded')
+  
+  console.log('📦 Loading middleware...')
+  const rateLimiterModule = require('./middleware/rateLimiter')
+  generalApiLimiter = rateLimiterModule.generalApiLimiter
+  suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker
+  console.log('✅ Middleware loaded')
+  
+  console.log('📦 Loading routes...')
+  adminRoutes = require('./routes/admin').default
+  authRoutes = require('./routes/auth').authRoutes
+  gameRoutes = require('./routes/game').gameRoutes
+  mapRoutes = require('./routes/maps').default
+  notificationRoutes = require('./routes/notifications').default
+  profileRoutes = require('./routes/profile').default
+  skillsRoutes = require('./routes/skills').default
+  userRoutes = require('./routes/users').default
+  console.log('✅ Routes loaded')
+  
+  console.log('📦 Loading services...')
+  setupSocketHandlers = require('./services/socketService').setupSocketHandlers
+  console.log('✅ Services loaded')
+  
+  console.log('📦 Loading utils...')
+  try {
+    ensureTablesExist = require('./utils/initTables').ensureTablesExist
+    console.log('  ✓ initTables loaded')
+  } catch (e) {
+    console.error('  ✗ Failed to load initTables:', e)
+    throw e
+  }
+  try {
+    logger = require('./utils/logger').logger
+    console.log('  ✓ logger loaded')
+  } catch (e) {
+    console.error('  ✗ Failed to load logger:', e)
+    throw e
+  }
+  try {
+    MigrationRunner = require('./utils/migrationRunner').MigrationRunner
+    console.log('  ✓ MigrationRunner loaded')
+  } catch (e) {
+    console.error('  ✗ Failed to load MigrationRunner:', e)
+    throw e
+  }
+  console.log('✅ Utils loaded')
+} catch (error) {
+  console.error('❌ FATAL: Failed to load modules:', error)
+  if (error instanceof Error) {
+    console.error('  Error:', error.message)
+    console.error('  Stack:', error.stack)
+  }
+  process.exit(1)
+}
 
 const app = express()
 const server = createServer(app)
@@ -110,7 +198,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
 
 // Simple test endpoint that doesn't require database
-app.get('/test', (_req, res) => {
+app.get('/test', (_req: Request, res: Response) => {
   res.json({
     message: 'Server is running!',
     timestamp: new Date().toISOString(),
@@ -120,7 +208,7 @@ app.get('/test', (_req, res) => {
   })
 })
 
-app.get('/health', async (_req, res) => {
+app.get('/health', async (_req: Request, res: Response) => {
   let databaseStatus = 'unknown'
   let databaseError = null
 
@@ -145,7 +233,7 @@ app.get('/health', async (_req, res) => {
   })
 })
 
-app.get('/debug/env', (_req, res) => {
+app.get('/debug/env', (_req: Request, res: Response) => {
   res.json({
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
@@ -157,7 +245,7 @@ app.get('/debug/env', (_req, res) => {
   })
 })
 
-app.get('/debug/tables', async (_req, res) => {
+app.get('/debug/tables', async (_req: Request, res: Response) => {
   try {
     const { query } = await import('./config/database')
 
@@ -222,7 +310,7 @@ app.get('/debug/tables', async (_req, res) => {
   }
 })
 
-app.get('/debug/migrations', async (_req, res) => {
+app.get('/debug/migrations', async (_req: Request, res: Response) => {
   try {
     const migrationRunner = new MigrationRunner()
     const migrationStatus = await migrationRunner.getMigrationStatus()
@@ -250,7 +338,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(
     express.static(frontendPath, {
       maxAge: '1d',
-      setHeaders: (res, filePath) => {
+      setHeaders: (res: Response, filePath: string) => {
         // Set proper content types for assets
         if (filePath.endsWith('.js')) {
           res.setHeader('Content-Type', 'application/javascript; charset=UTF-8')
@@ -265,13 +353,13 @@ if (process.env.NODE_ENV === 'production') {
   )
 
   // Explicitly handle asset requests to ensure they don't fall through
-  app.get('/assets/*', (_req, res) => {
+  app.get('/assets/*', (_req: Request, res: Response) => {
     // If we reach here, the asset wasn't found
     res.status(404).send('Asset not found')
   })
 
   // Handle React Router - serve index.html for all non-API and non-asset routes
-  app.get('*', (req, res) => {
+  app.get('*', (req: Request, res: Response) => {
     // Don't serve index.html for API routes or assets
     if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
       return res.status(404).send('Not found')
