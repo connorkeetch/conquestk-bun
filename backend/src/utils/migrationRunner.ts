@@ -10,7 +10,22 @@ export class MigrationRunner {
 
   constructor(migrationTracker?: MigrationTracker) {
     this.migrationTracker = migrationTracker || new MigrationTracker()
-    this.migrationsPath = join(__dirname, '../../migrations')
+    // In production (compiled), __dirname is dist/utils, so we need ../../../migrations
+    // In development (ts-node), __dirname is src/utils, so we need ../../migrations
+    const isCompiled = __dirname.includes('dist')
+    this.migrationsPath = isCompiled 
+      ? join(__dirname, '../../../migrations')
+      : join(__dirname, '../../migrations')
+    
+    // Log the path for debugging
+    logger.info(`🔍 Migration path resolved to: ${this.migrationsPath}`)
+    
+    // Check if the migrations directory exists
+    if (!existsSync(this.migrationsPath)) {
+      logger.error(`❌ Migrations directory not found at: ${this.migrationsPath}`)
+      // Create an empty migrations directory to prevent crashes
+      this.migrationsPath = join(__dirname, '../../migrations-fallback')
+    }
   }
 
   async runPendingMigrations(): Promise<void> {
