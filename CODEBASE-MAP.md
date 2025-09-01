@@ -150,7 +150,9 @@ risk-game/
 │   │
 │   ├── 📁 migrations/       # Database migrations
 │   │   └── postgres/
-│   │       └── 001_complete_schema.sql       # Full PostgreSQL schema
+│   │       ├── 001_complete_schema.sql       # Initial schema
+│   │       ├── 002_add_missing_tables.sql    # Game rooms + map tables
+│   │       └── 003_complete_missing_tables.sql # All feature tables
 │   │
 │   └── 📁 uploads/          # User uploads
 │       └── maps/                             # Map images
@@ -240,10 +242,12 @@ risk-game/
 3. Add navigation link if needed in `frontend/src/components/navigation/`
 
 ### Modify database schema
-1. Edit `backend/migrations/postgres/001_complete_schema.sql`
-2. Run migration script
-3. Update types in `backend/src/types/`
-4. Update services that use the tables
+1. **NEVER edit existing migration files!**
+2. Create new migration: `backend/migrations/postgres/004_your_change.sql`
+3. Test locally: `cd backend && npm run migrate`
+4. Update types in `backend/src/types/`
+5. Update services that use the tables
+6. Commit and push to deploy
 
 ## 📌 Key Files
 
@@ -270,5 +274,75 @@ risk-game/
 - [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) - Development guide
 - [docs/PROJECT-STATUS.md](./docs/PROJECT-STATUS.md) - Feature status
 
+## 🗄️ Complete Database Schema
+
+### Current Tables (After Migration 003)
+
+**Core Game Tables:**
+- `users` - User accounts
+- `game_rooms` - Active game sessions
+- `room_players` - Players in rooms
+- `game_states` - Current game state
+- `game_moves` - Move history
+- `game_history` - Completed games
+- `player_game_stats` - Per-game stats
+- `player_stats` - Aggregate stats
+
+**Map System:**
+- `maps` - Map definitions
+- `map_territories` - Territory polygons
+- `territory_adjacencies` - Connections
+- `custom_maps` - User-created maps
+- `map_submissions` - Approval queue
+- `map_reviews` - Review feedback
+- `map_test_games` - Playtesting
+- `map_approval_history` - Audit trail
+- `map_featured_history` - Featured maps
+- `map_usage_stats` - Usage tracking
+- `map_ratings` - User ratings
+- `map_comments` - User comments
+- `map_downloads` - Download tracking
+- `map_favorites` - User favorites
+- `map_tags` - Tag definitions
+- `map_tag_associations` - Tag links
+
+**Social Features:**
+- `user_profiles` - Extended profiles
+- `friendships` - Friend connections
+- `user_blocks` - Blocked users
+- `chat_messages` - In-game chat
+- `private_messages` - Direct messages
+
+**Achievement System:**
+- `achievements` - Achievement definitions
+- `user_achievements` - Earned achievements
+- `achievement_progress` - Progress tracking
+
+**Tournament System:**
+- `tournaments` - Tournament definitions
+- `tournament_participants` - Players
+- `tournament_matches` - Match brackets
+- `ranking_history` - ELO history
+
+**Territory Features:**
+- `territory_modifiers` - Special effects
+- `territory_events` - Random events
+- `active_territory_effects` - Active in-game
+
+**Admin & Moderation:**
+- `admin_roles` - Role definitions
+- `user_admin_roles` - User roles
+- `admin_activity_logs` - Admin actions
+- `user_reports` - User reports
+- `user_bans` - Ban records
+- `user_account_status` - Account status
+
+**Support Tables:**
+- `notifications` - System notifications
+- `game_analytics` - Game telemetry
+- `user_activity` - Activity tracking
+- `map_editor_sessions` - Editor saves
+- `schema_migrations` - Migration tracking
+
 ---
-*Last updated: August 29, 2025*
+*Last updated: September 1, 2025*
