@@ -6,25 +6,38 @@ import { type MigrationRecord, MigrationTracker } from './migrationTracker'
 
 export class MigrationRunner {
   private migrationTracker: MigrationTracker
-  private migrationsPath: string
+  private migrationsPath: string = ''
 
   constructor(migrationTracker?: MigrationTracker) {
     this.migrationTracker = migrationTracker || new MigrationTracker()
-    // In production (compiled), __dirname is dist/utils, so we need ../../../migrations
-    // In development (ts-node), __dirname is src/utils, so we need ../../migrations
-    const isCompiled = __dirname.includes('dist')
-    this.migrationsPath = isCompiled 
-      ? join(__dirname, '../../../migrations')
-      : join(__dirname, '../../migrations')
     
-    // Log the path for debugging
-    logger.info(`🔍 Migration path resolved to: ${this.migrationsPath}`)
+    // Try multiple possible migration paths
+    const possiblePaths = [
+      join(__dirname, '../migrations'),        // dist/utils -> dist/migrations
+      join(__dirname, '../../migrations'),     // src/utils -> migrations
+      join(__dirname, '../../../migrations'),  // dist/utils -> migrations (old structure)
+      join(process.cwd(), 'migrations'),       // Current working directory
+      join(process.cwd(), 'backend/migrations'), // Railway structure
+      '/app/backend/migrations',               // Railway absolute path
+      '/app/migrations'                        // Railway alternate path
+    ]
     
-    // Check if the migrations directory exists
-    if (!existsSync(this.migrationsPath)) {
-      logger.error(`❌ Migrations directory not found at: ${this.migrationsPath}`)
-      // Create an empty migrations directory to prevent crashes
-      this.migrationsPath = join(__dirname, '../../migrations-fallback')
+    // Find the first existing path
+    let foundPath = false
+    for (const path of possiblePaths) {
+      if (existsSync(path)) {
+        this.migrationsPath = path
+        logger.info(`✅ Found migrations at: ${this.migrationsPath}`)
+        foundPath = true
+        break
+      }
+    }
+    
+    // If no path found, use a fallback
+    if (!foundPath) {
+      logger.error(`❌ Migrations directory not found in any of: ${possiblePaths.join(', ')}`)
+      this.migrationsPath = join(__dirname, '../migrations')
+      logger.warn(`⚠️  Using fallback path: ${this.migrationsPath}`)
     }
   }
 
