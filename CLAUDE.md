@@ -8,7 +8,11 @@ npm install        # Install dependencies
 npm run setup     # Configure environment and database
 npm run dev       # Start development servers
 ```
-Frontend: http://localhost:5173 | Backend: http://localhost:5001 | Live: [conquestk.com](https://conquestk.com)
+Frontend: http://localhost:5173 | Backend: http://localhost:5001 
+
+### Live Environments
+- **Production**: [conquestk.com](https://conquestk.com) (main branch)
+- **Staging**: [risk-game-production-9935.up.railway.app](https://risk-game-production-9935.up.railway.app/) (dev branch)
 
 ## ⚡ Essential Commands
 ```bash
@@ -77,6 +81,11 @@ frontend/
 - **games** - Active game sessions
 - **users** - Player accounts with ELO ratings
 
+### Database Connections
+- **Production**: Railway PostgreSQL (yamanote.proxy.rlwy.net:46553)
+- **Development**: Railway PostgreSQL (yamabiko.proxy.rlwy.net:25470)
+- **SQL Format**: PostgreSQL placeholders ($1, $2, etc) - NOT MySQL (?)
+
 ## 🔴 Critical Rules
 1. **ALWAYS use Tailwind CSS v4** - NO inline styles, NO regular CSS
 2. **Prefer editing existing files** - Create new files ONLY for clear architectural needs
@@ -121,7 +130,9 @@ socket.on('game:state', (state) => {
 ## 🎯 Current Focus Areas
 1. **UI Consistency** - Tailwind-only styling (no DaisyUI)
 2. **Production** - Railway deployment at conquestk.com
-3. **Map Editor** - Canvas-based territory creation with ImageProcessor
+3. **Staging** - Dev branch at risk-game-production-9935.up.railway.app
+4. **Map Editor** - Canvas-based territory creation with ImageProcessor
+5. **PostgreSQL** - All queries must use $1, $2 format (not ? placeholders)
 
 ## 📁 Environment Configuration
 Backend requires `.env` file with:
