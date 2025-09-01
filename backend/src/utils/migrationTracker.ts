@@ -73,14 +73,49 @@ export class MigrationTracker {
     }
 
     try {
-      const result = await query(`
-        SELECT filename 
-        FROM schema_migrations 
-        WHERE status = 'completed' 
-        ORDER BY executed_at ASC
+      // Check which column exists (version or filename)
+      const columnCheck = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'schema_migrations' 
+        AND column_name IN ('filename', 'version')
       `)
-
-      return result.rows.map((row: any) => row.filename)
+      
+      const hasFilename = columnCheck.rows.some(row => row.column_name === 'filename')
+      const hasVersion = columnCheck.rows.some(row => row.column_name === 'version')
+      
+      if (hasFilename) {
+        const result = await query(`
+          SELECT filename 
+          FROM schema_migrations 
+          WHERE status = 'completed' 
+          ORDER BY executed_at ASC
+        `)
+        return result.rows.map((row: any) => row.filename)
+      } else if (hasVersion) {
+        // Handle older schema_migrations table format
+        const result = await query(`
+          SELECT version 
+          FROM schema_migrations 
+          ORDER BY applied_at ASC
+        `)
+        // Convert version numbers to expected filename format
+        return result.rows.map((row: any) => {
+          const version = row.version
+          // Map version to actual migration filenames
+          if (version === '001' || version === '001_complete_schema') {
+            return '001_complete_schema.sql'
+          } else if (version === '002') {
+            return '002_add_missing_tables.sql'
+          } else if (version === '003') {
+            return '003_complete_missing_tables.sql'
+          }
+          return `${version}.sql`
+        })
+      } else {
+        // No migrations table or empty table
+        return []
+      }
     } catch (error) {
       logger.error('❌ Failed to get applied migrations:', error)
       return []
@@ -93,13 +128,24 @@ export class MigrationTracker {
     }
 
     try {
-      await query(
-        `
-        INSERT INTO schema_migrations (filename, checksum, executed_at, execution_time_ms, status, rollback_sql)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (filename) 
-        DO UPDATE SET 
-          checksum = EXCLUDED.checksum,
+      // Check which column exists
+      const columnCheck = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'schema_migrations' 
+        AND column_name IN ('filename', 'version')
+      `)
+      
+      const hasFilename = columnCheck.rows.some(row => row.column_name === 'filename')
+      
+      if (hasFilename) {
+        await query(
+          `
+          INSERT INTO schema_migrations (filename, checksum, executed_at, execution_time_ms, status, rollback_sql)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (filename) 
+          DO UPDATE SET 
+            checksum = EXCLUDED.checksum,
           executed_at = EXCLUDED.executed_at,
           execution_time_ms = EXCLUDED.execution_time_ms,
           status = EXCLUDED.status,
@@ -115,7 +161,20 @@ export class MigrationTracker {
         ],
       )
 
-      logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`)
+        logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`)
+      } else {
+        // Handle older schema_migrations format - just track by version
+        const version = record.filename.replace('.sql', '').split('_')[0]
+        await query(
+          `
+          INSERT INTO schema_migrations (version, applied_at)
+          VALUES ($1, $2)
+          ON CONFLICT (version) DO NOTHING
+          `,
+          [version, record.executed_at]
+        )
+        logger.debug(`✅ Marked migration as completed: ${version}`)
+      }
     } catch (error) {
       logger.error(`❌ Failed to mark migration ${record.filename}:`, error)
       throw error
