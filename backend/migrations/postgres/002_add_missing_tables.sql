@@ -2,6 +2,80 @@
 -- This fixes the production deployment issues
 
 -- ============================================
+-- GAME ROOM TABLES (Missing from production)
+-- ============================================
+
+-- Create UUID extension if not exists
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Game Rooms table
+CREATE TABLE IF NOT EXISTS game_rooms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    host_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    max_players INTEGER NOT NULL DEFAULT 6,
+    is_private BOOLEAN DEFAULT FALSE,
+    status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'finished')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Room Players (junction table)
+CREATE TABLE IF NOT EXISTS room_players (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(room_id, user_id)
+);
+
+-- Game States
+CREATE TABLE IF NOT EXISTS game_states (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+    game_data JSONB NOT NULL,
+    turn_number INTEGER DEFAULT 1,
+    current_player_id UUID REFERENCES users(id),
+    phase VARCHAR(20) DEFAULT 'setup' CHECK (phase IN ('setup', 'reinforcement', 'attack', 'fortify', 'finished')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Game Moves
+CREATE TABLE IF NOT EXISTS game_moves (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_state_id UUID NOT NULL REFERENCES game_states(id) ON DELETE CASCADE,
+    player_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    move_type VARCHAR(50) NOT NULL,
+    move_data JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Custom Maps
+CREATE TABLE IF NOT EXISTS custom_maps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    map_data JSONB NOT NULL,
+    is_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Player Stats
+CREATE TABLE IF NOT EXISTS player_stats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    games_played INTEGER DEFAULT 0,
+    games_won INTEGER DEFAULT 0,
+    games_lost INTEGER DEFAULT 0,
+    total_playtime_minutes INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id)
+);
+
+-- ============================================
 -- MAP RELATED TABLES (Missing from original migration)
 -- ============================================
 
