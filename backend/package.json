@@ -16,7 +16,9 @@
     "seed": "npm run seed:users",
     "make-admin": "ts-node src/scripts/makeAdmin.ts",
     "migrate": "ts-node src/scripts/runMigration.ts",
-    "test:email": "ts-node src/scripts/testEmail.ts"
+    "test:email": "ts-node src/scripts/testEmail.ts",
+    "check:schema": "ts-node src/scripts/checkSchema.ts",
+    "migrate:status": "ts-node src/scripts/checkSchema.ts"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",

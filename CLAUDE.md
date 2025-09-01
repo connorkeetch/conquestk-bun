@@ -93,6 +93,10 @@ frontend/
 4. **Error handling**: Always handle async errors properly
 5. **Socket events**: Validate all incoming data before processing
 6. **Type safety**: Avoid TypeScript `any` type
+7. **Database changes**: ALWAYS create a migration file when adding/modifying tables
+8. **Migration naming**: Use format `XXX_description.sql` (e.g., `004_add_user_preferences.sql`)
+9. **Test migrations locally** before pushing to production
+10. **Follow CODING-STANDARDS.md** - Apply all 10 core principles
 
 ## 🎮 Game Implementation Patterns
 
@@ -133,6 +137,36 @@ socket.on('game:state', (state) => {
 3. **Staging** - Dev branch at risk-game-production-9935.up.railway.app
 4. **Map Editor** - Canvas-based territory creation with ImageProcessor
 5. **PostgreSQL** - All queries must use $1, $2 format (not ? placeholders)
+6. **Database Schema** - Comprehensive tables for all features (game rooms, achievements, tournaments, etc.)
+
+## 💾 Database Management
+
+### Migration Best Practices
+1. **Before ANY database changes**:
+   - Check existing migrations in `backend/migrations/postgres/`
+   - Create new migration file with next number (e.g., `004_your_change.sql`)
+   - Use `CREATE TABLE IF NOT EXISTS` for safety
+   - Include indexes and triggers in the same migration
+
+2. **Testing migrations**:
+   ```bash
+   cd backend && npm run migrate  # Test locally first
+   ```
+
+3. **Production deployment**:
+   - Migrations auto-run on Railway deployment
+   - Monitor logs for migration success
+   - Verify schema with `npm run check:schema`
+
+### Current Database Tables (as of migration 003)
+- **Core**: users, game_rooms, room_players, game_states, game_moves
+- **Maps**: maps, map_territories, custom_maps, map_submissions, map_reviews
+- **Stats**: player_stats, player_game_stats, game_history, game_analytics
+- **Social**: friendships, user_blocks, user_profiles, chat_messages
+- **Achievements**: achievements, user_achievements, achievement_progress
+- **Tournaments**: tournaments, tournament_participants, tournament_matches
+- **Admin**: admin_roles, user_admin_roles, admin_activity_logs, user_bans
+- **Support**: notifications, user_reports, territory_modifiers, territory_events
 
 ## 📁 Environment Configuration
 Backend requires `.env` file with:
@@ -154,6 +188,20 @@ Frontend proxies `/api` requests to backend port 5001 (configured in `vite.confi
 - Mock Socket.io connections for frontend tests
 - Use test database for backend integration tests
 
+## 📏 Code Quality Standards
+
+**ALWAYS follow these principles** (see CODING-STANDARDS.md for details):
+1. **Follow specifications** - TypeScript/React best practices
+2. **Document WHY, not WHAT** - Explain reasoning in comments
+3. **Handle errors robustly** - Try-catch, validate inputs
+4. **Apply SOLID principles** - Single responsibility, proper abstractions
+5. **Write testable code** - >70% coverage, AAA pattern
+6. **Appropriate abstraction** - Not too much, not too little
+7. **Use patterns wisely** - Don't over-engineer
+8. **Avoid global state** - Use dependency injection
+9. **Refactor continuously** - Keep tech debt low
+10. **Security first** - Validate, sanitize, authenticate
+
 ## 🚨 Common Gotchas
 - **Port conflicts**: Backend (5001) or frontend (5173) - check with `netstat -ano | findstr :PORT`
 - **PostgreSQL connection**: Railway-hosted, check DATABASE_URL in `.env`
@@ -161,3 +209,34 @@ Frontend proxies `/api` requests to backend port 5001 (configured in `vite.confi
 - **Socket.io rooms**: Game rooms use format `game:${gameId}`
 - **Redux DevTools**: Available in development mode only
 - **CORS**: Configured for localhost in dev, specific domains in production
+
+## 📚 Documentation Files
+
+### Root Level (Core Instructions)
+- **CLAUDE.md** - This file (AI assistant instructions)
+- **README.md** - Project overview and quick start
+- **CODING-STANDARDS.md** - 10 core coding principles
+- **CODEBASE-MAP.md** - Complete project structure reference
+- **TODO.md** - Development task list  
+- **CODEBASE-HEALTH-CHECK.md** - Project health status
+- **DEPLOYMENT.md** - Deployment guide (duplicate - should be removed)
+
+### /docs (Technical Documentation)
+- **ARCHITECTURE.md** - System design and architecture
+- **DEVELOPMENT.md** - Development environment setup
+- **DEPLOYMENT.md** - Deployment instructions (canonical version)
+- **PROJECT-STATUS.md** - Feature completion status
+- **TROUBLESHOOTING.md** - Common issues and solutions
+- **UPGRADE-LOG.md** - Version upgrade history
+- **MAP-FORMAT.md** - Map file format specification
+- **AUDIO-IMPLEMENTATION.md** - Sound system documentation
+- **SECURITY-AUDIT.md** - Security review checklist
+- **LEGAL_REVIEW_CHECKLIST.md** - Legal compliance checklist
+- **LEGAL_IMPLEMENTATION_PLAN.md** - Legal features roadmap
+- **PLAYWRIGHT-MCP.md** - Playwright testing setup
+
+### /backend
+- **MIGRATION_INSTRUCTIONS.md** - Database migration guide
+
+### /frontend/src/data
+- **MAP_SCHEMA.md** - Map data structure specification
