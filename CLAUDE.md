@@ -14,6 +14,13 @@ Frontend: http://localhost:5173 | Backend: http://localhost:5001
 - **Production**: [conquestk.com](https://conquestk.com) (main branch)
 - **Staging**: [risk-game-production-9935.up.railway.app](https://risk-game-production-9935.up.railway.app/) (dev branch)
 
+### 📁 Documentation
+- **README.md** - User-facing overview
+- **CLAUDE.md** - This file (AI assistant guide)
+- **TODO.md** - Feature & task tracking
+- **docs/DEPLOYMENT.md** - Complete deployment, monitoring, emergency procedures
+- **docs/** - Additional technical documentation
+
 ## ⚡ Essential Commands
 ```bash
 # Development
@@ -96,7 +103,13 @@ frontend/
 7. **Database changes**: ALWAYS create a migration file when adding/modifying tables
 8. **Migration naming**: Use format `XXX_description.sql` (e.g., `004_add_user_preferences.sql`)
 9. **Test migrations locally** before pushing to production
-10. **Follow CODING-STANDARDS.md** - Apply all 10 core principles
+10. **Follow docs/CODING-STANDARDS.md** - Apply all 10 core principles
+
+## 📊 Monitoring & Error Tracking
+- **Sentry**: Integrated for error tracking (configured via SENTRY_DSN env var)
+- **Health endpoint**: `/health` returns server, database, and Sentry status
+- **Test Sentry**: `/debug-sentry` endpoint (non-production only)
+- **Performance**: 10% transaction sampling in production
 
 ## 🎮 Game Implementation Patterns
 
