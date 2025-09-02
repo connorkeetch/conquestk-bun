@@ -629,7 +629,8 @@ BEGIN
         EXECUTE format('DROP TRIGGER IF EXISTS update_%I_updated_at ON %I', t.table_name, t.table_name);
         EXECUTE format('CREATE TRIGGER update_%I_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t.table_name, t.table_name);
     END LOOP;
-END $$;
+END
+$$ LANGUAGE plpgsql;
 
 -- ============================================
 -- MIGRATION COMPLETION
@@ -646,4 +647,5 @@ BEGIN
     END IF;
     
     RAISE NOTICE 'Migration 003 completed successfully';
-END $$;
+END
+$$ LANGUAGE plpgsql;
