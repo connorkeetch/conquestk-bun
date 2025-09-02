@@ -224,6 +224,12 @@ export class MigrationTracker {
         return true // New migration, no integrity issues
       }
 
+      // Allow re-running failed migrations with updated content
+      if (status.status === 'failed') {
+        logger.info(`🔄 Allowing re-run of failed migration with updated content: ${filename}`)
+        return true
+      }
+
       const result = await query(
         `
         SELECT checksum FROM schema_migrations WHERE filename = $1

@@ -11,8 +11,8 @@ import dotenv from 'dotenv'
 import * as Sentry from '@sentry/node'
 
 // Load environment variables FIRST before any other imports
-// Only load .env file in development - production uses Railway's environment variables
-if (process.env.NODE_ENV !== 'production') {
+// Only load .env file in development - production/staging uses Railway's environment variables
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
   console.log('📋 Loading .env file (development mode)')
   const result = dotenv.config()
   if (result.error) {
@@ -21,7 +21,7 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`✅ Loaded .env file with ${Object.keys(result.parsed || {}).length} variables`)
   }
 } else {
-  console.log('🏭 Production mode - using Railway environment variables')
+  console.log('🏭 Production/Staging mode - using Railway environment variables')
   console.log('Environment variables available:')
   console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.length + ' chars)' : 'NOT SET'}`)
   console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`)
