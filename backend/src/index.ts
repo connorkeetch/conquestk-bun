@@ -201,6 +201,30 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
 
+// Root endpoint with helpful information
+app.get('/', (_req: Request, res: Response) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+  res.json({
+    name: 'Conquest K Backend API',
+    status: 'running',
+    environment: process.env.NODE_ENV || 'development',
+    message: 'This is the backend API server. Please visit the frontend application.',
+    frontend: frontendUrl,
+    endpoints: {
+      health: '/health',
+      test: '/test',
+      api: {
+        auth: '/api/auth',
+        game: '/api/game',
+        maps: '/api/maps',
+        profile: '/api/profile',
+        users: '/api/users'
+      }
+    },
+    timestamp: new Date().toISOString()
+  })
+})
+
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {
   res.json({
