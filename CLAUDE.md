@@ -197,10 +197,10 @@ PORT=5001                           # Backend port
 NODE_ENV=development               # or production
 
 # Email Service (Required for password reset & verification)
-RESEND_API_KEY=...                 # From Resend dashboard
-EMAIL_FROM=noreply@conquestk.com  # Must match verified domain
-EMAIL_FROM_NAME=ConquestK          # Display name in emails
-EMAIL_ENABLED=true                 # Set to false to disable
+RESEND_API_KEY=...                     # From Resend dashboard
+EMAIL_FROM=noreply@send.conquestk.com  # Must use send.conquestk.com (configured for Resend)
+EMAIL_FROM_NAME=ConquestK              # Display name in emails
+EMAIL_ENABLED=true                     # Set to false to disable
 
 # Optional
 SENTRY_DSN=...                     # Error tracking
