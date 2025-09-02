@@ -66,7 +66,7 @@ backend/
 ├── src/game/worldMap.ts           # Territory definitions and adjacencies  
 ├── src/services/GameService.ts    # Game state management
 ├── src/socket/gameHandlers.ts     # Real-time event handling
-└── migrations/postgres/            # Database schema
+└── migrations/                    # Database migrations
 
 frontend/
 ├── src/components/game/            # GameBoard, PhaseControls, DiceModal
@@ -162,7 +162,7 @@ socket.on('game:state', (state) => {
 
 ### Migration Best Practices
 1. **Before ANY database changes**:
-   - Check existing migrations in `backend/migrations/postgres/`
+   - Check existing migrations in `backend/migrations/`
    - Create new migration file with next number (e.g., `004_your_change.sql`)
    - Use `CREATE TABLE IF NOT EXISTS` for safety
    - Include indexes and triggers in the same migration
