@@ -1,0 +1,47 @@
+# Docker Compose for Local Development
+# This ensures developers use local databases instead of production/staging
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: risk-game-postgres
+    environment:
+      POSTGRES_DB: risk_game_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: risk-game-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: risk-game-postgres-data
+  redis_data:
+    name: risk-game-redis-data
+
+# Usage:
+# 1. Start services: docker-compose up -d
+# 2. Stop services: docker-compose down
+# 3. Reset database: docker-compose down -v && docker-compose up -d
+# 4. View logs: docker-compose logs -f [service_name]

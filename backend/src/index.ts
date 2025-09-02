@@ -1,3 +1,6 @@
+// IMPORTANT: Import Sentry instrumentation before anything else
+import './instrument'
+
 // First, log the very start of the application
 console.log('🚀 Starting application...')
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
@@ -5,6 +8,7 @@ console.log(`Current directory: ${process.cwd()}`)
 console.log(`Script directory: ${__dirname}`)
 
 import dotenv from 'dotenv'
+import * as Sentry from '@sentry/node'
 
 // Load environment variables FIRST before any other imports
 // Only load .env file in development - production uses Railway's environment variables
@@ -228,6 +232,7 @@ app.get('/health', async (_req: Request, res: Response) => {
     database: databaseStatus,
     environment: process.env.NODE_ENV || 'development',
     databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+    sentry: process.env.SENTRY_DSN ? 'configured' : 'disabled',
     timestamp: new Date().toISOString(),
     ...(databaseError && { databaseError }),
   })
@@ -329,6 +334,13 @@ app.get('/debug/migrations', async (_req: Request, res: Response) => {
   }
 })
 
+// Add Sentry test endpoint (only in development/staging)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/debug-sentry', (_req: Request, res: Response) => {
+    throw new Error('Test Sentry error!')
+  })
+}
+
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../public')
@@ -369,6 +381,30 @@ if (process.env.NODE_ENV === 'production') {
     return res.sendFile(indexPath)
   })
 }
+
+// IMPORTANT: Sentry error handler must be registered AFTER all controllers
+// and BEFORE any other error middleware
+Sentry.setupExpressErrorHandler(app)
+
+// Custom error handler (comes after Sentry)
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  // The error id is attached to `res.sentry` for reference
+  const sentryId = (res as any).sentry
+  
+  logger.error('Application error:', {
+    error: err.message,
+    stack: err.stack,
+    sentryId
+  })
+  
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'An error occurred processing your request' 
+      : err.message,
+    ...(sentryId && { sentryId }),
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  })
+})
 
 setupSocketHandlers(io)
 
