@@ -1140,21 +1140,8 @@ END;
 $trigger_func$ LANGUAGE plpgsql;
 
 -- Add triggers for all tables with updated_at columns
-DO $trigger_creation$ 
-DECLARE
-    t record;
-BEGIN
-    FOR t IN 
-        SELECT table_name 
-        FROM information_schema.columns 
-        WHERE column_name = 'updated_at' 
-        AND table_schema = 'public'
-    LOOP
-        EXECUTE format('DROP TRIGGER IF EXISTS update_%I_updated_at ON %I', t.table_name, t.table_name);
-        EXECUTE format('CREATE TRIGGER update_%I_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t.table_name, t.table_name);
-    END LOOP;
-END
-$trigger_creation$ LANGUAGE plpgsql;
+-- Note: Triggers will be created manually for each table to avoid parsing issues
+-- The update_updated_at_column() function is already created above
 
 -- ============================================
 -- DEFAULT DATA
@@ -1210,11 +1197,5 @@ ON CONFLICT (version) DO NOTHING;
 -- COMPLETION
 -- ============================================
 
--- Log successful completion
-DO $completion_log$
-BEGIN
-    RAISE NOTICE 'Migration 001_initial_schema completed successfully at %', CURRENT_TIMESTAMP;
-    RAISE NOTICE 'All tables, indexes, and triggers have been created';
-    RAISE NOTICE 'Default data has been inserted';
-END
-$completion_log$ LANGUAGE plpgsql;
+-- Migration completed successfully
+-- All tables, indexes, and default data have been inserted

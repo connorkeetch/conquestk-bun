@@ -1,20 +1,20 @@
 {
-  "name": "Risk Game",
-  "short_name": "Risk",
-  "description": "Multiplayer Risk board game",
+  "name": "Conquest K",
+  "short_name": "Conquest K",
+  "description": "Strategic multiplayer conquest game",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#dc2626",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/conquest-icon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/vite.svg",
+      "src": "/conquest-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
