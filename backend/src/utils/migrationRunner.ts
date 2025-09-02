@@ -86,12 +86,17 @@ export class MigrationRunner {
         const initialSchema = availableMigrations.find(m => m === '001_initial_schema.sql')
         if (initialSchema) {
           pendingMigrations = [initialSchema]
-          // Mark it as pending in the tracker
-          await query(`
-            UPDATE schema_migrations 
-            SET status = 'pending' 
-            WHERE filename = $1
-          `, [initialSchema])
+          // Delete the migration record so it can run fresh
+          // This is safer than trying to update status to 'pending' which violates constraints
+          try {
+            await query(`
+              DELETE FROM schema_migrations 
+              WHERE filename = $1
+            `, [initialSchema])
+            logger.info('🗑️  Cleared migration record for re-run')
+          } catch (err) {
+            logger.warn('⚠️  Could not clear migration record, will attempt to run anyway')
+          }
         }
       }
 
