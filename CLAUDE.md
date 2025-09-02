@@ -90,6 +90,7 @@ frontend/
 
 ### Database Connections
 - **Production**: Railway PostgreSQL (yamanote.proxy.rlwy.net:46553)
+- **Staging**: Railway PostgreSQL (yamanote.proxy.rlwy.net:59752)
 - **Development**: Railway PostgreSQL (yamabiko.proxy.rlwy.net:25470)
 - **SQL Format**: PostgreSQL placeholders ($1, $2, etc) - NOT MySQL (?)
 
