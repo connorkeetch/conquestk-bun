@@ -71,9 +71,29 @@ export class MigrationRunner {
       const appliedMigrations = await this.migrationTracker.getAppliedMigrations()
 
       // Find pending migrations
-      const pendingMigrations = availableMigrations.filter(
+      let pendingMigrations = availableMigrations.filter(
         (migration) => !appliedMigrations.includes(migration),
       )
+
+      // IMPORTANT: Check if key tables actually exist, even if migration is marked as complete
+      // This handles cases where migrations were marked complete but tables are missing
+      const keyTablesExist = await this.checkKeyTablesExist()
+      if (!keyTablesExist && pendingMigrations.length === 0) {
+        logger.warn('⚠️  Key tables missing despite migrations marked as complete')
+        logger.info('🔄 Re-running initial schema migration to create missing tables...')
+        
+        // Force re-run of initial schema if it exists
+        const initialSchema = availableMigrations.find(m => m === '001_initial_schema.sql')
+        if (initialSchema) {
+          pendingMigrations = [initialSchema]
+          // Mark it as pending in the tracker
+          await query(`
+            UPDATE schema_migrations 
+            SET status = 'pending' 
+            WHERE filename = $1
+          `, [initialSchema])
+        }
+      }
 
       if (pendingMigrations.length === 0) {
         logger.info('✅ All migrations are up to date')
@@ -450,6 +470,36 @@ export class MigrationRunner {
     }
 
     return hints.join('\n')
+  }
+
+  async checkKeyTablesExist(): Promise<boolean> {
+    try {
+      // Check if essential tables exist
+      const keyTables = ['users', 'maps', 'game_rooms', 'game_states', 'user_admin_roles']
+      
+      for (const tableName of keyTables) {
+        const result = await query(
+          `
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = $1
+          )
+        `,
+          [tableName],
+        )
+
+        if (!result.rows[0].exists) {
+          logger.warn(`⚠️  Key table missing: ${tableName}`)
+          return false
+        }
+      }
+      
+      return true
+    } catch (error) {
+      logger.error('❌ Error checking key tables:', error)
+      return false
+    }
   }
 
   async validateSchemaIntegrity(): Promise<boolean> {
