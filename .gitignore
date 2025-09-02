@@ -130,3 +130,8 @@ mcp.json
 test-results/
 tests/
 *.test.ts
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -1,0 +1,121 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: risk_game_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Build project
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword123@localhost:5432/risk_game_test
+          JWT_SECRET: test-jwt-secret-minimum-32-characters
+          SESSION_SECRET: test-session-secret-minimum-32-characters
+      
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword123@localhost:5432/risk_game_test
+          JWT_SECRET: test-jwt-secret-minimum-32-characters
+          SESSION_SECRET: test-session-secret-minimum-32-characters
+          NODE_ENV: test
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Railway Staging
+        run: |
+          curl -X POST ${{ secrets.RAILWAY_STAGING_WEBHOOK }}
+        if: success()
+      
+      - name: Wait for deployment
+        run: sleep 30
+      
+      - name: Health check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://risk-game-production-9935.up.railway.app/health)
+          if [ $response -eq 200 ]; then
+            echo "Staging deployment successful!"
+          else
+            echo "Staging health check failed with status: $response"
+            exit 1
+          fi
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: https://conquestk.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Railway Production
+        run: |
+          curl -X POST ${{ secrets.RAILWAY_PRODUCTION_WEBHOOK }}
+        if: success()
+      
+      - name: Wait for deployment
+        run: sleep 45
+      
+      - name: Health check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://conquestk.com/health)
+          if [ $response -eq 200 ]; then
+            echo "Production deployment successful!"
+          else
+            echo "Production health check failed with status: $response"
+            exit 1
+          fi
+      
+      - name: Create deployment tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "deploy-$(date +%Y%m%d-%H%M%S)" -m "Production deployment"
+          git push origin --tags
