@@ -57,7 +57,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'NODE_ENV',
     required: false,
     defaultValue: 'development',
-    validator: (value) => ['development', 'production', 'test'].includes(value),
+    validator: (value) => ['development', 'production', 'staging', 'test'].includes(value),
     description: 'Application environment',
   },
   
@@ -158,8 +158,8 @@ export function validateEnvironmentVariables(): void {
   const warnings: string[] = []
   const applied: string[] = []
   
-  // Handle production-specific secret generation FIRST before validation
-  if (process.env.NODE_ENV === 'production') {
+  // Handle production/staging-specific secret generation FIRST before validation
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
     const crypto = require('crypto')
     
     // Generate JWT_SECRET if missing or invalid (Railway reference)
@@ -218,8 +218,8 @@ export function validateEnvironmentVariables(): void {
     }
   }
   
-  // Check for other production-specific warnings
-  if (process.env.NODE_ENV === 'production') {
+  // Check for other production/staging-specific warnings
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
     if (!process.env.REDIS_URL) {
       warnings.push('⚠️  REDIS_URL not set - sessions will use memory storage (not recommended for production)')
     }
@@ -244,8 +244,8 @@ export function validateEnvironmentVariables(): void {
     logger.error('Environment validation failed:')
     errors.forEach(msg => logger.error(msg))
     
-    // In production, fail fast on missing required variables
-    if (process.env.NODE_ENV === 'production') {
+    // In production/staging, fail fast on missing required variables
+    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
       logger.error('🛑 Cannot start server with missing/invalid environment variables in production')
       process.exit(1)
     } else {
