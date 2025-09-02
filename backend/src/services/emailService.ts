@@ -47,8 +47,8 @@ class EmailService {
       return false
     }
 
-    // Use verified domain email
-    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com'
+    // Use verified domain email (send.conquestk.com is configured for Resend)
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@send.conquestk.com'
     const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK'
 
     try {
