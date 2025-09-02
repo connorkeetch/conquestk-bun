@@ -30,9 +30,20 @@ SESSION_SECRET=[generate with: openssl rand -base64 32]
 CORS_ORIGIN=https://conquestk.com
 FRONTEND_URL=https://conquestk.com
 
+# Email Service (Resend)
+RESEND_API_KEY=[your-resend-api-key from Resend dashboard]
+EMAIL_FROM=noreply@conquestk.com  # Must be verified domain in Resend
+EMAIL_FROM_NAME=ConquestK
+EMAIL_ENABLED=true
+EMAIL_VERIFICATION_EXPIRE_HOURS=24
+REQUIRE_EMAIL_VERIFICATION=true
+
 # Monitoring
 SENTRY_DSN=https://your-sentry-dsn
 LOG_LEVEL=info
+
+# Redis (Optional)
+REDIS_URL=redis://...
 
 # Database Tuning
 DB_POOL_MAX=20
@@ -40,6 +51,12 @@ DB_POOL_IDLE_TIMEOUT=30000
 DB_POOL_CONNECTION_TIMEOUT=2000
 DB_STATEMENT_TIMEOUT=30000
 DB_QUERY_TIMEOUT=30000
+
+# Feature Flags (Optional)
+ENABLE_AI_PLAYERS=false
+ENABLE_DEBUG_LOGS=false
+ENABLE_NEW_FEATURES=false
+ENABLE_TOURNAMENTS=false
 ```
 
 ### Generate Secure Secrets
