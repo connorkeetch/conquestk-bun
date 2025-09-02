@@ -24,16 +24,19 @@ class EmailService {
   }
 
   private initialize() {
-    // Use Resend API key from environment or the provided key
-    const apiKey = process.env.RESEND_API_KEY || 're_LAQqfKtd_BZixGnfuWLZgpwTZdCDG4V7s'
+    // Use Resend API key from environment only (no hardcoded fallback for security)
+    const apiKey = process.env.RESEND_API_KEY
     this.emailEnabled = process.env.EMAIL_ENABLED !== 'false' // Default to enabled
 
-    if (apiKey) {
+    if (apiKey && this.emailEnabled) {
       this.resend = new Resend(apiKey)
-      this.emailEnabled = true
       console.log('✅ Email service initialized with Resend')
     } else {
-      console.log('⚠️ Email service disabled - no Resend API key')
+      if (!apiKey) {
+        console.log('⚠️ Email service disabled - RESEND_API_KEY not configured')
+      } else {
+        console.log('⚠️ Email service disabled - EMAIL_ENABLED is false')
+      }
       this.emailEnabled = false
     }
   }
@@ -45,8 +48,8 @@ class EmailService {
     }
 
     // Use verified domain email
-    const fromEmail = process.env.EMAIL_FROM || 'noreply@mail.conquestk.com'
-    const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK Game'
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@conquestk.com'
+    const fromName = process.env.EMAIL_FROM_NAME || 'ConquestK'
 
     try {
       const { data, error } = await this.resend.emails.send({

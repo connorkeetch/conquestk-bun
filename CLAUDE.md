@@ -111,6 +111,12 @@ frontend/
 - **Test Sentry**: `/debug-sentry` endpoint (non-production only)
 - **Performance**: 10% transaction sampling in production
 
+## 🛠️ Development Environment
+- **Node.js**: v20+ required (check with `node -v`)
+- **npm**: v9+ required (check with `npm -v`)
+- **IDE**: VS Code on Windows (PowerShell for dev scripts)
+- **Linter**: Biome 2.2.2 (2 spaces, single quotes JS, double quotes JSX)
+
 ## 🎮 Game Implementation Patterns
 
 ### Adding a New Game Feature
@@ -185,13 +191,24 @@ socket.on('game:state', (state) => {
 Backend requires `.env` file with:
 ```bash
 DATABASE_URL=postgresql://...      # Railway PostgreSQL URL
-JWT_SECRET=...                      # JWT signing secret
+JWT_SECRET=...                      # JWT signing secret (min 32 chars)
+SESSION_SECRET=...                  # Session secret (min 32 chars)
 PORT=5001                           # Backend port
 NODE_ENV=development               # or production
-RESEND_API_KEY=...                 # Email service (optional)
+
+# Email Service (Required for password reset & verification)
+RESEND_API_KEY=...                 # From Resend dashboard
+EMAIL_FROM=noreply@conquestk.com  # Must match verified domain
+EMAIL_FROM_NAME=ConquestK          # Display name in emails
+EMAIL_ENABLED=true                 # Set to false to disable
+
+# Optional
+SENTRY_DSN=...                     # Error tracking
+REDIS_URL=...                      # Redis cache
 ```
 
 Frontend proxies `/api` requests to backend port 5001 (configured in `vite.config.ts`).
+See `backend/.env.example` for complete configuration template.
 
 ## 🧪 Testing Strategy
 - **Unit Tests**: Core game logic, utility functions
@@ -222,6 +239,9 @@ Frontend proxies `/api` requests to backend port 5001 (configured in `vite.confi
 - **Socket.io rooms**: Game rooms use format `game:${gameId}`
 - **Redux DevTools**: Available in development mode only
 - **CORS**: Configured for localhost in dev, specific domains in production
+- **Windows paths**: Use forward slashes in imports, backslashes for file system operations
+- **PowerShell scripts**: May need `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
+- **npm workspaces**: Root `npm install` installs all dependencies for frontend/backend
 
 ## 📚 Documentation Files
 
