@@ -6,7 +6,7 @@
 
 **NEVER modify database tables directly in code!** Always follow this process:
 
-1. Create a new migration file in `backend/migrations/postgres/`
+1. Create a new migration file in `backend/migrations/`
 2. Test the migration locally
 3. Commit and push to trigger automatic deployment
 4. Monitor production logs to ensure migration success
@@ -28,6 +28,10 @@ If you want to test locally first, set your DATABASE_URL to your local PostgreSQ
 DATABASE_URL=postgresql://postgres:password@localhost:5432/risk_game
 npm run migrate
 ```
+
+## Migration Files Location
+
+All migration files are stored in `backend/migrations/` (e.g., `001_complete_schema.sql`, `002_add_missing_tables.sql`, etc.)
 
 ### 2. Production Migration on Railway
 
@@ -63,7 +67,7 @@ npm run migrate
 
 #### Option C: Direct SQL Execution
 1. Connect to your Railway PostgreSQL database using a tool like pgAdmin, DBeaver, or psql
-2. Run the SQL file directly: `backend/migrations/postgres/002_add_missing_tables.sql`
+2. Run the SQL file directly: `backend/migrations/002_add_missing_tables.sql`
 
 ## Creating New Migrations
 
@@ -71,7 +75,7 @@ When adding new database features:
 
 ```bash
 # 1. Create migration file
-touch backend/migrations/postgres/004_your_feature.sql
+touch backend/migrations/004_your_feature.sql
 
 # 2. Add your SQL
 CREATE TABLE IF NOT EXISTS your_table (
@@ -84,7 +88,7 @@ CREATE TABLE IF NOT EXISTS your_table (
 cd backend && npm run migrate
 
 # 4. Commit and push
-git add backend/migrations/postgres/004_your_feature.sql
+git add backend/migrations/004_your_feature.sql
 git commit -m "Add migration for your feature"
 git push origin main
 ```

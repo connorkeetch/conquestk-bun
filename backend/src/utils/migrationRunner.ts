@@ -11,31 +11,49 @@ export class MigrationRunner {
   constructor(migrationTracker?: MigrationTracker) {
     this.migrationTracker = migrationTracker || new MigrationTracker()
     
-    // Try multiple possible migration paths
+    // Try multiple possible migration paths (simplified - no postgres subdirectory)
     const possiblePaths = [
+      // Production paths (Railway) - check these first
+      '/app/backend/dist/migrations',          // Railway dist
+      '/app/backend/migrations',               // Railway source
+      '/app/migrations',                       // Railway alternate
+      
+      // Development and build paths
       join(__dirname, '../migrations'),        // dist/utils -> dist/migrations
       join(__dirname, '../../migrations'),     // src/utils -> migrations
-      join(__dirname, '../../../migrations'),  // dist/utils -> migrations (old structure)
-      join(process.cwd(), 'migrations'),       // Current working directory
-      join(process.cwd(), 'backend/migrations'), // Railway structure
-      '/app/backend/migrations',               // Railway absolute path
-      '/app/migrations'                        // Railway alternate path
+      join(process.cwd(), 'migrations'),       // Current working directory/migrations
+      join(process.cwd(), 'backend/migrations'), // Current working directory/backend/migrations
     ]
+    
+    // Log all paths being checked for debugging
+    logger.info('📁 Checking migration paths:')
+    possiblePaths.forEach((path, index) => {
+      const exists = existsSync(path)
+      logger.info(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`)
+    })
     
     // Find the first existing path
     let foundPath = false
     for (const path of possiblePaths) {
       if (existsSync(path)) {
         this.migrationsPath = path
-        logger.info(`✅ Found migrations at: ${this.migrationsPath}`)
-        foundPath = true
-        break
+        
+        // Count SQL files in the directory
+        try {
+          const files = readdirSync(path).filter(f => f.endsWith('.sql'))
+          logger.info(`✅ Found migrations at: ${this.migrationsPath}`)
+          logger.info(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`)
+          foundPath = true
+          break
+        } catch (err) {
+          logger.warn(`⚠️  Could not read directory ${path}: ${err}`)
+        }
       }
     }
     
     // If no path found, use a fallback
     if (!foundPath) {
-      logger.error(`❌ Migrations directory not found in any of: ${possiblePaths.join(', ')}`)
+      logger.error(`❌ Migrations directory not found in any of the checked paths`)
       this.migrationsPath = join(__dirname, '../migrations')
       logger.warn(`⚠️  Using fallback path: ${this.migrationsPath}`)
     }
@@ -167,18 +185,26 @@ export class MigrationRunner {
 
   private getAvailableMigrations(): string[] {
     try {
+      logger.info(`📁 Checking migration files in: ${this.migrationsPath}`)
+      
       if (!existsSync(this.migrationsPath)) {
-        logger.warn('⚠️  Migrations directory not found')
+        logger.warn(`⚠️  Migrations directory not found: ${this.migrationsPath}`)
         return []
       }
 
-      return readdirSync(this.migrationsPath)
+      const allFiles = readdirSync(this.migrationsPath)
+      logger.info(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`)
+      
+      const sqlFiles = allFiles
         .filter(
           (file) => file.endsWith('.sql') && !file.includes('_mysql') && !file.includes('_sqlite'),
         )
         .sort() // Ensure migrations run in order
+      
+      logger.info(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`)
+      return sqlFiles
     } catch (error) {
-      logger.error('❌ Failed to read migrations directory:', error)
+      logger.error(`❌ Failed to read migrations directory ${this.migrationsPath}:`, error)
       return []
     }
   }

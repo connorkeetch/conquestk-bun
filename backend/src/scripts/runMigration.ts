@@ -31,7 +31,7 @@ async function runMigration() {
     console.log('📍 Database:', databaseUrl?.split('@')[1]?.split('/')[0])
     
     // Read the migration file
-    const migrationPath = path.join(__dirname, '../../migrations/postgres/002_add_missing_tables.sql')
+    const migrationPath = path.join(__dirname, '../../migrations/002_add_missing_tables.sql')
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8')
     
     console.log('📄 Running migration: 002_add_missing_tables.sql')

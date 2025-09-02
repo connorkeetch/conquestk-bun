@@ -200,8 +200,8 @@ risk-game/
 
 #### **Database**
 - Connection: `backend/src/config/database.ts`
-- Migrations: `backend/migrations/postgres/`
-- Schema: `backend/migrations/postgres/001_complete_schema.sql`
+- Migrations: `backend/migrations/`
+- Schema: `backend/migrations/001_complete_schema.sql`
 
 #### **Admin System**
 - Admin dashboard: `frontend/src/pages/AdminPage.tsx`
@@ -243,7 +243,7 @@ risk-game/
 
 ### Modify database schema
 1. **NEVER edit existing migration files!**
-2. Create new migration: `backend/migrations/postgres/004_your_change.sql`
+2. Create new migration: `backend/migrations/004_your_change.sql`
 3. Test locally: `cd backend && npm run migrate`
 4. Update types in `backend/src/types/`
 5. Update services that use the tables

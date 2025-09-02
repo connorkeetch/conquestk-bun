@@ -8,7 +8,7 @@ dotenv.config()
 import { query } from '../config/database'
 
 async function runMigrations() {
-  const migrationsDir = path.join(__dirname, '../../migrations/postgres')
+  const migrationsDir = path.join(__dirname, '../../migrations')
 
   try {
     // Create migrations tracking table if it doesn't exist
