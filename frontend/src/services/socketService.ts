@@ -21,7 +21,11 @@ class SocketService {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001', {
+    // Use relative URL in production, absolute URL in development
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+      (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
+    
+    this.socket = io(socketUrl, {
       auth: {
         token,
       },
