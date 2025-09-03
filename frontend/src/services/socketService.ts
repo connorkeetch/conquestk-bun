@@ -136,6 +136,9 @@ class SocketService {
     })
 
     this.socket.on('gamePhaseChanged', (data) => {
+      // Play phase transition sound
+      audioService.playEffect('swoosh')
+      
       store.dispatch(
         updateGameState({
           phase: data.phase,
@@ -171,6 +174,9 @@ class SocketService {
     })
 
     this.socket.on('armiesDeployed', (data) => {
+      // Play troop placement sound
+      audioService.playEffect('placetroop')
+      
       store.dispatch(
         updateTerritory({
           territoryId: data.territoryId,
@@ -277,6 +283,10 @@ class SocketService {
     })
 
     this.socket.on('capitalElimination', (data) => {
+      // Play dramatic fanfare for capital elimination
+      audioService.playEffect('fanfare')
+      audioService.playEffect('victory')
+      
       // Show capital elimination notification
       store.dispatch(
         updateGameState({
@@ -292,12 +302,16 @@ class SocketService {
     })
 
     this.socket.on('gameError', (error) => {
+      // Play error sound
+      audioService.playEffect('error')
       store.dispatch(setError(error.message))
     })
 
     this.socket.on('chat-message', (_data) => {})
 
     this.socket.on('error', (_error) => {
+      // Play error sound for connection errors
+      audioService.playEffect('error')
       store.dispatch(setError('Connection error'))
     })
   }

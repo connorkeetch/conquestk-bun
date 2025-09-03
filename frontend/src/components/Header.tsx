@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { logout } from '../store/authSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
+import audioService from '../services/audioService'
 
 interface MenuItem {
   path: string
@@ -18,6 +19,17 @@ export default function Header() {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+
+  useEffect(() => {
+    // Check initial mute state
+    setIsMuted(audioService.isMutedState())
+  }, [])
+
+  const handleToggleMute = () => {
+    audioService.toggleMute()
+    setIsMuted(!isMuted)
+  }
 
   // Simplified flat menu structure
   const menuItems: MenuItem[] = [
@@ -132,6 +144,47 @@ export default function Header() {
           <div className="flex items-center gap-1 sm:gap-2">
             {isAuthenticated ? (
               <>
+                {/* Audio Mute Button */}
+                <button
+                  onClick={handleToggleMute}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors relative group"
+                  title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                  aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-colors ${
+                      isMuted ? 'text-red-400' : 'text-green-400'
+                    }`}
+                  >
+                    {isMuted ? (
+                      <>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                      </>
+                    ) : (
+                      <>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      </>
+                    )}
+                  </svg>
+                  
+                  {/* Tooltip */}
+                  <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    {isMuted ? 'Audio Muted' : 'Audio Enabled'}
+                  </div>
+                </button>
+                
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
                 
