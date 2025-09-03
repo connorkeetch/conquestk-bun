@@ -39,20 +39,12 @@ export default function Login() {
     // Check if the error is email verification related
     if (login.rejected.match(result)) {
       const payload = result.payload as any
-      console.log('Login rejected with payload:', JSON.stringify(payload, null, 2))
-      console.log('Payload type:', typeof payload)
-      console.log('Payload keys:', payload ? Object.keys(payload) : 'null')
-      console.log('requiresVerification value:', payload?.requiresVerification)
-      console.log('email value:', payload?.email)
       
       if (payload?.requiresVerification) {
-        console.log('Setting verification error with email:', payload.email)
         setVerificationError({
           message: payload.message,
           email: payload.email,
         })
-      } else {
-        console.log('Not a verification error, showing regular error')
       }
     }
   }
