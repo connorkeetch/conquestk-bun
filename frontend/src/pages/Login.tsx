@@ -38,10 +38,17 @@ export default function Login() {
 
     // Check if the error is email verification related
     if (login.rejected.match(result)) {
-      const payload = result.payload as any
-      console.log('[Login] Login rejected with payload:', payload)
+      // The action.payload in Redux DevTools shows the correct structure,
+      // but result.payload here might be processed differently
+      const action = result as any
+      console.log('[Login] Full result/action:', action)
+      console.log('[Login] result.payload:', action.payload)
+      console.log('[Login] result.meta:', action.meta)
       
-      if (payload?.requiresVerification) {
+      // Access the payload correctly
+      const payload = action.payload
+      
+      if (typeof payload === 'object' && payload?.requiresVerification) {
         console.log('[Login] Setting verification error:', {
           message: payload.message,
           email: payload.email,
@@ -50,6 +57,8 @@ export default function Login() {
           message: payload.message,
           email: payload.email,
         })
+      } else {
+        console.log('[Login] Payload does not have requiresVerification flag')
       }
     }
   }
