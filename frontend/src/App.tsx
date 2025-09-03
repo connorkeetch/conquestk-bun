@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
 import ErrorBoundary from './components/ErrorBoundary'
 import GameErrorBoundary from './components/GameErrorBoundary'
+import VerificationGuard from './components/VerificationGuard'
 // Layout
 import Layout from './components/Layout'
 import { useAppDispatch } from './hooks/redux'
@@ -31,6 +32,7 @@ import Settings from './pages/Settings'
 import Statistics from './pages/Statistics'
 import TutorialPage from './pages/TutorialPage'
 import VerifyEmail from './pages/VerifyEmail'
+import VerifyEmailToken from './pages/VerifyEmailToken'
 import AdminPage from './pages/AdminPage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -97,6 +99,14 @@ function App() {
           path="/verify-email/:token"
           element={
             <AuthGuard requireAuth={false}>
+              <VerifyEmailToken />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <AuthGuard requireAuth={true}>
               <VerifyEmail />
             </AuthGuard>
           }
@@ -193,7 +203,9 @@ function App() {
           path="/lobby"
           element={
             <AuthGuard>
-              <LobbyPage />
+              <VerificationGuard>
+                <LobbyPage />
+              </VerificationGuard>
             </AuthGuard>
           }
         />
@@ -201,7 +213,9 @@ function App() {
           path="/lobby/:section"
           element={
             <AuthGuard>
-              <LobbyPage />
+              <VerificationGuard>
+                <LobbyPage />
+              </VerificationGuard>
             </AuthGuard>
           }
         />

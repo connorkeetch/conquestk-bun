@@ -192,27 +192,14 @@ export class AuthController {
         })
       }
 
-      // Check email verification if required
-      const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
-      if (requireVerification && !user.email_verified) {
-        // Allow test accounts to bypass verification in development
-        const isTestAccount =
-          process.env.NODE_ENV === 'development' &&
-          (user.email.includes('test@') || user.username.startsWith('test_'))
-
-        if (!isTestAccount) {
-          return res.status(403).json({
-            error: 'Email not verified',
-            message: 'Please verify your email address before logging in',
-            requiresVerification: true,
-            email: user.email,
-          })
-        }
-      }
-
+      // Generate token regardless of verification status
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
         expiresIn: '24h',
       })
+
+      // Check email verification status
+      const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+      const needsVerification = requireVerification && !user.email_verified
 
       return res.json({
         message: 'Login successful',
@@ -221,9 +208,11 @@ export class AuthController {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerified: user.email_verified || false,
           isAdmin: user.is_admin || false,
           adminLevel: user.admin_level || 0,
         },
+        requiresVerification: needsVerification,
       })
     } catch (error) {
       logger.error('Login error:', error)
