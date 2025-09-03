@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAppSelector } from '../hooks/redux'
 import {
   COLOR_CLASSES,
   COLOR_DISPLAY_NAMES,
@@ -9,6 +10,7 @@ import {
   PLAYER_COLORS,
   PREMIUM_COLORS,
   STANDARD_COLORS,
+  type PlayerColor,
 } from '../constants/colors'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
@@ -71,6 +73,10 @@ const OptionCard: React.FC<OptionCardProps> = ({
 
 const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
+  const settings = useAppSelector((state) => state.settings)
+  
+  // Get preferred color from settings, default to bright-red
+  const preferredColor = settings.game?.preferredColor || 'bright-red'
 
   // Form state
   const [gameVisibility, setGameVisibility] = useState<'public' | 'private' | 'tournament'>(
@@ -86,7 +92,7 @@ const CreateGamePage: React.FC = () => {
   const [teamAssignment, setTeamAssignment] = useState('random')
   const [fortification, setFortification] = useState('adjacent')
   const [movementType, setMovementType] = useState('classic')
-  const [selectedColor, setSelectedColor] = useState('red')
+  const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState('none')
   const [gameSpeed, setGameSpeed] = useState<'realtime' | 'async'>('realtime')
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')

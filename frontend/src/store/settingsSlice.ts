@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { PlayerColor } from '../constants/colors'
 
 // Theme types
 export type Theme = 'dark' | 'light'
@@ -16,6 +17,11 @@ interface SettingsState {
     sfxVolume: number
     musicVolume: number
   }
+
+  // Game Settings
+  game: {
+    preferredColor: PlayerColor
+  }
 }
 
 // Default settings
@@ -27,6 +33,9 @@ const defaultSettings: SettingsState = {
     masterVolume: 75,
     sfxVolume: 80,
     musicVolume: 50,
+  },
+  game: {
+    preferredColor: 'bright-red' as PlayerColor,
   },
 }
 
@@ -42,6 +51,7 @@ const loadSettings = (): SettingsState => {
         ...parsed,
         display: { ...defaultSettings.display, ...parsed.display },
         audio: { ...defaultSettings.audio, ...parsed.audio },
+        game: { ...defaultSettings.game, ...parsed.game },
       }
     }
   } catch (_error) {}
@@ -81,6 +91,12 @@ const settingsSlice = createSlice({
       saveSettings(state)
     },
 
+    // Game settings
+    setPreferredColor: (state, action: PayloadAction<PlayerColor>) => {
+      state.game.preferredColor = action.payload
+      saveSettings(state)
+    },
+
     // Utility actions
     clearCache: (_state) => {
       // Clear all localStorage except auth and settings
@@ -106,6 +122,7 @@ export const {
   setMasterVolume,
   setSfxVolume,
   setMusicVolume,
+  setPreferredColor,
   clearCache,
   resetSettings,
 } = settingsSlice.actions

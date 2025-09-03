@@ -33,9 +33,7 @@ export default function Header() {
 
   // Future features (keeping track for later)
   const futureItems: MenuItem[] = [
-    { path: '/friends', label: 'Friends', icon: '👥' },
     { path: '/tournaments', label: 'Tournaments', icon: '🏅' },
-    { path: '/achievements', label: 'Achievements', icon: '🎖️' },
   ]
 
   const handleLogout = () => {
