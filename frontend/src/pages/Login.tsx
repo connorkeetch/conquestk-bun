@@ -25,6 +25,11 @@ export default function Login() {
     }
   }, [location])
 
+  // Debug: Monitor verificationError state
+  useEffect(() => {
+    console.log('[Login] verificationError state changed:', verificationError)
+  }, [verificationError])
+
   if (isAuthenticated) {
     return <Navigate to="/lobby" replace />
   }
