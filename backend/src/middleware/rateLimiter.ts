@@ -33,10 +33,9 @@ setInterval(() => {
  * Strict rate limiter for authentication endpoints
  * 5 attempts per 15 minutes per IP
  */
-// TEMPORARILY DISABLED FOR TESTING - RE-ENABLE AFTER TESTING
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // TEMPORARILY INCREASED FROM 5 TO 500 FOR TESTING
+  max: 5, // 5 attempts per 15 minutes
   message: createMessage('authentication endpoints', 5, '15 minutes'),
   standardHeaders: true,
   legacyHeaders: false,
