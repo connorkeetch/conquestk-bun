@@ -1,5 +1,41 @@
 # 📋 Risk Game - Development TODO List
 
+## ✅ Recently Completed
+
+### Authentication & User Management
+- [x] **Email Verification System**
+  - [x] Email verification on registration
+  - [x] Dedicated verification page with resend functionality
+  - [x] Verification status indicator in Settings
+  - [x] Email service integration with Resend
+  - [x] Verification guards for protected routes
+
+- [x] **Account Management**
+  - [x] Password change functionality
+  - [x] Account deletion with confirmation
+  - [x] Persistent login with token validation
+  - [x] Auth state synchronization fixes
+  - [x] Rate limiting for auth endpoints (5 requests/15 min)
+
+- [x] **User Preferences**
+  - [x] Preferred game color selection
+  - [x] Auto-default color in game creation
+  - [x] Premium color indicators
+  - [x] Theme-aware UI components
+
+### UI/UX Improvements
+- [x] **Settings Page Enhancements**
+  - [x] Email verification status display
+  - [x] Game color preview with exact colors
+  - [x] Improved button styling (theme-dependent)
+  - [x] Edit mode for username/email changes
+
+- [x] **Navigation & Layout**
+  - [x] Sidebar cleanup (removed Friends/Achievements)
+  - [x] Homepage beta section removal
+  - [x] Loading states for auth checks
+  - [x] Proper error boundaries
+
 ## 🔴 Priority 1 - Core Features
 
 ### Audio System
@@ -126,4 +162,4 @@
 - [ ] Deployment guide
 
 ---
-*Last updated: August 29, 2025*
+*Last updated: January 3, 2025*
