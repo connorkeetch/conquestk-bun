@@ -466,6 +466,10 @@ async function startServer() {
 
             logger.info('✅ All migrations completed and schema validated')
             logger.info('🗄️  Database: PostgreSQL with migration tracking')
+            
+            // Ensure owner has admin privileges
+            const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
+            await ensureOwnerAdmin()
 
             if (process.env.NODE_ENV === 'production') {
               logger.info('🌐 Production deployment ready at https://conquestk.com')
