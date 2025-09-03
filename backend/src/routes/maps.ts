@@ -9,7 +9,7 @@ import { mapService } from '../services/mapService'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
-import pool from '../config/database'
+import { getPool } from '../config/database'
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
@@ -550,7 +550,7 @@ router.post(
       }
       
       // Generate capitals using the service
-      const capitalService = new CapitalGeneratorService(pool)
+      const capitalService = new CapitalGeneratorService(getPool())
       const capitals = await capitalService.generateCapitalsForMap(mapId)
       
       // Save to database
@@ -560,7 +560,7 @@ router.post(
         manuallyAdjusted: {},
       }
       
-      await pool.query(
+      await getPool().query(
         'UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3',
         [JSON.stringify(capitals), JSON.stringify(metadata), mapId]
       )
@@ -613,7 +613,7 @@ router.patch(
       }
       
       // Update capitals for this player count
-      const capitalService = new CapitalGeneratorService(pool)
+      const capitalService = new CapitalGeneratorService(getPool())
       await capitalService.updateCapitalsForPlayerCount(mapId, playerCountNum, territoryIds)
       
       logger.info(`Updated capitals for map ${mapId}, ${playerCountNum} players`)
@@ -655,7 +655,7 @@ router.get(
       }
       
       // Get capital assignments from database
-      const result = await pool.query(
+      const result = await getPool().query(
         'SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1',
         [mapId]
       )

@@ -190,4 +190,12 @@ export async function getClient() {
   return await pgPool.connect()
 }
 
+// Export getPool function for services that need direct pool access
+export function getPool(): Pool {
+  if (!pgPool) {
+    throw new Error('Database connection not available')
+  }
+  return pgPool
+}
+
 export default { query, transaction, initDatabase, closeDatabase, getClient }
