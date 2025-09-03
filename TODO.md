@@ -2,6 +2,25 @@
 
 ## ✅ Recently Completed
 
+### Map Editor & Capital System
+- [x] **Map Editor Improvements**
+  - [x] Image size adjustment controls (50%-150% scale)
+  - [x] Simplified cropping tool (single mode instead of 4)
+  - [x] Button color standardization (neutral except Save)
+  - [x] Removed continent requirement (only 2 territories needed)
+  - [x] Fixed Content Security Policy errors
+  - [x] Auto-expansion for small images
+  - [x] JSON import/export functionality
+
+- [x] **Capital Assignment System**
+  - [x] Database schema for capital storage (JSONB)
+  - [x] Maximin distance algorithm for optimal placement
+  - [x] API endpoints for generation and manual adjustment
+  - [x] Frontend UI with player count selector (2-12)
+  - [x] Visual capital indicators on map canvas
+  - [x] Support for manual capital adjustments
+  - [x] Per-player-count configurations
+
 ### Authentication & User Management
 - [x] **Email Verification System**
   - [x] Email verification on registration
