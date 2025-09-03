@@ -341,8 +341,10 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
-// Serve static frontend files in production
-if (process.env.NODE_ENV === 'production') {
+// Serve static frontend files in production-like environments
+// Staging should behave exactly like production for testing
+const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+if (isProductionLike) {
   const frontendPath = path.join(__dirname, '../public')
 
   // IMPORTANT: Serve static files with explicit options
