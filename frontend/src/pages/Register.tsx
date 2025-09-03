@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, register } from '../store/authSlice'
+import EmailVerificationPending from './EmailVerificationPending'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -10,6 +11,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [verificationPending, setVerificationPending] = useState(false)
   const dispatch = useAppDispatch()
   const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth)
 
