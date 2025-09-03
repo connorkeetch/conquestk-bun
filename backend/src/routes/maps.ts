@@ -6,8 +6,10 @@ import sizeOf from 'image-size'
 import multer from 'multer'
 import { authenticateToken } from '../middleware/auth'
 import { mapService } from '../services/mapService'
+import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
+import pool from '../config/database'
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
@@ -520,6 +522,158 @@ router.post(
     } catch (error) {
       logger.error('Error rating map:', error)
       res.status(500).json({ error: 'Failed to rate map' })
+    }
+  },
+)
+
+// ============= CAPITAL ASSIGNMENTS =============
+
+// Generate capitals for all player counts
+router.post(
+  '/:mapId/generate-capitals',
+  authenticateToken,
+  param('mapId').isUUID().withMessage('Invalid map ID'),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const mapId = req.params.mapId
+      const userId = (req as any).userId
+      
+      // Verify user owns the map
+      const mapData = await mapService.getMapWithFullData(mapId)
+      if (!mapData) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+      
+      if (mapData.map.creatorId !== userId) {
+        return res.status(403).json({ error: 'You do not have permission to edit this map' })
+      }
+      
+      // Generate capitals using the service
+      const capitalService = new CapitalGeneratorService(pool)
+      const capitals = await capitalService.generateCapitalsForMap(mapId)
+      
+      // Save to database
+      const metadata = {
+        generatedAt: new Date().toISOString(),
+        algorithm: 'maximin-distance-v1',
+        manuallyAdjusted: {},
+      }
+      
+      await pool.query(
+        'UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3',
+        [JSON.stringify(capitals), JSON.stringify(metadata), mapId]
+      )
+      
+      logger.info(`Generated capitals for map ${mapId}`)
+      
+      return res.json({
+        success: true,
+        capitals,
+        metadata,
+      })
+    } catch (error) {
+      logger.error('Error generating capitals:', error)
+      return res.status(500).json({ error: 'Failed to generate capitals' })
+    }
+  },
+)
+
+// Update capitals for a specific player count
+router.patch(
+  '/:mapId/capitals/:playerCount',
+  authenticateToken,
+  param('mapId').isUUID().withMessage('Invalid map ID'),
+  param('playerCount').isInt({ min: 2, max: 12 }).withMessage('Player count must be 2-12'),
+  body('territoryIds').isArray({ min: 2, max: 12 }).withMessage('Must provide territory IDs'),
+  body('territoryIds.*').isString().withMessage('Each territory ID must be a string'),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId, playerCount } = req.params
+      const { territoryIds } = req.body
+      const userId = (req as any).userId
+      const playerCountNum = parseInt(playerCount, 10)
+      
+      // Verify user owns the map
+      const mapData = await mapService.getMapWithFullData(mapId)
+      if (!mapData) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+      
+      if (mapData.map.creatorId !== userId) {
+        return res.status(403).json({ error: 'You do not have permission to edit this map' })
+      }
+      
+      // Validate territory count matches player count
+      if (territoryIds.length !== playerCountNum) {
+        return res.status(400).json({
+          error: `Must provide exactly ${playerCountNum} territories for ${playerCountNum} players`,
+        })
+      }
+      
+      // Update capitals for this player count
+      const capitalService = new CapitalGeneratorService(pool)
+      await capitalService.updateCapitalsForPlayerCount(mapId, playerCountNum, territoryIds)
+      
+      logger.info(`Updated capitals for map ${mapId}, ${playerCountNum} players`)
+      
+      return res.json({
+        success: true,
+        playerCount: playerCountNum,
+        capitals: territoryIds,
+      })
+    } catch (error) {
+      logger.error('Error updating capitals:', error)
+      return res.status(500).json({ error: 'Failed to update capitals' })
+    }
+  },
+)
+
+// Get current capital assignments
+router.get(
+  '/:mapId/capitals',
+  param('mapId').isUUID().withMessage('Invalid map ID'),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const mapId = req.params.mapId
+      
+      // Get map to check if it's public or user owns it
+      const mapData = await mapService.getMapWithFullData(mapId)
+      if (!mapData) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+      
+      // Check access permissions
+      const userId = (req as any).userId
+      if (
+        !mapData.map.isPublic &&
+        (!userId || userId !== mapData.map.creatorId)
+      ) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+      
+      // Get capital assignments from database
+      const result = await pool.query(
+        'SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1',
+        [mapId]
+      )
+      
+      if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+      
+      const { capital_assignments, capital_metadata } = result.rows[0]
+      
+      return res.json({
+        capitals: capital_assignments || {},
+        metadata: capital_metadata || {},
+        mapId,
+      })
+    } catch (error) {
+      logger.error('Error fetching capitals:', error)
+      return res.status(500).json({ error: 'Failed to fetch capitals' })
     }
   },
 )
