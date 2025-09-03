@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -6,7 +6,7 @@ import GameErrorBoundary from './components/GameErrorBoundary'
 import VerificationGuard from './components/VerificationGuard'
 // Layout
 import Layout from './components/Layout'
-import { useAppDispatch } from './hooks/redux'
+import { useAppDispatch, useAppSelector } from './hooks/redux'
 import CommunityPage from './pages/CommunityPage'
 import CreateGamePage from './pages/CreateGamePage'
 import Dashboard from './pages/Dashboard'
@@ -41,16 +41,25 @@ import { checkAuth } from './store/authSlice'
 function App() {
   console.log('[APP] App component rendering...')
   const dispatch = useAppDispatch()
+  const { isLoading, token } = useAppSelector((state) => state.auth)
+  const [initialCheckDone, setInitialCheckDone] = useState(false)
 
   useEffect(() => {
     console.log('[APP] App useEffect running...')
-    // Only check auth if we have a token
-    const token = localStorage.getItem('token')
-    console.log('[APP] Token exists:', !!token)
-    if (token) {
-      console.log('[APP] Dispatching checkAuth...')
-      dispatch(checkAuth())
+    
+    const initAuth = async () => {
+      const token = localStorage.getItem('token')
+      console.log('[APP] Token exists:', !!token)
+      
+      if (token) {
+        console.log('[APP] Dispatching checkAuth...')
+        await dispatch(checkAuth())
+      }
+      
+      setInitialCheckDone(true)
     }
+    
+    initAuth()
 
     // Apply saved theme on app load
     const savedSettings = localStorage.getItem('userSettings')
@@ -65,6 +74,18 @@ function App() {
       }
     }
   }, [dispatch])
+
+  // Show loading screen while initial auth check is happening
+  if (!initialCheckDone && (isLoading || token)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
+        <div className="text-center">
+          <div className="spinner mb-4"></div>
+          <div className="text-white text-lg">Connecting...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ErrorBoundary level="app">
