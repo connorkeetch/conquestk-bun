@@ -67,7 +67,7 @@ const ProfileOverview: React.FC = () => {
       setLoading(true)
       
       // Fetch user profile
-      const profileResponse = await api.get('/auth/profile')
+      const profileResponse = await api.get('/profile')
       const userData = profileResponse.data.user
       
       const userProfile: UserProfile = {

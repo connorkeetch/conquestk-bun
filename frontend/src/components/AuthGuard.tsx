@@ -40,9 +40,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     return <Navigate to="/" replace />
   }
 
-  // If user is authenticated and trying to access login/register, redirect to dashboard
+  // If user is authenticated and trying to access login/register, redirect to profile
   if (isAuthenticated && (location.pathname === '/login' || location.pathname === '/register')) {
-    return <Navigate to="/lobby" replace />
+    return <Navigate to="/profile" replace />
   }
 
   return <>{children}</>
