@@ -37,7 +37,8 @@ const EditableProfile: React.FC = () => {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('authToken')
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
       const response = await fetch(`${apiUrl}/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -72,7 +73,8 @@ const EditableProfile: React.FC = () => {
     setCheckingUsername(true)
     try {
       const token = localStorage.getItem('authToken')
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
       const response = await fetch(`${apiUrl}/users/check-username`, {
         method: 'POST',
         headers: {
@@ -125,7 +127,8 @@ const EditableProfile: React.FC = () => {
     setSaving(true)
     try {
       const token = localStorage.getItem('authToken')
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
       const response = await fetch(`${apiUrl}/users/profile`, {
         method: 'PUT',
         headers: {
@@ -168,7 +171,8 @@ const EditableProfile: React.FC = () => {
     setSaving(true)
     try {
       const token = localStorage.getItem('authToken')
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
       const response = await fetch(`${apiUrl}/users/change-password`, {
         method: 'PUT',
         headers: {
