@@ -190,4 +190,10 @@ export class UserService {
     const result = await query(countQuery, [userId, oneHourAgo])
     return result.rows[0]?.count || 0
   }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Delete user and all related data (cascade delete should handle most references)
+    const deleteQuery = `DELETE FROM users WHERE id = $1`
+    await query(deleteQuery, [userId])
+  }
 }

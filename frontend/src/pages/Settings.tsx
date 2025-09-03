@@ -7,7 +7,17 @@ import {
   clearCache,
   resetSettings,
   setTheme,
+  setPreferredColor,
 } from '../store/settingsSlice'
+import {
+  STANDARD_COLORS,
+  PREMIUM_COLORS,
+  COLOR_DISPLAY_NAMES,
+  COLOR_HEX_VALUES,
+  COLOR_CLASSES,
+  isPremiumColor,
+  type PlayerColor,
+} from '../constants/colors'
 
 type SettingsTab =
   | 'account'
@@ -21,8 +31,8 @@ type SettingsTab =
 interface SettingItem {
   id: string
   label: string
-  description: string
-  type: 'toggle' | 'select' | 'range' | 'button' | 'input'
+  description: string | React.ReactNode
+  type: 'toggle' | 'select' | 'range' | 'button' | 'input' | 'custom'
   isWorking: boolean
   defaultValue?: any
   options?: { value: string; label: string }[]
@@ -152,9 +162,11 @@ export default function Settings() {
           )
 
         case 'button': {
-          const buttonClass = `btn ${
-            setting.buttonVariant === 'danger' ? 'btn-danger' : 'btn-secondary'
-          } text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+          const buttonClass = setting.buttonVariant === 'danger'
+            ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            : setting.buttonVariant === 'primary' 
+            ? `px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            : `px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
             <button
@@ -177,7 +189,7 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <>
-                  <span className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm min-w-[200px] inline-block">
+                  <span className="text-gray-300 text-sm">
                     {fieldValues[setting.id] || setting.defaultValue || 'Not set'}
                   </span>
                   {setting.isWorking && (
@@ -238,6 +250,108 @@ export default function Settings() {
           )
         }
 
+        case 'custom':
+          if (setting.id === 'preferred-color') {
+            const colors = [...STANDARD_COLORS, ...PREMIUM_COLORS]
+            const currentColor = setting.defaultValue as PlayerColor
+            
+            return (
+              <div className="flex flex-col gap-2">
+                {/* Standard Colors */}
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Standard Colors</p>
+                  <div className="grid grid-cols-6 gap-2">
+                    {STANDARD_COLORS.map((color) => {
+                      const isSelected = currentColor === color
+                      const isRainbow = color === 'rainbow'
+                      const isPulse = color === 'pulse'
+                      const baseClass = COLOR_CLASSES[color]
+                      const hexValue = COLOR_HEX_VALUES[color]
+                      
+                      return (
+                        <button
+                          key={color}
+                          className={`relative h-10 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-white scale-105 shadow-lg ring-2 ring-white/50'
+                              : 'border-gray-600 hover:border-gray-400 hover:scale-102'
+                          }`}
+                          style={{
+                            background: hexValue.includes('gradient') ? hexValue : undefined,
+                            backgroundColor: !hexValue.includes('gradient') ? hexValue : undefined,
+                          }}
+                          onClick={() => setting.onChange && setting.onChange(color)}
+                          title={COLOR_DISPLAY_NAMES[color]}
+                        >
+                          {isSelected && (
+                            <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                
+                {/* Premium Colors */}
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Premium Colors ⭐</p>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PREMIUM_COLORS.map((color) => {
+                      const isSelected = currentColor === color
+                      const isPulse = color === 'pulse'
+                      const hexValue = COLOR_HEX_VALUES[color]
+                      
+                      return (
+                        <button
+                          key={color}
+                          className={`relative h-10 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-yellow-400 scale-105 shadow-lg ring-2 ring-yellow-400/50'
+                              : 'border-gray-600 hover:border-yellow-600 hover:scale-102'
+                          } ${isPulse ? 'animate-pulse' : ''}`}
+                          style={{
+                            background: hexValue.includes('gradient') ? hexValue : undefined,
+                            backgroundColor: !hexValue.includes('gradient') ? hexValue : undefined,
+                            boxShadow: color === 'neon' ? '0 0 10px #39FF14' : undefined,
+                          }}
+                          onClick={() => setting.onChange && setting.onChange(color)}
+                          title={COLOR_DISPLAY_NAMES[color]}
+                        >
+                          <span className="absolute top-0.5 right-0.5 text-yellow-400 text-xs">⭐</span>
+                          {isSelected && (
+                            <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                
+                {/* Selected Color Display */}
+                <div className="mt-2 p-2 bg-gray-800 rounded">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded"
+                      style={{
+                        background: COLOR_HEX_VALUES[currentColor].includes('gradient')
+                          ? COLOR_HEX_VALUES[currentColor]
+                          : undefined,
+                        backgroundColor: !COLOR_HEX_VALUES[currentColor].includes('gradient')
+                          ? COLOR_HEX_VALUES[currentColor]
+                          : undefined,
+                      }}
+                    />
+                    <span className="text-sm">
+                      {COLOR_DISPLAY_NAMES[currentColor]}
+                      {isPremiumColor(currentColor) && ' ⭐'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+          return null
+          
         default:
           return null
       }
@@ -273,10 +387,19 @@ export default function Settings() {
           {
             id: 'email',
             label: 'Email Address',
-            description: 'Your account email for notifications and recovery',
+            description: (
+              <span>
+                Your account email for notifications and recovery •{' '}
+                {user?.emailVerified ? (
+                  <span className="text-blue-400 font-semibold">✓ Verified</span>
+                ) : (
+                  <span className="text-red-400 font-semibold">⚠ Not Verified</span>
+                )}
+              </span>
+            ),
             type: 'input',
             isWorking: true,
-            defaultValue: user?.email || 'player@example.com',
+            defaultValue: user?.email || '',
           },
           {
             id: 'avatar',
@@ -285,14 +408,49 @@ export default function Settings() {
             type: 'button',
             isWorking: false,
             buttonText: '📁 Upload New Avatar',
+            buttonVariant: 'secondary',
           },
           {
             id: 'change-password',
             label: 'Change Password',
             description: 'Update your account password',
             type: 'button',
-            isWorking: false,
+            isWorking: true,
             buttonText: '🔑 Change Password',
+            buttonVariant: 'secondary',
+            onClick: async () => {
+              const currentPassword = prompt('Enter your current password:')
+              if (!currentPassword) return
+              
+              const newPassword = prompt('Enter your new password:')
+              if (!newPassword) return
+              
+              const confirmPassword = prompt('Confirm your new password:')
+              if (newPassword !== confirmPassword) {
+                alert('Passwords do not match!')
+                return
+              }
+              
+              try {
+                const response = await fetch('/api/auth/change-password', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                  },
+                  body: JSON.stringify({ currentPassword, newPassword }),
+                })
+                
+                const data = await response.json()
+                if (response.ok) {
+                  alert('Password changed successfully!')
+                } else {
+                  alert(data.message || 'Failed to change password')
+                }
+              } catch (error) {
+                alert('Error changing password')
+              }
+            },
           },
           {
             id: 'two-factor',
@@ -301,43 +459,69 @@ export default function Settings() {
             type: 'button',
             isWorking: false,
             buttonText: '📱 Enable 2FA',
+            buttonVariant: 'secondary',
           },
           {
             id: 'delete-account',
             label: 'Delete Account',
             description: 'Permanently delete your account',
             type: 'button',
-            isWorking: false,
+            isWorking: true,
             buttonText: '🗑️ Delete Account',
             buttonVariant: 'danger',
+            onClick: async () => {
+              const confirmation = prompt('Type "DELETE" to confirm you want to permanently delete your account:')
+              if (confirmation !== 'DELETE') {
+                alert('Account deletion cancelled')
+                return
+              }
+              
+              const finalConfirm = confirm('Are you absolutely sure? This action cannot be undone!')
+              if (!finalConfirm) return
+              
+              try {
+                const response = await fetch('/api/auth/delete-account', {
+                  method: 'DELETE',
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                  },
+                })
+                
+                if (response.ok) {
+                  alert('Account deleted successfully')
+                  localStorage.removeItem('token')
+                  window.location.href = '/'
+                } else {
+                  const data = await response.json()
+                  alert(data.message || 'Failed to delete account')
+                }
+              } catch (error) {
+                alert('Error deleting account')
+              }
+            },
           },
         ]
 
       case 'game':
+        const standardOptions = STANDARD_COLORS.map((color) => ({
+          value: color,
+          label: COLOR_DISPLAY_NAMES[color],
+        }))
+        
+        const premiumOptions = PREMIUM_COLORS.map((color) => ({
+          value: color,
+          label: COLOR_DISPLAY_NAMES[color] + ' ⭐',
+        }))
+        
         return [
           {
-            id: 'auto-deploy',
-            label: 'Auto-Deploy Troops',
-            description: 'Automatically place reinforcements at start of turn',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
-          },
-          {
-            id: 'turn-timer-warning',
-            label: 'Turn Timer Warning',
-            description: 'Alert when turn timer is running low',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
-            id: 'quick-actions',
-            label: 'Keyboard Shortcuts',
-            description: 'Enable keyboard shortcuts for common actions',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
+            id: 'preferred-color',
+            label: 'Preferred Color',
+            description: 'Your preferred player color in games',
+            type: 'custom',
+            isWorking: true,
+            defaultValue: settings.game?.preferredColor || 'bright-red',
+            onChange: (value: PlayerColor) => dispatch(setPreferredColor(value)),
           },
         ]
 
@@ -398,6 +582,7 @@ export default function Settings() {
             type: 'button',
             isWorking: true,
             buttonText: '🔊 Test Effects',
+            buttonVariant: 'secondary',
             onClick: () => audioService.testEffect(),
           },
           {
@@ -407,6 +592,7 @@ export default function Settings() {
             type: 'button',
             isWorking: true,
             buttonText: '🎵 Test Music',
+            buttonVariant: 'secondary',
             onClick: () => audioService.testMusic(),
           },
         ]
@@ -435,12 +621,12 @@ export default function Settings() {
             defaultValue: false,
           },
           {
-            id: 'territory-labels',
-            label: 'Always Show Territory Names',
-            description: 'Display territory names permanently on the map',
-            type: 'toggle',
+            id: 'custom-themes',
+            label: 'Custom Theme Styles',
+            description: '90s retro, MySpace, Vaporwave, and more nostalgic themes',
+            type: 'button',
             isWorking: false,
-            defaultValue: false,
+            buttonText: '🎨 Browse Themes',
           },
         ]
 
@@ -506,6 +692,14 @@ export default function Settings() {
             defaultValue: true,
           },
           {
+            id: 'turn-timer-warning',
+            label: 'Turn Timer Warning',
+            description: 'Alert when turn timer is running low',
+            type: 'toggle',
+            isWorking: false,
+            defaultValue: true,
+          },
+          {
             id: 'game-invites',
             label: 'Game Invites',
             description: 'Notify about new game invitations',
@@ -542,25 +736,9 @@ export default function Settings() {
       case 'privacy':
         return [
           {
-            id: 'public-profile',
-            label: 'Public Profile',
-            description: 'Make your profile visible to other players',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
-            id: 'show-statistics',
-            label: 'Show Statistics',
-            description: 'Display your game stats on profile',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
             id: 'online-status',
             label: 'Online Status',
-            description: "Show when you're online",
+            description: "Show when you're online to other players",
             type: 'toggle',
             isWorking: false,
             defaultValue: false,
@@ -568,10 +746,11 @@ export default function Settings() {
           {
             id: 'download-data',
             label: 'Download My Data',
-            description: 'Export your account data',
+            description: 'Export all your account data',
             type: 'button',
             isWorking: false,
             buttonText: '📊 Download Data',
+            buttonVariant: 'secondary',
           },
           {
             id: 'privacy-policy',
@@ -579,31 +758,20 @@ export default function Settings() {
             description: 'View our privacy policy',
             type: 'button',
             isWorking: false,
-            buttonText: '🔒 Privacy Policy',
+            buttonText: '🔒 View Policy',
+            buttonVariant: 'secondary',
           },
         ]
 
       case 'advanced':
         return [
           {
-            id: 'clear-cache',
-            label: 'Clear Cache',
-            description: 'Clear stored game data and reload',
-            type: 'button',
-            isWorking: true,
-            buttonText: '🗂️ Clear Cache',
-            onClick: () => {
-              dispatch(clearCache())
-              alert('Cache cleared successfully!')
-            },
-          },
-          {
             id: 'reset-settings',
             label: 'Reset All Settings',
             description: 'Reset all settings to default values',
             type: 'button',
             isWorking: true,
-            buttonText: '🔄 Reset All',
+            buttonText: '🔄 Reset All Settings',
             buttonVariant: 'danger',
             onClick: () => {
               if (confirm('Are you sure you want to reset all settings to default?')) {
@@ -644,7 +812,7 @@ export default function Settings() {
               <div>
                 <div className="relative">
                   <button
-                    className="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed"
+                    className="px-4 py-2 bg-gray-600 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed"
                     disabled
                   >
                     📁 Upload New Avatar

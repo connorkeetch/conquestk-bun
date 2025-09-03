@@ -482,4 +482,88 @@ export class AuthController {
       })
     }
   }
+
+  changePassword = async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId
+      const { currentPassword, newPassword } = req.body
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          error: 'Missing fields',
+          message: 'Current and new passwords are required',
+        })
+      }
+
+      // Validate new password length
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          error: 'Invalid password',
+          message: 'New password must be at least 6 characters long',
+        })
+      }
+
+      const user = await this.userService.findById(userId)
+      if (!user) {
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'User account not found',
+        })
+      }
+
+      // Verify current password
+      const validPassword = await bcrypt.compare(currentPassword, user.password)
+      if (!validPassword) {
+        return res.status(401).json({
+          error: 'Invalid password',
+          message: 'Current password is incorrect',
+        })
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+      // Update password
+      await this.userService.updatePassword(userId, hashedPassword)
+
+      return res.json({
+        message: 'Password changed successfully',
+      })
+    } catch (error) {
+      logger.error('Change password error:', error)
+      return res.status(500).json({
+        error: 'Request failed',
+        message: 'Unable to change password',
+      })
+    }
+  }
+
+  deleteAccount = async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId
+
+      const user = await this.userService.findById(userId)
+      if (!user) {
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'User account not found',
+        })
+      }
+
+      // Delete user account
+      await this.userService.deleteUser(userId)
+
+      logger.info('User account deleted:', { userId, username: user.username })
+
+      return res.json({
+        message: 'Account deleted successfully',
+      })
+    } catch (error) {
+      logger.error('Delete account error:', error)
+      return res.status(500).json({
+        error: 'Request failed',
+        message: 'Unable to delete account',
+      })
+    }
+  }
 }
