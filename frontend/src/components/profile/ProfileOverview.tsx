@@ -2,11 +2,13 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 import api from '../../services/api'
+import { authService } from '../../services/authService'
 
 interface UserProfile {
   id: string
   username: string
   email: string
+  email_verified?: boolean
   avatarUrl?: string
   bio?: string
   elo: number
@@ -47,6 +49,8 @@ const ProfileOverview: React.FC = () => {
   const [recentGames, setRecentGames] = useState<RecentGame[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resendingVerification, setResendingVerification] = useState(false)
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProfileData()
@@ -70,6 +74,7 @@ const ProfileOverview: React.FC = () => {
         id: userData.id,
         username: userData.username,
         email: userData.email,
+        email_verified: userData.email_verified,
         avatarUrl: userData.avatar_url,
         bio: userData.bio || '',
         elo: userData.elo || 1200,
@@ -111,6 +116,23 @@ const ProfileOverview: React.FC = () => {
       setError('Failed to load profile data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!profile?.email) return
+    
+    setResendingVerification(true)
+    setVerificationMessage(null)
+    
+    try {
+      await authService.resendVerification(profile.email)
+      setVerificationMessage('Verification email sent! Please check your inbox.')
+      setTimeout(() => setVerificationMessage(null), 5000)
+    } catch (err: any) {
+      setVerificationMessage(err.message || 'Failed to send verification email')
+    } finally {
+      setResendingVerification(false)
     }
   }
 
@@ -178,6 +200,38 @@ const ProfileOverview: React.FC = () => {
 
         <div className="profile-info">
           <h1 className="username">{profile.username}</h1>
+          
+          {/* Email Verification Status */}
+          {profile.email_verified === false && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400">⚠️</span>
+                  <span className="text-yellow-300 text-sm">Email not verified</span>
+                </div>
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendingVerification ? 'Sending...' : 'Resend Email'}
+                </button>
+              </div>
+              {verificationMessage && (
+                <div className={`mt-2 text-sm ${verificationMessage.includes('sent') ? 'text-green-400' : 'text-red-400'}`}>
+                  {verificationMessage}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {profile.email_verified === true && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-green-400">✅</span>
+              <span className="text-green-400 text-sm">Email verified</span>
+            </div>
+          )}
+          
           <div className="rank-info">
             <span className="rank-badge" style={{ color }}>
               {rank}
