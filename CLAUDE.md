@@ -199,7 +199,7 @@ NODE_ENV=development               # or production
 
 # Email Service (Required for password reset & verification)
 RESEND_API_KEY=...                     # From Resend dashboard
-EMAIL_FROM=noreply@send.conquestk.com  # Must use send.conquestk.com (configured for Resend)
+EMAIL_FROM=noreply@updates.conquestk.com  # Updates subdomain verified in Resend
 EMAIL_FROM_NAME=ConquestK              # Display name in emails
 EMAIL_ENABLED=true                     # Set to false to disable
 
