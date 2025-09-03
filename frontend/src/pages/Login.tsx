@@ -58,10 +58,21 @@ export default function Login() {
           message: payload.message,
           email: payload.email,
         })
-        setVerificationError({
-          message: payload.message,
-          email: payload.email,
+        
+        // Use a callback to ensure we're setting the state
+        setVerificationError(() => {
+          const newState = {
+            message: payload.message,
+            email: payload.email,
+          }
+          console.log('[Login] State setter called with:', newState)
+          return newState
         })
+        
+        // Also try setting it after a microtask to ensure React processes it
+        setTimeout(() => {
+          console.log('[Login] Checking if state was set after timeout...')
+        }, 0)
       } else {
         console.log('[Login] Payload does not have requiresVerification flag')
       }
