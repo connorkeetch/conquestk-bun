@@ -177,33 +177,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Social Proof / Beta Status */}
-      <section className="relative z-10 section-spacing-sm">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <div className="bg-gradient-to-r from-gray-800/40 via-gray-900/40 to-gray-800/40 backdrop-blur-sm rounded-xl p-8 border border-gray-700/50 flex flex-col items-center">
-            <h2 className="text-2xl font-bold mb-3 text-center">
-              <span className="gradient-text">Join the Beta</span>
-            </h2>
-            <p className="text-gray-300 mb-6 max-w-2xl text-center">
-              Be among the first commanders to experience next-generation strategic warfare.
-            </p>
-
-            {!isAuthenticated && (
-              <Link
-                to="/register"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
-                         bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
-                         shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
-                         hover:shadow-[0_18px_48px_-12px_rgba(99,102,241,.7)]
-                         active:scale-[.98] transition"
-              >
-                Join the Beta Now →
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* How It Works - Streamlined */}
       <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-5xl">
