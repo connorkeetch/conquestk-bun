@@ -40,12 +40,17 @@ export default function Login() {
     if (login.rejected.match(result)) {
       const payload = result.payload as any
       console.log('Login rejected with payload:', payload)
+      console.log('Payload has requiresVerification?', payload?.requiresVerification)
+      console.log('Full result:', result)
+      
       if (payload?.requiresVerification) {
         console.log('Setting verification error:', payload)
         setVerificationError({
           message: payload.message,
           email: payload.email,
         })
+      } else {
+        console.log('Not a verification error, regular error handling')
       }
     }
   }

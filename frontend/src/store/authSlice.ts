@@ -34,6 +34,9 @@ export const login = createAsyncThunk(
       return response
     } catch (error: any) {
       // Pass the full error response for email verification handling
+      console.log('Login error caught:', error)
+      console.log('Error response data:', error.response?.data)
+      
       if (error.response?.data) {
         return rejectWithValue(error.response.data)
       }
