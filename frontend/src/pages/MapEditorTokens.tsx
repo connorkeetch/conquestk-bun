@@ -34,8 +34,20 @@ interface MapState {
   imageScale: number  // Scale factor for resizing image
 }
 
-type EditorMode = 'territories' | 'continents' | 'connections'
+type EditorMode = 'territories' | 'continents' | 'connections' | 'capitals'
 type TokenShape = 'hexagon' | 'square' | 'circle'
+
+interface CapitalAssignments {
+  [playerCount: string]: string[]  // Territory IDs for each player count
+}
+
+interface CapitalMetadata {
+  generatedAt?: string
+  algorithm?: string
+  manuallyAdjusted?: {
+    [playerCount: string]: boolean
+  }
+}
 
 export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -75,6 +87,13 @@ export default function MapEditorTokens() {
   const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
   const [newContinentBonus, setNewContinentBonus] = useState(3)
   const [editingContinentId, setEditingContinentId] = useState<string | null>(null)
+  
+  // Capital management state
+  const [capitalAssignments, setCapitalAssignments] = useState<CapitalAssignments>({})
+  const [capitalMetadata, setCapitalMetadata] = useState<CapitalMetadata>({})
+  const [selectedPlayerCount, setSelectedPlayerCount] = useState(4)
+  const [isGeneratingCapitals, setIsGeneratingCapitals] = useState(false)
+  const [isAssigningCapital, setIsAssigningCapital] = useState(false)
 
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,6 +211,11 @@ export default function MapEditorTokens() {
   // Handle token click based on mode
   const handleTokenClick = (territoryId: string, event: React.MouseEvent) => {
     event.stopPropagation()
+    
+    if (editorMode === 'capitals') {
+      handleCapitalTokenClick(territoryId)
+      return
+    }
 
     if (editorMode === 'connections') {
       if (!isConnecting || !connectingFromId) {
@@ -542,6 +566,58 @@ export default function MapEditorTokens() {
       mapHeight: Math.round(prev.mapHeight * (newScale / prev.imageScale)),
     }))
   }
+  
+  // Capital management functions
+  const handleGenerateCapitals = async () => {
+    if (!state.territories.length) {
+      alert('Please add territories before generating capitals')
+      return
+    }
+    
+    // For now, just alert that we need to save the map first
+    // In a complete implementation, we'd call the API after the map is saved
+    alert('Please save the map to database first, then capitals can be generated')
+  }
+  
+  const handleCapitalTokenClick = (territoryId: string) => {
+    if (!isAssigningCapital) return
+    
+    const playerCountStr = selectedPlayerCount.toString()
+    const currentCapitals = capitalAssignments[playerCountStr] || []
+    
+    // Toggle capital selection
+    if (currentCapitals.includes(territoryId)) {
+      // Remove from capitals
+      setCapitalAssignments((prev) => ({
+        ...prev,
+        [playerCountStr]: currentCapitals.filter(id => id !== territoryId)
+      }))
+    } else if (currentCapitals.length < selectedPlayerCount) {
+      // Add to capitals
+      setCapitalAssignments((prev) => ({
+        ...prev,
+        [playerCountStr]: [...currentCapitals, territoryId]
+      }))
+      
+      // Mark as manually adjusted
+      setCapitalMetadata((prev) => ({
+        ...prev,
+        manuallyAdjusted: {
+          ...prev.manuallyAdjusted,
+          [playerCountStr]: true
+        }
+      }))
+    } else {
+      alert(`Already selected ${selectedPlayerCount} capitals for ${selectedPlayerCount} players`)
+    }
+  }
+  
+  const getCapitalForTerritory = (territoryId: string): number | null => {
+    const playerCountStr = selectedPlayerCount.toString()
+    const capitals = capitalAssignments[playerCountStr] || []
+    const index = capitals.indexOf(territoryId)
+    return index >= 0 ? index + 1 : null
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
@@ -627,6 +703,12 @@ export default function MapEditorTokens() {
                 className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
               >
                 🔗 Connections
+              </button>
+              <button
+                onClick={() => setEditorMode('capitals')}
+                className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              >
+                👑 Capitals
               </button>
             </div>
 
@@ -887,6 +969,88 @@ export default function MapEditorTokens() {
               )}
             </div>
           )}
+          
+          {editorMode === 'capitals' && (
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-4 items-center">
+                <button
+                  onClick={handleGenerateCapitals}
+                  disabled={isGeneratingCapitals || state.territories.length < 2}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded"
+                >
+                  {isGeneratingCapitals ? '⏳ Generating...' : '✨ Generate Capitals'}
+                </button>
+                <span className="text-sm text-gray-400">
+                  Auto-generate optimal starting positions for all player counts
+                </span>
+              </div>
+              
+              <div className="flex gap-2 items-center flex-wrap">
+                <span className="text-sm">Player Count:</span>
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setSelectedPlayerCount(count)}
+                    disabled={state.territories.length < count}
+                    className={`px-3 py-1 rounded text-sm ${
+                      selectedPlayerCount === count
+                        ? 'bg-blue-600'
+                        : state.territories.length < count
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex gap-4 items-center">
+                <button
+                  onClick={() => setIsAssigningCapital(!isAssigningCapital)}
+                  className={`px-4 py-2 rounded ${
+                    isAssigningCapital ? 'bg-yellow-600' : 'bg-gray-700'
+                  }`}
+                >
+                  {isAssigningCapital ? '🎯 Click Territories' : '📍 Assign Capitals'}
+                </button>
+                <div className="text-sm">
+                  <span className="text-gray-400">Capitals for {selectedPlayerCount} players: </span>
+                  <span className="text-white">
+                    {(capitalAssignments[selectedPlayerCount.toString()] || []).length}/{selectedPlayerCount}
+                  </span>
+                </div>
+              </div>
+              
+              {capitalAssignments[selectedPlayerCount.toString()]?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
+                    const territory = state.territories.find(t => t.id === territoryId)
+                    if (!territory) return null
+                    const playerColors = ['#FF4444', '#4444FF', '#44FF44', '#FFFF44', '#FF44FF', '#44FFFF', '#FFA500', '#800080', '#00CED1', '#DC143C', '#32CD32', '#FFD700']
+                    return (
+                      <div
+                        key={territoryId}
+                        className="px-3 py-1 rounded text-sm"
+                        style={{
+                          backgroundColor: `${playerColors[index % playerColors.length]}20`,
+                          border: `2px solid ${playerColors[index % playerColors.length]}`
+                        }}
+                      >
+                        Player {index + 1}: {territory.name}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              
+              {capitalMetadata.manuallyAdjusted?.[selectedPlayerCount.toString()] && (
+                <p className="text-xs text-yellow-400">
+                  ⚠️ Manually adjusted from algorithm suggestion
+                </p>
+              )}
+            </div>
+          )}
         </div>
         {/* Main Editor Area - Full width with right sidebar */}
         <div className="flex gap-4">
@@ -987,6 +1151,13 @@ export default function MapEditorTokens() {
                       size={20} // Smaller tokens
                       opacity={0.7}
                     />
+                    {editorMode === 'capitals' && getCapitalForTerritory(territory.id) && (
+                      <div className="absolute -top-3 -right-3 text-lg">
+                        <span className="bg-yellow-500 text-black rounded-full px-1.5 py-0.5 text-xs font-bold">
+                          {getCapitalForTerritory(territory.id)}
+                        </span>
+                      </div>
+                    )}
                     {state.selectedTerritoryId === territory.id && (
                       <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-black/80 px-2 py-1 rounded whitespace-nowrap">
                         {territory.name}
