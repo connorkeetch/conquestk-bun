@@ -243,6 +243,10 @@ See `backend/.env.example` for complete configuration template.
 - **Windows paths**: Use forward slashes in imports, backslashes for file system operations
 - **PowerShell scripts**: May need `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 - **npm workspaces**: Root `npm install` installs all dependencies for frontend/backend
+- **API URLs in production**: Frontend MUST use relative URLs (`/api`) not localhost
+- **Staging NODE_ENV**: Set to 'staging', code must check for both 'production' and 'staging'
+- **Frontend serving**: Backend serves built frontend from `backend/public` in production/staging
+- **Email verification**: Requires RESEND_API_KEY configured in Railway environment
 
 ## 📚 Documentation Files
 
