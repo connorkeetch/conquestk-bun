@@ -120,8 +120,14 @@ export class AuthController {
         expiresIn: '24h',
       })
 
+      // Check if email verification is required
+      const requiresEmailVerification = emailService.isEnabled() && 
+        process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+
       return res.status(201).json({
-        message: 'User created successfully',
+        message: requiresEmailVerification 
+          ? 'Account created! Please check your email to verify your account.'
+          : 'User created successfully',
         token,
         user: {
           id: user.id,
@@ -130,6 +136,8 @@ export class AuthController {
           isAdmin: user.is_admin || false,
           adminLevel: user.admin_level || 0,
         },
+        requiresEmailVerification,
+        emailSent: emailService.isEnabled() && verificationToken ? true : false,
       })
     } catch (error) {
       logger.error('Registration error:', error)
