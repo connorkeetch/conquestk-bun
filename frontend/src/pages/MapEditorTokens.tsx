@@ -31,6 +31,7 @@ interface MapState {
   draggedTerritoryId: string | null
   mapWidth: number
   mapHeight: number
+  imageScale: number  // Scale factor for resizing image
 }
 
 type EditorMode = 'territories' | 'continents' | 'connections'
@@ -50,6 +51,7 @@ export default function MapEditorTokens() {
     draggedTerritoryId: null,
     mapWidth: 1200,
     mapHeight: 800,
+    imageScale: 1,  // Default scale
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
@@ -63,6 +65,10 @@ export default function MapEditorTokens() {
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
   const [showGrid, setShowGrid] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadInfo, setUploadInfo] = useState<string | null>(null)
+  const [showImageOptions, setShowImageOptions] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   // New continent form
   const [newContinentName, setNewContinentName] = useState('')
@@ -78,16 +84,77 @@ export default function MapEditorTokens() {
   }
 
   const processImageFile = (file: File) => {
+    // Clear previous errors and info
+    setUploadError(null)
+    setUploadInfo(null)
+    
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
+      setUploadError('Please select an image file (PNG, JPG, GIF, WEBP, SVG)')
+      return
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max size is 10MB`)
       return
     }
 
+    setImageFile(file)  // Store for later use
+    
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string
-      setTempImageUrl(dataUrl)
-      setShowProcessor(true)
+      
+      // Check image dimensions
+      const img = new Image()
+      img.onload = () => {
+        const MIN_WIDTH = 400
+        const MIN_HEIGHT = 300
+        const MAX_WIDTH = 1600
+        const MAX_HEIGHT = 1200
+        
+        let finalWidth = img.width
+        let finalHeight = img.height
+        
+        // Auto-expand small images to meet minimum size
+        if (img.width < MIN_WIDTH || img.height < MIN_HEIGHT) {
+          const scaleX = MIN_WIDTH / img.width
+          const scaleY = MIN_HEIGHT / img.height
+          const scale = Math.max(scaleX, scaleY)
+          
+          finalWidth = Math.round(img.width * scale)
+          finalHeight = Math.round(img.height * scale)
+          
+          // Create expanded canvas
+          const expandCanvas = document.createElement('canvas')
+          expandCanvas.width = finalWidth
+          expandCanvas.height = finalHeight
+          const ctx = expandCanvas.getContext('2d')
+          
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(img, 0, 0, finalWidth, finalHeight)
+            const expandedDataUrl = expandCanvas.toDataURL('image/png')
+            setTempImageUrl(expandedDataUrl)
+            setUploadInfo(`Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`)
+          }
+        } else {
+          setTempImageUrl(dataUrl)
+          setUploadInfo(null)
+        }
+        
+        // Update map dimensions
+        setState((prev) => ({
+          ...prev,
+          mapWidth: Math.min(finalWidth, MAX_WIDTH),
+          mapHeight: Math.min(finalHeight, MAX_HEIGHT),
+        }))
+        
+        // Show options dialog
+        setShowImageOptions(true)
+      }
+      img.src = dataUrl
     }
     reader.readAsDataURL(file)
   }
@@ -299,10 +366,7 @@ export default function MapEditorTokens() {
         alert('Please add at least 2 territories before saving')
         return
       }
-      if (state.continents.length < 1) {
-        alert('Please add at least 1 continent before saving')
-        return
-      }
+      // Continents are optional - removed requirement
 
       // Prepare map data for API
       const formData = new FormData()
@@ -451,12 +515,96 @@ export default function MapEditorTokens() {
     event.target.value = ''
   }
 
+  // Handle image options dialog
+  const handleUseFullImage = () => {
+    if (!tempImageUrl) return
+    
+    setState((prev) => ({
+      ...prev,
+      imageUrl: tempImageUrl,
+      imageScale: 1,
+    }))
+    setShowImageOptions(false)
+    setShowProcessor(false)
+    setTempImageUrl(null)
+  }
+
+  const handleCropImage = () => {
+    setShowImageOptions(false)
+    setShowProcessor(true)
+  }
+
+  const handleScaleChange = (newScale: number) => {
+    setState((prev) => ({
+      ...prev,
+      imageScale: newScale,
+      mapWidth: Math.round(prev.mapWidth * (newScale / prev.imageScale)),
+      mapHeight: Math.round(prev.mapHeight * (newScale / prev.imageScale)),
+    }))
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
+      {/* Image Options Dialog */}
+      {showImageOptions && tempImageUrl && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
+            <p className="text-gray-400 mb-6">
+              How would you like to use this image?
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleUseFullImage}
+                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium flex items-center justify-between"
+              >
+                <span>Use Full Image</span>
+                <span className="text-sm text-blue-200">No cropping</span>
+              </button>
+              <button
+                onClick={handleCropImage}
+                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium flex items-center justify-between"
+              >
+                <span>Crop Image</span>
+                <span className="text-sm text-green-200">Select area</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowImageOptions(false)
+                  setTempImageUrl(null)
+                }}
+                className="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+            {uploadInfo && (
+              <div className="mt-4 p-2 bg-blue-900/50 border border-blue-600 rounded text-blue-300 text-sm">
+                ℹ️ {uploadInfo}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="w-full max-w-[1920px] mx-auto">
         {' '}
         {/* Full width with max limit */}
-        <h1 className="text-3xl font-bold mb-6">Map Editor</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
+          <div className="flex gap-4 items-center">
+            <a 
+              href="/map-editor-polygon" 
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+            >
+              🏪 Try Polygon Editor (Beta)
+            </a>
+            <div className="text-sm text-gray-400">
+              <p className="text-xs">Token-based: Place circular tokens as territories</p>
+              <p className="text-xs">Polygon-based: Draw custom territory shapes</p>
+            </div>
+          </div>
+        </div>
         {/* Toolbar */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -515,8 +663,8 @@ export default function MapEditorTokens() {
                   setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1200 }))
                 }
                 className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
-                min="800"
-                max="2000"
+                min="400"
+                max="1600"
               />
               <span className="text-sm">×</span>
               <input
@@ -526,10 +674,26 @@ export default function MapEditorTokens() {
                   setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 800 }))
                 }
                 className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
-                min="600"
-                max="1500"
+                min="300"
+                max="1200"
               />
             </div>
+
+            {/* Image Scale Control */}
+            {state.imageUrl && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm">Scale:</span>
+                <input
+                  type="range"
+                  min="50"
+                  max="150"
+                  value={state.imageScale * 100}
+                  onChange={(e) => handleScaleChange(parseInt(e.target.value) / 100)}
+                  className="w-32"
+                />
+                <span className="text-xs text-gray-400">{Math.round(state.imageScale * 100)}%</span>
+              </div>
+            )}
 
             {/* Grid Toggle */}
             <button
@@ -542,27 +706,27 @@ export default function MapEditorTokens() {
             {/* Actions */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
             >
               📤 Upload Image
+            </button>
+            <button
+              onClick={handleExport}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
+            >
+              📥 Export JSON
+            </button>
+            <button
+              onClick={() => document.getElementById('json-import')?.click()}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
+            >
+              📤 Import JSON
             </button>
             <button
               onClick={handleSaveMap}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
             >
               💾 Save to Database
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-            >
-              📥 Export JSON
-            </button>
-            <button
-              onClick={() => document.getElementById('json-import')?.click()}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
-            >
-              📤 Import JSON
             </button>
           </div>
 
@@ -641,7 +805,7 @@ export default function MapEditorTokens() {
                       handleCreateContinent()
                     }
                   }}
-                  className="px-4 py-1 bg-green-600 hover:bg-green-700 rounded"
+                  className="px-4 py-1 bg-slate-700 hover:bg-slate-600 rounded"
                   disabled={!newContinentName.trim()}
                 >
                   {editingContinentId ? '💾 Update' : '➕ Add Continent'}
@@ -835,6 +999,12 @@ export default function MapEditorTokens() {
               {!state.imageUrl && !isDragOver && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
+                    {/* Upload Error Display */}
+                    {uploadError && (
+                      <div className="mb-4 p-2 bg-red-900/50 border border-red-600 rounded text-red-300 text-sm max-w-md">
+                        ❌ {uploadError}
+                      </div>
+                    )}
                     <p className="text-gray-400 mb-2">Drop an image here or</p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
@@ -842,6 +1012,11 @@ export default function MapEditorTokens() {
                     >
                       Upload Map Image
                     </button>
+                    <div className="mt-4 text-xs text-gray-500">
+                      <p>💡 Min: 400×300px | Max: 1600×1200px</p>
+                      <p>⚡ Small images auto-expand to minimum size</p>
+                      <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
+                    </div>
                   </div>
                 </div>
               )}
