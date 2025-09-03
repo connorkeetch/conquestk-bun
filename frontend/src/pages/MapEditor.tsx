@@ -24,6 +24,7 @@ interface EditorState {
   imageUrl?: string
   imageWidth: number
   imageHeight: number
+  imageScale: number  // Scale factor for resizing image
   adjacencies: Array<{ from: string; to: string }>
   firstSelectedTerritory?: string
 }
@@ -40,6 +41,7 @@ export default function MapEditor() {
     currentPolygon: [],
     imageWidth: 800,
     imageHeight: 600,
+    imageScale: 1,  // Default scale
     adjacencies: [],
     firstSelectedTerritory: undefined,
   })
@@ -62,8 +64,11 @@ export default function MapEditor() {
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadInfo, setUploadInfo] = useState<string | null>(null)
   const [showCropper, setShowCropper] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
+  const [showImageOptions, setShowImageOptions] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   // Load metadata on component mount
   useEffect(() => {
@@ -163,12 +168,15 @@ export default function MapEditor() {
       ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF' // White borders for better contrast
       ctx.lineWidth = isSelected ? 4 : 2
 
-      // Draw territory polygon
+      // Draw territory polygon (apply scale)
       if (territory.boundaryCoords.length > 0) {
         ctx.beginPath()
-        ctx.moveTo(territory.boundaryCoords[0].x, territory.boundaryCoords[0].y)
+        ctx.moveTo(
+          territory.boundaryCoords[0].x * state.imageScale, 
+          territory.boundaryCoords[0].y * state.imageScale
+        )
         territory.boundaryCoords.slice(1).forEach((coord) => {
-          ctx.lineTo(coord.x, coord.y)
+          ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
         })
         ctx.closePath()
         ctx.fill()
@@ -178,11 +186,19 @@ export default function MapEditor() {
         ctx.fillStyle = '#000000'
         ctx.font = 'bold 14px sans-serif'
         ctx.textAlign = 'center'
-        // Draw shadow
-        ctx.fillText(territory.name, territory.armyPosition.x + 1, territory.armyPosition.y + 1)
+        // Draw shadow (apply scale)
+        ctx.fillText(
+          territory.name, 
+          territory.armyPosition.x * state.imageScale + 1, 
+          territory.armyPosition.y * state.imageScale + 1
+        )
         // Draw text
         ctx.fillStyle = '#FFFFFF'
-        ctx.fillText(territory.name, territory.armyPosition.x, territory.armyPosition.y)
+        ctx.fillText(
+          territory.name, 
+          territory.armyPosition.x * state.imageScale, 
+          territory.armyPosition.y * state.imageScale
+        )
       }
     })
 
@@ -191,9 +207,12 @@ export default function MapEditor() {
       // Draw filled preview with low opacity
       ctx.fillStyle = '#60A5FA40' // Light blue with 25% opacity
       ctx.beginPath()
-      ctx.moveTo(state.currentPolygon[0].x, state.currentPolygon[0].y)
+      ctx.moveTo(
+        state.currentPolygon[0].x * state.imageScale, 
+        state.currentPolygon[0].y * state.imageScale
+      )
       state.currentPolygon.slice(1).forEach((coord) => {
-        ctx.lineTo(coord.x, coord.y)
+        ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
       })
       ctx.closePath()
       ctx.fill()
@@ -203,9 +222,12 @@ export default function MapEditor() {
       ctx.lineWidth = 3
       ctx.setLineDash([8, 4])
       ctx.beginPath()
-      ctx.moveTo(state.currentPolygon[0].x, state.currentPolygon[0].y)
+      ctx.moveTo(
+        state.currentPolygon[0].x * state.imageScale, 
+        state.currentPolygon[0].y * state.imageScale
+      )
       state.currentPolygon.slice(1).forEach((coord) => {
-        ctx.lineTo(coord.x, coord.y)
+        ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
       })
       ctx.stroke()
       ctx.setLineDash([])
@@ -216,7 +238,7 @@ export default function MapEditor() {
         ctx.strokeStyle = '#3B82F6'
         ctx.lineWidth = 2
         ctx.beginPath()
-        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2)
+        ctx.arc(point.x * state.imageScale, point.y * state.imageScale, 4, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
       })
@@ -235,18 +257,32 @@ export default function MapEditor() {
         ctx.setLineDash([10, 5])
 
         ctx.beginPath()
-        ctx.moveTo(fromTerritory.armyPosition.x, fromTerritory.armyPosition.y)
-        ctx.lineTo(toTerritory.armyPosition.x, toTerritory.armyPosition.y)
+        ctx.moveTo(
+          fromTerritory.armyPosition.x * state.imageScale, 
+          fromTerritory.armyPosition.y * state.imageScale
+        )
+        ctx.lineTo(
+          toTerritory.armyPosition.x * state.imageScale, 
+          toTerritory.armyPosition.y * state.imageScale
+        )
         ctx.stroke()
         ctx.setLineDash([])
 
         // Draw connection dots
         ctx.fillStyle = '#10B981'
         ctx.beginPath()
-        ctx.arc(fromTerritory.armyPosition.x, fromTerritory.armyPosition.y, 4, 0, 2 * Math.PI)
+        ctx.arc(
+          fromTerritory.armyPosition.x * state.imageScale, 
+          fromTerritory.armyPosition.y * state.imageScale, 
+          4, 0, 2 * Math.PI
+        )
         ctx.fill()
         ctx.beginPath()
-        ctx.arc(toTerritory.armyPosition.x, toTerritory.armyPosition.y, 4, 0, 2 * Math.PI)
+        ctx.arc(
+          toTerritory.armyPosition.x * state.imageScale, 
+          toTerritory.armyPosition.y * state.imageScale, 
+          4, 0, 2 * Math.PI
+        )
         ctx.fill()
       }
     })
@@ -278,30 +314,34 @@ export default function MapEditor() {
       const scaleY = canvas.height / rect.height
       const x = (event.clientX - rect.left) * scaleX
       const y = (event.clientY - rect.top) * scaleY
+      
+      // Store coordinates relative to original image dimensions for consistency
+      const normalizedX = x / state.imageScale
+      const normalizedY = y / state.imageScale
 
       if (state.selectedTool === 'territory') {
         if (!state.isDrawing) {
           setState((prev) => ({
             ...prev,
             isDrawing: true,
-            currentPolygon: [{ x, y }],
+            currentPolygon: [{ x: normalizedX, y: normalizedY }],
           }))
         } else {
           setState((prev) => ({
             ...prev,
-            currentPolygon: [...prev.currentPolygon, { x, y }],
+            currentPolygon: [...prev.currentPolygon, { x: normalizedX, y: normalizedY }],
           }))
         }
       } else if (state.selectedTool === 'select') {
         // Select territory
-        const clickedTerritory = findTerritoryAtPoint(x, y)
+        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
         setState((prev) => ({
           ...prev,
           selectedTerritory: clickedTerritory?.id,
         }))
       } else if (state.selectedTool === 'adjacency') {
         // Handle adjacency creation
-        const clickedTerritory = findTerritoryAtPoint(x, y)
+        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
         if (!clickedTerritory) return
 
         if (!state.firstSelectedTerritory) {
@@ -426,8 +466,9 @@ export default function MapEditor() {
   }
 
   const processImageFile = (file: File) => {
-    // Clear previous errors
+    // Clear previous errors and info
     setUploadError(null)
+    setUploadInfo(null)
 
     // Validate file type (including SVG)
     if (!file.type.startsWith('image/')) {
@@ -448,6 +489,7 @@ export default function MapEditor() {
 
     // Store the actual file for upload
     setSelectedFile(file)
+    setImageFile(file)  // Store for later upload
 
     // Use FileReader API for better compatibility (avoids blob URL security issues)
     const reader = new FileReader()
@@ -460,28 +502,56 @@ export default function MapEditor() {
       const img = new Image()
 
       img.onload = () => {
-        // Check if image needs cropping (larger than canvas and not SVG)
         const isSvg = file.type === 'image/svg+xml'
-        if (!isSvg && (img.width > 800 || img.height > 600)) {
-          setTempImageUrl(dataUrl)
-          setShowCropper(true)
-          setIsUploading(false)
-          setUploadProgress(0)
+        
+        // Minimum size requirements
+        const MIN_WIDTH = 400
+        const MIN_HEIGHT = 300
+        const MAX_WIDTH = 1600
+        const MAX_HEIGHT = 1200
+        
+        let finalWidth = img.width
+        let finalHeight = img.height
+        
+        // Auto-expand small images to meet minimum size
+        if (img.width < MIN_WIDTH || img.height < MIN_HEIGHT) {
+          const scaleX = MIN_WIDTH / img.width
+          const scaleY = MIN_HEIGHT / img.height
+          const scale = Math.max(scaleX, scaleY)
+          
+          finalWidth = Math.round(img.width * scale)
+          finalHeight = Math.round(img.height * scale)
+          
+          // Create expanded canvas
+          const expandCanvas = document.createElement('canvas')
+          expandCanvas.width = finalWidth
+          expandCanvas.height = finalHeight
+          const ctx = expandCanvas.getContext('2d')
+          
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(img, 0, 0, finalWidth, finalHeight)
+            const expandedDataUrl = expandCanvas.toDataURL('image/png')
+            setTempImageUrl(expandedDataUrl)
+            setUploadInfo(`Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`)
+          }
         } else {
-          // Image fits, use directly
-          setState((prev) => ({
-            ...prev,
-            imageUrl: dataUrl,
-            imageWidth: img.width,
-            imageHeight: img.height,
-          }))
-
-          setUploadProgress(100)
-          setTimeout(() => {
-            setIsUploading(false)
-            setUploadProgress(0)
-          }, 500)
+          setTempImageUrl(dataUrl)
+          setUploadInfo(null)
         }
+        
+        // Show options dialog for all images
+        setShowImageOptions(true)
+        setIsUploading(false)
+        setUploadProgress(0)
+        
+        // Store dimensions (with limits)
+        setState((prev) => ({
+          ...prev,
+          imageWidth: Math.min(finalWidth, MAX_WIDTH),
+          imageHeight: Math.min(finalHeight, MAX_HEIGHT),
+        }))
       }
 
       img.onerror = (_event) => {
@@ -694,7 +764,7 @@ export default function MapEditor() {
         tags: ['custom'],
       }
 
-      const savedMap = await mapService.createMap(mapData, selectedFile || undefined)
+      const savedMap = await mapService.createMap(mapData, imageFile || undefined)
 
       // Save continents
       const savedContinents = []
@@ -766,24 +836,37 @@ export default function MapEditor() {
         selectedTerritory: undefined,
         selectedContinent: undefined,
         imageUrl: undefined,
+        imageScale: 1,
         adjacencies: [],
         firstSelectedTerritory: undefined,
       }))
       setMapName('')
       setMapDescription('')
       setSelectedFile(null)
+      setImageFile(null)
     }
   }
 
   const handleCropComplete = (croppedImageUrl: string) => {
+    // Convert base64 to File for upload
+    fetch(croppedImageUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], imageFile?.name || 'cropped-image.png', { type: 'image/png' })
+        setImageFile(file)
+        setSelectedFile(file)
+      })
+    
     setState((prev) => ({
       ...prev,
       imageUrl: croppedImageUrl,
       imageWidth: 800,
       imageHeight: 600,
+      imageScale: 1,
     }))
     setShowCropper(false)
     setTempImageUrl(null)
+    setShowImageOptions(false)
   }
 
   const handleCropCancel = () => {
@@ -793,19 +876,167 @@ export default function MapEditor() {
   }
 
   const validateMap = () => {
-    const validation = mapService.validateMapData(state.territories, [])
-
-    if (validation.isValid) {
+    // Custom validation that only requires 2+ territories
+    const errors: string[] = []
+    
+    if (state.territories.length < 2) {
+      errors.push('Map must have at least 2 territories')
+    }
+    
+    // Check if territories have adjacencies (optional warning, not error)
+    const hasAdjacencies = state.adjacencies.length > 0
+    if (!hasAdjacencies && state.territories.length > 1) {
+      errors.push('Warning: No territory connections defined. Players may not be able to attack between territories.')
+    }
+    
+    if (errors.length === 0) {
       alert('✅ Map validation passed! Your map is ready to use.')
     } else {
-      alert(`❌ Map validation failed:\n\n${validation.errors.join('\n')}`)
+      alert(`⚠️ Map validation:\n\n${errors.join('\n')}`)
     }
+  }
+
+  const exportMapJSON = () => {
+    const mapData = {
+      name: mapName,
+      description: mapDescription,
+      imageWidth: state.imageWidth,
+      imageHeight: state.imageHeight,
+      territories: state.territories.map(t => ({
+        ...t,
+        // Ensure coordinates are stored relative to base image dimensions
+        boundaryCoords: t.boundaryCoords,
+        armyPosition: t.armyPosition,
+      })),
+      continents: state.continents,
+      adjacencies: state.adjacencies,
+      version: '1.0',
+    }
+
+    const jsonString = JSON.stringify(mapData, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${mapName || 'map'}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const importMapJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const mapData = JSON.parse(e.target?.result as string)
+        
+        // Load map data
+        setMapName(mapData.name || '')
+        setMapDescription(mapData.description || '')
+        setState(prev => ({
+          ...prev,
+          territories: mapData.territories || [],
+          continents: mapData.continents || [],
+          adjacencies: mapData.adjacencies || [],
+          imageWidth: mapData.imageWidth || 800,
+          imageHeight: mapData.imageHeight || 600,
+        }))
+        
+        alert('Map data imported successfully!')
+      } catch (error) {
+        alert('Failed to import map data. Please check the file format.')
+      }
+    }
+    reader.readAsText(file)
   }
 
   const _selectedTerritoryData = state.territories.find((t) => t.id === state.selectedTerritory)
 
+  const handleUseFullImage = () => {
+    if (!tempImageUrl) return
+    
+    setState((prev) => ({
+      ...prev,
+      imageUrl: tempImageUrl,
+      imageScale: 1,
+    }))
+    setShowImageOptions(false)
+    setTempImageUrl(null)
+  }
+
+  const handleCropImage = () => {
+    setShowImageOptions(false)
+    setShowCropper(true)
+  }
+
+  const handleScaleChange = (newScale: number) => {
+    setState((prev) => ({
+      ...prev,
+      imageScale: newScale,
+      imageWidth: prev.imageWidth,
+      imageHeight: prev.imageHeight,
+    }))
+  }
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-6">
+    <div className="min-h-screen bg-slate-900 text-slate-100 p-6 relative">
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-white mb-4">🚧 Coming Soon</h1>
+          <p className="text-xl text-gray-300 mb-6">
+            The polygon-based map editor is currently under development
+          </p>
+          <button
+            onClick={() => window.location.href = '/map-editor'}
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium text-white"
+          >
+            Return to Current Map Editor
+          </button>
+        </div>
+      </div>
+
+      {/* Image Options Dialog */}
+      {showImageOptions && tempImageUrl && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
+            <p className="text-gray-400 mb-6">
+              How would you like to use this image?
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleUseFullImage}
+                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium flex items-center justify-between"
+              >
+                <span>Use Full Image</span>
+                <span className="text-sm text-blue-200">No cropping</span>
+              </button>
+              <button
+                onClick={handleCropImage}
+                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium flex items-center justify-between"
+              >
+                <span>Crop Image</span>
+                <span className="text-sm text-green-200">Select area</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowImageOptions(false)
+                  setTempImageUrl(null)
+                }}
+                className="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image Cropper Modal */}
       {showCropper && tempImageUrl && (
         <ImageCropper
@@ -857,14 +1088,33 @@ export default function MapEditor() {
               className="hidden"
             />
             <button
+              onClick={exportMapJSON}
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
+            >
+              📥 Export JSON
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              onChange={importMapJSON}
+              id="json-import"
+              className="hidden"
+            />
+            <label
+              htmlFor="json-import"
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium cursor-pointer inline-block"
+            >
+              📤 Import JSON
+            </label>
+            <button
               onClick={validateMap}
-              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-medium"
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
             >
               🔍 Validate Map
             </button>
             <button
               onClick={clearMap}
-              className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium"
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
             >
               🗑️ Clear All
             </button>
@@ -948,6 +1198,13 @@ export default function MapEditor() {
                           ❌ {uploadError}
                         </div>
                       )}
+                      
+                      {/* Upload Info Display */}
+                      {uploadInfo && (
+                        <div className="mb-3 p-2 bg-blue-900/50 border border-blue-600 rounded text-blue-300 text-xs">
+                          ℹ️ {uploadInfo}
+                        </div>
+                      )}
 
                       {/* Upload Progress Bar */}
                       {isUploading && (
@@ -984,6 +1241,7 @@ export default function MapEditor() {
                                 setState((prev) => ({ ...prev, imageUrl: undefined }))
                                 setSelectedFile(null)
                                 setUploadError(null)
+                                setUploadInfo(null)
                               }}
                               className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
@@ -1008,11 +1266,11 @@ export default function MapEditor() {
                                 PNG, JPG, GIF, WEBP, SVG (max 10MB)
                                 <br />
                                 <span className="text-blue-300">
-                                  💡 Recommended: 800×600 or 1600×1200
+                                  💡 Min: 400×300px | Max: 1600×1200px
                                 </span>
                                 <br />
                                 <span className="text-yellow-300">
-                                  ⚡ Large images will be cropped
+                                  ⚡ Small images auto-expand to minimum size
                                 </span>
                                 <br />
                                 <span className="text-green-300">✨ SVG maps supported!</span>
@@ -1035,6 +1293,32 @@ export default function MapEditor() {
                     💡 Start by uploading a map image, then draw territories on top
                   </div>
                 </div>
+
+                {/* Image Scale Control */}
+                {state.imageUrl && (
+                  <div className="mt-4 p-3 bg-gray-700 rounded">
+                    <label className="block text-sm font-medium mb-2 text-slate-200">
+                      Image Scale: {Math.round(state.imageScale * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="150"
+                      value={state.imageScale * 100}
+                      onChange={(e) => handleScaleChange(parseInt(e.target.value) / 100)}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-slate-400 mt-1">
+                      <span>50%</span>
+                      <span>100%</span>
+                      <span>150%</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2">
+                      Canvas: {Math.round(state.imageWidth * state.imageScale)}×
+                      {Math.round(state.imageHeight * state.imageScale)}px
+                    </div>
+                  </div>
+                )}
 
                 {/* Map Details */}
                 <div>
@@ -1214,7 +1498,7 @@ export default function MapEditor() {
                     ) : (
                       <button
                         onClick={createContinent}
-                        className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                        className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm"
                       >
                         Add
                       </button>
@@ -1372,13 +1656,13 @@ export default function MapEditor() {
               <div className="space-y-2">
                 <button
                   onClick={validateMap}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 px-3 py-2 rounded text-sm"
+                  className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
                 >
                   🔍 Validate Map
                 </button>
                 <button
                   onClick={clearMap}
-                  className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm"
+                  className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
                 >
                   🗑️ Clear Map
                 </button>
