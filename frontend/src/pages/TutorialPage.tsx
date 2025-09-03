@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { BookOpen, Gamepad2, Trophy, Shield, Map, Zap, Users, Settings } from 'lucide-react'
 
 const TutorialPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'basics' | 'gametypes' | 'strategy' | 'rankings' | 'maps' | 'options'>('basics')
+  const [activeTab, setActiveTab] = useState<'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'>('basics')
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -59,15 +59,15 @@ const TutorialPage: React.FC = () => {
           Rankings & ELO
         </button>
         <button
-          onClick={() => setActiveTab('maps')}
+          onClick={() => setActiveTab('editor')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'maps' 
+            activeTab === 'editor' 
               ? 'text-blue-400 border-b-2 border-blue-400' 
               : 'text-gray-400 hover:text-white'
           }`}
         >
           <Map className="w-4 h-4" />
-          Maps
+          Map Editor
         </button>
         <button
           onClick={() => setActiveTab('options')}
@@ -328,92 +328,163 @@ const TutorialPage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'maps' && (
+        {activeTab === 'editor' && (
           <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Maps & Territories</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Map Editor Guide</h2>
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-blue-400 mb-3">Official Maps</h3>
-                <div className="grid gap-4">
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Getting Started</h3>
+                <p className="text-gray-300 mb-3">
+                  Create your own custom maps using our intuitive token-based map editor. Share your creations with the community!
+                </p>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-semibold text-yellow-400 mb-2">Quick Start Steps:</h4>
+                  <ol className="text-gray-300 space-y-1 list-decimal list-inside">
+                    <li>Upload a background image (400×300 minimum)</li>
+                    <li>Place territory tokens on strategic locations</li>
+                    <li>Create continents and assign territories (optional)</li>
+                    <li>Connect territories to define borders</li>
+                    <li>Set up capital positions for different player counts</li>
+                    <li>Save to database and submit for approval</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Editor Modes</h3>
+                <div className="grid gap-3">
                   <div className="bg-gray-700 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-400">Classic World</h4>
+                    <h4 className="font-semibold text-green-400">🗺️ Territories Mode</h4>
                     <p className="text-gray-300 text-sm mt-1">
-                      42 territories across 6 continents. The original and most balanced map.
+                      Click to place territory tokens. Drag to reposition. Select a continent first to auto-assign new territories.
                     </p>
                   </div>
                   
                   <div className="bg-gray-700 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-400">Europe Detailed</h4>
+                    <h4 className="font-semibold text-blue-400">🌍 Continents Mode</h4>
                     <p className="text-gray-300 text-sm mt-1">
-                      Focus on European territories with historical borders and regions.
+                      Create continent groups with bonus army values. Assign colors for visual distinction.
                     </p>
                   </div>
                   
                   <div className="bg-gray-700 p-4 rounded-lg">
-                    <h4 className="font-semibold text-purple-400">Fantasy Realms</h4>
+                    <h4 className="font-semibold text-purple-400">🔗 Connections Mode</h4>
                     <p className="text-gray-300 text-sm mt-1">
-                      Magical kingdoms and territories in a fantasy world setting.
+                      Click a territory, then click adjacent territories to create connections. These define attack paths.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h4 className="font-semibold text-yellow-400">👑 Capitals Mode</h4>
+                    <p className="text-gray-300 text-sm mt-1">
+                      Auto-generate or manually assign starting positions for 2-12 players using our fair distribution system.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-blue-400 mb-3">Continent Bonuses</h3>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Capital Assignment System</h3>
+                <p className="text-gray-300 mb-3">
+                  The new capital system ensures balanced starting positions for all player counts:
+                </p>
+                <ul className="text-gray-300 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">✨</span>
+                    <span><strong>Auto-Generation:</strong> Uses maximin distance algorithm to maximize spacing between starting positions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">🎯</span>
+                    <span><strong>Manual Override:</strong> Click territories in Capitals mode to customize assignments</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">👥</span>
+                    <span><strong>Player-Specific:</strong> Different optimal configurations for 2-12 players</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-400">⚖️</span>
+                    <span><strong>Fair Play:</strong> Ensures no player has an unfair starting advantage</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Map Requirements</h3>
                 <table className="w-full text-gray-300">
                   <thead>
                     <tr className="border-b border-gray-600">
-                      <th className="text-left py-2">Continent</th>
-                      <th className="text-center py-2">Territories</th>
-                      <th className="text-center py-2">Bonus Troops</th>
+                      <th className="text-left py-2">Feature</th>
+                      <th className="text-center py-2">Minimum</th>
+                      <th className="text-center py-2">Recommended</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-gray-700">
-                      <td className="py-2">Australia</td>
-                      <td className="text-center">4</td>
-                      <td className="text-center text-green-400">+2</td>
+                      <td className="py-2">Territories</td>
+                      <td className="text-center text-yellow-400">2</td>
+                      <td className="text-center text-green-400">20-50</td>
                     </tr>
                     <tr className="border-b border-gray-700">
-                      <td className="py-2">South America</td>
-                      <td className="text-center">4</td>
-                      <td className="text-center text-green-400">+2</td>
+                      <td className="py-2">Continents</td>
+                      <td className="text-center text-yellow-400">0 (optional)</td>
+                      <td className="text-center text-green-400">3-7</td>
                     </tr>
                     <tr className="border-b border-gray-700">
-                      <td className="py-2">Africa</td>
-                      <td className="text-center">6</td>
-                      <td className="text-center text-yellow-400">+3</td>
+                      <td className="py-2">Image Size</td>
+                      <td className="text-center text-yellow-400">400×300</td>
+                      <td className="text-center text-green-400">1200×800</td>
                     </tr>
                     <tr className="border-b border-gray-700">
-                      <td className="py-2">North America</td>
-                      <td className="text-center">9</td>
-                      <td className="text-center text-yellow-400">+5</td>
-                    </tr>
-                    <tr className="border-b border-gray-700">
-                      <td className="py-2">Europe</td>
-                      <td className="text-center">7</td>
-                      <td className="text-center text-orange-400">+5</td>
-                    </tr>
-                    <tr className="border-b border-gray-700">
-                      <td className="py-2">Asia</td>
-                      <td className="text-center">12</td>
-                      <td className="text-center text-red-400">+7</td>
+                      <td className="py-2">File Size</td>
+                      <td className="text-center text-yellow-400">< 10MB</td>
+                      <td className="text-center text-green-400">< 2MB</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-blue-400 mb-3">Custom Maps</h3>
-                <p className="text-gray-300">
-                  Create your own maps using the Map Editor! Design territories, set connections, and share with the community.
-                </p>
-                <ul className="text-gray-300 space-y-1 mt-3">
-                  <li>• Draw territory boundaries</li>
-                  <li>• Define continent groups</li>
-                  <li>• Set custom bonus values</li>
-                  <li>• Upload background images</li>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Getting Maps Approved</h3>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-400 mb-2">Approval Process:</h4>
+                  <ol className="text-gray-300 space-y-2 list-decimal list-inside">
+                    <li><strong>Validation:</strong> Automatic checks for minimum requirements</li>
+                    <li><strong>Playability:</strong> All territories must be connected</li>
+                    <li><strong>Balance:</strong> Fair distribution of territories and continents</li>
+                    <li><strong>Quality:</strong> Clear visuals and appropriate theme</li>
+                    <li><strong>Community Review:</strong> Players test and rate your map</li>
+                    <li><strong>Admin Approval:</strong> Final check before publication</li>
+                  </ol>
+                  <p className="text-gray-400 text-sm mt-3">
+                    💡 Tip: Well-balanced maps with interesting themes get approved faster!
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">Advanced Features</h3>
+                <ul className="text-gray-300 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">📏</span>
+                    <span><strong>Grid Snap:</strong> Enable grid for precise territory placement</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">🔄</span>
+                    <span><strong>Import/Export:</strong> Save work as JSON for backup or sharing</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">🎨</span>
+                    <span><strong>Token Shapes:</strong> Choose hexagon, square, or circle tokens</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-400">🔍</span>
+                    <span><strong>Image Scaling:</strong> Adjust background size (50%-150%)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-400">✂️</span>
+                    <span><strong>Smart Cropping:</strong> Crop images to perfect dimensions</span>
+                  </li>
                 </ul>
               </div>
             </div>
