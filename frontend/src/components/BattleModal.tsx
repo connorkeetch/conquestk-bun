@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
+import audioService from '../services/audioService'
 
 interface BattleResult {
   attackerDice: number[]
@@ -38,6 +39,25 @@ export const BattleModal: React.FC<BattleModalProps> = ({
   useEffect(() => {
     if (isOpen && battleResult) {
       setShowAnimation(true)
+      
+      // Play battle sounds
+      audioService.playEffect('dice')
+      
+      // Play battle/attack sound after dice
+      setTimeout(() => {
+        audioService.playEffect('battle')
+      }, 500)
+      
+      // Play outcome sound
+      setTimeout(() => {
+        if (battleResult.conquered) {
+          audioService.playEffect('fanfare')
+          audioService.playEffect('capture')
+        } else if (battleResult.defenderLosses > battleResult.attackerLosses) {
+          audioService.playEffect('attack')
+        }
+      }, 1000)
+      
       // Auto-close after 3 seconds if no continue attack option
       if (!onContinueAttack) {
         const timer = setTimeout(onClose, 3000)

@@ -29,27 +29,95 @@ class AudioService {
   private isMuted: boolean = false
   private previousVolumes: AudioPreferences | null = null
 
-  // Sound effect definitions
+  // Track which audio files are being used
+  private audioUsageTracker: Map<string, { lastUsed: Date; count: number }> = new Map()
+
+  // Sound effect definitions - mapped from actual audio files
   private readonly SOUND_EFFECTS = {
-    dice: '/sounds/effects/dice.mp3',
-    victory: '/sounds/effects/victory.mp3',
-    defeat: '/sounds/effects/defeat.mp3',
-    capture: '/sounds/effects/capture.mp3',
-    eliminated: '/sounds/effects/eliminated.mp3',
-    gamestart: '/sounds/effects/gamestart.mp3',
-    yourturn: '/sounds/effects/yourturn.mp3',
-    message: '/sounds/effects/message.mp3',
-    error: '/sounds/effects/error.mp3',
+    // Dice rolling sounds (rotate through multiple)
+    dice: [
+      '/audio files/11L-Dice_roll_sound_effe-1756344593515.mp3',
+      '/audio files/11L-Dice_roll_sound_effe-1756344594194.mp3',
+      '/audio files/11L-Dice_roll_sound_effe-1756344594793.mp3',
+      '/audio files/11L-Dice_roll_sound_effe-1756344595231.mp3',
+      '/audio files/11L-dice_rolling_on_tabl-1756342799425.mp3',
+      '/audio files/11L-dice_rolling_on_tabl-1756342803307.mp3',
+      '/audio files/11L-dice_rolling_on_tabl-1756342805308.mp3',
+    ],
+    // Turn notification sounds (rotate through multiple)
+    yourturn: [
+      '/audio files/11L-Bell_chime_for_turn_-1756343144511.mp3',
+      '/audio files/11L-Bell_chime_for_turn_-1756343145119.mp3',
+      '/audio files/11L-Bell_chime_for_turn_-1756343145643.mp3',
+      '/audio files/11L-Bell_chime_for_turn_-1756343146159.mp3',
+      '/audio files/11L-Turn_notification_so-1756344526253.mp3',
+      '/audio files/11L-Turn_notification_so-1756344528165.mp3',
+      '/audio files/11L-turn_notification_so-1756344682568.mp3',
+      '/audio files/11L-turn_notification_so-1756344683788.mp3',
+      '/audio files/11L-turn_notification_so-1756344684748.mp3',
+      '/audio files/11L-turn_notification_so-1756344686879.mp3',
+      '/audio files/11L-turn_notification_so-1756344688096.mp3',
+      '/audio files/11L-turn_notification_so-1756344689048.mp3',
+      '/audio files/11L-turn_notification_so-1756344690288.mp3',
+    ],
+    // Attack/Battle sounds
+    attack: [
+      '/audio files/11L-Cannon_fire_in_the_d-1756343009915.mp3',
+      '/audio files/11L-Cannon_fire_in_the_d-1756343012115.mp3',
+      '/audio files/11L-Cannon_fire_in_the_d-1756343014505.mp3',
+    ],
+    battle: [
+      '/audio files/11L-swords_clash-1756342861091.mp3',
+      '/audio files/11L-swords_clash-1756342863185.mp3',
+    ],
+    // Victory/Achievement sounds
+    victory: [
+      '/audio files/11L-Crowd_cheering_victo-1756343298068.mp3',
+      '/audio files/11L-Triumphant_orchestra-1756343250021.mp3',
+    ],
+    fanfare: [
+      '/audio files/11L-Trumpet_fanfare_shor-1756343177067.mp3',
+      '/audio files/11L-Trumpet_fanfare_shor-1756343179983.mp3',
+      '/audio files/11L-Trumpet_fanfare_shor-1756343182421.mp3',
+      '/audio files/11L-Trumpet_fanfare_shor-1756343184710.mp3',
+    ],
+    // Game state sounds
+    gamestart: '/audio files/11L-Bright_brass_bell_si-1756344484349.mp3',
+    capture: '/audio files/11L-Stamp_hitting_paper_-1756343095784.mp3',
+    // Piece movement sounds
+    placetroop: [
+      '/audio files/11L-Wooden_game_piece_be-1756343068801.mp3',
+      '/audio files/11L-Wooden_game_piece_be-1756343069629.mp3',
+      '/audio files/11L-Wooden_game_piece_be-1756343070672.mp3',
+    ],
+    // UI sounds
+    message: [
+      '/audio files/11L-Chat_message_notific-1756344550342.mp3',
+      '/audio files/11L-Chat_message_notific-1756344550932.mp3',
+      '/audio files/11L-Chat_message_notific-1756344552127.mp3',
+      '/audio files/11L-Chat_message_notific-1756344552591.mp3',
+    ],
+    error: '/audio files/11L-Errorinvalid_move_so-1756344569392.mp3',
+    swoosh: '/audio files/11L-Swoosh_sound_for_swi-1756344719043.mp3',
+    // Timer sounds
+    timer: '/audio files/11L-Clock_ticking_countd-1756343124965.mp3',
+    timerslow: '/audio files/11L-Slow_cinematic_clock-1756344723753.mp3',
+    // These are aliases for backwards compatibility
+    defeat: '/audio files/11L-Errorinvalid_move_so-1756344569392.mp3',
+    eliminated: '/audio files/11L-Errorinvalid_move_so-1756344569392.mp3',
   }
 
   // Background music tracks
   private readonly MUSIC_TRACKS = [
-    '/sounds/music/track1.mp3',
-    '/sounds/music/track2.mp3',
-    '/sounds/music/track3.mp3',
-    '/sounds/music/track4.mp3',
-    '/sounds/music/track5.mp3',
+    '/audio files/Conquer the World.mp3',
+    // We can add the WAV files as alternatives if needed
+    // '/audio files/Conquer the World.wav',
+    // '/audio files/Conquer the World (1).wav',
+    // '/audio files/Conquer the World (3).wav',
   ]
+
+  // Sound rotation indices for arrays
+  private soundIndices: Map<string, number> = new Map()
 
   private constructor() {
     this.loadPreferences()
@@ -93,21 +161,45 @@ class AudioService {
 
   private preloadSounds(): void {
     // Preload sound effects
-    Object.entries(this.SOUND_EFFECTS).forEach(([name, path]) => {
-      const howl = new Howl({
-        src: [path],
-        preload: true,
-        volume: this.getEffectiveVolume('effect'),
-        onloaderror: (id, error) => {
-          console.warn(`Failed to load sound effect ${name}:`, error)
-          // Store null to prevent repeated loading attempts
-          this.sounds.set(name, { name, howl: null, category: 'effect' })
-        },
-        onload: () => {
-          console.log(`Loaded sound effect: ${name}`)
-        },
-      })
-      this.sounds.set(name, { name, howl, category: 'effect' })
+    Object.entries(this.SOUND_EFFECTS).forEach(([name, pathOrPaths]) => {
+      const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths]
+      
+      // For arrays of sounds, preload all of them
+      if (Array.isArray(pathOrPaths)) {
+        paths.forEach((path, index) => {
+          const soundKey = `${name}_${index}`
+          const howl = new Howl({
+            src: [path],
+            preload: true,
+            volume: this.getEffectiveVolume('effect'),
+            onloaderror: (id, error) => {
+              console.warn(`Failed to load sound effect ${soundKey}:`, error)
+              this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
+            },
+            onload: () => {
+              console.log(`Loaded sound effect: ${soundKey}`)
+            },
+          })
+          this.sounds.set(soundKey, { name: soundKey, howl, category: 'effect' })
+        })
+        // Initialize rotation index
+        this.soundIndices.set(name, 0)
+      } else {
+        // Single sound
+        const howl = new Howl({
+          src: [paths[0]],
+          preload: true,
+          volume: this.getEffectiveVolume('effect'),
+          onloaderror: (id, error) => {
+            console.warn(`Failed to load sound effect ${name}:`, error)
+            this.sounds.set(name, { name, howl: null, category: 'effect' })
+          },
+          onload: () => {
+            console.log(`Loaded sound effect: ${name}`)
+          },
+        })
+        this.sounds.set(name, { name, howl, category: 'effect' })
+      }
     })
   }
 
@@ -140,13 +232,75 @@ class AudioService {
   public playEffect(effectName: string): void {
     if (!this.preferences.enabled || this.isMuted || !this.isTabFocused) return
 
-    const sound = this.sounds.get(effectName)
-    if (sound?.howl) {
-      sound.howl.volume(this.getEffectiveVolume('effect'))
-      sound.howl.play()
+    // Track usage
+    this.trackAudioUsage(effectName)
+
+    // Check if this is a rotating sound effect (has multiple variations)
+    const effectConfig = this.SOUND_EFFECTS[effectName as keyof typeof this.SOUND_EFFECTS]
+    if (Array.isArray(effectConfig)) {
+      // Get current index and rotate
+      const currentIndex = this.soundIndices.get(effectName) || 0
+      const soundKey = `${effectName}_${currentIndex}`
+      const sound = this.sounds.get(soundKey)
+      
+      if (sound?.howl) {
+        sound.howl.volume(this.getEffectiveVolume('effect'))
+        sound.howl.play()
+      } else {
+        console.warn(`Sound effect '${soundKey}' not found or failed to load`)
+      }
+      
+      // Update index for next time (rotate through available sounds)
+      this.soundIndices.set(effectName, (currentIndex + 1) % effectConfig.length)
     } else {
-      console.warn(`Sound effect '${effectName}' not found or failed to load`)
+      // Single sound effect
+      const sound = this.sounds.get(effectName)
+      if (sound?.howl) {
+        sound.howl.volume(this.getEffectiveVolume('effect'))
+        sound.howl.play()
+      } else {
+        console.warn(`Sound effect '${effectName}' not found or failed to load`)
+      }
     }
+  }
+
+  // Track audio usage for debugging/analytics
+  private trackAudioUsage(audioName: string): void {
+    const existing = this.audioUsageTracker.get(audioName)
+    if (existing) {
+      existing.lastUsed = new Date()
+      existing.count++
+    } else {
+      this.audioUsageTracker.set(audioName, {
+        lastUsed: new Date(),
+        count: 1,
+      })
+    }
+  }
+
+  // Get audio usage statistics
+  public getAudioUsageStats(): Map<string, { lastUsed: Date; count: number }> {
+    return new Map(this.audioUsageTracker)
+  }
+
+  // Get list of unused audio files (for debugging)
+  public getUnusedAudioFiles(): string[] {
+    const allSoundNames = new Set<string>()
+    
+    // Add all defined sound effect names
+    Object.keys(this.SOUND_EFFECTS).forEach(name => {
+      allSoundNames.add(name)
+    })
+    
+    // Find which ones haven't been used
+    const unused: string[] = []
+    allSoundNames.forEach(name => {
+      if (!this.audioUsageTracker.has(name)) {
+        unused.push(name)
+      }
+    })
+    
+    return unused
   }
 
   public playMusic(trackIndex?: number): void {

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Test</title>
+</head>
+<body>
+    <h1>Audio File Test</h1>
+    <p>Click to test if audio files are accessible:</p>
+    
+    <h2>Test Direct Audio Playback:</h2>
+    <audio controls>
+        <source src="http://localhost:5173/audio%20files/11L-Dice_roll_sound_effe-1756344593515.mp3" type="audio/mpeg">
+        Your browser does not support audio.
+    </audio>
+    
+    <h2>Test Multiple Files:</h2>
+    <button onclick="testAudio()">Test Dice Sound</button>
+    <button onclick="testMusic()">Test Background Music</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testAudio() {
+            const audio = new Audio('http://localhost:5173/audio%20files/11L-Dice_roll_sound_effe-1756344593515.mp3');
+            audio.play().then(() => {
+                document.getElementById('result').innerHTML = '✅ Dice sound played successfully!';
+            }).catch(err => {
+                document.getElementById('result').innerHTML = '❌ Error: ' + err.message;
+            });
+        }
+        
+        function testMusic() {
+            const audio = new Audio('http://localhost:5173/audio%20files/Conquer%20the%20World.mp3');
+            audio.play().then(() => {
+                document.getElementById('result').innerHTML = '✅ Music played successfully!';
+            }).catch(err => {
+                document.getElementById('result').innerHTML = '❌ Error: ' + err.message;
+            });
+        }
+    </script>
+    
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open this file in your browser</li>
+        <li>Make sure dev server is running (npm run dev)</li>
+        <li>Try the audio controls and buttons</li>
+        <li>If audio doesn't work, check browser console for errors</li>
+    </ol>
+</body>
+</html>

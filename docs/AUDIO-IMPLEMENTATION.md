@@ -1,18 +1,29 @@
 # 🎵 Audio System Implementation
 
-## Current Implementation Status
+## Current Implementation Status - UPDATED
 
 ### ✅ Completed Features
 
-1. **Core Audio Service** (`frontend/src/services/audioService.ts`)
+1. **Enhanced Audio Service** (`frontend/src/services/audioService.ts`)
    - Howler.js integration for cross-browser audio support
    - Volume control system (master, effects, music)
    - Preference persistence with localStorage
    - Tab visibility handling (pauses when tab not focused)
    - Mute toggle functionality
    - Singleton pattern for global access
+   - **NEW**: Audio rotation system for multiple sound variations
+   - **NEW**: Usage tracking and statistics
+   - **NEW**: Actual audio files integration from `/audio files/` directory
 
-2. **Settings Integration**
+2. **Global Mute Button** 
+   - **NEW**: `frontend/src/components/MuteButton.tsx`
+   - Fixed position (top-right) on all pages via Layout component
+   - Visual feedback with animated speaker icon
+   - Color coding: Green (active) / Red (muted)
+   - Hover tooltip with status
+
+3. **Settings Integration - Enhanced**
+   - **IMPROVED**: Color selection dropdown with hexagon preview
    - Audio tab in Settings page with working controls:
      - Master enable/disable toggle
      - Master volume slider (0-100)
@@ -21,181 +32,206 @@
      - Test buttons for effects and music
    - All settings persist across sessions
 
-3. **Game Event Integration**
-   - **Battle sounds**:
-     - `dice.mp3` - Plays when attack occurs
-     - `victory.mp3` - Plays when player wins a battle
-     - `defeat.mp3` - Plays when player loses a battle
-     - `capture.mp3` - Plays when territory is conquered
-   - **Game flow sounds**:
-     - `gamestart.mp3` - Plays when game begins
-     - `yourturn.mp3` - Plays when it becomes your turn
-   - **Background music**:
-     - Starts when game begins
-     - Rotates through 5 tracks every 5 minutes
-     - Fades between tracks
+4. **Actual Audio Files Integrated** 
+   - **47 audio files** from `/audio files/` directory mapped to game events:
+   
+   **Dice/Battle Sounds (7 variations)**:
+   - Multiple dice roll effects for attack sequences
+   - Rotates through variations to avoid repetition
+   
+   **Turn Notifications (13 variations)**:
+   - Bell chimes and notification sounds
+   - Plays when turn changes to current player
+   
+   **Combat Sounds (5 variations)**:
+   - Cannon fire effects (3 variations)
+   - Sword clash sounds (2 variations)
+   
+   **Victory/Achievement (6 variations)**:
+   - Crowd cheering
+   - Triumphant orchestra
+   - Trumpet fanfares (4 variations)
+   
+   **UI/Interaction Sounds**:
+   - Chat message notifications (4 variations)
+   - Error/invalid move sound
+   - Wooden game piece placement (3 variations)
+   - Phase transition swoosh
+   - Timer/countdown effects (2 variations)
+   
+   **Background Music**:
+   - "Conquer the World" theme (MP3 and WAV versions)
 
-4. **UI Controls**
-   - Mute button in GameRoom header
-   - Visual feedback (🔊/🔇 icons)
-   - Quick toggle without opening settings
+5. **Socket.io Event Integration**
+   - `playerTurnChanged` → Turn notification sound
+   - `armiesDeployed` → Troop placement sound
+   - `attackResult` → Dice roll sound
+   - `gamePhaseChanged` → Swoosh transition sound
+   - `capitalElimination` → Victory fanfare
+   - `gameError` → Error sound
+   - `message` → Chat notification sound
 
-5. **Placeholder Audio Files**
-   - Created silent WAV placeholders for all effects
-   - Located in `frontend/public/sounds/effects/` and `/music/`
-   - Ready to be replaced with actual audio files
+6. **Battle Modal Integration**
+   - Dice roll on battle start
+   - Battle sounds during combat
+   - Victory fanfare for conquered territories
+   - Different sounds based on battle outcome
 
-## 🚧 Future Work Required
+## 📊 Audio Usage Tracking
 
-### 1. **Actual Audio Files**
-Replace placeholder files with real audio:
-- **Sound Effects** (royalty-free or custom):
-  - `dice.mp3` - Actual dice rolling sound
-  - `victory.mp3` - Triumphant fanfare
-  - `defeat.mp3` - Somber defeat sound
-  - `capture.mp3` - Flag planting or territory claim sound
-  - `eliminated.mp3` - Dramatic elimination sound
-  - `gamestart.mp3` - War horn or battle call
-  - `yourturn.mp3` - Notification bell or chime
-  - `message.mp3` - Subtle pop for chat messages
-  - `error.mp3` - Error buzzer for invalid moves
-
-- **Background Music** (5 epic orchestral tracks):
-  - Use Suno AI or royalty-free sources
-  - Varying intensity levels
-  - Loop-friendly compositions
-  - Consider dynamic intensity based on game state
-
-### 2. **Audio Sprite Implementation**
-For better performance:
+### Debug Commands (Browser Console)
 ```javascript
-// Combine short sounds into one file
-const audioSprite = new Howl({
-  src: ['sounds/sprite.mp3'],
-  sprite: {
-    dice: [0, 1000],
-    victory: [1000, 2000],
-    defeat: [3000, 1500],
-    // etc...
-  }
-});
+// Get usage statistics
+audioService.getAudioUsageStats()
+
+// Get list of unused sounds
+audioService.getUnusedAudioFiles()
+
+// Test specific sound
+audioService.playEffect('dice')
+
+// Toggle mute
+audioService.toggleMute()
+
+// Check mute state
+audioService.isMutedState()
 ```
 
-### 3. **Additional Sound Events**
-- Chat message received (`message.mp3`)
-- Invalid move attempted (`error.mp3`)
-- Player eliminated (`eliminated.mp3`)
-- Game won (special victory fanfare)
-- Game lost (defeat music)
+## 🎵 Audio File Reference
 
-### 4. **Dynamic Music System**
-- Increase tempo/intensity during large battles
-- Special tracks for final showdowns
-- Victory/defeat specific music
-- Ambient music for waiting/lobby
-
-### 5. **Mobile Optimizations**
-- Detect silent mode on iOS/Android
-- Handle autoplay restrictions
-- Optimize file sizes for mobile data
-- Test on various devices
-
-### 6. **Advanced Features**
-- Per-player sound preferences
-- Custom sound pack support
-- Positional audio for battles (left/right based on map position)
-- Sound effect variations to avoid repetition
-- Volume ducking (lower music during effects)
-
-## 📁 File Structure
+### File Organization
 ```
-frontend/
-├── src/
-│   └── services/
-│       └── audioService.ts      # Core audio service
-├── public/
-│   └── sounds/
-│       ├── effects/
-│       │   ├── dice.mp3        # Dice roll sound
-│       │   ├── victory.mp3     # Battle victory
-│       │   ├── defeat.mp3      # Battle defeat
-│       │   ├── capture.mp3     # Territory captured
-│       │   ├── eliminated.mp3  # Player eliminated
-│       │   ├── gamestart.mp3   # Game start
-│       │   ├── yourturn.mp3    # Turn notification
-│       │   ├── message.mp3     # Chat message (future)
-│       │   └── error.mp3       # Invalid move (future)
-│       └── music/
-│           ├── track1.mp3      # Background music 1
-│           ├── track2.mp3      # Background music 2
-│           ├── track3.mp3      # Background music 3
-│           ├── track4.mp3      # Background music 4
-│           └── track5.mp3      # Background music 5
+/audio files/
+├── Battle & Combat
+│   ├── 11L-Cannon_fire_*.mp3 (3 files)
+│   ├── 11L-swords_clash*.mp3 (2 files)
+│   └── 11L-Dice_roll_*.mp3 (7 files)
+├── Notifications
+│   ├── 11L-Bell_chime_*.mp3 (4 files)
+│   ├── 11L-Turn_notification_*.mp3 (9 files)
+│   └── 11L-Chat_message_*.mp3 (4 files)
+├── Game States
+│   ├── 11L-Crowd_cheering*.mp3
+│   ├── 11L-Triumphant_*.mp3
+│   ├── 11L-Trumpet_fanfare*.mp3 (4 files)
+│   └── 11L-Wooden_game_piece*.mp3 (3 files)
+├── UI & Timing
+│   ├── 11L-Clock_ticking*.mp3
+│   ├── 11L-Slow_cinematic_clock*.mp3
+│   ├── 11L-Swoosh_sound*.mp3
+│   └── 11L-Error*.mp3
+└── Music
+    └── Conquer the World.mp3/.wav (4 files)
 ```
 
-## 🎮 Usage
-
-### For Players
-1. Open Settings → Audio tab
-2. Enable sounds with master toggle
-3. Adjust volume sliders to preference
-4. Test sounds with test buttons
-5. Use mute button in game for quick toggle
-
-### For Developers
-
-#### Adding New Sound Effects
-```typescript
-// 1. Add to SOUND_EFFECTS in audioService.ts
-private readonly SOUND_EFFECTS = {
-  // ... existing sounds
-  newSound: '/sounds/effects/newSound.mp3',
-};
-
-// 2. Play the sound in your component
-import audioService from '../services/audioService';
-audioService.playEffect('newSound');
+### Sound Mapping in Code
+```javascript
+// Example from audioService.ts
+SOUND_EFFECTS = {
+  dice: [/* 7 variations */],
+  yourturn: [/* 13 variations */],
+  attack: [/* 3 cannon sounds */],
+  battle: [/* 2 sword sounds */],
+  victory: [/* 2 celebration sounds */],
+  fanfare: [/* 4 trumpet sounds */],
+  placetroop: [/* 3 piece sounds */],
+  message: [/* 4 chat sounds */],
+  // ... more mappings
+}
 ```
 
-#### Integrating with Game Events
-```typescript
-// Example: Play sound on specific socket event
-socket.on('someEvent', (data) => {
-  audioService.playEffect('effectName');
-  // ... handle event
-});
-```
+## 🔧 Developer Guide
 
-## 🐛 Known Issues
-1. Placeholder files are silent - need real audio
-2. Mobile silent mode detection needs testing
-3. Some browsers may block autoplay until user interaction
+### Adding New Sounds
+1. Place audio file in `/audio files/` directory
+2. Add to `SOUND_EFFECTS` object in `audioService.ts`:
+   ```javascript
+   // For single sound
+   newSound: '/audio files/new_sound.mp3'
+   
+   // For multiple variations
+   newSound: [
+     '/audio files/variation1.mp3',
+     '/audio files/variation2.mp3'
+   ]
+   ```
+3. Call where needed: `audioService.playEffect('newSound')`
+4. Update this documentation
 
-## 📊 Performance Considerations
-- All sounds preload on app start
-- Tab visibility API prevents unnecessary playback
-- Volume changes apply immediately without reload
-- Music tracks lazy-load to reduce initial bundle
+### Testing Audio Implementation
+1. Start dev server: `npm run dev`
+2. Open browser at http://localhost:5173
+3. Navigate to Settings → Audio tab
+4. Test volume controls and effects
+5. Check mute button functionality
+6. Join/create a game to test game sounds
 
-## 🔧 Testing
-1. Test volume controls in Settings
-2. Verify mute button works in game
-3. Check that sounds play for correct events
-4. Ensure preferences persist after refresh
-5. Test tab switching pauses/resumes music
-6. Verify no console errors for missing files
+## 🐛 Troubleshooting
 
-## 🎯 Success Metrics
-- [ ] All game events have appropriate sounds
-- [ ] Volume controls work smoothly
-- [ ] No performance degradation
-- [ ] Works on mobile devices
-- [ ] Settings persist across sessions
-- [ ] Players can easily mute/unmute
+### Common Issues & Solutions
 
-## 📚 Resources
-- [Howler.js Documentation](https://howlerjs.com/)
-- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-- [Freesound.org](https://freesound.org/) - Free sound effects
-- [OpenGameArt](https://opengameart.org/art-search-advanced?field_art_type_tid[]=13) - Game audio
-- [Suno AI](https://suno.ai/) - AI music generation
+1. **No sound playing**
+   - Check mute button status (top-right corner)
+   - Verify Settings → Audio → Enable Sounds is ON
+   - Check browser autoplay policy (may need user interaction)
+   - Inspect browser console for audio loading errors
+
+2. **Sound delays or glitches**
+   - Sounds are preloaded on initialization
+   - Check Network tab for 404 errors on audio files
+   - Verify `/audio files/` directory exists and is accessible
+
+3. **Mobile device issues**
+   - Some mobile browsers require user interaction first
+   - Silent/vibrate mode may block audio
+   - Use `audioService.checkMobileSilentMode()` for debugging
+
+4. **Volume not working**
+   - Check all three volume levels: Master, Effects, Music
+   - Ensure audio is not muted at system level
+   - Test with Settings page test buttons
+
+## 🚀 Future Enhancements
+
+### Planned Features
+- [ ] Dynamic music intensity based on game state
+- [ ] 3D spatial audio for battle positions
+- [ ] Voice announcements for major events
+- [ ] Custom sound packs for premium users
+- [ ] Sound effect preferences per event type
+- [ ] Audio visualization/waveforms
+- [ ] Accessibility: Visual indicators for audio cues
+
+### Performance Optimizations
+- [ ] Lazy load less common sounds
+- [ ] Audio sprite sheets for reduced requests
+- [ ] WebAudio API for advanced effects
+- [ ] Compress audio files for faster loading
+
+## 📝 Notes
+
+- All audio files use rotation to provide variety
+- Usage statistics help identify popular/unused sounds
+- Mute state persists across sessions
+- Background music auto-rotates every 5 minutes
+- Tab focus detection prevents audio playing in background tabs
+- Mobile silent mode detection attempted but may vary by device
+
+## 🎮 Game Events with Audio
+
+| Event | Sound Effect | When Triggered |
+|-------|-------------|----------------|
+| Turn Start | `yourturn` | Player's turn begins |
+| Deploy Troops | `placetroop` | Armies placed on territory |
+| Attack Initiated | `dice` | Battle dice rolled |
+| Battle Action | `battle`/`attack` | Combat animation |
+| Territory Captured | `capture` | Territory conquered |
+| Capital Eliminated | `fanfare` + `victory` | Capital territory taken |
+| Phase Change | `swoosh` | Game phase transitions |
+| Chat Message | `message` | New chat received |
+| Error/Invalid | `error` | Invalid action attempted |
+| Victory | `victory` | Game won |
+| Defeat | `defeat` | Game lost |
+
+---
+*Last Updated: Audio system fully integrated with 47 actual sound files*

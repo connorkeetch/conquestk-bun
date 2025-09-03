@@ -19,6 +19,233 @@ import {
   type PlayerColor,
 } from '../constants/colors'
 
+// Color Dropdown Component
+function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (color: PlayerColor) => void }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+  
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {/* Dropdown Button */}
+      <button
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px]"
+      >
+        {/* Color Hexagon */}
+        <div className="relative">
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <polygon
+              points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
+              style={{
+                fill: COLOR_HEX_VALUES[value].includes('gradient') 
+                  ? 'url(#gradient)' 
+                  : COLOR_HEX_VALUES[value],
+                stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
+                strokeWidth: '1.5',
+              }}
+            />
+            {COLOR_HEX_VALUES[value].includes('gradient') && (
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
+                  <stop offset="50%" style={{ stopColor: value === 'rainbow' ? '#00ff00' : '#00ffff' }} />
+                  <stop offset="100%" style={{ stopColor: value === 'rainbow' ? '#0000ff' : '#ffff00' }} />
+                </linearGradient>
+              </defs>
+            )}
+          </svg>
+          {value === 'pulse' && (
+            <div className="absolute inset-0 animate-pulse">
+              <svg width="24" height="24" viewBox="0 0 24 24">
+                <polygon
+                  points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
+                  fill="none"
+                  stroke="#ff00ff"
+                  strokeWidth="1"
+                  opacity="0.5"
+                />
+              </svg>
+            </div>
+          )}
+        </div>
+        
+        {/* Color Name */}
+        <span className="flex-1 text-left text-white">
+          {COLOR_DISPLAY_NAMES[value]}
+        </span>
+        
+        {/* Premium Star */}
+        {isPremiumColor(value) && (
+          <span className="text-yellow-400">⭐</span>
+        )}
+        
+        {/* Dropdown Arrow */}
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform ${
+            isDropdownOpen ? 'rotate-180' : ''
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {/* Dropdown Menu */}
+      {isDropdownOpen && (
+        <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+          {/* Standard Colors Section */}
+          <div className="p-2">
+            <div className="text-xs text-gray-400 uppercase tracking-wider px-2 py-1">Standard Colors</div>
+            {STANDARD_COLORS.map((color) => {
+              const isSelected = value === color
+              return (
+                <button
+                  key={color}
+                  onClick={() => {
+                    onChange(color)
+                    setIsDropdownOpen(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700 ${
+                    isSelected ? 'bg-slate-700' : ''
+                  }`}
+                >
+                  {/* Color Hexagon */}
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <polygon
+                      points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
+                      style={{
+                        fill: COLOR_HEX_VALUES[color].includes('gradient') 
+                          ? 'url(#gradient-' + color + ')' 
+                          : COLOR_HEX_VALUES[color],
+                        stroke: isSelected ? '#ffffff' : '#ffffff30',
+                        strokeWidth: '1.5',
+                      }}
+                    />
+                    {COLOR_HEX_VALUES[color].includes('gradient') && (
+                      <defs>
+                        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style={{ stopColor: color === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
+                          <stop offset="50%" style={{ stopColor: color === 'rainbow' ? '#00ff00' : '#00ffff' }} />
+                          <stop offset="100%" style={{ stopColor: color === 'rainbow' ? '#0000ff' : '#ffff00' }} />
+                        </linearGradient>
+                      </defs>
+                    )}
+                  </svg>
+                  
+                  {/* Color Name */}
+                  <span className="flex-1 text-left text-gray-200">
+                    {COLOR_DISPLAY_NAMES[color]}
+                  </span>
+                  
+                  {/* Selected Check */}
+                  {isSelected && (
+                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          
+          {/* Divider */}
+          <div className="border-t border-slate-700 my-1" />
+          
+          {/* Premium Colors Section */}
+          <div className="p-2">
+            <div className="text-xs text-yellow-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
+              <span>Premium Colors</span>
+              <span>⭐</span>
+            </div>
+            {PREMIUM_COLORS.map((color) => {
+              const isSelected = value === color
+              return (
+                <button
+                  key={color}
+                  onClick={() => {
+                    onChange(color)
+                    setIsDropdownOpen(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700 ${
+                    isSelected ? 'bg-slate-700' : ''
+                  }`}
+                >
+                  {/* Color Hexagon */}
+                  <div className="relative">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                      <polygon
+                        points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
+                        style={{
+                          fill: COLOR_HEX_VALUES[color].includes('gradient') 
+                            ? 'url(#gradient-' + color + ')' 
+                            : COLOR_HEX_VALUES[color],
+                          stroke: '#FBBF24',
+                          strokeWidth: '1.5',
+                          filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
+                        }}
+                      />
+                      {COLOR_HEX_VALUES[color].includes('gradient') && (
+                        <defs>
+                          <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
+                            <stop offset="50%" style={{ stopColor: '#00ffff' }} />
+                            <stop offset="100%" style={{ stopColor: '#ffff00' }} />
+                          </linearGradient>
+                        </defs>
+                      )}
+                    </svg>
+                    {color === 'pulse' && (
+                      <div className="absolute inset-0 animate-pulse">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                          <polygon
+                            points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
+                            fill="none"
+                            stroke="#ff00ff"
+                            strokeWidth="1"
+                            opacity="0.5"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Color Name */}
+                  <span className="flex-1 text-left text-gray-200">
+                    {COLOR_DISPLAY_NAMES[color]}
+                  </span>
+                  
+                  {/* Premium Star */}
+                  <span className="text-yellow-400 text-sm">⭐</span>
+                  
+                  {/* Selected Check */}
+                  {isSelected && (
+                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 type SettingsTab =
   | 'account'
   | 'game'
@@ -252,102 +479,12 @@ export default function Settings() {
 
         case 'custom':
           if (setting.id === 'preferred-color') {
-            const colors = [...STANDARD_COLORS, ...PREMIUM_COLORS]
             const currentColor = setting.defaultValue as PlayerColor
-            
             return (
-              <div className="flex flex-col gap-2">
-                {/* Standard Colors */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2">Standard Colors</p>
-                  <div className="grid grid-cols-6 gap-2">
-                    {STANDARD_COLORS.map((color) => {
-                      const isSelected = currentColor === color
-                      const isRainbow = color === 'rainbow'
-                      const isPulse = color === 'pulse'
-                      const baseClass = COLOR_CLASSES[color]
-                      const hexValue = COLOR_HEX_VALUES[color]
-                      
-                      return (
-                        <button
-                          key={color}
-                          className={`relative h-10 rounded-lg border-2 transition-all ${
-                            isSelected
-                              ? 'border-white scale-105 shadow-lg ring-2 ring-white/50'
-                              : 'border-gray-600 hover:border-gray-400 hover:scale-102'
-                          }`}
-                          style={{
-                            background: hexValue.includes('gradient') ? hexValue : undefined,
-                            backgroundColor: !hexValue.includes('gradient') ? hexValue : undefined,
-                          }}
-                          onClick={() => setting.onChange && setting.onChange(color)}
-                          title={COLOR_DISPLAY_NAMES[color]}
-                        >
-                          {isSelected && (
-                            <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                
-                {/* Premium Colors */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2">Premium Colors ⭐</p>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PREMIUM_COLORS.map((color) => {
-                      const isSelected = currentColor === color
-                      const isPulse = color === 'pulse'
-                      const hexValue = COLOR_HEX_VALUES[color]
-                      
-                      return (
-                        <button
-                          key={color}
-                          className={`relative h-10 rounded-lg border-2 transition-all ${
-                            isSelected
-                              ? 'border-yellow-400 scale-105 shadow-lg ring-2 ring-yellow-400/50'
-                              : 'border-gray-600 hover:border-yellow-600 hover:scale-102'
-                          } ${isPulse ? 'animate-pulse' : ''}`}
-                          style={{
-                            background: hexValue.includes('gradient') ? hexValue : undefined,
-                            backgroundColor: !hexValue.includes('gradient') ? hexValue : undefined,
-                            boxShadow: color === 'neon' ? '0 0 10px #39FF14' : undefined,
-                          }}
-                          onClick={() => setting.onChange && setting.onChange(color)}
-                          title={COLOR_DISPLAY_NAMES[color]}
-                        >
-                          <span className="absolute top-0.5 right-0.5 text-yellow-400 text-xs">⭐</span>
-                          {isSelected && (
-                            <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                
-                {/* Selected Color Display */}
-                <div className="mt-2 p-2 bg-gray-800 rounded">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-6 h-6 rounded"
-                      style={{
-                        background: COLOR_HEX_VALUES[currentColor].includes('gradient')
-                          ? COLOR_HEX_VALUES[currentColor]
-                          : undefined,
-                        backgroundColor: !COLOR_HEX_VALUES[currentColor].includes('gradient')
-                          ? COLOR_HEX_VALUES[currentColor]
-                          : undefined,
-                      }}
-                    />
-                    <span className="text-sm">
-                      {COLOR_DISPLAY_NAMES[currentColor]}
-                      {isPremiumColor(currentColor) && ' ⭐'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <ColorDropdown
+                value={currentColor}
+                onChange={(color) => setting.onChange && setting.onChange(color)}
+              />
             )
           }
           return null
