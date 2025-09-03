@@ -39,8 +39,13 @@ export default function Login() {
     // Check if the error is email verification related
     if (login.rejected.match(result)) {
       const payload = result.payload as any
+      console.log('[Login] Login rejected with payload:', payload)
       
       if (payload?.requiresVerification) {
+        console.log('[Login] Setting verification error:', {
+          message: payload.message,
+          email: payload.email,
+        })
         setVerificationError({
           message: payload.message,
           email: payload.email,
@@ -95,6 +100,7 @@ export default function Login() {
             </div>
           )}
 
+          {verificationError && console.log('[Login] Rendering verification error box:', verificationError)}
           {verificationError && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-4 rounded-lg mb-6">
               <div className="flex items-start gap-2">
