@@ -5,13 +5,7 @@ import audioService from '../services/audioService'
 import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,
-  exportSettings,
-  importSettings,
   resetSettings,
-  setBetaFeatures,
-  setConfirmAttacks,
-  setDebugMode,
-  setShowAttackAnimations,
   setTheme,
 } from '../store/settingsSlice'
 
@@ -43,7 +37,6 @@ export default function Settings() {
   const { user } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -323,22 +316,28 @@ export default function Settings() {
       case 'game':
         return [
           {
-            id: 'show-animations',
-            label: 'Show Attack Animations',
-            description: 'Display dice rolling and battle animations',
+            id: 'auto-deploy',
+            label: 'Auto-Deploy Troops',
+            description: 'Automatically place reinforcements at start of turn',
             type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.game.showAttackAnimations,
-            onChange: (value: boolean) => dispatch(setShowAttackAnimations(value)),
+            isWorking: false,
+            defaultValue: false,
           },
           {
-            id: 'confirm-attacks',
-            label: 'Confirm Attacks',
-            description: 'Show confirmation dialog before attacking',
+            id: 'turn-timer-warning',
+            label: 'Turn Timer Warning',
+            description: 'Alert when turn timer is running low',
             type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.game.confirmAttacks,
-            onChange: (value: boolean) => dispatch(setConfirmAttacks(value)),
+            isWorking: false,
+            defaultValue: true,
+          },
+          {
+            id: 'quick-actions',
+            label: 'Keyboard Shortcuts',
+            description: 'Enable keyboard shortcuts for common actions',
+            type: 'toggle',
+            isWorking: false,
+            defaultValue: true,
           },
         ]
 
@@ -426,6 +425,22 @@ export default function Settings() {
               { value: 'dark', label: '🌙 Dark Theme' },
               { value: 'light', label: '☀️ Light Theme' },
             ],
+          },
+          {
+            id: 'colorblind-mode',
+            label: 'Colorblind Mode',
+            description: 'Use colorblind-friendly territory colors',
+            type: 'toggle',
+            isWorking: false,
+            defaultValue: false,
+          },
+          {
+            id: 'territory-labels',
+            label: 'Always Show Territory Names',
+            description: 'Display territory names permanently on the map',
+            type: 'toggle',
+            isWorking: false,
+            defaultValue: false,
           },
         ]
 
@@ -571,27 +586,9 @@ export default function Settings() {
       case 'advanced':
         return [
           {
-            id: 'debug-mode',
-            label: 'Debug Mode',
-            description: 'Show additional debug information',
-            type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.advanced.debugMode,
-            onChange: (value: boolean) => dispatch(setDebugMode(value)),
-          },
-          {
-            id: 'beta-features',
-            label: 'Beta Features',
-            description: 'Enable experimental features',
-            type: 'toggle',
-            isWorking: true,
-            defaultValue: settings.advanced.betaFeatures,
-            onChange: (value: boolean) => dispatch(setBetaFeatures(value)),
-          },
-          {
             id: 'clear-cache',
             label: 'Clear Cache',
-            description: 'Clear stored game data',
+            description: 'Clear stored game data and reload',
             type: 'button',
             isWorking: true,
             buttonText: '🗂️ Clear Cache',
@@ -601,27 +598,9 @@ export default function Settings() {
             },
           },
           {
-            id: 'export-settings',
-            label: 'Export Settings',
-            description: 'Save your settings to file',
-            type: 'button',
-            isWorking: true,
-            buttonText: '💾 Export Settings',
-            onClick: () => dispatch(exportSettings()),
-          },
-          {
-            id: 'import-settings',
-            label: 'Import Settings',
-            description: 'Load settings from file',
-            type: 'button',
-            isWorking: true,
-            buttonText: '📁 Import Settings',
-            onClick: () => fileInputRef.current?.click(),
-          },
-          {
             id: 'reset-settings',
             label: 'Reset All Settings',
-            description: 'Reset all settings to default',
+            description: 'Reset all settings to default values',
             type: 'button',
             isWorking: true,
             buttonText: '🔄 Reset All',
@@ -699,34 +678,9 @@ export default function Settings() {
     )
   }
 
-  // Handle file import
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const content = e.target?.result as string
-        try {
-          dispatch(importSettings(content))
-          alert('Settings imported successfully!')
-        } catch (_error) {
-          alert('Failed to import settings. Please check the file format.')
-        }
-      }
-      reader.readAsText(file)
-    }
-  }
 
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        style={{ display: 'none' }}
-        onChange={handleFileImport}
-      />
 
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 gradient-text">Settings</h1>
