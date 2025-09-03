@@ -848,14 +848,25 @@ export default function MapEditor() {
   }
 
   const handleCropComplete = (croppedImageUrl: string) => {
-    // Convert base64 to File for upload
-    fetch(croppedImageUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], imageFile?.name || 'cropped-image.png', { type: 'image/png' })
-        setImageFile(file)
-        setSelectedFile(file)
-      })
+    // Convert base64 to File for upload without using fetch (CSP compliance)
+    try {
+      // Extract the base64 data from the data URL
+      const base64Data = croppedImageUrl.split(',')[1]
+      // Convert base64 to binary
+      const binaryString = atob(base64Data)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      // Create blob and file
+      const blob = new Blob([bytes], { type: 'image/png' })
+      const file = new File([blob], imageFile?.name || 'cropped-image.png', { type: 'image/png' })
+      setImageFile(file)
+      setSelectedFile(file)
+    } catch (error) {
+      console.error('Failed to convert cropped image:', error)
+      setUploadError('Failed to process cropped image')
+    }
     
     setState((prev) => ({
       ...prev,

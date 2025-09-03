@@ -19,12 +19,12 @@ export class ProfileService {
 
     try {
       // Get profile data
-      const profileResult = await client.query('SELECT * FROM user_profiles WHERE user_id = ?', [
+      const profileResult = await client.query('SELECT * FROM user_profiles WHERE user_id = $1', [
         userId,
       ])
 
       // Get statistics
-      const statsResult = await client.query('SELECT * FROM user_statistics WHERE user_id = ?', [
+      const statsResult = await client.query('SELECT * FROM user_statistics WHERE user_id = $1', [
         userId,
       ])
 
@@ -34,7 +34,7 @@ export class ProfileService {
         SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
-        WHERE ua.user_id = ?
+        WHERE ua.user_id = $1
         ORDER BY ua.unlocked_at DESC
       `,
         [userId],
@@ -42,13 +42,13 @@ export class ProfileService {
 
       // Get recent games
       const recentGamesResult = await client.query(
-        'SELECT * FROM game_history WHERE user_id = ? ORDER BY started_at DESC LIMIT 10',
+        'SELECT * FROM game_history WHERE user_id = $1 ORDER BY started_at DESC LIMIT 10',
         [userId],
       )
 
       // Get preferences
       const preferencesResult = await client.query(
-        'SELECT * FROM user_preferences WHERE user_id = ?',
+        'SELECT * FROM user_preferences WHERE user_id = $1',
         [userId],
       )
 
@@ -71,19 +71,20 @@ export class ProfileService {
     try {
       const updateFields: string[] = []
       const values: any[] = []
+      let paramCount = 0
 
       if (updates.avatarUrl !== undefined) {
-        updateFields.push('avatar_url = ?')
+        updateFields.push(`avatar_url = $${++paramCount}`)
         values.push(updates.avatarUrl)
       }
 
       if (updates.bio !== undefined) {
-        updateFields.push('bio = ?')
+        updateFields.push(`bio = $${++paramCount}`)
         values.push(updates.bio)
       }
 
       if (updates.preferences) {
-        updateFields.push('preferences = ?')
+        updateFields.push(`preferences = $${++paramCount}`)
         values.push(JSON.stringify(updates.preferences))
       }
 
@@ -93,13 +94,13 @@ export class ProfileService {
       const query = `
         UPDATE user_profiles 
         SET ${updateFields.join(', ')} 
-        WHERE user_id = ?
+        WHERE user_id = $${++paramCount}
       `
 
       await client.query(query, values)
 
       // Return updated profile
-      const result = await client.query('SELECT * FROM user_profiles WHERE user_id = ?', [userId])
+      const result = await client.query('SELECT * FROM user_profiles WHERE user_id = $1', [userId])
 
       return result.rows[0]
     } finally {
@@ -113,7 +114,7 @@ export class ProfileService {
 
     try {
       // Overall stats
-      const overallResult = await client.query('SELECT * FROM user_statistics WHERE user_id = ?', [
+      const overallResult = await client.query('SELECT * FROM user_statistics WHERE user_id = $1', [
         userId,
       ])
 
@@ -127,7 +128,7 @@ export class ProfileService {
           AVG(duration) as avg_duration,
           MAX(max_territories) as best_territories
         FROM game_history 
-        WHERE user_id = ? 
+        WHERE user_id = $1 
         GROUP BY map_name
       `,
         [userId],
@@ -142,7 +143,7 @@ export class ProfileService {
           SUM(CASE WHEN result = 'won' THEN 1 ELSE 0 END) as games_won,
           AVG(duration) as avg_duration
         FROM game_history 
-        WHERE user_id = ? 
+        WHERE user_id = $1 
         GROUP BY game_mode
       `,
         [userId],
@@ -157,7 +158,7 @@ export class ProfileService {
           SUM(CASE WHEN result = 'won' THEN 1 ELSE 0 END) as games_won,
           SUM(duration) as playtime
         FROM game_history 
-        WHERE user_id = ? AND started_at >= datetime('now', '-30 days')
+        WHERE user_id = $1 AND started_at >= NOW() - INTERVAL '30 days'
         GROUP BY DATE(started_at)
         ORDER BY date DESC
       `,
@@ -207,7 +208,7 @@ export class ProfileService {
         SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
-        WHERE ua.user_id = ?
+        WHERE ua.user_id = $1
         ORDER BY ua.unlocked_at DESC
       `,
         [userId],
@@ -236,7 +237,7 @@ export class ProfileService {
     try {
       // Check if already unlocked
       const existing = await client.query(
-        'SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?',
+        'SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2',
         [userId, achievementId],
       )
 
@@ -259,7 +260,7 @@ export class ProfileService {
         SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
-        WHERE ua.user_id = ? AND ua.achievement_id = ?
+        WHERE ua.user_id = $1 AND ua.achievement_id = ?
       `,
         [userId, achievementId],
       )
@@ -273,8 +274,8 @@ export class ProfileService {
         await client.query(
           `
           UPDATE user_profiles 
-          SET experience_points = experience_points + ?
-          WHERE user_id = ?
+          SET experience_points = experience_points + $1
+          WHERE user_id = $2
         `,
           [achievement.rows[0].points, userId],
         )
@@ -298,9 +299,9 @@ export class ProfileService {
       const result = await client.query(
         `
         SELECT * FROM game_history 
-        WHERE user_id = ? 
+        WHERE user_id = $1 
         ORDER BY started_at DESC 
-        LIMIT ? OFFSET ?
+        LIMIT $2 OFFSET $3
       `,
         [userId, limit, offset],
       )
@@ -321,10 +322,11 @@ export class ProfileService {
     try {
       const updateFields: string[] = []
       const values: any[] = []
+      let paramCount = 0
 
       Object.keys(preferences).forEach((key) => {
         if (key !== 'userId' && preferences[key as keyof UserPreferences] !== undefined) {
-          updateFields.push(`${this.camelToSnake(key)} = ?`)
+          updateFields.push(`${this.camelToSnake(key)} = $${++paramCount}`)
           values.push(preferences[key as keyof UserPreferences])
         }
       })
@@ -335,7 +337,7 @@ export class ProfileService {
       const query = `
         UPDATE user_preferences 
         SET ${updateFields.join(', ')} 
-        WHERE user_id = ?
+        WHERE user_id = $${++paramCount}
       `
 
       await client.query(query, values)

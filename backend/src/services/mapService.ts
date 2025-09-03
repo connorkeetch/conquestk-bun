@@ -33,12 +33,12 @@ export class MapService {
       const mapQuery = hasMetadataColumn
         ? `
           INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *
         `
         : `
           INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *
         `
 
@@ -84,7 +84,7 @@ export class MapService {
         const mapResult = await client.query(
           `
           INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *
         `,
           [
@@ -148,8 +148,8 @@ export class MapService {
       const result = await query(
         `
         UPDATE maps 
-        SET capital_territories = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND creator_id = ?
+        SET capital_territories = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND creator_id = $3
       `,
         [JSON.stringify(capitalTerritories), mapId, userId],
       )
@@ -236,40 +236,41 @@ export class MapService {
     const client = await getClient()
     try {
       // Verify ownership
-      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = ?', [mapId])
+      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = $1', [mapId])
       if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].creator_id !== userId) {
         throw new Error('Map not found or access denied')
       }
 
       const updateFields: string[] = []
       const updateValues: any[] = []
+      let paramCount = 0
 
       if (updates.name !== undefined) {
-        updateFields.push('name = ?')
+        updateFields.push(`name = $${++paramCount}`)
         updateValues.push(updates.name)
       }
       if (updates.description !== undefined) {
-        updateFields.push('description = ?')
+        updateFields.push(`description = $${++paramCount}`)
         updateValues.push(updates.description)
       }
       if (updates.isPublic !== undefined) {
-        updateFields.push('is_public = ?')
+        updateFields.push(`is_public = $${++paramCount}`)
         updateValues.push(updates.isPublic)
       }
       if (updates.tags !== undefined) {
-        updateFields.push('tags = ?')
+        updateFields.push(`tags = $${++paramCount}`)
         updateValues.push(JSON.stringify(updates.tags))
       }
       if (updates.imageUrl !== undefined) {
-        updateFields.push('image_url = ?')
+        updateFields.push(`image_url = $${++paramCount}`)
         updateValues.push(updates.imageUrl)
       }
       if (updates.imageWidth !== undefined) {
-        updateFields.push('image_width = ?')
+        updateFields.push(`image_width = $${++paramCount}`)
         updateValues.push(updates.imageWidth)
       }
       if (updates.imageHeight !== undefined) {
-        updateFields.push('image_height = ?')
+        updateFields.push(`image_height = $${++paramCount}`)
         updateValues.push(updates.imageHeight)
       }
 
@@ -283,7 +284,7 @@ export class MapService {
       const result = await client.query(
         `
         UPDATE maps SET ${updateFields.join(', ')}
-        WHERE id = ?
+        WHERE id = $${++paramCount}
         RETURNING *
       `,
         updateValues,
@@ -299,13 +300,13 @@ export class MapService {
     const client = await getClient()
     try {
       // Verify ownership
-      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = ?', [mapId])
+      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = $1', [mapId])
       if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].creator_id !== userId) {
         return false
       }
 
       // Delete map (cascades to all related tables)
-      const result = await client.query('DELETE FROM maps WHERE id = ?', [mapId])
+      const result = await client.query('DELETE FROM maps WHERE id = $1', [mapId])
       logger.info(`Deleted map ${mapId} by user ${userId}`)
 
       return (result.rowCount || 0) > 0
@@ -387,7 +388,7 @@ export class MapService {
           map_id, territory_id, name, continent_id, boundary_coords,
           army_position_x, army_position_y, ability_type_id,
           starting_owner_slot, starting_armies
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `,
         [
@@ -413,7 +414,7 @@ export class MapService {
   async getMapTerritories(mapId: string): Promise<MapTerritory[]> {
     const result = await query(
       `
-      SELECT * FROM map_territories WHERE map_id = ? ORDER BY name
+      SELECT * FROM map_territories WHERE map_id = $1 ORDER BY name
     `,
       [mapId],
     )
@@ -429,30 +430,31 @@ export class MapService {
     try {
       const updateFields: string[] = []
       const updateValues: any[] = []
+      let paramCount = 0
 
       if (updates.name) {
-        updateFields.push('name = ?')
+        updateFields.push(`name = $${++paramCount}`)
         updateValues.push(updates.name)
       }
       if (updates.continentId !== undefined) {
-        updateFields.push('continent_id = ?')
+        updateFields.push(`continent_id = $${++paramCount}`)
         updateValues.push(updates.continentId)
       }
       if (updates.boundaryCoords) {
-        updateFields.push('boundary_coords = ?')
+        updateFields.push(`boundary_coords = $${++paramCount}`)
         updateValues.push(JSON.stringify(updates.boundaryCoords))
       }
       if (updates.armyPosition) {
-        updateFields.push('army_position_x = ?, army_position_y = ?')
+        updateFields.push(`army_position_x = $${++paramCount}, army_position_y = $${++paramCount}`)
         updateValues.push(updates.armyPosition.x, updates.armyPosition.y)
       }
       if (updates.abilityTypeId !== undefined) {
-        updateFields.push('ability_type_id = ?')
+        updateFields.push(`ability_type_id = $${++paramCount}`)
         updateValues.push(updates.abilityTypeId)
       }
 
       if (updateFields.length === 0) {
-        const result = await client.query('SELECT * FROM map_territories WHERE id = ?', [
+        const result = await client.query('SELECT * FROM map_territories WHERE id = $1', [
           territoryId,
         ])
         return result.rows.length > 0 ? this.formatTerritoryFromDb(result.rows[0]) : null
@@ -462,7 +464,7 @@ export class MapService {
       const result = await client.query(
         `
         UPDATE map_territories SET ${updateFields.join(', ')}
-        WHERE id = ? RETURNING *
+        WHERE id = $${++paramCount} RETURNING *
       `,
         updateValues,
       )
@@ -486,7 +488,7 @@ export class MapService {
       const result = await client.query(
         `
         INSERT INTO map_continents (map_id, name, bonus_armies, color)
-        VALUES (?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4)
         RETURNING *
       `,
         [mapId, name, bonusArmies, color || '#cccccc'],
@@ -499,7 +501,7 @@ export class MapService {
   }
 
   async getMapContinents(mapId: string): Promise<MapContinent[]> {
-    const result = await query('SELECT * FROM map_continents WHERE map_id = ? ORDER BY name', [
+    const result = await query('SELECT * FROM map_continents WHERE map_id = $1 ORDER BY name', [
       mapId,
     ])
     return result.rows.map((row) => this.formatContinentFromDb(row))
@@ -540,7 +542,7 @@ export class MapService {
         INSERT INTO territory_adjacencies (
           from_territory_id, to_territory_id, connection_type,
           is_bidirectional, special_requirements
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
         [
@@ -616,7 +618,7 @@ export class MapService {
       const result = await client.query(
         `
         INSERT INTO map_ratings (map_id, user_id, rating, review)
-        VALUES (?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (map_id, user_id) DO UPDATE SET
           rating = EXCLUDED.rating,
           review = EXCLUDED.review,
@@ -742,9 +744,9 @@ export class MapService {
     await client.query(
       `
       UPDATE maps SET
-        rating_average = (SELECT AVG(rating) FROM map_ratings WHERE map_id = ?),
-        rating_count = (SELECT COUNT(*) FROM map_ratings WHERE map_id = ?)
-      WHERE id = ?
+        rating_average = (SELECT AVG(rating) FROM map_ratings WHERE map_id = $1),
+        rating_count = (SELECT COUNT(*) FROM map_ratings WHERE map_id = $2)
+      WHERE id = $3
     `,
       [mapId, mapId, mapId],
     )

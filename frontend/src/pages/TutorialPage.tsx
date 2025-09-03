@@ -437,8 +437,8 @@ const TutorialPage: React.FC = () => {
                     </tr>
                     <tr className="border-b border-gray-700">
                       <td className="py-2">File Size</td>
-                      <td className="text-center text-yellow-400">< 10MB</td>
-                      <td className="text-center text-green-400">< 2MB</td>
+                      <td className="text-center text-yellow-400">&lt; 10MB</td>
+                      <td className="text-center text-green-400">&lt; 2MB</td>
                     </tr>
                   </tbody>
                 </table>

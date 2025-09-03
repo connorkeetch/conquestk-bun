@@ -411,11 +411,38 @@ export default function MapEditorTokens() {
       }
       formData.append('metadata', JSON.stringify(metadata))
 
-      // If there's an image, convert data URL to blob and append
+      // If there's an image, convert data URL to blob and append without using fetch (CSP compliance)
       if (state.imageUrl) {
-        const response = await fetch(state.imageUrl)
-        const blob = await response.blob()
-        formData.append('image', blob, 'map-background.png')
+        try {
+          let blob: Blob
+          
+          // Check if it's a data URL or a regular URL
+          if (state.imageUrl.startsWith('data:')) {
+            // Extract the base64 data from the data URL
+            const parts = state.imageUrl.split(',')
+            const base64Data = parts[1]
+            const mimeType = parts[0].match(/data:([^;]+)/)?.[1] || 'image/png'
+            
+            // Convert base64 to binary
+            const binaryString = atob(base64Data)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+            
+            // Create blob
+            blob = new Blob([bytes], { type: mimeType })
+          } else {
+            // For regular URLs, we can still use fetch (not a CSP violation)
+            const response = await fetch(state.imageUrl)
+            blob = await response.blob()
+          }
+          
+          formData.append('image', blob, 'map-background.png')
+        } catch (error) {
+          console.error('Failed to process image:', error)
+          throw new Error('Failed to process map background image')
+        }
       }
 
       // Save to backend
@@ -426,7 +453,12 @@ export default function MapEditorTokens() {
         hasImage: !!state.imageUrl,
       })
 
-      const result = await axios.post('/api/maps', formData, {
+      // Use correct backend URL for API calls
+      const apiUrl = import.meta.env.MODE === 'production' 
+        ? '/api/maps' 
+        : 'http://localhost:5001/api/maps'
+      
+      const result = await axios.post(apiUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
