@@ -33,14 +33,14 @@ export const login = createAsyncThunk(
       localStorage.setItem('token', response.token)
       return response
     } catch (error: any) {
-      // Pass the full error response for email verification handling
-      console.log('Login error caught:', error)
-      console.log('Error response data:', error.response?.data)
-      
-      if (error.response?.data) {
-        return rejectWithValue(error.response.data)
+      // authService throws the error.response.data directly for API errors
+      // or an Error object for other errors
+      if (error.message && !error.error) {
+        // This is a plain Error object, extract message
+        return rejectWithValue({ message: error.message })
       }
-      return rejectWithValue({ message: error.message || 'Login failed' })
+      // This is the full error response from the backend
+      return rejectWithValue(error)
     }
   },
 )

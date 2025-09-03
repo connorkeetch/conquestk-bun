@@ -22,16 +22,12 @@ export const authService = {
       const response = await api.post('/auth/login', credentials)
       return response.data
     } catch (error: any) {
-      // Handle verification errors specifically
-      if (error.response?.data?.requiresVerification) {
+      // Always throw the full error data if available, not just the message
+      if (error.response?.data) {
         throw error.response.data
       }
-      // Extract the error message from the backend response
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        'Login failed. Please check your credentials.'
-      throw new Error(message)
+      // Fallback for non-API errors
+      throw new Error(error.message || 'Login failed. Please check your credentials.')
     }
   },
 
