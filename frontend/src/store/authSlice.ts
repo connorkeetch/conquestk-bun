@@ -22,7 +22,7 @@ const initialState: AuthState = {
   token: getInitialToken(),
   isLoading: false,
   error: null,
-  isAuthenticated: !!getInitialToken(),
+  isAuthenticated: false, // Don't set to true until we verify the token and load user
 }
 
 export const login = createAsyncThunk(
@@ -64,12 +64,13 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
     const response = await authService.getProfile()
     return { user: response.user, token }
   } catch (error: any) {
-    // If it's a 401, the token is invalid
-    if (error.response?.status === 401) {
+    // If it's a 401 or 403, the token is invalid
+    if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('token')
       return rejectWithValue('Invalid token')
     }
-    // For other errors (network, server down), keep the token but throw error
+    // For other errors (network, server down), also clear auth to avoid confusion
+    localStorage.removeItem('token')
     return rejectWithValue(error.message || 'Auth check failed')
   }
 })
@@ -129,15 +130,13 @@ const authSlice = createSlice({
         state.token = action.payload.token
         state.isAuthenticated = true
       })
-      .addCase(checkAuth.rejected, (state, action) => {
+      .addCase(checkAuth.rejected, (state) => {
         state.isLoading = false
-        // Only clear auth if it was a 401 or no token
-        if (action.payload === 'No token found' || action.payload === 'Invalid token') {
-          state.user = null
-          state.token = null
-          state.isAuthenticated = false
-        }
-        // For network errors, keep existing auth state
+        // Always clear auth state on checkAuth failure to avoid confusion
+        state.user = null
+        state.token = null
+        state.isAuthenticated = false
+        localStorage.removeItem('token')
       })
   },
 })

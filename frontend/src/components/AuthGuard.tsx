@@ -13,11 +13,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   requireAuth = true,
   requireAdmin = false,
 }) => {
-  const { isAuthenticated, user, isLoading } = useAppSelector((state) => state.auth)
+  const { isAuthenticated, user, isLoading, token } = useAppSelector((state) => state.auth)
   const location = useLocation()
 
-  // If auth is still loading, show a loading state
-  if (isLoading) {
+  // If we have a token but haven't loaded user yet, show loading
+  // This prevents the flash of "not authenticated" when refreshing
+  if ((isLoading || (token && !user)) && requireAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
         <div className="text-center">

@@ -8,6 +8,7 @@ const api = axios.create({
   baseURL: API_URL,
 })
 
+// Request interceptor to add token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -15,6 +16,28 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Response interceptor to handle expired tokens
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If we get a 401 or 403, clear the token and redirect to login
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Don't clear token for login/register endpoints
+      const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
+                             error.config?.url?.includes('/auth/register')
+      
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('token')
+        // Dispatch logout action if store is available
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const authService = {
   async login(credentials: { identifier: string; password: string }) {
