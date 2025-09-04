@@ -16,6 +16,23 @@ import {
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
 
+// Helper function to get valid team configurations based on player count
+function getValidTeamOptions(playerCount: number): number[] {
+  const validOptions: number[] = []
+  
+  // Always can have free for all (represented as 0)
+  validOptions.push(0)
+  
+  // Check which team sizes divide evenly into player count
+  for (let teams = 2; teams <= 6; teams++) {
+    if (playerCount % teams === 0 && playerCount / teams >= 2) {
+      validOptions.push(teams)
+    }
+  }
+  
+  return validOptions
+}
+
 // Reusable OptionCard component
 interface OptionCardProps {
   number: string
@@ -616,32 +633,40 @@ const CreateGamePage: React.FC = () => {
           onToggleLock={() => toggleLock('teams')}
         >
           <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => setTeams(0)}
-              className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                teams === 0
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
-            >
-              Free for All
-            </button>
-            {[2, 3, 4, 5, 6].map((teamNum) => (
-              <button
-                key={teamNum}
-                type="button"
-                onClick={() => setTeams(teamNum)}
-                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  teams === teamNum
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-              >
-                {teamNum} Teams
-              </button>
-            ))}
+            {(() => {
+              const validTeamOptions = getValidTeamOptions(maxPlayers)
+              
+              // Reset teams if current selection is no longer valid
+              if (teams > 0 && !validTeamOptions.includes(teams)) {
+                setTeams(0)
+              }
+              
+              return validTeamOptions.map((teamOption) => (
+                <button
+                  key={teamOption}
+                  type="button"
+                  onClick={() => setTeams(teamOption)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    teams === teamOption
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  {teamOption === 0 ? 'Free for All' : `${teamOption} Teams`}
+                </button>
+              ))
+            })()}
           </div>
+          {maxPlayers > 0 && getValidTeamOptions(maxPlayers).length === 1 && (
+            <p className="text-xs text-yellow-400 mt-2">
+              ⚠️ {maxPlayers} players can only play Free for All (no even team split possible)
+            </p>
+          )}
+          {teams > 0 && (
+            <p className="text-xs text-gray-400 mt-2">
+              Each team will have {Math.floor(maxPlayers / teams)} players
+            </p>
+          )}
           {teams > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-600">
               <p className="text-sm text-gray-400 mb-2">Team Assignment:</p>
