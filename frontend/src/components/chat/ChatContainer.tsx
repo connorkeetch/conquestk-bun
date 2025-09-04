@@ -13,8 +13,8 @@ import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 
 interface ChatContainerProps {
-  conversationType: 'game' | 'dm'
-  conversationId: string // gameId for games, userId for DMs
+  conversationType: 'game' | 'team' | 'dm'
+  conversationId: string // gameId for games, gameId:teamId for teams, userId for DMs
   className?: string
 }
 
@@ -66,6 +66,13 @@ export default function ChatContainer({
       // Only add messages for this conversation
       if (conversationType === 'game' && message.game_id === conversationId) {
         dispatch(addMessage(message))
+      } else if (conversationType === 'team') {
+        const [gameId, teamId] = conversationId.split(':')
+        if (message.message_type === 'team' && 
+            message.game_id === gameId && 
+            message.team_id === parseInt(teamId)) {
+          dispatch(addMessage(message))
+        }
       } else if (conversationType === 'dm') {
         const isDMForUs = (
           (message.sender_id === currentUserId && message.recipient_id === conversationId) ||
@@ -139,11 +146,26 @@ export default function ChatContainer({
   const sendMessage = (text: string) => {
     if (!socketService.getSocket() || !text.trim()) return
     
+    let gameId: string | undefined
+    let teamId: number | undefined
+    let recipientId: string | undefined
+    
+    if (conversationType === 'game') {
+      gameId = conversationId
+    } else if (conversationType === 'team') {
+      const [gId, tId] = conversationId.split(':')
+      gameId = gId
+      teamId = parseInt(tId)
+    } else if (conversationType === 'dm') {
+      recipientId = conversationId
+    }
+    
     socketService.sendChatMessage({
       message: text,
       messageType: conversationType,
-      gameId: conversationType === 'game' ? conversationId : undefined,
-      recipientId: conversationType === 'dm' ? conversationId : undefined
+      gameId,
+      teamId,
+      recipientId
     })
   }
   
@@ -162,7 +184,9 @@ export default function ChatContainer({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 rounded-t-lg">
         <h3 className="font-semibold text-white">
-          {conversationType === 'game' ? '🎮 Game Chat' : '💬 Direct Message'}
+          {conversationType === 'game' ? '🎮 Game Chat' : 
+           conversationType === 'team' ? '👥 Team Chat' : 
+           '💬 Direct Message'}
         </h3>
         {conversation?.unreadCount > 0 && (
           <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">

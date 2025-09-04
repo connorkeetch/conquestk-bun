@@ -39,6 +39,8 @@ export interface CreateGameData {
   mapId?: string
   movementType?: string
   allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance'
+  numberOfTeams?: number
   gameType?: string
   capitalsEnabled?: boolean
   useTerritoryModifiers?: boolean

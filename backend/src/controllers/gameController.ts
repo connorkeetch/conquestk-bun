@@ -25,6 +25,8 @@ export class GameController {
         gameType,
         movementType,
         allowTeamPlay,
+        teamMode,
+        numberOfTeams,
         capitalsEnabled,
       } = req.body
       const hostId = (req as any).userId
@@ -38,6 +40,8 @@ export class GameController {
         gameType: gameType || 'quick',
         movementType: movementType || 'classic_adjacent',
         allowTeamPlay: allowTeamPlay || false,
+        teamMode: teamMode || 'none',
+        numberOfTeams: numberOfTeams || undefined,
         capitalsEnabled: capitalsEnabled || false,
       }
 

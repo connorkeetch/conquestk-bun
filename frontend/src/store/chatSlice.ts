@@ -26,7 +26,7 @@ export interface ChatMessage {
 
 export interface ChatConversation {
   id: string
-  type: 'game' | 'dm'
+  type: 'game' | 'team' | 'dm'
   messages: ChatMessage[]
   unreadCount: number
   isLoading: boolean
@@ -76,6 +76,8 @@ const chatSlice = createSlice({
       // Determine conversation ID based on message type
       if (message.message_type === 'game' && message.game_id) {
         conversationId = `game:${message.game_id}`
+      } else if (message.message_type === 'team' && message.game_id && message.team_id) {
+        conversationId = `team:${message.game_id}:${message.team_id}`
       } else if (message.message_type === 'dm') {
         // For DMs, use the other user's ID as conversation ID
         const currentUserId = localStorage.getItem('userId') // TODO: Get from auth state
@@ -86,9 +88,18 @@ const chatSlice = createSlice({
       
       // Initialize conversation if it doesn't exist
       if (!state.conversations[conversationId]) {
+        let conversationType: 'game' | 'team' | 'dm'
+        if (message.message_type === 'game') {
+          conversationType = 'game'
+        } else if (message.message_type === 'team') {
+          conversationType = 'team'
+        } else {
+          conversationType = 'dm'
+        }
+        
         state.conversations[conversationId] = {
           id: conversationId,
-          type: message.message_type === 'game' ? 'game' : 'dm',
+          type: conversationType,
           messages: [],
           unreadCount: 0,
           isLoading: false,

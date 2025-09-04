@@ -4,7 +4,7 @@ import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { socketService } from '../services/socketService'
-import ChatContainer from '../components/chat/ChatContainer'
+import TabbedGameChat from '../components/chat/TabbedGameChat'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -136,10 +136,12 @@ export default function GameRoom() {
 
           {/* Chat */}
           <div className="bg-gray-800 rounded-lg overflow-hidden" style={{ height: '400px' }}>
-            {roomId && (
-              <ChatContainer 
-                conversationType="game" 
-                conversationId={roomId}
+            {roomId && user && (
+              <TabbedGameChat
+                gameId={roomId}
+                players={currentRoom.players || []}
+                currentUserId={user.id}
+                userTeamId={currentGame?.players?.find(p => p.userId === user.id)?.teamId}
                 className="h-full"
               />
             )}

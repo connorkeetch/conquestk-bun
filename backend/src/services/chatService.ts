@@ -160,8 +160,22 @@ class ChatService {
           LIMIT $3 OFFSET $4`
         queryParams = [userId, conversationId, limit, offset]
         
+      } else if (messageType === 'team') {
+        // Team chat - conversationId format: "gameId:teamId"
+        const [gameId, teamId] = conversationId.split(':')
+        queryText = `
+          SELECT m.*, u.username as sender_username
+          FROM chat_messages m
+          JOIN users u ON m.sender_id = u.id
+          WHERE m.message_type = 'team' 
+            AND m.game_id = $1
+            AND m.team_id = $2
+            AND m.deleted_at IS NULL
+          ORDER BY m.created_at DESC
+          LIMIT $3 OFFSET $4`
+        queryParams = [gameId, parseInt(teamId), limit, offset]
+        
       } else {
-        // Team chat - not implemented in MVP
         return []
       }
       
