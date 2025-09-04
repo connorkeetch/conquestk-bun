@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, register } from '../store/authSlice'
 import EmailVerificationPending from './EmailVerificationPending'
+import MountainLogo from '../components/MountainLogo'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -47,9 +48,18 @@ export default function Register() {
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-bold text-white mb-2 hover:opacity-80 transition-opacity">
-              ⚔️ CONQUEST K
-            </h1>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <MountainLogo width={48} height={48} />
+              <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
+                CONQUEST <span className="text-yellow-400 font-bold" style={{ 
+                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                  backgroundClip: 'text', 
+                  textFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>K</span>
+              </h1>
+            </div>
           </Link>
           <p className="text-gray-400">Join the battle for world domination</p>
         </div>
