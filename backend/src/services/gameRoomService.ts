@@ -19,6 +19,38 @@ export interface CreateRoomData {
 }
 
 export class GameRoomService {
+  private validateTeamConfiguration(maxPlayers: number, teamMode: string, numberOfTeams?: number | null): void {
+    if (teamMode === 'none' || teamMode === 'auto_balance') {
+      return // No validation needed for FFA or auto-balance
+    }
+    
+    if (teamMode === 'teams') {
+      if (!numberOfTeams || numberOfTeams < 2 || numberOfTeams > 6) {
+        throw new Error('Invalid number of teams. Must be between 2 and 6.')
+      }
+      
+      // Check if the team configuration is valid for the player count
+      const validTeamOptions = this.getValidTeamOptions(maxPlayers)
+      if (!validTeamOptions.includes(numberOfTeams)) {
+        throw new Error(`${numberOfTeams} teams is not valid for ${maxPlayers} players. Valid options: ${validTeamOptions.filter(n => n > 0).join(', ')} teams or Free for All.`)
+      }
+    }
+  }
+  
+  private getValidTeamOptions(playerCount: number): number[] {
+    const validOptions: number[] = [0] // 0 represents Free for All
+    
+    // Check all possible team counts from 2 to 6
+    for (let teams = 2; teams <= 6; teams++) {
+      // Valid if players divide evenly and at least 2 players per team
+      if (playerCount % teams === 0 && playerCount / teams >= 2) {
+        validOptions.push(teams)
+      }
+    }
+    
+    return validOptions
+  }
+
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
     // Validate ranked game requirements
     if (roomData.isRanked) {
@@ -42,6 +74,9 @@ export class GameRoomService {
     // Determine team mode
     const teamMode = roomData.teamMode || (roomData.allowTeamPlay ? 'teams' : 'none')
     const numberOfTeams = roomData.numberOfTeams || (roomData.allowTeamPlay ? 2 : null)
+    
+    // Validate team configuration
+    this.validateTeamConfiguration(roomData.maxPlayers, teamMode, numberOfTeams)
 
     const insertQuery = `
       INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, team_mode, number_of_teams, is_ranked, game_settings, status)
