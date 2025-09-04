@@ -14,36 +14,55 @@ const createMessage = (endpoint: string, limit: number, window: string) => {
   return `Too many requests to ${endpoint}. Limited to ${limit} requests per ${window}. Please try again later.`
 }
 
-// Get Redis client for rate limiting
-const redisClient = getRedisClient()
-
 // Create Redis store if available, otherwise use memory store
 function createRateLimitStore(prefix: string) {
+  const redisClient = getRedisClient()
   if (redisClient) {
-    return new RedisStore({
-      client: redisClient as any,
-      prefix: `rate-limit:${prefix}:`,
-    } as any)
+    try {
+      return new RedisStore({
+        client: redisClient as any,
+        prefix: `rate-limit:${prefix}:`,
+      } as any)
+    } catch (error) {
+      logger.error(`Failed to create Redis store for ${prefix}:`, error instanceof Error ? error.message : error)
+      logger.warn(`Using in-memory store for rate limiting (${prefix}) - Redis store creation failed`)
+      return undefined
+    }
   }
   logger.warn(`Using in-memory store for rate limiting (${prefix}) - Redis not available`)
   return undefined // Uses default memory store
 }
 
 // Store for tracking attempts (uses Redis if available)
-const loginAttemptsStore = redisClient ? null : new Map<string, number[]>()
+let loginAttemptsStore: Map<string, number[]> | null = null
+
+// Initialize login attempts store
+function initLoginAttemptsStore() {
+  const redisClient = getRedisClient()
+  if (!redisClient) {
+    loginAttemptsStore = new Map<string, number[]>()
+    return true
+  }
+  return false
+}
+
+// Initialize the store
+const useInMemoryLogin = initLoginAttemptsStore()
 
 // Clean up old entries periodically (only needed for in-memory store)
-if (!redisClient && loginAttemptsStore) {
+if (useInMemoryLogin && loginAttemptsStore) {
   setInterval(() => {
+    if (!loginAttemptsStore) return
+    
     const now = Date.now()
     const fifteenMinutes = 15 * 60 * 1000
 
     loginAttemptsStore.forEach((attempts, key) => {
       const recentAttempts = attempts.filter((time) => now - time < fifteenMinutes)
       if (recentAttempts.length === 0) {
-        loginAttemptsStore.delete(key)
+        loginAttemptsStore!.delete(key)
       } else {
-        loginAttemptsStore.set(key, recentAttempts)
+        loginAttemptsStore!.set(key, recentAttempts)
       }
     })
   }, 60 * 1000) // Clean every minute
@@ -177,17 +196,21 @@ export class SuspiciousActivityTracker {
   private blockedIPs = new Set<string>()
   private readonly THRESHOLD = 10 // 10 rate limit violations
   private readonly BLOCK_DURATION = 60 * 60 // 1 hour in seconds for Redis
-  private readonly redisClient = getRedisClient()
+
+  private getRedis() {
+    return getRedisClient()
+  }
 
   async recordViolation(ip: string): Promise<void> {
-    if (this.redisClient) {
+    const redisClient = this.getRedis()
+    if (redisClient) {
       try {
         const key = `suspicious:${ip}`
-        const violations = await this.redisClient.incr(key)
+        const violations = await redisClient.incr(key)
         
         // Set expiry on first violation
         if (violations === 1) {
-          await this.redisClient.expire(key, this.BLOCK_DURATION)
+          await redisClient.expire(key, this.BLOCK_DURATION)
         }
 
         if (violations >= this.THRESHOLD) {
@@ -213,10 +236,11 @@ export class SuspiciousActivityTracker {
   }
 
   async blockIP(ip: string): Promise<void> {
-    if (this.redisClient) {
+    const redisClient = this.getRedis()
+    if (redisClient) {
       try {
         const key = `blocked:${ip}`
-        await this.redisClient.setex(key, this.BLOCK_DURATION, '1')
+        await redisClient.setex(key, this.BLOCK_DURATION, '1')
         logger.warn(`Blocked IP ${ip} for suspicious activity`)
       } catch (error) {
         logger.error('Redis error in blockIP:', error)
@@ -238,10 +262,11 @@ export class SuspiciousActivityTracker {
   }
 
   async isBlocked(ip: string): Promise<boolean> {
-    if (this.redisClient) {
+    const redisClient = this.getRedis()
+    if (redisClient) {
       try {
         const key = `blocked:${ip}`
-        const result = await this.redisClient.get(key)
+        const result = await redisClient.get(key)
         return result === '1'
       } catch (error) {
         logger.error('Redis error in isBlocked:', error)

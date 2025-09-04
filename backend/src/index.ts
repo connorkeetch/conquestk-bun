@@ -163,12 +163,22 @@ const io = new Server(server, {
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis().then(() => {
   const { pubClient, subClient } = getPubSubClients()
+  
+  // Set up Socket.io Redis adapter
   if (pubClient && subClient) {
     const { createAdapter } = require('@socket.io/redis-adapter')
     io.adapter(createAdapter(pubClient, subClient))
     console.log('✅ Socket.io using Redis adapter for multi-server support')
   } else {
     console.log('⚠️ Socket.io using in-memory adapter (single server only)')
+  }
+  
+  // Enable Redis session store now that Redis is available
+  const { enableRedisSessionStore } = require('./middleware/session')
+  if (enableRedisSessionStore()) {
+    console.log('✅ Session storage upgraded to Redis')
+  } else {
+    console.log('⚠️ Failed to upgrade session storage to Redis')
   }
 }).catch((err: any) => {
   console.log('⚠️ Redis initialization failed, using in-memory adapter:', err.message)
@@ -203,9 +213,10 @@ app.use(cors(corsOptions))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-// Initialize session middleware after app is created
-const { createSessionMiddleware } = require('./middleware/session')
-app.use(createSessionMiddleware())
+// Initialize session middleware after app is created (starts with in-memory, upgrades to Redis later)
+const { createSessionMiddleware, sessionMiddleware } = require('./middleware/session')
+createSessionMiddleware() // Initialize the session system
+app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 
 // Apply suspicious activity tracker globally
 app.use(suspiciousActivityTracker.middleware())

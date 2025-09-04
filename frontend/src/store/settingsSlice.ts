@@ -3,6 +3,15 @@ import type { PlayerColor } from '../constants/colors'
 
 // Theme types
 export type Theme = 'dark' | 'light'
+export type DMPermission = 'everyone' | 'friends' | 'nobody'
+
+// Notification settings
+export interface NotificationPrefs {
+  turnNotifications: { browser: boolean; email: boolean }
+  turnTimerWarning: { browser: boolean; email: boolean }
+  gameInvites: { browser: boolean; email: boolean }
+  gameEnded: { browser: boolean; email: boolean }
+}
 
 // Settings state interface
 interface SettingsState {
@@ -22,6 +31,15 @@ interface SettingsState {
   game: {
     preferredColor: PlayerColor
   }
+
+  // Privacy Settings
+  privacy: {
+    showOnlineStatus: boolean
+    directMessages: DMPermission
+  }
+
+  // Notification Settings  
+  notifications: NotificationPrefs
 }
 
 // Default settings
@@ -36,6 +54,16 @@ const defaultSettings: SettingsState = {
   },
   game: {
     preferredColor: 'bright-red' as PlayerColor,
+  },
+  privacy: {
+    showOnlineStatus: true,
+    directMessages: 'friends' as DMPermission,
+  },
+  notifications: {
+    turnNotifications: { browser: true, email: false },
+    turnTimerWarning: { browser: true, email: false },
+    gameInvites: { browser: true, email: true },
+    gameEnded: { browser: true, email: false },
   },
 }
 
@@ -52,6 +80,8 @@ const loadSettings = (): SettingsState => {
         display: { ...defaultSettings.display, ...parsed.display },
         audio: { ...defaultSettings.audio, ...parsed.audio },
         game: { ...defaultSettings.game, ...parsed.game },
+        privacy: { ...defaultSettings.privacy, ...parsed.privacy },
+        notifications: { ...defaultSettings.notifications, ...parsed.notifications },
       }
     }
   } catch (_error) {}
@@ -97,6 +127,27 @@ const settingsSlice = createSlice({
       saveSettings(state)
     },
 
+    // Privacy settings
+    setShowOnlineStatus: (state, action: PayloadAction<boolean>) => {
+      state.privacy.showOnlineStatus = action.payload
+      saveSettings(state)
+    },
+    setDirectMessages: (state, action: PayloadAction<DMPermission>) => {
+      state.privacy.directMessages = action.payload
+      saveSettings(state)
+    },
+
+    // Notification settings
+    setNotificationPref: (state, action: PayloadAction<{ 
+      type: keyof NotificationPrefs; 
+      channel: 'browser' | 'email'; 
+      enabled: boolean 
+    }>) => {
+      const { type, channel, enabled } = action.payload
+      state.notifications[type][channel] = enabled
+      saveSettings(state)
+    },
+
     // Utility actions
     clearCache: (_state) => {
       // Clear all localStorage except auth and settings
@@ -123,6 +174,9 @@ export const {
   setSfxVolume,
   setMusicVolume,
   setPreferredColor,
+  setShowOnlineStatus,
+  setDirectMessages,
+  setNotificationPref,
   clearCache,
   resetSettings,
 } = settingsSlice.actions
