@@ -231,6 +231,17 @@ export class AuthController {
         return res.status(404).json({ message: 'User not found' })
       }
 
+      // Get user settings (if they exist)
+      let settings = null
+      try {
+        const { query } = await import('../config/database')
+        const settingsResult = await query('SELECT * FROM user_settings WHERE user_id = $1', [userId])
+        settings = settingsResult.rows[0] || null
+      } catch (settingsError) {
+        // If settings table doesn't exist yet or other error, continue without settings
+        logger.warn('Could not load user settings:', settingsError)
+      }
+
       return res.json({
         user: {
           id: user.id,
@@ -238,6 +249,7 @@ export class AuthController {
           email: user.email,
           emailVerified: user.email_verified,
           isAdmin: user.is_admin || false,
+          settings: settings,
         },
       })
     } catch (error) {
@@ -531,6 +543,59 @@ export class AuthController {
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to change password',
+      })
+    }
+  }
+
+  updateSettings = async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId
+      const { settings } = req.body
+
+      if (!settings || typeof settings !== 'object') {
+        return res.status(400).json({
+          error: 'Invalid settings',
+          message: 'Settings object is required',
+        })
+      }
+
+      const { query } = await import('../config/database')
+
+      // Upsert user settings
+      const updateQuery = `
+        INSERT INTO user_settings (user_id, theme, preferred_color, show_online_status, direct_messages, notifications)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET 
+          theme = COALESCE(EXCLUDED.theme, user_settings.theme),
+          preferred_color = COALESCE(EXCLUDED.preferred_color, user_settings.preferred_color),
+          show_online_status = COALESCE(EXCLUDED.show_online_status, user_settings.show_online_status),
+          direct_messages = COALESCE(EXCLUDED.direct_messages, user_settings.direct_messages),
+          notifications = COALESCE(EXCLUDED.notifications, user_settings.notifications),
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+      `
+
+      const result = await query(updateQuery, [
+        userId,
+        settings.theme || null,
+        settings.preferredColor || null,
+        settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null,
+        settings.directMessages || null,
+        settings.notifications ? JSON.stringify(settings.notifications) : null,
+      ])
+
+      logger.info('User settings updated:', { userId, settings: Object.keys(settings) })
+
+      return res.json({
+        message: 'Settings updated successfully',
+        settings: result.rows[0],
+      })
+    } catch (error) {
+      logger.error('Update settings error:', error)
+      return res.status(500).json({
+        error: 'Request failed',
+        message: 'Unable to update settings',
       })
     }
   }

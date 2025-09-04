@@ -16,6 +16,7 @@ router.post('/resend-verification', authLimiter as any, authController.resendVer
 router.post('/forgot-password', authLimiter as any, authController.forgotPassword)
 router.post('/reset-password', authLimiter as any, authController.resetPassword)
 router.post('/change-password', authenticateToken as any, authController.changePassword)
+router.put('/settings', authenticateToken as any, authController.updateSettings)
 router.delete('/delete-account', authenticateToken as any, authController.deleteAccount)
 
 export { router as authRoutes }

@@ -2,6 +2,7 @@ import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
+import authService from '../services/authService'
 import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,
@@ -289,6 +290,41 @@ export default function Settings() {
     }
     initNotifications()
   }, [])
+
+  // Helper function to persist important settings to server
+  const persistSetting = async (settingKey: string, value: any) => {
+    try {
+      const settingsToSave: any = {}
+      
+      // Map Redux setting keys to server setting keys
+      switch (settingKey) {
+        case 'theme':
+          settingsToSave.theme = value
+          break
+        case 'preferredColor':
+          settingsToSave.preferredColor = value
+          break
+        case 'showOnlineStatus':
+          settingsToSave.showOnlineStatus = value
+          break
+        case 'directMessages':
+          settingsToSave.directMessages = value
+          break
+        case 'notifications':
+          settingsToSave.notifications = value
+          break
+        default:
+          // Don't persist other settings (like audio settings)
+          return
+      }
+
+      await authService.updateSettings(settingsToSave)
+      console.log('✅ Setting persisted to server:', settingKey, value)
+    } catch (error) {
+      console.error('Failed to persist setting:', settingKey, error)
+      // Don't show error to user - Redux change still worked locally
+    }
+  }
 
   const settingsTabs = [
     { id: 'account' as SettingsTab, label: 'Account', icon: '👤' },
@@ -657,7 +693,10 @@ export default function Settings() {
             type: 'custom',
             isWorking: true,
             defaultValue: settings.game?.preferredColor || 'bright-red',
-            onChange: (value: PlayerColor) => dispatch(setPreferredColor(value)),
+            onChange: async (value: PlayerColor) => {
+              dispatch(setPreferredColor(value))
+              await persistSetting('preferredColor', value)
+            },
           },
         ]
 
@@ -742,7 +781,10 @@ export default function Settings() {
             type: 'select',
             isWorking: true,
             defaultValue: settings.display.theme,
-            onChange: (value: 'dark' | 'light') => dispatch(setTheme(value)),
+            onChange: async (value: 'dark' | 'light') => {
+              dispatch(setTheme(value))
+              await persistSetting('theme', value)
+            },
             options: [
               { value: 'dark', label: '🌙 Dark Theme' },
               { value: 'light', label: '☀️ Light Theme' },
@@ -830,7 +872,10 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.privacy?.showOnlineStatus ?? true,
-            onChange: (value: boolean) => dispatch(setShowOnlineStatus(value)),
+            onChange: async (value: boolean) => {
+              dispatch(setShowOnlineStatus(value))
+              await persistSetting('showOnlineStatus', value)
+            },
           },
           {
             id: 'dm-settings',
@@ -839,7 +884,10 @@ export default function Settings() {
             type: 'select',
             isWorking: true,
             defaultValue: settings.privacy?.directMessages ?? 'friends',
-            onChange: (value: DMPermission) => dispatch(setDirectMessages(value)),
+            onChange: async (value: DMPermission) => {
+              dispatch(setDirectMessages(value))
+              await persistSetting('directMessages', value)
+            },
             options: [
               { value: 'everyone', label: 'Everyone' },
               { value: 'friends', label: 'Friends Only' },
@@ -937,12 +985,21 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={settings.notifications?.[notification.key]?.browser ?? false}
-                      onChange={(e) => {
-                        dispatch(setNotificationPref({
+                      onChange={async (e) => {
+                        const newPref = {
                           type: notification.key,
-                          channel: 'browser',
+                          channel: 'browser' as const,
                           enabled: e.target.checked
-                        }))
+                        }
+                        dispatch(setNotificationPref(newPref))
+                        
+                        // Persist notification preferences
+                        const updatedNotifications = { ...settings.notifications }
+                        if (!updatedNotifications[notification.key]) {
+                          updatedNotifications[notification.key] = { browser: false, email: false }
+                        }
+                        updatedNotifications[notification.key].browser = e.target.checked
+                        await persistSetting('notifications', updatedNotifications)
                       }}
                     />
                     <span className="slider"></span>
@@ -953,12 +1010,21 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={settings.notifications?.[notification.key]?.email ?? false}
-                      onChange={(e) => {
-                        dispatch(setNotificationPref({
+                      onChange={async (e) => {
+                        const newPref = {
                           type: notification.key,
-                          channel: 'email',
+                          channel: 'email' as const,
                           enabled: e.target.checked
-                        }))
+                        }
+                        dispatch(setNotificationPref(newPref))
+                        
+                        // Persist notification preferences
+                        const updatedNotifications = { ...settings.notifications }
+                        if (!updatedNotifications[notification.key]) {
+                          updatedNotifications[notification.key] = { browser: false, email: false }
+                        }
+                        updatedNotifications[notification.key].email = e.target.checked
+                        await persistSetting('notifications', updatedNotifications)
                       }}
                     />
                     <span className="slider"></span>

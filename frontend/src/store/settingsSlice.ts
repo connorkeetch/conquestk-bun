@@ -165,6 +165,53 @@ const settingsSlice = createSlice({
       // Apply default theme
       document.documentElement.setAttribute('data-theme', defaultSettings.display.theme)
     },
+
+    // Load settings from server (merge with current Redux state)
+    loadServerSettings: (state, action: PayloadAction<any>) => {
+      const serverSettings = action.payload
+      if (!serverSettings) return
+      
+      // Map server settings to Redux state (only if they exist)
+      if (serverSettings.theme) {
+        state.display.theme = serverSettings.theme
+        document.documentElement.setAttribute('data-theme', serverSettings.theme)
+      }
+      
+      if (serverSettings.preferred_color) {
+        state.game.preferredColor = serverSettings.preferred_color
+      }
+      
+      if (serverSettings.show_online_status !== undefined) {
+        state.privacy.showOnlineStatus = serverSettings.show_online_status
+      }
+      
+      if (serverSettings.direct_messages) {
+        state.privacy.directMessages = serverSettings.direct_messages as DMPermission
+      }
+      
+      if (serverSettings.notifications && typeof serverSettings.notifications === 'object') {
+        try {
+          const notifications = typeof serverSettings.notifications === 'string' 
+            ? JSON.parse(serverSettings.notifications) 
+            : serverSettings.notifications
+          
+          // Merge notification settings carefully
+          Object.keys(notifications).forEach((key) => {
+            if (key in state.notifications) {
+              state.notifications[key as keyof NotificationPrefs] = {
+                ...state.notifications[key as keyof NotificationPrefs],
+                ...notifications[key]
+              }
+            }
+          })
+        } catch (error) {
+          console.warn('Failed to parse server notifications:', error)
+        }
+      }
+      
+      // Don't call saveSettings here - we don't want to overwrite localStorage with server data
+      console.log('✅ Server settings loaded into Redux')
+    },
   },
 })
 
@@ -179,6 +226,7 @@ export const {
   setNotificationPref,
   clearCache,
   resetSettings,
+  loadServerSettings,
 } = settingsSlice.actions
 
 export default settingsSlice.reducer
