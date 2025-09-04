@@ -236,7 +236,7 @@ export class AuthController {
           id: user.id,
           username: user.username,
           email: user.email,
-          email_verified: user.email_verified,
+          emailVerified: user.email_verified,
           isAdmin: user.is_admin || false,
         },
       })
