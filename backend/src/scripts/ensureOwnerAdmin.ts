@@ -2,11 +2,11 @@ import { getPool } from '../config/database'
 import { logger } from '../utils/logger'
 
 /**
- * Ensures the owner (conorkeetch@gmail.com) has super admin privileges
+ * Ensures the owner (connorkeetch@gmail.com) has super admin privileges
  * This runs on server startup to maintain owner access
  */
 export async function ensureOwnerAdmin(): Promise<void> {
-  const ownerEmail = 'conorkeetch@gmail.com'
+  const ownerEmail = 'connorkeetch@gmail.com'
   
   try {
     const pool = getPool()
@@ -38,7 +38,7 @@ export async function ensureOwnerAdmin(): Promise<void> {
       
       // Ensure admin role exists and is assigned
       const roleResult = await pool.query(
-        'SELECT id FROM admin_roles WHERE role_name = $1',
+        'SELECT id FROM admin_roles WHERE name = $1',
         ['super_admin']
       )
       
@@ -54,7 +54,7 @@ export async function ensureOwnerAdmin(): Promise<void> {
         if (userRoleResult.rows.length === 0) {
           // Assign super_admin role
           await pool.query(
-            `INSERT INTO user_admin_roles (user_id, role_id, granted_by, granted_at)
+            `INSERT INTO user_admin_roles (user_id, role_id, assigned_by, assigned_at)
              VALUES ($1, $2, $1, CURRENT_TIMESTAMP)
              ON CONFLICT (user_id, role_id) DO NOTHING`,
             [user.id, roleId]
