@@ -10,13 +10,13 @@ const router = Router()
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await query(
-      'SELECT name, enabled FROM feature_flags WHERE enabled = true'
+      'SELECT flag_name, is_enabled FROM feature_flags WHERE is_enabled = true'
     )
     
     // Convert to object format for easier frontend consumption
     const flags: Record<string, boolean> = {}
     result.rows.forEach((row: any) => {
-      flags[row.name] = row.enabled
+      flags[row.flag_name] = row.is_enabled
     })
     
     res.json({ flags })
@@ -47,7 +47,7 @@ router.put('/:flagName', authenticateToken, requireAdmin, async (req: Request, r
   
   try {
     const result = await query(
-      'UPDATE feature_flags SET enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE name = $2 RETURNING *',
+      'UPDATE feature_flags SET is_enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE flag_name = $2 RETURNING *',
       [enabled, flagName]
     )
     

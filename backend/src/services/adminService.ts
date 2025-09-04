@@ -60,7 +60,7 @@ export class AdminService {
       `
       SELECT 1 FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
-      WHERE uar.user_id = ? AND uar.is_active = TRUE
+      WHERE uar.user_id = $1 AND uar.is_active = TRUE
       AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
     `,
       [userId],
@@ -74,7 +74,7 @@ export class AdminService {
       `
       SELECT ar.permissions, ar.is_super_admin FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
-      WHERE uar.user_id = ? AND uar.is_active = TRUE
+      WHERE uar.user_id = $1 AND uar.is_active = TRUE
       AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
     `,
       [userId],
@@ -107,7 +107,7 @@ export class AdminService {
         uar.assigned_by, uar.assigned_at, uar.expires_at, uar.is_active
       FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
-      WHERE uar.user_id = ?
+      WHERE uar.user_id = $1
     `,
       [userId],
     )
@@ -138,7 +138,7 @@ export class AdminService {
     const params: any[] = []
 
     if (search) {
-      whereClause = 'WHERE u.username LIKE ? OR u.email LIKE ?'
+      whereClause = 'WHERE u.username LIKE $1 OR u.email LIKE $2'
       params.push(`%${search}%`, `%${search}%`)
     }
 
@@ -146,20 +146,21 @@ export class AdminService {
     const total = countResult.rows[0].total
 
     params.push(limit, offset)
+    const limitOffset = search ? '$3 OFFSET $4' : '$1 OFFSET $2'
     const result = await query(
       `
       SELECT 
         u.id, u.username, u.email, u.created_at, u.last_login,
         uas.status, uas.reason as status_reason,
-        GROUP_CONCAT(ar.name) as admin_roles
+        STRING_AGG(ar.name, ',') as admin_roles
       FROM users u
       LEFT JOIN user_account_status uas ON u.id = uas.user_id
       LEFT JOIN user_admin_roles uar ON u.id = uar.user_id AND uar.is_active = TRUE
       LEFT JOIN admin_roles ar ON uar.role_id = ar.id
       ${whereClause}
-      GROUP BY u.id
+      GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, uas.status, uas.reason
       ORDER BY u.created_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${limitOffset}
     `,
       params,
     )
@@ -193,7 +194,7 @@ export class AdminService {
       await client.query(
         `
         INSERT INTO user_account_status (user_id, status, reason, admin_user_id, expires_at)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (user_id) DO UPDATE SET
           status = EXCLUDED.status,
           reason = EXCLUDED.reason,
@@ -235,7 +236,7 @@ export class AdminService {
     const bcrypt = require('bcrypt')
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    await query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, targetUserId])
+    await query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, targetUserId])
 
     await this.logAdminAction(
       adminUserId,
@@ -257,7 +258,7 @@ export class AdminService {
     await query(
       `
       INSERT INTO user_admin_roles (user_id, role_id, assigned_by, expires_at)
-      VALUES (?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (user_id, role_id) DO UPDATE SET
         assigned_by = EXCLUDED.assigned_by,
         expires_at = EXCLUDED.expires_at,
@@ -284,7 +285,7 @@ export class AdminService {
       `
       UPDATE user_admin_roles 
       SET is_active = FALSE 
-      WHERE user_id = ? AND role_id = ?
+      WHERE user_id = $1 AND role_id = $2
     `,
       [targetUserId, roleId],
     )
@@ -330,7 +331,7 @@ export class AdminService {
       LEFT JOIN maps m ON caq.content_type = 'map' AND caq.content_id = m.id
       WHERE caq.status = 'pending'
       ORDER BY caq.submitted_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT $1 OFFSET $2
     `,
       [limit, offset],
     )
@@ -359,8 +360,8 @@ export class AdminService {
       await client.query(
         `
         UPDATE content_approval_queue 
-        SET status = 'approved', admin_user_id = ?, admin_notes = ?, reviewed_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        SET status = 'approved', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
+        WHERE id = $3
       `,
         [adminUserId, notes, queueId],
       )
@@ -368,7 +369,7 @@ export class AdminService {
       // Get the content details
       const result = await client.query(
         `
-        SELECT content_type, content_id FROM content_approval_queue WHERE id = ?
+        SELECT content_type, content_id FROM content_approval_queue WHERE id = $1
       `,
         [queueId],
       )
@@ -378,7 +379,7 @@ export class AdminService {
 
         // Update content to be public/approved
         if (content_type === 'map') {
-          await client.query('UPDATE maps SET is_public = TRUE WHERE id = ?', [content_id])
+          await client.query('UPDATE maps SET is_public = TRUE WHERE id = $1', [content_id])
         }
 
         await this.logAdminAction(
@@ -408,8 +409,8 @@ export class AdminService {
     await query(
       `
       UPDATE content_approval_queue 
-      SET status = 'rejected', admin_user_id = ?, admin_notes = ?, reviewed_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET status = 'rejected', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
+      WHERE id = $3
     `,
       [adminUserId, reason, queueId],
     )
@@ -443,8 +444,8 @@ export class AdminService {
     await query(
       `
       UPDATE feature_flags 
-      SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE flag_name = ?
+      SET is_enabled = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE flag_name = $2
     `,
       [enabled, flagName],
     )
@@ -476,7 +477,7 @@ export class AdminService {
       `
       INSERT INTO admin_activity_logs 
       (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
     `,
       [
         adminUserId,
@@ -501,7 +502,7 @@ export class AdminService {
       `
       INSERT INTO user_activity_logs 
       (user_id, action_type, action_details, ip_address, user_agent)
-      VALUES (?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5)
     `,
       [
         userId,
@@ -522,7 +523,7 @@ export class AdminService {
       FROM admin_activity_logs aal
       JOIN users u ON aal.admin_user_id = u.id
       ORDER BY aal.timestamp DESC
-      LIMIT ? OFFSET ?
+      LIMIT $1 OFFSET $2
     `,
       [limit, offset],
     )
