@@ -3,6 +3,7 @@ import authSlice from './authSlice'
 import gameSlice from './gameSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
+import chatSlice from './chatSlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     game: gameSlice,
     room: roomSlice,
     settings: settingsSlice,
+    chat: chatSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

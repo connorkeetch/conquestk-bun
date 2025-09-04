@@ -5,6 +5,7 @@ import { logger } from '../utils/logger'
 import { eloService, type PlayerRating } from './eloService'
 import { GameService } from './gameService'
 import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
+import { setupChatHandlers } from '../socket/chatHandlers'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -69,6 +70,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     logger.info(`User ${socket.userId} connected`)
+    
+    // Join user's personal room for DMs
+    if (socket.userId) {
+      socket.join(`user:${socket.userId}`)
+    }
+    
+    // Setup chat handlers
+    setupChatHandlers(io, socket)
 
     socket.on('join-room', withErrorHandler(socket, 'join-room', async (roomId: string) => {
       if (!roomId || typeof roomId !== 'string') {

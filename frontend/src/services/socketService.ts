@@ -54,9 +54,6 @@ class SocketService {
     this.socket?.emit('game-action', action)
   }
 
-  sendChatMessage(roomId: string, message: string) {
-    this.socket?.emit('chat-message', { roomId, message })
-  }
 
   // Game-specific emit methods
   emit(event: string, data: any) {
@@ -81,6 +78,40 @@ class SocketService {
 
   endTurn(roomId: string) {
     this.socket?.emit('endTurn', { roomId })
+  }
+  
+  // Chat methods
+  sendChatMessage(data: any) {
+    this.socket?.emit('chat:send', data)
+  }
+  
+  loadChatHistory(data: any) {
+    this.socket?.emit('chat:load-history', data)
+  }
+  
+  markChatAsRead(data: any) {
+    this.socket?.emit('chat:mark-read', data)
+  }
+  
+  getChatUnreadCounts() {
+    this.socket?.emit('chat:get-unread')
+  }
+  
+  sendTypingIndicator(data: any) {
+    this.socket?.emit('chat:typing', data)
+  }
+  
+  // Generic on/off for chat events
+  on(event: string, handler: any) {
+    this.socket?.on(event, handler)
+  }
+  
+  off(event: string, handler: any) {
+    this.socket?.off(event, handler)
+  }
+  
+  getSocket() {
+    return this.socket
   }
 
   private setupEventListeners() {
