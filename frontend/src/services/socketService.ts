@@ -13,6 +13,7 @@ import {
 } from '../store/gameSlice'
 import { addPlayerToRoom, removePlayerFromRoom, updateRoom } from '../store/roomSlice'
 import audioService from './audioService'
+import { notificationService } from './notificationService'
 
 class SocketService {
   private socket: Socket | null = null
@@ -108,6 +109,33 @@ class SocketService {
     })
 
     this.socket.on('game-update', (gameState) => {
+      const previousState = store.getState().game.currentGame
+      const currentUserId = store.getState().auth.user?.id
+      
+      // Check if it's now the current user's turn
+      if (
+        currentUserId &&
+        previousState?.currentPlayer !== currentUserId &&
+        gameState.currentPlayer === currentUserId &&
+        gameState.phase !== 'ended'
+      ) {
+        // Add a turn reminder notification
+        notificationService.addNotification({
+          type: 'turn_reminder',
+          title: "It's your turn!",
+          message: `It's your turn in ${gameState.roomId || 'the game'}`,
+          read: false,
+          actionUrl: `/game/${gameState.roomId}`,
+          actionLabel: 'Go to game',
+          metadata: {
+            gameId: gameState.roomId,
+          },
+        })
+        
+        // Play turn notification sound
+        audioService.playEffect('turn')
+      }
+      
       store.dispatch(setGameState(gameState))
     })
 
@@ -136,8 +164,37 @@ class SocketService {
     })
 
     this.socket.on('gamePhaseChanged', (data) => {
+      const previousState = store.getState().game.currentGame
+      const currentUserId = store.getState().auth.user?.id
+      
       // Play phase transition sound
       audioService.playEffect('swoosh')
+      
+      // Check if it's now the current user's turn (player changed)
+      if (
+        currentUserId &&
+        data.currentPlayer &&
+        previousState?.currentPlayer !== currentUserId &&
+        data.currentPlayer === currentUserId &&
+        data.phase !== 'ended'
+      ) {
+        // Add a turn reminder notification
+        const roomId = store.getState().room.currentRoom?.id
+        notificationService.addNotification({
+          type: 'turn_reminder',
+          title: "It's your turn!",
+          message: `It's your turn in the game - ${data.phase} phase`,
+          read: false,
+          actionUrl: roomId ? `/game/${roomId}` : '/play',
+          actionLabel: 'Go to game',
+          metadata: {
+            gameId: roomId,
+          },
+        })
+        
+        // Play turn notification sound
+        audioService.playEffect('turn')
+      }
       
       store.dispatch(
         updateGameState({
