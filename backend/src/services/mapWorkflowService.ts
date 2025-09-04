@@ -16,7 +16,7 @@ export class MapWorkflowService {
   async saveDraft(userId: string, draftData: Partial<MapDraft>): Promise<MapDraft> {
     try {
       const existingDraft = draftData.id
-        ? await query('SELECT * FROM map_drafts WHERE id = ? AND user_id = ?', [
+        ? await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
             draftData.id,
             userId,
           ])
@@ -24,54 +24,95 @@ export class MapWorkflowService {
 
       if (existingDraft?.rows[0]) {
         // Update existing draft
-        const _result = await query(
+        const result = await query(
           `
           UPDATE map_drafts 
-          SET name = ?, description = ?, data = ?, territories = ?, 
-              continents = ?, adjacencies = ?, thumbnail_url = ?,
-              auto_saved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ? AND user_id = ?
+          SET name = $1, description = $2, map_data = $3, territories = $4, 
+              continents = $5, adjacencies = $6, thumbnail_url = $7,
+              staging_image_id = $8, parent_map_id = $9, 
+              image_url = $10, image_width = $11, image_height = $12,
+              capital_assignments = $13, tags = $14, is_public = $15,
+              auto_saved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+              last_edited_at = CURRENT_TIMESTAMP
+          WHERE id = $16 AND user_id = $17
+          RETURNING *
         `,
           [
             draftData.name,
             draftData.description,
-            JSON.stringify(draftData.data),
-            JSON.stringify(draftData.territories),
-            JSON.stringify(draftData.continents),
-            JSON.stringify(draftData.adjacencies),
+            JSON.stringify(draftData.data || {}),
+            JSON.stringify(draftData.territories || []),
+            JSON.stringify(draftData.continents || []),
+            JSON.stringify(draftData.adjacencies || []),
             draftData.thumbnailUrl,
+            draftData.stagingImageId || null,
+            draftData.parentMapId || null,
+            draftData.imageUrl,
+            draftData.imageWidth,
+            draftData.imageHeight,
+            JSON.stringify(draftData.capitalAssignments || {}),
+            JSON.stringify(draftData.tags || []),
+            draftData.isPublic || false,
             draftData.id,
             userId,
           ],
         )
 
-        return (await query('SELECT * FROM map_drafts WHERE id = $1', [draftData.id])).rows[0]
+        return result.rows[0]
       }
-      // Create new draft
+      
+      // Create new draft - check quota first
+      const quotaCheck = await query(
+        `SELECT COUNT(*) as count FROM (
+          SELECT id FROM map_images_staging WHERE user_id = $1 AND is_deleted = FALSE
+          UNION ALL
+          SELECT id FROM map_drafts WHERE user_id = $1 AND draft_status != 'submitted'
+          UNION ALL
+          SELECT id FROM map_submissions WHERE user_id = $1 AND review_status = 'pending'
+        ) AS items`,
+        [userId]
+      )
+      
+      const userCheck = await query('SELECT is_admin FROM users WHERE id = $1', [userId])
+      const isAdmin = userCheck.rows[0]?.is_admin
+      const currentCount = parseInt(quotaCheck.rows[0]?.count || '0')
+      
+      if (!isAdmin && currentCount >= 5) {
+        throw new Error('Quota exceeded: Maximum 5 unpublished maps/images allowed')
+      }
+      
       const result = await query(
         `
-          INSERT INTO map_drafts (user_id, map_id, name, description, data, territories, continents, adjacencies, thumbnail_url)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO map_drafts (
+            user_id, staging_image_id, parent_map_id, name, description, 
+            map_data, territories, continents, adjacencies, thumbnail_url,
+            image_url, image_width, image_height, capital_assignments,
+            tags, is_public, draft_status
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           RETURNING *
         `,
         [
           userId,
-          draftData.mapId || null,
+          draftData.stagingImageId || null,
+          draftData.parentMapId || null,
           draftData.name,
           draftData.description,
-          JSON.stringify(draftData.data),
-          JSON.stringify(draftData.territories),
-          JSON.stringify(draftData.continents),
-          JSON.stringify(draftData.adjacencies),
+          JSON.stringify(draftData.data || {}),
+          JSON.stringify(draftData.territories || []),
+          JSON.stringify(draftData.continents || []),
+          JSON.stringify(draftData.adjacencies || []),
           draftData.thumbnailUrl,
+          draftData.imageUrl,
+          draftData.imageWidth,
+          draftData.imageHeight,
+          JSON.stringify(draftData.capitalAssignments || {}),
+          JSON.stringify(draftData.tags || []),
+          draftData.isPublic || false,
+          'editing'
         ],
       )
 
-      // For PostgreSQL, we use RETURNING to get the inserted ID
-      const insertedId = result.rows[0]?.id
-      if (!insertedId) {
-        throw new Error('Failed to get inserted draft ID')
-      }
       return result.rows[0]
     } catch (error) {
       logger.error('Error saving map draft:', error)
@@ -87,7 +128,7 @@ export class MapWorkflowService {
       const result = await query(
         `
         SELECT * FROM map_drafts 
-        WHERE user_id = ? 
+        WHERE user_id = $1 AND draft_status != 'submitted'
         ORDER BY updated_at DESC
       `,
         [userId],

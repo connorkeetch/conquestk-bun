@@ -2,6 +2,31 @@
 
 ## ✅ Recently Completed
 
+### Map Editor Workflow Enhancement
+- [x] **Three-Stage Map Pipeline**
+  - [x] Staging area for uploaded images
+  - [x] Draft system with auto-save
+  - [x] Admin review and approval process
+  - [x] Production deployment for approved maps
+
+- [x] **Terms & Conditions System**
+  - [x] Map editor T&C with copyright guidelines
+  - [x] Scroll-to-accept modal interface
+  - [x] Version tracking and acceptance history
+  - [x] Per-feature terms management
+
+- [x] **Quota System**
+  - [x] 5-item limit for non-admin users
+  - [x] Includes staging images + drafts + pending submissions
+  - [x] Unlimited for admin users
+  - [x] Real-time quota checking
+
+- [x] **Backend Infrastructure**
+  - [x] New database tables (Migration 005)
+  - [x] Map staging service with Sharp image processing
+  - [x] Enhanced draft storage with territories/continents/adjacencies
+  - [x] Review history and audit trail
+
 ### Map Editor & Capital System
 - [x] **Map Editor Improvements**
   - [x] Image size adjustment controls (50%-150% scale)
@@ -43,6 +68,11 @@
   - [x] Theme-aware UI components
 
 ### UI/UX Improvements
+- [x] **Dark Mode Text Fixes**
+  - [x] OAuth buttons (Google/Discord) text visibility
+  - [x] Terms & Privacy page subheaders
+  - [x] Dynamic text color based on theme
+
 - [x] **Settings Page Enhancements**
   - [x] Email verification status display
   - [x] Game color preview with exact colors
