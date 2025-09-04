@@ -13,11 +13,16 @@ export function initializeRedis(): {
   pubClient: Redis | null
   subClient: Redis | null
 } {
-  const redisUrl = process.env.REDIS_URL
+  const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL
 
   if (!redisUrl) {
     logger.warn('Redis URL not configured, using in-memory fallback')
     return { redisClient: null, pubClient: null, subClient: null }
+  }
+
+  // In production, if Redis fails to connect, gracefully degrade
+  if (process.env.NODE_ENV === 'production') {
+    logger.info('Production mode: Redis connection will be attempted but failures will be handled gracefully')
   }
 
   try {
@@ -25,14 +30,19 @@ export function initializeRedis(): {
     const redisOptions: any = {
       enableReadyCheck: true,
       maxRetriesPerRequest: 3,
+      connectTimeout: 10000, // 10 seconds
+      lazyConnect: true, // Don't connect immediately
       retryStrategy: (times: number) => {
+        if (times > 5) {
+          logger.warn('Redis retry attempts exhausted, giving up')
+          return null // Stop retrying
+        }
         const delay = Math.min(times * 50, 2000)
         return delay
       },
       reconnectOnError: (err: Error) => {
         const targetError = 'READONLY'
         if (err.message.includes(targetError)) {
-          // Only reconnect when the error contains "READONLY"
           return true
         }
         return false
@@ -56,32 +66,60 @@ export function initializeRedis(): {
       connectionName: 'sub',
     })
 
-    // Event handlers
+    // Event handlers with graceful degradation
     redisClient.on('connect', () => {
       logger.info('✅ Redis client connected')
     })
 
     redisClient.on('error', (err) => {
-      logger.error('Redis client error:', err)
+      logger.error('Redis client error:', err.message)
+      if (process.env.NODE_ENV === 'production') {
+        // In production, don't crash the app on Redis errors
+        logger.warn('Redis errors are being handled gracefully in production')
+      }
     })
 
     redisClient.on('ready', () => {
       logger.info('✅ Redis client ready')
     })
 
+    redisClient.on('close', () => {
+      logger.warn('Redis client connection closed')
+    })
+
     pubClient.on('connect', () => {
       logger.info('✅ Redis pub client connected')
+    })
+
+    pubClient.on('error', (err) => {
+      logger.error('Redis pub client error:', err.message)
+    })
+
+    pubClient.on('close', () => {
+      logger.warn('Redis pub client connection closed')
     })
 
     subClient.on('connect', () => {
       logger.info('✅ Redis sub client connected')
     })
 
-    // Test connection
-    redisClient.ping().then(() => {
+    subClient.on('error', (err) => {
+      logger.error('Redis sub client error:', err.message)
+    })
+
+    subClient.on('close', () => {
+      logger.warn('Redis sub client connection closed')
+    })
+
+    // Test connection with timeout
+    Promise.race([
+      redisClient.ping(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Ping timeout')), 5000))
+    ]).then(() => {
       logger.info('✅ Redis ping successful')
     }).catch(err => {
       logger.error('Redis ping failed:', err)
+      // Don't fail the app startup, just log the error
     })
 
     return { redisClient, pubClient, subClient }

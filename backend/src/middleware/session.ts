@@ -1,7 +1,9 @@
 import session from 'express-session'
-import RedisStore from 'connect-redis'
 import { getRedisClient } from '../config/redis'
 import { logger } from '../utils/logger'
+
+// Import connect-redis v9 style
+const RedisStore = require('connect-redis').default
 
 /**
  * Create session middleware with Redis store if available
@@ -26,12 +28,17 @@ export function createSessionMiddleware() {
 
   // Use Redis store if available
   if (redisClient) {
-    sessionConfig.store = new (RedisStore as any)({
-      client: redisClient,
-      prefix: 'session:',
-      ttl: 60 * 60 * 24 * 7, // 7 days in seconds
-    })
-    logger.info('✅ Using Redis for session storage')
+    try {
+      sessionConfig.store = new RedisStore({
+        client: redisClient,
+        prefix: 'session:',
+        ttl: 60 * 60 * 24 * 7, // 7 days in seconds
+      })
+      logger.info('✅ Using Redis for session storage')
+    } catch (error) {
+      logger.error('Failed to create Redis session store:', error)
+      logger.warn('⚠️ Falling back to in-memory session storage')
+    }
   } else {
     logger.warn('⚠️ Using in-memory session storage (not recommended for production)')
   }
