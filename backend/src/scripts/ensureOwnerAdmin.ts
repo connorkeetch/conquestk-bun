@@ -13,27 +13,27 @@ export async function ensureOwnerAdmin(): Promise<void> {
     
     // Check if user exists
     const userResult = await pool.query(
-      'SELECT id, is_admin, admin_level FROM users WHERE LOWER(email) = LOWER($1)',
+      'SELECT id, is_admin FROM users WHERE LOWER(email) = LOWER($1)',
       [ownerEmail]
     )
     
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0]
       
-      // Update to super admin if not already
-      if (!user.is_admin || user.admin_level !== 'super') {
+      // Update to admin if not already
+      if (!user.is_admin) {
         await pool.query(
           `UPDATE users 
            SET is_admin = true, 
-               admin_level = 'super',
+               admin_since = CURRENT_TIMESTAMP,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $1`,
           [user.id]
         )
         
-        logger.info(`✅ Owner account (${ownerEmail}) elevated to super admin`)
+        logger.info(`✅ Owner account (${ownerEmail}) elevated to admin`)
       } else {
-        logger.info(`✅ Owner account (${ownerEmail}) already has super admin privileges`)
+        logger.info(`✅ Owner account (${ownerEmail}) already has admin privileges`)
       }
       
       // Ensure admin role exists and is assigned
