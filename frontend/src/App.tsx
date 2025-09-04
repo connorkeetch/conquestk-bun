@@ -7,6 +7,7 @@ import VerificationGuard from './components/VerificationGuard'
 // Layout
 import Layout from './components/Layout'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
+import { useFaviconBadge } from './hooks/useFaviconBadge'
 import CommunityPage from './pages/CommunityPage'
 import CreateGamePage from './pages/CreateGamePage'
 import Dashboard from './pages/Dashboard'
@@ -43,6 +44,9 @@ function App() {
   const dispatch = useAppDispatch()
   const { isLoading, token } = useAppSelector((state) => state.auth)
   const [initialCheckDone, setInitialCheckDone] = useState(false)
+  
+  // Initialize favicon badge service
+  useFaviconBadge()
 
   useEffect(() => {
     console.log('[APP] App useEffect running...')
