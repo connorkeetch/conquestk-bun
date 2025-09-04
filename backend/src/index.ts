@@ -202,6 +202,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
 app.use('/api/terms', require('./routes/terms').default)
 app.use('/api/staging', require('./routes/mapStaging').default)
+app.use('/api/feature-flags', require('./routes/featureFlags').default)
 
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {
