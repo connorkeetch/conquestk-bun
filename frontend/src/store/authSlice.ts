@@ -54,7 +54,7 @@ export const register = createAsyncThunk(
   },
 )
 
-export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue }) => {
+export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue, dispatch }) => {
   try {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -62,6 +62,13 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
     }
 
     const response = await authService.getProfile()
+    
+    // Load server settings into Redux if they exist
+    if (response.user.settings) {
+      const { loadServerSettings } = await import('./settingsSlice')
+      dispatch(loadServerSettings(response.user.settings))
+    }
+    
     return { user: response.user, token }
   } catch (error: any) {
     // If it's a 401 or 403, the token is invalid

@@ -122,6 +122,11 @@ export const authService = {
     const response = await api.post('/auth/reset-password', { token, password })
     return response.data
   },
+
+  async updateSettings(settings: any) {
+    const response = await api.put('/auth/settings', { settings })
+    return response.data
+  },
 }
 
 export default authService
