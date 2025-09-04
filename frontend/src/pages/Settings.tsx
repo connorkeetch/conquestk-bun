@@ -8,6 +8,11 @@ import {
   resetSettings,
   setTheme,
   setPreferredColor,
+  setShowOnlineStatus,
+  setDirectMessages,
+  setNotificationPref,
+  type DMPermission,
+  type NotificationPrefs,
 } from '../store/settingsSlice'
 import {
   STANDARD_COLORS,
@@ -814,83 +819,44 @@ export default function Settings() {
               }
             },
           },
-          {
-            id: 'turn-reminders',
-            label: 'Turn Reminders',
-            description: "Notify when it's your turn",
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
-            id: 'turn-timer-warning',
-            label: 'Turn Timer Warning',
-            description: 'Alert when turn timer is running low',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
-            id: 'game-invites',
-            label: 'Game Invites',
-            description: 'Notify about new game invitations',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: true,
-          },
-          {
-            id: 'game-results',
-            label: 'Game Results',
-            description: 'Notify about game outcomes',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
-          },
-          {
-            id: 'weekly-summary',
-            label: 'Weekly Summary',
-            description: 'Receive weekly game activity summary',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
-          },
-          {
-            id: 'marketing-updates',
-            label: 'Marketing Updates',
-            description: 'Receive news and feature updates',
-            type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
-          },
         ]
 
       case 'privacy':
         return [
           {
             id: 'online-status',
-            label: 'Online Status',
-            description: "Show when you're online to other players",
+            label: 'Show Online Status',
+            description: "Let other players see when you're online",
             type: 'toggle',
-            isWorking: false,
-            defaultValue: false,
+            isWorking: true,
+            defaultValue: settings.privacy?.showOnlineStatus ?? true,
+            onChange: (value: boolean) => dispatch(setShowOnlineStatus(value)),
           },
           {
-            id: 'download-data',
-            label: 'Download My Data',
-            description: 'Export all your account data',
-            type: 'button',
-            isWorking: false,
-            buttonText: '📊 Download Data',
-            buttonVariant: 'secondary',
+            id: 'dm-settings',
+            label: 'Direct Messages',
+            description: 'Who can send you direct messages',
+            type: 'select',
+            isWorking: true,
+            defaultValue: settings.privacy?.directMessages ?? 'friends',
+            onChange: (value: DMPermission) => dispatch(setDirectMessages(value)),
+            options: [
+              { value: 'everyone', label: 'Everyone' },
+              { value: 'friends', label: 'Friends Only' },
+              { value: 'nobody', label: 'Nobody' },
+            ],
           },
           {
             id: 'privacy-policy',
             label: 'Privacy Policy',
             description: 'View our privacy policy',
             type: 'button',
-            isWorking: false,
+            isWorking: true,
             buttonText: '🔒 View Policy',
             buttonVariant: 'secondary',
+            onClick: () => {
+              window.open('/privacy', '_blank')
+            },
           },
         ]
 
@@ -918,8 +884,116 @@ export default function Settings() {
     }
   }
 
+  // Custom notification table renderer
+  const renderNotificationTable = () => {
+    const notificationTypes: Array<{
+      key: keyof NotificationPrefs
+      label: string
+      description: string
+    }> = [
+      {
+        key: 'turnNotifications',
+        label: 'Your Turn',
+        description: "When it's your turn to play"
+      },
+      {
+        key: 'turnTimerWarning', 
+        label: 'Turn Timer Warning',
+        description: '10 minutes before turn timeout'
+      },
+      {
+        key: 'gameInvites',
+        label: 'Game Invitations', 
+        description: 'When someone invites you to play'
+      },
+      {
+        key: 'gameEnded',
+        label: 'Game Ended',
+        description: 'When a game you\'re in finishes'
+      }
+    ]
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-slate-600">
+              <th className="text-left py-4 pr-4 text-gray-200 font-medium">Notification Type</th>
+              <th className="text-center py-4 px-4 text-gray-200 font-medium">Browser</th>
+              <th className="text-center py-4 pl-4 text-gray-200 font-medium">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {notificationTypes.map((notification) => (
+              <tr key={notification.key} className="border-b border-slate-700/50">
+                <td className="py-4 pr-4">
+                  <div>
+                    <div className="text-gray-200 font-medium">{notification.label}</div>
+                    <div className="text-sm text-gray-400">{notification.description}</div>
+                  </div>
+                </td>
+                <td className="py-4 px-4 text-center">
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.notifications?.[notification.key]?.browser ?? false}
+                      onChange={(e) => {
+                        dispatch(setNotificationPref({
+                          type: notification.key,
+                          channel: 'browser',
+                          enabled: e.target.checked
+                        }))
+                      }}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </td>
+                <td className="py-4 pl-4 text-center">
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.notifications?.[notification.key]?.email ?? false}
+                      onChange={(e) => {
+                        dispatch(setNotificationPref({
+                          type: notification.key,
+                          channel: 'email',
+                          enabled: e.target.checked
+                        }))
+                      }}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   const renderTabContent = () => {
-    const settings = getSettingsForTab(activeTab)
+    const settingsData = getSettingsForTab(activeTab)
+
+    if (activeTab === 'notifications') {
+      return (
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-6">Push Notification Setup</h3>
+            <div className="space-y-4">
+              {settingsData.map((setting) => renderSetting(setting))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-6">Notification Preferences</h3>
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-600">
+              {renderNotificationTable()}
+            </div>
+          </div>
+        </div>
+      )
+    }
 
     if (activeTab === 'account') {
       return (
@@ -972,7 +1046,7 @@ export default function Settings() {
         <h3 className="text-xl font-semibold text-white mb-6">
           {settingsTabs.find((tab) => tab.id === activeTab)?.label} Settings
         </h3>
-        <div className="space-y-4">{settings.map((setting) => renderSetting(setting))}</div>
+        <div className="space-y-4">{settingsData.map((setting) => renderSetting(setting))}</div>
       </div>
     )
   }
