@@ -3,15 +3,20 @@ import { adminService } from '../services/adminService'
 import { logger } from '../utils/logger'
 
 // Extend Express Request type to include admin info
-declare global {
-  namespace Express {
-    interface Request {
-      adminUser?: {
-        userId: string
-        roles: string[]
-        permissions: string[]
-        isSuperAdmin: boolean
-      }
+declare module 'express-serve-static-core' {
+  interface Request {
+    userId?: string
+    user?: {
+      id: string
+      username?: string
+      email?: string
+      isAdmin?: boolean
+    }
+    adminUser?: {
+      userId: string
+      roles: string[]
+      permissions: string[]
+      isSuperAdmin: boolean
     }
   }
 }
