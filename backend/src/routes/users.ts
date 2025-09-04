@@ -6,14 +6,18 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 
-// Conquest rank system
+// The Conqueror's Path - Conquest rank system
 const CONQUEST_RANKS = [
-  { name: 'Recruit', minRating: 0, color: '#8B5A3C', insignia: '⚫' },
-  { name: 'Soldier', minRating: 1000, color: '#C0C0C0', insignia: '🔘' },
-  { name: 'Commander', minRating: 1300, color: '#FFD700', insignia: '🟡' },
-  { name: 'General', minRating: 1600, color: '#E5E4E2', insignia: '⚪' },
-  { name: 'Marshal', minRating: 1900, color: '#B9F2FF', insignia: '🔵' },
-  { name: 'Conqueror', minRating: 2200, color: '#FF69B4', insignia: '🔴' },
+  { name: 'Chieftain', minRating: 0, color: '#8B7355', insignia: '🛡️' },
+  { name: 'Warlord', minRating: 800, color: '#C41E3A', insignia: '⚔️' },
+  { name: 'Raider King', minRating: 1000, color: '#4682B4', insignia: '⚓' },
+  { name: 'Sultan', minRating: 1200, color: '#228B22', insignia: '☪️' },
+  { name: 'Caesar', minRating: 1400, color: '#B8860B', insignia: '🦅' },
+  { name: 'Khan', minRating: 1600, color: '#8B4513', insignia: '🏹' },
+  { name: 'Emperor', minRating: 1800, color: '#483D8B', insignia: '👑' },
+  { name: 'The Great King', minRating: 2000, color: '#FF8C00', insignia: '☀️' },
+  { name: 'Overlord', minRating: 2200, color: '#8B008B', insignia: '💀' },
+  { name: 'Worldbreaker', minRating: 2400, color: '#DC143C', insignia: '☄️' },
 ]
 
 // Helper function to calculate conquest rank
@@ -23,7 +27,7 @@ function getConquestRank(skillRating: number) {
       return CONQUEST_RANKS[i]
     }
   }
-  return CONQUEST_RANKS[0] // Default to Recruit
+  return CONQUEST_RANKS[0] // Default to Chieftain
 }
 
 // Get user profile by username (public route)
@@ -33,10 +37,12 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
 
     const result = await query(`
       SELECT 
-        id, username, email, created_at, email_verified, profile_picture, bio, 
-        skill_rating, games_played, games_won, peak_rating, current_tier, last_login
-      FROM users 
-      WHERE username = $1 AND deleted_at IS NULL
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
+        u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
+        us.preferred_color
+      FROM users u
+      LEFT JOIN user_settings us ON u.id = us.user_id
+      WHERE u.username = $1 AND u.deleted_at IS NULL
     `, [username])
 
     if (result.rows.length === 0) {
@@ -44,7 +50,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     }
 
     const user = result.rows[0]
-    const rank = getConquestRank(user.skill_rating || 1200)
+    const rank = getConquestRank(user.skill_rating || 1000)
     const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
 
     return res.json({
@@ -54,19 +60,20 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       emailVerified: user.email_verified,
       avatarUrl: user.profile_picture,
       bio: user.bio,
-      elo: user.skill_rating || 1200,
+      elo: user.skill_rating || 1000,
       joinDate: user.created_at,
       lastActive: user.last_login,
       gamesPlayed: user.games_played || 0,
       wins: user.games_won || 0,
       losses: (user.games_played || 0) - (user.games_won || 0),
       winRate: winRate,
-      peakRating: user.peak_rating || user.skill_rating || 1200,
+      peakRating: user.peak_rating || user.skill_rating || 1000,
+      preferredColor: user.preferred_color || 'bright-red',
       rank: {
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1200
+        rating: user.skill_rating || 1000
       }
     })
   } catch (error) {
@@ -82,10 +89,12 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     const result = await query(`
       SELECT 
-        id, username, email, created_at, email_verified, profile_picture, bio, 
-        skill_rating, games_played, games_won, peak_rating, current_tier, last_login
-      FROM users 
-      WHERE id = $1
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
+        u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
+        us.preferred_color
+      FROM users u
+      LEFT JOIN user_settings us ON u.id = us.user_id
+      WHERE u.id = $1
     `, [userId])
 
     if (result.rows.length === 0) {
@@ -93,7 +102,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     }
 
     const user = result.rows[0]
-    const rank = getConquestRank(user.skill_rating || 1200)
+    const rank = getConquestRank(user.skill_rating || 1000)
     const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
 
     return res.json({
@@ -103,19 +112,20 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       emailVerified: user.email_verified,
       avatarUrl: user.profile_picture,
       bio: user.bio,
-      elo: user.skill_rating || 1200,
+      elo: user.skill_rating || 1000,
       joinDate: user.created_at,
       lastActive: user.last_login,
       gamesPlayed: user.games_played || 0,
       wins: user.games_won || 0,
       losses: (user.games_played || 0) - (user.games_won || 0),
       winRate: winRate,
-      peakRating: user.peak_rating || user.skill_rating || 1200,
+      peakRating: user.peak_rating || user.skill_rating || 1000,
+      preferredColor: user.preferred_color || 'bright-red',
       rank: {
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1200
+        rating: user.skill_rating || 1000
       }
     })
   } catch (error) {

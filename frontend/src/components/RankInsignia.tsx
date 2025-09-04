@@ -8,12 +8,16 @@ export interface ConquestRank {
 }
 
 export const CONQUEST_RANKS: ConquestRank[] = [
-  { name: 'Recruit', minRating: 0, color: '#8B5A3C', insignia: '⚫' },
-  { name: 'Soldier', minRating: 1000, color: '#C0C0C0', insignia: '🔘' },
-  { name: 'Commander', minRating: 1300, color: '#FFD700', insignia: '🟡' },
-  { name: 'General', minRating: 1600, color: '#E5E4E2', insignia: '⚪' },
-  { name: 'Marshal', minRating: 1900, color: '#B9F2FF', insignia: '🔵' },
-  { name: 'Conqueror', minRating: 2200, color: '#FF69B4', insignia: '🔴' },
+  { name: 'Chieftain', minRating: 0, color: '#8B7355', insignia: '🛡️' },
+  { name: 'Warlord', minRating: 800, color: '#C41E3A', insignia: '⚔️' },
+  { name: 'Raider King', minRating: 1000, color: '#4682B4', insignia: '⚓' },
+  { name: 'Sultan', minRating: 1200, color: '#228B22', insignia: '☪️' },
+  { name: 'Caesar', minRating: 1400, color: '#B8860B', insignia: '🦅' },
+  { name: 'Khan', minRating: 1600, color: '#8B4513', insignia: '🏹' },
+  { name: 'Emperor', minRating: 1800, color: '#483D8B', insignia: '👑' },
+  { name: 'The Great King', minRating: 2000, color: '#FF8C00', insignia: '☀️' },
+  { name: 'Overlord', minRating: 2200, color: '#8B008B', insignia: '💀' },
+  { name: 'Worldbreaker', minRating: 2400, color: '#DC143C', insignia: '☄️' },
 ]
 
 export function getConquestRank(skillRating: number): ConquestRank {
@@ -22,7 +26,7 @@ export function getConquestRank(skillRating: number): ConquestRank {
       return CONQUEST_RANKS[i]
     }
   }
-  return CONQUEST_RANKS[0] // Default to Recruit
+  return CONQUEST_RANKS[0] // Default to Chieftain
 }
 
 interface RankInsigniaProps {
