@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import RankInsignia from './RankInsignia'
+import { COLOR_CLASSES } from '../constants/colors'
+import type { PlayerColor } from '../constants/colors'
 
 interface UserProfile {
   id: string
@@ -19,6 +21,7 @@ interface UserProfile {
   losses: number
   winRate: number
   peakRating: number
+  preferredColor?: string
   rank: {
     name: string
     color: string
@@ -30,6 +33,7 @@ interface UserProfile {
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
+  const settings = useAppSelector((state) => state.settings)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -142,7 +146,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Avatar Section */}
             <div className="flex flex-col items-center sm:items-start">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-3 border-blue-500 bg-gray-700/50 flex items-center justify-center mb-3">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-3 border-blue-500 flex items-center justify-center mb-3">
                 {profile.avatarUrl ? (
                   <img 
                     src={profile.avatarUrl} 
@@ -150,19 +154,14 @@ const ProfilePage: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="text-4xl sm:text-5xl text-gray-400">👤</div>
+                  <div className={`w-full h-full flex items-center justify-center text-2xl sm:text-4xl font-bold ${COLOR_CLASSES[
+                    (profile.preferredColor as PlayerColor) || 'bright-red' as PlayerColor
+                  ]}`}>
+                    {profile.username?.charAt(0).toUpperCase() || 'U'}
+                  </div>
                 )}
               </div>
               
-              {/* Settings button for own profile */}
-              {isOwnProfile && (
-                <button 
-                  onClick={() => window.location.href = '/settings'}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors text-sm"
-                >
-                  ⚙️ Settings
-                </button>
-              )}
             </div>
 
             {/* Profile Info */}
@@ -171,22 +170,6 @@ const ProfilePage: React.FC = () => {
                 {profile.username}
               </h1>
               
-              {/* Email Verification Status (own profile only) */}
-              {isOwnProfile && profile.email && (
-                <div className="mb-3">
-                  {profile.emailVerified === false ? (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                      <span className="text-yellow-400">⚠️</span>
-                      <span className="text-yellow-300 text-sm">Email not verified</span>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <span className="text-green-400">✅</span>
-                      <span className="text-green-400 text-sm">Email verified</span>
-                    </div>
-                  )}
-                </div>
-              )}
               
               {/* Rank Display */}
               <div className="mb-4">

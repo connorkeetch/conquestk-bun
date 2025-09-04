@@ -19,7 +19,9 @@
     "migrate": "ts-node src/scripts/runMigration.ts",
     "test:email": "ts-node src/scripts/testEmail.ts",
     "check:schema": "ts-node src/scripts/checkSchema.ts",
-    "migrate:status": "ts-node src/scripts/checkSchema.ts"
+    "migrate:status": "ts-node src/scripts/checkSchema.ts",
+    "backup:production": "node scripts/backup-production.js",
+    "deploy:consolidated": "node scripts/deploy-consolidated-migration.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",

@@ -191,6 +191,9 @@ export class AuthController {
         })
       }
 
+      // Update last_login timestamp
+      await this.userService.updateLastLogin(user.id)
+
       // Generate token regardless of verification status
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
         expiresIn: '24h',

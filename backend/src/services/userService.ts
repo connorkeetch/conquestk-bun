@@ -196,4 +196,14 @@ export class UserService {
     const deleteQuery = `DELETE FROM users WHERE id = $1`
     await query(deleteQuery, [userId])
   }
+
+  async updateLastLogin(userId: string): Promise<void> {
+    const updateQuery = `
+      UPDATE users 
+      SET last_login = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `
+    await query(updateQuery, [userId])
+  }
 }
