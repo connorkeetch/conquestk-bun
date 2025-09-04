@@ -6,20 +6,118 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 
-// Get user profile
-router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId
+// Conquest rank system
+const CONQUEST_RANKS = [
+  { name: 'Recruit', minRating: 0, color: '#8B5A3C', insignia: '⚫' },
+  { name: 'Soldier', minRating: 1000, color: '#C0C0C0', insignia: '🔘' },
+  { name: 'Commander', minRating: 1300, color: '#FFD700', insignia: '🟡' },
+  { name: 'General', minRating: 1600, color: '#E5E4E2', insignia: '⚪' },
+  { name: 'Marshal', minRating: 1900, color: '#B9F2FF', insignia: '🔵' },
+  { name: 'Conqueror', minRating: 2200, color: '#FF69B4', insignia: '🔴' },
+]
 
-    const result = await query('SELECT id, username, email, created_at FROM users WHERE id = ?', [
-      userId,
-    ])
+// Helper function to calculate conquest rank
+function getConquestRank(skillRating: number) {
+  for (let i = CONQUEST_RANKS.length - 1; i >= 0; i--) {
+    if (skillRating >= CONQUEST_RANKS[i].minRating) {
+      return CONQUEST_RANKS[i]
+    }
+  }
+  return CONQUEST_RANKS[0] // Default to Recruit
+}
+
+// Get user profile by username (public route)
+router.get('/:username/profile', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params
+
+    const result = await query(`
+      SELECT 
+        id, username, email, created_at, email_verified, profile_picture, bio, 
+        skill_rating, games_played, games_won, peak_rating, current_tier, last_login
+      FROM users 
+      WHERE username = $1 AND deleted_at IS NULL
+    `, [username])
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    return res.json(result.rows[0])
+    const user = result.rows[0]
+    const rank = getConquestRank(user.skill_rating || 1200)
+    const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
+
+    return res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email, // Only visible to own profile or admins
+      emailVerified: user.email_verified,
+      avatarUrl: user.profile_picture,
+      bio: user.bio,
+      elo: user.skill_rating || 1200,
+      joinDate: user.created_at,
+      lastActive: user.last_login,
+      gamesPlayed: user.games_played || 0,
+      wins: user.games_won || 0,
+      losses: (user.games_played || 0) - (user.games_won || 0),
+      winRate: winRate,
+      peakRating: user.peak_rating || user.skill_rating || 1200,
+      rank: {
+        name: rank.name,
+        color: rank.color,
+        insignia: rank.insignia,
+        rating: user.skill_rating || 1200
+      }
+    })
+  } catch (error) {
+    logger.error('Error fetching user profile:', error)
+    return res.status(500).json({ error: 'Failed to fetch profile' })
+  }
+})
+
+// Get own user profile (authenticated)
+router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId
+
+    const result = await query(`
+      SELECT 
+        id, username, email, created_at, email_verified, profile_picture, bio, 
+        skill_rating, games_played, games_won, peak_rating, current_tier, last_login
+      FROM users 
+      WHERE id = $1
+    `, [userId])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const user = result.rows[0]
+    const rank = getConquestRank(user.skill_rating || 1200)
+    const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
+
+    return res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      emailVerified: user.email_verified,
+      avatarUrl: user.profile_picture,
+      bio: user.bio,
+      elo: user.skill_rating || 1200,
+      joinDate: user.created_at,
+      lastActive: user.last_login,
+      gamesPlayed: user.games_played || 0,
+      wins: user.games_won || 0,
+      losses: (user.games_played || 0) - (user.games_won || 0),
+      winRate: winRate,
+      peakRating: user.peak_rating || user.skill_rating || 1200,
+      rank: {
+        name: rank.name,
+        color: rank.color,
+        insignia: rank.insignia,
+        rating: user.skill_rating || 1200
+      }
+    })
   } catch (error) {
     logger.error('Error fetching user profile:', error)
     return res.status(500).json({ error: 'Failed to fetch profile' })
@@ -39,7 +137,7 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
       })
     }
 
-    const result = await query('SELECT id FROM users WHERE username = ? AND id != ?', [
+    const result = await query('SELECT id FROM users WHERE username = $1 AND id != $2', [
       username.trim(),
       userId,
     ])
@@ -71,7 +169,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Check if username is taken (if changing)
     if (username) {
-      const usernameCheck = await query('SELECT id FROM users WHERE username = ? AND id != ?', [
+      const usernameCheck = await query('SELECT id FROM users WHERE username = $1 AND id != $2', [
         username.trim(),
         userId,
       ])
@@ -83,7 +181,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Check if email is taken (if changing)
     if (email) {
-      const emailCheck = await query('SELECT id FROM users WHERE email = ? AND id != ?', [
+      const emailCheck = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [
         email.trim().toLowerCase(),
         userId,
       ])
@@ -96,14 +194,15 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     // Build update query dynamically
     const updates = []
     const values = []
+    let paramCounter = 1
 
     if (username) {
-      updates.push('username = ?')
+      updates.push(`username = $${paramCounter++}`)
       values.push(username.trim())
     }
 
     if (email) {
-      updates.push('email = ?')
+      updates.push(`email = $${paramCounter++}`)
       values.push(email.trim().toLowerCase())
     }
 
@@ -113,11 +212,11 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     values.push(userId)
 
-    await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values)
+    await query(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCounter}`, values)
 
     // Fetch updated user
     const updatedUser = await query(
-      'SELECT id, username, email, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, created_at FROM users WHERE id = $1',
       [userId],
     )
 
@@ -146,7 +245,7 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
     }
 
     // Get current password hash
-    const result = await query('SELECT password FROM users WHERE id = ?', [userId])
+    const result = await query('SELECT password FROM users WHERE id = $1', [userId])
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
@@ -162,7 +261,7 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     // Update password
-    await query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId])
+    await query('UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId])
 
     return res.json({ success: true, message: 'Password updated successfully' })
   } catch (error) {
