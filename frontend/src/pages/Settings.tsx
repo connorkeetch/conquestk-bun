@@ -1005,7 +1005,7 @@ export default function Settings() {
           )}
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Account Information</h3>
-            <div className="space-y-4">{settings.slice(0, 2).map(renderSetting)}</div>
+            <div className="space-y-4">{settingsData.slice(0, 2).map(renderSetting)}</div>
           </div>
 
           <div>
@@ -1034,7 +1034,7 @@ export default function Settings() {
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Security</h3>
             <div className="space-y-4">
-              {settings.slice(3).map((setting) => renderSetting(setting))}
+              {settingsData.slice(3).map((setting) => renderSetting(setting))}
             </div>
           </div>
         </div>

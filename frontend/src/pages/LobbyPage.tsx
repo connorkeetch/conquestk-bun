@@ -46,8 +46,20 @@ const LobbyPage: React.FC = () => {
       setError(null)
       const response = await gameService.getPublicGames()
       setPublicGames(response.rooms || [])
-    } catch (_err: any) {
-      setError('Failed to load games')
+    } catch (err: any) {
+      console.error('Failed to load public games:', err)
+      
+      // Provide helpful error messages based on error type
+      if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
+        setError('Cannot connect to server. Make sure the backend is running.')
+      } else if (err.response?.status === 404) {
+        setError('Game service not available. Please try again later.')
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.')
+      } else {
+        setError(`Failed to load games: ${err.response?.data?.message || err.message || 'Unknown error'}`)
+      }
+      setPublicGames([])
     } finally {
       setLoading(false)
     }
@@ -62,8 +74,19 @@ const LobbyPage: React.FC = () => {
       setError(null)
       const response = await api.get('/game/my-games')
       setMyGames(response.data.games || [])
-    } catch (_err: any) {
-      setError('Failed to load your games')
+    } catch (err: any) {
+      console.error('Failed to load user games:', err)
+      
+      // Provide helpful error messages based on error type
+      if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
+        setError('Cannot connect to server. Make sure the backend is running.')
+      } else if (err.response?.status === 404) {
+        setError('User games service not available. Please try again later.')
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.')
+      } else {
+        setError(`Failed to load your games: ${err.response?.data?.message || err.message || 'Unknown error'}`)
+      }
       setMyGames([])
     } finally {
       setLoading(false)
