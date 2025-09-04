@@ -170,7 +170,7 @@ initializeRedis().then(() => {
   } else {
     console.log('⚠️ Socket.io using in-memory adapter (single server only)')
   }
-}).catch(err => {
+}).catch((err: any) => {
   console.log('⚠️ Redis initialization failed, using in-memory adapter:', err.message)
 })
 
