@@ -106,7 +106,7 @@ const LobbyPage: React.FC = () => {
     const checkVerificationStatus = async () => {
       try {
         const response = await authService.getProfile()
-        setEmailVerified(response.user?.email_verified)
+        setEmailVerified(response.user?.emailVerified)
       } catch (_error) {}
     }
 

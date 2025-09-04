@@ -66,15 +66,15 @@ const ProfileOverview: React.FC = () => {
     try {
       setLoading(true)
       
-      // Fetch user profile
-      const profileResponse = await api.get('/profile')
-      const userData = profileResponse.data.user
+      // Fetch user profile from auth endpoint
+      const profileResponse = await authService.getProfile()
+      const userData = profileResponse.user
       
       const userProfile: UserProfile = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        email_verified: userData.email_verified,
+        email_verified: userData.emailVerified,
         avatarUrl: userData.avatar_url,
         bio: userData.bio || '',
         elo: userData.elo || 1200,
