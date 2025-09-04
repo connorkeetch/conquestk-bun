@@ -6,18 +6,15 @@ export default function Footer() {
   return (
     <footer className="mt-auto border-t border-white/10 bg-black/50">
       <div className="container mx-auto px-4 py-6">
-        {/* Simple two-row layout */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-white/60">
-          {/* Copyright */}
-          <div className="text-center sm:text-left">
+        {/* Updated layout: copyright left, links center, version right */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-white/60">
+          {/* Copyright - Left aligned */}
+          <div className="flex-1 text-left">
             © {currentYear} Conquest K. All rights reserved.
-            <div className="text-xs mt-1">
-              Not affiliated with Hasbro or Risk®
-            </div>
           </div>
           
-          {/* Legal Links */}
-          <nav className="flex gap-4 text-xs sm:text-sm">
+          {/* Legal Links - Perfectly centered */}
+          <nav className="flex gap-4 text-xs sm:text-sm justify-center">
             <Link 
               to="/terms" 
               className="hover:text-white transition-colors"
@@ -40,8 +37,8 @@ export default function Footer() {
             </a>
           </nav>
           
-          {/* Version */}
-          <div className="text-xs">
+          {/* Version - Right aligned */}
+          <div className="flex-1 text-xs text-right">
             Beta v0.9.1
           </div>
         </div>
