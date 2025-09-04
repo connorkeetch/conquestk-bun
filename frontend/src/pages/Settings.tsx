@@ -85,10 +85,6 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
           {COLOR_DISPLAY_NAMES[value]}
         </span>
         
-        {/* Premium Star */}
-        {isPremiumColor(value) && (
-          <span className="text-yellow-400">⭐</span>
-        )}
         
         {/* Dropdown Arrow */}
         <svg
@@ -227,8 +223,6 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                     {COLOR_DISPLAY_NAMES[color]}
                   </span>
                   
-                  {/* Premium Star */}
-                  <span className="text-yellow-400 text-sm">⭐</span>
                   
                   {/* Selected Check */}
                   {isSelected && (
@@ -647,7 +641,7 @@ export default function Settings() {
         
         const premiumOptions = PREMIUM_COLORS.map((color) => ({
           value: color,
-          label: COLOR_DISPLAY_NAMES[color] + ' ⭐',
+          label: COLOR_DISPLAY_NAMES[color],
         }))
         
         return [
