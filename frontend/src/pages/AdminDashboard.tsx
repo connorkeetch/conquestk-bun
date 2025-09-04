@@ -224,9 +224,15 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between bg-gray-700 rounded-lg p-4"
                   >
                     <div>
-                      <div className="font-medium capitalize">{flagName.replace(/_/g, ' ')}</div>
+                      <div className="font-medium capitalize">
+                        {flagName === 'gunts_prescriptions' 
+                          ? "💊 Gunt's Prescriptions" 
+                          : flagName.replace(/_/g, ' ')}
+                      </div>
                       <div className="text-sm text-gray-400">
-                        {isEnabled ? 'Enabled' : 'Disabled'}
+                        {flagName === 'gunts_prescriptions'
+                          ? (isEnabled ? 'Doctor is IN' : 'Doctor is OUT')
+                          : (isEnabled ? 'Enabled' : 'Disabled')}
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">

@@ -2,6 +2,7 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import {
   COLOR_CLASSES,
   COLOR_DISPLAY_NAMES,
@@ -74,6 +75,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
 const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
+  const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   
   // Get preferred color from settings, default to bright-red
   const preferredColor = settings.game?.preferredColor || 'bright-red'
@@ -297,7 +299,14 @@ const CreateGamePage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">Create New Game</h1>
-            <p className="text-gray-400">Configure your perfect strategic warfare experience</p>
+            <p className="text-gray-400">
+              Configure your perfect strategic warfare experience
+              {guntsPrescriptions && (
+                <span className="block mt-1 text-sm text-blue-400 italic">
+                  💊 "Just what the doctor ordered!" - Dr. Gunt
+                </span>
+              )}
+            </p>
           </div>
           <Link
             to="/lobby"
