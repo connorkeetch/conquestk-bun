@@ -3,11 +3,28 @@ import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger'
 import { linkPreviewService, type LinkPreview } from './linkPreviewService'
 
-// bad-words module - using require for CommonJS compatibility
-const Filter = require('bad-words')
-const profanityFilter = new Filter()
-// Add custom words if needed
-// profanityFilter.addWords('customword1', 'customword2')
+// Profanity filter - lazy loaded to handle ESM module
+let profanityFilter: any = null
+
+async function getProfanityFilter() {
+  if (!profanityFilter) {
+    try {
+      // Dynamic import for ESM module compatibility
+      const { Filter } = await import('bad-words')
+      profanityFilter = new Filter()
+      // Add custom words if needed
+      // profanityFilter.addWords('customword1', 'customword2')
+    } catch (error) {
+      logger.error('Failed to load profanity filter:', error)
+      // Create a no-op filter if module fails to load
+      profanityFilter = {
+        clean: (text: string) => text,
+        isProfane: () => false
+      }
+    }
+  }
+  return profanityFilter
+}
 
 export interface ChatMessage {
   id: string
@@ -47,7 +64,8 @@ class ChatService {
       const shouldFilter = await this.shouldFilterProfanity(data.senderId)
       
       if (shouldFilter) {
-        filteredMessage = profanityFilter.clean(data.message)
+        const filter = await getProfanityFilter()
+        filteredMessage = filter.clean(data.message)
       }
       
       // Check DM privacy settings if it's a DM
@@ -399,7 +417,8 @@ class ChatService {
       const shouldFilter = await this.shouldFilterProfanity(userId)
       
       if (shouldFilter) {
-        filteredMessage = profanityFilter.clean(newMessage)
+        const filter = await getProfanityFilter()
+        filteredMessage = filter.clean(newMessage)
       }
       
       const result = await query(
