@@ -20,42 +20,54 @@ export async function initializeRedis(): Promise<{
     return { redisClient: null, pubClient: null, subClient: null }
   }
 
-  // In production, if Redis fails to connect, gracefully degrade
-  if (process.env.NODE_ENV === 'production') {
-    logger.info('Production mode: Redis connection will be attempted but failures will be handled gracefully')
-  }
+  logger.info(`Initializing Redis connection...`)
+  logger.info(`Using Redis URL: ${redisUrl.replace(/:[^:]*@/, ':****@')}`)
 
   try {
-    // Parse Redis URL
+    // Railway-specific Redis configuration
+    // Railway uses IPv6 for internal networking, so we need dual-stack support
+    let finalRedisUrl = redisUrl
+    
+    // Add family=0 for dual-stack IPv4/IPv6 support if not already present
+    if (!redisUrl.includes('family=')) {
+      const separator = redisUrl.includes('?') ? '&' : '?'
+      finalRedisUrl = `${redisUrl}${separator}family=0`
+    }
+
     const redisOptions: any = {
+      family: 0, // Enable dual-stack IPv4/IPv6 lookups for Railway
       enableReadyCheck: false,
-      maxRetriesPerRequest: null, // Disable retries to prevent unhandled rejections
-      connectTimeout: 5000, // 5 seconds
+      connectTimeout: 10000, // 10 seconds for Railway startup
+      commandTimeout: 5000,
       lazyConnect: true, // Don't connect immediately
-      retryStrategy: () => {
-        // Don't retry connections - fail fast
-        logger.warn('Redis connection failed, disabling Redis functionality')
-        return null
-      },
-      reconnectOnError: () => {
-        // Don't reconnect automatically
-        return false
+      maxRetriesPerRequest: 3, // Allow some retries for Railway networking
+      retryDelayOnFailover: 100,
+      retryDelayOnClusterDown: 300,
+      retryDelayOnClusterFailure: 100,
+      retryStrategy: (times: number) => {
+        const delay = Math.min(times * 50, 2000)
+        if (times > 3) {
+          logger.error(`Redis connection failed after ${times} attempts, giving up`)
+          return null
+        }
+        logger.warn(`Redis connection attempt ${times} failed, retrying in ${delay}ms`)
+        return delay
       },
     }
 
     // Main Redis client for general use
-    redisClient = new Redis(redisUrl, {
+    redisClient = new Redis(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'main',
     })
 
     // Pub/Sub clients for Socket.io
-    pubClient = new Redis(redisUrl, {
+    pubClient = new Redis(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'pub',
     })
 
-    subClient = new Redis(redisUrl, {
+    subClient = new Redis(finalRedisUrl, {
       ...redisOptions,
       connectionName: 'sub',
     })
@@ -105,24 +117,47 @@ export async function initializeRedis(): Promise<{
       logger.warn('Redis sub client connection closed')
     })
 
-    // Test connection with timeout - if it fails, disable Redis entirely
+    // Railway-specific startup delay for private network initialization
+    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+      if (redisUrl.includes('railway.internal')) {
+        logger.info('Railway internal Redis detected, waiting for private network initialization...')
+        await new Promise(resolve => setTimeout(resolve, 10000)) // 10 second delay for Railway
+      }
+    }
+
+    // Test connection with extended timeout for Railway
     try {
       await Promise.race([
         redisClient.connect(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 15s')), 15000))
       ])
-      logger.info('✅ Redis connection established')
+      
+      // Test basic operations
+      await redisClient.ping()
+      logger.info('✅ Redis connection established and verified')
+      
       return { redisClient, pubClient, subClient }
     } catch (err) {
-      logger.error('Redis connection failed, disabling Redis functionality:', err)
-      // Clean up failed clients
-      try {
-        await redisClient?.quit()
-        await pubClient?.quit()
-        await subClient?.quit()
-      } catch (cleanupError) {
-        // Ignore cleanup errors
+      logger.error('Redis connection failed:', err instanceof Error ? err.message : err)
+      
+      // Clean up failed clients properly
+      const cleanup = async (client: Redis | null, name: string) => {
+        if (client) {
+          try {
+            await client.disconnect()
+          } catch (e) {
+            logger.warn(`Failed to disconnect ${name} client:`, e instanceof Error ? e.message : e)
+          }
+        }
       }
+      
+      await Promise.all([
+        cleanup(redisClient, 'main'),
+        cleanup(pubClient, 'pub'), 
+        cleanup(subClient, 'sub')
+      ])
+      
+      logger.warn('Redis disabled, application will use in-memory fallbacks')
       return { redisClient: null, pubClient: null, subClient: null }
     }
   } catch (error) {
