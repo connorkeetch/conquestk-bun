@@ -25,13 +25,18 @@ export interface SkillTier {
   color: string
 }
 
+// The Conqueror's Path - Historical conquest-themed ranking system
 export const SKILL_TIERS: SkillTier[] = [
-  { name: 'Bronze', minRating: 0, maxRating: 799, icon: '🥉', color: '#CD7F32' },
-  { name: 'Silver', minRating: 800, maxRating: 999, icon: '🥈', color: '#C0C0C0' },
-  { name: 'Gold', minRating: 1000, maxRating: 1199, icon: '🥇', color: '#FFD700' },
-  { name: 'Platinum', minRating: 1200, maxRating: 1399, icon: '💎', color: '#E5E4E2' },
-  { name: 'Master', minRating: 1400, maxRating: 1599, icon: '👑', color: '#9B59B6' },
-  { name: 'Grandmaster', minRating: 1600, maxRating: 9999, icon: '⚔️', color: '#E74C3C' },
+  { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: '#8B4513' }, // Brown - tribal leader
+  { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: '#DC143C' }, // Crimson - rules by might
+  { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: '#4682B4' }, // Steel blue - Viking raiders
+  { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: '#228B22' }, // Forest green - faith & politics
+  { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: '#FFD700' }, // Gold - Roman empire
+  { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: '#FF8C00' }, // Dark orange - steppe warriors
+  { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: '#9370DB' }, // Medium purple - European dominance
+  { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: '#FF6347' }, // Tomato - Alexander's empire
+  { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: '#2F4F4F' }, // Dark slate gray - terror & tribute
+  { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: '#8B0000' }, // Dark red - apocalyptic conqueror
 ]
 
 export class EloService {
