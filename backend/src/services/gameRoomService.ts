@@ -11,6 +11,8 @@ export interface CreateRoomData {
   gameType?: string
   movementType?: string
   allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance'
+  numberOfTeams?: number
   capitalsEnabled?: boolean
   isRanked?: boolean
   gameSettings?: any
@@ -31,15 +33,19 @@ export class GameRoomService {
       }
     }
 
-    // Include capitalsEnabled in game settings
+    // Include capitalsEnabled and team settings in game settings
     const gameSettings = {
       ...(roomData.gameSettings || {}),
       capitalsEnabled: roomData.capitalsEnabled || false,
     }
 
+    // Determine team mode
+    const teamMode = roomData.teamMode || (roomData.allowTeamPlay ? 'teams' : 'none')
+    const numberOfTeams = roomData.numberOfTeams || (roomData.allowTeamPlay ? 2 : null)
+
     const insertQuery = `
-      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, is_ranked, game_settings, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'waiting')
+      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, team_mode, number_of_teams, is_ranked, game_settings, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'waiting')
       RETURNING *
     `
 
@@ -52,6 +58,8 @@ export class GameRoomService {
       roomData.gameType || 'quick',
       roomData.movementType || 'classic_adjacent',
       roomData.allowTeamPlay || false,
+      teamMode,
+      numberOfTeams,
       roomData.isRanked || false,
       JSON.stringify(gameSettings),
     ])

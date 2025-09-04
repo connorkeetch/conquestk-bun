@@ -83,6 +83,7 @@ export interface Player {
   capitalTerritory?: string
   isAI?: boolean
   turnTimeRemaining?: number
+  teamId?: number // For team games
 }
 
 export interface Card {
@@ -119,6 +120,8 @@ export interface GameSettings {
   startingArmies?: number
   isRanked: boolean
   isPrivate: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance' // Team game settings
+  numberOfTeams?: number // Number of teams (2-4)
 }
 
 export interface GameAction {

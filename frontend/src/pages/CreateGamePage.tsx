@@ -219,6 +219,8 @@ const CreateGamePage: React.FC = () => {
           ? 'classic_adjacent'
           : movementType) as MovementType,
         allowTeamPlay: teams > 0,
+        teamMode: teams > 0 ? 'teams' : 'none',
+        numberOfTeams: teams > 0 ? teams : undefined,
         capitalsEnabled: gameMode === 'capitals',
         useTerritoryModifiers,
         modifierDistribution: useTerritoryModifiers ? modifierDistribution : 'none',
