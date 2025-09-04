@@ -90,6 +90,9 @@ try {
   
   console.log('📦 Loading services...')
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
+  
+  // Session middleware will be initialized after app is created
+  
   console.log('✅ Services loaded')
   
   console.log('📦 Loading utils...')
@@ -149,9 +152,23 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }
 
+// Initialize Redis for Socket.io adapter
+const { initializeRedis, getPubSubClients } = require('./config/redis')
+initializeRedis()
+
 const io = new Server(server, {
   cors: corsOptions,
 })
+
+// Set up Redis adapter for Socket.io if available
+const { pubClient, subClient } = getPubSubClients()
+if (pubClient && subClient) {
+  const { createAdapter } = require('@socket.io/redis-adapter')
+  io.adapter(createAdapter(pubClient, subClient))
+  console.log('✅ Socket.io using Redis adapter for multi-server support')
+} else {
+  console.log('⚠️ Socket.io using in-memory adapter (single server only)')
+}
 
 const PORT = process.env.PORT || 5001
 
@@ -180,6 +197,11 @@ app.use(
 )
 app.use(cors(corsOptions))
 app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true }))
+
+// Initialize session middleware after app is created
+const { createSessionMiddleware } = require('./middleware/session')
+app.use(createSessionMiddleware())
 
 // Apply suspicious activity tracker globally
 app.use(suspiciousActivityTracker.middleware())
@@ -218,6 +240,8 @@ app.get('/test', (_req: Request, res: Response) => {
 app.get('/health', async (_req: Request, res: Response) => {
   let databaseStatus = 'unknown'
   let databaseError = null
+  let redisStatus = 'unknown'
+  let redisError = null
 
   try {
     const { query } = await import('./config/database')
@@ -228,16 +252,32 @@ app.get('/health', async (_req: Request, res: Response) => {
     databaseError = error instanceof Error ? error.message : 'Unknown error'
   }
 
-  // Always return 200 OK for server health, but include database status
+  // Check Redis health
+  try {
+    const { checkRedisHealth } = await import('./config/redis')
+    const redisHealth = await checkRedisHealth()
+    redisStatus = redisHealth.healthy ? 'connected' : 'disconnected'
+    if (!redisHealth.healthy) {
+      redisError = redisHealth.message
+    }
+  } catch (error) {
+    redisStatus = 'disconnected'
+    redisError = error instanceof Error ? error.message : 'Unknown error'
+  }
+
+  // Always return 200 OK for server health, but include database and Redis status
   res.json({
     status: 'OK',
     server: 'running',
     database: databaseStatus,
+    redis: redisStatus,
     environment: process.env.NODE_ENV || 'development',
     databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+    redisUrl: process.env.REDIS_URL ? 'configured' : 'missing',
     sentry: process.env.SENTRY_DSN ? 'configured' : 'disabled',
     timestamp: new Date().toISOString(),
     ...(databaseError && { databaseError }),
+    ...(redisError && { redisError }),
   })
 })
 
