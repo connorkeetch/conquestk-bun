@@ -8,11 +8,11 @@ let subClient: Redis | null = null
 /**
  * Initialize Redis clients for different purposes
  */
-export function initializeRedis(): {
+export async function initializeRedis(): Promise<{
   redisClient: Redis | null
   pubClient: Redis | null
   subClient: Redis | null
-} {
+}> {
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL
 
   if (!redisUrl) {
@@ -28,23 +28,17 @@ export function initializeRedis(): {
   try {
     // Parse Redis URL
     const redisOptions: any = {
-      enableReadyCheck: true,
-      maxRetriesPerRequest: 3,
-      connectTimeout: 10000, // 10 seconds
+      enableReadyCheck: false,
+      maxRetriesPerRequest: null, // Disable retries to prevent unhandled rejections
+      connectTimeout: 5000, // 5 seconds
       lazyConnect: true, // Don't connect immediately
-      retryStrategy: (times: number) => {
-        if (times > 5) {
-          logger.warn('Redis retry attempts exhausted, giving up')
-          return null // Stop retrying
-        }
-        const delay = Math.min(times * 50, 2000)
-        return delay
+      retryStrategy: () => {
+        // Don't retry connections - fail fast
+        logger.warn('Redis connection failed, disabling Redis functionality')
+        return null
       },
-      reconnectOnError: (err: Error) => {
-        const targetError = 'READONLY'
-        if (err.message.includes(targetError)) {
-          return true
-        }
+      reconnectOnError: () => {
+        // Don't reconnect automatically
         return false
       },
     }
@@ -111,18 +105,26 @@ export function initializeRedis(): {
       logger.warn('Redis sub client connection closed')
     })
 
-    // Test connection with timeout
-    Promise.race([
-      redisClient.ping(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Ping timeout')), 5000))
-    ]).then(() => {
-      logger.info('✅ Redis ping successful')
-    }).catch(err => {
-      logger.error('Redis ping failed:', err)
-      // Don't fail the app startup, just log the error
-    })
-
-    return { redisClient, pubClient, subClient }
+    // Test connection with timeout - if it fails, disable Redis entirely
+    try {
+      await Promise.race([
+        redisClient.connect(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+      ])
+      logger.info('✅ Redis connection established')
+      return { redisClient, pubClient, subClient }
+    } catch (err) {
+      logger.error('Redis connection failed, disabling Redis functionality:', err)
+      // Clean up failed clients
+      try {
+        await redisClient?.quit()
+        await pubClient?.quit()
+        await subClient?.quit()
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+      return { redisClient: null, pubClient: null, subClient: null }
+    }
   } catch (error) {
     logger.error('Failed to initialize Redis:', error)
     return { redisClient: null, pubClient: null, subClient: null }

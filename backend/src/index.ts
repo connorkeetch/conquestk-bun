@@ -154,21 +154,25 @@ const corsOptions = {
 
 // Initialize Redis for Socket.io adapter
 const { initializeRedis, getPubSubClients } = require('./config/redis')
-initializeRedis()
 
+// Initialize Socket.io first
 const io = new Server(server, {
   cors: corsOptions,
 })
 
-// Set up Redis adapter for Socket.io if available
-const { pubClient, subClient } = getPubSubClients()
-if (pubClient && subClient) {
-  const { createAdapter } = require('@socket.io/redis-adapter')
-  io.adapter(createAdapter(pubClient, subClient))
-  console.log('✅ Socket.io using Redis adapter for multi-server support')
-} else {
-  console.log('⚠️ Socket.io using in-memory adapter (single server only)')
-}
+// Initialize Redis asynchronously and set up adapter if successful
+initializeRedis().then(() => {
+  const { pubClient, subClient } = getPubSubClients()
+  if (pubClient && subClient) {
+    const { createAdapter } = require('@socket.io/redis-adapter')
+    io.adapter(createAdapter(pubClient, subClient))
+    console.log('✅ Socket.io using Redis adapter for multi-server support')
+  } else {
+    console.log('⚠️ Socket.io using in-memory adapter (single server only)')
+  }
+}).catch(err => {
+  console.log('⚠️ Redis initialization failed, using in-memory adapter:', err.message)
+})
 
 const PORT = process.env.PORT || 5001
 
