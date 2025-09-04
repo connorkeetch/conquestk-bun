@@ -309,17 +309,31 @@ export interface MapSearchResult {
 export interface MapDraft {
   id: string
   userId: string
-  mapId?: string // If editing existing map
+  stagingImageId?: string // Reference to staging image
+  parentMapId?: string // If editing/cloning existing map
   name: string
   description?: string
   data: any // JSON map data
   territories?: any
   continents?: any
   adjacencies?: any
+  capitalAssignments?: any
   thumbnailUrl?: string
-  autoSavedAt: Date
+  imageUrl?: string
+  imageWidth?: number
+  imageHeight?: number
+  draftStatus?: string
+  validationStatus?: string
+  validationErrors?: any[]
+  isPublic?: boolean
+  tags?: string[]
+  autoSavedAt?: Date
+  lastEditedAt?: Date
   createdAt: Date
   updatedAt: Date
+  
+  // Deprecated - kept for backward compatibility
+  mapId?: string
 }
 
 // Map Version History

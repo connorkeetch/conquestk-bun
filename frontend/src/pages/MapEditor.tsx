@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ImageCropper from '../components/ImageCropper'
+import TermsModal from '../components/TermsModal'
 import {
   type Coordinate,
   type CustomMap,
@@ -9,6 +11,7 @@ import {
   mapService,
   type TerritoryAbilityType,
 } from '../services/mapService'
+import { termsService } from '../services/termsService'
 
 type EditorTool = 'select' | 'territory' | 'continent' | 'adjacency'
 
@@ -32,6 +35,7 @@ interface EditorState {
 export default function MapEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   const [state, setState] = useState<EditorState>({
     selectedTool: 'select',
@@ -45,6 +49,11 @@ export default function MapEditor() {
     adjacencies: [],
     firstSelectedTerritory: undefined,
   })
+
+  // Terms acceptance state
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [termsContent, setTermsContent] = useState<any>(null)
+  const [isCheckingTerms, setIsCheckingTerms] = useState(true)
 
   const [_territoryAbilities, setTerritoryAbilities] = useState<TerritoryAbilityType[]>([])
   const [_gameModes, setGameModes] = useState<GameMode[]>([])
@@ -70,10 +79,48 @@ export default function MapEditor() {
   const [showImageOptions, setShowImageOptions] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
 
-  // Load metadata on component mount
+  // Check terms acceptance on mount
   useEffect(() => {
-    loadMetadata()
-  }, [loadMetadata])
+    checkTermsAcceptance()
+  }, [])
+
+  // Load metadata after terms are accepted
+  useEffect(() => {
+    if (!showTermsModal && !isCheckingTerms) {
+      loadMetadata()
+    }
+  }, [showTermsModal, isCheckingTerms])
+
+  const checkTermsAcceptance = async () => {
+    try {
+      const response = await termsService.checkTermsAcceptance('map_editor')
+      
+      if (!response.hasAccepted) {
+        setTermsContent(response.termsContent)
+        setShowTermsModal(true)
+      }
+    } catch (error) {
+      console.error('Error checking terms:', error)
+      // If terms check fails, allow access but log the error
+    } finally {
+      setIsCheckingTerms(false)
+    }
+  }
+
+  const handleAcceptTerms = async () => {
+    try {
+      await termsService.acceptTerms('map_editor')
+      setShowTermsModal(false)
+    } catch (error) {
+      console.error('Error accepting terms:', error)
+      alert('Failed to accept terms. Please try again.')
+    }
+  }
+
+  const handleDeclineTerms = () => {
+    setShowTermsModal(false)
+    navigate('/') // Navigate back to home if terms are declined
+  }
 
   const loadMetadata = async () => {
     try {
@@ -995,6 +1042,17 @@ export default function MapEditor() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 relative">
+      {/* Terms Modal */}
+      {showTermsModal && termsContent && (
+        <TermsModal
+          isOpen={showTermsModal}
+          onAccept={handleAcceptTerms}
+          onDecline={handleDeclineTerms}
+          termsContent={termsContent}
+          featureType="map_editor"
+        />
+      )}
+
       {/* Coming Soon Overlay */}
       <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
         <div className="text-center">
