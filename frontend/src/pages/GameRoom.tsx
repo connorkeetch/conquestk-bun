@@ -4,6 +4,7 @@ import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { socketService } from '../services/socketService'
+import ChatContainer from '../components/chat/ChatContainer'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -134,21 +135,14 @@ export default function GameRoom() {
           )}
 
           {/* Chat */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">Chat</h3>
-            <div className="h-32 bg-gray-700 rounded p-2 mb-2 overflow-y-auto">
-              <div className="text-sm text-gray-400">Chat messages will appear here...</div>
-            </div>
-            <div className="flex">
-              <input
-                type="text"
-                placeholder="Type a message..."
-                className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded-l text-sm"
+          <div className="bg-gray-800 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+            {roomId && (
+              <ChatContainer 
+                conversationType="game" 
+                conversationId={roomId}
+                className="h-full"
               />
-              <button className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-r text-sm">
-                Send
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
