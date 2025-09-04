@@ -161,27 +161,35 @@ const io = new Server(server, {
 })
 
 // Initialize Redis asynchronously and set up adapter if successful
-initializeRedis().then(() => {
-  const { pubClient, subClient } = getPubSubClients()
+initializeRedis().then((redisClients: any) => {
+  const { pubClient, subClient, redisClient } = redisClients
   
-  // Set up Socket.io Redis adapter
+  // Set up Socket.io Redis adapter only if clients are valid and connected
   if (pubClient && subClient) {
-    const { createAdapter } = require('@socket.io/redis-adapter')
-    io.adapter(createAdapter(pubClient, subClient))
-    console.log('✅ Socket.io using Redis adapter for multi-server support')
+    try {
+      const { createAdapter } = require('@socket.io/redis-adapter')
+      io.adapter(createAdapter(pubClient, subClient))
+      console.log('✅ Socket.io using Redis adapter for multi-server support')
+    } catch (error: any) {
+      console.log('⚠️ Failed to create Redis adapter, using in-memory adapter:', error.message)
+    }
   } else {
     console.log('⚠️ Socket.io using in-memory adapter (single server only)')
   }
   
-  // Enable Redis session store now that Redis is available
-  const { enableRedisSessionStore } = require('./middleware/session')
-  if (enableRedisSessionStore()) {
-    console.log('✅ Session storage upgraded to Redis')
+  // Enable Redis session store only if Redis is available
+  if (redisClient) {
+    const { enableRedisSessionStore } = require('./middleware/session')
+    if (enableRedisSessionStore()) {
+      console.log('✅ Session storage upgraded to Redis')
+    } else {
+      console.log('⚠️ Failed to upgrade session storage to Redis')
+    }
   } else {
-    console.log('⚠️ Failed to upgrade session storage to Redis')
+    console.log('⚠️ Using in-memory session store (Redis not available)')
   }
 }).catch((err: any) => {
-  console.log('⚠️ Redis initialization failed, using in-memory adapter:', err.message)
+  console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
 })
 
 const PORT = process.env.PORT || 5001
