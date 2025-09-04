@@ -1,5 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
+export interface LinkPreview {
+  url: string
+  title?: string
+  description?: string
+  image?: string
+  site_name?: string
+}
+
 export interface ChatMessage {
   id: string
   sender_id: string
@@ -13,6 +21,7 @@ export interface ChatMessage {
   edited_at?: string
   deleted_at?: string
   is_read: boolean
+  link_previews?: LinkPreview[]
 }
 
 export interface ChatConversation {
