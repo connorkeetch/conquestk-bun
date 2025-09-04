@@ -1,11 +1,12 @@
 import type React from 'react'
 
 export interface SkillTier {
-  name: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Master' | 'Grandmaster'
+  name: 'Chieftain' | 'Warlord' | 'Raider King' | 'Sultan' | 'Caesar' | 'Khan' | 'Emperor' | 'The Great King' | 'Overlord' | 'Worldbreaker'
   minRating: number
   maxRating: number
   icon: string
   color: string
+  description?: string
 }
 
 interface SkillTierBadgeProps {
@@ -16,13 +17,88 @@ interface SkillTierBadgeProps {
   className?: string
 }
 
+// The Conqueror's Path - Historical conquest-themed ranking system
 const SKILL_TIERS: SkillTier[] = [
-  { name: 'Bronze', minRating: 0, maxRating: 799, icon: '🥉', color: 'text-orange-600' },
-  { name: 'Silver', minRating: 800, maxRating: 999, icon: '🥈', color: 'text-gray-400' },
-  { name: 'Gold', minRating: 1000, maxRating: 1199, icon: '🥇', color: 'text-yellow-500' },
-  { name: 'Platinum', minRating: 1200, maxRating: 1399, icon: '💎', color: 'text-cyan-400' },
-  { name: 'Master', minRating: 1400, maxRating: 1599, icon: '👑', color: 'text-purple-500' },
-  { name: 'Grandmaster', minRating: 1600, maxRating: 9999, icon: '⚔️', color: 'text-red-600' },
+  { 
+    name: 'Chieftain', 
+    minRating: 0, 
+    maxRating: 599, 
+    icon: '🛡️', 
+    color: 'text-amber-700',
+    description: 'Leads a tribe or small clan, fighting for survival and territory'
+  },
+  { 
+    name: 'Warlord', 
+    minRating: 600, 
+    maxRating: 799, 
+    icon: '⚔️', 
+    color: 'text-red-600',
+    description: 'Rules by might, feared by neighboring villages and rival tribes'
+  },
+  { 
+    name: 'Raider King', 
+    minRating: 800, 
+    maxRating: 999, 
+    icon: '⚓', 
+    color: 'text-blue-500',
+    description: 'Expands by plunder and coastal terror campaigns'
+  },
+  { 
+    name: 'Sultan', 
+    minRating: 1000, 
+    maxRating: 1199, 
+    icon: '☪️', 
+    color: 'text-green-600',
+    description: 'A ruler who wields faith and politics alongside armies'
+  },
+  { 
+    name: 'Caesar', 
+    minRating: 1200, 
+    maxRating: 1399, 
+    icon: '🦅', 
+    color: 'text-yellow-500',
+    description: 'Transforms a republic into empire, master of politics and war'
+  },
+  { 
+    name: 'Khan', 
+    minRating: 1400, 
+    maxRating: 1599, 
+    icon: '🏹', 
+    color: 'text-orange-500',
+    description: 'Unstoppable steppe warlord, masters of cavalry and mobility'
+  },
+  { 
+    name: 'Emperor', 
+    minRating: 1600, 
+    maxRating: 1799, 
+    icon: '👑', 
+    color: 'text-purple-500',
+    description: 'Commands massive armies, reshapes Europe through ambition'
+  },
+  { 
+    name: 'The Great King', 
+    minRating: 1800, 
+    maxRating: 1999, 
+    icon: '☀️', 
+    color: 'text-orange-400',
+    description: 'Ruler of kings, empire spanning continents'
+  },
+  { 
+    name: 'Overlord', 
+    minRating: 2000, 
+    maxRating: 2199, 
+    icon: '💀', 
+    color: 'text-gray-600',
+    description: 'Ruler of rulers, tyrant who demands tribute and burns resistance'
+  },
+  { 
+    name: 'Worldbreaker', 
+    minRating: 2200, 
+    maxRating: 9999, 
+    icon: '☄️', 
+    color: 'text-red-800',
+    description: 'The apocalyptic conqueror, remembered for brutality and empire-wide destruction'
+  },
 ]
 
 const SkillTierBadge: React.FC<SkillTierBadgeProps> = ({
@@ -34,7 +110,7 @@ const SkillTierBadge: React.FC<SkillTierBadgeProps> = ({
 }) => {
   // Get tier based on rating
   const skillTier =
-    SKILL_TIERS.find((t) => rating >= t.minRating && rating <= t.maxRating) || SKILL_TIERS[2] // Default to Gold
+    SKILL_TIERS.find((t) => rating >= t.minRating && rating <= t.maxRating) || SKILL_TIERS[3] // Default to Sultan (1000 rating)
 
   const currentTier = tier || skillTier.name
 

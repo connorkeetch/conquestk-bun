@@ -259,57 +259,98 @@ const TutorialPage: React.FC = () => {
 
         {activeTab === 'rankings' && (
           <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Rankings & ELO System</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">The Conqueror's Path - Ranking System</h2>
             
             <div className="space-y-6">
               <div>
                 <h3 className="text-xl font-semibold text-blue-400 mb-3">How ELO Works</h3>
                 <p className="text-gray-300">
-                  The ELO rating system measures your skill level based on game results. Everyone starts at 1200 ELO.
+                  The ELO rating system measures your skill level based on game results. Everyone starts at 1000 ELO.
                   Win against higher-rated players to gain more points, lose to lower-rated players to lose more points.
+                  Your journey follows the path of history's greatest conquerors!
                 </p>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-blue-400 mb-3">Rank Tiers</h3>
+                <h3 className="text-xl font-semibold text-blue-400 mb-3">The Conqueror's Path</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
-                    <span className="text-2xl">🥉</span>
+                    <span className="text-2xl">🛡️</span>
                     <div>
-                      <div className="font-semibold text-orange-400">Bronze (800-1199)</div>
-                      <div className="text-sm text-gray-400">New players learning the basics</div>
+                      <div className="font-semibold text-amber-700">Chieftain (0-599)</div>
+                      <div className="text-sm text-gray-400">Leads a tribe or small clan, fighting for survival • Example: Vercingetorix</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
-                    <span className="text-2xl">🥈</span>
+                    <span className="text-2xl">⚔️</span>
                     <div>
-                      <div className="font-semibold text-gray-300">Silver (1200-1499)</div>
-                      <div className="text-sm text-gray-400">Solid understanding of game mechanics</div>
+                      <div className="font-semibold text-red-600">Warlord (600-799)</div>
+                      <div className="text-sm text-gray-400">Rules by might, feared by neighboring villages • Example: Shaka Zulu</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
-                    <span className="text-2xl">🥇</span>
+                    <span className="text-2xl">⚓</span>
                     <div>
-                      <div className="font-semibold text-yellow-400">Gold (1500-1799)</div>
-                      <div className="text-sm text-gray-400">Strong strategic players</div>
+                      <div className="font-semibold text-blue-500">Raider King (800-999)</div>
+                      <div className="text-sm text-gray-400">Expands by plunder and coastal terror • Example: Ragnar Lothbrok</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
-                    <span className="text-2xl">💎</span>
+                    <span className="text-2xl">☪️</span>
                     <div>
-                      <div className="font-semibold text-cyan-400">Diamond (1800-2099)</div>
-                      <div className="text-sm text-gray-400">Expert tacticians</div>
+                      <div className="font-semibold text-green-600">Sultan (1000-1199)</div>
+                      <div className="text-sm text-gray-400">Wields faith and politics alongside armies • Example: Saladin</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
+                    <span className="text-2xl">🦅</span>
+                    <div>
+                      <div className="font-semibold text-yellow-500">Caesar (1200-1399)</div>
+                      <div className="text-sm text-gray-400">Transforms republic into empire • Example: Julius Caesar</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
+                    <span className="text-2xl">🏹</span>
+                    <div>
+                      <div className="font-semibold text-orange-500">Khan (1400-1599)</div>
+                      <div className="text-sm text-gray-400">Masters of cavalry and mobility • Example: Genghis Khan</div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
                     <span className="text-2xl">👑</span>
                     <div>
-                      <div className="font-semibold text-purple-400">Master (2100+)</div>
-                      <div className="text-sm text-gray-400">Elite commanders</div>
+                      <div className="font-semibold text-purple-500">Emperor (1600-1799)</div>
+                      <div className="text-sm text-gray-400">Commands massive armies • Example: Napoleon Bonaparte</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
+                    <span className="text-2xl">☀️</span>
+                    <div>
+                      <div className="font-semibold text-orange-400">The Great King (1800-1999)</div>
+                      <div className="text-sm text-gray-400">Ruler of kings, empire spanning continents • Example: Alexander the Great</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
+                    <span className="text-2xl">💀</span>
+                    <div>
+                      <div className="font-semibold text-gray-600">Overlord (2000-2199)</div>
+                      <div className="text-sm text-gray-400">Tyrant who demands tribute and burns resistance • Example: Attila the Hun</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-gray-700 p-3 rounded-lg">
+                    <span className="text-2xl">☄️</span>
+                    <div>
+                      <div className="font-semibold text-red-800">Worldbreaker (2200+)</div>
+                      <div className="text-sm text-gray-400">Apocalyptic conqueror, remembered for brutality • Example: Tamerlane</div>
                     </div>
                   </div>
                 </div>
