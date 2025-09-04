@@ -134,7 +134,6 @@ export class AuthController {
           username: user.username,
           email: user.email,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0,
         },
         requiresEmailVerification,
         emailSent: emailService.isEnabled() && verificationToken ? true : false,
@@ -210,7 +209,6 @@ export class AuthController {
           email: user.email,
           emailVerified: user.email_verified || false,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0,
         },
         requiresVerification: needsVerification,
       })
@@ -240,7 +238,6 @@ export class AuthController {
           email: user.email,
           email_verified: user.email_verified,
           isAdmin: user.is_admin || false,
-          adminLevel: user.admin_level || 0,
         },
       })
     } catch (error) {
