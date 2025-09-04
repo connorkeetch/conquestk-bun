@@ -27,6 +27,8 @@ import Maps from './pages/Maps'
 import NotFoundPage from './pages/NotFoundPage'
 import Play from './pages/Play'
 import Profile from './pages/Profile'
+import ProfilePage from './components/ProfilePage'
+import ProfileRedirect from './components/ProfileRedirect'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
@@ -205,20 +207,12 @@ function App() {
           }
         />
 
-        {/* Profile Routes (Public but with user-specific content) */}
+        {/* Profile Routes - Username-based */}
         <Route
-          path="/profile/:userId"
+          path="/profile/:username"
           element={
             <AuthGuard requireAuth={false}>
-              <Profile />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/profile/:userId/:section"
-          element={
-            <AuthGuard requireAuth={false}>
-              <Profile />
+              <ProfilePage />
             </AuthGuard>
           }
         />
@@ -360,7 +354,7 @@ function App() {
           path="/profile"
           element={
             <AuthGuard>
-              <Profile />
+              <ProfileRedirect />
             </AuthGuard>
           }
         />

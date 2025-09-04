@@ -1,4 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
-  <rect width="192" height="192" fill="#dc2626" rx="20"/>
-  <text x="96" y="120" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">R</text>
+  <defs>
+    <linearGradient id="loneGradIcon" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#0F1117" />
+      <stop offset="70%" style="stop-color:#374151" />
+      <stop offset="100%" style="stop-color:#6B7280" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="192" height="192" fill="#111827" rx="20"/>
+  
+  <!-- Jagged Lone Peak profile (scaled up for 192x192) -->
+  <path d="M 24 165 
+           L 51 120
+           L 66 126
+           L 78 108
+           L 84 96
+           L 90 84
+           L 93 72
+           L 96 60
+           L 99 72
+           L 102 84
+           L 108 96
+           L 114 108
+           L 126 126
+           L 141 120
+           L 168 165
+           Z" 
+        fill="url(#loneGradIcon)"/>
+  
+  <!-- Subtle ridge lines for texture -->
+  <line x1="96" y1="60" x2="90" y2="120" stroke="#1F2937" stroke-width="1.5" opacity="0.4"/>
+  <line x1="96" y1="60" x2="102" y2="120" stroke="#1F2937" stroke-width="1.5" opacity="0.4"/>
+  
+  <!-- Minimal snow -->
+  <path d="M 96 60 L 105 78 L 96 72 L 87 78 Z" fill="white" opacity="0.85"/>
+  
+  <!-- Flag pole -->
+  <line x1="96" y1="60" x2="96" y2="30" stroke="#4B5563" stroke-width="6"/>
+  
+  <!-- Waving flag (red) -->
+  <path d="M 96 30 Q 114 36, 126 30 L 126 48 Q 114 54, 96 45 Z" fill="#E74C3C"/>
+  
+  <!-- K on flag -->
+  <text x="108" y="42" font-family="Arial" font-size="12" font-weight="bold" fill="white">K</text>
 </svg>

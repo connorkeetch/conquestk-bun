@@ -6,6 +6,7 @@ import { sanitizeText } from '../utils/sanitizer'
 import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import audioService from '../services/audioService'
+import MountainLogo from './MountainLogo'
 
 interface MenuItem {
   path: string
@@ -76,9 +77,25 @@ export default function Header() {
               to="/"
               className="text-white/90 font-semibold tracking-wide flex items-center gap-2"
             >
-              <span className="text-xl">⚔️</span>
-              <span className="hidden sm:inline">CONQUEST K</span>
-              <span className="sm:hidden">CK</span>
+              <MountainLogo width={24} height={24} />
+              <span className="hidden sm:inline">
+                CONQUEST <span className="text-yellow-400 font-bold" style={{ 
+                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                  backgroundClip: 'text', 
+                  textFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>K</span>
+              </span>
+              <span className="sm:hidden">
+                C<span className="text-yellow-400 font-bold" style={{ 
+                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                  backgroundClip: 'text', 
+                  textFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>K</span>
+              </span>
             </Link>
           </div>
 

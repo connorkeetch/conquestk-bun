@@ -280,6 +280,9 @@ export default function Settings() {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [audioPrefs, setAudioPrefs] = useState(audioService.getPreferences())
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [checkingUsername, setCheckingUsername] = useState(false)
+  const [profileUpdateLoading, setProfileUpdateLoading] = useState(false)
 
   useEffect(() => {
     // Initialize push notification service and check status
@@ -290,6 +293,85 @@ export default function Settings() {
     }
     initNotifications()
   }, [])
+
+  // Check username availability
+  const checkUsernameAvailability = async (username: string) => {
+    if (username === user?.username) {
+      setUsernameAvailable(true)
+      return
+    }
+
+    if (username.length < 3) {
+      setUsernameAvailable(false)
+      return
+    }
+
+    setCheckingUsername(true)
+    try {
+      const token = localStorage.getItem('token')
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
+      const response = await fetch(`${apiUrl}/users/check-username`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username }),
+      })
+
+      const data = await response.json()
+      setUsernameAvailable(data.available)
+    } catch (error) {
+      console.error('Error checking username:', error)
+      setUsernameAvailable(null)
+    } finally {
+      setCheckingUsername(false)
+    }
+  }
+
+  // Update profile (username/email)
+  const updateProfile = async (username?: string, email?: string) => {
+    setProfileUpdateLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
+      
+      const updateData: any = {}
+      if (username) updateData.username = username
+      if (email) updateData.email = email
+      
+      const response = await fetch(`${apiUrl}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSaveStatus('Profile updated successfully!')
+        setTimeout(() => setSaveStatus(null), 3000)
+        // You might want to update the Redux state here too
+        return true
+      } else {
+        setSaveStatus(data.error || 'Failed to update profile')
+        setTimeout(() => setSaveStatus(null), 5000)
+        return false
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+      setSaveStatus('Failed to update profile')
+      setTimeout(() => setSaveStatus(null), 5000)
+      return false
+    } finally {
+      setProfileUpdateLoading(false)
+    }
+  }
 
   // Helper function to persist important settings to server
   const persistSetting = async (settingKey: string, value: any) => {
@@ -447,6 +529,9 @@ export default function Settings() {
 
         case 'input': {
           const isEditing = editingField === setting.id
+          const isUsername = setting.id === 'username'
+          const isEmail = setting.id === 'email'
+          
           return (
             <div className="flex items-center gap-2">
               {!isEditing ? (
@@ -462,6 +547,10 @@ export default function Settings() {
                           ...prev,
                           [setting.id]: setting.defaultValue || '',
                         }))
+                        // Reset username availability when starting to edit
+                        if (isUsername) {
+                          setUsernameAvailable(null)
+                        }
                       }}
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
                     >
@@ -471,27 +560,99 @@ export default function Settings() {
                 </>
               ) : (
                 <>
-                  <input
-                    type={setting.id === 'email' ? 'email' : 'text'}
-                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm w-48"
-                    value={fieldValues[setting.id] || ''}
-                    onChange={(e) =>
-                      setFieldValues((prev) => ({
-                        ...prev,
-                        [setting.id]: e.target.value,
-                      }))
-                    }
-                  />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type={isEmail ? 'email' : 'text'}
+                        className={`px-3 py-2 bg-slate-700 border rounded-lg text-white text-sm w-48 ${
+                          isUsername && usernameAvailable === false 
+                            ? 'border-red-500' 
+                            : isUsername && usernameAvailable === true 
+                            ? 'border-green-500' 
+                            : 'border-slate-600'
+                        }`}
+                        value={fieldValues[setting.id] || ''}
+                        onChange={(e) => {
+                          const newValue = e.target.value
+                          setFieldValues((prev) => ({
+                            ...prev,
+                            [setting.id]: newValue,
+                          }))
+                          
+                          // Check username availability with debounce
+                          if (isUsername) {
+                            const timeoutId = setTimeout(() => {
+                              checkUsernameAvailability(newValue)
+                            }, 500)
+                            return () => clearTimeout(timeoutId)
+                          }
+                        }}
+                      />
+                      
+                      {/* Username availability indicator */}
+                      {isUsername && (
+                        <div className="flex items-center">
+                          {checkingUsername ? (
+                            <span className="text-gray-400">⏳</span>
+                          ) : usernameAvailable === true ? (
+                            <span className="text-green-400">✓</span>
+                          ) : usernameAvailable === false ? (
+                            <span className="text-red-400">✗</span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Username availability message */}
+                    {isUsername && usernameAvailable === false && (
+                      <p className="text-red-400 text-xs">
+                        {fieldValues[setting.id]?.length < 3 
+                          ? 'Username must be at least 3 characters'
+                          : 'Username is already taken'
+                        }
+                      </p>
+                    )}
+                  </div>
+                  
                   <button
-                    onClick={() => {
-                      // Here you would save to backend
-                      setSaveStatus(`${setting.label} updated successfully!`)
-                      setTimeout(() => setSaveStatus(null), 3000)
-                      setEditingField(null)
+                    onClick={async () => {
+                      const value = fieldValues[setting.id]
+                      if (!value) return
+                      
+                      // Validate username
+                      if (isUsername && (value.length < 3 || usernameAvailable === false)) {
+                        return
+                      }
+                      
+                      // Validate email
+                      if (isEmail && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                        setSaveStatus('Invalid email format')
+                        setTimeout(() => setSaveStatus(null), 3000)
+                        return
+                      }
+                      
+                      // Update profile
+                      const updateData: any = {}
+                      if (isUsername) updateData.username = value
+                      if (isEmail) updateData.email = value
+                      
+                      const success = await updateProfile(
+                        isUsername ? value : undefined,
+                        isEmail ? value : undefined
+                      )
+                      
+                      if (success) {
+                        setEditingField(null)
+                        // Reset availability check
+                        if (isUsername) {
+                          setUsernameAvailable(null)
+                        }
+                      }
                     }}
-                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                    disabled={profileUpdateLoading || (isUsername && (checkingUsername || usernameAvailable === false))}
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
                   >
-                    Save
+                    {profileUpdateLoading ? 'Saving...' : 'Save'}
                   </button>
                   <button
                     onClick={() => {
@@ -501,6 +662,10 @@ export default function Settings() {
                         delete newValues[setting.id]
                         return newValues
                       })
+                      // Reset username availability
+                      if (isUsername) {
+                        setUsernameAvailable(null)
+                      }
                     }}
                     className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
                   >
