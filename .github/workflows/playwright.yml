@@ -1,9 +1,13 @@
 name: Playwright Tests
+# Temporarily disabled during active development
+# Uncomment when ready for production testing
+# on:
+#   push:
+#     branches: [ main, master ]
+#   pull_request:
+#     branches: [ main, master ]
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch: # Manual trigger only for now
 jobs:
   test:
     timeout-minutes: 60
