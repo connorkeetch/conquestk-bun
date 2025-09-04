@@ -1,6 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import { chatService } from '../services/chatService'
 import { logger } from '../utils/logger'
+import { query } from '../config/database'
 
 export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Send a message
@@ -243,6 +244,114 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       }
     } catch (error) {
       logger.error('Error broadcasting typing indicator:', error)
+    }
+  })
+
+  // Add reaction to message
+  socket.on('chat:add-reaction', async (data: {
+    messageId: string
+    emoji: string
+  }) => {
+    try {
+      const userId = (socket as any).userId
+      if (!userId) {
+        socket.emit('chat:error', { error: 'Not authenticated' })
+        return
+      }
+
+      const success = await chatService.addReaction(data.messageId, userId, data.emoji)
+      
+      if (success) {
+        const reactions = await chatService.getMessageReactions(data.messageId)
+        
+        // Get the message to find the conversation
+        const messageResult = await query(
+          `SELECT message_type, game_id, sender_id, recipient_id FROM chat_messages WHERE id = $1`,
+          [data.messageId]
+        )
+        
+        if (messageResult.rows.length > 0) {
+          const message = messageResult.rows[0]
+          
+          // Broadcast to appropriate room/users
+          if (message.message_type === 'game' && message.game_id) {
+            io.to(`game:${message.game_id}`).emit('chat:reactions-updated', {
+              messageId: data.messageId,
+              reactions
+            })
+          } else if (message.message_type === 'dm') {
+            // Send to both users in DM
+            const userIds = [message.sender_id, message.recipient_id]
+            userIds.forEach(uid => {
+              const userSocket = Array.from(io.sockets.sockets.values())
+                .find(s => (s as any).userId === uid)
+              if (userSocket) {
+                userSocket.emit('chat:reactions-updated', {
+                  messageId: data.messageId,
+                  reactions
+                })
+              }
+            })
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error adding reaction:', error)
+      socket.emit('chat:error', { error: 'Failed to add reaction' })
+    }
+  })
+
+  // Remove reaction from message
+  socket.on('chat:remove-reaction', async (data: {
+    messageId: string
+    emoji: string
+  }) => {
+    try {
+      const userId = (socket as any).userId
+      if (!userId) {
+        socket.emit('chat:error', { error: 'Not authenticated' })
+        return
+      }
+
+      const success = await chatService.removeReaction(data.messageId, userId, data.emoji)
+      
+      if (success) {
+        const reactions = await chatService.getMessageReactions(data.messageId)
+        
+        // Get the message to find the conversation
+        const messageResult = await query(
+          `SELECT message_type, game_id, sender_id, recipient_id FROM chat_messages WHERE id = $1`,
+          [data.messageId]
+        )
+        
+        if (messageResult.rows.length > 0) {
+          const message = messageResult.rows[0]
+          
+          // Broadcast to appropriate room/users
+          if (message.message_type === 'game' && message.game_id) {
+            io.to(`game:${message.game_id}`).emit('chat:reactions-updated', {
+              messageId: data.messageId,
+              reactions
+            })
+          } else if (message.message_type === 'dm') {
+            // Send to both users in DM
+            const userIds = [message.sender_id, message.recipient_id]
+            userIds.forEach(uid => {
+              const userSocket = Array.from(io.sockets.sockets.values())
+                .find(s => (s as any).userId === uid)
+              if (userSocket) {
+                userSocket.emit('chat:reactions-updated', {
+                  messageId: data.messageId,
+                  reactions
+                })
+              }
+            })
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error removing reaction:', error)
+      socket.emit('chat:error', { error: 'Failed to remove reaction' })
     }
   })
 }

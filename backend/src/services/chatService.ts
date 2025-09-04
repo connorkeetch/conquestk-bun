@@ -1,6 +1,13 @@
 import { query } from '../config/database'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger'
+import { linkPreviewService, type LinkPreview } from './linkPreviewService'
+
+// bad-words module - using require for CommonJS compatibility
+const Filter = require('bad-words')
+const profanityFilter = new Filter()
+// Add custom words if needed
+// profanityFilter.addWords('customword1', 'customword2')
 
 export interface ChatMessage {
   id: string
@@ -15,6 +22,7 @@ export interface ChatMessage {
   edited_at?: Date
   deleted_at?: Date
   is_read: boolean
+  link_previews?: LinkPreview[]
 }
 
 export interface SendMessageData {
@@ -34,6 +42,14 @@ class ChatService {
     const messageId = uuidv4()
     
     try {
+      // Check if user has profanity filter enabled
+      let filteredMessage = data.message
+      const shouldFilter = await this.shouldFilterProfanity(data.senderId)
+      
+      if (shouldFilter) {
+        filteredMessage = profanityFilter.clean(data.message)
+      }
+      
       // Check DM privacy settings if it's a DM
       if (data.messageType === 'dm' && data.recipientId) {
         const canSendDM = await this.canSendDMTo(data.senderId, data.recipientId)
@@ -41,6 +57,12 @@ class ChatService {
           throw new Error('User has restricted direct messages')
         }
       }
+      
+      // Extract link previews
+      const links = await linkPreviewService.extractLinks(filteredMessage)
+      const linkPreviews = links.length > 0 
+        ? await linkPreviewService.getMultiplePreviews(links.slice(0, 3)) // Limit to 3 previews
+        : []
       
       const result = await query(
         `INSERT INTO chat_messages (
@@ -51,13 +73,36 @@ class ChatService {
         [
           messageId,
           data.senderId,
-          data.message,
+          filteredMessage,  // Use filtered message
           data.messageType,
           data.gameId || null,
           data.teamId || null,
           data.recipientId || null
         ]
       )
+      
+      // Add link previews to the message object
+      const message = result.rows[0]
+      if (linkPreviews.length > 0) {
+        message.link_previews = linkPreviews.filter(p => p !== null)
+        
+        // Store link previews in database
+        for (const preview of message.link_previews) {
+          await query(
+            `INSERT INTO message_link_previews (
+              message_id, url, title, description, image, site_name
+            ) VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              messageId,
+              preview.url,
+              preview.title || null,
+              preview.description || null,
+              preview.image || null,
+              preview.siteName || null
+            ]
+          ).catch(err => logger.error('Error storing link preview:', err))
+        }
+      }
       
       // Update unread count for recipient
       if (data.messageType === 'dm' && data.recipientId) {
@@ -67,7 +112,7 @@ class ChatService {
         await this.incrementGameUnreadForAllPlayers(data.gameId, data.senderId)
       }
       
-      return result.rows[0]
+      return message
     } catch (error) {
       logger.error('Error sending message:', error)
       throw error
@@ -122,6 +167,20 @@ class ChatService {
       
       const result = await query(queryText, queryParams)
       
+      // Fetch link previews for messages
+      const messages = result.rows
+      for (const message of messages) {
+        const previewsResult = await query(
+          `SELECT url, title, description, image, site_name
+           FROM message_link_previews
+           WHERE message_id = $1`,
+          [message.id]
+        )
+        if (previewsResult.rows.length > 0) {
+          message.link_previews = previewsResult.rows
+        }
+      }
+      
       // Mark messages as read
       if (messageType === 'dm') {
         await this.markMessagesAsRead(userId, conversationId)
@@ -129,7 +188,7 @@ class ChatService {
         await this.markGameMessagesAsRead(userId, conversationId)
       }
       
-      return result.rows.reverse() // Reverse to get chronological order
+      return messages.reverse() // Reverse to get chronological order
     } catch (error) {
       logger.error('Error getting chat history:', error)
       throw error
@@ -321,18 +380,137 @@ class ChatService {
    */
   async editMessage(messageId: string, userId: string, newMessage: string): Promise<boolean> {
     try {
+      // Apply profanity filter if enabled
+      let filteredMessage = newMessage
+      const shouldFilter = await this.shouldFilterProfanity(userId)
+      
+      if (shouldFilter) {
+        filteredMessage = profanityFilter.clean(newMessage)
+      }
+      
       const result = await query(
         `UPDATE chat_messages 
          SET message = $1, edited_at = CURRENT_TIMESTAMP 
          WHERE id = $2 AND sender_id = $3 AND deleted_at IS NULL
          RETURNING id`,
-        [newMessage, messageId, userId]
+        [filteredMessage, messageId, userId]
       )
       
       return result.rows.length > 0
     } catch (error) {
       logger.error('Error editing message:', error)
       return false
+    }
+  }
+  
+  /**
+   * Check if profanity filter is enabled for user
+   */
+  async shouldFilterProfanity(userId: string): Promise<boolean> {
+    try {
+      const result = await query(
+        `SELECT profanity_filter FROM user_preferences WHERE user_id = $1`,
+        [userId]
+      )
+      
+      // Default to true if no preference set
+      if (result.rows.length === 0) {
+        return true
+      }
+      
+      return result.rows[0].profanity_filter !== false
+    } catch (error) {
+      logger.error('Error checking profanity filter preference:', error)
+      return true // Default to filtering on error
+    }
+  }
+
+  /**
+   * Add or update a reaction to a message
+   */
+  async addReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
+    try {
+      // Check if user already reacted with this emoji
+      const existing = await query(
+        `SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
+        [messageId, userId, emoji]
+      )
+
+      if (existing.rows.length > 0) {
+        // Already reacted with this emoji, remove it instead
+        return this.removeReaction(messageId, userId, emoji)
+      }
+
+      // Add the reaction
+      await query(
+        `INSERT INTO message_reactions (message_id, user_id, emoji, created_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (message_id, user_id, emoji) DO NOTHING`,
+        [messageId, userId, emoji]
+      )
+
+      return true
+    } catch (error) {
+      logger.error('Error adding reaction:', error)
+      return false
+    }
+  }
+
+  /**
+   * Remove a reaction from a message
+   */
+  async removeReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
+    try {
+      const result = await query(
+        `DELETE FROM message_reactions 
+         WHERE message_id = $1 AND user_id = $2 AND emoji = $3
+         RETURNING message_id`,
+        [messageId, userId, emoji]
+      )
+
+      return result.rows.length > 0
+    } catch (error) {
+      logger.error('Error removing reaction:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get reactions for a message
+   */
+  async getMessageReactions(messageId: string): Promise<any[]> {
+    try {
+      const result = await query(
+        `SELECT r.emoji, r.user_id, u.username
+         FROM message_reactions r
+         JOIN users u ON r.user_id = u.id
+         WHERE r.message_id = $1
+         ORDER BY r.created_at`,
+        [messageId]
+      )
+
+      // Group reactions by emoji
+      const reactionMap = new Map<string, any[]>()
+      
+      for (const row of result.rows) {
+        if (!reactionMap.has(row.emoji)) {
+          reactionMap.set(row.emoji, [])
+        }
+        reactionMap.get(row.emoji)!.push({
+          id: row.user_id,
+          username: row.username
+        })
+      }
+
+      // Convert to array format
+      return Array.from(reactionMap.entries()).map(([emoji, users]) => ({
+        emoji,
+        users,
+        count: users.length
+      }))
+    } catch (error) {
+      logger.error('Error getting message reactions:', error)
+      return []
     }
   }
 }

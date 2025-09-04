@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../../store/chatSlice'
+import LinkPreviewComponent from './LinkPreview'
 
 interface MessageListProps {
   messages: ChatMessage[]
@@ -57,6 +58,19 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
                   message.message
                 )}
               </div>
+              
+              {/* Link Previews */}
+              {!isDeleted && message.link_previews && message.link_previews.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {message.link_previews.map((preview, index) => (
+                    <LinkPreviewComponent 
+                      key={`${message.id}-preview-${index}`}
+                      preview={preview} 
+                      isOwnMessage={isOwnMessage}
+                    />
+                  ))}
+                </div>
+              )}
               
               {/* Timestamp and edit indicator */}
               <div className={`text-xs mt-1 flex items-center gap-2 ${
