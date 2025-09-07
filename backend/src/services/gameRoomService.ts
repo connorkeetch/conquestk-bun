@@ -108,14 +108,15 @@ export class GameRoomService {
              COUNT(rp.user_id) as current_players,
              u.username as host_username,
              u.skill_rating as host_skill_rating,
-             u.current_tier as host_tier,
+             -- u.current_tier as host_tier, -- Column doesn't exist yet
+             NULL as host_tier,
              m.name as map_name
       FROM game_rooms gr
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON gr.host_id = u.id
       LEFT JOIN maps m ON gr.map_id = m.id
       WHERE gr.status IN ('waiting', 'active')
-      GROUP BY gr.id, u.username, u.skill_rating, u.current_tier, m.name
+      GROUP BY gr.id, u.username, u.skill_rating, m.name
       ORDER BY gr.created_at DESC
     `
 
@@ -138,7 +139,8 @@ export class GameRoomService {
                  'userId', u.id,
                  'username', u.username,
                  'skill_rating', u.skill_rating,
-                 'current_tier', u.current_tier,
+                 -- 'current_tier', u.current_tier, -- Column doesn't exist yet
+                 'current_tier', NULL,
                  'joinedAt', rp.joined_at
                )
              ) as players

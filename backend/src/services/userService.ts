@@ -6,8 +6,8 @@ export class UserService {
     // Try with email verification columns first
     try {
       const insertQuery = `
-        INSERT INTO users (username, email, password_hash, email_verified, verification_token, verification_sent_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO users (username, email, password_hash, email_verified, verification_token)
+        VALUES ($1, $2, $3, $4, $5)
       `
 
       const values = [
@@ -16,7 +16,7 @@ export class UserService {
         userData.password,
         userData.email_verified === true,
         userData.verification_token || null,
-        userData.verification_sent_at || null,
+        -- userData.verification_sent_at || null, -- Column doesn't exist in schema
       ]
 
       await query(insertQuery, values)
@@ -95,7 +95,10 @@ export class UserService {
     const updateQuery = `
       UPDATE users 
       SET verification_token = $1,
-          verification_sent_at = CURRENT_TIMESTAMP,
+          -- verification_sent_at = CURRENT_TIMESTAMP, -- Column doesn't exist
+          updated_at = CURRENT_TIMESTAMP,
+          -- Store sent timestamp in verification_token if needed
+          verification_token = $1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `
