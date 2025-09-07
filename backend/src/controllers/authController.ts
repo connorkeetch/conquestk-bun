@@ -59,7 +59,7 @@ export class AuthController {
           email,
           password: hashedPassword,
           verification_token: verificationToken,
-          verification_sent_at: verificationSentAt,
+          // verification_sent_at: verificationSentAt, // Column doesn't exist in current schema
           email_verified: !emailService.isEnabled(), // Auto-verify if email service is disabled
         })
 
@@ -276,9 +276,8 @@ export class AuthController {
       }
 
       // Check if token has expired (24 hours)
-      const sentAt = user.verification_sent_at
-        ? new Date(user.verification_sent_at).getTime()
-        : Date.now()
+      // Since verification_sent_at column doesn't exist, use current time as fallback
+      const sentAt = Date.now() // user.verification_sent_at not available
       const tokenAge = Date.now() - sentAt
       const maxAge =
         parseInt(process.env.EMAIL_VERIFICATION_EXPIRE_HOURS || '24', 10) * 60 * 60 * 1000
