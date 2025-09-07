@@ -13,7 +13,7 @@ export default function MountainLogo({ width = 60, height = 60, className = '' }
       xmlns="http://www.w3.org/2000/svg"
       className={`${className}`}
       style={{
-        filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(147, 51, 234, 0.9)) drop-shadow(0 0 16px rgba(147, 51, 234, 0.6)) drop-shadow(0 0 24px rgba(147, 51, 234, 0.3))'
+        filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 3px rgba(147, 51, 234, 0.8)) drop-shadow(0 0 6px rgba(147, 51, 234, 0.4))'
       }}
     >
       <defs>

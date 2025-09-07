@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 interface MapVersion {
@@ -45,13 +45,7 @@ export const MapVersionManager: React.FC = () => {
     tags: [],
   })
 
-  useEffect(() => {
-    if (mapId) {
-      loadVersions()
-    }
-  }, [mapId, loadVersions])
-
-  const loadVersions = async () => {
+  const loadVersions = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/map-approval/maps/${mapId}/versions`, {
@@ -71,7 +65,13 @@ export const MapVersionManager: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [mapId])
+
+  useEffect(() => {
+    if (mapId) {
+      loadVersions()
+    }
+  }, [mapId, loadVersions])
 
   const handleCreateVersion = async () => {
     try {

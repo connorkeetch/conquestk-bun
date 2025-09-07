@@ -133,57 +133,7 @@ export default function MapEditor() {
     } catch (_error) {}
   }
 
-  // Canvas drawing setup
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-    // Draw background image if loaded
-    if (state.imageUrl) {
-      const img = new Image()
-      // No need for crossOrigin with data URLs
-      img.onload = () => {
-        // Clear and draw image
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-
-        // Draw territories and adjacencies on top of image
-        redrawTerritories(ctx)
-        drawAdjacencies(ctx)
-      }
-
-      img.onerror = (_event) => {
-        // Fall back to grid if image fails
-        drawGrid(ctx)
-        redrawTerritories(ctx)
-        drawAdjacencies(ctx)
-      }
-
-      // Use the image URL directly for data URLs, or process it for relative URLs
-      const imageUrl = state.imageUrl.startsWith('data:')
-        ? state.imageUrl
-        : mapService.getImageUrl(state.imageUrl)
-      img.src = imageUrl
-    } else {
-      // Draw grid background
-      drawGrid(ctx)
-      redrawTerritories(ctx)
-      drawAdjacencies(ctx)
-    }
-  }, [
-    state.imageUrl,
-    drawAdjacencies, // Draw grid background
-    drawGrid,
-    redrawTerritories,
-  ])
-
-  const drawGrid = (ctx: CanvasRenderingContext2D) => {
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     const canvas = ctx.canvas
     ctx.strokeStyle = '#374151'
     ctx.lineWidth = 1
@@ -202,9 +152,9 @@ export default function MapEditor() {
       ctx.lineTo(canvas.width, y)
       ctx.stroke()
     }
-  }
+  }, [])
 
-  const redrawTerritories = (ctx: CanvasRenderingContext2D) => {
+  const redrawTerritories = useCallback((ctx: CanvasRenderingContext2D) => {
     // Draw territories
     state.territories.forEach((territory) => {
       const continent = state.continents.find((c) => c.id === territory.continentId)
@@ -290,9 +240,9 @@ export default function MapEditor() {
         ctx.stroke()
       })
     }
-  }
+  }, [state.territories, state.continents, state.selectedTerritory, state.isDrawing, state.currentPolygon, state.imageScale])
 
-  const drawAdjacencies = (ctx: CanvasRenderingContext2D) => {
+  const drawAdjacencies = useCallback((ctx: CanvasRenderingContext2D) => {
     // Draw adjacency lines
     state.adjacencies.forEach((adjacency) => {
       const fromTerritory = state.territories.find((t) => t.id === adjacency.from)
@@ -348,111 +298,56 @@ export default function MapEditor() {
         ctx.setLineDash([])
       }
     }
-  }
+  }, [state.adjacencies, state.territories, state.selectedTool, state.firstSelectedTerritory, state.imageScale])
 
-  const handleCanvasClick = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current
-      if (!canvas) return
+  // Canvas drawing setup - moved after function definitions to avoid hoisting issues
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-      const rect = canvas.getBoundingClientRect()
-      // Scale the coordinates based on the actual canvas size vs displayed size
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (event.clientX - rect.left) * scaleX
-      const y = (event.clientY - rect.top) * scaleY
-      
-      // Store coordinates relative to original image dimensions for consistency
-      const normalizedX = x / state.imageScale
-      const normalizedY = y / state.imageScale
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-      if (state.selectedTool === 'territory') {
-        if (!state.isDrawing) {
-          setState((prev) => ({
-            ...prev,
-            isDrawing: true,
-            currentPolygon: [{ x: normalizedX, y: normalizedY }],
-          }))
-        } else {
-          setState((prev) => ({
-            ...prev,
-            currentPolygon: [...prev.currentPolygon, { x: normalizedX, y: normalizedY }],
-          }))
-        }
-      } else if (state.selectedTool === 'select') {
-        // Select territory
-        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
-        setState((prev) => ({
-          ...prev,
-          selectedTerritory: clickedTerritory?.id,
-        }))
-      } else if (state.selectedTool === 'adjacency') {
-        // Handle adjacency creation
-        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
-        if (!clickedTerritory) return
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-        if (!state.firstSelectedTerritory) {
-          // First territory selection
-          setState((prev) => ({
-            ...prev,
-            firstSelectedTerritory: clickedTerritory.id,
-            selectedTerritory: clickedTerritory.id,
-          }))
-        } else if (state.firstSelectedTerritory !== clickedTerritory.id) {
-          // Second territory selection - create adjacency
-          const newAdjacency = {
-            from: state.firstSelectedTerritory,
-            to: clickedTerritory.id,
-          }
+    // Draw background image if loaded
+    if (state.imageUrl) {
+      const img = new Image()
+      // No need for crossOrigin with data URLs
+      img.onload = () => {
+        // Clear and draw image
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-          // Check if adjacency already exists
-          const exists = state.adjacencies.some(
-            (adj) =>
-              (adj.from === newAdjacency.from && adj.to === newAdjacency.to) ||
-              (adj.from === newAdjacency.to && adj.to === newAdjacency.from),
-          )
-
-          if (!exists) {
-            setState((prev) => ({
-              ...prev,
-              adjacencies: [...prev.adjacencies, newAdjacency],
-              firstSelectedTerritory: undefined,
-              selectedTerritory: undefined,
-            }))
-          } else {
-            // Reset selection if adjacency already exists
-            setState((prev) => ({
-              ...prev,
-              firstSelectedTerritory: undefined,
-              selectedTerritory: undefined,
-            }))
-          }
-        } else {
-          // Same territory clicked - deselect
-          setState((prev) => ({
-            ...prev,
-            firstSelectedTerritory: undefined,
-            selectedTerritory: undefined,
-          }))
-        }
+        // Draw territories and adjacencies on top of image
+        redrawTerritories(ctx)
+        drawAdjacencies(ctx)
       }
-    },
-    [
-      state.selectedTool,
-      state.isDrawing,
-      findTerritoryAtPoint,
-      state.adjacencies.some,
-      state.firstSelectedTerritory,
-    ],
-  )
 
-  const handleCanvasDoubleClick = useCallback(() => {
-    if (state.selectedTool === 'territory' && state.isDrawing && state.currentPolygon.length >= 3) {
-      finishTerritory()
+      img.onerror = (_event) => {
+        // Fall back to grid if image fails
+        drawGrid(ctx)
+        redrawTerritories(ctx)
+        drawAdjacencies(ctx)
+      }
+
+      // Use the image URL directly for data URLs, or process it for relative URLs
+      const imageUrl = state.imageUrl.startsWith('data:')
+        ? state.imageUrl
+        : mapService.getImageUrl(state.imageUrl)
+      img.src = imageUrl
+    } else {
+      // Draw grid background
+      drawGrid(ctx)
+      redrawTerritories(ctx)
+      drawAdjacencies(ctx)
     }
-  }, [state.selectedTool, state.isDrawing, state.currentPolygon, finishTerritory])
+  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory, state.isDrawing, state.currentPolygon, state.adjacencies, state.selectedTool, state.firstSelectedTerritory, state.imageScale, drawGrid, redrawTerritories, drawAdjacencies])
 
-  const finishTerritory = () => {
+  // Canvas handlers will be defined after all helper functions
+
+  const finishTerritory = useCallback(() => {
     if (!newTerritoryName.trim() || state.currentPolygon.length < 3) return
 
     // Calculate center point for army position
@@ -482,15 +377,9 @@ export default function MapEditor() {
     }))
 
     setNewTerritoryName('')
-  }
+  }, [newTerritoryName, state.currentPolygon, state.selectedContinent, state.currentMap?.id])
 
-  const findTerritoryAtPoint = (x: number, y: number): MapTerritory | undefined => {
-    return state.territories.find((territory) => {
-      return isPointInPolygon({ x, y }, territory.boundaryCoords)
-    })
-  }
-
-  const isPointInPolygon = (point: Coordinate, polygon: Coordinate[]): boolean => {
+  const isPointInPolygon = useCallback((point: Coordinate, polygon: Coordinate[]): boolean => {
     let inside = false
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       if (
@@ -504,7 +393,13 @@ export default function MapEditor() {
       }
     }
     return inside
-  }
+  }, [])
+
+  const findTerritoryAtPoint = useCallback((x: number, y: number): MapTerritory | undefined => {
+    return state.territories.find((territory) => {
+      return isPointInPolygon({ x, y }, territory.boundaryCoords)
+    })
+  }, [state.territories, isPointInPolygon])
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -811,6 +706,15 @@ export default function MapEditor() {
         tags: ['custom'],
       }
 
+      console.log('Saving map with data:', {
+        mapData,
+        hasImageFile: !!imageFile,
+        mapName: mapName,
+        nameLength: mapName.length,
+        territories: state.territories.length,
+        continents: state.continents.length,
+      })
+
       const savedMap = await mapService.createMap(mapData, imageFile || undefined)
 
       // Save continents
@@ -863,12 +767,24 @@ export default function MapEditor() {
 
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (error: any) {
+      console.error('Map save error:', error)
+      console.error('Error response:', error.response?.data)
       setSaveStatus('error')
-      setSaveError(error.message || 'Failed to save map. Please try again.')
+      
+      let errorMessage = 'Failed to save map. Please try again.'
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+        if (error.response.data.details) {
+          console.log('Validation details:', error.response.data.details)
+          errorMessage += ': ' + error.response.data.details.map((d: any) => d.msg).join(', ')
+        }
+      }
+      
+      setSaveError(errorMessage)
       setTimeout(() => {
         setSaveStatus('idle')
         setSaveError(null)
-      }, 5000)
+      }, 10000) // Longer timeout to read the error
     }
   }
 
@@ -1039,6 +955,110 @@ export default function MapEditor() {
       imageHeight: prev.imageHeight,
     }))
   }
+
+  // Canvas event handlers - defined after all helper functions to avoid hoisting issues
+  const handleCanvasClick = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const rect = canvas.getBoundingClientRect()
+      // Scale the coordinates based on the actual canvas size vs displayed size
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      const x = (event.clientX - rect.left) * scaleX
+      const y = (event.clientY - rect.top) * scaleY
+      
+      // Store coordinates relative to original image dimensions for consistency
+      const normalizedX = x / state.imageScale
+      const normalizedY = y / state.imageScale
+
+      if (state.selectedTool === 'territory') {
+        if (!state.isDrawing) {
+          setState((prev) => ({
+            ...prev,
+            isDrawing: true,
+            currentPolygon: [{ x: normalizedX, y: normalizedY }],
+          }))
+        } else {
+          setState((prev) => ({
+            ...prev,
+            currentPolygon: [...prev.currentPolygon, { x: normalizedX, y: normalizedY }],
+          }))
+        }
+      } else if (state.selectedTool === 'select') {
+        // Select territory
+        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
+        setState((prev) => ({
+          ...prev,
+          selectedTerritory: clickedTerritory?.id,
+        }))
+      } else if (state.selectedTool === 'adjacency') {
+        // Handle adjacency creation
+        const clickedTerritory = findTerritoryAtPoint(normalizedX, normalizedY)
+        if (!clickedTerritory) return
+
+        if (!state.firstSelectedTerritory) {
+          // First territory selection
+          setState((prev) => ({
+            ...prev,
+            firstSelectedTerritory: clickedTerritory.id,
+            selectedTerritory: clickedTerritory.id,
+          }))
+        } else if (state.firstSelectedTerritory !== clickedTerritory.id) {
+          // Second territory selection - create adjacency
+          const newAdjacency = {
+            from: state.firstSelectedTerritory,
+            to: clickedTerritory.id,
+          }
+
+          // Check if adjacency already exists
+          const exists = state.adjacencies.some(
+            (adj) =>
+              (adj.from === newAdjacency.from && adj.to === newAdjacency.to) ||
+              (adj.from === newAdjacency.to && adj.to === newAdjacency.from),
+          )
+
+          if (!exists) {
+            setState((prev) => ({
+              ...prev,
+              adjacencies: [...prev.adjacencies, newAdjacency],
+              firstSelectedTerritory: undefined,
+              selectedTerritory: undefined,
+            }))
+          } else {
+            // Reset selection if adjacency already exists
+            setState((prev) => ({
+              ...prev,
+              firstSelectedTerritory: undefined,
+              selectedTerritory: undefined,
+            }))
+          }
+        } else {
+          // Same territory clicked - deselect
+          setState((prev) => ({
+            ...prev,
+            firstSelectedTerritory: undefined,
+            selectedTerritory: undefined,
+          }))
+        }
+      }
+    },
+    [
+      state.selectedTool,
+      state.isDrawing,
+      findTerritoryAtPoint,
+      state.adjacencies,
+      state.firstSelectedTerritory,
+      state.imageScale,
+    ],
+  )
+
+  const handleCanvasDoubleClick = useCallback(() => {
+    if (state.selectedTool === 'territory' && state.isDrawing && state.currentPolygon.length >= 3) {
+      finishTerritory()
+    }
+  }, [state.selectedTool, state.isDrawing, state.currentPolygon, finishTerritory])
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 relative">
