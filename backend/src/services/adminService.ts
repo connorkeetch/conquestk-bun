@@ -236,7 +236,7 @@ export class AdminService {
     const bcrypt = require('bcrypt')
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    await query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, targetUserId])
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, targetUserId])
 
     await this.logAdminAction(
       adminUserId,

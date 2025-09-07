@@ -221,6 +221,51 @@ useEffect(() => {
    - Separate limits for different operations
    - Suspicious activity tracking
 
+## Troubleshooting Guide
+
+### Current Issues (September 2025)
+1. **No UI feedback** - Registration succeeds but user doesn't know email verification is required
+2. **Emails not sending** - Resend API may not be properly configured
+3. **Silent failures** - Email errors are logged but user isn't notified
+
+### Debug Steps
+1. **Check if email service is initialized**:
+   - Look for "✅ Email service initialized with Resend" in logs
+   - Or "⚠️ Email service disabled" if EMAIL_ENABLED=false
+
+2. **Check Resend API**:
+   - Go to https://resend.com/domains
+   - Verify send.conquestk.com is verified
+   - Check API key is active
+
+3. **Test email directly**:
+   ```bash
+   cd backend
+   npm run test:email
+   ```
+
+4. **Check logs for**:
+   - "Sending verification email to: [email]"
+   - "Failed to send verification email:" (indicates error)
+
+### Known Issues
+
+**Problem 1: No UI Feedback**
+- Location: `frontend/src/store/authSlice.ts` (line 100-105)
+- After successful registration, user is automatically logged in
+- No message about email verification
+
+**Problem 2: Email Sending Silently Fails**
+- Location: `backend/src/controllers/authController.ts` (line 113-116)
+- Errors are caught but user isn't notified
+- Registration succeeds even if email fails
+
+### Quick Fixes Needed
+1. Add UI notification after registration
+2. Return email verification status in registration response
+3. Add /api/auth/resend-verification endpoint
+4. Show verification required message on login if not verified
+
 ## Future Enhancements
 
 - [ ] Email change functionality with re-verification

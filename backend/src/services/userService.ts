@@ -6,7 +6,7 @@ export class UserService {
     // Try with email verification columns first
     try {
       const insertQuery = `
-        INSERT INTO users (username, email, password, email_verified, verification_token, verification_sent_at)
+        INSERT INTO users (username, email, password_hash, email_verified, verification_token, verification_sent_at)
         VALUES ($1, $2, $3, $4, $5, $6)
       `
 
@@ -37,7 +37,7 @@ export class UserService {
         error.code === 'ER_BAD_FIELD_ERROR'
       ) {
         const basicQuery = `
-          INSERT INTO users (username, email, password)
+          INSERT INTO users (username, email, password_hash)
           VALUES ($1, $2, $3)
         `
 
@@ -168,7 +168,7 @@ export class UserService {
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const updateQuery = `
       UPDATE users 
-      SET password = $1,
+      SET password_hash = $1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `

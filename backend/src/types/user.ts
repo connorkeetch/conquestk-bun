@@ -2,7 +2,7 @@ export interface User {
   id: string
   username: string
   email: string
-  password: string
+  password_hash: string
   email_verified?: boolean
   verification_token?: string | null
   verification_sent_at?: Date | null
