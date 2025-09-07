@@ -75,11 +75,6 @@ export class UserService {
     return result.rows[0] || null
   }
 
-  async updateLastLogin(id: string): Promise<void> {
-    const updateQuery = `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-    await query(updateQuery, [id])
-  }
-
   async findByVerificationToken(token: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE verification_token = $1', [token])
     return result.rows[0] || null
