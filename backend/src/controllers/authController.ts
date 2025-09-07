@@ -566,26 +566,34 @@ export class AuthController {
 
       // Upsert user settings
       const updateQuery = `
-        INSERT INTO user_settings (user_id, theme, preferred_color, show_online_status, direct_messages, notifications)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO user_settings (user_id, theme, notifications, privacy, preferences)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (user_id) 
         DO UPDATE SET 
           theme = COALESCE(EXCLUDED.theme, user_settings.theme),
-          preferred_color = COALESCE(EXCLUDED.preferred_color, user_settings.preferred_color),
-          show_online_status = COALESCE(EXCLUDED.show_online_status, user_settings.show_online_status),
-          direct_messages = COALESCE(EXCLUDED.direct_messages, user_settings.direct_messages),
           notifications = COALESCE(EXCLUDED.notifications, user_settings.notifications),
+          privacy = COALESCE(EXCLUDED.privacy, user_settings.privacy),
+          preferences = COALESCE(EXCLUDED.preferences, user_settings.preferences),
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `
 
+      // Prepare the data for storage
+      const privacySettings = {
+        show_online_status: settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null
+      }
+      
+      const preferencesData = {
+        preferred_color: settings.preferredColor || null,
+        direct_messages: settings.directMessages || null
+      }
+
       const result = await query(updateQuery, [
         userId,
         settings.theme || null,
-        settings.preferredColor || null,
-        settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null,
-        settings.directMessages || null,
         settings.notifications ? JSON.stringify(settings.notifications) : null,
+        JSON.stringify(privacySettings),
+        JSON.stringify(preferencesData)
       ])
 
       logger.info('User settings updated:', { userId, settings: Object.keys(settings) })
