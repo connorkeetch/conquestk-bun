@@ -66,7 +66,7 @@ async function seedUsers() {
 
       // Insert user
       await query(
-        `INSERT INTO users (username, email, password) 
+        `INSERT INTO users (username, email, password_hash) 
          VALUES ($1, $2, $3)`,
         [user.username, user.email, hashedPassword],
       )

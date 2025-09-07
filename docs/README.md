@@ -1,207 +1,98 @@
-# Documentation System Guide
+# 📚 ConquestK Documentation
 
-This guide explains how the 3-tier documentation architecture powers the Claude Code Development Kit and why it provides superior results compared to traditional documentation approaches.
+Welcome to the ConquestK Risk Game documentation! This directory contains all technical documentation for developers and contributors.
 
-## Critical Foundation Files
+## 🚀 Quick Start
 
-Two files form the cornerstone of the entire documentation system:
+New to the project? Start here:
 
-1. **docs-overview.md** - The central routing guide that directs AI agents to appropriate documentation based on task complexity. This file maps your entire documentation structure and enables intelligent context loading.
+1. **[Project Overview](../README.md)** - Getting started & project overview
+2. **[AI Assistant Guide](../CLAUDE.md)** - Essential instructions for AI-assisted development
+3. **[Development Tasks](../TODO.md)** - Current priorities and feature roadmap
 
-2. **project-structure.md** - The comprehensive overview of your project's complete file structure and technology stack. This file is required reading for all AI agents and must be attached to Gemini consultations.
+## 🔧 Development Guides
 
-These foundation files ensure AI agents always have the essential context needed to understand your project and navigate to relevant documentation.
+Essential guides for development:
 
-## Why the 3-Tier System
+- **[Deployment Guide](DEPLOYMENT.md)** - Production & staging deployment procedures
+- **[Coding Standards](CODING-STANDARDS.md)** - Code quality standards & best practices
+- **[Codebase Map](CODEBASE-MAP.md)** - Navigation guide through the project structure
+- **[Development Setup](DEVELOPMENT.md)** - Local environment configuration
 
-### Traditional Documentation Problems
+## 📊 Project Status
 
-Standard documentation approaches create friction for AI-assisted development:
+Track project progress and features:
 
-- **Context Overload** - AI agents must process entire documentation sets for simple tasks
-- **Maintenance Burden** - Every code change cascades to multiple documentation locations
-- **Stale Content** - Documentation diverges from implementation reality
-- **No AI Optimization** - Human-readable formats lack structure for machine processing
+- **[Project Status](PROJECT-STATUS.md)** - Feature completion tracking & achievements
+- **[Architecture Overview](ARCHITECTURE.md)** - System design and architecture decisions
+- **[Upgrade Log](UPGRADE-LOG.md)** - Version upgrade history
 
-### The 3-Tier Solution
+## 🔧 Technical Documentation
 
-The kit solves these problems through hierarchical organization:
+Implementation-specific documentation:
 
-**Tier 1: Foundation (Rarely Changes)**
-- Project-wide standards, architecture decisions, technology stack
-- Auto-loads for every AI session
-- Provides consistent baseline without redundancy
-- Uses CLAUDE.md as the master context file
+- **[Email System](EMAIL-VERIFICATION.md)** - Email verification system implementation
+- **[Authentication](AUTH-IMPLEMENTATION.md)** - Authentication flow and security
+- **[Map Format](MAP-FORMAT.md)** - Map file format specification
+- **[Audio Implementation](AUDIO-IMPLEMENTATION.md)** - Sound system documentation
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
 
-**Tier 2: Component (Occasionally Changes)**
-- Component boundaries, architectural patterns, integration points
-- Loads only when working within specific components
-- Isolates architectural decisions from implementation details
-- Uses CONTEXT.md files at component roots
+## 🛡️ Security & Compliance
 
-**Tier 3: Feature (Frequently Changes)**
-- Implementation specifics, technical details, local patterns
-- Co-located with code for immediate updates
-- Minimizes documentation cascade when code changes
-- Uses CONTEXT.md files within feature directories
+Security and legal documentation:
 
-## Benefits vs Traditional Systems
+- **[Security Audit](SECURITY-AUDIT.md)** - Security review checklist
+- **[Legal Review](LEGAL_REVIEW_CHECKLIST.md)** - Legal compliance checklist
+- **[Legal Implementation](LEGAL_IMPLEMENTATION_PLAN.md)** - Legal features roadmap
 
-### 1. Intelligent Context Loading
+## 🎯 Feature Planning
 
-**Traditional**: AI loads entire documentation corpus regardless of task
-**3-Tier**: Commands load only relevant tiers based on complexity
+Feature-specific planning documents:
 
-Example:
-- Simple query → Tier 1 only (minimal tokens)
-- Component work → Tier 1 + relevant Tier 2
-- Deep implementation → All relevant tiers
+- **[Capital System](CAPITAL_SYSTEM_PLAN.md)** - Capital game mode planning
+- **[Map Editor Improvements](MAP_EDITOR_IMPROVEMENTS.md)** - Map editor enhancements
+- **[User Preferences](USER-PREFERENCES.md)** - User preference system design
 
-### 2. Maintenance Efficiency
+## 🔍 Analysis & Health
 
-**Traditional**: Update multiple documents for each change
-**3-Tier**: Updates isolated to appropriate tier
+Project analysis and health monitoring:
 
-Example:
-- API endpoint change → Update only Tier 3 API documentation
-- New component → Add Tier 2 documentation, Tier 1 unchanged
-- Coding standard → Update only Tier 1, applies everywhere
+- **[Codebase Health Check](CODEBASE-HEALTH-CHECK.md)** - Project health status
+- **[Profile System Consolidation](PROFILE-SYSTEM-CONSOLIDATION-PLAN.md)** - Profile system planning
+- **[Settings vs Preferences Analysis](SETTINGS-VS-PREFERENCES-ANALYSIS.md)** - UI/UX analysis
+- **[Missing Database Tables](MISSING-DATABASE-TABLES.md)** - Database schema gaps
+- **[Endpoint Audit](ENDPOINT-AUDIT.md)** - API endpoint review
 
-### 3. AI Performance Optimization
+## 🧪 Testing & Quality
 
-**Traditional**: AI struggles to find relevant information
-**3-Tier**: Structured hierarchy guides AI to precise context
+Testing and quality assurance documentation:
 
-The system provides:
-- Clear routing logic for agent navigation
-- Predictable documentation locations
-- Efficient token usage through targeted loading
+- **[Playwright MCP](PLAYWRIGHT-MCP.md)** - End-to-end testing setup
 
-## Integration with Kit Components
+## 📁 Directory Structure
 
-### Command Integration
-
-Commands leverage the 3-tier structure for intelligent operation:
+The docs are organized for easy navigation:
 
 ```
-Command Execution → Analyze Task Complexity → Load Appropriate Tiers
-                                            ↓
-                                   Simple: Tier 1 only
-                                   Component: Tiers 1-2
-                                   Complex: All relevant tiers
+docs/
+├── README.md                    # This file - documentation index
+├── [GUIDE-NAME].md             # Development and setup guides  
+├── [FEATURE-NAME].md           # Feature-specific documentation
+└── ai-context/                 # AI assistant context files
+    ├── deployment-infrastructure.md
+    ├── handoff.md
+    └── system-integration.md
 ```
 
-### MCP Server Integration
+## 💡 Contributing to Documentation
 
-External AI services receive proper context through the tier system:
+When adding new documentation:
 
-- **Gemini Consultations** - Auto-attach `project-structure.md` (Tier 1)
-- **Context7 Lookups** - Happen within established project context
-- **Recommendations** - Align with documented architecture
-
-### Multi-Agent Routing
-
-The documentation structure determines agent behavior:
-
-- Number of agents spawned based on tiers involved
-- Each agent receives targeted documentation subset
-- Parallel analysis without context overlap
-
-## Key Files and Their Roles
-
-### Foundation Files (ai-context/)
-
-**docs-overview.md**
-- Template for implementing 3-tier documentation
-- Maps documentation structure for AI navigation
-- [View Template](ai-context/docs-overview.md)
-
-**project-structure.md**
-- Complete technology stack and file organization
-- Required reading for all AI agents
-- Auto-attaches to Gemini consultations
-- [View Template](ai-context/project-structure.md)
-
-**system-integration.md**
-- Cross-component communication patterns
-- Integration architectures for multi-agent analysis
-- [View Template](ai-context/system-integration.md)
-
-**deployment-infrastructure.md**
-- Infrastructure patterns and constraints
-- Deployment context for AI recommendations
-- [View Template](ai-context/deployment-infrastructure.md)
-
-**handoff.md**
-- Session continuity between AI interactions
-- Task state preservation
-- [View Template](ai-context/handoff.md)
-
-### Context Templates
-
-**CLAUDE.md** (Tier 1)
-- Master AI context with coding standards
-- Project-wide instructions and patterns
-- [View Template](CLAUDE.md)
-
-**CONTEXT-tier2-component.md**
-- Component-level architectural context
-- [View Template](CONTEXT-tier2-component.md)
-
-**CONTEXT-tier3-feature.md**
-- Feature-specific implementation details
-- [View Template](CONTEXT-tier3-feature.md)
-
-## Implementation Strategy
-
-### 1. Start with Templates
-
-Use provided templates as foundation:
-- Copy and customize for your project
-- Maintain consistent structure
-- Focus on AI-consumable formatting
-
-### 2. Follow Natural Boundaries
-
-Let your architecture guide tier placement:
-- Stable decisions → Tier 1
-- Component design → Tier 2
-- Implementation details → Tier 3
-
-### 3. Co-locate Documentation
-
-Place CONTEXT.md files with related code:
-```
-backend/
-├── CONTEXT.md         # Backend architecture (Tier 2)
-└── src/
-    └── api/
-        └── CONTEXT.md # API implementation (Tier 3)
-```
-
-### 4. Maintain Hierarchy
-
-Ensure clear relationships:
-- Tier 3 references Tier 2 patterns
-- Tier 2 follows Tier 1 standards
-- No circular dependencies
-
-### 5. Use Documentation Commands
-
-The kit provides commands to manage documentation:
-- **`/create-docs`** - Generate initial documentation structure for projects without existing docs
-- **`/update-docs`** - Regenerate and update documentation after code changes to keep everything current
-
-## Measuring Success
-
-The 3-tier system succeeds when:
-
-1. **AI agents find context quickly** - No searching through irrelevant documentation
-2. **Updates stay localized** - Changes don't cascade unnecessarily
-3. **Documentation stays current** - Co-location ensures updates happen
-4. **Commands work efficiently** - Appropriate context loads automatically
-5. **MCP servers provide relevant advice** - External AI understands your project
+1. **Follow naming conventions** - Use descriptive, lowercase filenames with hyphens
+2. **Update this README** - Add your new document to the appropriate section above
+3. **Include proper headers** - Use consistent markdown formatting
+4. **Cross-reference related docs** - Link to related documentation where helpful
 
 ---
 
-*Part of the Claude Code Development Kit - see [main documentation](../README.md) for complete system overview.*
+*Last updated: September 7, 2025*

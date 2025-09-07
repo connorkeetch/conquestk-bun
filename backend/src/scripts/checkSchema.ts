@@ -123,7 +123,7 @@ async function checkTable(tableName: string): Promise<TableCheckResult> {
 
 async function checkRequiredColumns(): Promise<void> {
   const criticalColumns = [
-    { table: 'users', columns: ['id', 'username', 'email', 'password'] },
+    { table: 'users', columns: ['id', 'username', 'email', 'password_hash'] },
     { table: 'game_rooms', columns: ['id', 'name', 'host_id', 'status'] },
     { table: 'maps', columns: ['id', 'name', 'creator_id'] }
   ];

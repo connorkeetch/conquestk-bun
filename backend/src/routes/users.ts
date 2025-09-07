@@ -255,14 +255,14 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
     }
 
     // Get current password hash
-    const result = await query('SELECT password FROM users WHERE id = $1', [userId])
+    const result = await query('SELECT password_hash FROM users WHERE id = $1', [userId])
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, result.rows[0].password)
+    const isValidPassword = await bcrypt.compare(currentPassword, result.rows[0].password_hash)
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' })
     }
@@ -271,7 +271,7 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     // Update password
-    await query('UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId])
+    await query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId])
 
     return res.json({ success: true, message: 'Password updated successfully' })
   } catch (error) {

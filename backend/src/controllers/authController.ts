@@ -182,7 +182,7 @@ export class AuthController {
         })
       }
 
-      const validPassword = await bcrypt.compare(password, user.password)
+      const validPassword = await bcrypt.compare(password, user.password_hash)
       if (!validPassword) {
         return res.status(401).json({
           error: 'Authentication failed',
@@ -524,7 +524,7 @@ export class AuthController {
       }
 
       // Verify current password
-      const validPassword = await bcrypt.compare(currentPassword, user.password)
+      const validPassword = await bcrypt.compare(currentPassword, user.password_hash)
       if (!validPassword) {
         return res.status(401).json({
           error: 'Invalid password',
