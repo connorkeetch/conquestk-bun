@@ -110,7 +110,7 @@ export class MapService {
   }
 
   async getMap(mapId: string): Promise<CustomMap | null> {
-    const result = await query('SELECT * FROM maps WHERE id = ?', [mapId])
+    const result = await query('SELECT * FROM maps WHERE id = $1', [mapId])
     return result.rows.length > 0 ? this.formatMapFromDb(result.rows[0]) : null
   }
 
