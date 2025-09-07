@@ -6,15 +6,22 @@ export default function Footer() {
   return (
     <footer className="mt-auto border-t border-white/10 bg-black/50">
       <div className="container mx-auto px-4 py-6">
-        {/* Updated layout: copyright left, links center, version right */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-white/60">
-          {/* Copyright - Left aligned */}
-          <div className="flex-1 text-left">
-            © 2025 Conquest K. All rights reserved.
+        {/* Use justify-between like header for proper left/right alignment */}
+        <div className="flex flex-col sm:flex-row items-center text-sm text-white/60">
+          <div className="w-full flex items-center justify-between">
+            {/* Copyright - Far left */}
+            <div className="text-left">
+              © 2025 Conquest K. All rights reserved.
+            </div>
+            
+            {/* Version - Far right */}
+            <div className="text-xs text-right">
+              Beta v0.9.1
+            </div>
           </div>
           
-          {/* Legal Links - Perfectly centered */}
-          <nav className="flex gap-4 text-xs sm:text-sm justify-center">
+          {/* Legal Links - Centered below on mobile, between on desktop */}
+          <nav className="flex gap-4 text-xs sm:text-sm justify-center mt-2 sm:mt-0 sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">
             <Link 
               to="/terms" 
               className="hover:text-white transition-colors"
@@ -36,11 +43,6 @@ export default function Footer() {
               Contact
             </a>
           </nav>
-          
-          {/* Version - Right aligned */}
-          <div className="flex-1 text-xs text-right">
-            Beta v0.9.1
-          </div>
         </div>
       </div>
     </footer>

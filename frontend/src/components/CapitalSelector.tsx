@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface Territory {
   id: number
@@ -25,11 +25,7 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
   const [selectedCapitals, setSelectedCapitals] = useState<number[]>(existingCapitals)
   const [validationError, setValidationError] = useState<string>('')
 
-  useEffect(() => {
-    validateCapitals(selectedCapitals)
-  }, [selectedCapitals, validateCapitals])
-
-  const validateCapitals = (capitals: number[]) => {
+  const validateCapitals = useCallback((capitals: number[]) => {
     if (capitals.length !== playerCount) {
       setValidationError(`Select exactly ${playerCount} capitals (currently ${capitals.length})`)
       return false
@@ -54,7 +50,11 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
 
     setValidationError('')
     return true
-  }
+  }, [playerCount, territories])
+
+  useEffect(() => {
+    validateCapitals(selectedCapitals)
+  }, [selectedCapitals, validateCapitals])
 
   const toggleCapital = (territoryId: number) => {
     if (selectedCapitals.includes(territoryId)) {
