@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-white/60">
           {/* Copyright - Left aligned */}
           <div className="flex-1 text-left">
-            © {currentYear} Conquest K. All rights reserved.
+            © 2025 Conquest K. All rights reserved.
           </div>
           
           {/* Legal Links - Perfectly centered */}

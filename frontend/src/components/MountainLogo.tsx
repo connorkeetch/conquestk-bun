@@ -11,16 +11,16 @@ export default function MountainLogo({ width = 60, height = 60, className = '' }
       height={height} 
       viewBox="0 0 60 60" 
       xmlns="http://www.w3.org/2000/svg"
-      className={`${className} drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]`}
+      className={`${className}`}
       style={{
-        filter: 'drop-shadow(0 0 8px rgba(147, 51, 234, 0.6)) drop-shadow(0 0 16px rgba(147, 51, 234, 0.3))'
+        filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(147, 51, 234, 0.9)) drop-shadow(0 0 16px rgba(147, 51, 234, 0.6)) drop-shadow(0 0 24px rgba(147, 51, 234, 0.3))'
       }}
     >
       <defs>
         <linearGradient id="loneGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" style={{stopColor:"#0F1117"}} />
-          <stop offset="70%" style={{stopColor:"#374151"}} />
-          <stop offset="100%" style={{stopColor:"#6B7280"}} />
+          <stop offset="0%" style={{stopColor:"#1F2937"}} />
+          <stop offset="70%" style={{stopColor:"#4B5563"}} />
+          <stop offset="100%" style={{stopColor:"#9CA3AF"}} />
         </linearGradient>
       </defs>
       
