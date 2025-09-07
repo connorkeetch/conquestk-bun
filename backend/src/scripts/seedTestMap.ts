@@ -5,7 +5,7 @@ import { testWorldMap } from '../data/defaultMaps'
 async function seedTestMap() {
   try {
     // Check if test map already exists
-    const existingMap = (await query('SELECT id FROM maps WHERE name = ?', [
+    const existingMap = (await query('SELECT id FROM maps WHERE name = $1', [
       testWorldMap.name,
     ])) as unknown as any[]
 
@@ -19,7 +19,7 @@ async function seedTestMap() {
       `INSERT INTO maps (
         id, name, description, image_url, image_width, image_height, 
         is_public, creator_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         mapId,
         testWorldMap.name,
@@ -41,7 +41,7 @@ async function seedTestMap() {
       await query(
         `INSERT INTO map_continents (
           id, map_id, name, color, bonus_armies
-        ) VALUES (?, ?, ?, ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5)`,
         [continentId, mapId, continent.name, continent.color, continent.bonusArmies],
       )
     }
@@ -60,7 +60,7 @@ async function seedTestMap() {
         `INSERT INTO map_territories (
           id, map_id, territory_id, name, boundary_coords, 
           army_position_x, army_position_y, continent_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           territoryId,
           mapId,
@@ -85,14 +85,14 @@ async function seedTestMap() {
         await query(
           `INSERT INTO territory_adjacencies (
             from_territory_id, to_territory_id, connection_type
-          ) VALUES (?, ?, 'land')`,
+          ) VALUES ($1, $2, 'land')`,
           [fromId, toId],
         )
 
         await query(
           `INSERT INTO territory_adjacencies (
             from_territory_id, to_territory_id, connection_type
-          ) VALUES (?, ?, 'land')`,
+          ) VALUES ($1, $2, 'land')`,
           [toId, fromId],
         )
 

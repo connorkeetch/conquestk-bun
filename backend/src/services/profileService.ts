@@ -24,7 +24,7 @@ export class ProfileService {
       ])
 
       // Get statistics
-      const statsResult = await client.query('SELECT * FROM user_statistics WHERE user_id = $1', [
+      const statsResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
         userId,
       ])
 
@@ -40,9 +40,21 @@ export class ProfileService {
         [userId],
       )
 
-      // Get recent games
+      // Get recent games from game_rooms + room_players (game_history table doesn't exist)
       const recentGamesResult = await client.query(
-        'SELECT * FROM game_history WHERE user_id = $1 ORDER BY started_at DESC LIMIT 10',
+        `SELECT 
+          gr.id as game_id,
+          gr.name as game_name, 
+          gr.started_at,
+          gr.ended_at,
+          gr.game_mode,
+          gr.status,
+          CASE WHEN gr.winner_id = $1 THEN 'won' ELSE 'lost' END as result,
+          EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60 as duration_minutes
+        FROM game_rooms gr
+        JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        ORDER BY gr.started_at DESC LIMIT 10`,
         [userId],
       )
 
@@ -114,52 +126,57 @@ export class ProfileService {
 
     try {
       // Overall stats
-      const overallResult = await client.query('SELECT * FROM user_statistics WHERE user_id = $1', [
+      const overallResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
         userId,
       ])
 
-      // Stats by map
+      // Stats by map (using game_rooms + room_players)
       const mapStatsResult = await client.query(
         `
         SELECT 
-          map_name,
+          m.name as map_name,
           COUNT(*) as games_played,
-          SUM(CASE WHEN result = 'won' THEN 1 ELSE 0 END) as games_won,
-          AVG(duration) as avg_duration,
-          MAX(max_territories) as best_territories
-        FROM game_history 
-        WHERE user_id = $1 
-        GROUP BY map_name
+          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
+          AVG(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as avg_duration,
+          0 as best_territories  -- TODO: Get from game_states when needed
+        FROM game_rooms gr
+        JOIN room_players rp ON gr.id = rp.room_id  
+        JOIN maps m ON gr.map_id = m.id
+        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        GROUP BY m.name
       `,
         [userId],
       )
 
-      // Stats by game mode
+      // Stats by game mode (using game_rooms + room_players)
       const modeStatsResult = await client.query(
         `
         SELECT 
-          game_mode,
+          gr.game_mode,
           COUNT(*) as games_played,
-          SUM(CASE WHEN result = 'won' THEN 1 ELSE 0 END) as games_won,
-          AVG(duration) as avg_duration
-        FROM game_history 
-        WHERE user_id = $1 
-        GROUP BY game_mode
+          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
+          AVG(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as avg_duration
+        FROM game_rooms gr
+        JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        GROUP BY gr.game_mode
       `,
         [userId],
       )
 
-      // Timeline data (last 30 days)
+      // Timeline data (last 30 days) (using game_rooms + room_players)
       const timelineResult = await client.query(
         `
         SELECT 
-          DATE(started_at) as date,
+          DATE(gr.started_at) as date,
           COUNT(*) as games_played,
-          SUM(CASE WHEN result = 'won' THEN 1 ELSE 0 END) as games_won,
-          SUM(duration) as playtime
-        FROM game_history 
-        WHERE user_id = $1 AND started_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(started_at)
+          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
+          SUM(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as playtime
+        FROM game_rooms gr
+        JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended') 
+          AND gr.started_at >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(gr.started_at)
         ORDER BY date DESC
       `,
         [userId],
@@ -249,7 +266,7 @@ export class ProfileService {
       await client.query(
         `
         INSERT INTO user_achievements (user_id, achievement_id)
-        VALUES (?, ?)
+        VALUES ($1, $2)
       `,
         [userId, achievementId],
       )
@@ -260,13 +277,13 @@ export class ProfileService {
         SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
-        WHERE ua.user_id = $1 AND ua.achievement_id = ?
+        WHERE ua.user_id = $1 AND ua.achievement_id = $2
       `,
         [userId, achievementId],
       )
 
       // Update user experience points
-      const achievement = await client.query('SELECT points FROM achievements WHERE id = ?', [
+      const achievement = await client.query('SELECT points FROM achievements WHERE id = $1', [
         achievementId,
       ])
 
@@ -298,9 +315,19 @@ export class ProfileService {
     try {
       const result = await client.query(
         `
-        SELECT * FROM game_history 
-        WHERE user_id = $1 
-        ORDER BY started_at DESC 
+        SELECT 
+          gr.id as game_id,
+          gr.name as game_name,
+          gr.started_at,
+          gr.ended_at,
+          gr.game_mode,
+          gr.status,
+          CASE WHEN gr.winner_id = $1 THEN 'won' ELSE 'lost' END as result,
+          EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60 as duration_minutes
+        FROM game_rooms gr
+        JOIN room_players rp ON gr.id = rp.room_id
+        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+        ORDER BY gr.started_at DESC 
         LIMIT $2 OFFSET $3
       `,
         [userId, limit, offset],
@@ -343,7 +370,7 @@ export class ProfileService {
       await client.query(query, values)
 
       // Return updated preferences
-      const result = await client.query('SELECT * FROM user_preferences WHERE user_id = ?', [
+      const result = await client.query('SELECT * FROM user_preferences WHERE user_id = $1', [
         userId,
       ])
 
@@ -371,10 +398,10 @@ export class ProfileService {
           (us.games_won * 10 + up.level * 5) as rating
         FROM users u
         JOIN user_profiles up ON u.id = up.user_id
-        JOIN user_statistics us ON u.id = us.user_id
+        JOIN player_stats us ON u.id = us.user_id
         WHERE us.games_played >= 5
         ORDER BY rating DESC
-        LIMIT ?
+        LIMIT $1
       `,
         [limit],
       )
