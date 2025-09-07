@@ -25,7 +25,6 @@ export async function ensureOwnerAdmin(): Promise<void> {
         await pool.query(
           `UPDATE users 
            SET is_admin = true, 
-               admin_since = CURRENT_TIMESTAMP,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $1`,
           [user.id]

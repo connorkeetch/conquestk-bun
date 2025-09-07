@@ -7,7 +7,7 @@ export interface User {
   verification_token?: string | null
   // verification_sent_at?: Date | null // Column doesn't exist in current schema
   is_admin?: boolean
-  admin_since?: Date
+  // admin_since?: Date // Column doesn't exist in current schema
   skill_rating?: number
   skill_confidence?: number
   total_ranked_games?: number
