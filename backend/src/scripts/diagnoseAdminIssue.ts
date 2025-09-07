@@ -38,7 +38,7 @@ async function diagnoseAdminIssue(email: string) {
       } else {
         console.log('✅ admin_roles table exists with columns:', roleTableCheck.rows.map(r => r.column_name).join(', '))
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Error checking admin_roles table:', error.message)
       return
     }
@@ -59,7 +59,7 @@ async function diagnoseAdminIssue(email: string) {
       } else {
         console.log('✅ user_admin_roles table exists with columns:', userRoleTableCheck.rows.map(r => r.column_name).join(', '))
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Error checking user_admin_roles table:', error.message)
       return
     }
@@ -105,7 +105,7 @@ async function diagnoseAdminIssue(email: string) {
     try {
       const isAdmin = await adminService.isAdmin(user.id)
       console.log(`adminService.isAdmin result: ${isAdmin}`)
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Error testing adminService.isAdmin:', error.message)
     }
 
