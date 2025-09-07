@@ -21,7 +21,8 @@
     "check:schema": "ts-node src/scripts/checkSchema.ts",
     "migrate:status": "ts-node src/scripts/checkSchema.ts",
     "backup:production": "node scripts/backup-production.js",
-    "deploy:consolidated": "node scripts/deploy-consolidated-migration.js"
+    "deploy:consolidated": "node scripts/deploy-consolidated-migration.js",
+    "deploy:consolidated:nodejs": "node scripts/deploy-consolidated-nodejs.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",

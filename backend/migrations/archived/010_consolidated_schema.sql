@@ -9,6 +9,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 DROP TABLE IF EXISTS 
     password_reset_tokens,
     email_verification_log,
+    user_account_status,
+    content_approval_queue,
+    feature_flags,
+    user_activity_logs,
     game_moves,
     game_states,
     room_players,
@@ -38,6 +42,14 @@ DROP TABLE IF EXISTS
     map_submissions,
     custom_maps,
     map_territories,
+    territory_adjacencies,
+    map_usage_stats,
+    map_ratings,
+    map_comments,
+    map_downloads,
+    map_favorites,
+    map_tags,
+    map_tag_associations,
     maps,
     user_profiles,
     user_settings,
@@ -470,7 +482,7 @@ CREATE TABLE chat_messages (
 -- Available achievements
 CREATE TABLE achievements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT NOT NULL,
     category VARCHAR(50) DEFAULT 'general',
     icon VARCHAR(10), -- emoji
@@ -713,19 +725,7 @@ INSERT INTO admin_roles (id, name, description, permissions, is_super_admin) VAL
     TRUE
 ) ON CONFLICT (name) DO NOTHING;
 
--- Create default map if none exists
-INSERT INTO maps (id, name, description, territories_count, is_official, created_by, created_at, updated_at, version)
-SELECT 
-    uuid_generate_v4(),
-    'World Map',
-    'Classic Risk world map with 42 territories',
-    42,
-    TRUE,
-    (SELECT id FROM users WHERE email = 'connorkeetch@gmail.com' LIMIT 1),
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP,
-    1
-WHERE NOT EXISTS (SELECT 1 FROM maps WHERE name = 'World Map');
+-- Default map creation handled by deployment script after user restoration
 
 -- Grant admin privileges to owner account if it exists
 INSERT INTO user_admin_roles (user_id, role_id, assigned_by, assigned_at)
