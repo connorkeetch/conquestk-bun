@@ -45,7 +45,6 @@ async function makeOwnerAdmin() {
     await pool.query(
       `UPDATE users 
        SET is_admin = true, 
-           admin_since = COALESCE(admin_since, CURRENT_TIMESTAMP),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
       [user.id]
