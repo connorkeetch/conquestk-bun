@@ -16,7 +16,7 @@ export class UserService {
         userData.password,
         userData.email_verified === true,
         userData.verification_token || null,
-        -- userData.verification_sent_at || null, -- Column doesn't exist in schema
+        // userData.verification_sent_at || null, // Column doesn't exist in schema
       ]
 
       await query(insertQuery, values)
@@ -95,10 +95,6 @@ export class UserService {
     const updateQuery = `
       UPDATE users 
       SET verification_token = $1,
-          -- verification_sent_at = CURRENT_TIMESTAMP, -- Column doesn't exist
-          updated_at = CURRENT_TIMESTAMP,
-          -- Store sent timestamp in verification_token if needed
-          verification_token = $1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `
