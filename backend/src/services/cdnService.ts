@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 import { createHash } from 'crypto'
 import { readFileSync, statSync } from 'fs'
 import { join } from 'path'

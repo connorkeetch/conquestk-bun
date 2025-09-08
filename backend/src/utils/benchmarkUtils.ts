@@ -1,5 +1,5 @@
-import { logger } from '@/utils/logger'
-import { performanceTestingService } from '@/services/performanceTestingService'
+import { logger } from '../utils/logger'
+import { performanceTestingService } from '../services/performanceTestingService'
 
 export interface BenchmarkThresholds {
   responseTime: {

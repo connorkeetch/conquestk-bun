@@ -1,9 +1,9 @@
 import Bull from 'bull'
-import { GameCleanupJob, queueService } from '@/services/queueService'
-import { GameService } from '@/services/gameService'
-import { CacheService } from '@/services/cacheService'
+import { GameCleanupJob, queueService } from '../services/queueService'
+import { GameService } from '../services/gameService'
+import { CacheService } from '../services/cacheService'
 // TODO: Fix import when territoryModifierService is implemented
-// import { TerritoryModifierService } from '@/services/territoryModifierService'
+// import { TerritoryModifierService } from '../services/territoryModifierService'
 
 export class CleanupWorker {
   private queue: Bull.Queue<GameCleanupJob>

@@ -1,7 +1,7 @@
 import express from 'express'
-import { authenticateToken } from '@/middleware/auth'
-import { performanceTestingService } from '@/services/performanceTestingService'
-import { logger } from '@/utils/logger'
+import { authenticateToken } from '../middleware/auth'
+import { performanceTestingService } from '../services/performanceTestingService'
+import { logger } from '../utils/logger'
 
 const router = express.Router()
 

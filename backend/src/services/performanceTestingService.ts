@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 import { performanceMonitorService } from './performanceMonitorService'
 import { redisClusterService } from './redisClusterService'
 import { databaseClusterService } from './databaseClusterService'

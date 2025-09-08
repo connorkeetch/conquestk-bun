@@ -1,9 +1,9 @@
 import Bull from 'bull'
-import { GameActionJob, queueService } from '@/services/queueService'
-import { GameService } from '@/services/gameService'
-import { GameDelta, DeltaBuilder, CompoundDelta } from '@/types/deltaUpdates'
+import { GameActionJob, queueService } from '../services/queueService'
+import { GameService } from '../services/gameService'
+import { GameDelta, DeltaBuilder, CompoundDelta } from '../types/deltaUpdates'
 import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
+import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>

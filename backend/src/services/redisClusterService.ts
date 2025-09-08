@@ -1,5 +1,5 @@
 import Redis, { Cluster } from 'ioredis'
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 
 interface CacheMetrics {
   hits: number

@@ -1,6 +1,6 @@
 import Bull from 'bull'
 import Redis from 'ioredis'
-import { GameState, GameAction, BattleResult } from '@/types/game'
+import { GameState, GameAction, BattleResult } from '../types/game'
 
 // Queue job types
 export interface GameActionJob {

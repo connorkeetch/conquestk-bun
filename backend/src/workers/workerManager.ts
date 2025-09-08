@@ -1,9 +1,9 @@
-import { queueService } from '@/services/queueService'
+import { queueService } from '../services/queueService'
 import { createGameActionWorker } from './gameActionWorker'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
+import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 
 export class WorkerManager {
   private isInitialized = false
