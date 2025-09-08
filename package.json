@@ -43,7 +43,7 @@
   "author": "",
   "license": "MIT",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=22.11.0",
     "npm": ">=10.0.0"
   },
   "devDependencies": {
@@ -55,5 +55,11 @@
   "workspaces": [
     "frontend",
     "backend"
-  ]
+  ],
+  "overrides": {
+    "simple-swizzle": "0.2.2"
+  },
+  "resolutions": {
+    "simple-swizzle": "0.2.2"
+  }
 }
