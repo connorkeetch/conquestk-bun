@@ -44,7 +44,7 @@ export class CleanupWorker {
       console.log(`🧹 Cleaning up game ${gameId}, reason: ${reason}`)
 
       // Get game state before cleanup
-      const gameState = await gameService.getGameState(gameId)
+      const gameState = await this.gameService.getGameState(gameId)
       if (!gameState) {
         console.log(`Game ${gameId} already cleaned up`)
         return { success: true, alreadyClean: true }
@@ -86,7 +86,7 @@ export class CleanupWorker {
 
   private async cleanupFinishedGame(gameId: string, gameState: any): Promise<void> {
     // Archive game results
-    await gameService.archiveGameResults(gameId, {
+    await this.gameService.archiveGameResults(gameId, {
       winner: gameState.winner,
       endReason: 'finished',
       duration: Date.now() - gameState.startTime,
@@ -95,11 +95,11 @@ export class CleanupWorker {
 
     // Update player ELO ratings if ranked
     if (gameState.isRanked) {
-      await gameService.updateEloRatings(gameId, gameState)
+      await this.gameService.updateEloRatings(gameId, gameState)
     }
 
     // Record game history
-    await gameService.recordGameHistory(gameId, gameState)
+    await this.gameService.recordGameHistory(gameId, gameState)
   }
 
   private async cleanupTimedOutGame(gameId: string, gameState: any): Promise<void> {
@@ -108,7 +108,7 @@ export class CleanupWorker {
     const winner = Object.entries(territoryCount)
       .sort(([,a], [,b]) => (b as number) - (a as number))[0][0]
 
-    await gameService.archiveGameResults(gameId, {
+    await this.gameService.archiveGameResults(gameId, {
       winner,
       endReason: 'timeout',
       duration: Date.now() - gameState.startTime,
@@ -117,7 +117,7 @@ export class CleanupWorker {
 
     // Partial ELO updates for timeout
     if (gameState.isRanked) {
-      await gameService.updateEloRatings(gameId, { 
+      await this.gameService.updateEloRatings(gameId, { 
         ...gameState, 
         winner,
         isTimeout: true,
@@ -127,7 +127,7 @@ export class CleanupWorker {
 
   private async cleanupAbandonedGame(gameId: string, gameState: any): Promise<void> {
     // Mark as abandoned - no winner
-    await gameService.archiveGameResults(gameId, {
+    await this.gameService.archiveGameResults(gameId, {
       winner: null,
       endReason: 'abandoned',
       duration: Date.now() - gameState.startTime,
@@ -140,16 +140,16 @@ export class CleanupWorker {
 
   private async performCommonCleanup(gameId: string): Promise<void> {
     // Clean up Redis cache
-    await gameStateCache.deleteGameState(gameId)
+    await this.cacheService.deleteGameState(gameId)
     
     // Clean up territory modifiers
-    await territoryModifierService.cleanupFinishedGameModifiers([gameId])
+    // await territoryModifierService.cleanupFinishedGameModifiers([gameId])
     
     // Clean up any temporary files or resources
     await this.cleanupTempResources(gameId)
     
     // Remove from active games tracking
-    await gameService.removeFromActiveGames(gameId)
+    await this.gameService.removeFromActiveGames(gameId)
   }
 
   private async cleanupTempResources(gameId: string): Promise<void> {
@@ -190,7 +190,7 @@ export class CleanupWorker {
   private async scheduleAbandonedGameCleanup(): Promise<void> {
     try {
       // Find games that haven't been updated in over 30 minutes
-      const abandonedGames = await gameService.findAbandonedGames(30 * 60 * 1000)
+      const abandonedGames = await this.gameService.findAbandonedGames(30 * 60 * 1000)
       
       for (const gameId of abandonedGames) {
         console.log(`📅 Scheduling cleanup for abandoned game: ${gameId}`)
@@ -209,5 +209,5 @@ export class CleanupWorker {
   }
 }
 
-// Export singleton instance
-export const cleanupWorker = new CleanupWorker()
+// Export factory function
+export const createCleanupWorker = () => new CleanupWorker()

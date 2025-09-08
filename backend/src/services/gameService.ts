@@ -242,6 +242,120 @@ export class GameService {
   }
 
   /**
+   * Worker support methods
+   */
+  async processPlaceArmies(gameId: string, data: { territoryId: string; armies: number; playerId: string }): Promise<number> {
+    const gameState = await this.getGameState(gameId)
+    if (!gameState) throw new Error('Game not found')
+    
+    const territory = gameState.board.find(t => t.id === data.territoryId)
+    if (!territory) throw new Error('Territory not found')
+    
+    territory.armies += data.armies
+    await gameStateCache.setGameState(gameId, gameState)
+    
+    return territory.armies
+  }
+
+  async processFortify(gameId: string, data: { fromTerritoryId: string; toTerritoryId: string; armies: number; playerId: string }): Promise<{ fromArmies: number; toArmies: number }> {
+    const result = await this.fortify(gameId, data.playerId, data.fromTerritoryId, data.toTerritoryId, data.armies)
+    return {
+      fromArmies: result.fromArmies,
+      toArmies: result.toArmies
+    }
+  }
+
+  async processEndTurn(gameId: string, playerId: string): Promise<{ id: string }> {
+    const result = await this.endTurn(gameId, playerId)
+    return { id: result.gameState.currentPlayer }
+  }
+
+  async processPhaseChange(gameId: string, playerId: string, phase: string): Promise<void> {
+    const gameState = await this.getGameState(gameId)
+    if (!gameState) throw new Error('Game not found')
+    
+    gameState.phase = phase as any
+    await gameStateCache.setGameState(gameId, gameState)
+  }
+
+  async applyBattleResult(gameId: string, battleResult: any, attackingTerritory: string, defendingTerritory: string): Promise<void> {
+    const gameState = await this.getGameState(gameId)
+    if (!gameState) throw new Error('Game not found')
+    
+    const attacker = gameState.board.find(t => t.id === attackingTerritory)
+    const defender = gameState.board.find(t => t.id === defendingTerritory)
+    
+    if (attacker && defender) {
+      attacker.armies -= battleResult.attackerLosses
+      defender.armies -= battleResult.defenderLosses
+      
+      if (battleResult.territoryConquered) {
+        defender.ownerId = attacker.ownerId
+      }
+      
+      await gameStateCache.setGameState(gameId, gameState)
+    }
+  }
+
+  async archiveGameResults(gameId: string, results: any): Promise<void> {
+    // TODO: Store in database
+    console.log(`Archiving game ${gameId}:`, results)
+  }
+
+  async updateEloRatings(gameId: string, gameState: any): Promise<void> {
+    // TODO: Update ELO ratings
+    console.log(`Updating ELO for game ${gameId}`)
+  }
+
+  async recordGameHistory(gameId: string, gameState: any): Promise<void> {
+    // TODO: Record in database
+    console.log(`Recording history for game ${gameId}`)
+  }
+
+  async removeFromActiveGames(gameId: string): Promise<void> {
+    await gameStateCache.deleteGameState(gameId)
+  }
+
+  async getIdleGames(threshold: number): Promise<any[]> {
+    // TODO: Query games that have been idle
+    return []
+  }
+
+  async markPlayerAsInactive(gameId: string, playerId: string): Promise<void> {
+    console.log(`Marking player ${playerId} as inactive in game ${gameId}`)
+  }
+
+  async pauseGame(gameId: string): Promise<void> {
+    console.log(`Pausing game ${gameId}`)
+  }
+
+  async deleteGame(gameId: string): Promise<void> {
+    await gameStateCache.deleteGameState(gameId)
+  }
+
+  async cleanupTemporaryData(gameId: string): Promise<void> {
+    console.log(`Cleaning temp data for game ${gameId}`)
+  }
+
+  async cleanupAbandonedGame(gameId: string): Promise<void> {
+    await this.removeFromActiveGames(gameId)
+  }
+
+  async logCleanup(gameId: string, reason: string): Promise<void> {
+    console.log(`Cleanup logged for game ${gameId}: ${reason}`)
+  }
+
+  async archiveGame(gameId: string): Promise<void> {
+    console.log(`Archiving game ${gameId}`)
+  }
+
+  async findAbandonedGames(thresholdMs: number): Promise<string[]> {
+    // TODO: Query database for games that haven't been updated in thresholdMs
+    console.log(`Finding games abandoned for ${thresholdMs}ms`)
+    return []
+  }
+
+  /**
    * Clean up finished games from cache
    */
   async cleanupFinishedGames(roomIds: string[]) {

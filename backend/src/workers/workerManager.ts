@@ -1,11 +1,20 @@
 import { queueService } from '@/services/queueService'
-// TODO: Re-enable workers after fixing imports
-// import { gameActionWorker } from './gameActionWorker'
-// import { createBattleWorker } from './battleWorker'
-// import { cleanupWorker } from './cleanupWorker'
+import { createGameActionWorker } from './gameActionWorker'
+import { createBattleWorker } from './battleWorker'
+import { createCleanupWorker } from './cleanupWorker'
+import { Server } from 'socket.io'
+import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
 
 export class WorkerManager {
   private isInitialized = false
+  private gameActionWorker: any
+  private battleWorker: any
+  private cleanupWorker: any
+  private io: Server<ClientToServerEvents, ServerToClientEvents>
+
+  constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+    this.io = io
+  }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
@@ -17,12 +26,15 @@ export class WorkerManager {
       await queueService.initialize()
 
       // Initialize all workers
-      // TODO: Re-enable workers after fixing imports
-      // await Promise.all([
-      //   gameActionWorker.initialize(),
-      //   battleWorker.initialize(),
-      //   cleanupWorker.initialize(),
-      // ])
+      this.gameActionWorker = createGameActionWorker(this.io)
+      this.battleWorker = createBattleWorker(this.io)
+      this.cleanupWorker = createCleanupWorker()
+      
+      await Promise.all([
+        this.gameActionWorker.initialize(),
+        this.battleWorker.initialize(),
+        this.cleanupWorker.initialize(),
+      ])
 
       this.isInitialized = true
       console.log('✅ WorkerManager initialized successfully')
@@ -82,5 +94,14 @@ export class WorkerManager {
   }
 }
 
-// Export singleton instance
-export const workerManager = new WorkerManager()
+// Export factory function
+export const createWorkerManager = (io: Server<ClientToServerEvents, ServerToClientEvents>) => new WorkerManager(io)
+
+// Singleton instance (will be set by index.ts)
+let workerManagerInstance: WorkerManager | null = null
+
+export const setWorkerManagerInstance = (instance: WorkerManager) => {
+  workerManagerInstance = instance
+}
+
+export const getWorkerManagerInstance = () => workerManagerInstance
