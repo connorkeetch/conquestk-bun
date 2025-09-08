@@ -325,7 +325,11 @@ export class MapService {
 
     if (filters.search) {
       whereConditions.push('(name LIKE ? OR description LIKE ?)')
-      const searchTerm = `%${filters.search}%`
+      // Use Node.js 24's RegExp.escape for safer search terms
+      const escapedSearch = typeof RegExp.escape === 'function' 
+        ? RegExp.escape(filters.search)
+        : filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Fallback for older Node.js
+      const searchTerm = `%${escapedSearch}%`
       queryParams.push(searchTerm, searchTerm)
     }
 
@@ -347,7 +351,13 @@ export class MapService {
       // Simple tag matching - in production you might want better JSON querying
       const tagConditions = filters.tags.map(() => 'tags LIKE ?').join(' AND ')
       whereConditions.push(`(${tagConditions})`)
-      filters.tags.forEach((tag) => queryParams.push(`%"${tag}"%`))
+      filters.tags.forEach((tag) => {
+        // Use Node.js 24's RegExp.escape for safer tag matching
+        const escapedTag = typeof RegExp.escape === 'function' 
+          ? RegExp.escape(tag)
+          : tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Fallback for older Node.js
+        queryParams.push(`%"${escapedTag}"%`)
+      })
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
