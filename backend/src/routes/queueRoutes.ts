@@ -10,10 +10,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
-      return res.status(503).json({
+      res.status(503).json({
         success: false,
         error: 'WorkerManager not initialized',
       })
+      return
     }
     const stats = await workerManager.getStats()
     res.json({
@@ -32,10 +33,11 @@ router.get('/health', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
-      return res.status(503).json({
+      res.status(503).json({
         success: false,
         error: 'WorkerManager not initialized',
       })
+      return
     }
     const health = await workerManager.healthCheck()
     const statusCode = health.status === 'healthy' ? 200 : 503
@@ -57,10 +59,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
-      return res.status(503).json({
+      res.status(503).json({
         success: false,
         error: 'WorkerManager not initialized',
       })
+      return
     }
     const stats = await queueService.getQueueStats()
     const health = await workerManager.healthCheck()
@@ -145,10 +148,11 @@ router.get('/ping', async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
-      return res.json({
+      res.json({
         status: 'not-initialized',
         timestamp: new Date().toISOString(),
       })
+      return
     }
     const health = await workerManager.healthCheck()
     res.json({
