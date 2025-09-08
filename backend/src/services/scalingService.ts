@@ -1,5 +1,5 @@
 import { logger } from '@/utils/logger'
-import cluster from 'cluster'
+import cluster from 'node:cluster'
 import os from 'os'
 
 interface ScalingMetrics {

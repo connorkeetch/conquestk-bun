@@ -1,8 +1,8 @@
 import Bull from 'bull'
 import { BattleSimulationJob, queueService } from '@/services/queueService'
-import { gameService } from '@/services/GameService'
+// import { gameService } from '@/services/GameService' // TODO: Fix import path
 import { DeltaBuilder, GameDelta } from '@/types/deltaUpdates'
-import { io } from '@/socket'
+// import { io } from '@/socket' // TODO: Fix import path
 
 interface BattleResult {
   attackerLosses: number
@@ -97,7 +97,7 @@ export class BattleWorker {
         // Update defending territory (new owner)
         deltas.push(DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
           armies: movingArmies,
-          owner: attackingTerr.owner,
+          ownerId: attackingTerr.owner,
         }))
 
         // Check for player elimination

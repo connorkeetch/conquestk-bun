@@ -137,7 +137,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         gameId: data.roomId,
         playerId: socket.userId!,
         action: {
-          type: 'PLACE_ARMIES',
+          type: 'deploy',
           territoryId: data.territoryId,
           armies: data.armies,
         },
@@ -162,7 +162,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         gameId: data.roomId,
         playerId: socket.userId!,
         action: {
-          type: 'ATTACK',
+          type: 'attack',
           fromTerritory: data.fromTerritoryId,
           toTerritory: data.toTerritoryId,
           armies: data.armies || 1,

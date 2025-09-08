@@ -1,4 +1,4 @@
-import Redis from 'ioredis'
+import Redis, { Cluster } from 'ioredis'
 import { logger } from '@/utils/logger'
 
 interface CacheMetrics {
@@ -27,7 +27,7 @@ interface ClusterConfig {
 }
 
 export class RedisClusterService {
-  private cluster: any | null = null
+  private cluster: Cluster | null = null
   private fallbackClient: Redis | null = null
   private isClusterMode = false
   private metrics: CacheMetrics = {
@@ -91,7 +91,7 @@ export class RedisClusterService {
       },
     }
 
-    this.cluster = new Redis.Cluster(config.nodes, config.options)
+    this.cluster = new Cluster(config.nodes, config.options)
     this.isClusterMode = true
 
     // Cluster event handlers
@@ -99,12 +99,12 @@ export class RedisClusterService {
       logger.info('🔗 Redis Cluster connected')
     })
 
-    this.cluster.on('error', (error) => {
+    this.cluster.on('error', (error: Error) => {
       logger.error('❌ Redis Cluster error:', error)
       this.metrics.errors++
     })
 
-    this.cluster.on('node error', (error, node) => {
+    this.cluster.on('node error', (error: Error, node: any) => {
       logger.warn(`⚠️ Redis node error (${node.host}:${node.port}):`, error)
     })
 
@@ -117,7 +117,6 @@ export class RedisClusterService {
       lazyConnect: true,
       connectTimeout: 10000,
       commandTimeout: 5000,
-      retryDelayOnFailover: 100,
     })
 
     this.fallbackClient.on('connect', () => {
@@ -132,7 +131,7 @@ export class RedisClusterService {
     await this.fallbackClient.connect()
   }
 
-  private getClient(): Redis | Redis.Cluster | null {
+  private getClient(): Redis | Cluster | null {
     return this.isClusterMode ? this.cluster : this.fallbackClient
   }
 
