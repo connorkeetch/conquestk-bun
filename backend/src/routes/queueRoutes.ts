@@ -1,7 +1,7 @@
 import express from 'express'
-import { authenticateToken } from '@/middleware/auth'
-import { queueService } from '@/services/queueService'
-import { getWorkerManagerInstance } from '@/workers/workerManager'
+import { authenticateToken } from '../middleware/auth'
+import { queueService } from '../services/queueService'
+import { getWorkerManagerInstance } from '../workers/workerManager'
 
 const router = express.Router()
 
