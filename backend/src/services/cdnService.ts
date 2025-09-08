@@ -220,9 +220,27 @@ export class CDNService {
   }
 
   private getAssetConfig(assetPath: string): AssetConfig | null {
-    for (const [pattern, config] of this.assetConfigs) {
-      if (new RegExp(pattern).test(assetPath)) {
-        return config
+    // Use URLPattern if available (Node.js 24+) for better performance
+    if (typeof URLPattern !== 'undefined') {
+      for (const [pattern, config] of this.assetConfigs) {
+        try {
+          const urlPattern = new URLPattern({ pathname: pattern })
+          if (urlPattern.test({ pathname: assetPath })) {
+            return config
+          }
+        } catch {
+          // Fallback to RegExp if URLPattern fails
+          if (new RegExp(pattern).test(assetPath)) {
+            return config
+          }
+        }
+      }
+    } else {
+      // Fallback to RegExp for older Node.js versions
+      for (const [pattern, config] of this.assetConfigs) {
+        if (new RegExp(pattern).test(assetPath)) {
+          return config
+        }
       }
     }
     return null
