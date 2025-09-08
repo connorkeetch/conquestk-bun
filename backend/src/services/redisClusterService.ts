@@ -1,5 +1,6 @@
 import Redis, { Cluster } from 'ioredis'
 import { logger } from '../utils/logger'
+import { getRedisClient } from '../config/redis'
 
 interface CacheMetrics {
   hits: number
@@ -112,23 +113,23 @@ export class RedisClusterService {
   }
 
   private async initializeFallback(redisUrl: string): Promise<void> {
-    this.fallbackClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-      connectTimeout: 10000,
-      commandTimeout: 5000,
-    })
+    // Use centralized Redis client instead of creating new connection
+    this.fallbackClient = getRedisClient()
+    
+    if (!this.fallbackClient) {
+      logger.warn('Centralized Redis client not available, RedisClusterService will be disabled')
+      return
+    }
 
-    this.fallbackClient.on('connect', () => {
-      logger.info('🔗 Redis standalone connected')
-    })
-
+    logger.info('🔗 RedisClusterService using centralized Redis client with Railway network support')
+    
+    // Add error handling for this service
     this.fallbackClient.on('error', (error) => {
-      logger.error('❌ Redis standalone error:', error)
+      logger.warn('RedisClusterService client error:', error.message)
       this.metrics.errors++
     })
 
-    await this.fallbackClient.connect()
+    // Centralized client is already connected, no need to call connect() again
   }
 
   private getClient(): Redis | Cluster | null {

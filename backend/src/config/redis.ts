@@ -22,6 +22,20 @@ export async function initializeRedis(): Promise<{
 
   logger.info(`Initializing Redis connection...`)
   logger.info(`Using Redis URL: ${redisUrl.replace(/:[^:]*@/, ':****@')}`)
+  
+  // Enhanced Railway detection and network wait logic
+  const isRailwayEnvironment = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' || 
+                              process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID ||
+                              redisUrl.includes('railway.internal') || redisUrl.includes('.railway.app') ||
+                              redisUrl.includes('.railway.') || redisUrl.includes('redis-')
+  
+  if (isRailwayEnvironment) {
+    const waitTime = 15000 // 15 seconds for Railway network initialization
+    logger.info(`🚂 Railway environment detected - waiting ${waitTime/1000}s for private network initialization...`)
+    logger.info(`Environment indicators: NODE_ENV=${process.env.NODE_ENV}, RAILWAY_ENV=${process.env.RAILWAY_ENVIRONMENT}, PROJECT_ID=${process.env.RAILWAY_PROJECT_ID}`)
+    await new Promise(resolve => setTimeout(resolve, waitTime))
+    logger.info(`🚂 Railway network wait complete, proceeding with Redis connection...`)
+  }
 
   try {
     // Railway-specific Redis configuration
@@ -78,10 +92,21 @@ export async function initializeRedis(): Promise<{
     })
 
     redisClient.on('error', (err) => {
-      logger.error('Redis client error:', err.message)
-      if (process.env.NODE_ENV === 'production') {
-        // In production, don't crash the app on Redis errors
-        logger.warn('Redis errors are being handled gracefully in production')
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      const errorCode = (err as any)?.code
+      
+      if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+        // In production/staging, log Redis errors less verbosely to avoid log spam
+        logger.warn(`Redis client error (${errorCode || 'unknown'}): ${errorMsg}`)
+        
+        // Only log full details for certain error types that indicate real issues
+        if (errorCode && !['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET'].includes(errorCode)) {
+          logger.error('Redis client detailed error:', err)
+        }
+      } else {
+        // In development, log all errors with full details
+        logger.error('Redis client error:', err.message)
+        logger.debug('Redis client error details:', err)
       }
     })
 
@@ -98,7 +123,14 @@ export async function initializeRedis(): Promise<{
     })
 
     pubClient.on('error', (err) => {
-      logger.error('Redis pub client error:', err.message)
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      const errorCode = (err as any)?.code
+      
+      if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+        logger.warn(`Redis pub client error (${errorCode || 'unknown'}): ${errorMsg}`)
+      } else {
+        logger.error('Redis pub client error:', err.message)
+      }
     })
 
     pubClient.on('close', () => {
@@ -110,20 +142,26 @@ export async function initializeRedis(): Promise<{
     })
 
     subClient.on('error', (err) => {
-      logger.error('Redis sub client error:', err.message)
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      const errorCode = (err as any)?.code
+      
+      if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+        logger.warn(`Redis sub client error (${errorCode || 'unknown'}): ${errorMsg}`)
+      } else {
+        logger.error('Redis sub client error:', err.message)
+      }
     })
 
     subClient.on('close', () => {
       logger.warn('Redis sub client connection closed')
     })
 
-    // Railway-specific startup delay for private network initialization
-    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-      if (redisUrl.includes('railway.internal')) {
-        logger.info('Railway internal Redis detected, waiting for private network initialization...')
-        await new Promise(resolve => setTimeout(resolve, 10000)) // 10 second delay for Railway
-      }
-    }
+    // Additional Railway-specific diagnostics
+    logger.info(`Redis connection attempt details:`)
+    logger.info(`  - Final Redis URL: ${finalRedisUrl.replace(/:[^:]*@/, ':****@')}`)
+    logger.info(`  - Connection timeout: ${redisOptions.connectTimeout}ms`)
+    logger.info(`  - Command timeout: ${redisOptions.commandTimeout}ms`)
+    logger.info(`  - Railway environment: ${isRailwayEnvironment}`)
 
     // Test connection with extended timeout for Railway
     try {
@@ -138,7 +176,37 @@ export async function initializeRedis(): Promise<{
       
       return { redisClient, pubClient, subClient }
     } catch (err) {
-      logger.error('Redis connection failed:', err instanceof Error ? err.message : err)
+      const errorDetails: any = err instanceof Error ? {
+        name: err.name,
+        message: err.message,
+        code: (err as any).code,
+        errno: (err as any).errno,
+        syscall: (err as any).syscall,
+        hostname: (err as any).hostname
+      } : err
+      
+      logger.error('🔴 Redis connection failed with detailed error:')
+      logger.error(`  - Error type: ${errorDetails.name || 'Unknown'}`)
+      logger.error(`  - Error message: ${errorDetails.message || 'No message'}`)
+      logger.error(`  - Error code: ${errorDetails.code || 'No code'}`)
+      logger.error(`  - System call: ${errorDetails.syscall || 'No syscall'}`)
+      logger.error(`  - Hostname: ${errorDetails.hostname || 'No hostname'}`)
+      logger.error(`  - Full error details:`, errorDetails)
+      
+      // Additional Railway-specific diagnostics
+      if (isRailwayEnvironment) {
+        logger.error(`🚂 Railway-specific diagnostics:`)
+        logger.error(`  - Railway environment variables: RAILWAY_ENVIRONMENT=${process.env.RAILWAY_ENVIRONMENT}, PROJECT_ID=${process.env.RAILWAY_PROJECT_ID}`)
+        logger.error(`  - Network wait was applied: 15 seconds`)
+        logger.error(`  - This error occurred AFTER the network wait period`)
+        
+        // Try to determine if this is a DNS resolution issue
+        if (errorDetails.code === 'ENOTFOUND' || errorDetails.syscall === 'getaddrinfo') {
+          logger.error(`  - 🔍 This appears to be a DNS resolution issue`)
+          logger.error(`  - 🔍 Railway private network may still be initializing`)
+          logger.error(`  - 🔍 Consider increasing wait time or checking Railway service status`)
+        }
+      }
       
       // Clean up failed clients properly
       const cleanup = async (client: Redis | null, name: string) => {

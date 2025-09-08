@@ -125,10 +125,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socketId: socket.id,
       })
       
-      logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
-        jobId: job.id,
-        playerId: socket.userId!,
-      })
+      if (job) {
+        logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
+          jobId: job.id,
+          playerId: socket.userId!,
+        })
+      } else {
+        logger.info(`Processed game action directly (no queue): ${data.action.type} for game ${data.roomId}`, {
+          playerId: socket.userId!,
+        })
+      }
     }))
 
     // Deployment phase - migrated to use queue system
@@ -153,11 +159,18 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socketId: socket.id,
       })
       
-      logger.info(`Queued army deployment for game ${data.roomId}`, {
-        jobId: job.id,
-        territoryId: data.territoryId,
-        armies: data.armies,
-      })
+      if (job) {
+        logger.info(`Queued army deployment for game ${data.roomId}`, {
+          jobId: job.id,
+          territoryId: data.territoryId,
+          armies: data.armies,
+        })
+      } else {
+        logger.info(`Processed army deployment directly (no queue) for game ${data.roomId}`, {
+          territoryId: data.territoryId,
+          armies: data.armies,
+        })
+      }
     }))
 
     // Attack phase - migrated to use queue system
@@ -183,11 +196,18 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socketId: socket.id,
       })
       
-      logger.info(`Queued attack for game ${data.roomId}`, {
-        jobId: job.id,
-        from: data.fromTerritoryId,
-        to: data.toTerritoryId,
-      })
+      if (job) {
+        logger.info(`Queued attack for game ${data.roomId}`, {
+          jobId: job.id,
+          from: data.fromTerritoryId,
+          to: data.toTerritoryId,
+        })
+      } else {
+        logger.info(`Processed attack directly (no queue) for game ${data.roomId}`, {
+          from: data.fromTerritoryId,
+          to: data.toTerritoryId,
+        })
+      }
     }))
 
     // Capital warning check
