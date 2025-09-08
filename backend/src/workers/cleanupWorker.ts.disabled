@@ -7,13 +7,13 @@ import { CacheService } from '@/services/cacheService'
 
 export class CleanupWorker {
   private queue: Bull.Queue<GameCleanupJob>
+  private gameService: GameService
+  private cacheService: CacheService
 
   constructor() {
-    // Get the queue from the service
-    this.queue = (queueService as any).queues.get('gameCleanup')
-    if (!this.queue) {
-      throw new Error('Game cleanup queue not available')
-    }
+    this.gameService = new GameService()
+    this.cacheService = new CacheService()
+    this.queue = queueService.getCleanupQueue()
   }
 
   async initialize(): Promise<void> {
