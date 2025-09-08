@@ -485,10 +485,10 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
   // The error id is attached to `res.sentry` for reference
   const sentryId = (res as any).sentry
   
-  // Use Node.js 24's Error.isError for safer error detection
-  const isActualError = typeof Error.isError === 'function' ? Error.isError(err) : err instanceof Error
-  const errorMessage = isActualError ? err.message : String(err)
-  const errorStack = isActualError ? err.stack : undefined
+  // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
+  const isActualError = err instanceof Error
+  const errorMessage = isActualError ? (err as Error).message : String(err)
+  const errorStack = isActualError ? (err as Error).stack : undefined
   
   logger.error('Application error:', {
     error: errorMessage,

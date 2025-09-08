@@ -16,10 +16,10 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
 
 // Error handler wrapper for socket events
 function handleSocketError(socket: Socket<ClientToServerEvents, ServerToClientEvents>, eventName: string, error: unknown) {
-  // Use Node.js 24's Error.isError for safer error detection
-  const isActualError = typeof Error.isError === 'function' ? Error.isError(error) : error instanceof Error
-  const errorMessage = isActualError ? error.message : String(error)
-  const errorStack = isActualError ? error.stack : undefined
+  // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
+  const isActualError = error instanceof Error
+  const errorMessage = isActualError ? (error as Error).message : String(error)
+  const errorStack = isActualError ? (error as Error).stack : undefined
   
   logger.error(`Socket error in ${eventName}:`, {
     error: errorMessage,
