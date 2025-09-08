@@ -10,6 +10,7 @@ import {
   setReinforcementArmies,
   updateGameState,
   updateTerritory,
+  applyDelta,
 } from '../store/gameSlice'
 import { addPlayerToRoom, removePlayerFromRoom, updateRoom } from '../store/roomSlice'
 import audioService from './audioService'
@@ -139,6 +140,40 @@ class SocketService {
       )
     })
 
+    // Delta update handler - efficient real-time updates
+    this.socket.on('game-delta', (delta) => {
+      const currentUserId = store.getState().auth.user?.id
+      
+      // Handle turn notifications for phase changes
+      if (delta.type === 'PHASE_CHANGE' && delta.currentPlayer === currentUserId) {
+        notificationService.addNotification({
+          type: 'turn_reminder',
+          title: "It's your turn!",
+          message: `It's your turn - ${delta.phase} phase`,
+          read: false,
+          actionUrl: `/game/${delta.roomId}`,
+          actionLabel: 'Go to game',
+          metadata: {
+            gameId: delta.roomId,
+          },
+        })
+        audioService.playEffect('turn')
+      }
+      
+      // Handle battle result audio
+      if (delta.type === 'BATTLE_RESULT') {
+        if (delta.battleResult.conquered) {
+          audioService.playEffect('victory')
+        } else {
+          audioService.playEffect('defeat')
+        }
+      }
+      
+      // Apply delta to Redux store
+      store.dispatch(applyDelta(delta))
+    })
+
+    // Legacy game-update handler - kept for backward compatibility during transition
     this.socket.on('game-update', (gameState) => {
       const previousState = store.getState().game.currentGame
       const currentUserId = store.getState().auth.user?.id

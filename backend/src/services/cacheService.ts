@@ -156,18 +156,33 @@ export const cacheService = new CacheService()
 // Game state caching
 export class GameStateCache {
   private cache = new CacheService()
-  private readonly TTL = 60 // 1 minute
+  private readonly DEFAULT_TTL = 3600 // 1 hour for active games
+  private readonly INACTIVE_TTL = 86400 // 24 hours for inactive games
 
-  async getGameState(gameId: string) {
+  async getGameState(gameId: string): Promise<any | null> {
     return this.cache.get(`game:state:${gameId}`)
   }
 
-  async setGameState(gameId: string, state: any) {
-    return this.cache.set(`game:state:${gameId}`, state, this.TTL)
+  async setGameState(gameId: string, state: any, ttl?: number) {
+    const cacheTime = ttl || this.DEFAULT_TTL
+    return this.cache.set(`game:state:${gameId}`, state, cacheTime)
+  }
+
+  async setInactiveGameState(gameId: string, state: any) {
+    // Longer TTL for finished or inactive games to prevent immediate cleanup
+    return this.cache.set(`game:state:${gameId}`, state, this.INACTIVE_TTL)
   }
 
   async invalidateGame(gameId: string) {
     return this.cache.delete(`game:state:${gameId}`)
+  }
+
+  async cleanupFinishedGames(gameIds: string[]) {
+    // Batch cleanup of finished games
+    for (const gameId of gameIds) {
+      await this.invalidateGame(gameId)
+    }
+    logger.info(`Cleaned up ${gameIds.length} finished games from cache`)
   }
 }
 
@@ -237,8 +252,68 @@ export class MapCache {
   }
 }
 
+/**
+ * Territory modifier cache with optimized batch operations
+ */
+export class TerritoryModifierCache extends CacheService {
+  private readonly CACHE_PREFIX = 'territory_modifiers'
+  private readonly TEMPLATES_KEY = 'modifier_templates'
+  private readonly DEFAULT_TTL = 1800 // 30 minutes
+
+  /**
+   * Get cached modifier templates
+   */
+  async getTemplates() {
+    return this.get(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`)
+  }
+
+  /**
+   * Cache modifier templates
+   */
+  async setTemplates(templates: any[]) {
+    await this.set(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`, templates, this.DEFAULT_TTL)
+  }
+
+  /**
+   * Get cached game modifiers
+   */
+  async getGameModifiers(gameId: string) {
+    return this.get(`${this.CACHE_PREFIX}:game:${gameId}`)
+  }
+
+  /**
+   * Cache game modifiers
+   */
+  async setGameModifiers(gameId: string, modifiers: Map<string, any>) {
+    const serializedModifiers = Object.fromEntries(modifiers)
+    await this.set(`${this.CACHE_PREFIX}:game:${gameId}`, serializedModifiers, this.DEFAULT_TTL * 2) // 1 hour
+  }
+
+  /**
+   * Remove game modifiers from cache
+   */
+  async removeGameModifiers(gameId: string) {
+    await this.delete(`${this.CACHE_PREFIX}:game:${gameId}`)
+  }
+
+  /**
+   * Cache map modifiers
+   */
+  async setMapModifiers(mapId: string, modifiers: any[]) {
+    await this.set(`${this.CACHE_PREFIX}:map:${mapId}`, modifiers, this.DEFAULT_TTL * 4) // 2 hours
+  }
+
+  /**
+   * Get cached map modifiers
+   */
+  async getMapModifiers(mapId: string) {
+    return this.get(`${this.CACHE_PREFIX}:map:${mapId}`)
+  }
+}
+
 // Export instances
 export const gameStateCache = new GameStateCache()
 export const userCache = new UserCache()
 export const leaderboardCache = new LeaderboardCache()
 export const mapCache = new MapCache()
+export const territoryModifierCache = new TerritoryModifierCache()

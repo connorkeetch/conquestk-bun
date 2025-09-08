@@ -158,6 +158,7 @@ socket.on('game:state', (state) => {
 4. **Map Editor** - Canvas-based territory creation with ImageProcessor
 5. **PostgreSQL** - All queries must use $1, $2 format (not ? placeholders)
 6. **Database Schema** - Comprehensive tables for all features (game rooms, achievements, tournaments, etc.)
+7. **Performance** - Optimized with Redis caching, delta updates, and bulk database operations (see PERFORMANCE-OPTIMIZATIONS.md)
 
 ## 💾 Database Management
 
@@ -275,6 +276,7 @@ See `backend/.env.example` for complete configuration template.
 
 ### /backend
 - **MIGRATION_INSTRUCTIONS.md** - Database migration guide
+- **PERFORMANCE-OPTIMIZATIONS.md** - Performance patterns and optimization guidelines
 
 ### /frontend/src/data
 - **MAP_SCHEMA.md** - Map data structure specification

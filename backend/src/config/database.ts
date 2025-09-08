@@ -19,23 +19,45 @@ if (!databaseUrl) {
 try {
   logger.info('🔧 Initializing PostgreSQL connection pool')
   
-  // Increase timeout for Railway connections
+  // Enhanced connection pool configuration for production loads
   const isRailway = databaseUrl.includes('railway')
-  const connectionTimeout = isRailway ? 10000 : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '2000')
+  const connectionTimeout = isRailway ? 15000 : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000')
+  const isProduction = process.env.NODE_ENV === 'production'
   
   pgPool = new Pool({
     connectionString: databaseUrl,
-    max: parseInt(process.env.DB_POOL_MAX || '20'),
-    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
-    connectionTimeoutMillis: connectionTimeout, // Increased for Railway
-    // Production optimizations
-    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'), // 30s query timeout
+    // Enhanced pool sizing based on environment
+    max: parseInt(process.env.DB_POOL_MAX || (isProduction ? '25' : '15')), // More connections in production
+    min: parseInt(process.env.DB_POOL_MIN || (isProduction ? '5' : '2')), // Keep minimum connections alive
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || (isProduction ? '60000' : '30000')), // Longer idle in production
+    connectionTimeoutMillis: connectionTimeout,
+    acquireTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT || '10000'), // Time to wait for connection
+    // Query timeouts
+    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
     query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
-    // Railway requires SSL
-    ssl: isRailway || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    // Connection optimization
+    application_name: 'conquestk-backend',
+    // Railway and production SSL
+    ssl: isRailway || isProduction ? { rejectUnauthorized: false } : undefined,
+    // Connection keep-alive for Railway reliability
+    keepAlive: isRailway,
+    keepAliveInitialDelayMillis: isRailway ? 10000 : 0,
   })
   
-  logger.info(`📊 Database config: Railway=${isRailway}, Timeout=${connectionTimeout}ms, SSL=${isRailway || process.env.NODE_ENV === 'production'}`)
+  logger.info(`📊 Database config: Railway=${isRailway}, Timeout=${connectionTimeout}ms, SSL=${isRailway || isProduction}, Pool: ${pgPool.options.min}-${pgPool.options.max}`)
+
+  // Enhanced connection monitoring
+  pgPool.on('connect', (client) => {
+    logger.debug(`🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`)
+  })
+
+  pgPool.on('error', (err, client) => {
+    logger.error('❌ Unexpected error on idle client:', err)
+  })
+
+  pgPool.on('remove', (client) => {
+    logger.debug(`🔌 Client removed. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle`)
+  })
 
   // Test the connection (non-blocking)
   pgPool.query('SELECT 1', (err) => {
@@ -196,6 +218,27 @@ export function getPool(): Pool {
     throw new Error('Database connection not available')
   }
   return pgPool
+}
+
+// Get detailed pool metrics for monitoring
+export function getPoolMetrics() {
+  if (!pgPool) {
+    return { error: 'Pool not initialized' }
+  }
+
+  return {
+    totalCount: pgPool.totalCount,
+    idleCount: pgPool.idleCount,
+    waitingCount: pgPool.waitingCount,
+    config: {
+      max: pgPool.options.max,
+      min: pgPool.options.min,
+      idleTimeoutMillis: pgPool.options.idleTimeoutMillis,
+      connectionTimeoutMillis: pgPool.options.connectionTimeoutMillis,
+      acquireTimeoutMillis: pgPool.options.acquireTimeoutMillis,
+    },
+    utilization: pgPool.totalCount > 0 ? ((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount * 100).toFixed(1) + '%' : '0%'
+  }
 }
 
 export default { query, transaction, initDatabase, closeDatabase, getClient }
