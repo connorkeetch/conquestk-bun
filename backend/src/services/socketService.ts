@@ -138,8 +138,12 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         playerId: socket.userId!,
         action: {
           type: 'deploy',
-          territoryId: data.territoryId,
-          armies: data.armies,
+          roomId: data.roomId,
+          playerId: socket.userId!,
+          payload: {
+            territoryId: data.territoryId,
+            armies: data.armies,
+          },
         },
         socketId: socket.id,
       })
@@ -163,9 +167,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         playerId: socket.userId!,
         action: {
           type: 'attack',
-          fromTerritory: data.fromTerritoryId,
-          toTerritory: data.toTerritoryId,
-          armies: data.armies || 1,
+          roomId: data.roomId,
+          playerId: socket.userId!,
+          payload: {
+            fromTerritory: data.fromTerritoryId,
+            toTerritory: data.toTerritoryId,
+            armies: (data as any).armies || 1,
+          },
         },
         socketId: socket.id,
       })

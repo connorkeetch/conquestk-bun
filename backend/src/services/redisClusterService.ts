@@ -136,7 +136,7 @@ export class RedisClusterService {
   }
 
   // Advanced caching methods with automatic tier management
-  async setWithTier(key: string, value: any, tier: keyof typeof this.CACHE_TIERS = 'STANDARD'): Promise<boolean> {
+  async setWithTier(key: string, value: any, tier: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' = 'STANDARD'): Promise<boolean> {
     const client = this.getClient()
     if (!client) return false
 
@@ -151,7 +151,7 @@ export class RedisClusterService {
         version: 1,
       })
 
-      const ttl = this.CACHE_TIERS[tier]
+      const ttl = this.CACHE_TIERS[tier as keyof typeof this.CACHE_TIERS]
       await client.setex(key, ttl, serializedValue)
 
       logger.debug(`📦 Cache SET: ${key} (${tier}, TTL: ${ttl}s)`)
@@ -210,9 +210,9 @@ export class RedisClusterService {
 
         this.metrics.hits++
         try {
-          const parsed = JSON.parse(result)
-          logger.debug(`🎯 Cache HIT: ${keys[index]} (${parsed.tier})`)
-          return parsed.data as T
+          const parsedValue = JSON.parse(result)
+          logger.debug(`🎯 Cache HIT: ${keys[index]} (${parsedValue.tier})`)
+          return parsedValue.data as T
         } catch (parseError) {
           logger.error(`❌ Failed to parse cached value for key ${keys[index]}:`, parseError)
           return null
@@ -228,7 +228,7 @@ export class RedisClusterService {
     }
   }
 
-  async mset(keyValuePairs: Array<{ key: string; value: any; tier?: keyof typeof this.CACHE_TIERS }>): Promise<boolean> {
+  async mset(keyValuePairs: Array<{ key: string; value: any; tier?: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' }>): Promise<boolean> {
     const client = this.getClient()
     if (!client || keyValuePairs.length === 0) return false
 
@@ -246,7 +246,7 @@ export class RedisClusterService {
           version: 1,
         })
 
-        const ttl = this.CACHE_TIERS[tier]
+        const ttl = this.CACHE_TIERS[tier as keyof typeof this.CACHE_TIERS]
         pipeline.setex(key, ttl, serializedValue)
         this.metrics.sets++
       }

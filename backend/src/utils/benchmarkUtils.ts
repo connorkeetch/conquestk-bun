@@ -258,7 +258,7 @@ export function generatePerformanceReport(testResults: any[]): {
   )
 
   // Identify areas needing improvement
-  const needsImprovement = []
+  const needsImprovement: string[] = []
   const avgResponseTime = testGrades.reduce((sum, test) => sum + test.responseTime, 0) / testGrades.length
   const avgThroughput = testGrades.reduce((sum, test) => sum + test.throughput, 0) / testGrades.length
   const avgErrorRate = testGrades.reduce((sum, test) => sum + test.errorRate, 0) / testGrades.length
@@ -274,7 +274,11 @@ export function generatePerformanceReport(testResults: any[]): {
   }
 
   // Analyze trends (if we have enough data)
-  const trends = { improving: [], degrading: [], stable: [] }
+  const trends: {
+    improving: string[]
+    degrading: string[]
+    stable: string[]
+  } = { improving: [], degrading: [], stable: [] }
   if (testGrades.length >= 4) {
     const firstHalf = testGrades.slice(0, Math.floor(testGrades.length / 2))
     const secondHalf = testGrades.slice(Math.floor(testGrades.length / 2))
@@ -461,7 +465,12 @@ export function checkSLACompliance(
     }
   }
 
-  const violations = []
+  const violations: Array<{
+    metric: string
+    actual: number
+    threshold: number
+    severity: 'warning' | 'violation'
+  }> = []
   
   // Check average response time
   const avgResponseTime = testResults.reduce((sum, test) => 
