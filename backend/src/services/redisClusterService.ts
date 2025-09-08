@@ -27,7 +27,7 @@ interface ClusterConfig {
 }
 
 export class RedisClusterService {
-  private cluster: Redis.Cluster | null = null
+  private cluster: any | null = null
   private fallbackClient: Redis | null = null
   private isClusterMode = false
   private metrics: CacheMetrics = {

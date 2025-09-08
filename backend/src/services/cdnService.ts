@@ -157,7 +157,7 @@ export class CDNService {
           type,
           cacheControl: rule.cacheControl,
           compression: rule.compression,
-          minify: rule.minify || false,
+          minify: ('minify' in rule ? rule.minify : false) || false,
         })
       }
     }

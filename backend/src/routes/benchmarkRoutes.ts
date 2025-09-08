@@ -33,10 +33,11 @@ router.post('/load-test/:scenario', authenticateToken, async (req, res): Promise
     const scenarios = performanceTestingService.getTestScenarios()
     
     if (!scenarios.includes(scenario)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: `Unknown scenario: ${scenario}. Available scenarios: ${scenarios.join(', ')}`
       })
+      return
     }
 
     // Start the test asynchronously
@@ -87,10 +88,11 @@ router.post('/game-scenario', authenticateToken, async (req, res): Promise<void>
     } = req.body
 
     if (players > 1000 || duration > 3600) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Test parameters exceed safety limits (max 1000 players, 3600s duration)'
       })
+      return
     }
 
     const config = {
@@ -140,10 +142,11 @@ router.post('/stress-test', authenticateToken, async (req, res): Promise<void> =
     const { maxConcurrency = 500 } = req.body
 
     if (maxConcurrency > 2000) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Maximum concurrency cannot exceed 2000 for safety'
       })
+      return
     }
 
     // Start stress test asynchronously
@@ -196,7 +199,7 @@ router.get('/status', authenticateToken, async (req, res) => {
         recentTests: recentHistory.map(test => ({
           testId: test.testId,
           timestamp: new Date(test.timestamp).toISOString(),
-          type: test.config.scenario || 'load_test',
+          type: ('scenario' in test.config ? test.config.scenario : 'load_test') as string,
           status: 'completed',
           summary: {
             totalRequests: test.results.totalRequests,
@@ -228,10 +231,11 @@ router.get('/results/:testId', authenticateToken, async (req, res): Promise<void
     const testResult = history.find(test => test.testId === testId)
 
     if (!testResult) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Test result not found'
       })
+      return
     }
 
     res.json({
@@ -254,10 +258,11 @@ router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> 
     const stopped = await performanceTestingService.stopTest(testId)
 
     if (!stopped) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Test not found or already completed'
       })
+      return
     }
 
     res.json({
@@ -328,10 +333,11 @@ router.post('/quick-test', authenticateToken, async (req, res): Promise<void> =>
     } = req.body
 
     if (concurrency > 100 || duration > 300) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Quick test limits: max 100 concurrency, 300s duration'
       })
+      return
     }
 
     // Create temporary test scenario
