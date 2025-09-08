@@ -1,7 +1,7 @@
 import Bull from 'bull'
 import { GameActionJob, queueService } from '@/services/queueService'
 import { GameService } from '@/services/gameService'
-import { GameDelta, DeltaBuilder } from '@/types/deltaUpdates'
+import { GameDelta, DeltaBuilder, CompoundDelta } from '@/types/deltaUpdates'
 import { Server } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
 
@@ -45,7 +45,7 @@ export class GameActionWorker {
       console.log(`🎮 Processing game action: ${action.type} for game ${gameId}`)
       
       // Get current game state
-      const currentState = await gameService.getGameState(gameId)
+      const currentState = await this.gameService.getGameState(gameId)
       if (!currentState) {
         throw new Error(`Game ${gameId} not found`)
       }
@@ -60,18 +60,18 @@ export class GameActionWorker {
 
       // Process different action types
       switch (action.type) {
-        case 'PLACE_ARMIES':
+        case 'deploy':
           delta = await this.processPlaceArmies(gameId, playerId, action)
           break
           
-        case 'ATTACK':
+        case 'attack':
           // For attacks, we queue a battle simulation
           const battleJob = {
             gameId,
-            attackingTerritory: action.fromTerritory,
-            defendingTerritory: action.toTerritory,
-            attackingArmies: action.armies || 1,
-            defendingArmies: currentState.board.find(t => t.id === action.toTerritory)?.armies || 1,
+            attackingTerritory: action.payload?.fromTerritory || '',
+            defendingTerritory: action.payload?.toTerritory || '',
+            attackingArmies: action.payload?.armies || 1,
+            defendingArmies: currentState.board.find((t: any) => t.id === action.payload?.toTerritory)?.armies || 1,
             playerId,
           }
           
@@ -81,22 +81,18 @@ export class GameActionWorker {
           shouldBroadcast = false
           break
           
-        case 'FORTIFY':
+        case 'fortify':
           delta = await this.processFortify(gameId, playerId, action)
           break
           
-        case 'END_TURN':
+        case 'end_turn':
           delta = await this.processEndTurn(gameId, playerId)
           break
           
-        case 'PHASE_CHANGE':
+        case 'begin_turn':
+        case 'trade_cards':
+        case 'go_back_to_reinforcement':
           delta = await this.processPhaseChange(gameId, playerId, action)
-          break
-          
-        case 'CHAT_MESSAGE':
-          // Chat messages are processed immediately and don't affect game state
-          shouldBroadcast = true
-          delta = null
           break
           
         default:
@@ -105,16 +101,7 @@ export class GameActionWorker {
 
       // Broadcast delta update if needed
       if (shouldBroadcast && delta) {
-        io.to(`game:${gameId}`).emit('game:delta', delta)
-      }
-
-      // For chat messages, emit directly
-      if (action.type === 'CHAT_MESSAGE') {
-        io.to(`game:${gameId}`).emit('game:chat', {
-          playerId,
-          message: action.message,
-          timestamp: Date.now(),
-        })
+        this.io.to(`game:${gameId}`).emit('game-delta', delta)
       }
 
       return { 
@@ -128,9 +115,10 @@ export class GameActionWorker {
       
       // Emit error to specific socket if available
       if (socketId) {
-        io.to(socketId).emit('error', { 
+        this.io.to(socketId).emit('error', { 
+          event: 'game:action:error',
           message: (error as Error).message,
-          action: action.type,
+          timestamp: new Date().toISOString(),
         })
       }
       
@@ -145,7 +133,7 @@ export class GameActionWorker {
     }
 
     // Check if it's player's turn for turn-based actions
-    const turnBasedActions = ['PLACE_ARMIES', 'ATTACK', 'FORTIFY', 'END_TURN']
+    const turnBasedActions = ['deploy', 'attack', 'fortify', 'end_turn']
     if (turnBasedActions.includes(action.type)) {
       return gameState.currentPlayer === playerId
     }
@@ -155,54 +143,55 @@ export class GameActionWorker {
 
   private async processPlaceArmies(gameId: string, playerId: string, action: any): Promise<GameDelta> {
     // Update territory armies
-    const newArmyCount = await gameService.processPlaceArmies(gameId, {
-      territoryId: action.territoryId,
-      armies: action.armies,
+    const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
+      territoryId: action.payload?.territoryId || '',
+      armies: action.payload?.armies || 0,
       playerId,
     })
 
-    return DeltaBuilder.territoryUpdate(gameId, action.territoryId, {
+    return DeltaBuilder.territoryUpdate(gameId, action.payload?.territoryId || '', {
       armies: newArmyCount,
     })
   }
 
   private async processFortify(gameId: string, playerId: string, action: any): Promise<GameDelta> {
     // Process fortification
-    const result = await gameService.processFortify(gameId, {
-      fromTerritoryId: action.fromTerritory,
-      toTerritoryId: action.toTerritory,
-      armies: action.armies,
+    const result = await this.gameService.processFortify(gameId, {
+      fromTerritoryId: action.payload?.fromTerritory || '',
+      toTerritoryId: action.payload?.toTerritory || '',
+      armies: action.payload?.armies || 0,
       playerId,
     })
 
     // Return compound delta for both territories
-    return {
+    const compoundDelta: CompoundDelta = {
       type: 'COMPOUND',
-      gameId,
+      roomId: gameId,
       timestamp: Date.now(),
       changes: [
-        DeltaBuilder.territoryUpdate(gameId, action.fromTerritory, {
+        DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritory || '', {
           armies: result.fromArmies,
         }),
-        DeltaBuilder.territoryUpdate(gameId, action.toTerritory, {
+        DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritory || '', {
           armies: result.toArmies,
         }),
       ],
     }
+    return compoundDelta
   }
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
-    const nextPlayer = await gameService.processEndTurn(gameId, playerId)
+    const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
     
-    return DeltaBuilder.phaseChange(gameId, 'PLACE_ARMIES', nextPlayer.id)
+    return DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0)
   }
 
   private async processPhaseChange(gameId: string, playerId: string, action: any): Promise<GameDelta> {
-    await gameService.processPhaseChange(gameId, playerId, action.phase)
+    await this.gameService.processPhaseChange(gameId, playerId, action.payload?.phase || 'reinforcement')
     
-    return DeltaBuilder.phaseChange(gameId, action.phase, playerId)
+    return DeltaBuilder.phaseChange(gameId, action.payload?.phase || 'reinforcement', playerId, 0, 0)
   }
 }
 
-// Export singleton instance
-export const gameActionWorker = new GameActionWorker()
+// Export factory function
+export const createGameActionWorker = (io: Server<ClientToServerEvents, ServerToClientEvents>) => new GameActionWorker(io)

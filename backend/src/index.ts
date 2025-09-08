@@ -295,11 +295,17 @@ app.get('/health', async (_req: Request, res: Response) => {
 
   // Check queue system health
   try {
-    const { workerManager } = await import('./workers/workerManager')
-    const queueHealth = await workerManager.healthCheck()
-    queueStatus = queueHealth.status
-    if (queueHealth.status !== 'healthy') {
-      queueError = queueHealth.details?.error || 'Queue system unhealthy'
+    const { getWorkerManagerInstance } = await import('./workers/workerManager')
+    const workerManagerInstance = getWorkerManagerInstance()
+    if (workerManagerInstance) {
+      const queueHealth = await workerManagerInstance.healthCheck()
+      queueStatus = queueHealth.status
+      if (queueHealth.status !== 'healthy') {
+        queueError = queueHealth.details?.error || 'Queue system unhealthy'
+      }
+    } else {
+      queueStatus = 'not-initialized'
+      queueError = 'WorkerManager not initialized'
     }
   } catch (error) {
     queueStatus = 'disconnected'
@@ -495,6 +501,18 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
 })
 
 setupSocketHandlers(io)
+
+// Initialize WorkerManager with Socket.io instance
+import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager'
+const workerManager = createWorkerManager(io)
+setWorkerManagerInstance(workerManager)
+
+// Initialize workers asynchronously
+workerManager.initialize().then(() => {
+  console.log('✅ Worker system initialized')
+}).catch((error: any) => {
+  console.error('⚠️ Failed to initialize worker system:', error.message)
+})
 
 async function startServer() {
   try {

@@ -2,7 +2,7 @@ import { logger } from '@/utils/logger'
 import { redisClusterService } from './redisClusterService'
 import { databaseClusterService } from './databaseClusterService'
 import { cdnService } from './cdnService'
-import { workerManager } from '@/workers/workerManager'
+import { getWorkerManagerInstance } from '@/workers/workerManager'
 
 interface SystemMetrics {
   timestamp: number
@@ -172,7 +172,8 @@ export class PerformanceMonitorService {
       const cacheMetrics = redisClusterService.getMetrics()
       
       // Queue metrics
-      const queueHealth = await workerManager.getStats()
+      const workerManager = getWorkerManagerInstance()
+      const queueHealth = workerManager ? await workerManager.getStats() : null
       const queueMetrics = this.calculateQueueMetrics(queueHealth)
       
       // CDN metrics

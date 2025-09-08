@@ -76,6 +76,13 @@ export class CacheService {
   }
 
   /**
+   * Delete game state from cache (alias for delete with game key prefix)
+   */
+  async deleteGameState(gameId: string): Promise<void> {
+    await this.delete(`game:${gameId}`)
+  }
+
+  /**
    * Clear all cache entries with a specific prefix
    */
   async clearPrefix(prefix: string): Promise<void> {
@@ -175,6 +182,10 @@ export class GameStateCache {
 
   async invalidateGame(gameId: string) {
     return this.cache.delete(`game:state:${gameId}`)
+  }
+
+  async deleteGameState(gameId: string) {
+    return this.invalidateGame(gameId)
   }
 
   async cleanupFinishedGames(gameIds: string[]) {

@@ -1,7 +1,7 @@
 import Bull from 'bull'
 import { BattleSimulationJob, queueService } from '@/services/queueService'
 import { GameService } from '@/services/gameService'
-import { DeltaBuilder, GameDelta } from '@/types/deltaUpdates'
+import { DeltaBuilder, GameDelta, GameEndDelta } from '@/types/deltaUpdates'
 import { Server } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
 
@@ -109,14 +109,11 @@ export class BattleWorker {
         )
 
         if (remainingTerritories.length === 0) {
-          // Player eliminated
-          deltas.push({
-            type: 'PLAYER_ELIMINATED' as any,
-            gameId,
-            playerId: defendingTerr.ownerId!,
-            eliminatedBy: playerId,
-            timestamp: Date.now(),
-          })
+          // Player eliminated - use player update delta to mark as eliminated
+          deltas.push(DeltaBuilder.playerUpdate(gameId, defendingTerr.ownerId!, {
+            isEliminated: true,
+            territories: []
+          }))
         }
 
         // Check for game victory
@@ -127,10 +124,13 @@ export class BattleWorker {
         if (remainingPlayers.length === 1) {
           deltas.push({
             type: 'GAME_END',
+            roomId: gameId,
             winner: playerId,
-            reason: 'conquest',
+            eliminatedPlayers: gameState.players
+              .filter((p: any) => !gameState.board.some((t: any) => t.owner === p.id))
+              .map((p: any) => p.id),
             timestamp: Date.now(),
-          } as any)
+          } as GameEndDelta)
         }
 
       } else {
@@ -147,7 +147,7 @@ export class BattleWorker {
       // Create compound delta for all battle results
       const battleDelta: any = {
         type: 'BATTLE_RESULT',
-        gameId,
+        roomId: gameId,
         timestamp: Date.now(),
         battleResult: {
           ...battleResult,
@@ -170,7 +170,7 @@ export class BattleWorker {
       }
 
       // Broadcast battle results
-      (this.io.to(`game:${gameId}`) as any).emit('game:delta', battleDelta)
+      this.io.to(`game:${gameId}`).emit('game-delta', battleDelta)
 
       // Update persistent game state
       // TODO: Implement applyBattleResult method in GameService
@@ -182,10 +182,10 @@ export class BattleWorker {
       console.error(`❌ Battle simulation failed:`, error)
       
       // Emit battle error to game room
-      (this.io.to(`game:${gameId}`) as any).emit('battle:error', {
-        attackingTerritory,
-        defendingTerritory,
-        error: (error as Error).message,
+      this.io.to(`game:${gameId}`).emit('error', {
+        event: 'battle:error',
+        message: (error as Error).message,
+        timestamp: new Date().toISOString(),
       })
       
       throw error
