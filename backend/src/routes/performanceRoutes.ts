@@ -168,10 +168,11 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
     const { pattern } = req.body
     
     if (!pattern) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Pattern is required',
       })
+      return
     }
     
     const cleared = await redisClusterService.deletePattern(pattern)

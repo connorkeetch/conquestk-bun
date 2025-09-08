@@ -337,7 +337,14 @@ export class PerformanceTestingService {
       const stressTestResult: StressTestResult = {
         testId,
         timestamp: Date.now(),
-        config: { maxConcurrency, scenario: 'stress_test' } as GameScenarioConfig,
+        config: {
+          maxConcurrency,
+          players: maxConcurrency,
+          gameCount: 1,
+          actionsPerMinute: 60,
+          duration: 1800,
+          scenario: 'stress_test' as const,
+        } as GameScenarioConfig,
         results: testResults || {
           totalRequests: 0,
           successfulRequests: 0,

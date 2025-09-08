@@ -254,7 +254,7 @@ export class Phase4IntegrationService {
   }
 
   async getDetailedStatus(): Promise<Phase4Status & { serviceDetails: any }> {
-    const serviceDetails = {}
+    const serviceDetails: Record<string, any> = {}
 
     if (this.status.services.redisCluster.status === 'initialized') {
       try {
@@ -287,9 +287,9 @@ export class Phase4IntegrationService {
     logger.info('🔧 Running Phase 4 system diagnostics...')
 
     const diagnostics = {
-      systemHealth: null,
-      performanceMetrics: null,
-      scalingStatus: null,
+      systemHealth: null as any,
+      performanceMetrics: null as any,
+      scalingStatus: null as any,
       recommendations: [] as string[]
     }
 
