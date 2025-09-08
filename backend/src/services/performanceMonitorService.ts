@@ -1,8 +1,8 @@
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 import { redisClusterService } from './redisClusterService'
 import { databaseClusterService } from './databaseClusterService'
 import { cdnService } from './cdnService'
-import { getWorkerManagerInstance } from '@/workers/workerManager'
+import { getWorkerManagerInstance } from '../workers/workerManager'
 
 interface SystemMetrics {
   timestamp: number

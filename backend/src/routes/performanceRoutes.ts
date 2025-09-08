@@ -1,9 +1,9 @@
 import express from 'express'
-import { authenticateToken } from '@/middleware/auth'
-import { performanceMonitorService } from '@/services/performanceMonitorService'
-import { redisClusterService } from '@/services/redisClusterService'
-import { databaseClusterService } from '@/services/databaseClusterService'
-import { cdnService } from '@/services/cdnService'
+import { authenticateToken } from '../middleware/auth'
+import { performanceMonitorService } from '../services/performanceMonitorService'
+import { redisClusterService } from '../services/redisClusterService'
+import { databaseClusterService } from '../services/databaseClusterService'
+import { cdnService } from '../services/cdnService'
 
 const router = express.Router()
 

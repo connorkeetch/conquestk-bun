@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 import cluster from 'node:cluster'
 import os from 'os'
 

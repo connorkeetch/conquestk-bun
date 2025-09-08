@@ -1,5 +1,5 @@
 import { Pool, PoolClient, PoolConfig } from 'pg'
-import { logger } from '@/utils/logger'
+import { logger } from '../utils/logger'
 
 interface DatabaseNode {
   id: string

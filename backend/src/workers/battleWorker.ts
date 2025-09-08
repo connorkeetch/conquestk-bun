@@ -1,9 +1,9 @@
 import Bull from 'bull'
-import { BattleSimulationJob, queueService } from '@/services/queueService'
-import { GameService } from '@/services/gameService'
-import { DeltaBuilder, GameDelta, GameEndDelta } from '@/types/deltaUpdates'
+import { BattleSimulationJob, queueService } from '../services/queueService'
+import { GameService } from '../services/gameService'
+import { DeltaBuilder, GameDelta, GameEndDelta } from '../types/deltaUpdates'
 import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
+import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 
 interface BattleResult {
   attackerLosses: number
