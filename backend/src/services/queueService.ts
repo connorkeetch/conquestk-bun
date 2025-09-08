@@ -1,6 +1,6 @@
 import Bull from 'bull'
 import Redis from 'ioredis'
-import { GameState, GameAction, BattleResult, GameDelta } from '@/types/game'
+import { GameState, GameAction, BattleResult } from '@/types/game'
 
 // Queue job types
 export interface GameActionJob {
@@ -53,7 +53,6 @@ export class QueueService {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailure: 100,
       lazyConnect: true,
     })
   }
@@ -62,12 +61,20 @@ export class QueueService {
     if (this.isInitialized) return
 
     try {
-      await this.redis.connect()
+      // Connect to Redis if not already connected
+      if (this.redis.status !== 'ready') {
+        await this.redis.connect()
+      }
       
       // Initialize all queues
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
         const queue = new Bull(config.name, {
-          redis: this.redis.options,
+          redis: {
+            host: this.redis.options.host,
+            port: this.redis.options.port,
+            password: this.redis.options.password,
+            db: this.redis.options.db || 0,
+          },
           defaultJobOptions: {
             removeOnComplete: 10,
             removeOnFail: 5,
@@ -153,15 +160,17 @@ export class QueueService {
   // Priority system for game actions
   private getActionPriority(action: GameAction): number {
     switch (action.type) {
-      case 'PHASE_CHANGE':
-      case 'END_TURN':
+      case 'end_turn':
+      case 'begin_turn':
         return 10 // Highest priority
-      case 'ATTACK':
-      case 'FORTIFY':
+      case 'attack':
+      case 'fortify':
         return 7  // High priority
-      case 'PLACE_ARMIES':
+      case 'deploy':
         return 5  // Medium priority
-      case 'CHAT_MESSAGE':
+      case 'trade_cards':
+        return 3  // Medium priority
+      case 'go_back_to_reinforcement':
         return 2  // Low priority
       default:
         return 5  // Default medium priority

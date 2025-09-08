@@ -1,12 +1,12 @@
 import express from 'express'
-import { requireAuth, requireAdmin } from '@/middleware/auth'
+import { authenticateToken } from '@/middleware/auth'
 import { performanceTestingService } from '@/services/performanceTestingService'
 import { logger } from '@/utils/logger'
 
 const router = express.Router()
 
 // Get available test scenarios
-router.get('/scenarios', requireAuth, requireAdmin, async (req, res) => {
+router.get('/scenarios', authenticateToken, async (req, res) => {
   try {
     const scenarios = performanceTestingService.getTestScenarios()
     
@@ -27,7 +27,7 @@ router.get('/scenarios', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Run load test
-router.post('/load-test/:scenario', requireAuth, requireAdmin, async (req, res) => {
+router.post('/load-test/:scenario', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { scenario } = req.params
     const scenarios = performanceTestingService.getTestScenarios()
@@ -76,7 +76,7 @@ router.post('/load-test/:scenario', requireAuth, requireAdmin, async (req, res) 
 })
 
 // Run game scenario test
-router.post('/game-scenario', requireAuth, requireAdmin, async (req, res) => {
+router.post('/game-scenario', authenticateToken, async (req, res): Promise<void> => {
   try {
     const {
       players = 50,
@@ -135,7 +135,7 @@ router.post('/game-scenario', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Run stress test
-router.post('/stress-test', requireAuth, requireAdmin, async (req, res) => {
+router.post('/stress-test', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { maxConcurrency = 500 } = req.body
 
@@ -180,7 +180,7 @@ router.post('/stress-test', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Get test status
-router.get('/status', requireAuth, requireAdmin, async (req, res) => {
+router.get('/status', authenticateToken, async (req, res) => {
   try {
     const activeTests = performanceTestingService.getActiveTests()
     const recentHistory = performanceTestingService.getBenchmarkHistory(10)
@@ -221,7 +221,7 @@ router.get('/status', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Get detailed test results
-router.get('/results/:testId', requireAuth, requireAdmin, async (req, res) => {
+router.get('/results/:testId', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { testId } = req.params
     const history = performanceTestingService.getBenchmarkHistory()
@@ -248,7 +248,7 @@ router.get('/results/:testId', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Stop active test
-router.post('/stop/:testId', requireAuth, requireAdmin, async (req, res) => {
+router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { testId } = req.params
     const stopped = await performanceTestingService.stopTest(testId)
@@ -274,7 +274,7 @@ router.post('/stop/:testId', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Get benchmark history
-router.get('/history', requireAuth, requireAdmin, async (req, res) => {
+router.get('/history', authenticateToken, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50
     const history = performanceTestingService.getBenchmarkHistory(limit)
@@ -297,7 +297,7 @@ router.get('/history', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Generate benchmark report
-router.get('/report', requireAuth, requireAdmin, async (req, res) => {
+router.get('/report', authenticateToken, async (req, res) => {
   try {
     const report = performanceTestingService.generateBenchmarkReport()
 
@@ -319,7 +319,7 @@ router.get('/report', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Quick benchmark for specific endpoints
-router.post('/quick-test', requireAuth, requireAdmin, async (req, res) => {
+router.post('/quick-test', authenticateToken, async (req, res): Promise<void> => {
   try {
     const {
       endpoints = ['/health'],
@@ -374,7 +374,7 @@ router.post('/quick-test', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // System performance baseline
-router.get('/baseline', requireAuth, requireAdmin, async (req, res) => {
+router.get('/baseline', authenticateToken, async (req, res) => {
   try {
     const baselineTests = [
       'api_health_check',

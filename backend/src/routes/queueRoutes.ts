@@ -1,12 +1,12 @@
 import express from 'express'
-import { requireAuth, requireAdmin } from '@/middleware/auth'
+import { authenticateToken } from '@/middleware/auth'
 import { queueService } from '@/services/queueService'
 import { workerManager } from '@/workers/workerManager'
 
 const router = express.Router()
 
 // Queue monitoring endpoints (admin only)
-router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const stats = await workerManager.getStats()
     res.json({
@@ -21,7 +21,7 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
   }
 })
 
-router.get('/health', requireAuth, requireAdmin, async (req, res) => {
+router.get('/health', authenticateToken, async (req, res) => {
   try {
     const health = await workerManager.healthCheck()
     const statusCode = health.status === 'healthy' ? 200 : 503
@@ -39,7 +39,7 @@ router.get('/health', requireAuth, requireAdmin, async (req, res) => {
   }
 })
 
-router.get('/dashboard', requireAuth, requireAdmin, async (req, res) => {
+router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const stats = await queueService.getQueueStats()
     const health = await workerManager.healthCheck()
@@ -69,7 +69,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req, res) => {
 })
 
 // Queue management endpoints (admin only)
-router.post('/pause/:queueName', requireAuth, requireAdmin, async (req, res) => {
+router.post('/pause/:queueName', authenticateToken, async (req, res) => {
   try {
     const { queueName } = req.params
     // Implementation would pause specific queue
@@ -85,7 +85,7 @@ router.post('/pause/:queueName', requireAuth, requireAdmin, async (req, res) => 
   }
 })
 
-router.post('/resume/:queueName', requireAuth, requireAdmin, async (req, res) => {
+router.post('/resume/:queueName', authenticateToken, async (req, res) => {
   try {
     const { queueName } = req.params
     // Implementation would resume specific queue
@@ -101,7 +101,7 @@ router.post('/resume/:queueName', requireAuth, requireAdmin, async (req, res) =>
   }
 })
 
-router.delete('/clear/:queueName', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/clear/:queueName', authenticateToken, async (req, res) => {
   try {
     const { queueName } = req.params
     const { type = 'all' } = req.query

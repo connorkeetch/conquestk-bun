@@ -20,8 +20,8 @@ export class BattleWorker {
   private queue: Bull.Queue<BattleSimulationJob>
 
   constructor() {
-    // Get the queue from the service
-    this.queue = (queueService as any).queues.get('battleSimulations')
+    // Get the queue from the service - will be set after queueService initialization
+    this.queue = null as any
     if (!this.queue) {
       throw new Error('Battle simulations queue not available')
     }
