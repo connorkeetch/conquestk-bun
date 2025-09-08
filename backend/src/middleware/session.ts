@@ -44,7 +44,19 @@ export function createSessionMiddleware() {
   }
 
   // Try to use Redis immediately if available
-  tryConfigureRedisStore(sessionConfig)
+  const redisConfigured = tryConfigureRedisStore(sessionConfig)
+  
+  // Always explicitly set MemoryStore if Redis is not configured to suppress warning
+  if (!redisConfigured) {
+    const MemoryStore = require('express-session').MemoryStore
+    sessionConfig.store = new MemoryStore()
+    
+    if (process.env.REDIS_URL) {
+      logger.warn('⚠️ Using temporary MemoryStore while Redis initializes (this is expected during startup)')
+    } else {
+      logger.info('ℹ️ Using MemoryStore for sessions (Redis not configured)')
+    }
+  }
 
   // Create the session middleware
   currentSessionMiddleware = session(sessionConfig)
