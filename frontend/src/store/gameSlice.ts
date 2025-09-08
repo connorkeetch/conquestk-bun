@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { GameState } from '../types/game'
+import type { GameDelta } from '../types/deltaUpdates'
 
 // Helper function to check if territories are connected through owned territories
 const isConnectedThroughOwnedTerritories = (
@@ -236,6 +237,82 @@ const gameSlice = createSlice({
     setReinforcementArmies: (state, action: PayloadAction<number>) => {
       state.reinforcementArmies = action.payload
     },
+    
+    // Delta update handlers for efficient real-time updates
+    applyDelta: (state, action: PayloadAction<GameDelta>) => {
+      const delta = action.payload
+      
+      if (!state.currentGame) return
+      
+      switch (delta.type) {
+        case 'TERRITORY_UPDATE': {
+          const territory = state.currentGame.board.find(t => t.id === delta.territoryId)
+          if (territory) {
+            if (delta.changes.armies !== undefined) {
+              territory.armies = delta.changes.armies
+            }
+            if (delta.changes.ownerId !== undefined) {
+              territory.ownerId = delta.changes.ownerId
+            }
+          }
+          break
+        }
+        
+        case 'PLAYER_UPDATE': {
+          const player = state.currentGame.players.find(p => p.id === delta.playerId)
+          if (player) {
+            if (delta.changes.armies !== undefined) {
+              player.armies = delta.changes.armies
+            }
+            if (delta.changes.territories !== undefined) {
+              player.territories = delta.changes.territories
+            }
+            if (delta.changes.isEliminated !== undefined) {
+              player.isEliminated = delta.changes.isEliminated
+            }
+          }
+          break
+        }
+        
+        case 'PHASE_CHANGE': {
+          state.currentGame.phase = delta.phase
+          state.currentGame.currentPlayer = delta.currentPlayer
+          if (delta.turn !== undefined) {
+            state.currentGame.turn = delta.turn
+          }
+          if (delta.reinforcementArmies !== undefined) {
+            state.reinforcementArmies = delta.reinforcementArmies
+          }
+          break
+        }
+        
+        case 'BATTLE_RESULT': {
+          state.battleResult = delta.battleResult
+          // Territory updates are handled by separate TERRITORY_UPDATE deltas
+          break
+        }
+        
+        case 'GAME_END': {
+          state.currentGame.phase = 'finished'
+          // Winner and elimination details handled separately
+          break
+        }
+      }
+      
+      // Recalculate valid targets if territory selection is active
+      if (state.selectedTerritory && state.currentGame) {
+        const territory = state.currentGame.board.find(t => t.id === state.selectedTerritory)
+        const currentPlayer = state.currentGame.players.find(p => p.id === state.currentGame?.currentPlayer)
+        
+        if (territory && currentPlayer) {
+          state.validTargets = calculateValidTargets(
+            state.currentGame,
+            state.selectedTerritory,
+            currentPlayer.id
+          )
+        }
+      }
+    },
   },
 })
 
@@ -253,6 +330,7 @@ export const {
   setValidTargets,
   setBattleResult,
   setReinforcementArmies,
+  applyDelta,
 } = gameSlice.actions
 
 export default gameSlice.reducer

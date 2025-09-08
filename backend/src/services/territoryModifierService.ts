@@ -1,5 +1,6 @@
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { territoryModifierCache } from './cacheService'
 
 export interface TerritoryModifierTemplate {
   id: string
@@ -28,17 +29,35 @@ export interface GameTerritoryModifier {
 
 export class TerritoryModifierService {
   /**
-   * Get all available modifier templates
+   * Get all available modifier templates (cached)
    */
   async getModifierTemplates(): Promise<TerritoryModifierTemplate[]> {
+    // Check cache first
+    let templates = await territoryModifierCache.getTemplates() as TerritoryModifierTemplate[] | null
+    if (templates) {
+      return templates
+    }
+
+    // Cache miss - query database
     const result = await query('SELECT * FROM territory_modifier_templates ORDER BY name')
-    return result.rows
+    templates = result.rows as TerritoryModifierTemplate[]
+
+    // Cache the results
+    await territoryModifierCache.setTemplates(templates)
+    return templates
   }
 
   /**
-   * Get modifiers for a specific map
+   * Get modifiers for a specific map (cached)
    */
   async getMapModifiers(mapId: string): Promise<any[]> {
+    // Check cache first
+    let modifiers = await territoryModifierCache.getMapModifiers(mapId) as any[] | null
+    if (modifiers) {
+      return modifiers
+    }
+
+    // Cache miss - query database
     const sql = `
       SELECT 
         mtm.*,
@@ -53,10 +72,14 @@ export class TerritoryModifierService {
         tmt.description
       FROM map_territory_modifiers mtm
       JOIN territory_modifier_templates tmt ON mtm.modifier_template_id = tmt.id
-      WHERE mtm.map_id = ?
+      WHERE mtm.map_id = $1
     `
     const result = await query(sql, [mapId])
-    return result.rows
+    modifiers = result.rows as any[]
+
+    // Cache the results
+    await territoryModifierCache.setMapModifiers(mapId, modifiers)
+    return modifiers
   }
 
   /**
@@ -99,19 +122,20 @@ export class TerritoryModifierService {
   }
 
   /**
-   * Apply predefined map modifiers to a game
+   * Apply predefined map modifiers to a game (optimized batch insert)
    */
   private async applyMapModifiers(gameId: string, mapModifiers: any[]): Promise<void> {
-    for (const modifier of mapModifiers) {
-      const sql = `
-        INSERT INTO game_territory_modifiers (
-          game_id, territory_id, defense_bonus, attack_bonus, 
-          troop_generation_bonus, movement_restriction, supply_line_bonus,
-          icon, color, name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `
+    if (mapModifiers.length === 0) return
 
-      await query(sql, [
+    // Build batch insert with PostgreSQL VALUES clause
+    const values: any[] = []
+    const placeholders: string[] = []
+    
+    mapModifiers.forEach((modifier, index) => {
+      const baseIndex = index * 10
+      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`)
+      
+      values.push(
         gameId,
         modifier.territory_id,
         modifier.defense_bonus,
@@ -121,9 +145,20 @@ export class TerritoryModifierService {
         modifier.supply_line_bonus,
         modifier.icon,
         modifier.color,
-        modifier.name,
-      ])
-    }
+        modifier.name
+      )
+    })
+
+    const sql = `
+      INSERT INTO game_territory_modifiers (
+        game_id, territory_id, defense_bonus, attack_bonus, 
+        troop_generation_bonus, movement_restriction, supply_line_bonus,
+        icon, color, name
+      ) VALUES ${placeholders.join(', ')}
+    `
+
+    await query(sql, values)
+    logger.info(`Batch inserted ${mapModifiers.length} map modifiers for game ${gameId}`)
   }
 
   /**
@@ -152,40 +187,46 @@ export class TerritoryModifierService {
     const shuffled = [...territories].sort(() => Math.random() - 0.5)
     const selectedTerritories = shuffled.slice(0, numModifiers)
 
-    // Assign random modifiers to selected territories
+    // Prepare batch insert data
+    const modifiersToInsert: any[] = []
     for (const territoryId of selectedTerritories) {
       const template = templates[Math.floor(Math.random() * templates.length)]
-
-      const sql = `
-        INSERT INTO game_territory_modifiers (
-          game_id, territory_id, defense_bonus, attack_bonus, 
-          troop_generation_bonus, movement_restriction, supply_line_bonus,
-          icon, color, name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `
-
-      await query(sql, [
-        gameId,
-        territoryId,
-        template.defense_bonus,
-        template.attack_bonus,
-        template.troop_generation_bonus,
-        template.movement_restriction,
-        template.supply_line_bonus,
-        template.icon,
-        template.color,
-        template.name,
-      ])
+      modifiersToInsert.push({
+        territory_id: territoryId,
+        defense_bonus: template.defense_bonus,
+        attack_bonus: template.attack_bonus,
+        troop_generation_bonus: template.troop_generation_bonus,
+        movement_restriction: template.movement_restriction,
+        supply_line_bonus: template.supply_line_bonus,
+        icon: template.icon,
+        color: template.color,
+        name: template.name
+      })
     }
+
+    // Use the same batch insert logic
+    await this.applyMapModifiers(gameId, modifiersToInsert)
   }
 
   /**
-   * Get all modifiers for a specific game
+   * Get all modifiers for a specific game (cached)
    */
   async getGameModifiers(gameId: string): Promise<Map<string, GameTerritoryModifier>> {
+    // Check cache first
+    const cachedModifiers = await territoryModifierCache.getGameModifiers(gameId)
+    if (cachedModifiers) {
+      // Convert cached object back to Map
+      const modifierMap = new Map<string, GameTerritoryModifier>()
+      for (const [territoryId, modifier] of Object.entries(cachedModifiers)) {
+        modifierMap.set(territoryId, modifier as GameTerritoryModifier)
+      }
+      return modifierMap
+    }
+
+    // Cache miss - query database
     const sql = `
       SELECT * FROM game_territory_modifiers 
-      WHERE game_id = ?
+      WHERE game_id = $1
     `
     const result = await query(sql, [gameId])
 
@@ -204,36 +245,40 @@ export class TerritoryModifierService {
       })
     }
 
+    // Cache the results
+    await territoryModifierCache.setGameModifiers(gameId, modifierMap)
     return modifierMap
   }
 
   /**
-   * Get modifier for a specific territory in a game
+   * Get modifier for a specific territory in a game (optimized)
    */
   async getTerritoryModifier(
     gameId: string,
     territoryId: string,
   ): Promise<GameTerritoryModifier | null> {
-    const sql = `
-      SELECT * FROM game_territory_modifiers 
-      WHERE game_id = ? AND territory_id = ?
-    `
-    const result = await query(sql, [gameId, territoryId])
+    // Get all game modifiers (cached) and extract the specific one
+    const allModifiers = await this.getGameModifiers(gameId)
+    return allModifiers.get(territoryId) || null
+  }
 
-    if (result.rows.length === 0) return null
+  /**
+   * Clean up modifiers for finished games
+   */
+  async cleanupFinishedGameModifiers(gameIds: string[]): Promise<void> {
+    if (gameIds.length === 0) return
 
-    const row = result.rows[0]
-    return {
-      territory_id: row.territory_id,
-      defense_bonus: row.defense_bonus,
-      attack_bonus: row.attack_bonus,
-      troop_generation_bonus: row.troop_generation_bonus,
-      movement_restriction: row.movement_restriction,
-      supply_line_bonus: row.supply_line_bonus,
-      icon: row.icon,
-      color: row.color,
-      name: row.name,
+    // Remove from cache
+    for (const gameId of gameIds) {
+      await territoryModifierCache.removeGameModifiers(gameId)
     }
+
+    // Remove from database in batch
+    const placeholders = gameIds.map((_, index) => `$${index + 1}`).join(', ')
+    const sql = `DELETE FROM game_territory_modifiers WHERE game_id IN (${placeholders})`
+    
+    await query(sql, gameIds)
+    logger.info(`Cleaned up territory modifiers for ${gameIds.length} finished games`)
   }
 }
 

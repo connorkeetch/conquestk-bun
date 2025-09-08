@@ -2,10 +2,13 @@ import { GameEngine } from '../game/gameEngine'
 import type { GameAction, GameState } from '../types/game'
 import { mapService } from './mapService'
 import territoryModifierService from './territoryModifierService'
+import { gameStateCache } from './cacheService'
+import { logger } from '../utils/logger'
 
 export class GameService {
   private gameEngine = new GameEngine()
-  private activeGames = new Map<string, GameState>()
+  // Removed: private activeGames = new Map<string, GameState>() 
+  // Now using Redis-backed gameStateCache for persistence and scalability
 
   // Helper to serialize game state for transmission
   private serializeGameState(gameState: GameState): any {
@@ -26,7 +29,7 @@ export class GameService {
   async isCapitalTerritory(roomId: string, _territoryId: string): Promise<boolean> {
     // This is a placeholder - in a real implementation, you'd check the game state
     // or database to see if this territory is marked as a capital
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId)
     if (!gameState) return false
 
     // Check if the game has capitals enabled and if this territory is a capital
@@ -35,7 +38,7 @@ export class GameService {
   }
 
   async processGameAction(action: GameAction, userId: string): Promise<GameState> {
-    const gameState = this.activeGames.get(action.roomId)
+    const gameState = await gameStateCache.getGameState(action.roomId)
 
     if (!gameState) {
       throw new Error('Game not found')
@@ -46,8 +49,9 @@ export class GameService {
     }
 
     const updatedState = this.gameEngine.processAction(gameState, action)
-    this.activeGames.set(action.roomId, updatedState)
+    await gameStateCache.setGameState(action.roomId, updatedState)
 
+    logger.info(`Game action processed for room ${action.roomId}: ${action.type}`)
     return updatedState
   }
 
@@ -90,12 +94,15 @@ export class GameService {
       ;(gameState as any).territoryModifiers = modifiers
     }
 
-    this.activeGames.set(roomId, gameState)
+    // Cache the game state with TTL for automatic cleanup (24 hours)
+    await gameStateCache.setGameState(roomId, gameState)
+    
+    logger.info(`Game initialized for room ${roomId} with ${players.length} players`)
     return gameState
   }
 
   async getGameState(roomId: string): Promise<GameState | null> {
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId)
     if (!gameState) return null
 
     // Attach territory modifiers if they exist
@@ -110,7 +117,7 @@ export class GameService {
   }
 
   async deployArmies(roomId: string, userId: string, territoryId: string, armies: number) {
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId)
     if (!gameState) throw new Error('Game not found')
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'reinforcement') throw new Error('Not reinforcement phase')
@@ -127,7 +134,7 @@ export class GameService {
     }
 
     const updatedState = this.gameEngine.processAction(gameState, action)
-    this.activeGames.set(roomId, updatedState)
+    await gameStateCache.setGameState(roomId, updatedState)
 
     return {
       gameState: this.serializeGameState(updatedState),
@@ -137,7 +144,7 @@ export class GameService {
   }
 
   async attack(roomId: string, userId: string, fromTerritoryId: string, toTerritoryId: string) {
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId)
     if (!gameState) throw new Error('Game not found')
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'attack') throw new Error('Not attack phase')
@@ -154,7 +161,7 @@ export class GameService {
     }
 
     const battleResult = this.gameEngine.processAction(gameState, action)
-    this.activeGames.set(roomId, gameState)
+    await gameStateCache.setGameState(roomId, gameState)
 
     return {
       ...battleResult,
@@ -169,7 +176,7 @@ export class GameService {
     toTerritoryId: string,
     armies: number,
   ) {
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId)
     if (!gameState) throw new Error('Game not found')
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
     if (gameState.phase !== 'fortify') throw new Error('Not fortify phase')
@@ -186,7 +193,7 @@ export class GameService {
     }
 
     const updatedState = this.gameEngine.processAction(gameState, action)
-    this.activeGames.set(roomId, updatedState)
+    await gameStateCache.setGameState(roomId, updatedState)
 
     return {
       gameState: this.serializeGameState(updatedState),
@@ -198,12 +205,18 @@ export class GameService {
   }
 
   async endTurn(roomId: string, userId: string) {
-    const gameState = this.activeGames.get(roomId)
+    const gameState = await gameStateCache.getGameState(roomId) as GameState
     if (!gameState) throw new Error('Game not found')
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
 
     const updatedState = this.gameEngine.advancePhase(gameState)
-    this.activeGames.set(roomId, updatedState)
+    
+    // Use longer TTL for finished games
+    if (updatedState.phase === 'finished') {
+      await gameStateCache.setInactiveGameState(roomId, updatedState)
+    } else {
+      await gameStateCache.setGameState(roomId, updatedState)
+    }
 
     // Calculate reinforcement armies if moving to reinforcement phase
     let reinforcementArmies = 0
@@ -226,5 +239,22 @@ export class GameService {
     }
 
     return this.gameEngine.validateAction(gameState, action)
+  }
+
+  /**
+   * Clean up finished games from cache
+   */
+  async cleanupFinishedGames(roomIds: string[]) {
+    await gameStateCache.cleanupFinishedGames(roomIds)
+    // Also cleanup territory modifiers for finished games
+    await territoryModifierService.cleanupFinishedGameModifiers(roomIds)
+  }
+
+  /**
+   * Force cleanup a specific game (useful for abandoned games)
+   */
+  async removeGame(roomId: string) {
+    await gameStateCache.invalidateGame(roomId)
+    logger.info(`Forcefully removed game ${roomId} from cache`)
   }
 }

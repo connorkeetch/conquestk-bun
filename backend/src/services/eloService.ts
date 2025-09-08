@@ -163,114 +163,29 @@ export class EloService {
   }
 
   /**
-   * Apply rating changes to database after a game
+   * Apply rating changes to database after a game (optimized bulk operations)
    */
   async applyRatingChanges(gameId: string, changes: RatingChange[]): Promise<void> {
-    // Use transactions for consistency
+    if (changes.length === 0) return
+
     try {
       // Start transaction
-      await query('BEGIN TRANSACTION')
+      await query('BEGIN')
 
-      for (const change of changes) {
-        // Find the position (1 = winner, etc.)
-        const position =
-          changes
-            .sort((a, b) => b.newRating - a.newRating)
-            .findIndex((c) => c.userId === change.userId) + 1
+      // Sort changes by new rating to determine positions
+      const sortedChanges = [...changes].sort((a, b) => b.newRating - a.newRating)
+      const positionMap = new Map<string, number>()
+      sortedChanges.forEach((change, index) => {
+        positionMap.set(change.userId, index + 1)
+      })
 
-        // Record rating history
-        const insertRatingHistoryQuery = `
-      INSERT INTO rating_history (
-        user_id, game_id, rating_before, rating_after, rating_change,
-        position, total_players, k_factor, expected_score, actual_score
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-
-        await query(insertRatingHistoryQuery, [
-          change.userId,
-          gameId,
-          change.oldRating,
-          change.newRating,
-          change.change,
-          position,
-          changes.length,
-          change.kFactor,
-          change.expectedScore,
-          change.actualScore,
-        ])
-
-        // Update user rating
-        const isWinner = position === 1
-        const updateUserRatingQuery = `
-      UPDATE users 
-      SET 
-        skill_rating = ?,
-        skill_confidence = MIN(1.0, skill_confidence + 0.05),
-        total_ranked_games = total_ranked_games + 1,
-        ranked_wins = ranked_wins + ?,
-        ranked_losses = ranked_losses + ?,
-        last_ranked_game_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `
-
-        await query(updateUserRatingQuery, [
-          change.newRating,
-          isWinner ? 1 : 0,
-          isWinner ? 0 : 1,
-          change.userId,
-        ])
-
-        // Update leaderboard cache
-        const updateLeaderboardQuery = `
-      INSERT OR REPLACE INTO skill_leaderboard_cache (
-        user_id, username, skill_rating, skill_confidence, 
-        rank_position, tier, total_ranked_games, win_rate,
-        recent_trend, last_game_change
-      )
-      SELECT 
-        u.id,
-        u.username,
-        u.skill_rating,
-        u.skill_confidence,
-        ROW_NUMBER() OVER (ORDER BY u.skill_rating DESC) as rank_position,
-        u.current_tier,
-        u.total_ranked_games,
-        CASE 
-          WHEN u.total_ranked_games > 0 
-          THEN CAST(u.ranked_wins AS REAL) / u.total_ranked_games 
-          ELSE 0 
-        END as win_rate,
-        CASE 
-          WHEN ? > 0 THEN 'up'
-          WHEN ? < 0 THEN 'down'
-          ELSE 'stable'
-        END as recent_trend,
-        ?
-      FROM users u
-      WHERE u.id = ?
-    `
-
-        await query(updateLeaderboardQuery, [
-          change.change, // For trend calculation
-          change.change, // For trend calculation
-          change.change, // Last game change
-          change.userId,
-        ])
+      // Bulk insert rating history
+      if (changes.length > 0) {
+        await this.bulkInsertRatingHistory(gameId, changes, positionMap)
       }
 
-      // Update game room with average ratings
-      const avgRating = Math.round(
-        changes.reduce((sum, c) => sum + c.newRating, 0) / changes.length,
-      )
-
-      await query(
-        `
-        UPDATE game_rooms 
-        SET avg_skill_rating = ?
-        WHERE id = ?
-      `,
-        [avgRating, gameId],
-      )
+      // Bulk update user ratings
+      await this.bulkUpdateUserRatings(changes, positionMap)
 
       // Commit transaction
       await query('COMMIT')
@@ -279,6 +194,99 @@ export class EloService {
       await query('ROLLBACK')
       throw error
     }
+  }
+
+  /**
+   * Bulk insert rating history records
+   */
+  private async bulkInsertRatingHistory(
+    gameId: string, 
+    changes: RatingChange[], 
+    positionMap: Map<string, number>
+  ): Promise<void> {
+    const values: any[] = []
+    const placeholders: string[] = []
+    
+    changes.forEach((change, index) => {
+      const baseIndex = index * 10
+      const position = positionMap.get(change.userId) || 0
+      
+      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`)
+      
+      values.push(
+        change.userId,
+        gameId,
+        change.oldRating,
+        change.newRating,
+        change.change,
+        position,
+        changes.length,
+        change.kFactor,
+        change.expectedScore,
+        change.actualScore
+      )
+    })
+
+    const sql = `
+      INSERT INTO rating_history (
+        user_id, game_id, rating_before, rating_after, rating_change,
+        position, total_players, k_factor, expected_score, actual_score
+      ) VALUES ${placeholders.join(', ')}
+    `
+
+    await query(sql, values)
+  }
+
+  /**
+   * Bulk update user ratings using PostgreSQL UPDATE with CASE statements
+   */
+  private async bulkUpdateUserRatings(
+    changes: RatingChange[], 
+    positionMap: Map<string, number>
+  ): Promise<void> {
+    if (changes.length === 0) return
+
+    const userIds = changes.map(change => change.userId)
+    const userIdPlaceholders = userIds.map((_, index) => `$${changes.length * 4 + index + 1}`).join(', ')
+    
+    // Build CASE statements for each field
+    const ratingCases: string[] = []
+    const winCases: string[] = []
+    const lossCases: string[] = []
+    const values: any[] = []
+
+    changes.forEach((change, index) => {
+      const position = positionMap.get(change.userId) || 0
+      const isWinner = position === 1
+      const baseIndex = index * 4
+
+      ratingCases.push(`WHEN id = $${baseIndex + 1} THEN $${baseIndex + 2}`)
+      winCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_wins + $${baseIndex + 3}`)
+      lossCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_losses + $${baseIndex + 4}`)
+
+      values.push(
+        change.userId,
+        change.newRating,
+        isWinner ? 1 : 0,
+        isWinner ? 0 : 1
+      )
+    })
+
+    // Add user IDs for the WHERE clause
+    values.push(...userIds)
+
+    const sql = `
+      UPDATE users SET 
+        skill_rating = CASE ${ratingCases.join(' ')} END,
+        skill_confidence = LEAST(1.0, skill_confidence + 0.05),
+        total_ranked_games = total_ranked_games + 1,
+        ranked_wins = CASE ${winCases.join(' ')} END,
+        ranked_losses = CASE ${lossCases.join(' ')} END,
+        last_ranked_game_at = CURRENT_TIMESTAMP
+      WHERE id IN (${userIdPlaceholders})
+    `
+
+    await query(sql, values)
   }
 
   /**

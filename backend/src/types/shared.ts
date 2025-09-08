@@ -42,6 +42,7 @@ export interface ServerToClientEvents {
   'player-left': (data: { userId: string; socketId: string }) => void
   'player-disconnected': (data: { userId: string; socketId: string }) => void
   'game-update': (gameState: any) => void
+  'game-delta': (delta: any) => void // Delta update for efficient real-time broadcasting
   'armiesDeployed': (result: { gameState: any }) => void
   'attackResult': (result: any) => void
   'territoriesFortified': (result: { gameState: any }) => void

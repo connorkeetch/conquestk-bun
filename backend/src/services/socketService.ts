@@ -6,6 +6,7 @@ import { eloService, type PlayerRating } from './eloService'
 import { GameService } from './gameService'
 import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 import { setupChatHandlers } from '../socket/chatHandlers'
+import { DeltaBuilder } from '../types/deltaUpdates'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -126,8 +127,25 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         data.territoryId,
         data.armies,
       )
+      
+      // Send delta update instead of full game state
+      const territoryDelta = DeltaBuilder.territoryUpdate(
+        data.roomId,
+        data.territoryId,
+        { armies: result.armies }
+      )
+      
+      const playerDelta = DeltaBuilder.playerUpdate(
+        data.roomId,
+        socket.userId!,
+        { armies: result.gameState.players.find((p: any) => p.id === socket.userId!)?.armies }
+      )
+
+      io.to(data.roomId).emit('game-delta', territoryDelta)
+      io.to(data.roomId).emit('game-delta', playerDelta)
+      
+      // Keep legacy event for backward compatibility during transition
       io.to(data.roomId).emit('armiesDeployed', result)
-      io.to(data.roomId).emit('game-update', result.gameState)
     }))
 
     // Attack phase
@@ -143,6 +161,32 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         data.toTerritoryId,
       )
 
+      // Send battle result as delta update
+      const battleDelta = DeltaBuilder.battleResult(data.roomId, result)
+      io.to(data.roomId).emit('game-delta', battleDelta)
+
+      // Send territory updates for affected territories
+      if (result.fromTerritory) {
+        const fromTerritoryDelta = DeltaBuilder.territoryUpdate(
+          data.roomId,
+          result.fromTerritory.id,
+          { armies: result.fromTerritory.armies }
+        )
+        io.to(data.roomId).emit('game-delta', fromTerritoryDelta)
+      }
+
+      if (result.toTerritory) {
+        const toTerritoryDelta = DeltaBuilder.territoryUpdate(
+          data.roomId,
+          result.toTerritory.id,
+          { 
+            armies: result.toTerritory.armies,
+            ownerId: result.conquered ? result.toTerritory.ownerId : undefined
+          }
+        )
+        io.to(data.roomId).emit('game-delta', toTerritoryDelta)
+      }
+
       // Check if this was a capital attack that resulted in elimination
       if (result.capitalElimination) {
         io.to(data.roomId).emit('capitalElimination', {
@@ -154,13 +198,23 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         })
       }
 
-      io.to(data.roomId).emit('attackResult', result)
-      io.to(data.roomId).emit('game-update', result.gameState)
+      // Handle game end
+      if (result.gameEnded) {
+        const gameEndDelta = DeltaBuilder.gameEnd(
+          data.roomId,
+          result.winner,
+          result.eliminatedPlayers || []
+        )
+        io.to(data.roomId).emit('game-delta', gameEndDelta)
 
-      // Handle ELO rating updates for ranked games when game ends
-      if (result.gameEnded && result.gameState) {
-        await handleRankedGameEnd(io, data.roomId, result.gameState)
+        // Handle ELO rating updates for ranked games
+        if (result.gameState) {
+          await handleRankedGameEnd(io, data.roomId, result.gameState)
+        }
       }
+
+      // Keep legacy event for backward compatibility
+      io.to(data.roomId).emit('attackResult', result)
     }))
 
     // Capital warning check
@@ -204,13 +258,24 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }
       
       const result = await gameService.endTurn(data.roomId, socket.userId!)
+      
+      // Send phase change as delta update
+      const phaseDelta = DeltaBuilder.phaseChange(
+        data.roomId,
+        result.gameState.phase,
+        result.gameState.currentPlayer,
+        result.gameState.turn,
+        result.reinforcementArmies
+      )
+      io.to(data.roomId).emit('game-delta', phaseDelta)
+      
+      // Keep legacy event for backward compatibility
       io.to(data.roomId).emit('phaseChanged', {
         phase: result.gameState.phase,
         currentPlayer: result.gameState.currentPlayer,
         turn: result.gameState.turn,
         reinforcementArmies: result.reinforcementArmies,
       })
-      io.to(data.roomId).emit('game-update', result.gameState)
     }))
 
     socket.on('chat-message', withErrorHandler(socket, 'chat-message', async (data) => {
@@ -275,28 +340,38 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         return bTerritories - aTerritories
       })
 
-      // Fetch current ratings and prepare player rating data
-      for (let i = 0; i < sortedPlayers.length; i++) {
-        const player = sortedPlayers[i]
-
-        // Skip AI players in ranked games (shouldn't happen due to validation)
-        if (player.id.startsWith('ai-')) continue
-
-        const userQuery = `
-          SELECT skill_rating, total_ranked_games 
+      // Fetch current ratings in bulk (optimized)
+      const humanPlayers = sortedPlayers.filter(p => !p.id.startsWith('ai-'))
+      if (humanPlayers.length > 0) {
+        const playerIds = humanPlayers.map(p => p.id)
+        const placeholders = playerIds.map((_, index) => `$${index + 1}`).join(', ')
+        
+        const bulkUserQuery = `
+          SELECT id, skill_rating, total_ranked_games 
           FROM users 
-          WHERE id = ?
+          WHERE id IN (${placeholders})
         `
-        const userResult = await query(userQuery, [player.id])
+        const userResults = await query(bulkUserQuery, playerIds)
+        
+        // Create a map for quick lookup
+        const userDataMap = new Map()
+        userResults.rows.forEach((row: any) => {
+          userDataMap.set(row.id, row)
+        })
 
-        if (userResult.rows.length > 0) {
-          playerRatings.push({
-            userId: player.id,
-            currentRating: userResult.rows[0].skill_rating || 1000,
-            gamesPlayed: userResult.rows[0].total_ranked_games || 0,
-            position: i + 1, // Position is 1-indexed
-          })
-        }
+        // Build player ratings array
+        humanPlayers.forEach((player, index) => {
+          const userData = userDataMap.get(player.id)
+          if (userData) {
+            const position = sortedPlayers.findIndex(p => p.id === player.id) + 1
+            playerRatings.push({
+              userId: player.id,
+              currentRating: userData.skill_rating || 1000,
+              gamesPlayed: userData.total_ranked_games || 0,
+              position: position, // Position based on original sorted array
+            })
+          }
+        })
       }
 
       // Calculate rating changes
