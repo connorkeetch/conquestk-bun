@@ -1,18 +1,19 @@
 import Bull from 'bull'
 import { GameActionJob, queueService } from '@/services/queueService'
-import { gameService } from '@/services/GameService'
+import { GameService } from '@/services/gameService'
 import { GameDelta, DeltaBuilder } from '@/types/deltaUpdates'
-import { io } from '@/socket'
+import { Server } from 'socket.io'
+import type { ServerToClientEvents, ClientToServerEvents } from '@/types/shared'
 
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>
+  private gameService: GameService
+  private io: Server<ClientToServerEvents, ServerToClientEvents>
 
-  constructor() {
-    // Get the queue from the service
-    this.queue = (queueService as any).queues.get('gameActions')
-    if (!this.queue) {
-      throw new Error('Game actions queue not available')
-    }
+  constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+    this.gameService = new GameService()
+    this.io = io
+    this.queue = queueService.getGameActionQueue()
   }
 
   async initialize(): Promise<void> {
