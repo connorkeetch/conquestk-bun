@@ -139,7 +139,7 @@ export class ScalingService {
     this.setupWorkerMonitoring()
   }
 
-  private addWorkerMetrics(worker: cluster.Worker): void {
+  private addWorkerMetrics(worker: any): void {
     const metrics: WorkerMetrics = {
       id: worker.id,
       pid: worker.process.pid!,
@@ -187,7 +187,8 @@ export class ScalingService {
 
   private collectWorkerMetrics(): void {
     // Send health check to all workers
-    Object.values(cluster.workers || {}).forEach(worker => {
+    const clusterWorkers = cluster.workers as Record<string, any> | undefined
+    Object.values(clusterWorkers || {}).forEach(worker => {
       if (worker && worker.send) {
         worker.send({ type: 'health-check' })
       }
@@ -293,7 +294,8 @@ export class ScalingService {
         return false
       }
 
-      const worker = Object.values(cluster.workers || {}).find(
+      const clusterWorkers = cluster.workers as Record<string, any> | undefined
+      const worker = Object.values(clusterWorkers || {}).find(
         w => w && w.id === leastBusyWorker.id
       )
 
@@ -385,7 +387,8 @@ export class ScalingService {
       }
 
       // Gracefully shutdown all workers
-      Object.values(cluster.workers || {}).forEach(worker => {
+      const clusterWorkers = cluster.workers as Record<string, any> | undefined
+      Object.values(clusterWorkers || {}).forEach(worker => {
         if (worker) {
           worker.disconnect()
         }

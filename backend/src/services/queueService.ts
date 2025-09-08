@@ -212,6 +212,26 @@ export class QueueService {
       }
     }
   }
+
+  private getQueue(name: string): Bull.Queue {
+    const queue = this.queues.get(name)
+    if (!queue) {
+      throw new Error(`Queue ${name} not found. Make sure initialize() was called first.`)
+    }
+    return queue
+  }
+
+  getBattleQueue(): Bull.Queue<BattleSimulationJob> {
+    return this.getQueue('battleSimulations') as Bull.Queue<BattleSimulationJob>
+  }
+
+  getGameActionQueue(): Bull.Queue<GameActionJob> {
+    return this.getQueue('gameActions') as Bull.Queue<GameActionJob>
+  }
+
+  getCleanupQueue(): Bull.Queue<any> {
+    return this.getQueue('gameCleanup')
+  }
 }
 
 // Export singleton instance
