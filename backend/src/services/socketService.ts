@@ -7,6 +7,7 @@ import { GameService } from './gameService'
 import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
 import { setupChatHandlers } from '../socket/chatHandlers'
 import { DeltaBuilder } from '../types/deltaUpdates'
+import { queueService } from './queueService'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -107,114 +108,73 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     }))
 
     socket.on('game-action', withErrorHandler(socket, 'game-action', async (data) => {
-      if (!data || !data.roomId) {
+      if (!data || !data.roomId || !data.action) {
         throw new Error('Invalid game action data')
       }
       
-      const result = await gameService.processGameAction(data.action, socket.userId!)
-      socket.to(data.roomId).emit('game-update', result)
+      // Queue the game action for processing
+      const job = await queueService.addGameAction({
+        gameId: data.roomId,
+        playerId: socket.userId!,
+        action: data.action,
+        socketId: socket.id,
+      })
+      
+      logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
+        jobId: job.id,
+        playerId: socket.userId!,
+      })
     }))
 
-    // Deployment phase
+    // Deployment phase - migrated to use queue system
     socket.on('deployArmies', withErrorHandler(socket, 'deployArmies', async (data) => {
       if (!data || !data.roomId || !data.territoryId || typeof data.armies !== 'number') {
         throw new Error('Invalid deployment data')
       }
       
-      const result = await gameService.deployArmies(
-        data.roomId,
-        socket.userId!,
-        data.territoryId,
-        data.armies,
-      )
+      // Queue the place armies action
+      const job = await queueService.addGameAction({
+        gameId: data.roomId,
+        playerId: socket.userId!,
+        action: {
+          type: 'PLACE_ARMIES',
+          territoryId: data.territoryId,
+          armies: data.armies,
+        },
+        socketId: socket.id,
+      })
       
-      // Send delta update instead of full game state
-      const territoryDelta = DeltaBuilder.territoryUpdate(
-        data.roomId,
-        data.territoryId,
-        { armies: result.armies }
-      )
-      
-      const playerDelta = DeltaBuilder.playerUpdate(
-        data.roomId,
-        socket.userId!,
-        { armies: result.gameState.players.find((p: any) => p.id === socket.userId!)?.armies }
-      )
-
-      io.to(data.roomId).emit('game-delta', territoryDelta)
-      io.to(data.roomId).emit('game-delta', playerDelta)
-      
-      // Keep legacy event for backward compatibility during transition
-      io.to(data.roomId).emit('armiesDeployed', result)
+      logger.info(`Queued army deployment for game ${data.roomId}`, {
+        jobId: job.id,
+        territoryId: data.territoryId,
+        armies: data.armies,
+      })
     }))
 
-    // Attack phase
+    // Attack phase - migrated to use queue system
     socket.on('attack', withErrorHandler(socket, 'attack', async (data) => {
       if (!data || !data.roomId || !data.fromTerritoryId || !data.toTerritoryId) {
         throw new Error('Invalid attack data')
       }
       
-      const result = await gameService.attack(
-        data.roomId,
-        socket.userId!,
-        data.fromTerritoryId,
-        data.toTerritoryId,
-      )
-
-      // Send battle result as delta update
-      const battleDelta = DeltaBuilder.battleResult(data.roomId, result)
-      io.to(data.roomId).emit('game-delta', battleDelta)
-
-      // Send territory updates for affected territories
-      if (result.fromTerritory) {
-        const fromTerritoryDelta = DeltaBuilder.territoryUpdate(
-          data.roomId,
-          result.fromTerritory.id,
-          { armies: result.fromTerritory.armies }
-        )
-        io.to(data.roomId).emit('game-delta', fromTerritoryDelta)
-      }
-
-      if (result.toTerritory) {
-        const toTerritoryDelta = DeltaBuilder.territoryUpdate(
-          data.roomId,
-          result.toTerritory.id,
-          { 
-            armies: result.toTerritory.armies,
-            ownerId: result.conquered ? result.toTerritory.ownerId : undefined
-          }
-        )
-        io.to(data.roomId).emit('game-delta', toTerritoryDelta)
-      }
-
-      // Check if this was a capital attack that resulted in elimination
-      if (result.capitalElimination) {
-        io.to(data.roomId).emit('capitalElimination', {
-          conqueror: result.capitalElimination.conqueror,
-          eliminated: result.capitalElimination.eliminated,
-          capitalTerritory: result.capitalElimination.capitalTerritory,
-          territoriesGained: result.capitalElimination.territoriesGained,
-          troopsGained: result.capitalElimination.troopsGained,
-        })
-      }
-
-      // Handle game end
-      if (result.gameEnded) {
-        const gameEndDelta = DeltaBuilder.gameEnd(
-          data.roomId,
-          result.winner,
-          result.eliminatedPlayers || []
-        )
-        io.to(data.roomId).emit('game-delta', gameEndDelta)
-
-        // Handle ELO rating updates for ranked games
-        if (result.gameState) {
-          await handleRankedGameEnd(io, data.roomId, result.gameState)
-        }
-      }
-
-      // Keep legacy event for backward compatibility
-      io.to(data.roomId).emit('attackResult', result)
+      // Queue the attack action - battle simulation will be handled in background
+      const job = await queueService.addGameAction({
+        gameId: data.roomId,
+        playerId: socket.userId!,
+        action: {
+          type: 'ATTACK',
+          fromTerritory: data.fromTerritoryId,
+          toTerritory: data.toTerritoryId,
+          armies: data.armies || 1,
+        },
+        socketId: socket.id,
+      })
+      
+      logger.info(`Queued attack for game ${data.roomId}`, {
+        jobId: job.id,
+        from: data.fromTerritoryId,
+        to: data.toTerritoryId,
+      })
     }))
 
     // Capital warning check
