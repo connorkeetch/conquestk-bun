@@ -485,18 +485,24 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
   // The error id is attached to `res.sentry` for reference
   const sentryId = (res as any).sentry
   
+  // Use Node.js 24's Error.isError for safer error detection
+  const isActualError = typeof Error.isError === 'function' ? Error.isError(err) : err instanceof Error
+  const errorMessage = isActualError ? err.message : String(err)
+  const errorStack = isActualError ? err.stack : undefined
+  
   logger.error('Application error:', {
-    error: err.message,
-    stack: err.stack,
+    error: errorMessage,
+    stack: errorStack,
+    isError: isActualError,
     sentryId
   })
   
   res.status(err.status || 500).json({
     error: process.env.NODE_ENV === 'production' 
       ? 'An error occurred processing your request' 
-      : err.message,
+      : errorMessage,
     ...(sentryId && { sentryId }),
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+    ...(process.env.NODE_ENV !== 'production' && errorStack && { stack: errorStack })
   })
 })
 
