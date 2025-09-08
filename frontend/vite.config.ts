@@ -33,11 +33,14 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           redux: ['@reduxjs/toolkit', 'react-redux'],
-          ui: ['lucide-react'],
+          ui: ['lucide-react', 'framer-motion'],
+          forms: ['react-hook-form', '@hookform/resolvers'],
+          utils: ['axios', 'bad-words', 'dompurify'],
+          audio: ['howler'],
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 800, // Reduced from 1000 to encourage better splitting
   },
   test: {
     globals: true,

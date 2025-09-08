@@ -8,37 +8,39 @@ import VerificationGuard from './components/VerificationGuard'
 import Layout from './components/Layout'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { useFaviconBadge } from './hooks/useFaviconBadge'
-import CommunityPage from './pages/CommunityPage'
-import CreateGamePage from './pages/CreateGamePage'
-import Dashboard from './pages/Dashboard'
+// Lazy load heavy components for code splitting
+import { lazy, Suspense } from 'react'
+const CommunityPage = lazy(() => import('./pages/CommunityPage'))
+const CreateGamePage = lazy(() => import('./pages/CreateGamePage'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 import ForgotPassword from './pages/ForgotPassword'
-import GameListPage from './pages/GameListPage'
-import GamePage from './pages/GamePage'
-import GameRoom from './pages/GameRoom'
+const GameListPage = lazy(() => import('./pages/GameListPage'))
+const GamePage = lazy(() => import('./pages/GamePage'))
+const GameRoom = lazy(() => import('./pages/GameRoom'))
 // Public Pages
 import Home from './pages/Home'
-import LearnPage from './pages/LearnPage'
+const LearnPage = lazy(() => import('./pages/LearnPage'))
 // Protected Pages
-import LobbyPage from './pages/LobbyPage'
+const LobbyPage = lazy(() => import('./pages/LobbyPage'))
 import Login from './pages/Login'
-import MapEditor from './pages/MapEditor'
-import MapEditorTokens from './pages/MapEditorTokens'
-import Maps from './pages/Maps'
+const MapEditor = lazy(() => import('./pages/MapEditor'))
+const MapEditorTokens = lazy(() => import('./pages/MapEditorTokens'))
+const Maps = lazy(() => import('./pages/Maps'))
 import NotFoundPage from './pages/NotFoundPage'
-import Play from './pages/Play'
-import Profile from './pages/Profile'
-import ProfilePage from './components/ProfilePage'
+const Play = lazy(() => import('./pages/Play'))
+const Profile = lazy(() => import('./pages/Profile'))
+const ProfilePage = lazy(() => import('./components/ProfilePage'))
 import ProfileRedirect from './components/ProfileRedirect'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
-import Settings from './pages/Settings'
-import Statistics from './pages/Statistics'
-import TutorialPage from './pages/TutorialPage'
+const Settings = lazy(() => import('./pages/Settings'))
+const Statistics = lazy(() => import('./pages/Statistics'))
+const TutorialPage = lazy(() => import('./pages/TutorialPage'))
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
-import AdminPage from './pages/AdminPage'
-import TermsPage from './pages/TermsPage'
-import PrivacyPage from './pages/PrivacyPage'
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 import { checkAuth } from './store/authSlice'
 
 function App() {
@@ -158,7 +160,9 @@ function App() {
           path="/community"
           element={
             <AuthGuard requireAuth={false}>
-              <CommunityPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <CommunityPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -170,7 +174,9 @@ function App() {
           path="/tutorial"
           element={
             <AuthGuard requireAuth={false}>
-              <TutorialPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <TutorialPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -178,7 +184,9 @@ function App() {
           path="/terms"
           element={
             <AuthGuard requireAuth={false}>
-              <TermsPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <TermsPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -186,7 +194,9 @@ function App() {
           path="/privacy"
           element={
             <AuthGuard requireAuth={false}>
-              <PrivacyPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <PrivacyPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -194,7 +204,9 @@ function App() {
           path="/learn"
           element={
             <AuthGuard requireAuth={false}>
-              <LearnPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <LearnPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -202,7 +214,9 @@ function App() {
           path="/learn/:section"
           element={
             <AuthGuard requireAuth={false}>
-              <LearnPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <LearnPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -212,7 +226,9 @@ function App() {
           path="/profile/:username"
           element={
             <AuthGuard requireAuth={false}>
-              <ProfilePage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <ProfilePage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -223,7 +239,9 @@ function App() {
           element={
             <AuthGuard>
               <VerificationGuard>
-                <LobbyPage />
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                  <LobbyPage />
+                </Suspense>
               </VerificationGuard>
             </AuthGuard>
           }
@@ -233,7 +251,9 @@ function App() {
           element={
             <AuthGuard>
               <VerificationGuard>
-                <LobbyPage />
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                  <LobbyPage />
+                </Suspense>
               </VerificationGuard>
             </AuthGuard>
           }
@@ -252,7 +272,9 @@ function App() {
           path="/games/:section"
           element={
             <AuthGuard>
-              <GameListPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <GameListPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -263,7 +285,9 @@ function App() {
           element={
             <AuthGuard>
               <GameErrorBoundary>
-                <GamePage />
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                  <GamePage />
+                </Suspense>
               </GameErrorBoundary>
             </AuthGuard>
           }
@@ -273,7 +297,9 @@ function App() {
           element={
             <AuthGuard>
               <GameErrorBoundary>
-                <GamePage />
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                  <GamePage />
+                </Suspense>
               </GameErrorBoundary>
             </AuthGuard>
           }
@@ -284,7 +310,9 @@ function App() {
           path="/create"
           element={
             <AuthGuard>
-              <CreateGamePage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <CreateGamePage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -292,7 +320,9 @@ function App() {
           path="/create/:type"
           element={
             <AuthGuard>
-              <CreateGamePage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <CreateGamePage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -310,7 +340,9 @@ function App() {
           path="/editor/new"
           element={
             <AuthGuard>
-              <MapEditor />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <MapEditor />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -318,7 +350,9 @@ function App() {
           path="/editor/:mapId"
           element={
             <AuthGuard>
-              <MapEditor />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <MapEditor />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -326,7 +360,9 @@ function App() {
           path="/editor/browse"
           element={
             <AuthGuard>
-              <Maps />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Maps />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -336,7 +372,9 @@ function App() {
           path="/community"
           element={
             <AuthGuard>
-              <CommunityPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <CommunityPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -344,7 +382,9 @@ function App() {
           path="/community/:section"
           element={
             <AuthGuard>
-              <CommunityPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <CommunityPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -362,7 +402,9 @@ function App() {
           path="/profile/stats"
           element={
             <AuthGuard>
-              <Statistics />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Statistics />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -370,7 +412,9 @@ function App() {
           path="/settings"
           element={
             <AuthGuard>
-              <Settings />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Settings />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -380,7 +424,9 @@ function App() {
           path="/admin"
           element={
             <AuthGuard requireAdmin={true}>
-              <AdminPage />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <AdminPage />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -390,7 +436,9 @@ function App() {
           path="/dashboard"
           element={
             <AuthGuard>
-              <Dashboard />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Dashboard />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -398,7 +446,9 @@ function App() {
           path="/play"
           element={
             <AuthGuard>
-              <Play />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Play />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -406,7 +456,9 @@ function App() {
           path="/maps"
           element={
             <AuthGuard>
-              <Maps />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <Maps />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -414,7 +466,9 @@ function App() {
           path="/map-editor"
           element={
             <AuthGuard>
-              <MapEditorTokens />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <MapEditorTokens />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -422,7 +476,9 @@ function App() {
           path="/map-editor-polygon"
           element={
             <AuthGuard>
-              <MapEditor />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <MapEditor />
+              </Suspense>
             </AuthGuard>
           }
         />
@@ -431,7 +487,9 @@ function App() {
           element={
             <AuthGuard>
               <GameErrorBoundary>
-                <GameRoom />
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                  <GameRoom />
+                </Suspense>
               </GameErrorBoundary>
             </AuthGuard>
           }

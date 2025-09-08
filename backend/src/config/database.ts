@@ -31,7 +31,7 @@ try {
     min: parseInt(process.env.DB_POOL_MIN || (isProduction ? '5' : '2')), // Keep minimum connections alive
     idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || (isProduction ? '60000' : '30000')), // Longer idle in production
     connectionTimeoutMillis: connectionTimeout,
-    acquireTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT || '10000'), // Time to wait for connection
+    // Note: acquireTimeoutMillis is not a valid pg Pool option, removing it
     // Query timeouts
     statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
     query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
@@ -48,7 +48,9 @@ try {
 
   // Enhanced connection monitoring
   pgPool.on('connect', (client) => {
-    logger.debug(`🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`)
+    if (pgPool) {
+      logger.debug(`🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`)
+    }
   })
 
   pgPool.on('error', (err, client) => {
@@ -56,7 +58,9 @@ try {
   })
 
   pgPool.on('remove', (client) => {
-    logger.debug(`🔌 Client removed. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle`)
+    if (pgPool) {
+      logger.debug(`🔌 Client removed. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle`)
+    }
   })
 
   // Test the connection (non-blocking)
@@ -235,7 +239,6 @@ export function getPoolMetrics() {
       min: pgPool.options.min,
       idleTimeoutMillis: pgPool.options.idleTimeoutMillis,
       connectionTimeoutMillis: pgPool.options.connectionTimeoutMillis,
-      acquireTimeoutMillis: pgPool.options.acquireTimeoutMillis,
     },
     utilization: pgPool.totalCount > 0 ? ((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount * 100).toFixed(1) + '%' : '0%'
   }

@@ -1,6 +1,5 @@
 import type React from 'react'
 import ProfileOverview from '../components/profile/ProfileOverview'
-import '../components/profile/ProfileOverview.css'
 
 const Profile: React.FC = () => {
   return (
