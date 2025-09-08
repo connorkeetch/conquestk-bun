@@ -1,6 +1,8 @@
 import Bull from 'bull'
 import Redis from 'ioredis'
 import { GameState, GameAction, BattleResult } from '../types/game'
+import { getRedisClient } from '../config/redis'
+import { logger } from '../utils/logger'
 
 // Queue job types
 export interface GameActionJob {
@@ -44,29 +46,31 @@ const QUEUE_CONFIGS = {
 } as const
 
 export class QueueService {
-  private redis: Redis
+  private redis: Redis | null = null
   private queues: Map<string, Bull.Queue> = new Map()
   private isInitialized = false
 
   constructor() {
-    // Use existing Redis connection or create new one
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
-    this.redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-    })
+    // Use centralized Redis client with proper Railway network wait
+    // Don't create connection in constructor - wait for initialize()
   }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
 
     try {
-      // Connect to Redis if not already connected
-      if (this.redis.status !== 'ready') {
-        await this.redis.connect()
-      }
+      // Use centralized Redis client that has proper Railway network wait
+      this.redis = getRedisClient()
       
-      // Initialize all queues
+      if (!this.redis) {
+        logger.warn('Redis not available, QueueService will be disabled')
+        // Don't throw error - gracefully degrade functionality
+        return
+      }
+
+      logger.info('QueueService using centralized Redis client with Railway network support')
+      
+      // Initialize all queues using the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
         const queue = new Bull(config.name, {
           redis: {
@@ -87,19 +91,29 @@ export class QueueService {
         })
 
         this.queues.set(key, queue)
-        console.log(`✅ Queue initialized: ${config.name}`)
+        logger.info(`✅ Queue initialized: ${config.name}`)
       }
 
       this.isInitialized = true
-      console.log('✅ QueueService initialized successfully')
+      logger.info('✅ QueueService initialized successfully')
     } catch (error) {
-      console.error('❌ Failed to initialize QueueService:', error)
-      throw error
+      logger.error('❌ Failed to initialize QueueService:', error)
+      // Don't throw error in production - gracefully degrade
+      if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+        logger.warn('QueueService initialization failed but continuing without queues')
+      } else {
+        throw error
+      }
     }
   }
 
   // Game Action Queue
-  async addGameAction(job: GameActionJob): Promise<Bull.Job<GameActionJob>> {
+  async addGameAction(job: GameActionJob): Promise<Bull.Job<GameActionJob> | null> {
+    if (!this.redis || !this.isInitialized) {
+      logger.warn('QueueService not available, skipping game action queue')
+      return null
+    }
+    
     const queue = this.queues.get('gameActions')
     if (!queue) throw new Error('Game actions queue not initialized')
 
@@ -110,7 +124,12 @@ export class QueueService {
   }
 
   // Battle Simulation Queue
-  async addBattleSimulation(job: BattleSimulationJob): Promise<Bull.Job<BattleSimulationJob>> {
+  async addBattleSimulation(job: BattleSimulationJob): Promise<Bull.Job<BattleSimulationJob> | null> {
+    if (!this.redis || !this.isInitialized) {
+      logger.warn('QueueService not available, skipping battle simulation queue')
+      return null
+    }
+    
     const queue = this.queues.get('battleSimulations')
     if (!queue) throw new Error('Battle simulations queue not initialized')
 
@@ -121,7 +140,12 @@ export class QueueService {
   }
 
   // Game Cleanup Queue  
-  async addGameCleanup(job: GameCleanupJob): Promise<Bull.Job<GameCleanupJob>> {
+  async addGameCleanup(job: GameCleanupJob): Promise<Bull.Job<GameCleanupJob> | null> {
+    if (!this.redis || !this.isInitialized) {
+      logger.warn('QueueService not available, skipping game cleanup queue')
+      return null
+    }
+    
     const queue = this.queues.get('gameCleanup')
     if (!queue) throw new Error('Game cleanup queue not initialized')
 
@@ -179,21 +203,35 @@ export class QueueService {
 
   // Graceful shutdown
   async shutdown(): Promise<void> {
-    console.log('🔄 Shutting down QueueService...')
+    logger.info('🔄 Shutting down QueueService...')
     
     const shutdownPromises = Array.from(this.queues.values()).map(queue =>
       queue.close()
     )
     
     await Promise.all(shutdownPromises)
-    await this.redis.disconnect()
     
-    console.log('✅ QueueService shutdown complete')
+    // Only disconnect if redis is available (it's managed by the central config)
+    if (this.redis) {
+      logger.info('QueueService shutdown - Redis connection managed by central config')
+    }
+    
+    logger.info('✅ QueueService shutdown complete')
   }
 
   // Health check
   async healthCheck(): Promise<{ status: string; details: any }> {
     try {
+      if (!this.redis) {
+        return {
+          status: 'disabled',
+          details: { 
+            message: 'Redis not available, queue service disabled',
+            initialized: this.isInitialized,
+          },
+        }
+      }
+      
       const pingResult = await this.redis.ping()
       const stats = await this.getQueueStats()
       
