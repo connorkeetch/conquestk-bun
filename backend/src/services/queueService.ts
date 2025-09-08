@@ -1,7 +1,7 @@
 import Bull from 'bull'
-import Redis from 'ioredis'
-import { GameState, GameAction, BattleResult } from '../types/game'
+import type Redis from 'ioredis'
 import { getRedisClient } from '../config/redis'
+import { BattleResult, type GameAction, GameState } from '../types/game'
 import { logger } from '../utils/logger'
 
 // Queue job types
@@ -61,7 +61,7 @@ export class QueueService {
     try {
       // Use centralized Redis client that has proper Railway network wait
       this.redis = getRedisClient()
-      
+
       if (!this.redis) {
         logger.warn('Redis not available, QueueService will be disabled')
         // Don't throw error - gracefully degrade functionality
@@ -69,7 +69,7 @@ export class QueueService {
       }
 
       logger.info('QueueService using centralized Redis client with Railway network support')
-      
+
       // Initialize all queues using the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
         const queue = new Bull(config.name, {
@@ -113,7 +113,7 @@ export class QueueService {
       logger.warn('QueueService not available, skipping game action queue')
       return null
     }
-    
+
     const queue = this.queues.get('gameActions')
     if (!queue) throw new Error('Game actions queue not initialized')
 
@@ -124,12 +124,14 @@ export class QueueService {
   }
 
   // Battle Simulation Queue
-  async addBattleSimulation(job: BattleSimulationJob): Promise<Bull.Job<BattleSimulationJob> | null> {
+  async addBattleSimulation(
+    job: BattleSimulationJob,
+  ): Promise<Bull.Job<BattleSimulationJob> | null> {
     if (!this.redis || !this.isInitialized) {
       logger.warn('QueueService not available, skipping battle simulation queue')
       return null
     }
-    
+
     const queue = this.queues.get('battleSimulations')
     if (!queue) throw new Error('Battle simulations queue not initialized')
 
@@ -139,13 +141,13 @@ export class QueueService {
     })
   }
 
-  // Game Cleanup Queue  
+  // Game Cleanup Queue
   async addGameCleanup(job: GameCleanupJob): Promise<Bull.Job<GameCleanupJob> | null> {
     if (!this.redis || !this.isInitialized) {
       logger.warn('QueueService not available, skipping game cleanup queue')
       return null
     }
-    
+
     const queue = this.queues.get('gameCleanup')
     if (!queue) throw new Error('Game cleanup queue not initialized')
 
@@ -189,33 +191,31 @@ export class QueueService {
         return 10 // Highest priority
       case 'attack':
       case 'fortify':
-        return 7  // High priority
+        return 7 // High priority
       case 'deploy':
-        return 5  // Medium priority
+        return 5 // Medium priority
       case 'trade_cards':
-        return 3  // Medium priority
+        return 3 // Medium priority
       case 'go_back_to_reinforcement':
-        return 2  // Low priority
+        return 2 // Low priority
       default:
-        return 5  // Default medium priority
+        return 5 // Default medium priority
     }
   }
 
   // Graceful shutdown
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down QueueService...')
-    
-    const shutdownPromises = Array.from(this.queues.values()).map(queue =>
-      queue.close()
-    )
-    
+
+    const shutdownPromises = Array.from(this.queues.values()).map((queue) => queue.close())
+
     await Promise.all(shutdownPromises)
-    
+
     // Only disconnect if redis is available (it's managed by the central config)
     if (this.redis) {
       logger.info('QueueService shutdown - Redis connection managed by central config')
     }
-    
+
     logger.info('✅ QueueService shutdown complete')
   }
 
@@ -225,16 +225,16 @@ export class QueueService {
       if (!this.redis) {
         return {
           status: 'disabled',
-          details: { 
+          details: {
             message: 'Redis not available, queue service disabled',
             initialized: this.isInitialized,
           },
         }
       }
-      
+
       const pingResult = await this.redis.ping()
       const stats = await this.getQueueStats()
-      
+
       return {
         status: pingResult === 'PONG' ? 'healthy' : 'unhealthy',
         details: {

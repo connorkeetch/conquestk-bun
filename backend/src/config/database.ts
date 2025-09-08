@@ -1,4 +1,4 @@
-import { QueryResult as PgQueryResult, Pool, PoolClient, QueryResultRow } from 'pg'
+import { QueryResult as PgQueryResult, Pool, type PoolClient, QueryResultRow } from 'pg'
 import { logger } from '../utils/logger'
 
 // Normalized query result interface
@@ -18,18 +18,22 @@ if (!databaseUrl) {
 
 try {
   logger.info('🔧 Initializing PostgreSQL connection pool')
-  
+
   // Enhanced connection pool configuration for production loads
   const isRailway = databaseUrl.includes('railway')
-  const connectionTimeout = isRailway ? 15000 : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000')
+  const connectionTimeout = isRailway
+    ? 15000
+    : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000')
   const isProduction = process.env.NODE_ENV === 'production'
-  
+
   pgPool = new Pool({
     connectionString: databaseUrl,
     // Enhanced pool sizing based on environment
     max: parseInt(process.env.DB_POOL_MAX || (isProduction ? '25' : '15')), // More connections in production
     min: parseInt(process.env.DB_POOL_MIN || (isProduction ? '5' : '2')), // Keep minimum connections alive
-    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || (isProduction ? '60000' : '30000')), // Longer idle in production
+    idleTimeoutMillis: parseInt(
+      process.env.DB_POOL_IDLE_TIMEOUT || (isProduction ? '60000' : '30000'),
+    ), // Longer idle in production
     connectionTimeoutMillis: connectionTimeout,
     // Note: acquireTimeoutMillis is not a valid pg Pool option, removing it
     // Query timeouts
@@ -43,13 +47,17 @@ try {
     keepAlive: isRailway,
     keepAliveInitialDelayMillis: isRailway ? 10000 : 0,
   })
-  
-  logger.info(`📊 Database config: Railway=${isRailway}, Timeout=${connectionTimeout}ms, SSL=${isRailway || isProduction}, Pool: ${pgPool.options.min}-${pgPool.options.max}`)
+
+  logger.info(
+    `📊 Database config: Railway=${isRailway}, Timeout=${connectionTimeout}ms, SSL=${isRailway || isProduction}, Pool: ${pgPool.options.min}-${pgPool.options.max}`,
+  )
 
   // Enhanced connection monitoring
   pgPool.on('connect', (client) => {
     if (pgPool) {
-      logger.debug(`🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`)
+      logger.debug(
+        `🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`,
+      )
     }
   })
 
@@ -240,7 +248,10 @@ export function getPoolMetrics() {
       idleTimeoutMillis: pgPool.options.idleTimeoutMillis,
       connectionTimeoutMillis: pgPool.options.connectionTimeoutMillis,
     },
-    utilization: pgPool.totalCount > 0 ? ((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount * 100).toFixed(1) + '%' : '0%'
+    utilization:
+      pgPool.totalCount > 0
+        ? (((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount) * 100).toFixed(1) + '%'
+        : '0%',
   }
 }
 

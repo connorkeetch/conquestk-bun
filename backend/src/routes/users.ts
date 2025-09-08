@@ -35,7 +35,8 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
   try {
     const { username } = req.params
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT 
         u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
@@ -43,7 +44,9 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       FROM users u
       LEFT JOIN user_settings us ON u.id = us.user_id
       WHERE u.username = $1 AND u.deleted_at IS NULL
-    `, [username])
+    `,
+      [username],
+    )
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
@@ -51,7 +54,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
 
     const user = result.rows[0]
     const rank = getConquestRank(user.skill_rating || 1000)
-    const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
+    const winRate = user.games_played > 0 ? (user.games_won / user.games_played) * 100 : 0
 
     return res.json({
       id: user.id,
@@ -73,8 +76,8 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1000
-      }
+        rating: user.skill_rating || 1000,
+      },
     })
   } catch (error) {
     logger.error('Error fetching user profile:', error)
@@ -87,7 +90,8 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
   try {
     const userId = (req as any).userId
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT 
         u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
@@ -95,7 +99,9 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       FROM users u
       LEFT JOIN user_settings us ON u.id = us.user_id
       WHERE u.id = $1
-    `, [userId])
+    `,
+      [userId],
+    )
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
@@ -103,7 +109,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     const user = result.rows[0]
     const rank = getConquestRank(user.skill_rating || 1000)
-    const winRate = user.games_played > 0 ? ((user.games_won / user.games_played) * 100) : 0
+    const winRate = user.games_played > 0 ? (user.games_won / user.games_played) * 100 : 0
 
     return res.json({
       id: user.id,
@@ -125,8 +131,8 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1000
-      }
+        rating: user.skill_rating || 1000,
+      },
     })
   } catch (error) {
     logger.error('Error fetching user profile:', error)
@@ -222,7 +228,10 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     values.push(userId)
 
-    await query(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCounter}`, values)
+    await query(
+      `UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCounter}`,
+      values,
+    )
 
     // Fetch updated user
     const updatedUser = await query(
@@ -271,7 +280,10 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     // Update password
-    await query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, userId])
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [hashedPassword, userId],
+    )
 
     return res.json({ success: true, message: 'Password updated successfully' })
   } catch (error) {

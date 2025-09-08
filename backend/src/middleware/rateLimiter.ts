@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
-import RedisStore from 'rate-limit-redis'
 import slowDown from 'express-slow-down'
+import RedisStore from 'rate-limit-redis'
 import { getRedisClient } from '../config/redis'
 import { logger } from '../utils/logger'
 
@@ -24,8 +24,13 @@ function createRateLimitStore(prefix: string) {
         prefix: `rate-limit:${prefix}:`,
       } as any)
     } catch (error) {
-      logger.error(`Failed to create Redis store for ${prefix}:`, error instanceof Error ? error.message : error)
-      logger.warn(`Using in-memory store for rate limiting (${prefix}) - Redis store creation failed`)
+      logger.error(
+        `Failed to create Redis store for ${prefix}:`,
+        error instanceof Error ? error.message : error,
+      )
+      logger.warn(
+        `Using in-memory store for rate limiting (${prefix}) - Redis store creation failed`,
+      )
       return undefined
     }
   }
@@ -53,7 +58,7 @@ const useInMemoryLogin = initLoginAttemptsStore()
 if (useInMemoryLogin && loginAttemptsStore) {
   setInterval(() => {
     if (!loginAttemptsStore) return
-    
+
     const now = Date.now()
     const fifteenMinutes = 15 * 60 * 1000
 
@@ -207,7 +212,7 @@ export class SuspiciousActivityTracker {
       try {
         const key = `suspicious:${ip}`
         const violations = await redisClient.incr(key)
-        
+
         // Set expiry on first violation
         if (violations === 1) {
           await redisClient.expire(key, this.BLOCK_DURATION)

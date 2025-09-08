@@ -331,7 +331,7 @@ export interface MapDraft {
   lastEditedAt?: Date
   createdAt: Date
   updatedAt: Date
-  
+
   // Deprecated - kept for backward compatibility
   mapId?: string
 }

@@ -1,7 +1,7 @@
-import Bull from 'bull'
-import { GameCleanupJob, queueService } from '../services/queueService'
-import { GameService } from '../services/gameService'
+import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
+import { GameService } from '../services/gameService'
+import { type GameCleanupJob, queueService } from '../services/queueService'
 // TODO: Fix import when territoryModifierService is implemented
 // import { TerritoryModifierService } from '../services/territoryModifierService'
 
@@ -55,15 +55,15 @@ export class CleanupWorker {
         case 'finished':
           await this.cleanupFinishedGame(gameId, gameState)
           break
-          
+
         case 'timeout':
           await this.cleanupTimedOutGame(gameId, gameState)
           break
-          
+
         case 'abandoned':
           await this.cleanupAbandonedGame(gameId, gameState)
           break
-          
+
         default:
           console.warn(`Unknown cleanup reason: ${reason}`)
       }
@@ -72,12 +72,11 @@ export class CleanupWorker {
       await this.performCommonCleanup(gameId)
 
       console.log(`✅ Game ${gameId} cleanup completed`)
-      return { 
-        success: true, 
-        reason, 
+      return {
+        success: true,
+        reason,
         cleanedAt: new Date().toISOString(),
       }
-
     } catch (error) {
       console.error(`❌ Failed to cleanup game ${gameId}:`, error)
       throw error
@@ -105,8 +104,9 @@ export class CleanupWorker {
   private async cleanupTimedOutGame(gameId: string, gameState: any): Promise<void> {
     // Determine winner based on territories controlled
     const territoryCount = this.countTerritoriesByPlayer(gameState.board)
-    const winner = Object.entries(territoryCount)
-      .sort(([,a], [,b]) => (b as number) - (a as number))[0][0]
+    const winner = Object.entries(territoryCount).sort(
+      ([, a], [, b]) => (b as number) - (a as number),
+    )[0][0]
 
     await this.gameService.archiveGameResults(gameId, {
       winner,
@@ -117,8 +117,8 @@ export class CleanupWorker {
 
     // Partial ELO updates for timeout
     if (gameState.isRanked) {
-      await this.gameService.updateEloRatings(gameId, { 
-        ...gameState, 
+      await this.gameService.updateEloRatings(gameId, {
+        ...gameState,
         winner,
         isTimeout: true,
       })
@@ -141,13 +141,13 @@ export class CleanupWorker {
   private async performCommonCleanup(gameId: string): Promise<void> {
     // Clean up Redis cache
     await this.cacheService.deleteGameState(gameId)
-    
+
     // Clean up territory modifiers
     // await territoryModifierService.cleanupFinishedGameModifiers([gameId])
-    
+
     // Clean up any temporary files or resources
     await this.cleanupTempResources(gameId)
-    
+
     // Remove from active games tracking
     await this.gameService.removeFromActiveGames(gameId)
   }
@@ -161,11 +161,11 @@ export class CleanupWorker {
 
   private calculatePlayerStats(gameState: any): Record<string, any> {
     const stats: Record<string, any> = {}
-    
+
     for (const player of gameState.players) {
       const territories = gameState.board.filter((t: any) => t.owner === player.id)
       const totalArmies = territories.reduce((sum: number, t: any) => sum + t.armies, 0)
-      
+
       stats[player.id] = {
         territoriesControlled: territories.length,
         totalArmies,
@@ -173,17 +173,17 @@ export class CleanupWorker {
         eliminated: territories.length === 0,
       }
     }
-    
+
     return stats
   }
 
   private countTerritoriesByPlayer(board: any[]): Record<string, number> {
     const counts: Record<string, number> = {}
-    
+
     for (const territory of board) {
       counts[territory.owner] = (counts[territory.owner] || 0) + 1
     }
-    
+
     return counts
   }
 
@@ -191,7 +191,7 @@ export class CleanupWorker {
     try {
       // Find games that haven't been updated in over 30 minutes
       const abandonedGames = await this.gameService.findAbandonedGames(30 * 60 * 1000)
-      
+
       for (const gameId of abandonedGames) {
         console.log(`📅 Scheduling cleanup for abandoned game: ${gameId}`)
         await queueService.addGameCleanup({
@@ -199,7 +199,7 @@ export class CleanupWorker {
           reason: 'abandoned',
         })
       }
-      
+
       if (abandonedGames.length > 0) {
         console.log(`📅 Scheduled cleanup for ${abandonedGames.length} abandoned games`)
       }

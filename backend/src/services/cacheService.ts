@@ -52,7 +52,7 @@ export class CacheService {
   private setInMemory<T>(key: string, value: T, ttlSeconds: number) {
     this.inMemoryCache.set(key, {
       data: value,
-      expires: Date.now() + ttlSeconds * 1000
+      expires: Date.now() + ttlSeconds * 1000,
     })
 
     // Clean up expired entries periodically
@@ -96,7 +96,7 @@ export class CacheService {
         logger.error(`Cache clear error for prefix ${prefix}:`, error)
       }
     }
-    
+
     // Clear from in-memory cache
     const keysToDelete: string[] = []
     this.inMemoryCache.forEach((_, key) => {
@@ -104,17 +104,13 @@ export class CacheService {
         keysToDelete.push(key)
       }
     })
-    keysToDelete.forEach(key => this.inMemoryCache.delete(key))
+    keysToDelete.forEach((key) => this.inMemoryCache.delete(key))
   }
 
   /**
    * Cache wrapper for expensive operations
    */
-  async getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    ttlSeconds = 300
-  ): Promise<T> {
+  async getOrSet<T>(key: string, factory: () => Promise<T>, ttlSeconds = 300): Promise<T> {
     // Try to get from cache first
     const cached = await this.get<T>(key)
     if (cached !== null) {
@@ -123,10 +119,10 @@ export class CacheService {
 
     // Generate new value
     const value = await factory()
-    
+
     // Store in cache
     await this.set(key, value, ttlSeconds)
-    
+
     return value
   }
 
@@ -142,14 +138,14 @@ export class CacheService {
   private cleanupInMemoryCache() {
     const now = Date.now()
     const keysToDelete: string[] = []
-    
+
     this.inMemoryCache.forEach((value, key) => {
       if (value.expires <= now) {
         keysToDelete.push(key)
       }
     })
-    
-    keysToDelete.forEach(key => this.inMemoryCache.delete(key))
+
+    keysToDelete.forEach((key) => this.inMemoryCache.delete(key))
   }
 }
 

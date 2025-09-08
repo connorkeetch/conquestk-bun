@@ -16,7 +16,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     description: 'PostgreSQL connection string',
     validator: (value) => value.startsWith('postgres://') || value.startsWith('postgresql://'),
   },
-  
+
   // Server
   {
     name: 'PORT',
@@ -25,7 +25,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0 && parseInt(value) < 65536,
     description: 'Server port number',
   },
-  
+
   // Authentication
   {
     name: 'JWT_SECRET',
@@ -39,7 +39,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     defaultValue: '7d',
     description: 'JWT token expiration time',
   },
-  
+
   // Session
   {
     name: 'SESSION_SECRET',
@@ -47,11 +47,11 @@ const ENV_VARIABLES: EnvVariable[] = [
     description: 'Secret key for session encryption',
     validator: (value) => {
       // Skip validation if it's a Railway reference (will be generated)
-      if (value.startsWith('$')) return true;
-      return value.length >= 32;
+      if (value.startsWith('$')) return true
+      return value.length >= 32
     },
   },
-  
+
   // Environment
   {
     name: 'NODE_ENV',
@@ -60,7 +60,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     validator: (value) => ['development', 'production', 'staging', 'test'].includes(value),
     description: 'Application environment',
   },
-  
+
   // Database Pool (optional but recommended)
   {
     name: 'DB_POOL_MAX',
@@ -97,7 +97,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
     description: 'Database query timeout (ms)',
   },
-  
+
   // File Upload
   {
     name: 'MAX_FILE_SIZE',
@@ -106,7 +106,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
     description: 'Maximum file upload size (bytes)',
   },
-  
+
   // CORS
   {
     name: 'CORS_ORIGIN',
@@ -114,7 +114,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     defaultValue: 'http://localhost:5173',
     description: 'CORS allowed origins',
   },
-  
+
   // Optional Features
   {
     name: 'REDIS_URL',
@@ -153,63 +153,67 @@ const ENV_VARIABLES: EnvVariable[] = [
 
 export function validateEnvironmentVariables(): void {
   logger.info('🔍 Validating environment variables...')
-  
+
   const errors: string[] = []
   const warnings: string[] = []
   const applied: string[] = []
-  
+
   // Handle production/staging-specific secret generation FIRST before validation
   if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
     const crypto = require('crypto')
-    
+
     // Generate JWT_SECRET if missing or invalid (Railway reference)
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('$')) {
       process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex')
       warnings.push('⚠️  JWT_SECRET not provided or is Railway reference - generated random key')
       applied.push(`✅ Generated JWT_SECRET for production`)
     }
-    
+
     // Generate SESSION_SECRET if missing or invalid (Railway reference)
     if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith('$')) {
       process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex')
       warnings.push('⚠️  SESSION_SECRET not provided or is Railway reference - generated random key')
       applied.push(`✅ Generated SESSION_SECRET for production`)
     }
-    
+
     // Ensure they're different
     if (process.env.JWT_SECRET === process.env.SESSION_SECRET) {
       process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex')
       warnings.push('⚠️  Regenerated SESSION_SECRET to be different from JWT_SECRET')
     }
   }
-  
+
   for (const envVar of ENV_VARIABLES) {
     const value = process.env[envVar.name]
-    
+
     // Check if required variable is missing
     if (envVar.required && !value) {
-      errors.push(`❌ Missing required environment variable: ${envVar.name}${envVar.description ? ` (${envVar.description})` : ''}`)
+      errors.push(
+        `❌ Missing required environment variable: ${envVar.name}${envVar.description ? ` (${envVar.description})` : ''}`,
+      )
       continue
     }
-    
+
     // Apply default value if not set and has default
     if (!value && envVar.defaultValue) {
       process.env[envVar.name] = envVar.defaultValue
       applied.push(`✅ Applied default value for ${envVar.name}: ${envVar.defaultValue}`)
       continue
     }
-    
+
     // Skip validation if not set and not required
     if (!value) {
       continue
     }
-    
+
     // Validate the value if validator exists
     if (envVar.validator && !envVar.validator(value)) {
-      errors.push(`❌ Invalid value for ${envVar.name}: "${value}"${envVar.description ? ` (${envVar.description})` : ''}`)
+      errors.push(
+        `❌ Invalid value for ${envVar.name}: "${value}"${envVar.description ? ` (${envVar.description})` : ''}`,
+      )
       continue
     }
-    
+
     // Check for common issues
     if (envVar.name.includes('SECRET') || envVar.name.includes('KEY')) {
       if (value === 'your-secret-here' || value === 'change-me' || value.length < 16) {
@@ -217,36 +221,40 @@ export function validateEnvironmentVariables(): void {
       }
     }
   }
-  
+
   // Check for other production/staging-specific warnings
   if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
     if (!process.env.REDIS_URL) {
-      warnings.push('⚠️  REDIS_URL not set - sessions will use memory storage (not recommended for production)')
+      warnings.push(
+        '⚠️  REDIS_URL not set - sessions will use memory storage (not recommended for production)',
+      )
     }
-    
+
     if (!process.env.SMTP_HOST && !process.env.RESEND_API_KEY) {
       warnings.push('⚠️  Email service not configured (SMTP_HOST or RESEND_API_KEY missing)')
     }
   }
-  
+
   // Log results
   if (applied.length > 0) {
     logger.info('Applied defaults:')
-    applied.forEach(msg => logger.info(msg))
+    applied.forEach((msg) => logger.info(msg))
   }
-  
+
   if (warnings.length > 0) {
     logger.warn('Environment warnings:')
-    warnings.forEach(msg => logger.warn(msg))
+    warnings.forEach((msg) => logger.warn(msg))
   }
-  
+
   if (errors.length > 0) {
     logger.error('Environment validation failed:')
-    errors.forEach(msg => logger.error(msg))
-    
+    errors.forEach((msg) => logger.error(msg))
+
     // In production/staging, fail fast on missing required variables
     if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-      logger.error('🛑 Cannot start server with missing/invalid environment variables in production')
+      logger.error(
+        '🛑 Cannot start server with missing/invalid environment variables in production',
+      )
       process.exit(1)
     } else {
       logger.warn('⚠️  Starting with missing/invalid environment variables (development mode)')
@@ -254,7 +262,7 @@ export function validateEnvironmentVariables(): void {
   } else {
     logger.info('✅ Environment variables validated successfully')
   }
-  
+
   // Log current environment summary
   logger.info(`📊 Environment Summary:
   - Mode: ${process.env.NODE_ENV || 'development'}

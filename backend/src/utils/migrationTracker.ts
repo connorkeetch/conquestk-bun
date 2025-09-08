@@ -80,10 +80,10 @@ export class MigrationTracker {
         WHERE table_name = 'schema_migrations' 
         AND column_name IN ('filename', 'version')
       `)
-      
-      const hasFilename = columnCheck.rows.some(row => row.column_name === 'filename')
-      const hasVersion = columnCheck.rows.some(row => row.column_name === 'version')
-      
+
+      const hasFilename = columnCheck.rows.some((row) => row.column_name === 'filename')
+      const hasVersion = columnCheck.rows.some((row) => row.column_name === 'version')
+
       if (hasFilename) {
         const result = await query(`
           SELECT filename 
@@ -92,7 +92,8 @@ export class MigrationTracker {
           ORDER BY executed_at ASC
         `)
         return result.rows.map((row: any) => row.filename)
-      } else if (hasVersion) {
+      }
+      if (hasVersion) {
         // Handle older schema_migrations table format
         const result = await query(`
           SELECT version 
@@ -105,17 +106,18 @@ export class MigrationTracker {
           // Map version to actual migration filenames
           if (version === '001' || version === '001_complete_schema') {
             return '001_complete_schema.sql'
-          } else if (version === '002') {
+          }
+          if (version === '002') {
             return '002_add_missing_tables.sql'
-          } else if (version === '003') {
+          }
+          if (version === '003') {
             return '003_complete_missing_tables.sql'
           }
           return `${version}.sql`
         })
-      } else {
-        // No migrations table or empty table
-        return []
       }
+      // No migrations table or empty table
+      return []
     } catch (error) {
       logger.error('❌ Failed to get applied migrations:', error)
       return []
@@ -135,9 +137,9 @@ export class MigrationTracker {
         WHERE table_name = 'schema_migrations' 
         AND column_name IN ('filename', 'version')
       `)
-      
-      const hasFilename = columnCheck.rows.some(row => row.column_name === 'filename')
-      
+
+      const hasFilename = columnCheck.rows.some((row) => row.column_name === 'filename')
+
       if (hasFilename) {
         await query(
           `
@@ -151,15 +153,15 @@ export class MigrationTracker {
           status = EXCLUDED.status,
           rollback_sql = EXCLUDED.rollback_sql
       `,
-        [
-          record.filename,
-          record.checksum,
-          record.executed_at,
-          record.execution_time_ms,
-          record.status,
-          record.rollback_sql,
-        ],
-      )
+          [
+            record.filename,
+            record.checksum,
+            record.executed_at,
+            record.execution_time_ms,
+            record.status,
+            record.rollback_sql,
+          ],
+        )
 
         logger.debug(`✅ Marked migration as ${record.status}: ${record.filename}`)
       } else {
@@ -171,7 +173,7 @@ export class MigrationTracker {
           VALUES ($1, $2)
           ON CONFLICT (version) DO NOTHING
           `,
-          [version, record.executed_at]
+          [version, record.executed_at],
         )
         logger.debug(`✅ Marked migration as completed: ${version}`)
       }

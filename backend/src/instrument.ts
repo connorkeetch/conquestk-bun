@@ -11,19 +11,19 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
-    
+
     // Performance Monitoring
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    
+
     // Release tracking (helpful for tracking which version has issues)
     release: process.env.npm_package_version,
-    
+
     // Security - don't send PII in production unless explicitly needed
     sendDefaultPii: process.env.NODE_ENV !== 'production',
-    
+
     // Set sample rate for profiling
     profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    
+
     // Configure error filtering
     beforeSend(event, hint) {
       // Filter out non-critical errors in production
@@ -40,7 +40,7 @@ if (process.env.SENTRY_DSN) {
       }
       return event
     },
-    
+
     // Configure transaction filtering
     beforeSendTransaction(event) {
       // Don't send health check transactions
@@ -53,7 +53,7 @@ if (process.env.SENTRY_DSN) {
       return event
     },
   })
-  
+
   console.log('✅ Sentry initialized for', process.env.NODE_ENV, 'environment')
 } else {
   console.log('ℹ️  Sentry DSN not provided - error tracking disabled')

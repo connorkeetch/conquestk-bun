@@ -1,8 +1,8 @@
-import type { Request, Response, NextFunction } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 import multer from 'multer'
-import { authenticateToken } from '../middleware/auth'
 import { requireAdmin } from '../middleware/adminAuth'
+import { authenticateToken } from '../middleware/auth'
 import { mapStagingService } from '../services/mapStagingService'
 import { logger } from '../utils/logger'
 
@@ -21,7 +21,7 @@ const upload = multer({
     } else {
       cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'))
     }
-  }
+  },
 })
 
 // Check user's quota

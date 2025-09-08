@@ -1,8 +1,8 @@
-import { query } from '../config/database'
-import { logger } from '../utils/logger'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import sharp from 'sharp'
+import { query } from '../config/database'
+import { logger } from '../utils/logger'
 
 export interface StagingImage {
   id: string
@@ -53,7 +53,9 @@ export class MapStagingService {
   /**
    * Check user's current quota usage
    */
-  async checkUserQuota(userId: string): Promise<{ canUpload: boolean; remaining: number; reason?: string }> {
+  async checkUserQuota(
+    userId: string,
+  ): Promise<{ canUpload: boolean; remaining: number; reason?: string }> {
     try {
       // Check if user is admin
       const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [userId])
@@ -75,7 +77,7 @@ export class MapStagingService {
           SELECT id FROM map_submissions
           WHERE user_id = $1 AND review_status = 'pending'
         ) AS items`,
-        [userId]
+        [userId],
       )
 
       const currentCount = parseInt(countResult.rows[0]?.total || '0')
@@ -85,7 +87,7 @@ export class MapStagingService {
         return {
           canUpload: false,
           remaining: 0,
-          reason: `You have reached the maximum of ${this.NON_ADMIN_QUOTA} unpublished maps/images. Please delete some or wait for approval.`
+          reason: `You have reached the maximum of ${this.NON_ADMIN_QUOTA} unpublished maps/images. Please delete some or wait for approval.`,
         }
       }
 
@@ -99,10 +101,7 @@ export class MapStagingService {
   /**
    * Upload and process a map image
    */
-  async uploadImage(
-    userId: string,
-    file: Express.Multer.File
-  ): Promise<StagingImage> {
+  async uploadImage(userId: string, file: Express.Multer.File): Promise<StagingImage> {
     try {
       // Check quota first
       const quotaCheck = await this.checkUserQuota(userId)
@@ -128,7 +127,7 @@ export class MapStagingService {
 
       // Process image with sharp
       const metadata = await sharp(file.buffer).metadata()
-      
+
       if (!metadata.width || !metadata.height) {
         throw new Error('Could not determine image dimensions')
       }
@@ -160,8 +159,8 @@ export class MapStagingService {
           metadata.width,
           metadata.height,
           file.mimetype,
-          'ready'
-        ]
+          'ready',
+        ],
       )
 
       return result.rows[0]
@@ -180,7 +179,7 @@ export class MapStagingService {
         `SELECT * FROM map_images_staging 
          WHERE user_id = $1 AND is_deleted = FALSE
          ORDER BY created_at DESC`,
-        [userId]
+        [userId],
       )
 
       return result.rows
@@ -200,7 +199,7 @@ export class MapStagingService {
          FROM map_images_staging mis
          LEFT JOIN users u ON mis.user_id = u.id
          WHERE mis.is_deleted = FALSE
-         ORDER BY mis.created_at DESC`
+         ORDER BY mis.created_at DESC`,
       )
 
       return result.rows
@@ -223,7 +222,7 @@ export class MapStagingService {
         `UPDATE map_images_staging 
          SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = $1 ${ownershipCheck}`,
-        params
+        params,
       )
 
       if (result.rowCount === 0) {
@@ -255,26 +254,26 @@ export class MapStagingService {
           pendingSubmissions: 0,
           total: 0,
           maxAllowed: null,
-          remaining: null
+          remaining: null,
         }
       }
 
       // Get counts for each category
       const stagingResult = await query(
         'SELECT COUNT(*) as count FROM map_images_staging WHERE user_id = $1 AND is_deleted = FALSE',
-        [userId]
+        [userId],
       )
 
       const draftsResult = await query(
         `SELECT COUNT(*) as count FROM map_drafts 
          WHERE user_id = $1 AND draft_status != 'submitted'`,
-        [userId]
+        [userId],
       )
 
       const submissionsResult = await query(
         `SELECT COUNT(*) as count FROM map_submissions 
          WHERE user_id = $1 AND review_status = 'pending'`,
-        [userId]
+        [userId],
       )
 
       const stagingImages = parseInt(stagingResult.rows[0]?.count || '0')
@@ -290,7 +289,7 @@ export class MapStagingService {
         pendingSubmissions,
         total,
         maxAllowed: this.NON_ADMIN_QUOTA,
-        remaining: Math.max(0, this.NON_ADMIN_QUOTA - total)
+        remaining: Math.max(0, this.NON_ADMIN_QUOTA - total),
       }
     } catch (error) {
       logger.error('Error getting quota summary:', error)

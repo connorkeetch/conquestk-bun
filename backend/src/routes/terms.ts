@@ -51,12 +51,7 @@ router.post(
         return
       }
 
-      const acceptance = await termsService.acceptTerms(
-        userId,
-        featureType,
-        ipAddress,
-        userAgent,
-      )
+      const acceptance = await termsService.acceptTerms(userId, featureType, ipAddress, userAgent)
 
       res.json({
         success: true,

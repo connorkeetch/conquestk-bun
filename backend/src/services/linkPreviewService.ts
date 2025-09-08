@@ -17,7 +17,7 @@ class LinkPreviewService {
   async extractLinks(text: string): Promise<string[]> {
     const urlRegex = /(https?:\/\/[^\s]+)/gi
     const matches = text.match(urlRegex) || []
-    return matches.filter(url => {
+    return matches.filter((url) => {
       try {
         new URL(url)
         return true
@@ -40,17 +40,17 @@ class LinkPreviewService {
         timeout: 5000,
         followRedirects: 'follow',
         headers: {
-          'user-agent': 'Mozilla/5.0 (compatible; ConquestK/1.0)'
-        }
+          'user-agent': 'Mozilla/5.0 (compatible; ConquestK/1.0)',
+        },
       })
 
-      let result: LinkPreview = { url }
+      const result: LinkPreview = { url }
 
       if ('title' in preview) {
         result.title = preview.title
         result.description = preview.description
         result.siteName = preview.siteName
-        
+
         if (preview.images && preview.images.length > 0) {
           result.image = preview.images[0]
         }
@@ -67,7 +67,7 @@ class LinkPreviewService {
   }
 
   async getMultiplePreviews(urls: string[]): Promise<(LinkPreview | null)[]> {
-    const promises = urls.map(url => this.getPreview(url))
+    const promises = urls.map((url) => this.getPreview(url))
     return Promise.all(promises)
   }
 
@@ -90,8 +90,9 @@ class LinkPreviewService {
 
     // Limit cache size
     if (this.cache.size > 1000) {
-      const oldestUrl = Array.from(this.cacheTimestamps.entries())
-        .sort(([, a], [, b]) => a - b)[0][0]
+      const oldestUrl = Array.from(this.cacheTimestamps.entries()).sort(
+        ([, a], [, b]) => a - b,
+      )[0][0]
       this.cache.delete(oldestUrl)
       this.cacheTimestamps.delete(oldestUrl)
     }

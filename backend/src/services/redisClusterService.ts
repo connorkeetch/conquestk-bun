@@ -1,6 +1,7 @@
-import Redis, { Cluster } from 'ioredis'
-import { logger } from '../utils/logger'
+import type Redis from 'ioredis'
+import { Cluster } from 'ioredis'
 import { getRedisClient } from '../config/redis'
+import { logger } from '../utils/logger'
 
 interface CacheMetrics {
   hits: number
@@ -45,7 +46,7 @@ export class RedisClusterService {
     CRITICAL: 30 * 60, // 30 minutes - game states, user sessions
     STANDARD: 15 * 60, // 15 minutes - leaderboards, stats
     EXTENDED: 60 * 60, // 1 hour - static data, configurations
-    TEMPORARY: 5 * 60,  // 5 minutes - temporary computations
+    TEMPORARY: 5 * 60, // 5 minutes - temporary computations
   } as const
 
   async initialize(): Promise<void> {
@@ -63,7 +64,6 @@ export class RedisClusterService {
         mode: this.isClusterMode ? 'cluster' : 'standalone',
         nodes: clusterNodes?.split(',').length || 1,
       })
-
     } catch (error) {
       logger.error('❌ Failed to initialize Redis Cluster Service:', error)
       throw error
@@ -71,7 +71,7 @@ export class RedisClusterService {
   }
 
   private async initializeCluster(nodesString: string): Promise<void> {
-    const nodeArray = nodesString.split(',').map(node => {
+    const nodeArray = nodesString.split(',').map((node) => {
       const [host, port] = node.trim().split(':')
       return { host, port: parseInt(port) || 6379 }
     })
@@ -115,14 +115,16 @@ export class RedisClusterService {
   private async initializeFallback(redisUrl: string): Promise<void> {
     // Use centralized Redis client instead of creating new connection
     this.fallbackClient = getRedisClient()
-    
+
     if (!this.fallbackClient) {
       logger.warn('Centralized Redis client not available, RedisClusterService will be disabled')
       return
     }
 
-    logger.info('🔗 RedisClusterService using centralized Redis client with Railway network support')
-    
+    logger.info(
+      '🔗 RedisClusterService using centralized Redis client with Railway network support',
+    )
+
     // Add error handling for this service
     this.fallbackClient.on('error', (error) => {
       logger.warn('RedisClusterService client error:', error.message)
@@ -137,7 +139,11 @@ export class RedisClusterService {
   }
 
   // Advanced caching methods with automatic tier management
-  async setWithTier(key: string, value: any, tier: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' = 'STANDARD'): Promise<boolean> {
+  async setWithTier(
+    key: string,
+    value: any,
+    tier: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' = 'STANDARD',
+  ): Promise<boolean> {
     const client = this.getClient()
     if (!client) return false
 
@@ -157,7 +163,6 @@ export class RedisClusterService {
 
       logger.debug(`📦 Cache SET: ${key} (${tier}, TTL: ${ttl}s)`)
       return true
-
     } catch (error) {
       this.metrics.errors++
       logger.error(`❌ Cache SET failed for key ${key}:`, error)
@@ -173,7 +178,7 @@ export class RedisClusterService {
       this.metrics.totalRequests++
 
       const result = await client.get(key)
-      
+
       if (result === null) {
         this.metrics.misses++
         logger.debug(`💨 Cache MISS: ${key}`)
@@ -183,9 +188,8 @@ export class RedisClusterService {
       this.metrics.hits++
       const parsed = JSON.parse(result)
       logger.debug(`🎯 Cache HIT: ${key} (${parsed.tier})`)
-      
-      return parsed.data as T
 
+      return parsed.data as T
     } catch (error) {
       this.metrics.errors++
       logger.error(`❌ Cache GET failed for key ${key}:`, error)
@@ -221,7 +225,6 @@ export class RedisClusterService {
       })
 
       return parsed
-
     } catch (error) {
       this.metrics.errors += keys.length
       logger.error('❌ Cache MGET failed:', error)
@@ -229,7 +232,13 @@ export class RedisClusterService {
     }
   }
 
-  async mset(keyValuePairs: Array<{ key: string; value: any; tier?: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' }>): Promise<boolean> {
+  async mset(
+    keyValuePairs: Array<{
+      key: string
+      value: any
+      tier?: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY'
+    }>,
+  ): Promise<boolean> {
     const client = this.getClient()
     if (!client || keyValuePairs.length === 0) return false
 
@@ -255,7 +264,6 @@ export class RedisClusterService {
       await pipeline.exec()
       logger.debug(`📦 Cache MSET: ${keyValuePairs.length} keys`)
       return true
-
     } catch (error) {
       this.metrics.errors += keyValuePairs.length
       logger.error('❌ Cache MSET failed:', error)
@@ -285,7 +293,6 @@ export class RedisClusterService {
 
       logger.info(`🗑️ Deleted ${deletedCount} keys matching pattern: ${pattern}`)
       return deletedCount
-
     } catch (error) {
       this.metrics.errors++
       logger.error(`❌ Failed to delete pattern ${pattern}:`, error)
@@ -307,13 +314,11 @@ export class RedisClusterService {
 
   // Performance and health monitoring
   getMetrics(): CacheMetrics & { hitRate: number; errorRate: number } {
-    const hitRate = this.metrics.totalRequests > 0 
-      ? (this.metrics.hits / this.metrics.totalRequests) * 100 
-      : 0
-    
-    const errorRate = this.metrics.totalRequests > 0 
-      ? (this.metrics.errors / this.metrics.totalRequests) * 100 
-      : 0
+    const hitRate =
+      this.metrics.totalRequests > 0 ? (this.metrics.hits / this.metrics.totalRequests) * 100 : 0
+
+    const errorRate =
+      this.metrics.totalRequests > 0 ? (this.metrics.errors / this.metrics.totalRequests) * 100 : 0
 
     return {
       ...this.metrics,
@@ -363,7 +368,7 @@ export class RedisClusterService {
 
   private parseRedisInfo(info: string): Record<string, string> {
     const result: Record<string, string> = {}
-    info.split('\r\n').forEach(line => {
+    info.split('\r\n').forEach((line) => {
       if (line.includes(':')) {
         const [key, value] = line.split(':')
         result[key] = value

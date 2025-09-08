@@ -1,9 +1,9 @@
-import Bull from 'bull'
-import { GameActionJob, queueService } from '../services/queueService'
+import type Bull from 'bull'
+import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
-import { GameDelta, DeltaBuilder, CompoundDelta } from '../types/deltaUpdates'
-import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
+import { type GameActionJob, queueService } from '../services/queueService'
+import { type CompoundDelta, DeltaBuilder, type GameDelta } from '../types/deltaUpdates'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>
@@ -40,10 +40,10 @@ export class GameActionWorker {
 
   private async processGameAction(jobData: GameActionJob): Promise<any> {
     const { gameId, playerId, action, socketId } = jobData
-    
+
     try {
       console.log(`🎮 Processing game action: ${action.type} for game ${gameId}`)
-      
+
       // Get current game state
       const currentState = await this.gameService.getGameState(gameId)
       if (!currentState) {
@@ -63,38 +63,41 @@ export class GameActionWorker {
         case 'deploy':
           delta = await this.processPlaceArmies(gameId, playerId, action)
           break
-          
-        case 'attack':
+
+        case 'attack': {
           // For attacks, we queue a battle simulation
           const battleJob = {
             gameId,
             attackingTerritory: action.payload?.fromTerritory || '',
             defendingTerritory: action.payload?.toTerritory || '',
             attackingArmies: action.payload?.armies || 1,
-            defendingArmies: currentState.board.find((t: any) => t.id === action.payload?.toTerritory)?.armies || 1,
+            defendingArmies:
+              currentState.board.find((t: any) => t.id === action.payload?.toTerritory)?.armies ||
+              1,
             playerId,
           }
-          
+
           await queueService.addBattleSimulation(battleJob)
-          
+
           // Don't broadcast immediately for attacks - wait for battle result
           shouldBroadcast = false
           break
-          
+        }
+
         case 'fortify':
           delta = await this.processFortify(gameId, playerId, action)
           break
-          
+
         case 'end_turn':
           delta = await this.processEndTurn(gameId, playerId)
           break
-          
+
         case 'begin_turn':
         case 'trade_cards':
         case 'go_back_to_reinforcement':
           delta = await this.processPhaseChange(gameId, playerId, action)
           break
-          
+
         default:
           throw new Error(`Unknown action type: ${action.type}`)
       }
@@ -104,24 +107,23 @@ export class GameActionWorker {
         this.io.to(`game:${gameId}`).emit('game-delta', delta)
       }
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         delta: delta || null,
         processed: true,
       }
-
     } catch (error) {
       console.error(`❌ Failed to process game action:`, error)
-      
+
       // Emit error to specific socket if available
       if (socketId) {
-        this.io.to(socketId).emit('error', { 
+        this.io.to(socketId).emit('error', {
           event: 'game:action:error',
           message: (error as Error).message,
           timestamp: new Date().toISOString(),
         })
       }
-      
+
       throw error
     }
   }
@@ -141,7 +143,11 @@ export class GameActionWorker {
     return true
   }
 
-  private async processPlaceArmies(gameId: string, playerId: string, action: any): Promise<GameDelta> {
+  private async processPlaceArmies(
+    gameId: string,
+    playerId: string,
+    action: any,
+  ): Promise<GameDelta> {
     // Update territory armies
     const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
       territoryId: action.payload?.territoryId || '',
@@ -182,16 +188,31 @@ export class GameActionWorker {
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
     const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
-    
+
     return DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0)
   }
 
-  private async processPhaseChange(gameId: string, playerId: string, action: any): Promise<GameDelta> {
-    await this.gameService.processPhaseChange(gameId, playerId, action.payload?.phase || 'reinforcement')
-    
-    return DeltaBuilder.phaseChange(gameId, action.payload?.phase || 'reinforcement', playerId, 0, 0)
+  private async processPhaseChange(
+    gameId: string,
+    playerId: string,
+    action: any,
+  ): Promise<GameDelta> {
+    await this.gameService.processPhaseChange(
+      gameId,
+      playerId,
+      action.payload?.phase || 'reinforcement',
+    )
+
+    return DeltaBuilder.phaseChange(
+      gameId,
+      action.payload?.phase || 'reinforcement',
+      playerId,
+      0,
+      0,
+    )
   }
 }
 
 // Export factory function
-export const createGameActionWorker = (io: Server<ClientToServerEvents, ServerToClientEvents>) => new GameActionWorker(io)
+export const createGameActionWorker = (io: Server<ClientToServerEvents, ServerToClientEvents>) =>
+  new GameActionWorker(io)

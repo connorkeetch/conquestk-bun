@@ -1,9 +1,9 @@
+import type { Server } from 'socket.io'
 import { queueService } from '../services/queueService'
-import { createGameActionWorker } from './gameActionWorker'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
-import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
+import { createGameActionWorker } from './gameActionWorker'
 
 export class WorkerManager {
   private isInitialized = false
@@ -29,7 +29,7 @@ export class WorkerManager {
       this.gameActionWorker = createGameActionWorker(this.io)
       this.battleWorker = createBattleWorker(this.io)
       this.cleanupWorker = createCleanupWorker()
-      
+
       await Promise.all([
         this.gameActionWorker.initialize(),
         this.battleWorker.initialize(),
@@ -42,7 +42,6 @@ export class WorkerManager {
       // Log initial queue stats
       const stats = await queueService.getQueueStats()
       console.log('📊 Initial queue stats:', stats)
-
     } catch (error) {
       console.error('❌ Failed to initialize WorkerManager:', error)
       throw error
@@ -52,7 +51,7 @@ export class WorkerManager {
   async healthCheck(): Promise<{ status: string; details: any }> {
     try {
       const queueHealth = await queueService.healthCheck()
-      
+
       return {
         status: queueHealth.status === 'healthy' && this.isInitialized ? 'healthy' : 'unhealthy',
         details: {
@@ -72,7 +71,7 @@ export class WorkerManager {
 
   async getStats(): Promise<Record<string, any>> {
     const queueStats = await queueService.getQueueStats()
-    
+
     return {
       initialized: this.isInitialized,
       queues: queueStats,
@@ -82,7 +81,7 @@ export class WorkerManager {
 
   async shutdown(): Promise<void> {
     console.log('🔄 Shutting down WorkerManager...')
-    
+
     try {
       await queueService.shutdown()
       this.isInitialized = false
@@ -95,7 +94,8 @@ export class WorkerManager {
 }
 
 // Export factory function
-export const createWorkerManager = (io: Server<ClientToServerEvents, ServerToClientEvents>) => new WorkerManager(io)
+export const createWorkerManager = (io: Server<ClientToServerEvents, ServerToClientEvents>) =>
+  new WorkerManager(io)
 
 // Singleton instance (will be set by index.ts)
 let workerManagerInstance: WorkerManager | null = null

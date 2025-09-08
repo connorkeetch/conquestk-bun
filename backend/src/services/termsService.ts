@@ -26,13 +26,13 @@ export class TermsService {
   async hasAcceptedTerms(userId: string, featureType: string): Promise<boolean> {
     try {
       const currentVersion = this.getCurrentVersion(featureType)
-      
+
       const result = await query(
         `SELECT * FROM user_terms_acceptance 
          WHERE user_id = $1 AND feature_type = $2 AND terms_version = $3`,
-        [userId, featureType, currentVersion]
+        [userId, featureType, currentVersion],
       )
-      
+
       return result.rows.length > 0
     } catch (error) {
       logger.error('Error checking terms acceptance:', error)
@@ -51,7 +51,7 @@ export class TermsService {
   ): Promise<TermsAcceptance> {
     try {
       const currentVersion = this.getCurrentVersion(featureType)
-      
+
       const result = await query(
         `INSERT INTO user_terms_acceptance 
          (user_id, feature_type, terms_version, ip_address, user_agent)
@@ -59,9 +59,9 @@ export class TermsService {
          ON CONFLICT (user_id, feature_type, terms_version) 
          DO UPDATE SET accepted_at = CURRENT_TIMESTAMP
          RETURNING *`,
-        [userId, featureType, currentVersion, ipAddress, userAgent]
+        [userId, featureType, currentVersion, ipAddress, userAgent],
       )
-      
+
       return result.rows[0]
     } catch (error) {
       logger.error('Error accepting terms:', error)
@@ -78,9 +78,9 @@ export class TermsService {
         `SELECT * FROM user_terms_acceptance 
          WHERE user_id = $1
          ORDER BY accepted_at DESC`,
-        [userId]
+        [userId],
       )
-      
+
       return result.rows
     } catch (error) {
       logger.error('Error fetching terms history:', error)

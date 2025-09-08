@@ -1,6 +1,6 @@
-import dotenv from 'dotenv'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import dotenv from 'dotenv'
 
 // Load environment variables
 dotenv.config()

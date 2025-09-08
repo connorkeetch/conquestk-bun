@@ -1,7 +1,7 @@
-import { logger } from '../utils/logger'
 import { createHash } from 'crypto'
 import { readFileSync, statSync } from 'fs'
 import { join } from 'path'
+import { logger } from '../utils/logger'
 
 interface CDNProvider {
   name: string
@@ -77,10 +77,10 @@ export class CDNService {
 
       // Initialize CDN providers
       await this.initializeCDNProviders()
-      
+
       // Configure asset optimization
       await this.configureAssetOptimization()
-      
+
       // Set up asset versioning
       await this.generateAssetVersions()
 
@@ -88,7 +88,6 @@ export class CDNService {
         providers: this.providers.length,
         assets: this.assetConfigs.size,
       })
-
     } catch (error) {
       logger.error('❌ Failed to initialize CDN Service:', error)
       throw error
@@ -137,7 +136,7 @@ export class CDNService {
 
   private async configureAssetOptimization(): Promise<void> {
     const publicPath = join(process.cwd(), 'public')
-    
+
     // Configure static assets
     const assetTypes = [
       { pattern: /\.(js|mjs|jsx)$/, type: 'script' as const },
@@ -171,7 +170,7 @@ export class CDNService {
       // Asset versioning logic would go here
       // For now, we'll use a simple timestamp-based approach
       const version = Date.now().toString()
-      
+
       this.assetConfigs.forEach((config, pattern) => {
         config.version = version
       })
@@ -185,7 +184,7 @@ export class CDNService {
   // Asset URL generation with CDN selection
   getAssetUrl(assetPath: string, options: { region?: string; provider?: string } = {}): string {
     const { region = 'global', provider } = options
-    
+
     // Select optimal CDN provider
     const selectedProvider = this.selectProvider(region, provider)
     if (!selectedProvider) {
@@ -195,27 +194,27 @@ export class CDNService {
     // Get asset configuration
     const config = this.getAssetConfig(assetPath)
     const versionParam = config?.version ? `?v=${config.version}` : ''
-    
+
     // Construct CDN URL
     const cdnUrl = `${selectedProvider.baseUrl}${assetPath}${versionParam}`
-    
+
     this.metrics.totalRequests++
     logger.debug(`🌐 CDN URL generated: ${cdnUrl}`)
-    
+
     return cdnUrl
   }
 
   private selectProvider(region: string, preferredProvider?: string): CDNProvider | null {
     if (preferredProvider) {
-      const provider = this.providers.find(p => p.name === preferredProvider)
+      const provider = this.providers.find((p) => p.name === preferredProvider)
       if (provider) return provider
     }
 
     // Select based on region
-    const regionalProvider = this.providers.find(p => 
-      p.regions.includes(region) || p.regions.includes('global')
+    const regionalProvider = this.providers.find(
+      (p) => p.regions.includes(region) || p.regions.includes('global'),
     )
-    
+
     return regionalProvider || this.providers[0] || null
   }
 
@@ -252,28 +251,26 @@ export class CDNService {
 
     // Critical CSS
     preloadTags.push(
-      `<link rel="preload" href="${this.getAssetUrl('/assets/critical.css')}" as="style">`
+      `<link rel="preload" href="${this.getAssetUrl('/assets/critical.css')}" as="style">`,
     )
 
     // Critical JS
     preloadTags.push(
-      `<link rel="preload" href="${this.getAssetUrl('/assets/vendor.js')}" as="script">`
+      `<link rel="preload" href="${this.getAssetUrl('/assets/vendor.js')}" as="script">`,
     )
 
     // Critical fonts
     const criticalFonts = ['/fonts/game-font.woff2', '/fonts/ui-font.woff2']
-    criticalFonts.forEach(font => {
+    criticalFonts.forEach((font) => {
       preloadTags.push(
-        `<link rel="preload" href="${this.getAssetUrl(font)}" as="font" type="font/woff2" crossorigin>`
+        `<link rel="preload" href="${this.getAssetUrl(font)}" as="font" type="font/woff2" crossorigin>`,
       )
     })
 
     // Game-specific assets based on route
     const gameAssets = ['/audio/ui-sounds.opus', '/images/game-icons.webp']
-    gameAssets.forEach(asset => {
-      preloadTags.push(
-        `<link rel="prefetch" href="${this.getAssetUrl(asset)}">`
-      )
+    gameAssets.forEach((asset) => {
+      preloadTags.push(`<link rel="prefetch" href="${this.getAssetUrl(asset)}">`)
     })
 
     return preloadTags
@@ -284,7 +281,7 @@ export class CDNService {
     const hints: string[] = []
 
     // DNS prefetch for CDN domains
-    this.providers.forEach(provider => {
+    this.providers.forEach((provider) => {
       const domain = new URL(provider.baseUrl).hostname
       hints.push(`<link rel="dns-prefetch" href="//${domain}">`)
     })
@@ -300,26 +297,28 @@ export class CDNService {
 
   // Image optimization with responsive breakpoints
   generateResponsiveImageTag(
-    imagePath: string, 
+    imagePath: string,
     alt: string,
     options: {
       sizes?: string
       loading?: 'lazy' | 'eager'
       priority?: boolean
-    } = {}
+    } = {},
   ): string {
     const { sizes = '100vw', loading = 'lazy', priority = false } = options
     const rule = this.ASSET_RULES.images
 
     // Generate srcset for different sizes
-    const srcset = rule.sizes.map(size => {
-      const scaledPath = imagePath.replace(/(\.[^.]+)$/, `_${size}w$1`)
-      return `${this.getAssetUrl(scaledPath)} ${size}w`
-    }).join(', ')
+    const srcset = rule.sizes
+      .map((size) => {
+        const scaledPath = imagePath.replace(/(\.[^.]+)$/, `_${size}w$1`)
+        return `${this.getAssetUrl(scaledPath)} ${size}w`
+      })
+      .join(', ')
 
     // Generate WebP alternative
     const webpPath = imagePath.replace(/\.[^.]+$/, '.webp')
-    
+
     return `
       <picture>
         <source srcset="${this.getAssetUrl(webpPath)}" type="image/webp">
@@ -337,7 +336,7 @@ export class CDNService {
 
   // Cache management and purging
   async purgeCache(assetPaths: string[] = [], tags: string[] = []): Promise<boolean> {
-    const purgePromises = this.providers.map(async provider => {
+    const purgePromises = this.providers.map(async (provider) => {
       if (!provider.apiKey) return false
 
       try {
@@ -347,11 +346,10 @@ export class CDNService {
           paths: assetPaths.length,
           tags: tags.length,
         })
-        
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 100))
-        return true
 
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return true
       } catch (error) {
         logger.error(`❌ Failed to purge cache for ${provider.name}:`, error)
         return false
@@ -359,8 +357,8 @@ export class CDNService {
     })
 
     const results = await Promise.allSettled(purgePromises)
-    const successful = results.filter(result => 
-      result.status === 'fulfilled' && result.value === true
+    const successful = results.filter(
+      (result) => result.status === 'fulfilled' && result.value === true,
     ).length
 
     logger.info(`✅ Cache purged for ${successful}/${this.providers.length} providers`)
@@ -371,14 +369,14 @@ export class CDNService {
   recordCDNHit(loadTime: number, bandwidth: number): void {
     this.metrics.cdnHits++
     this.metrics.totalRequests++
-    
+
     // Update average load time
     const alpha = 0.1
     this.metrics.avgLoadTime = this.metrics.avgLoadTime * (1 - alpha) + loadTime * alpha
-    
+
     // Update bandwidth
     this.metrics.bandwidth += bandwidth
-    
+
     // Update cache hit rate
     this.metrics.cacheHitRate = (this.metrics.cdnHits / this.metrics.totalRequests) * 100
   }
@@ -399,15 +397,15 @@ export class CDNService {
 
   async healthCheck(): Promise<{ status: string; details: any }> {
     const healthChecks = await Promise.allSettled(
-      this.providers.map(async provider => {
+      this.providers.map(async (provider) => {
         try {
           // Simple health check - try to fetch a small asset
           const testUrl = `${provider.baseUrl}/health-check.txt`
-          const response = await fetch(testUrl, { 
-            method: 'HEAD', 
-            signal: AbortSignal.timeout(5000) 
+          const response = await fetch(testUrl, {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(5000),
           })
-          
+
           return {
             provider: provider.name,
             healthy: response.ok,
@@ -420,11 +418,11 @@ export class CDNService {
             error: (error as Error).message,
           }
         }
-      })
+      }),
     )
 
-    const healthyProviders = healthChecks.filter(check => 
-      check.status === 'fulfilled' && check.value.healthy
+    const healthyProviders = healthChecks.filter(
+      (check) => check.status === 'fulfilled' && check.value.healthy,
     ).length
 
     return {
@@ -433,8 +431,8 @@ export class CDNService {
         totalProviders: this.providers.length,
         healthyProviders,
         metrics: this.getMetrics(),
-        checks: healthChecks.map(check => 
-          check.status === 'fulfilled' ? check.value : { error: check.reason }
+        checks: healthChecks.map((check) =>
+          check.status === 'fulfilled' ? check.value : { error: check.reason },
         ),
       },
     }

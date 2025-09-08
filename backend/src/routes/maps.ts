@@ -1,16 +1,15 @@
-import fs from 'node:fs'
-import { promises as fsPromises } from 'node:fs'
+import fs, { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
 import { type Request, type Response, Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
 import sizeOf from 'image-size'
 import multer from 'multer'
+import { getPool } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
-import { mapService } from '../services/mapService'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
+import { mapService } from '../services/mapService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
-import { getPool } from '../config/database'
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
@@ -24,14 +23,14 @@ const router = Router()
 // File resource management using Node.js 24's explicit resource management pattern
 class FileResource {
   private fileHandle: fs.promises.FileHandle | null = null
-  
+
   constructor(private path: string) {}
-  
+
   async open() {
     this.fileHandle = await fsPromises.open(this.path, 'r')
     return this
   }
-  
+
   async readBuffer(): Promise<Buffer> {
     if (!this.fileHandle) throw new Error('File not opened')
     const stats = await this.fileHandle.stat()
@@ -39,7 +38,7 @@ class FileResource {
     await this.fileHandle.read(buffer, 0, stats.size, 0)
     return buffer
   }
-  
+
   // Explicit resource management - implement Symbol.dispose for 'using' keyword
   async [Symbol.dispose](): Promise<void> {
     if (this.fileHandle) {
@@ -47,7 +46,7 @@ class FileResource {
       this.fileHandle = null
     }
   }
-  
+
   // For backwards compatibility
   async close(): Promise<void> {
     await this[Symbol.dispose]()
@@ -90,20 +89,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { 
+  limits: {
     fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB default, configurable
     files: 1, // Only allow 1 file per upload
     fields: 10, // Limit number of non-file fields
   },
   fileFilter: (_req, file, cb) => {
     // Strict MIME type checking
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp'
-    ]
-    
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
     const allowedExtensions = /\.(jpeg|jpg|png|gif|webp)$/i
     const hasValidExtension = allowedExtensions.test(file.originalname)
     const hasValidMimeType = allowedMimeTypes.includes(file.mimetype)
@@ -111,7 +105,7 @@ const upload = multer({
     if (hasValidExtension && hasValidMimeType) {
       return cb(null, true)
     }
-    
+
     logger.warn(`File upload rejected: ${file.originalname} (${file.mimetype})`)
     cb(new Error('Only JPEG, PNG, GIF, and WebP images are allowed'))
   },
@@ -597,35 +591,35 @@ router.post(
     try {
       const mapId = req.params.mapId
       const userId = (req as any).userId
-      
+
       // Verify user owns the map
       const mapData = await mapService.getMapWithFullData(mapId)
       if (!mapData) {
         return res.status(404).json({ error: 'Map not found' })
       }
-      
+
       if (mapData.map.creatorId !== userId) {
         return res.status(403).json({ error: 'You do not have permission to edit this map' })
       }
-      
+
       // Generate capitals using the service
       const capitalService = new CapitalGeneratorService(getPool())
       const capitals = await capitalService.generateCapitalsForMap(mapId)
-      
+
       // Save to database
       const metadata = {
         generatedAt: new Date().toISOString(),
         algorithm: 'maximin-distance-v1',
         manuallyAdjusted: {},
       }
-      
+
       await getPool().query(
         'UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3',
-        [JSON.stringify(capitals), JSON.stringify(metadata), mapId]
+        [JSON.stringify(capitals), JSON.stringify(metadata), mapId],
       )
-      
+
       logger.info(`Generated capitals for map ${mapId}`)
-      
+
       return res.json({
         success: true,
         capitals,
@@ -653,30 +647,30 @@ router.patch(
       const { territoryIds } = req.body
       const userId = (req as any).userId
       const playerCountNum = parseInt(playerCount, 10)
-      
+
       // Verify user owns the map
       const mapData = await mapService.getMapWithFullData(mapId)
       if (!mapData) {
         return res.status(404).json({ error: 'Map not found' })
       }
-      
+
       if (mapData.map.creatorId !== userId) {
         return res.status(403).json({ error: 'You do not have permission to edit this map' })
       }
-      
+
       // Validate territory count matches player count
       if (territoryIds.length !== playerCountNum) {
         return res.status(400).json({
           error: `Must provide exactly ${playerCountNum} territories for ${playerCountNum} players`,
         })
       }
-      
+
       // Update capitals for this player count
       const capitalService = new CapitalGeneratorService(getPool())
       await capitalService.updateCapitalsForPlayerCount(mapId, playerCountNum, territoryIds)
-      
+
       logger.info(`Updated capitals for map ${mapId}, ${playerCountNum} players`)
-      
+
       return res.json({
         success: true,
         playerCount: playerCountNum,
@@ -697,34 +691,31 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const mapId = req.params.mapId
-      
+
       // Get map to check if it's public or user owns it
       const mapData = await mapService.getMapWithFullData(mapId)
       if (!mapData) {
         return res.status(404).json({ error: 'Map not found' })
       }
-      
+
       // Check access permissions
       const userId = (req as any).userId
-      if (
-        !mapData.map.isPublic &&
-        (!userId || userId !== mapData.map.creatorId)
-      ) {
+      if (!mapData.map.isPublic && (!userId || userId !== mapData.map.creatorId)) {
         return res.status(403).json({ error: 'Access denied' })
       }
-      
+
       // Get capital assignments from database
       const result = await getPool().query(
         'SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1',
-        [mapId]
+        [mapId],
       )
-      
+
       if (!result.rows[0]) {
         return res.status(404).json({ error: 'Map not found' })
       }
-      
+
       const { capital_assignments, capital_metadata } = result.rows[0]
-      
+
       return res.json({
         capitals: capital_assignments || {},
         metadata: capital_metadata || {},

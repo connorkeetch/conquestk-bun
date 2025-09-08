@@ -7,8 +7,8 @@ console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
 console.log(`Current directory: ${process.cwd()}`)
 console.log(`Script directory: ${__dirname}`)
 
-import dotenv from 'dotenv'
 import * as Sentry from '@sentry/node'
+import dotenv from 'dotenv'
 
 // Load environment variables FIRST before any other imports
 // Only load .env file in development - production/staging uses Railway's environment variables
@@ -23,7 +23,9 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
 } else {
   console.log('🏭 Production/Staging mode - using Railway environment variables')
   console.log('Environment variables available:')
-  console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.length + ' chars)' : 'NOT SET'}`)
+  console.log(
+    `  DATABASE_URL: ${process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.length + ' chars)' : 'NOT SET'}`,
+  )
   console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`)
   console.log(`  SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`)
   console.log(`  PORT: ${process.env.PORT || 'NOT SET'}`)
@@ -31,7 +33,9 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging')
 
 // Validate environment variables immediately after loading
 console.log('🔍 Starting environment validation...')
+
 import { validateEnvironmentVariables } from './config/validateEnv'
+
 try {
   validateEnvironmentVariables()
   console.log('✅ Environment validation completed')
@@ -45,7 +49,10 @@ import type { Request, Response } from 'express'
 
 // Wrap all imports in try-catch to identify which one is failing
 let createServer: any, path: any, cors: any, express: any, helmet: any, Server: any
-let initDatabase: any, logStartupDiagnostics: any, testDatabaseConnection: any, testMigrationFiles: any
+let initDatabase: any,
+  logStartupDiagnostics: any,
+  testDatabaseConnection: any,
+  testMigrationFiles: any
 let generalApiLimiter: any, suspiciousActivityTracker: any
 let adminRoutes: any, authRoutes: any, gameRoutes: any, mapRoutes: any
 let notificationRoutes: any, profileRoutes: any, skillsRoutes: any, userRoutes: any
@@ -61,7 +68,7 @@ try {
   const socketIo = require('socket.io')
   Server = socketIo.Server
   console.log('✅ Core modules loaded')
-  
+
   console.log('📦 Loading config modules...')
   const dbModule = require('./config/database')
   initDatabase = dbModule.initDatabase
@@ -70,13 +77,13 @@ try {
   testDatabaseConnection = debugModule.testDatabaseConnection
   testMigrationFiles = debugModule.testMigrationFiles
   console.log('✅ Config modules loaded')
-  
+
   console.log('📦 Loading middleware...')
   const rateLimiterModule = require('./middleware/rateLimiter')
   generalApiLimiter = rateLimiterModule.generalApiLimiter
   suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker
   console.log('✅ Middleware loaded')
-  
+
   console.log('📦 Loading routes...')
   adminRoutes = require('./routes/admin').default
   authRoutes = require('./routes/auth').authRoutes
@@ -87,14 +94,14 @@ try {
   skillsRoutes = require('./routes/skills').default
   userRoutes = require('./routes/users').default
   console.log('✅ Routes loaded')
-  
+
   console.log('📦 Loading services...')
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
-  
+
   // Session middleware will be initialized after app is created
-  
+
   console.log('✅ Services loaded')
-  
+
   console.log('📦 Loading utils...')
   try {
     ensureTablesExist = require('./utils/initTables').ensureTablesExist
@@ -161,36 +168,64 @@ const io = new Server(server, {
 })
 
 // Initialize Redis asynchronously and set up adapter if successful
-initializeRedis().then((redisClients: any) => {
-  const { pubClient, subClient, redisClient } = redisClients
-  
-  // Set up Socket.io Redis adapter only if clients are valid and connected
-  if (pubClient && subClient) {
-    try {
-      const { createAdapter } = require('@socket.io/redis-adapter')
-      io.adapter(createAdapter(pubClient, subClient))
-      console.log('✅ Socket.io using Redis adapter for multi-server support')
-    } catch (error: any) {
-      console.log('⚠️ Failed to create Redis adapter, using in-memory adapter:', error.message)
-    }
-  } else {
-    console.log('⚠️ Socket.io using in-memory adapter (single server only)')
-  }
-  
-  // Enable Redis session store only if Redis is available
-  if (redisClient) {
-    const { enableRedisSessionStore } = require('./middleware/session')
-    if (enableRedisSessionStore()) {
-      console.log('✅ Session storage upgraded to Redis')
+initializeRedis()
+  .then(async (redisClients: any) => {
+    const { pubClient, subClient, redisClient } = redisClients
+
+    // Set up Socket.io Redis adapter only if clients are valid and connected
+    if (pubClient && subClient) {
+      try {
+        const { createAdapter } = require('@socket.io/redis-adapter')
+        io.adapter(createAdapter(pubClient, subClient))
+        console.log('✅ Socket.io using Redis adapter for multi-server support')
+      } catch (error: any) {
+        console.log('⚠️ Failed to create Redis adapter, using in-memory adapter:', error.message)
+      }
     } else {
-      console.log('⚠️ Failed to upgrade session storage to Redis')
+      console.log('⚠️ Socket.io using in-memory adapter (single server only)')
     }
-  } else {
-    console.log('⚠️ Using in-memory session store (Redis not available)')
-  }
-}).catch((err: any) => {
-  console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
-})
+
+    // Enable Redis session store only if Redis is available
+    if (redisClient) {
+      const { enableRedisSessionStore } = require('./middleware/session')
+      if (enableRedisSessionStore()) {
+        console.log('✅ Session storage upgraded to Redis')
+      } else {
+        console.log('⚠️ Failed to upgrade session storage to Redis')
+      }
+    } else {
+      console.log('⚠️ Using in-memory session store (Redis not available)')
+    }
+
+    // Initialize WorkerManager AFTER Redis is ready
+    const { getWorkerManagerInstance } = require('./workers/workerManager')
+    const workerManagerInstance = getWorkerManagerInstance()
+    if (workerManagerInstance) {
+      try {
+        await workerManagerInstance.initialize()
+        console.log('✅ WorkerManager initialized after Redis connection')
+      } catch (error: any) {
+        console.error('❌ Failed to initialize WorkerManager after Redis:', error.message)
+      }
+    }
+  })
+  .catch((err: any) => {
+    console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
+
+    // Initialize WorkerManager even if Redis failed (graceful degradation)
+    const { getWorkerManagerInstance } = require('./workers/workerManager')
+    const workerManagerInstance = getWorkerManagerInstance()
+    if (workerManagerInstance) {
+      workerManagerInstance
+        .initialize()
+        .then(() => {
+          console.log('✅ WorkerManager initialized without Redis (degraded mode)')
+        })
+        .catch((error: any) => {
+          console.error('❌ Failed to initialize WorkerManager in degraded mode:', error.message)
+        })
+    }
+  })
 
 const PORT = process.env.PORT || 5001
 
@@ -484,41 +519,38 @@ Sentry.setupExpressErrorHandler(app)
 app.use((err: any, _req: Request, res: Response, _next: any) => {
   // The error id is attached to `res.sentry` for reference
   const sentryId = (res as any).sentry
-  
+
   // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
   const isActualError = err instanceof Error
   const errorMessage = isActualError ? (err as Error).message : String(err)
   const errorStack = isActualError ? (err as Error).stack : undefined
-  
+
   logger.error('Application error:', {
     error: errorMessage,
     stack: errorStack,
     isError: isActualError,
-    sentryId
+    sentryId,
   })
-  
+
   res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'An error occurred processing your request' 
-      : errorMessage,
+    error:
+      process.env.NODE_ENV === 'production'
+        ? 'An error occurred processing your request'
+        : errorMessage,
     ...(sentryId && { sentryId }),
-    ...(process.env.NODE_ENV !== 'production' && errorStack && { stack: errorStack })
+    ...(process.env.NODE_ENV !== 'production' && errorStack && { stack: errorStack }),
   })
 })
 
 setupSocketHandlers(io)
 
-// Initialize WorkerManager with Socket.io instance
+// Initialize WorkerManager with Socket.io instance (MOVED TO AFTER REDIS INITIALIZATION)
 import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager'
+
 const workerManager = createWorkerManager(io)
 setWorkerManagerInstance(workerManager)
 
-// Initialize workers asynchronously
-workerManager.initialize().then(() => {
-  console.log('✅ Worker system initialized')
-}).catch((error: any) => {
-  console.error('⚠️ Failed to initialize worker system:', error.message)
-})
+// Workers will be initialized after Redis is ready (see Redis initialization block above)
 
 async function startServer() {
   try {
@@ -576,7 +608,7 @@ async function startServer() {
 
             logger.info('✅ All migrations completed and schema validated')
             logger.info('🗄️  Database: PostgreSQL with migration tracking')
-            
+
             // Ensure owner has admin privileges
             const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
             await ensureOwnerAdmin()
