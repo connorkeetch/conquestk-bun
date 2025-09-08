@@ -197,34 +197,30 @@ initializeRedis()
       console.log('⚠️ Using in-memory session store (Redis not available)')
     }
 
-    // Initialize WorkerManager AFTER Redis is ready
-    const { getWorkerManagerInstance } = require('./workers/workerManager')
-    const workerManagerInstance = getWorkerManagerInstance()
-    if (workerManagerInstance) {
-      try {
-        await workerManagerInstance.initialize()
-        console.log('✅ WorkerManager initialized after Redis connection')
-      } catch (error: any) {
-        console.error('❌ Failed to initialize WorkerManager after Redis:', error.message)
-      }
+    // Create and initialize WorkerManager AFTER Redis is ready
+    const workerManager = createWorkerManager(io)
+    setWorkerManagerInstance(workerManager)
+    try {
+      await workerManager.initialize()
+      console.log('✅ WorkerManager created and initialized after Redis connection')
+    } catch (error: any) {
+      console.error('❌ Failed to initialize WorkerManager after Redis:', error.message)
     }
   })
   .catch((err: any) => {
     console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
 
-    // Initialize WorkerManager even if Redis failed (graceful degradation)
-    const { getWorkerManagerInstance } = require('./workers/workerManager')
-    const workerManagerInstance = getWorkerManagerInstance()
-    if (workerManagerInstance) {
-      workerManagerInstance
-        .initialize()
-        .then(() => {
-          console.log('✅ WorkerManager initialized without Redis (degraded mode)')
-        })
-        .catch((error: any) => {
-          console.error('❌ Failed to initialize WorkerManager in degraded mode:', error.message)
-        })
-    }
+    // Create and initialize WorkerManager even if Redis failed (graceful degradation)
+    const workerManager = createWorkerManager(io)
+    setWorkerManagerInstance(workerManager)
+    workerManager
+      .initialize()
+      .then(() => {
+        console.log('✅ WorkerManager initialized without Redis (degraded mode)')
+      })
+      .catch((error: any) => {
+        console.error('❌ Failed to initialize WorkerManager in degraded mode:', error.message)
+      })
   })
 
 const PORT = process.env.PORT || 5001
@@ -544,13 +540,8 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
 
 setupSocketHandlers(io)
 
-// Initialize WorkerManager with Socket.io instance (MOVED TO AFTER REDIS INITIALIZATION)
+// WorkerManager will be created AND initialized after Redis is ready (see Redis initialization block above)
 import { createWorkerManager, setWorkerManagerInstance } from './workers/workerManager'
-
-const workerManager = createWorkerManager(io)
-setWorkerManagerInstance(workerManager)
-
-// Workers will be initialized after Redis is ready (see Redis initialization block above)
 
 async function startServer() {
   try {
@@ -613,16 +604,7 @@ async function startServer() {
             const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
             await ensureOwnerAdmin()
 
-            // Initialize background queue workers
-            try {
-              logger.info('🔄 Initializing background queue system...')
-              const { workerManager } = require('./workers/workerManager')
-              await workerManager.initialize()
-              logger.info('✅ Background queue system initialized')
-            } catch (workerError) {
-              logger.error('❌ Failed to initialize queue system:', workerError)
-              logger.warn('⚠️  Server running without background processing')
-            }
+            // Background queue workers are now initialized after Redis connection (see Redis initialization block)
 
             if (process.env.NODE_ENV === 'production') {
               logger.info('🌐 Production deployment ready at https://conquestk.com')
