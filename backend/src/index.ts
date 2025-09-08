@@ -248,6 +248,9 @@ app.use('/api/workflow', require('./routes/mapWorkflow').default)
 app.use('/api/terms', require('./routes/terms').default)
 app.use('/api/staging', require('./routes/mapStaging').default)
 app.use('/api/feature-flags', require('./routes/featureFlags').default)
+app.use('/api/queues', require('./routes/queueRoutes').default)
+app.use('/api/performance', require('./routes/performanceRoutes').default)
+app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
 
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {
@@ -265,6 +268,8 @@ app.get('/health', async (_req: Request, res: Response) => {
   let databaseError = null
   let redisStatus = 'unknown'
   let redisError = null
+  let queueStatus = 'unknown'
+  let queueError = null
 
   try {
     const { query } = await import('./config/database')
@@ -288,12 +293,26 @@ app.get('/health', async (_req: Request, res: Response) => {
     redisError = error instanceof Error ? error.message : 'Unknown error'
   }
 
-  // Always return 200 OK for server health, but include database and Redis status
+  // Check queue system health
+  try {
+    const { workerManager } = await import('./workers/workerManager')
+    const queueHealth = await workerManager.healthCheck()
+    queueStatus = queueHealth.status
+    if (queueHealth.status !== 'healthy') {
+      queueError = queueHealth.details?.error || 'Queue system unhealthy'
+    }
+  } catch (error) {
+    queueStatus = 'disconnected'
+    queueError = error instanceof Error ? error.message : 'Unknown error'
+  }
+
+  // Always return 200 OK for server health, but include database, Redis, and queue status
   res.json({
     status: 'OK',
     server: 'running',
     database: databaseStatus,
     redis: redisStatus,
+    queues: queueStatus,
     environment: process.env.NODE_ENV || 'development',
     databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
     redisUrl: process.env.REDIS_URL ? 'configured' : 'missing',
@@ -301,6 +320,7 @@ app.get('/health', async (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     ...(databaseError && { databaseError }),
     ...(redisError && { redisError }),
+    ...(queueError && { queueError }),
   })
 })
 
@@ -536,6 +556,17 @@ async function startServer() {
             // Ensure owner has admin privileges
             const { ensureOwnerAdmin } = require('./scripts/ensureOwnerAdmin')
             await ensureOwnerAdmin()
+
+            // Initialize background queue workers
+            try {
+              logger.info('🔄 Initializing background queue system...')
+              const { workerManager } = require('./workers/workerManager')
+              await workerManager.initialize()
+              logger.info('✅ Background queue system initialized')
+            } catch (workerError) {
+              logger.error('❌ Failed to initialize queue system:', workerError)
+              logger.warn('⚠️  Server running without background processing')
+            }
 
             if (process.env.NODE_ENV === 'production') {
               logger.info('🌐 Production deployment ready at https://conquestk.com')
