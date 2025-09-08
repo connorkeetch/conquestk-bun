@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
 import { type Request, type Response, Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
@@ -19,6 +20,62 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const router = Router()
+
+// File resource management using Node.js 24's explicit resource management pattern
+class FileResource {
+  private fileHandle: fs.promises.FileHandle | null = null
+  
+  constructor(private path: string) {}
+  
+  async open() {
+    this.fileHandle = await fsPromises.open(this.path, 'r')
+    return this
+  }
+  
+  async readBuffer(): Promise<Buffer> {
+    if (!this.fileHandle) throw new Error('File not opened')
+    const stats = await this.fileHandle.stat()
+    const buffer = Buffer.allocUnsafe(stats.size)
+    await this.fileHandle.read(buffer, 0, stats.size, 0)
+    return buffer
+  }
+  
+  // Explicit resource management - implement Symbol.dispose for 'using' keyword
+  async [Symbol.dispose](): Promise<void> {
+    if (this.fileHandle) {
+      await this.fileHandle.close()
+      this.fileHandle = null
+    }
+  }
+  
+  // For backwards compatibility
+  async close(): Promise<void> {
+    await this[Symbol.dispose]()
+  }
+}
+
+// Safe file reading with automatic resource cleanup
+async function readFileWithResourceManagement(filePath: string): Promise<Buffer> {
+  // Use Node.js 24's explicit resource management when available
+  if (typeof Symbol.dispose !== 'undefined') {
+    try {
+      const fileResource = await new FileResource(filePath).open()
+      await using resource = fileResource as any // TypeScript needs to catch up with the spec
+      return await fileResource.readBuffer()
+    } catch (error) {
+      // Fallback to manual resource management
+      const fileResource = await new FileResource(filePath).open()
+      try {
+        return await fileResource.readBuffer()
+      } finally {
+        await fileResource.close()
+      }
+    }
+  } else {
+    // Fallback for older Node.js versions
+    return await fsPromises.readFile(filePath)
+  }
+}
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -294,8 +351,9 @@ router.post(
         mapData.imageUrl = `/uploads/maps/${req.file.filename}`
 
         try {
-          // Get image dimensions
-          const dimensions = sizeOf(fs.readFileSync(req.file.path))
+          // Get image dimensions using resource management
+          const fileBuffer = await readFileWithResourceManagement(req.file.path)
+          const dimensions = sizeOf(fileBuffer)
           mapData.imageWidth = dimensions.width || 800
           mapData.imageHeight = dimensions.height || 600
         } catch (dimensionError) {
@@ -353,8 +411,9 @@ router.put(
         updates.imageUrl = `/uploads/maps/${req.file.filename}`
 
         try {
-          // Get image dimensions
-          const dimensions = sizeOf(fs.readFileSync(req.file.path))
+          // Get image dimensions using resource management
+          const fileBuffer = await readFileWithResourceManagement(req.file.path)
+          const dimensions = sizeOf(fileBuffer)
           updates.imageWidth = dimensions.width || 800
           updates.imageHeight = dimensions.height || 600
         } catch (dimensionError) {
