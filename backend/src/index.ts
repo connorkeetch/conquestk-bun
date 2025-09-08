@@ -459,13 +459,13 @@ if (isProductionLike) {
   )
 
   // Explicitly handle asset requests to ensure they don't fall through
-  app.get('/assets/*', (_req: Request, res: Response) => {
+  app.get('/assets/*path', (_req: Request, res: Response) => {
     // If we reach here, the asset wasn't found
     res.status(404).send('Asset not found')
   })
 
   // Handle React Router - serve index.html for all non-API and non-asset routes
-  app.get('*', (req: Request, res: Response) => {
+  app.get('/*path', (req: Request, res: Response) => {
     // Don't serve index.html for API routes or assets
     if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
       return res.status(404).send('Not found')
