@@ -1,9 +1,9 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth'
+import { cdnService } from '../services/cdnService'
+import { databaseClusterService } from '../services/databaseClusterService'
 import { performanceMonitorService } from '../services/performanceMonitorService'
 import { redisClusterService } from '../services/redisClusterService'
-import { databaseClusterService } from '../services/databaseClusterService'
-import { cdnService } from '../services/cdnService'
 
 const router = express.Router()
 
@@ -11,7 +11,7 @@ const router = express.Router()
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const dashboard = performanceMonitorService.getDashboardData()
-    
+
     res.json({
       success: true,
       data: dashboard,
@@ -28,7 +28,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 router.get('/metrics', authenticateToken, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
-    
+
     res.json({
       success: true,
       data: current,
@@ -46,7 +46,7 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string) || 1
     const history = performanceMonitorService.getMetricsHistory(hours)
-    
+
     res.json({
       success: true,
       data: history,
@@ -67,10 +67,10 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
 router.get('/alerts', authenticateToken, async (req, res) => {
   try {
     const activeOnly = req.query.active === 'true'
-    const alerts = activeOnly 
+    const alerts = activeOnly
       ? performanceMonitorService.getActiveAlerts()
       : performanceMonitorService.getAllAlerts()
-    
+
     res.json({
       success: true,
       data: alerts,
@@ -88,7 +88,7 @@ router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
   try {
     const { alertId } = req.params
     const resolved = performanceMonitorService.resolveAlert(alertId)
-    
+
     res.json({
       success: resolved,
       message: resolved ? 'Alert resolved' : 'Alert not found',
@@ -104,20 +104,17 @@ router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
 // Component-specific health checks
 router.get('/health/detailed', authenticateToken, async (req, res) => {
   try {
-    const [
-      performanceHealth,
-      redisHealth,
-      databaseHealth,
-      cdnHealth,
-    ] = await Promise.allSettled([
+    const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
       performanceMonitorService.healthCheck(),
       redisClusterService.healthCheck(),
       databaseClusterService.healthCheck(),
       cdnService.healthCheck(),
     ])
 
-    const extractResult = (result: PromiseSettledResult<any>) => 
-      result.status === 'fulfilled' ? result.value : { status: 'error', error: result.reason.message }
+    const extractResult = (result: PromiseSettledResult<any>) =>
+      result.status === 'fulfilled'
+        ? result.value
+        : { status: 'error', error: result.reason.message }
 
     const health = {
       performance: extractResult(performanceHealth),
@@ -126,9 +123,9 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
       cdn: extractResult(cdnHealth),
     }
 
-    const overallStatus = Object.values(health).every(h => h.status === 'healthy') 
-      ? 'healthy' 
-      : Object.values(health).some(h => h.status === 'critical')
+    const overallStatus = Object.values(health).every((h) => h.status === 'healthy')
+      ? 'healthy'
+      : Object.values(health).some((h) => h.status === 'critical')
         ? 'critical'
         : 'degraded'
 
@@ -150,7 +147,7 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
 router.get('/cache/stats', authenticateToken, async (req, res) => {
   try {
     const stats = redisClusterService.getMetrics()
-    
+
     res.json({
       success: true,
       data: stats,
@@ -166,7 +163,7 @@ router.get('/cache/stats', authenticateToken, async (req, res) => {
 router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { pattern } = req.body
-    
+
     if (!pattern) {
       res.status(400).json({
         success: false,
@@ -174,9 +171,9 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
       })
       return
     }
-    
+
     const cleared = await redisClusterService.deletePattern(pattern)
-    
+
     res.json({
       success: true,
       data: { cleared },
@@ -194,7 +191,7 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
 router.get('/database/stats', authenticateToken, async (req, res) => {
   try {
     const stats = databaseClusterService.getMetrics()
-    
+
     res.json({
       success: true,
       data: stats,
@@ -211,7 +208,7 @@ router.get('/database/stats', authenticateToken, async (req, res) => {
 router.get('/cdn/stats', authenticateToken, async (req, res) => {
   try {
     const stats = cdnService.getMetrics()
-    
+
     res.json({
       success: true,
       data: stats,
@@ -227,9 +224,9 @@ router.get('/cdn/stats', authenticateToken, async (req, res) => {
 router.post('/cdn/purge', authenticateToken, async (req, res) => {
   try {
     const { paths = [], tags = [] } = req.body
-    
+
     const purged = await cdnService.purgeCache(paths, tags)
-    
+
     res.json({
       success: purged,
       message: purged ? 'CDN cache purged successfully' : 'Failed to purge CDN cache',
@@ -246,21 +243,21 @@ router.post('/cdn/purge', authenticateToken, async (req, res) => {
 // Performance testing endpoints
 router.post('/test/load', authenticateToken, async (req, res) => {
   try {
-    const { 
+    const {
       duration = 60, // seconds
       concurrency = 10,
-      endpoint = '/api/health'
+      endpoint = '/api/health',
     } = req.body
-    
+
     // Start load test (implementation would depend on testing framework)
     const testId = `load-test-${Date.now()}`
-    
+
     // Simulate load test initiation
     setTimeout(() => {
       // Would implement actual load testing here
       console.log(`Load test ${testId} completed`)
     }, duration * 1000)
-    
+
     res.json({
       success: true,
       data: {
@@ -285,7 +282,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
   try {
     const current = performanceMonitorService.getCurrentMetrics()
     const recommendations = []
-    
+
     if (current) {
       // Cache optimization
       if (current.cache.hitRate < 90) {
@@ -297,7 +294,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
           metric: `${current.cache.hitRate}% hit rate`,
         })
       }
-      
+
       // Database optimization
       if (current.database.avgResponseTime > 500) {
         recommendations.push({
@@ -308,7 +305,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
           metric: `${current.database.avgResponseTime}ms avg response time`,
         })
       }
-      
+
       // Memory optimization
       const memoryUsageMB = current.server.memoryUsage.heapUsed / 1024 / 1024
       if (memoryUsageMB > 800) {
@@ -320,7 +317,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
           metric: `${Math.round(memoryUsageMB)}MB memory usage`,
         })
       }
-      
+
       // Queue optimization
       if (current.queues.waitingJobs > 50) {
         recommendations.push({
@@ -332,7 +329,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
         })
       }
     }
-    
+
     res.json({
       success: true,
       data: recommendations,
@@ -353,12 +350,12 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
 router.get('/report', authenticateToken, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24
-    const format = req.query.format as string || 'json'
-    
+    const format = (req.query.format as string) || 'json'
+
     const dashboard = performanceMonitorService.getDashboardData()
     const history = performanceMonitorService.getMetricsHistory(hours)
     const alerts = performanceMonitorService.getAllAlerts()
-    
+
     const report = {
       generated: new Date().toISOString(),
       period: `${hours} hours`,
@@ -367,15 +364,18 @@ router.get('/report', authenticateToken, async (req, res) => {
       trends: dashboard.trends,
       alerts: {
         total: alerts.length,
-        active: alerts.filter(a => !a.resolved).length,
-        by_severity: alerts.reduce((acc, alert) => {
-          acc[alert.severity] = (acc[alert.severity] || 0) + 1
-          return acc
-        }, {} as Record<string, number>),
+        active: alerts.filter((a) => !a.resolved).length,
+        by_severity: alerts.reduce(
+          (acc, alert) => {
+            acc[alert.severity] = (acc[alert.severity] || 0) + 1
+            return acc
+          },
+          {} as Record<string, number>,
+        ),
       },
       metrics: history,
     }
-    
+
     if (format === 'csv') {
       // Would implement CSV export
       res.setHeader('Content-Type', 'text/csv')

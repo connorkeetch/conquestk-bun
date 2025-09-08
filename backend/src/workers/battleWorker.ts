@@ -1,9 +1,9 @@
-import Bull from 'bull'
-import { BattleSimulationJob, queueService } from '../services/queueService'
+import type Bull from 'bull'
+import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
-import { DeltaBuilder, GameDelta, GameEndDelta } from '../types/deltaUpdates'
-import { Server } from 'socket.io'
-import type { ServerToClientEvents, ClientToServerEvents } from '../types/shared'
+import { type BattleSimulationJob, queueService } from '../services/queueService'
+import { DeltaBuilder, type GameDelta, type GameEndDelta } from '../types/deltaUpdates'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
 interface BattleResult {
   attackerLosses: number
@@ -52,13 +52,13 @@ export class BattleWorker {
   }
 
   private async simulateBattle(jobData: BattleSimulationJob): Promise<BattleResult> {
-    const { 
-      gameId, 
-      attackingTerritory, 
-      defendingTerritory, 
-      attackingArmies, 
-      defendingArmies, 
-      playerId 
+    const {
+      gameId,
+      attackingTerritory,
+      defendingTerritory,
+      attackingArmies,
+      defendingArmies,
+      playerId,
     } = jobData
 
     try {
@@ -66,7 +66,7 @@ export class BattleWorker {
 
       // Simulate dice roll and battle outcome
       const battleResult = this.calculateBattleResult(attackingArmies, defendingArmies)
-      
+
       // Apply battle results to game state
       const gameState = await this.gameService.getGameState(gameId)
       if (!gameState) {
@@ -76,7 +76,7 @@ export class BattleWorker {
       // Update territories based on battle result
       const attackingTerr = gameState.board.find((t: any) => t.id === attackingTerritory)
       const defendingTerr = gameState.board.find((t: any) => t.id === defendingTerritory)
-      
+
       if (!attackingTerr || !defendingTerr) {
         throw new Error('Territory not found during battle processing')
       }
@@ -85,35 +85,41 @@ export class BattleWorker {
       const newAttackingArmies = attackingTerr.armies - battleResult.attackerLosses
       const newDefendingArmies = defendingTerr.armies - battleResult.defenderLosses
 
-      let deltas: GameDelta[] = []
+      const deltas: GameDelta[] = []
 
       if (battleResult.territoryConquered) {
         // Territory conquered - transfer ownership
         const movingArmies = Math.min(attackingArmies, newAttackingArmies - 1)
-        
+
         // Update attacking territory
-        deltas.push(DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
-          armies: newAttackingArmies - movingArmies,
-        }))
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
+            armies: newAttackingArmies - movingArmies,
+          }),
+        )
 
         // Update defending territory (new owner)
-        deltas.push(DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
-          armies: movingArmies,
-          ownerId: attackingTerr.ownerId!,
-        }))
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
+            armies: movingArmies,
+            ownerId: attackingTerr.ownerId!,
+          }),
+        )
 
         // Check for player elimination
         const defendingPlayer = gameState.players.find((p: any) => p.id === defendingTerr.ownerId)
-        const remainingTerritories = gameState.board.filter((t: any) => 
-          t.ownerId === defendingTerr.ownerId && t.id !== defendingTerritory
+        const remainingTerritories = gameState.board.filter(
+          (t: any) => t.ownerId === defendingTerr.ownerId && t.id !== defendingTerritory,
         )
 
         if (remainingTerritories.length === 0) {
           // Player eliminated - use player update delta to mark as eliminated
-          deltas.push(DeltaBuilder.playerUpdate(gameId, defendingTerr.ownerId!, {
-            isEliminated: true,
-            territories: []
-          }))
+          deltas.push(
+            DeltaBuilder.playerUpdate(gameId, defendingTerr.ownerId!, {
+              isEliminated: true,
+              territories: [],
+            }),
+          )
         }
 
         // Check for game victory
@@ -132,16 +138,19 @@ export class BattleWorker {
             timestamp: Date.now(),
           } as GameEndDelta)
         }
-
       } else {
         // Territory defended successfully
-        deltas.push(DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
-          armies: newAttackingArmies,
-        }))
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
+            armies: newAttackingArmies,
+          }),
+        )
 
-        deltas.push(DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
-          armies: newDefendingArmies,
-        }))
+        deltas.push(
+          DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
+            armies: newDefendingArmies,
+          }),
+        )
       }
 
       // Create compound delta for all battle results
@@ -160,7 +169,9 @@ export class BattleWorker {
             id: defendingTerritory,
             name: defendingTerr.name,
             armies: defendingTerr.armies - battleResult.defenderLosses,
-            ownerId: battleResult.territoryConquered ? attackingTerr.ownerId! : defendingTerr.ownerId!,
+            ownerId: battleResult.territoryConquered
+              ? attackingTerr.ownerId!
+              : defendingTerr.ownerId!,
           },
           conquered: battleResult.territoryConquered,
           attackerDice: battleResult.dice.attacker,
@@ -177,17 +188,16 @@ export class BattleWorker {
       // await this.gameService.applyBattleResult(gameId, battleResult, attackingTerritory, defendingTerritory)
 
       return battleResult
-
     } catch (error) {
       console.error(`❌ Battle simulation failed:`, error)
-      
+
       // Emit battle error to game room
       this.io.to(`game:${gameId}`).emit('error', {
         event: 'battle:error',
         message: (error as Error).message,
         timestamp: new Date().toISOString(),
       })
-      
+
       throw error
     }
   }
@@ -240,4 +250,5 @@ export class BattleWorker {
 }
 
 // Export factory function instead of singleton
-export const createBattleWorker = (io: Server<ClientToServerEvents, ServerToClientEvents>) => new BattleWorker(io)
+export const createBattleWorker = (io: Server<ClientToServerEvents, ServerToClientEvents>) =>
+  new BattleWorker(io)

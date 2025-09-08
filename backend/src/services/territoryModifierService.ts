@@ -33,7 +33,9 @@ export class TerritoryModifierService {
    */
   async getModifierTemplates(): Promise<TerritoryModifierTemplate[]> {
     // Check cache first
-    let templates = await territoryModifierCache.getTemplates() as TerritoryModifierTemplate[] | null
+    let templates = (await territoryModifierCache.getTemplates()) as
+      | TerritoryModifierTemplate[]
+      | null
     if (templates) {
       return templates
     }
@@ -52,7 +54,7 @@ export class TerritoryModifierService {
    */
   async getMapModifiers(mapId: string): Promise<any[]> {
     // Check cache first
-    let modifiers = await territoryModifierCache.getMapModifiers(mapId) as any[] | null
+    let modifiers = (await territoryModifierCache.getMapModifiers(mapId)) as any[] | null
     if (modifiers) {
       return modifiers
     }
@@ -130,11 +132,13 @@ export class TerritoryModifierService {
     // Build batch insert with PostgreSQL VALUES clause
     const values: any[] = []
     const placeholders: string[] = []
-    
+
     mapModifiers.forEach((modifier, index) => {
       const baseIndex = index * 10
-      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`)
-      
+      placeholders.push(
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`,
+      )
+
       values.push(
         gameId,
         modifier.territory_id,
@@ -145,7 +149,7 @@ export class TerritoryModifierService {
         modifier.supply_line_bonus,
         modifier.icon,
         modifier.color,
-        modifier.name
+        modifier.name,
       )
     })
 
@@ -200,7 +204,7 @@ export class TerritoryModifierService {
         supply_line_bonus: template.supply_line_bonus,
         icon: template.icon,
         color: template.color,
-        name: template.name
+        name: template.name,
       })
     }
 
@@ -276,7 +280,7 @@ export class TerritoryModifierService {
     // Remove from database in batch
     const placeholders = gameIds.map((_, index) => `$${index + 1}`).join(', ')
     const sql = `DELETE FROM game_territory_modifiers WHERE game_id IN (${placeholders})`
-    
+
     await query(sql, gameIds)
     logger.info(`Cleaned up territory modifiers for ${gameIds.length} finished games`)
   }

@@ -1,6 +1,6 @@
-import { logger } from '../utils/logger'
 import cluster from 'node:cluster'
 import os from 'os'
+import { logger } from '../utils/logger'
 
 interface ScalingMetrics {
   totalWorkers: number
@@ -83,7 +83,6 @@ export class ScalingService {
 
       this.isInitialized = true
       logger.info('✅ Scaling Service initialized')
-
     } catch (error) {
       logger.error('❌ Failed to initialize Scaling Service:', error)
       throw error
@@ -102,7 +101,7 @@ export class ScalingService {
     cluster.on('exit', (worker, code, signal) => {
       logger.warn(`🔴 Worker ${worker.id} died (${signal || code})`)
       this.removeWorkerMetrics(worker.id)
-      
+
       // Restart worker if it wasn't intentionally killed
       if (!worker.exitedAfterDisconnect) {
         logger.info(`🔄 Restarting worker ${worker.id}...`)
@@ -134,7 +133,7 @@ export class ScalingService {
 
   private async initializeWorker(): Promise<void> {
     logger.info(`👷 Worker ${process.pid} initialized`)
-    
+
     // Set up worker-specific monitoring
     this.setupWorkerMonitoring()
   }
@@ -163,18 +162,16 @@ export class ScalingService {
 
   private updateScalingMetrics(): void {
     const activeWorkers = Array.from(this.workers.values()).filter(
-      worker => worker.status === 'active'
+      (worker) => worker.status === 'active',
     )
 
     this.scalingMetrics.totalWorkers = this.workers.size
     this.scalingMetrics.activeWorkers = activeWorkers.length
     this.scalingMetrics.cpuUsage = activeWorkers.map(() => 0) // Would calculate actual CPU
     this.scalingMetrics.memoryUsage = activeWorkers.map(
-      worker => worker.memoryUsage.heapUsed / 1024 / 1024
+      (worker) => worker.memoryUsage.heapUsed / 1024 / 1024,
     )
-    this.scalingMetrics.requestsPerWorker = activeWorkers.map(
-      worker => worker.requestCount
-    )
+    this.scalingMetrics.requestsPerWorker = activeWorkers.map((worker) => worker.requestCount)
   }
 
   private startMetricsCollection(): void {
@@ -188,19 +185,21 @@ export class ScalingService {
   private collectWorkerMetrics(): void {
     // Send health check to all workers
     const clusterWorkers = cluster.workers as Record<string, any> | undefined
-    Object.values(clusterWorkers || {}).forEach(worker => {
+    Object.values(clusterWorkers || {}).forEach((worker) => {
       if (worker && worker.send) {
         worker.send({ type: 'health-check' })
       }
     })
 
     this.updateScalingMetrics()
-    
+
     // Log current metrics
     logger.debug('📊 Scaling metrics collected', {
       totalWorkers: this.scalingMetrics.totalWorkers,
       activeWorkers: this.scalingMetrics.activeWorkers,
-      avgMemory: this.scalingMetrics.memoryUsage.reduce((a, b) => a + b, 0) / this.scalingMetrics.memoryUsage.length || 0,
+      avgMemory:
+        this.scalingMetrics.memoryUsage.reduce((a, b) => a + b, 0) /
+          this.scalingMetrics.memoryUsage.length || 0,
     })
   }
 
@@ -220,13 +219,15 @@ export class ScalingService {
   private evaluateScaling(): void {
     const now = Date.now()
     const timeSinceLastScale = now - this.scalingMetrics.lastScaleEvent
-    
+
     // Calculate average metrics
-    const avgCpuUsage = this.scalingMetrics.cpuUsage.reduce((a, b) => a + b, 0) / 
-      this.scalingMetrics.cpuUsage.length || 0
-    
-    const avgMemoryUsage = this.scalingMetrics.memoryUsage.reduce((a, b) => a + b, 0) / 
-      this.scalingMetrics.memoryUsage.length || 0
+    const avgCpuUsage =
+      this.scalingMetrics.cpuUsage.reduce((a, b) => a + b, 0) /
+        this.scalingMetrics.cpuUsage.length || 0
+
+    const avgMemoryUsage =
+      this.scalingMetrics.memoryUsage.reduce((a, b) => a + b, 0) /
+        this.scalingMetrics.memoryUsage.length || 0
 
     // Scale up conditions
     if (
@@ -266,7 +267,7 @@ export class ScalingService {
     try {
       const newWorker = cluster.fork()
       this.scalingMetrics.lastScaleEvent = Date.now()
-      
+
       logger.info('📈 Scaling up: forked new worker', {
         reason,
         workerId: newWorker.id,
@@ -296,13 +297,13 @@ export class ScalingService {
 
       const clusterWorkers = cluster.workers as Record<string, any> | undefined
       const worker = Object.values(clusterWorkers || {}).find(
-        w => w && w.id === leastBusyWorker.id
+        (w) => w && w.id === leastBusyWorker.id,
       )
 
       if (worker) {
         worker.disconnect()
         this.scalingMetrics.lastScaleEvent = Date.now()
-        
+
         // Mark worker as terminating
         const metrics = this.workers.get(leastBusyWorker.id)
         if (metrics) {
@@ -333,13 +334,13 @@ export class ScalingService {
 
   private findLeastBusyWorker(): WorkerMetrics | null {
     const activeWorkers = Array.from(this.workers.values()).filter(
-      worker => worker.status === 'active'
+      (worker) => worker.status === 'active',
     )
 
     if (activeWorkers.length === 0) return null
 
-    return activeWorkers.reduce((least, current) => 
-      current.activeConnections < least.activeConnections ? current : least
+    return activeWorkers.reduce((least, current) =>
+      current.activeConnections < least.activeConnections ? current : least,
     )
   }
 
@@ -376,19 +377,19 @@ export class ScalingService {
   private setupShutdownHandlers(): void {
     const shutdown = (signal: string) => {
       logger.info(`🔄 Received ${signal}, starting graceful shutdown...`)
-      
+
       // Stop auto-scaling
       if (this.scalingInterval) {
         clearInterval(this.scalingInterval)
       }
-      
+
       if (this.metricsInterval) {
         clearInterval(this.metricsInterval)
       }
 
       // Gracefully shutdown all workers
       const clusterWorkers = cluster.workers as Record<string, any> | undefined
-      Object.values(clusterWorkers || {}).forEach(worker => {
+      Object.values(clusterWorkers || {}).forEach((worker) => {
         if (worker) {
           worker.disconnect()
         }
@@ -432,18 +433,18 @@ export class ScalingService {
     if (this.scalingMetrics.autoScalingEnabled) {
       this.config.enableAutoScaling = false
       this.scalingMetrics.autoScalingEnabled = false
-      
+
       if (this.scalingInterval) {
         clearInterval(this.scalingInterval)
       }
-      
+
       logger.info('⏸️ Auto-scaling disabled')
     }
   }
 
   async healthCheck(): Promise<{ status: string; details: any }> {
     const healthyWorkers = Array.from(this.workers.values()).filter(
-      worker => worker.status === 'active' && Date.now() - worker.lastHealthCheck < 120000
+      (worker) => worker.status === 'active' && Date.now() - worker.lastHealthCheck < 120000,
     )
 
     const status = healthyWorkers.length >= this.config.minWorkers ? 'healthy' : 'degraded'
@@ -456,7 +457,7 @@ export class ScalingService {
         healthyWorkers: healthyWorkers.length,
         autoScalingEnabled: this.scalingMetrics.autoScalingEnabled,
         config: this.config,
-        workers: this.getWorkerMetrics().map(w => ({
+        workers: this.getWorkerMetrics().map((w) => ({
           id: w.id,
           pid: w.pid,
           status: w.status,
@@ -469,11 +470,11 @@ export class ScalingService {
 
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down Scaling Service...')
-    
+
     if (this.scalingInterval) {
       clearInterval(this.scalingInterval)
     }
-    
+
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval)
     }

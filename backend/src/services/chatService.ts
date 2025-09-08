@@ -1,7 +1,7 @@
-import { query } from '../config/database'
 import { v4 as uuidv4 } from 'uuid'
+import { query } from '../config/database'
 import { logger } from '../utils/logger'
-import { linkPreviewService, type LinkPreview } from './linkPreviewService'
+import { type LinkPreview, linkPreviewService } from './linkPreviewService'
 
 // Profanity filter - lazy loaded to handle ESM module
 let profanityFilter: any = null
@@ -19,7 +19,7 @@ async function getProfanityFilter() {
       // Create a no-op filter if module fails to load
       profanityFilter = {
         clean: (text: string) => text,
-        isProfane: () => false
+        isProfane: () => false,
       }
     }
   }
@@ -57,17 +57,17 @@ class ChatService {
    */
   async sendMessage(data: SendMessageData): Promise<ChatMessage> {
     const messageId = uuidv4()
-    
+
     try {
       // Check if user has profanity filter enabled
       let filteredMessage = data.message
       const shouldFilter = await this.shouldFilterProfanity(data.senderId)
-      
+
       if (shouldFilter) {
         const filter = await getProfanityFilter()
         filteredMessage = filter.clean(data.message)
       }
-      
+
       // Check DM privacy settings if it's a DM
       if (data.messageType === 'dm' && data.recipientId) {
         const canSendDM = await this.canSendDMTo(data.senderId, data.recipientId)
@@ -75,13 +75,14 @@ class ChatService {
           throw new Error('User has restricted direct messages')
         }
       }
-      
+
       // Extract link previews
       const links = await linkPreviewService.extractLinks(filteredMessage)
-      const linkPreviews = links.length > 0 
-        ? await linkPreviewService.getMultiplePreviews(links.slice(0, 3)) // Limit to 3 previews
-        : []
-      
+      const linkPreviews =
+        links.length > 0
+          ? await linkPreviewService.getMultiplePreviews(links.slice(0, 3)) // Limit to 3 previews
+          : []
+
       const result = await query(
         `INSERT INTO chat_messages (
           id, sender_id, message, message_type, 
@@ -91,19 +92,19 @@ class ChatService {
         [
           messageId,
           data.senderId,
-          filteredMessage,  // Use filtered message
+          filteredMessage, // Use filtered message
           data.messageType,
           data.gameId || null,
           data.teamId || null,
-          data.recipientId || null
-        ]
+          data.recipientId || null,
+        ],
       )
-      
+
       // Add link previews to the message object
       const message = result.rows[0]
       if (linkPreviews.length > 0) {
-        message.link_previews = linkPreviews.filter(p => p !== null)
-        
+        message.link_previews = linkPreviews.filter((p) => p !== null)
+
         // Store link previews in database
         for (const preview of message.link_previews) {
           await query(
@@ -116,12 +117,12 @@ class ChatService {
               preview.title || null,
               preview.description || null,
               preview.image || null,
-              preview.siteName || null
-            ]
-          ).catch(err => logger.error('Error storing link preview:', err))
+              preview.siteName || null,
+            ],
+          ).catch((err) => logger.error('Error storing link preview:', err))
         }
       }
-      
+
       // Update unread count for recipient
       if (data.messageType === 'dm' && data.recipientId) {
         await this.incrementUnreadCount(data.recipientId, 'dm', data.senderId)
@@ -129,14 +130,14 @@ class ChatService {
         // We'll track game unread counts per user
         await this.incrementGameUnreadForAllPlayers(data.gameId, data.senderId)
       }
-      
+
       return message
     } catch (error) {
       logger.error('Error sending message:', error)
       throw error
     }
   }
-  
+
   /**
    * Get chat history
    */
@@ -145,12 +146,12 @@ class ChatService {
     conversationId: string,
     userId: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<ChatMessage[]> {
     try {
       let queryText: string
       let queryParams: any[]
-      
+
       if (messageType === 'game') {
         queryText = `
           SELECT m.*, u.username as sender_username
@@ -162,7 +163,6 @@ class ChatService {
           ORDER BY m.created_at DESC
           LIMIT $2 OFFSET $3`
         queryParams = [conversationId, limit, offset]
-        
       } else if (messageType === 'dm') {
         queryText = `
           SELECT m.*, u.username as sender_username
@@ -177,7 +177,6 @@ class ChatService {
           ORDER BY m.created_at DESC
           LIMIT $3 OFFSET $4`
         queryParams = [userId, conversationId, limit, offset]
-        
       } else if (messageType === 'team') {
         // Team chat - conversationId format: "gameId:teamId"
         const [gameId, teamId] = conversationId.split(':')
@@ -192,13 +191,12 @@ class ChatService {
           ORDER BY m.created_at DESC
           LIMIT $3 OFFSET $4`
         queryParams = [gameId, parseInt(teamId), limit, offset]
-        
       } else {
         return []
       }
-      
+
       const result = await query(queryText, queryParams)
-      
+
       // Fetch link previews for messages
       const messages = result.rows
       for (const message of messages) {
@@ -206,27 +204,27 @@ class ChatService {
           `SELECT url, title, description, image, site_name
            FROM message_link_previews
            WHERE message_id = $1`,
-          [message.id]
+          [message.id],
         )
         if (previewsResult.rows.length > 0) {
           message.link_previews = previewsResult.rows
         }
       }
-      
+
       // Mark messages as read
       if (messageType === 'dm') {
         await this.markMessagesAsRead(userId, conversationId)
       } else if (messageType === 'game') {
         await this.markGameMessagesAsRead(userId, conversationId)
       }
-      
+
       return messages.reverse() // Reverse to get chronological order
     } catch (error) {
       logger.error('Error getting chat history:', error)
       throw error
     }
   }
-  
+
   /**
    * Check if user can send DM based on privacy settings
    */
@@ -235,31 +233,33 @@ class ChatService {
       // Get recipient's privacy setting
       const privacyResult = await query(
         `SELECT dm_privacy FROM user_preferences WHERE user_id = $1`,
-        [recipientId]
+        [recipientId],
       )
-      
+
       if (privacyResult.rows.length === 0 || !privacyResult.rows[0].dm_privacy) {
         // Default to 'friends' if no preference set
         return this.areUsersFriends(senderId, recipientId)
       }
-      
+
       const dmPrivacy = privacyResult.rows[0].dm_privacy
-      
+
       if (dmPrivacy === 'anyone') {
         return true
-      } else if (dmPrivacy === 'nobody') {
+      }
+      if (dmPrivacy === 'nobody') {
         return false
-      } else if (dmPrivacy === 'friends') {
+      }
+      if (dmPrivacy === 'friends') {
         return this.areUsersFriends(senderId, recipientId)
       }
-      
+
       return false
     } catch (error) {
       logger.error('Error checking DM permissions:', error)
       return false
     }
   }
-  
+
   /**
    * Check if two users are friends
    */
@@ -270,16 +270,16 @@ class ChatService {
          WHERE status = 'accepted'
            AND ((user_id = $1 AND friend_id = $2) 
                 OR (user_id = $2 AND friend_id = $1))`,
-        [userId1, userId2]
+        [userId1, userId2],
       )
-      
+
       return result.rows.length > 0
     } catch (error) {
       logger.error('Error checking friendship:', error)
       return false
     }
   }
-  
+
   /**
    * Mark messages as read in a DM conversation
    */
@@ -292,9 +292,9 @@ class ChatService {
            AND recipient_id = $1 
            AND sender_id = $2
            AND is_read = FALSE`,
-        [userId, otherUserId]
+        [userId, otherUserId],
       )
-      
+
       // Reset unread count
       await query(
         `UPDATE unread_message_counts 
@@ -302,13 +302,13 @@ class ChatService {
          WHERE user_id = $1 
            AND conversation_type = 'dm' 
            AND conversation_id = $2`,
-        [userId, otherUserId]
+        [userId, otherUserId],
       )
     } catch (error) {
       logger.error('Error marking messages as read:', error)
     }
   }
-  
+
   /**
    * Mark game messages as read
    */
@@ -320,20 +320,20 @@ class ChatService {
          WHERE user_id = $1 
            AND conversation_type = 'game' 
            AND conversation_id = $2`,
-        [userId, gameId]
+        [userId, gameId],
       )
     } catch (error) {
       logger.error('Error marking game messages as read:', error)
     }
   }
-  
+
   /**
    * Increment unread count for DMs
    */
   async incrementUnreadCount(
-    userId: string, 
-    conversationType: 'dm' | 'game', 
-    conversationId: string
+    userId: string,
+    conversationType: 'dm' | 'game',
+    conversationId: string,
   ): Promise<void> {
     try {
       await query(
@@ -341,13 +341,13 @@ class ChatService {
          VALUES ($1, $2, $3, 1)
          ON CONFLICT (user_id, conversation_type, conversation_id)
          DO UPDATE SET unread_count = unread_message_counts.unread_count + 1`,
-        [userId, conversationType, conversationId]
+        [userId, conversationType, conversationId],
       )
     } catch (error) {
       logger.error('Error incrementing unread count:', error)
     }
   }
-  
+
   /**
    * Increment game unread for all players except sender
    */
@@ -356,9 +356,9 @@ class ChatService {
       // Get all players in the game
       const playersResult = await query(
         `SELECT player_id FROM room_players WHERE room_id = $1 AND player_id != $2`,
-        [gameId, senderId]
+        [gameId, senderId],
       )
-      
+
       // Increment unread for each player
       for (const player of playersResult.rows) {
         await this.incrementUnreadCount(player.player_id, 'game', gameId)
@@ -367,7 +367,7 @@ class ChatService {
       logger.error('Error incrementing game unread counts:', error)
     }
   }
-  
+
   /**
    * Get unread counts for a user
    */
@@ -377,16 +377,16 @@ class ChatService {
         `SELECT conversation_type, conversation_id, unread_count 
          FROM unread_message_counts 
          WHERE user_id = $1 AND unread_count > 0`,
-        [userId]
+        [userId],
       )
-      
+
       return result.rows
     } catch (error) {
       logger.error('Error getting unread counts:', error)
       return []
     }
   }
-  
+
   /**
    * Delete a message (soft delete)
    */
@@ -397,16 +397,16 @@ class ChatService {
          SET deleted_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
          RETURNING id`,
-        [messageId, userId]
+        [messageId, userId],
       )
-      
+
       return result.rows.length > 0
     } catch (error) {
       logger.error('Error deleting message:', error)
       return false
     }
   }
-  
+
   /**
    * Edit a message
    */
@@ -415,27 +415,27 @@ class ChatService {
       // Apply profanity filter if enabled
       let filteredMessage = newMessage
       const shouldFilter = await this.shouldFilterProfanity(userId)
-      
+
       if (shouldFilter) {
         const filter = await getProfanityFilter()
         filteredMessage = filter.clean(newMessage)
       }
-      
+
       const result = await query(
         `UPDATE chat_messages 
          SET message = $1, edited_at = CURRENT_TIMESTAMP 
          WHERE id = $2 AND sender_id = $3 AND deleted_at IS NULL
          RETURNING id`,
-        [filteredMessage, messageId, userId]
+        [filteredMessage, messageId, userId],
       )
-      
+
       return result.rows.length > 0
     } catch (error) {
       logger.error('Error editing message:', error)
       return false
     }
   }
-  
+
   /**
    * Check if profanity filter is enabled for user
    */
@@ -443,14 +443,14 @@ class ChatService {
     try {
       const result = await query(
         `SELECT profanity_filter FROM user_preferences WHERE user_id = $1`,
-        [userId]
+        [userId],
       )
-      
+
       // Default to true if no preference set
       if (result.rows.length === 0) {
         return true
       }
-      
+
       return result.rows[0].profanity_filter !== false
     } catch (error) {
       logger.error('Error checking profanity filter preference:', error)
@@ -466,7 +466,7 @@ class ChatService {
       // Check if user already reacted with this emoji
       const existing = await query(
         `SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
-        [messageId, userId, emoji]
+        [messageId, userId, emoji],
       )
 
       if (existing.rows.length > 0) {
@@ -479,7 +479,7 @@ class ChatService {
         `INSERT INTO message_reactions (message_id, user_id, emoji, created_at)
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
          ON CONFLICT (message_id, user_id, emoji) DO NOTHING`,
-        [messageId, userId, emoji]
+        [messageId, userId, emoji],
       )
 
       return true
@@ -498,7 +498,7 @@ class ChatService {
         `DELETE FROM message_reactions 
          WHERE message_id = $1 AND user_id = $2 AND emoji = $3
          RETURNING message_id`,
-        [messageId, userId, emoji]
+        [messageId, userId, emoji],
       )
 
       return result.rows.length > 0
@@ -519,19 +519,19 @@ class ChatService {
          JOIN users u ON r.user_id = u.id
          WHERE r.message_id = $1
          ORDER BY r.created_at`,
-        [messageId]
+        [messageId],
       )
 
       // Group reactions by emoji
       const reactionMap = new Map<string, any[]>()
-      
+
       for (const row of result.rows) {
         if (!reactionMap.has(row.emoji)) {
           reactionMap.set(row.emoji, [])
         }
         reactionMap.get(row.emoji)!.push({
           id: row.user_id,
-          username: row.username
+          username: row.username,
         })
       }
 
@@ -539,7 +539,7 @@ class ChatService {
       return Array.from(reactionMap.entries()).map(([emoji, users]) => ({
         emoji,
         users,
-        count: users.length
+        count: users.length,
       }))
     } catch (error) {
       logger.error('Error getting message reactions:', error)

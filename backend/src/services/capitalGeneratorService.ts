@@ -1,20 +1,20 @@
-import { Pool } from 'pg';
+import type { Pool } from 'pg'
 
 interface Territory {
-  id: string;
-  name: string;
-  map_id: string;
-  boundary_coords: any;
-  army_position: { x: number; y: number };
+  id: string
+  name: string
+  map_id: string
+  boundary_coords: any
+  army_position: { x: number; y: number }
 }
 
 interface Adjacency {
-  from_territory_id: string;
-  to_territory_id: string;
+  from_territory_id: string
+  to_territory_id: string
 }
 
 interface CapitalAssignments {
-  [playerCount: number]: string[];
+  [playerCount: number]: string[]
 }
 
 /**
@@ -31,48 +31,52 @@ export class CapitalGeneratorService {
   async generateCapitalsForMap(mapId: string): Promise<CapitalAssignments> {
     try {
       // Get territories and adjacencies from database
-      const territories = await this.getTerritories(mapId);
-      const adjacencies = await this.getAdjacencies(mapId);
-      
+      const territories = await this.getTerritories(mapId)
+      const adjacencies = await this.getAdjacencies(mapId)
+
       if (territories.length < 2) {
-        throw new Error('Map must have at least 2 territories to generate capitals');
+        throw new Error('Map must have at least 2 territories to generate capitals')
       }
-      
+
       // Build adjacency graph for distance calculations
-      const graph = this.buildAdjacencyGraph(territories, adjacencies);
-      
+      const graph = this.buildAdjacencyGraph(territories, adjacencies)
+
       // Check if graph is connected
-      const connectedComponents = this.findConnectedComponents(territories, graph);
+      const connectedComponents = this.findConnectedComponents(territories, graph)
       if (connectedComponents.length > 1) {
-        console.warn(`Map has ${connectedComponents.length} disconnected components. Using largest component.`);
+        console.warn(
+          `Map has ${connectedComponents.length} disconnected components. Using largest component.`,
+        )
         // Use only the largest connected component
-        const largestComponent = connectedComponents.reduce((a, b) => a.length > b.length ? a : b);
-        territories.length = 0;
-        territories.push(...largestComponent);
+        const largestComponent = connectedComponents.reduce((a, b) => (a.length > b.length ? a : b))
+        territories.length = 0
+        territories.push(...largestComponent)
       }
-      
+
       // Generate capitals for each valid player count
-      const capitalAssignments: CapitalAssignments = {};
-      
+      const capitalAssignments: CapitalAssignments = {}
+
       for (let playerCount = 2; playerCount <= 12; playerCount++) {
         // Skip if not enough territories for this player count
         if (territories.length < playerCount) {
-          console.log(`Skipping ${playerCount} players - only ${territories.length} territories available`);
-          continue;
+          console.log(
+            `Skipping ${playerCount} players - only ${territories.length} territories available`,
+          )
+          continue
         }
-        
-        console.log(`Generating capitals for ${playerCount} players...`);
+
+        console.log(`Generating capitals for ${playerCount} players...`)
         capitalAssignments[playerCount] = this.selectOptimalCapitals(
-          territories, 
-          graph, 
-          playerCount
-        );
+          territories,
+          graph,
+          playerCount,
+        )
       }
-      
-      return capitalAssignments;
+
+      return capitalAssignments
     } catch (error) {
-      console.error('Error generating capitals:', error);
-      throw error;
+      console.error('Error generating capitals:', error)
+      throw error
     }
   }
 
@@ -81,57 +85,55 @@ export class CapitalGeneratorService {
    * Uses a greedy approach with maximin distance heuristic
    */
   private selectOptimalCapitals(
-    territories: Territory[], 
+    territories: Territory[],
     graph: Map<string, Set<string>>,
-    count: number
+    count: number,
   ): string[] {
-    const capitals: string[] = [];
-    const territoryIds = territories.map(t => t.id);
-    
+    const capitals: string[] = []
+    const territoryIds = territories.map((t) => t.id)
+
     // Step 1: Find the most "central" territory as first capital
     // This provides a good starting point for distribution
-    const centerTerr = this.findMostCentralTerritory(territories, graph);
-    capitals.push(centerTerr);
-    console.log(`  Capital 1: ${territories.find(t => t.id === centerTerr)?.name}`);
-    
+    const centerTerr = this.findMostCentralTerritory(territories, graph)
+    capitals.push(centerTerr)
+    console.log(`  Capital 1: ${territories.find((t) => t.id === centerTerr)?.name}`)
+
     // Step 2: Iteratively add capitals maximizing minimum distance to existing capitals
     while (capitals.length < count) {
-      let bestCandidate: string | null = null;
-      let bestMinDistance = -1;
-      
+      let bestCandidate: string | null = null
+      let bestMinDistance = -1
+
       // Evaluate each remaining territory
       for (const candidateId of territoryIds) {
-        if (capitals.includes(candidateId)) continue;
-        
+        if (capitals.includes(candidateId)) continue
+
         // Calculate minimum distance to all existing capitals
-        const minDistance = this.getMinDistanceToCapitals(
-          candidateId, 
-          capitals, 
-          graph
-        );
-        
+        const minDistance = this.getMinDistanceToCapitals(candidateId, capitals, graph)
+
         // Select candidate with maximum minimum distance (maximin)
         if (minDistance > bestMinDistance) {
-          bestMinDistance = minDistance;
-          bestCandidate = candidateId;
+          bestMinDistance = minDistance
+          bestCandidate = candidateId
         }
       }
-      
+
       if (bestCandidate) {
-        capitals.push(bestCandidate);
-        const territory = territories.find(t => t.id === bestCandidate);
-        console.log(`  Capital ${capitals.length}: ${territory?.name} (min distance: ${bestMinDistance})`);
+        capitals.push(bestCandidate)
+        const territory = territories.find((t) => t.id === bestCandidate)
+        console.log(
+          `  Capital ${capitals.length}: ${territory?.name} (min distance: ${bestMinDistance})`,
+        )
       } else {
-        console.warn(`Could not find ${count}th capital - using random selection`);
+        console.warn(`Could not find ${count}th capital - using random selection`)
         // Fallback: select random territory if algorithm fails
-        const remaining = territoryIds.filter(id => !capitals.includes(id));
+        const remaining = territoryIds.filter((id) => !capitals.includes(id))
         if (remaining.length > 0) {
-          capitals.push(remaining[Math.floor(Math.random() * remaining.length)]);
+          capitals.push(remaining[Math.floor(Math.random() * remaining.length)])
         }
       }
     }
-    
-    return capitals;
+
+    return capitals
   }
 
   /**
@@ -139,69 +141,67 @@ export class CapitalGeneratorService {
    * Centrality = low total distance to all territories + high connection count
    */
   private findMostCentralTerritory(
-    territories: Territory[], 
-    graph: Map<string, Set<string>>
+    territories: Territory[],
+    graph: Map<string, Set<string>>,
   ): string {
-    let bestTerritory = territories[0].id;
-    let bestScore = Infinity;
-    
+    let bestTerritory = territories[0].id
+    let bestScore = Infinity
+
     for (const territory of territories) {
       // Calculate sum of distances to all other territories
       const totalDistance = this.getTotalDistanceToAll(
-        territory.id, 
-        territories.map(t => t.id), 
-        graph
-      );
-      
+        territory.id,
+        territories.map((t) => t.id),
+        graph,
+      )
+
       // Bonus for having more connections (hubs are better capitals)
-      const connectionCount = graph.get(territory.id)?.size || 0;
-      const connectionBonus = connectionCount * 2;
-      
+      const connectionCount = graph.get(territory.id)?.size || 0
+      const connectionBonus = connectionCount * 2
+
       // Lower score is better (less total distance, more connections)
-      const score = totalDistance - connectionBonus;
-      
+      const score = totalDistance - connectionBonus
+
       if (score < bestScore) {
-        bestScore = score;
-        bestTerritory = territory.id;
+        bestScore = score
+        bestTerritory = territory.id
       }
     }
-    
-    console.log(`  Most central territory: ${territories.find(t => t.id === bestTerritory)?.name}`);
-    return bestTerritory;
+
+    console.log(
+      `  Most central territory: ${territories.find((t) => t.id === bestTerritory)?.name}`,
+    )
+    return bestTerritory
   }
 
   /**
    * BFS (Breadth-First Search) to find shortest path distance between territories
    * Returns Infinity if territories are not connected
    */
-  private getDistance(
-    from: string, 
-    to: string, 
-    graph: Map<string, Set<string>>
-  ): number {
-    if (from === to) return 0;
-    
-    const visited = new Set<string>();
-    const queue: [string, number][] = [[from, 0]];
-    visited.add(from);
-    
+  private getDistance(from: string, to: string, graph: Map<string, Set<string>>): number {
+    if (from === to) return 0
+
+    const visited = new Set<string>()
+    const queue: [string, number][] = [[from, 0]]
+    visited.add(from)
+
     while (queue.length > 0) {
-      const [current, distance] = queue.shift()!;
-      
-      const neighbors = graph.get(current) || new Set();
+      const [current, distance] = queue.shift()!
+
+      const neighbors = graph.get(current) || new Set()
       for (const neighbor of neighbors) {
         if (neighbor === to) {
-          return distance + 1;
+          return distance + 1
         }
-        
+
         if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          queue.push([neighbor, distance + 1]);
+          visited.add(neighbor)
+          queue.push([neighbor, distance + 1])
         }
       }
     }
-    
-    return Infinity; // Territories are not connected
+
+    return Infinity // Territories are not connected
   }
 
   /**
@@ -210,16 +210,16 @@ export class CapitalGeneratorService {
   private getMinDistanceToCapitals(
     candidateId: string,
     capitals: string[],
-    graph: Map<string, Set<string>>
+    graph: Map<string, Set<string>>,
   ): number {
-    let minDistance = Infinity;
-    
+    let minDistance = Infinity
+
     for (const capital of capitals) {
-      const distance = this.getDistance(candidateId, capital, graph);
-      minDistance = Math.min(minDistance, distance);
+      const distance = this.getDistance(candidateId, capital, graph)
+      minDistance = Math.min(minDistance, distance)
     }
-    
-    return minDistance;
+
+    return minDistance
   }
 
   /**
@@ -229,17 +229,17 @@ export class CapitalGeneratorService {
   private getTotalDistanceToAll(
     from: string,
     allTerritories: string[],
-    graph: Map<string, Set<string>>
+    graph: Map<string, Set<string>>,
   ): number {
-    let total = 0;
+    let total = 0
     for (const territory of allTerritories) {
       if (territory !== from) {
-        const distance = this.getDistance(from, territory, graph);
+        const distance = this.getDistance(from, territory, graph)
         // Cap at 1000 to avoid Infinity affecting calculations
-        total += Math.min(distance, 1000);
+        total += Math.min(distance, 1000)
       }
     }
-    return total;
+    return total
   }
 
   /**
@@ -248,67 +248,67 @@ export class CapitalGeneratorService {
    */
   private findConnectedComponents(
     territories: Territory[],
-    graph: Map<string, Set<string>>
+    graph: Map<string, Set<string>>,
   ): Territory[][] {
-    const visited = new Set<string>();
-    const components: Territory[][] = [];
-    
+    const visited = new Set<string>()
+    const components: Territory[][] = []
+
     for (const territory of territories) {
       if (!visited.has(territory.id)) {
-        const component: Territory[] = [];
-        const queue = [territory.id];
-        
+        const component: Territory[] = []
+        const queue = [territory.id]
+
         while (queue.length > 0) {
-          const current = queue.shift()!;
-          if (visited.has(current)) continue;
-          
-          visited.add(current);
-          const currentTerritory = territories.find(t => t.id === current);
+          const current = queue.shift()!
+          if (visited.has(current)) continue
+
+          visited.add(current)
+          const currentTerritory = territories.find((t) => t.id === current)
           if (currentTerritory) {
-            component.push(currentTerritory);
+            component.push(currentTerritory)
           }
-          
-          const neighbors = graph.get(current) || new Set();
+
+          const neighbors = graph.get(current) || new Set()
           for (const neighbor of neighbors) {
             if (!visited.has(neighbor)) {
-              queue.push(neighbor);
+              queue.push(neighbor)
             }
           }
         }
-        
+
         if (component.length > 0) {
-          components.push(component);
+          components.push(component)
         }
       }
     }
-    
-    return components;
+
+    return components
   }
 
   /**
    * Build bidirectional adjacency graph from territories and adjacencies
    */
   private buildAdjacencyGraph(
-    territories: Territory[], 
-    adjacencies: Adjacency[]
+    territories: Territory[],
+    adjacencies: Adjacency[],
   ): Map<string, Set<string>> {
-    const graph = new Map<string, Set<string>>();
-    
+    const graph = new Map<string, Set<string>>()
+
     // Initialize all territories in graph
     for (const territory of territories) {
-      graph.set(territory.id, new Set());
+      graph.set(territory.id, new Set())
     }
-    
+
     // Add edges (bidirectional by default)
     for (const adj of adjacencies) {
       // Only add if both territories exist in our territory list
       if (graph.has(adj.from_territory_id) && graph.has(adj.to_territory_id)) {
-        graph.get(adj.from_territory_id)?.add(adj.to_territory_id);
-        graph.get(adj.to_territory_id)?.add(adj.from_territory_id);
+        graph.get(adj.from_territory_id)?.add(adj.to_territory_id)
+        graph.get(adj.to_territory_id)?.add(adj.from_territory_id)
       }
     }
-    
-    return graph;
+
+    return graph
   }
 
   /**
@@ -320,22 +320,25 @@ export class CapitalGeneratorService {
        FROM map_territories 
        WHERE map_id = $1
        ORDER BY name`,
-      [mapId]
-    );
-    return result.rows;
+      [mapId],
+    )
+    return result.rows
   }
 
   /**
    * Get all adjacencies for territories in a map
    */
   private async getAdjacencies(mapId: string): Promise<Adjacency[]> {
-    const result = await this.db.query(`
+    const result = await this.db.query(
+      `
       SELECT DISTINCT a.from_territory_id, a.to_territory_id
       FROM territory_adjacencies a
       JOIN map_territories t ON a.from_territory_id = t.id
       WHERE t.map_id = $1
-    `, [mapId]);
-    return result.rows;
+    `,
+      [mapId],
+    )
+    return result.rows
   }
 
   /**
@@ -344,45 +347,45 @@ export class CapitalGeneratorService {
   async updateCapitalsForPlayerCount(
     mapId: string,
     playerCount: number,
-    territoryIds: string[]
+    territoryIds: string[],
   ): Promise<void> {
     // Validate territory IDs belong to this map
-    const territories = await this.getTerritories(mapId);
-    const validIds = new Set(territories.map(t => t.id));
-    
+    const territories = await this.getTerritories(mapId)
+    const validIds = new Set(territories.map((t) => t.id))
+
     for (const id of territoryIds) {
       if (!validIds.has(id)) {
-        throw new Error(`Territory ${id} does not belong to map ${mapId}`);
+        throw new Error(`Territory ${id} does not belong to map ${mapId}`)
       }
     }
-    
+
     if (territoryIds.length !== playerCount) {
-      throw new Error(`Must provide exactly ${playerCount} territories for ${playerCount} players`);
+      throw new Error(`Must provide exactly ${playerCount} territories for ${playerCount} players`)
     }
-    
+
     // Get existing assignments
     const result = await this.db.query(
       'SELECT capital_assignments, capital_metadata FROM maps WHERE id = $1',
-      [mapId]
-    );
-    
-    const capitals = result.rows[0]?.capital_assignments || {};
-    const metadata = result.rows[0]?.capital_metadata || {};
-    
+      [mapId],
+    )
+
+    const capitals = result.rows[0]?.capital_assignments || {}
+    const metadata = result.rows[0]?.capital_metadata || {}
+
     // Update capitals for this player count
-    capitals[playerCount] = territoryIds;
-    
+    capitals[playerCount] = territoryIds
+
     // Mark as manually adjusted
     if (!metadata.manuallyAdjusted) {
-      metadata.manuallyAdjusted = {};
+      metadata.manuallyAdjusted = {}
     }
-    metadata.manuallyAdjusted[playerCount] = true;
-    metadata.lastModified = new Date().toISOString();
-    
+    metadata.manuallyAdjusted[playerCount] = true
+    metadata.lastModified = new Date().toISOString()
+
     // Save to database
     await this.db.query(
       'UPDATE maps SET capital_assignments = $1, capital_metadata = $2 WHERE id = $3',
-      [JSON.stringify(capitals), JSON.stringify(metadata), mapId]
-    );
+      [JSON.stringify(capitals), JSON.stringify(metadata), mapId],
+    )
   }
 }

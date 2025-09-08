@@ -70,10 +70,10 @@ export interface CompoundDelta extends BaseDelta {
   changes: GameDelta[]
 }
 
-export type GameDelta = 
-  | TerritoryUpdateDelta 
-  | PlayerUpdateDelta 
-  | PhaseChangeDelta 
+export type GameDelta =
+  | TerritoryUpdateDelta
+  | PlayerUpdateDelta
+  | PhaseChangeDelta
   | BattleResultDelta
   | GameEndDelta
   | CompoundDelta
@@ -83,30 +83,30 @@ export type GameDelta =
  */
 export class DeltaBuilder {
   static territoryUpdate(
-    roomId: string, 
-    territoryId: string, 
-    changes: { armies?: number; ownerId?: string }
+    roomId: string,
+    territoryId: string,
+    changes: { armies?: number; ownerId?: string },
   ): TerritoryUpdateDelta {
     return {
       type: 'TERRITORY_UPDATE',
       roomId,
       territoryId,
       changes,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
   static playerUpdate(
     roomId: string,
     playerId: string,
-    changes: { armies?: number; territories?: string[]; isEliminated?: boolean }
+    changes: { armies?: number; territories?: string[]; isEliminated?: boolean },
   ): PlayerUpdateDelta {
     return {
       type: 'PLAYER_UPDATE',
       roomId,
       playerId,
       changes,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
@@ -115,7 +115,7 @@ export class DeltaBuilder {
     phase: string,
     currentPlayer: string,
     turn?: number,
-    reinforcementArmies?: number
+    reinforcementArmies?: number,
   ): PhaseChangeDelta {
     return {
       type: 'PHASE_CHANGE',
@@ -124,33 +124,26 @@ export class DeltaBuilder {
       currentPlayer,
       turn,
       reinforcementArmies,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
-  static battleResult(
-    roomId: string,
-    battleResult: any
-  ): BattleResultDelta {
+  static battleResult(roomId: string, battleResult: any): BattleResultDelta {
     return {
       type: 'BATTLE_RESULT',
       roomId,
       battleResult,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
-  static gameEnd(
-    roomId: string,
-    winner: any,
-    eliminatedPlayers: string[]
-  ): GameEndDelta {
+  static gameEnd(roomId: string, winner: any, eliminatedPlayers: string[]): GameEndDelta {
     return {
       type: 'GAME_END',
       roomId,
       winner,
       eliminatedPlayers,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 }

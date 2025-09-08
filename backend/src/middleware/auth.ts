@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { logger } from '../utils/logger'
 import { query } from '../config/database'
+import { logger } from '../utils/logger'
 
 // Extend Request interface
 declare module 'express-serve-static-core' {
@@ -35,10 +35,9 @@ export const authenticateToken = async (
 
     // Optionally fetch user details for req.user
     try {
-      const result = await query(
-        'SELECT id, username, email FROM users WHERE id = $1',
-        [decoded.userId],
-      )
+      const result = await query('SELECT id, username, email FROM users WHERE id = $1', [
+        decoded.userId,
+      ])
       if (result.rows[0]) {
         // Check if user is admin
         const adminResult = await query(

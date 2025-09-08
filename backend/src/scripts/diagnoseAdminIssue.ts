@@ -31,13 +31,15 @@ async function diagnoseAdminIssue(email: string) {
         WHERE table_name = 'admin_roles'
         ORDER BY ordinal_position
       `)
-      
+
       if (roleTableCheck.rows.length === 0) {
         console.log('❌ admin_roles table does not exist')
         return
-      } else {
-        console.log('✅ admin_roles table exists with columns:', roleTableCheck.rows.map(r => r.column_name).join(', '))
       }
+      console.log(
+        '✅ admin_roles table exists with columns:',
+        roleTableCheck.rows.map((r) => r.column_name).join(', '),
+      )
     } catch (error: any) {
       console.log('❌ Error checking admin_roles table:', error.message)
       return
@@ -52,13 +54,15 @@ async function diagnoseAdminIssue(email: string) {
         WHERE table_name = 'user_admin_roles'
         ORDER BY ordinal_position
       `)
-      
+
       if (userRoleTableCheck.rows.length === 0) {
         console.log('❌ user_admin_roles table does not exist')
         return
-      } else {
-        console.log('✅ user_admin_roles table exists with columns:', userRoleTableCheck.rows.map(r => r.column_name).join(', '))
       }
+      console.log(
+        '✅ user_admin_roles table exists with columns:',
+        userRoleTableCheck.rows.map((r) => r.column_name).join(', '),
+      )
     } catch (error: any) {
       console.log('❌ Error checking user_admin_roles table:', error.message)
       return
@@ -71,25 +75,28 @@ async function diagnoseAdminIssue(email: string) {
       console.log('⚠️  No admin roles exist')
     } else {
       console.log('Found admin roles:')
-      rolesResult.rows.forEach(role => {
+      rolesResult.rows.forEach((role) => {
         console.log(`  - ${role.name} (${role.id}) - Super: ${role.is_super_admin}`)
       })
     }
 
     // 5. Check user's admin roles
     console.log('\n=== USER ADMIN STATUS ===')
-    const userAdminResult = await query(`
+    const userAdminResult = await query(
+      `
       SELECT uar.*, ar.name as role_name, ar.is_super_admin
       FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
       WHERE uar.user_id = $1
-    `, [user.id])
+    `,
+      [user.id],
+    )
 
     if (userAdminResult.rows.length === 0) {
       console.log('❌ User has no admin roles assigned')
     } else {
       console.log('User admin roles:')
-      userAdminResult.rows.forEach(role => {
+      userAdminResult.rows.forEach((role) => {
         console.log(`  - Role: ${role.role_name}`)
         console.log(`  - Active: ${role.is_active}`)
         console.log(`  - Expires: ${role.expires_at || 'Never'}`)
@@ -101,7 +108,7 @@ async function diagnoseAdminIssue(email: string) {
     console.log('\n=== TESTING ADMIN SERVICE ===')
     const { AdminService } = await import('../services/adminService')
     const adminService = new AdminService()
-    
+
     try {
       const isAdmin = await adminService.isAdmin(user.id)
       console.log(`adminService.isAdmin result: ${isAdmin}`)

@@ -24,18 +24,21 @@ async function setupProductionAdmin(email: string) {
 
     // 2. Ensure admin_roles table has super_admin role
     logger.info('🔧 Ensuring super_admin role exists...')
-    
+
     const existingRoleResult = await query("SELECT id FROM admin_roles WHERE name = 'super_admin'")
-    
+
     let roleId: string
     if (existingRoleResult.rows.length === 0) {
       // Create super_admin role
-      const createRoleResult = await query(`
+      const createRoleResult = await query(
+        `
         INSERT INTO admin_roles (name, description, permissions, is_super_admin, created_at, updated_at) 
         VALUES ('super_admin', 'Full system access', $1, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
         RETURNING id
-      `, [JSON.stringify(['*'])])
-      
+      `,
+        [JSON.stringify(['*'])],
+      )
+
       roleId = createRoleResult.rows[0].id
       logger.info('✅ Created super_admin role')
     } else {
@@ -58,10 +61,13 @@ async function setupProductionAdmin(email: string) {
       logger.info('✅ Updated existing admin role to active')
     } else {
       // Assign super_admin role to user
-      await query(`
+      await query(
+        `
         INSERT INTO user_admin_roles (user_id, role_id, assigned_by, assigned_at, is_active) 
         VALUES ($1, $2, $1, CURRENT_TIMESTAMP, true)
-      `, [user.id, roleId])
+      `,
+        [user.id, roleId],
+      )
       logger.info('✅ Assigned super_admin role to user')
     }
 
@@ -79,17 +85,23 @@ async function setupProductionAdmin(email: string) {
         ])
 
         if (statusResult.rows.length === 0) {
-          await query(`
+          await query(
+            `
             INSERT INTO user_account_status (user_id, status, created_at, updated_at) 
             VALUES ($1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          `, [user.id])
+          `,
+            [user.id],
+          )
           logger.info('✅ Created active account status')
         } else {
-          await query(`
+          await query(
+            `
             UPDATE user_account_status 
             SET status = 'active', expires_at = NULL, updated_at = CURRENT_TIMESTAMP
             WHERE user_id = $1
-          `, [user.id])
+          `,
+            [user.id],
+          )
           logger.info('✅ Updated account status to active')
         }
       } else {
@@ -101,21 +113,27 @@ async function setupProductionAdmin(email: string) {
 
     // 5. Ensure is_admin flag in users table is also true (keep both systems consistent)
     logger.info('🔧 Setting is_admin flag in users table...')
-    await query(`
+    await query(
+      `
       UPDATE users 
       SET is_admin = true 
       WHERE id = $1
-    `, [user.id])
+    `,
+      [user.id],
+    )
     logger.info('✅ Set is_admin = true in users table')
 
     // 6. Test the setup
     logger.info('🧪 Testing admin setup...')
-    const testResult = await query(`
+    const testResult = await query(
+      `
       SELECT 1 FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
       WHERE uar.user_id = $1 AND uar.is_active = TRUE
       AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
-    `, [user.id])
+    `,
+      [user.id],
+    )
 
     if (testResult.rows.length > 0) {
       logger.info(`

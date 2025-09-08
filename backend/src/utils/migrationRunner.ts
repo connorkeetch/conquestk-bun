@@ -10,37 +10,37 @@ export class MigrationRunner {
 
   constructor(migrationTracker?: MigrationTracker) {
     this.migrationTracker = migrationTracker || new MigrationTracker()
-    
+
     // Try multiple possible migration paths (simplified - no postgres subdirectory)
     const possiblePaths = [
       // Production paths (Railway) - check these first
-      '/app/backend/dist/migrations',          // Railway dist
-      '/app/backend/migrations',               // Railway source
-      '/app/migrations',                       // Railway alternate
-      
+      '/app/backend/dist/migrations', // Railway dist
+      '/app/backend/migrations', // Railway source
+      '/app/migrations', // Railway alternate
+
       // Development and build paths
-      join(__dirname, '../migrations'),        // dist/utils -> dist/migrations
-      join(__dirname, '../../migrations'),     // src/utils -> migrations
-      join(process.cwd(), 'migrations'),       // Current working directory/migrations
+      join(__dirname, '../migrations'), // dist/utils -> dist/migrations
+      join(__dirname, '../../migrations'), // src/utils -> migrations
+      join(process.cwd(), 'migrations'), // Current working directory/migrations
       join(process.cwd(), 'backend/migrations'), // Current working directory/backend/migrations
     ]
-    
+
     // Log all paths being checked for debugging
     logger.info('📁 Checking migration paths:')
     possiblePaths.forEach((path, index) => {
       const exists = existsSync(path)
       logger.info(`  ${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`)
     })
-    
+
     // Find the first existing path
     let foundPath = false
     for (const path of possiblePaths) {
       if (existsSync(path)) {
         this.migrationsPath = path
-        
+
         // Count SQL files in the directory
         try {
-          const files = readdirSync(path).filter(f => f.endsWith('.sql'))
+          const files = readdirSync(path).filter((f) => f.endsWith('.sql'))
           logger.info(`✅ Found migrations at: ${this.migrationsPath}`)
           logger.info(`  ✓ Contains ${files.length} SQL files: ${files.join(', ')}`)
           foundPath = true
@@ -50,7 +50,7 @@ export class MigrationRunner {
         }
       }
     }
-    
+
     // If no path found, use a fallback
     if (!foundPath) {
       logger.error(`❌ Migrations directory not found in any of the checked paths`)
@@ -81,18 +81,21 @@ export class MigrationRunner {
       if (!keyTablesExist && pendingMigrations.length === 0) {
         logger.warn('⚠️  Key tables missing despite migrations marked as complete')
         logger.info('🔄 Re-running initial schema migration to create missing tables...')
-        
+
         // Force re-run of initial schema if it exists
-        const initialSchema = availableMigrations.find(m => m === '001_initial_schema.sql')
+        const initialSchema = availableMigrations.find((m) => m === '001_initial_schema.sql')
         if (initialSchema) {
           pendingMigrations = [initialSchema]
           // Delete the migration record so it can run fresh
           // This is safer than trying to update status to 'pending' which violates constraints
           try {
-            await query(`
+            await query(
+              `
               DELETE FROM schema_migrations 
               WHERE filename = $1
-            `, [initialSchema])
+            `,
+              [initialSchema],
+            )
             logger.info('🗑️  Cleared migration record for re-run')
           } catch (err) {
             logger.warn('⚠️  Could not clear migration record, will attempt to run anyway')
@@ -211,7 +214,7 @@ export class MigrationRunner {
   private getAvailableMigrations(): string[] {
     try {
       logger.info(`📁 Checking migration files in: ${this.migrationsPath}`)
-      
+
       if (!existsSync(this.migrationsPath)) {
         logger.warn(`⚠️  Migrations directory not found: ${this.migrationsPath}`)
         return []
@@ -219,13 +222,13 @@ export class MigrationRunner {
 
       const allFiles = readdirSync(this.migrationsPath)
       logger.info(`  Found ${allFiles.length} total files: ${allFiles.join(', ')}`)
-      
+
       const sqlFiles = allFiles
         .filter(
           (file) => file.endsWith('.sql') && !file.includes('_mysql') && !file.includes('_sqlite'),
         )
         .sort() // Ensure migrations run in order
-      
+
       logger.info(`  ✅ Found ${sqlFiles.length} migration files: ${sqlFiles.join(', ')}`)
       return sqlFiles
     } catch (error) {
@@ -481,7 +484,7 @@ export class MigrationRunner {
     try {
       // Check if essential tables exist
       const keyTables = ['users', 'maps', 'game_rooms', 'game_states', 'user_admin_roles']
-      
+
       for (const tableName of keyTables) {
         const result = await query(
           `
@@ -499,7 +502,7 @@ export class MigrationRunner {
           return false
         }
       }
-      
+
       return true
     } catch (error) {
       logger.error('❌ Error checking key tables:', error)

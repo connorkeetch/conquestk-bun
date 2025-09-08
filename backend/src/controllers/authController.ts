@@ -121,11 +121,11 @@ export class AuthController {
       })
 
       // Check if email verification is required
-      const requiresEmailVerification = emailService.isEnabled() && 
-        process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+      const requiresEmailVerification =
+        emailService.isEnabled() && process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
 
       return res.status(201).json({
-        message: requiresEmailVerification 
+        message: requiresEmailVerification
           ? 'Account created! Please check your email to verify your account.'
           : 'User created successfully',
         token,
@@ -238,7 +238,9 @@ export class AuthController {
       let settings = null
       try {
         const { query } = await import('../config/database')
-        const settingsResult = await query('SELECT * FROM user_settings WHERE user_id = $1', [userId])
+        const settingsResult = await query('SELECT * FROM user_settings WHERE user_id = $1', [
+          userId,
+        ])
         settings = settingsResult.rows[0] || null
       } catch (settingsError) {
         // If settings table doesn't exist yet or other error, continue without settings
@@ -579,12 +581,13 @@ export class AuthController {
 
       // Prepare the data for storage
       const privacySettings = {
-        show_online_status: settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null
+        show_online_status:
+          settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null,
       }
-      
+
       const preferencesData = {
         preferred_color: settings.preferredColor || null,
-        direct_messages: settings.directMessages || null
+        direct_messages: settings.directMessages || null,
       }
 
       const result = await query(updateQuery, [
@@ -592,7 +595,7 @@ export class AuthController {
         settings.theme || null,
         settings.notifications ? JSON.stringify(settings.notifications) : null,
         JSON.stringify(privacySettings),
-        JSON.stringify(preferencesData)
+        JSON.stringify(preferencesData),
       ])
 
       logger.info('User settings updated:', { userId, settings: Object.keys(settings) })

@@ -1,7 +1,7 @@
+import type { NextFunction, Request, Response } from 'express'
 import session from 'express-session'
 import { getRedisClient } from '../config/redis'
 import { logger } from '../utils/logger'
-import type { Request, Response, NextFunction } from 'express'
 
 // Import connect-redis v9 - try multiple import patterns for compatibility
 let RedisStore: any = null
@@ -28,7 +28,7 @@ let isRedisStoreActive = false
  */
 export function createSessionMiddleware() {
   const sessionSecret = process.env.SESSION_SECRET || 'default-dev-secret-change-in-production'
-  
+
   // Base session configuration
   const sessionConfig: session.SessionOptions = {
     secret: sessionSecret,
@@ -38,21 +38,23 @@ export function createSessionMiddleware() {
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     },
     name: 'conquestk.sid', // Custom session name
   }
 
   // Try to use Redis immediately if available
   const redisConfigured = tryConfigureRedisStore(sessionConfig)
-  
+
   // Always explicitly set MemoryStore if Redis is not configured to suppress warning
   if (!redisConfigured) {
     const MemoryStore = require('express-session').MemoryStore
     sessionConfig.store = new MemoryStore()
-    
+
     if (process.env.REDIS_URL) {
-      logger.warn('⚠️ Using temporary MemoryStore while Redis initializes (this is expected during startup)')
+      logger.warn(
+        '⚠️ Using temporary MemoryStore while Redis initializes (this is expected during startup)',
+      )
     } else {
       logger.info('ℹ️ Using MemoryStore for sessions (Redis not configured)')
     }
@@ -60,7 +62,7 @@ export function createSessionMiddleware() {
 
   // Create the session middleware
   currentSessionMiddleware = session(sessionConfig)
-  
+
   return currentSessionMiddleware
 }
 
@@ -69,7 +71,7 @@ export function createSessionMiddleware() {
  */
 function tryConfigureRedisStore(sessionConfig: session.SessionOptions): boolean {
   const redisClient = getRedisClient()
-  
+
   if (redisClient && RedisStore && !isRedisStoreActive) {
     try {
       sessionConfig.store = new RedisStore({
@@ -81,14 +83,17 @@ function tryConfigureRedisStore(sessionConfig: session.SessionOptions): boolean 
       logger.info('✅ Using Redis for session storage')
       return true
     } catch (error) {
-      logger.error('Failed to create Redis session store:', error instanceof Error ? error.message : error)
+      logger.error(
+        'Failed to create Redis session store:',
+        error instanceof Error ? error.message : error,
+      )
       logger.warn('⚠️ Falling back to in-memory session storage')
       isRedisStoreActive = false
     }
   } else if (!redisClient) {
     logger.warn('⚠️ Redis not available, using in-memory session storage')
   }
-  
+
   return false
 }
 
@@ -103,12 +108,12 @@ export function enableRedisSessionStore(): boolean {
   }
 
   const redisClient = getRedisClient()
-  
+
   if (redisClient && RedisStore) {
     try {
       // Create new session configuration with Redis store
       const sessionSecret = process.env.SESSION_SECRET || 'default-dev-secret-change-in-production'
-      
+
       const sessionConfig: session.SessionOptions = {
         secret: sessionSecret,
         resave: false,
@@ -117,14 +122,14 @@ export function enableRedisSessionStore(): boolean {
           secure: process.env.NODE_ENV === 'production',
           httpOnly: true,
           maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         },
         name: 'conquestk.sid',
         store: new RedisStore({
           client: redisClient,
           prefix: 'session:',
           ttl: 60 * 60 * 24 * 7, // 7 days in seconds
-        })
+        }),
       }
 
       // Replace the current middleware
@@ -133,11 +138,14 @@ export function enableRedisSessionStore(): boolean {
       logger.info('✅ Session middleware reconfigured to use Redis store')
       return true
     } catch (error) {
-      logger.error('Failed to enable Redis session store:', error instanceof Error ? error.message : error)
+      logger.error(
+        'Failed to enable Redis session store:',
+        error instanceof Error ? error.message : error,
+      )
       return false
     }
   }
-  
+
   return false
 }
 
@@ -147,11 +155,10 @@ export function enableRedisSessionStore(): boolean {
 export function sessionMiddleware(req: Request, res: Response, next: NextFunction) {
   if (currentSessionMiddleware) {
     return currentSessionMiddleware(req, res, next)
-  } else {
-    // Fallback - this shouldn't happen
-    logger.error('Session middleware not initialized!')
-    return next()
   }
+  // Fallback - this shouldn't happen
+  logger.error('Session middleware not initialized!')
+  return next()
 }
 
 /**

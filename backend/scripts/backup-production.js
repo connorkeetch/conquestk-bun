@@ -66,26 +66,25 @@ try {
 
   // Execute backup using psql
   const command = `psql "${DATABASE_URL}" -t -c "${backupQuery.replace(/\n\s+/g, ' ')}" > "${backupFile}"`
-  
+
   execSync(command, { stdio: 'inherit' })
-  
+
   console.log('✅ Backup completed successfully!')
   console.log(`📄 Backup file: ${backupFile}`)
-  
+
   // Verify backup file exists and has content
   if (fs.existsSync(backupFile)) {
     const stats = fs.statSync(backupFile)
     console.log(`📊 Backup size: ${stats.size} bytes`)
-    
+
     if (stats.size === 0) {
       console.warn('⚠️  Warning: Backup file is empty - this may be expected if no user data exists')
     }
   }
-  
+
   console.log('\n🚀 Ready to deploy consolidated migration!')
   console.log('💡 To restore from backup if needed:')
   console.log(`   psql "\\$DATABASE_URL" < "${backupFile}"`)
-  
 } catch (error) {
   console.error('❌ Backup failed:', error.message)
   process.exit(1)

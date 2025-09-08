@@ -10,7 +10,7 @@ async function validateAndFixProduction() {
 
     // 1. Check if user_settings table exists and has required columns
     logger.info('\n=== CHECKING USER_SETTINGS TABLE ===')
-    
+
     try {
       const userSettingsColumns = await query(`
         SELECT column_name, data_type, is_nullable 
@@ -18,7 +18,7 @@ async function validateAndFixProduction() {
         WHERE table_name = 'user_settings'
         ORDER BY ordinal_position
       `)
-      
+
       if (userSettingsColumns.rows.length === 0) {
         logger.info('❌ user_settings table does not exist, creating...')
         await query(`
@@ -39,10 +39,15 @@ async function validateAndFixProduction() {
         `)
         logger.info('✅ Created user_settings table')
       } else {
-        logger.info('✅ user_settings table exists with columns:', userSettingsColumns.rows.map(r => r.column_name).join(', '))
-        
+        logger.info(
+          '✅ user_settings table exists with columns:',
+          userSettingsColumns.rows.map((r) => r.column_name).join(', '),
+        )
+
         // Check if preferred_color column exists
-        const hasPreferredColor = userSettingsColumns.rows.some(col => col.column_name === 'preferred_color')
+        const hasPreferredColor = userSettingsColumns.rows.some(
+          (col) => col.column_name === 'preferred_color',
+        )
         if (!hasPreferredColor) {
           logger.info('❌ preferred_color column missing, adding...')
           await query(`
@@ -64,7 +69,7 @@ async function validateAndFixProduction() {
         FROM information_schema.columns 
         WHERE table_name = 'admin_roles'
       `)
-      
+
       if (adminRolesCheck.rows.length === 0) {
         logger.info('❌ admin_roles table does not exist, creating...')
         await query(`
@@ -86,7 +91,7 @@ async function validateAndFixProduction() {
       logger.error('Error with admin_roles table:', error.message)
     }
 
-    // 3. Check user_admin_roles table  
+    // 3. Check user_admin_roles table
     logger.info('\n=== CHECKING USER_ADMIN_ROLES TABLE ===')
     try {
       const userAdminRolesCheck = await query(`
@@ -94,7 +99,7 @@ async function validateAndFixProduction() {
         FROM information_schema.columns 
         WHERE table_name = 'user_admin_roles'
       `)
-      
+
       if (userAdminRolesCheck.rows.length === 0) {
         logger.info('❌ user_admin_roles table does not exist, creating...')
         await query(`
@@ -122,7 +127,7 @@ async function validateAndFixProduction() {
     // 4. Create super_admin role if it doesn't exist
     logger.info('\n=== ENSURING SUPER_ADMIN ROLE ===')
     const superAdminRoleCheck = await query("SELECT id FROM admin_roles WHERE name = 'super_admin'")
-    
+
     if (superAdminRoleCheck.rows.length === 0) {
       logger.info('❌ super_admin role does not exist, creating...')
       await query(`
@@ -141,22 +146,54 @@ async function validateAndFixProduction() {
       FROM information_schema.columns 
       WHERE table_name = 'users'
     `)
-    
-    const columnNames = userColumns.rows.map(r => r.column_name)
+
+    const columnNames = userColumns.rows.map((r) => r.column_name)
     logger.info('Users table columns:', columnNames.join(', '))
 
     // Add missing columns if needed
     const essentialColumns = [
-      { name: 'email_verified', type: 'BOOLEAN DEFAULT FALSE', condition: !columnNames.includes('email_verified') },
-      { name: 'profile_picture', type: 'TEXT', condition: !columnNames.includes('profile_picture') },
+      {
+        name: 'email_verified',
+        type: 'BOOLEAN DEFAULT FALSE',
+        condition: !columnNames.includes('email_verified'),
+      },
+      {
+        name: 'profile_picture',
+        type: 'TEXT',
+        condition: !columnNames.includes('profile_picture'),
+      },
       { name: 'bio', type: 'TEXT', condition: !columnNames.includes('bio') },
-      { name: 'skill_rating', type: 'INTEGER DEFAULT 1000', condition: !columnNames.includes('skill_rating') },
-      { name: 'games_played', type: 'INTEGER DEFAULT 0', condition: !columnNames.includes('games_played') },
-      { name: 'games_won', type: 'INTEGER DEFAULT 0', condition: !columnNames.includes('games_won') },
+      {
+        name: 'skill_rating',
+        type: 'INTEGER DEFAULT 1000',
+        condition: !columnNames.includes('skill_rating'),
+      },
+      {
+        name: 'games_played',
+        type: 'INTEGER DEFAULT 0',
+        condition: !columnNames.includes('games_played'),
+      },
+      {
+        name: 'games_won',
+        type: 'INTEGER DEFAULT 0',
+        condition: !columnNames.includes('games_won'),
+      },
       { name: 'peak_rating', type: 'INTEGER', condition: !columnNames.includes('peak_rating') },
-      { name: 'current_tier', type: 'VARCHAR(50)', condition: !columnNames.includes('current_tier') },
-      { name: 'last_login', type: 'TIMESTAMP WITH TIME ZONE', condition: !columnNames.includes('last_login') },
-      { name: 'deleted_at', type: 'TIMESTAMP WITH TIME ZONE', condition: !columnNames.includes('deleted_at') }
+      {
+        name: 'current_tier',
+        type: 'VARCHAR(50)',
+        condition: !columnNames.includes('current_tier'),
+      },
+      {
+        name: 'last_login',
+        type: 'TIMESTAMP WITH TIME ZONE',
+        condition: !columnNames.includes('last_login'),
+      },
+      {
+        name: 'deleted_at',
+        type: 'TIMESTAMP WITH TIME ZONE',
+        condition: !columnNames.includes('deleted_at'),
+      },
     ]
 
     for (const col of essentialColumns) {
@@ -169,7 +206,7 @@ async function validateAndFixProduction() {
 
     // 6. Test the fixes
     logger.info('\n=== TESTING FIXES ===')
-    
+
     // Test user_settings query
     try {
       await query(`

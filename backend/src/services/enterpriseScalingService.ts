@@ -1,8 +1,8 @@
 import { logger } from '../utils/logger'
-import { redisClusterService } from './redisClusterService'
-import { databaseClusterService } from './databaseClusterService'
 import { cdnService } from './cdnService'
+import { databaseClusterService } from './databaseClusterService'
 import { performanceMonitorService } from './performanceMonitorService'
+import { redisClusterService } from './redisClusterService'
 import { scalingService } from './scalingService'
 
 interface EnterpriseConfig {
@@ -120,7 +120,6 @@ export class EnterpriseScalingService {
         services: this.getEnabledServices(),
         mode: this.getOperationalMode(),
       })
-
     } catch (error) {
       logger.error('❌ Failed to initialize Enterprise Scaling Service:', error)
       throw error
@@ -146,9 +145,9 @@ export class EnterpriseScalingService {
     }
 
     // Initialize all infrastructure services in parallel
-    const results = await Promise.allSettled(initTasks.map(task => task()))
-    
-    const failures = results.filter(result => result.status === 'rejected')
+    const results = await Promise.allSettled(initTasks.map((task) => task()))
+
+    const failures = results.filter((result) => result.status === 'rejected')
     if (failures.length > 0) {
       logger.warn('⚠️ Some infrastructure services failed to initialize:', failures)
     }
@@ -175,7 +174,7 @@ export class EnterpriseScalingService {
 
     try {
       await scalingService.initialize()
-      
+
       // Configure scaling parameters
       scalingService.updateConfig({
         minWorkers: this.config.cluster.minNodes,
@@ -191,10 +190,7 @@ export class EnterpriseScalingService {
 
   private async startHealthMonitoring(): Promise<void> {
     // Comprehensive health checks every 2 minutes
-    this.healthCheckInterval = setInterval(
-      () => this.performComprehensiveHealthCheck(),
-      120000
-    )
+    this.healthCheckInterval = setInterval(() => this.performComprehensiveHealthCheck(), 120000)
 
     // Initial health check
     await this.performComprehensiveHealthCheck()
@@ -204,10 +200,7 @@ export class EnterpriseScalingService {
 
   private async startOptimization(): Promise<void> {
     // System optimization every 5 minutes
-    this.optimizationInterval = setInterval(
-      () => this.performSystemOptimization(),
-      300000
-    )
+    this.optimizationInterval = setInterval(() => this.performSystemOptimization(), 300000)
 
     logger.info('⚙️ Started system optimization')
   }
@@ -215,7 +208,7 @@ export class EnterpriseScalingService {
   private async performComprehensiveHealthCheck(): Promise<void> {
     try {
       const status = await this.getSystemStatus()
-      
+
       if (status.overall === 'critical') {
         logger.error('🚨 CRITICAL: System status is critical!', status)
         await this.handleCriticalStatus(status)
@@ -229,7 +222,6 @@ export class EnterpriseScalingService {
           utilization: status.capacity.utilization,
         })
       }
-
     } catch (error) {
       logger.error('❌ Health check failed:', error)
     }
@@ -256,7 +248,7 @@ export class EnterpriseScalingService {
     }
 
     // Execute recovery actions
-    await Promise.allSettled(actions.map(action => action()))
+    await Promise.allSettled(actions.map((action) => action()))
   }
 
   private async handleDegradedStatus(status: SystemStatus): Promise<void> {
@@ -294,29 +286,23 @@ export class EnterpriseScalingService {
 
       // Execute optimizations
       if (optimizations.length > 0) {
-        await Promise.allSettled(optimizations.map(opt => opt()))
+        await Promise.allSettled(optimizations.map((opt) => opt()))
         logger.info(`⚙️ Executed ${optimizations.length} system optimizations`)
       }
-
     } catch (error) {
       logger.error('❌ System optimization failed:', error)
     }
   }
 
   async getSystemStatus(): Promise<SystemStatus> {
-    const [
-      cacheHealth,
-      databaseHealth,
-      cdnHealth,
-      scalingHealth,
-      monitoringHealth,
-    ] = await Promise.allSettled([
-      redisClusterService.healthCheck(),
-      databaseClusterService.healthCheck(),
-      cdnService.healthCheck(),
-      scalingService.healthCheck(),
-      performanceMonitorService.healthCheck(),
-    ])
+    const [cacheHealth, databaseHealth, cdnHealth, scalingHealth, monitoringHealth] =
+      await Promise.allSettled([
+        redisClusterService.healthCheck(),
+        databaseClusterService.healthCheck(),
+        cdnService.healthCheck(),
+        scalingService.healthCheck(),
+        performanceMonitorService.healthCheck(),
+      ])
 
     const extractStatus = (result: PromiseSettledResult<any>) =>
       result.status === 'fulfilled' ? result.value : { status: 'error', details: result.reason }
@@ -330,7 +316,7 @@ export class EnterpriseScalingService {
     }
 
     // Calculate overall status
-    const componentStatuses = Object.values(components).map(c => c.status)
+    const componentStatuses = Object.values(components).map((c) => c.status)
     const overall = this.calculateOverallStatus(componentStatuses)
 
     // Get performance metrics
@@ -358,12 +344,12 @@ export class EnterpriseScalingService {
   private calculateOverallStatus(statuses: string[]): SystemStatus['overall'] {
     if (statuses.includes('critical')) return 'critical'
     if (statuses.includes('unhealthy') || statuses.includes('error')) return 'degraded'
-    if (statuses.every(s => s === 'healthy')) return 'healthy'
+    if (statuses.every((s) => s === 'healthy')) return 'healthy'
     return 'degraded'
   }
 
   private calculateAvailability(statuses: string[]): number {
-    const healthyCount = statuses.filter(s => s === 'healthy').length
+    const healthyCount = statuses.filter((s) => s === 'healthy').length
     return (healthyCount / statuses.length) * 100
   }
 
@@ -406,37 +392,38 @@ export class EnterpriseScalingService {
   // Emergency operations
   async emergencyScale(targetNodes: number): Promise<boolean> {
     logger.warn('🚨 Emergency scaling initiated', { targetNodes })
-    
+
     const currentWorkers = scalingService.getMetrics().activeWorkers
-    
+
     if (targetNodes > currentWorkers) {
       // Scale up
       const scaleUpCount = targetNodes - currentWorkers
       const results = []
-      
+
       for (let i = 0; i < scaleUpCount; i++) {
         results.push(scalingService.scaleUp('Emergency scaling'))
       }
-      
-      return results.every(result => result === true)
-    } else if (targetNodes < currentWorkers) {
+
+      return results.every((result) => result === true)
+    }
+    if (targetNodes < currentWorkers) {
       // Scale down
       const scaleDownCount = currentWorkers - targetNodes
       const results = []
-      
+
       for (let i = 0; i < scaleDownCount; i++) {
         results.push(scalingService.scaleDown('Emergency scaling'))
       }
-      
-      return results.every(result => result === true)
+
+      return results.every((result) => result === true)
     }
-    
+
     return true
   }
 
   async emergencyRestart(): Promise<void> {
     logger.error('🚨 Emergency restart initiated')
-    
+
     // Graceful restart sequence
     await this.shutdown()
     setTimeout(() => {
@@ -446,7 +433,7 @@ export class EnterpriseScalingService {
 
   async healthCheck(): Promise<{ status: string; details: any }> {
     const systemStatus = await this.getSystemStatus()
-    
+
     return {
       status: systemStatus.overall,
       details: {
@@ -461,11 +448,11 @@ export class EnterpriseScalingService {
 
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down Enterprise Scaling Service...')
-    
+
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval)
     }
-    
+
     if (this.optimizationInterval) {
       clearInterval(this.optimizationInterval)
     }
@@ -478,8 +465,8 @@ export class EnterpriseScalingService {
       () => databaseClusterService.shutdown(),
     ]
 
-    await Promise.allSettled(shutdownTasks.map(task => task()))
-    
+    await Promise.allSettled(shutdownTasks.map((task) => task()))
+
     this.isInitialized = false
     logger.info('✅ Enterprise Scaling Service shutdown complete')
   }

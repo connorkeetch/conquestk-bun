@@ -1,6 +1,6 @@
-import winston from 'winston'
 import fs from 'fs'
 import path from 'path'
+import winston from 'winston'
 
 // Create transports array based on environment
 const transports: winston.transport[] = []
@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === 'production') {
         winston.format.errors({ stack: true }),
         winston.format.json(),
       ),
-    })
+    }),
   )
 } else {
   // In development, try to use file logging if possible
@@ -23,13 +23,13 @@ if (process.env.NODE_ENV === 'production') {
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true })
     }
-    
+
     transports.push(
       new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
       new winston.transports.File({ filename: 'logs/combined.log' }),
       new winston.transports.Console({
         format: winston.format.simple(),
-      })
+      }),
     )
   } catch (error) {
     // If file system is not writable, fall back to console only
@@ -37,7 +37,7 @@ if (process.env.NODE_ENV === 'production') {
     transports.push(
       new winston.transports.Console({
         format: winston.format.simple(),
-      })
+      }),
     )
   }
 }

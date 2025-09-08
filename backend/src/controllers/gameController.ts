@@ -50,16 +50,17 @@ export class GameController {
       return res.status(201).json({ room })
     } catch (error: any) {
       logger.error('Create room error:', error)
-      
+
       // Return validation errors with appropriate status code
-      if (error.message && (
-        error.message.includes('teams is not valid') || 
-        error.message.includes('Invalid number of teams') ||
-        error.message.includes('Ranked games')
-      )) {
+      if (
+        error.message &&
+        (error.message.includes('teams is not valid') ||
+          error.message.includes('Invalid number of teams') ||
+          error.message.includes('Ranked games'))
+      ) {
         return res.status(400).json({ message: error.message })
       }
-      
+
       return res.status(500).json({ message: 'Internal server error' })
     }
   }

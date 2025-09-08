@@ -60,7 +60,7 @@ export class MapWorkflowService {
 
         return result.rows[0]
       }
-      
+
       // Create new draft - check quota first
       const quotaCheck = await query(
         `SELECT COUNT(*) as count FROM (
@@ -70,17 +70,17 @@ export class MapWorkflowService {
           UNION ALL
           SELECT id FROM map_submissions WHERE user_id = $1 AND review_status = 'pending'
         ) AS items`,
-        [userId]
+        [userId],
       )
-      
+
       const userCheck = await query('SELECT is_admin FROM users WHERE id = $1', [userId])
       const isAdmin = userCheck.rows[0]?.is_admin
       const currentCount = parseInt(quotaCheck.rows[0]?.count || '0')
-      
+
       if (!isAdmin && currentCount >= 5) {
         throw new Error('Quota exceeded: Maximum 5 unpublished maps/images allowed')
       }
-      
+
       const result = await query(
         `
           INSERT INTO map_drafts (
@@ -109,7 +109,7 @@ export class MapWorkflowService {
           JSON.stringify(draftData.capitalAssignments || {}),
           JSON.stringify(draftData.tags || []),
           draftData.isPublic || false,
-          'editing'
+          'editing',
         ],
       )
 

@@ -200,19 +200,21 @@ export class EloService {
    * Bulk insert rating history records
    */
   private async bulkInsertRatingHistory(
-    gameId: string, 
-    changes: RatingChange[], 
-    positionMap: Map<string, number>
+    gameId: string,
+    changes: RatingChange[],
+    positionMap: Map<string, number>,
   ): Promise<void> {
     const values: any[] = []
     const placeholders: string[] = []
-    
+
     changes.forEach((change, index) => {
       const baseIndex = index * 10
       const position = positionMap.get(change.userId) || 0
-      
-      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`)
-      
+
+      placeholders.push(
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`,
+      )
+
       values.push(
         change.userId,
         gameId,
@@ -223,7 +225,7 @@ export class EloService {
         changes.length,
         change.kFactor,
         change.expectedScore,
-        change.actualScore
+        change.actualScore,
       )
     })
 
@@ -241,14 +243,16 @@ export class EloService {
    * Bulk update user ratings using PostgreSQL UPDATE with CASE statements
    */
   private async bulkUpdateUserRatings(
-    changes: RatingChange[], 
-    positionMap: Map<string, number>
+    changes: RatingChange[],
+    positionMap: Map<string, number>,
   ): Promise<void> {
     if (changes.length === 0) return
 
-    const userIds = changes.map(change => change.userId)
-    const userIdPlaceholders = userIds.map((_, index) => `$${changes.length * 4 + index + 1}`).join(', ')
-    
+    const userIds = changes.map((change) => change.userId)
+    const userIdPlaceholders = userIds
+      .map((_, index) => `$${changes.length * 4 + index + 1}`)
+      .join(', ')
+
     // Build CASE statements for each field
     const ratingCases: string[] = []
     const winCases: string[] = []
@@ -264,12 +268,7 @@ export class EloService {
       winCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_wins + $${baseIndex + 3}`)
       lossCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_losses + $${baseIndex + 4}`)
 
-      values.push(
-        change.userId,
-        change.newRating,
-        isWinner ? 1 : 0,
-        isWinner ? 0 : 1
-      )
+      values.push(change.userId, change.newRating, isWinner ? 1 : 0, isWinner ? 0 : 1)
     })
 
     // Add user IDs for the WHERE clause

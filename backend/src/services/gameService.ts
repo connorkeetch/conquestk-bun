@@ -1,13 +1,13 @@
 import { GameEngine } from '../game/gameEngine'
 import type { GameAction, GameState } from '../types/game'
+import { logger } from '../utils/logger'
+import { gameStateCache } from './cacheService'
 import { mapService } from './mapService'
 import territoryModifierService from './territoryModifierService'
-import { gameStateCache } from './cacheService'
-import { logger } from '../utils/logger'
 
 export class GameService {
   private gameEngine = new GameEngine()
-  // Removed: private activeGames = new Map<string, GameState>() 
+  // Removed: private activeGames = new Map<string, GameState>()
   // Now using Redis-backed gameStateCache for persistence and scalability
 
   // Helper to serialize game state for transmission
@@ -96,7 +96,7 @@ export class GameService {
 
     // Cache the game state with TTL for automatic cleanup (24 hours)
     await gameStateCache.setGameState(roomId, gameState)
-    
+
     logger.info(`Game initialized for room ${roomId} with ${players.length} players`)
     return gameState
   }
@@ -205,12 +205,12 @@ export class GameService {
   }
 
   async endTurn(roomId: string, userId: string) {
-    const gameState = await gameStateCache.getGameState(roomId) as GameState
+    const gameState = (await gameStateCache.getGameState(roomId)) as GameState
     if (!gameState) throw new Error('Game not found')
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
 
     const updatedState = this.gameEngine.advancePhase(gameState)
-    
+
     // Use longer TTL for finished games
     if (updatedState.phase === 'finished') {
       await gameStateCache.setInactiveGameState(roomId, updatedState)
@@ -244,24 +244,36 @@ export class GameService {
   /**
    * Worker support methods
    */
-  async processPlaceArmies(gameId: string, data: { territoryId: string; armies: number; playerId: string }): Promise<number> {
+  async processPlaceArmies(
+    gameId: string,
+    data: { territoryId: string; armies: number; playerId: string },
+  ): Promise<number> {
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
-    
-    const territory = gameState.board.find(t => t.id === data.territoryId)
+
+    const territory = gameState.board.find((t) => t.id === data.territoryId)
     if (!territory) throw new Error('Territory not found')
-    
+
     territory.armies += data.armies
     await gameStateCache.setGameState(gameId, gameState)
-    
+
     return territory.armies
   }
 
-  async processFortify(gameId: string, data: { fromTerritoryId: string; toTerritoryId: string; armies: number; playerId: string }): Promise<{ fromArmies: number; toArmies: number }> {
-    const result = await this.fortify(gameId, data.playerId, data.fromTerritoryId, data.toTerritoryId, data.armies)
+  async processFortify(
+    gameId: string,
+    data: { fromTerritoryId: string; toTerritoryId: string; armies: number; playerId: string },
+  ): Promise<{ fromArmies: number; toArmies: number }> {
+    const result = await this.fortify(
+      gameId,
+      data.playerId,
+      data.fromTerritoryId,
+      data.toTerritoryId,
+      data.armies,
+    )
     return {
       fromArmies: result.fromArmies,
-      toArmies: result.toArmies
+      toArmies: result.toArmies,
     }
   }
 
@@ -273,26 +285,31 @@ export class GameService {
   async processPhaseChange(gameId: string, playerId: string, phase: string): Promise<void> {
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
-    
+
     gameState.phase = phase as any
     await gameStateCache.setGameState(gameId, gameState)
   }
 
-  async applyBattleResult(gameId: string, battleResult: any, attackingTerritory: string, defendingTerritory: string): Promise<void> {
+  async applyBattleResult(
+    gameId: string,
+    battleResult: any,
+    attackingTerritory: string,
+    defendingTerritory: string,
+  ): Promise<void> {
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
-    
-    const attacker = gameState.board.find(t => t.id === attackingTerritory)
-    const defender = gameState.board.find(t => t.id === defendingTerritory)
-    
+
+    const attacker = gameState.board.find((t) => t.id === attackingTerritory)
+    const defender = gameState.board.find((t) => t.id === defendingTerritory)
+
     if (attacker && defender) {
       attacker.armies -= battleResult.attackerLosses
       defender.armies -= battleResult.defenderLosses
-      
+
       if (battleResult.territoryConquered) {
         defender.ownerId = attacker.ownerId
       }
-      
+
       await gameStateCache.setGameState(gameId, gameState)
     }
   }

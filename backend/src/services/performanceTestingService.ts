@@ -1,9 +1,9 @@
+import axios from 'axios'
 import { logger } from '../utils/logger'
+import { databaseClusterService } from './databaseClusterService'
 import { performanceMonitorService } from './performanceMonitorService'
 import { redisClusterService } from './redisClusterService'
-import { databaseClusterService } from './databaseClusterService'
 import { scalingService } from './scalingService'
-import axios from 'axios'
 
 interface LoadTestConfig {
   duration: number // seconds
@@ -85,9 +85,7 @@ export class PerformanceTestingService {
       duration: 60,
       concurrency: 50,
       rampUp: 10,
-      endpoints: [
-        { path: '/health', method: 'GET', weight: 1 }
-      ]
+      endpoints: [{ path: '/health', method: 'GET', weight: 1 }],
     })
 
     this.testScenarios.set('api_standard_load', {
@@ -99,7 +97,7 @@ export class PerformanceTestingService {
         { path: '/api/games/:id', method: 'GET', weight: 2 },
         { path: '/api/users/me', method: 'GET', weight: 2 },
         { path: '/api/leaderboard', method: 'GET', weight: 1 },
-      ]
+      ],
     })
 
     this.testScenarios.set('api_peak_load', {
@@ -108,12 +106,22 @@ export class PerformanceTestingService {
       rampUp: 60,
       endpoints: [
         { path: '/api/games', method: 'GET', weight: 5 },
-        { path: '/api/games', method: 'POST', weight: 1, payload: { name: 'Test Game', players: 4 } },
+        {
+          path: '/api/games',
+          method: 'POST',
+          weight: 1,
+          payload: { name: 'Test Game', players: 4 },
+        },
         { path: '/api/games/:id/join', method: 'POST', weight: 2 },
-        { path: '/api/games/:id/move', method: 'POST', weight: 10, payload: { action: 'attack', from: 1, to: 2 } },
+        {
+          path: '/api/games/:id/move',
+          method: 'POST',
+          weight: 10,
+          payload: { action: 'attack', from: 1, to: 2 },
+        },
         { path: '/api/users/me', method: 'GET', weight: 3 },
         { path: '/api/leaderboard', method: 'GET', weight: 2 },
-      ]
+      ],
     })
 
     this.testScenarios.set('database_stress', {
@@ -125,7 +133,7 @@ export class PerformanceTestingService {
         { path: '/api/users/:id/stats', method: 'GET', weight: 5 },
         { path: '/api/games/:id/history', method: 'GET', weight: 3 },
         { path: '/api/leaderboard', method: 'GET', weight: 2 },
-      ]
+      ],
     })
 
     this.testScenarios.set('cache_performance', {
@@ -137,11 +145,11 @@ export class PerformanceTestingService {
         { path: '/api/leaderboard', method: 'GET', weight: 5 },
         { path: '/api/maps', method: 'GET', weight: 3 },
         { path: '/api/users/search?q=test', method: 'GET', weight: 2 },
-      ]
+      ],
     })
 
     logger.info('✅ Performance test scenarios initialized', {
-      scenarios: this.testScenarios.size
+      scenarios: this.testScenarios.size,
     })
   }
 
@@ -152,34 +160,34 @@ export class PerformanceTestingService {
     }
 
     const testId = `load-test-${scenarioName}-${Date.now()}`
-    
+
     logger.info('🚀 Starting load test', {
       testId,
       scenario: scenarioName,
       duration: config.duration,
-      concurrency: config.concurrency
+      concurrency: config.concurrency,
     })
 
     // Track system metrics during test
     const metricsCollector = this.startMetricsCollection(testId)
-    
+
     try {
       // Execute the load test
       const testResults = await this.executeLoadTest(testId, config)
-      
+
       // Stop metrics collection
       const systemMetrics = await this.stopMetricsCollection(metricsCollector)
-      
+
       // Analyze results and identify bottlenecks
       const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
-      
+
       const benchmarkResult: BenchmarkResult = {
         testId,
         timestamp: Date.now(),
         config,
         results: testResults,
         systemMetrics,
-        bottlenecks
+        bottlenecks,
       }
 
       this.benchmarkHistory.push(benchmarkResult)
@@ -189,11 +197,10 @@ export class PerformanceTestingService {
         testId,
         successRate: (testResults.successfulRequests / testResults.totalRequests) * 100,
         avgResponseTime: testResults.avgResponseTime,
-        rps: testResults.requestsPerSecond
+        rps: testResults.requestsPerSecond,
       })
 
       return benchmarkResult
-
     } catch (error) {
       this.activeTests.delete(testId)
       await this.stopMetricsCollection(metricsCollector)
@@ -203,17 +210,17 @@ export class PerformanceTestingService {
 
   async runGameScenarioTest(config: GameScenarioConfig): Promise<BenchmarkResult> {
     const testId = `game-scenario-${config.scenario}-${Date.now()}`
-    
+
     logger.info('🎮 Starting game scenario test', {
       testId,
       scenario: config.scenario,
       players: config.players,
       games: config.gameCount,
-      duration: config.duration
+      duration: config.duration,
     })
 
     const metricsCollector = this.startMetricsCollection(testId)
-    
+
     try {
       const testResults = await this.executeGameScenario(testId, config)
       const systemMetrics = await this.stopMetricsCollection(metricsCollector)
@@ -225,7 +232,7 @@ export class PerformanceTestingService {
         config,
         results: testResults,
         systemMetrics,
-        bottlenecks
+        bottlenecks,
       }
 
       this.benchmarkHistory.push(benchmarkResult)
@@ -234,11 +241,10 @@ export class PerformanceTestingService {
       logger.info('✅ Game scenario test completed', {
         testId,
         totalGames: config.gameCount,
-        avgResponseTime: testResults.avgResponseTime
+        avgResponseTime: testResults.avgResponseTime,
       })
 
       return benchmarkResult
-
     } catch (error) {
       this.activeTests.delete(testId)
       await this.stopMetricsCollection(metricsCollector)
@@ -248,16 +254,16 @@ export class PerformanceTestingService {
 
   async runStressTest(maxConcurrency: number = 1000): Promise<StressTestResult> {
     const testId = `stress-test-${Date.now()}`
-    
+
     logger.info('💥 Starting stress test', {
       testId,
       maxConcurrency,
-      strategy: 'gradual increase until failure'
+      strategy: 'gradual increase until failure',
     })
 
     const metricsCollector = this.startMetricsCollection(testId)
     const degradationPoints: StressTestResult['degradationPoints'] = []
-    
+
     let currentConcurrency = 10
     let breakingPoint: StressTestResult['breakingPoint'] | null = null
     let testResults: any = null
@@ -265,7 +271,7 @@ export class PerformanceTestingService {
     try {
       while (currentConcurrency <= maxConcurrency && !breakingPoint) {
         logger.info(`📈 Testing concurrency level: ${currentConcurrency}`)
-        
+
         const stepConfig: LoadTestConfig = {
           duration: 60, // 1 minute per step
           concurrency: currentConcurrency,
@@ -273,19 +279,27 @@ export class PerformanceTestingService {
           endpoints: [
             { path: '/api/games', method: 'GET', weight: 5 },
             { path: '/api/games/:id', method: 'GET', weight: 3 },
-            { path: '/api/games/:id/move', method: 'POST', weight: 2, payload: { action: 'move', from: 1, to: 2 } },
-          ]
+            {
+              path: '/api/games/:id/move',
+              method: 'POST',
+              weight: 2,
+              payload: { action: 'move', from: 1, to: 2 },
+            },
+          ],
         }
 
-        const stepResults = await this.executeLoadTest(`${testId}-${currentConcurrency}`, stepConfig)
+        const stepResults = await this.executeLoadTest(
+          `${testId}-${currentConcurrency}`,
+          stepConfig,
+        )
         testResults = stepResults // Keep latest results for final report
 
         const errorRate = (stepResults.failedRequests / stepResults.totalRequests) * 100
-        
+
         degradationPoints.push({
           concurrency: currentConcurrency,
           responseTimeMs: stepResults.avgResponseTime,
-          errorRate
+          errorRate,
         })
 
         // Check for breaking point (>5% error rate or >5s response time)
@@ -294,13 +308,13 @@ export class PerformanceTestingService {
             maxConcurrentUsers: currentConcurrency,
             maxRequestsPerSecond: stepResults.requestsPerSecond,
             firstFailureAt: Date.now(),
-            recoveryTime: 0 // Will be measured below
+            recoveryTime: 0, // Will be measured below
           }
-          
+
           logger.warn('💥 Breaking point detected!', {
             concurrency: currentConcurrency,
             errorRate: errorRate.toFixed(2),
-            avgResponseTime: stepResults.avgResponseTime
+            avgResponseTime: stepResults.avgResponseTime,
           })
         }
 
@@ -311,21 +325,23 @@ export class PerformanceTestingService {
       if (breakingPoint) {
         logger.info('🔄 Testing system recovery...')
         const recoveryStart = Date.now()
-        
+
         // Wait for system to recover, then test with lower load
-        await new Promise(resolve => setTimeout(resolve, 30000)) // Wait 30s
-        
+        await new Promise((resolve) => setTimeout(resolve, 30000)) // Wait 30s
+
         const recoveryConfig: LoadTestConfig = {
           duration: 30,
           concurrency: Math.floor(breakingPoint.maxConcurrentUsers * 0.5),
           rampUp: 5,
-          endpoints: [{ path: '/health', method: 'GET', weight: 1 }]
+          endpoints: [{ path: '/health', method: 'GET', weight: 1 }],
         }
 
         const recoveryResults = await this.executeLoadTest(`${testId}-recovery`, recoveryConfig)
-        const recoveryErrorRate = (recoveryResults.failedRequests / recoveryResults.totalRequests) * 100
-        
-        if (recoveryErrorRate < 1) { // Less than 1% error rate = recovered
+        const recoveryErrorRate =
+          (recoveryResults.failedRequests / recoveryResults.totalRequests) * 100
+
+        if (recoveryErrorRate < 1) {
+          // Less than 1% error rate = recovered
           breakingPoint.recoveryTime = Date.now() - recoveryStart
           logger.info('✅ System recovered', { recoveryTimeMs: breakingPoint.recoveryTime })
         }
@@ -354,7 +370,7 @@ export class PerformanceTestingService {
           p99ResponseTime: 0,
           requestsPerSecond: 0,
           errorsPerSecond: 0,
-          throughputMBps: 0
+          throughputMBps: 0,
         },
         systemMetrics,
         bottlenecks,
@@ -362,9 +378,9 @@ export class PerformanceTestingService {
           maxConcurrentUsers: maxConcurrency,
           maxRequestsPerSecond: 0,
           firstFailureAt: 0,
-          recoveryTime: 0
+          recoveryTime: 0,
         },
-        degradationPoints
+        degradationPoints,
       }
 
       this.benchmarkHistory.push(stressTestResult)
@@ -373,11 +389,10 @@ export class PerformanceTestingService {
       logger.info('✅ Stress test completed', {
         testId,
         maxStableConcurrency: breakingPoint?.maxConcurrentUsers || maxConcurrency,
-        totalSteps: degradationPoints.length
+        totalSteps: degradationPoints.length,
       })
 
       return stressTestResult
-
     } catch (error) {
       this.activeTests.delete(testId)
       await this.stopMetricsCollection(metricsCollector)
@@ -385,32 +400,35 @@ export class PerformanceTestingService {
     }
   }
 
-  private async executeLoadTest(testId: string, config: LoadTestConfig): Promise<BenchmarkResult['results']> {
+  private async executeLoadTest(
+    testId: string,
+    config: LoadTestConfig,
+  ): Promise<BenchmarkResult['results']> {
     const startTime = Date.now()
     const results = {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
       responseTimes: [] as number[],
-      throughputBytes: 0
+      throughputBytes: 0,
     }
 
     const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5001'
-    
+
     // Create request workers
     const workers = []
     const requestsPerWorker = Math.ceil(config.concurrency / 10) // Max 10 workers
     const actualWorkers = Math.min(10, config.concurrency)
-    
+
     for (let w = 0; w < actualWorkers; w++) {
       workers.push(this.createLoadTestWorker(testId, config, baseUrl, requestsPerWorker))
     }
 
     // Run workers and collect results
     const workerResults = await Promise.allSettled(workers)
-    
+
     // Aggregate results
-    workerResults.forEach(result => {
+    workerResults.forEach((result) => {
       if (result.status === 'fulfilled') {
         results.totalRequests += result.value.totalRequests
         results.successfulRequests += result.value.successfulRequests
@@ -422,44 +440,45 @@ export class PerformanceTestingService {
 
     const duration = (Date.now() - startTime) / 1000
     const sortedResponseTimes = results.responseTimes.sort((a, b) => a - b)
-    
+
     return {
       totalRequests: results.totalRequests,
       successfulRequests: results.successfulRequests,
       failedRequests: results.failedRequests,
-      avgResponseTime: results.responseTimes.reduce((sum, rt) => sum + rt, 0) / results.responseTimes.length || 0,
+      avgResponseTime:
+        results.responseTimes.reduce((sum, rt) => sum + rt, 0) / results.responseTimes.length || 0,
       p95ResponseTime: sortedResponseTimes[Math.floor(sortedResponseTimes.length * 0.95)] || 0,
       p99ResponseTime: sortedResponseTimes[Math.floor(sortedResponseTimes.length * 0.99)] || 0,
       requestsPerSecond: results.totalRequests / duration,
       errorsPerSecond: results.failedRequests / duration,
-      throughputMBps: (results.throughputBytes / (1024 * 1024)) / duration
+      throughputMBps: results.throughputBytes / (1024 * 1024) / duration,
     }
   }
 
   private async createLoadTestWorker(
-    testId: string, 
-    config: LoadTestConfig, 
-    baseUrl: string, 
-    requestCount: number
+    testId: string,
+    config: LoadTestConfig,
+    baseUrl: string,
+    requestCount: number,
   ): Promise<any> {
     const results = {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
       responseTimes: [] as number[],
-      throughputBytes: 0
+      throughputBytes: 0,
     }
 
-    const endTime = Date.now() + (config.duration * 1000)
-    const rampUpEnd = Date.now() + (config.rampUp * 1000)
-    
+    const endTime = Date.now() + config.duration * 1000
+    const rampUpEnd = Date.now() + config.rampUp * 1000
+
     while (Date.now() < endTime && this.activeTests.has(testId)) {
       // Implement ramp-up
       const now = Date.now()
       if (now < rampUpEnd) {
         const rampUpProgress = (now - (endTime - config.duration * 1000)) / (config.rampUp * 1000)
         const delay = Math.max(0, (1000 / requestCount) * (1 - rampUpProgress))
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay))
       }
 
       // Select endpoint based on weight
@@ -474,16 +493,16 @@ export class PerformanceTestingService {
           data: endpoint.payload,
           headers: {
             'Content-Type': 'application/json',
-            ...endpoint.headers
+            ...endpoint.headers,
           },
           timeout: 10000,
-          validateStatus: () => true // Don't throw on HTTP errors
+          validateStatus: () => true, // Don't throw on HTTP errors
         })
 
         const responseTime = Date.now() - startTime
         results.totalRequests++
         results.responseTimes.push(responseTime)
-        
+
         if (response.status >= 200 && response.status < 400) {
           results.successfulRequests++
         } else {
@@ -493,7 +512,6 @@ export class PerformanceTestingService {
         // Estimate response size
         const responseSize = JSON.stringify(response.data || '').length
         results.throughputBytes += responseSize
-
       } catch (error) {
         results.totalRequests++
         results.failedRequests++
@@ -507,18 +525,21 @@ export class PerformanceTestingService {
   private selectWeightedEndpoint(endpoints: LoadTestConfig['endpoints']) {
     const totalWeight = endpoints.reduce((sum, ep) => sum + ep.weight, 0)
     let random = Math.random() * totalWeight
-    
+
     for (const endpoint of endpoints) {
       random -= endpoint.weight
       if (random <= 0) {
         return endpoint
       }
     }
-    
+
     return endpoints[0] // Fallback
   }
 
-  private async executeGameScenario(testId: string, config: GameScenarioConfig): Promise<BenchmarkResult['results']> {
+  private async executeGameScenario(
+    testId: string,
+    config: GameScenarioConfig,
+  ): Promise<BenchmarkResult['results']> {
     // Simplified game scenario simulation
     const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5001'
     const results = {
@@ -526,7 +547,7 @@ export class PerformanceTestingService {
       successfulRequests: 0,
       failedRequests: 0,
       responseTimes: [] as number[],
-      throughputBytes: 0
+      throughputBytes: 0,
     }
 
     // Simulate game actions based on scenario
@@ -534,7 +555,7 @@ export class PerformanceTestingService {
       { path: '/api/games', method: 'POST' as const, weight: 1 },
       { path: '/api/games/:id/join', method: 'POST' as const, weight: 2 },
       { path: '/api/games/:id/move', method: 'POST' as const, weight: 10 },
-      { path: '/api/games/:id', method: 'GET' as const, weight: 5 }
+      { path: '/api/games/:id', method: 'GET' as const, weight: 5 },
     ]
 
     // Convert to standard load test format
@@ -542,7 +563,7 @@ export class PerformanceTestingService {
       duration: config.duration,
       concurrency: config.players,
       rampUp: Math.min(30, config.duration / 4),
-      endpoints: gameActions
+      endpoints: gameActions,
     }
 
     return this.executeLoadTest(testId, loadTestConfig)
@@ -554,7 +575,7 @@ export class PerformanceTestingService {
       memoryUsage: [] as number[],
       dbConnections: [] as number[],
       cacheHitRate: [] as number[],
-      activeWorkers: [] as number[]
+      activeWorkers: [] as number[],
     }
 
     this.activeTests.set(testId, { metrics, startTime: Date.now() })
@@ -579,23 +600,27 @@ export class PerformanceTestingService {
     }, 5000) // Every 5 seconds
   }
 
-  private async stopMetricsCollection(collector: NodeJS.Timeout): Promise<BenchmarkResult['systemMetrics']> {
+  private async stopMetricsCollection(
+    collector: NodeJS.Timeout,
+  ): Promise<BenchmarkResult['systemMetrics']> {
     clearInterval(collector)
-    
+
     // Return the last collected metrics
     const testData = Array.from(this.activeTests.values())[0]
-    return testData?.metrics || {
-      cpuUsage: [],
-      memoryUsage: [],
-      dbConnections: [],
-      cacheHitRate: [],
-      activeWorkers: []
-    }
+    return (
+      testData?.metrics || {
+        cpuUsage: [],
+        memoryUsage: [],
+        dbConnections: [],
+        cacheHitRate: [],
+        activeWorkers: [],
+      }
+    )
   }
 
   private analyzeBottlenecks(
-    results: BenchmarkResult['results'], 
-    systemMetrics: BenchmarkResult['systemMetrics']
+    results: BenchmarkResult['results'],
+    systemMetrics: BenchmarkResult['systemMetrics'],
   ): BenchmarkResult['bottlenecks'] {
     const bottlenecks: BenchmarkResult['bottlenecks'] = []
 
@@ -605,7 +630,7 @@ export class PerformanceTestingService {
         component: 'response_time',
         issue: `High average response time: ${results.avgResponseTime}ms`,
         severity: results.avgResponseTime > 3000 ? 'critical' : 'high',
-        recommendation: 'Consider caching, database optimization, or scaling up'
+        recommendation: 'Consider caching, database optimization, or scaling up',
       })
     }
 
@@ -616,18 +641,20 @@ export class PerformanceTestingService {
         component: 'error_rate',
         issue: `High error rate: ${errorRate.toFixed(2)}%`,
         severity: errorRate > 5 ? 'critical' : errorRate > 2 ? 'high' : 'medium',
-        recommendation: 'Investigate error logs and increase system capacity'
+        recommendation: 'Investigate error logs and increase system capacity',
       })
     }
 
     // Analyze cache performance
-    const avgCacheHitRate = systemMetrics.cacheHitRate.reduce((sum, rate) => sum + rate, 0) / systemMetrics.cacheHitRate.length
+    const avgCacheHitRate =
+      systemMetrics.cacheHitRate.reduce((sum, rate) => sum + rate, 0) /
+      systemMetrics.cacheHitRate.length
     if (avgCacheHitRate < 85) {
       bottlenecks.push({
         component: 'cache',
         issue: `Low cache hit rate: ${avgCacheHitRate.toFixed(1)}%`,
         severity: avgCacheHitRate < 70 ? 'high' : 'medium',
-        recommendation: 'Review cache TTL settings and implement cache warming'
+        recommendation: 'Review cache TTL settings and implement cache warming',
       })
     }
 
@@ -638,7 +665,7 @@ export class PerformanceTestingService {
         component: 'memory',
         issue: `High memory usage: ${maxMemory.toFixed(0)}MB`,
         severity: maxMemory > 1200 ? 'critical' : 'medium',
-        recommendation: 'Implement memory optimization or scale up instances'
+        recommendation: 'Implement memory optimization or scale up instances',
       })
     }
 
@@ -682,46 +709,59 @@ export class PerformanceTestingService {
     recommendations: string[]
   } {
     const recentTests = this.benchmarkHistory.slice(-10)
-    
+
     if (recentTests.length === 0) {
       return {
         summary: { totalTests: 0, avgResponseTime: 0, avgThroughput: 0, commonBottlenecks: [] },
         trends: { responseTimeImprovement: 0, throughputImprovement: 0, stabilityImprovement: 0 },
-        recommendations: ['Run performance tests to gather benchmark data']
+        recommendations: ['Run performance tests to gather benchmark data'],
       }
     }
 
-    const avgResponseTime = recentTests.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / recentTests.length
-    const avgThroughput = recentTests.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) / recentTests.length
-    
-    const allBottlenecks = recentTests.flatMap(test => test.bottlenecks.map(b => b.component))
-    const bottleneckCounts = allBottlenecks.reduce((acc, component) => {
-      acc[component] = (acc[component] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    
+    const avgResponseTime =
+      recentTests.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / recentTests.length
+    const avgThroughput =
+      recentTests.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) /
+      recentTests.length
+
+    const allBottlenecks = recentTests.flatMap((test) => test.bottlenecks.map((b) => b.component))
+    const bottleneckCounts = allBottlenecks.reduce(
+      (acc, component) => {
+        acc[component] = (acc[component] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
     const commonBottlenecks = Object.entries(bottleneckCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
       .map(([component]) => component)
 
     // Calculate trends (compare first half vs second half of recent tests)
     const firstHalf = recentTests.slice(0, Math.floor(recentTests.length / 2))
     const secondHalf = recentTests.slice(Math.floor(recentTests.length / 2))
-    
-    const firstHalfAvgRT = firstHalf.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / firstHalf.length
-    const secondHalfAvgRT = secondHalf.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / secondHalf.length
-    
-    const firstHalfThroughput = firstHalf.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) / firstHalf.length
-    const secondHalfThroughput = secondHalf.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) / secondHalf.length
+
+    const firstHalfAvgRT =
+      firstHalf.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / firstHalf.length
+    const secondHalfAvgRT =
+      secondHalf.reduce((sum, test) => sum + test.results.avgResponseTime, 0) / secondHalf.length
+
+    const firstHalfThroughput =
+      firstHalf.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) / firstHalf.length
+    const secondHalfThroughput =
+      secondHalf.reduce((sum, test) => sum + test.results.requestsPerSecond, 0) / secondHalf.length
 
     const responseTimeImprovement = ((firstHalfAvgRT - secondHalfAvgRT) / firstHalfAvgRT) * 100
-    const throughputImprovement = ((secondHalfThroughput - firstHalfThroughput) / firstHalfThroughput) * 100
+    const throughputImprovement =
+      ((secondHalfThroughput - firstHalfThroughput) / firstHalfThroughput) * 100
 
     const recommendations = []
     if (avgResponseTime > 500) recommendations.push('Implement caching and database optimization')
-    if (commonBottlenecks.includes('memory')) recommendations.push('Scale up server instances or optimize memory usage')
-    if (commonBottlenecks.includes('cache')) recommendations.push('Improve cache hit rates and TTL configuration')
+    if (commonBottlenecks.includes('memory'))
+      recommendations.push('Scale up server instances or optimize memory usage')
+    if (commonBottlenecks.includes('cache'))
+      recommendations.push('Improve cache hit rates and TTL configuration')
     if (avgThroughput < 100) recommendations.push('Consider horizontal scaling and load balancing')
 
     return {
@@ -729,14 +769,15 @@ export class PerformanceTestingService {
         totalTests: this.benchmarkHistory.length,
         avgResponseTime: Math.round(avgResponseTime),
         avgThroughput: Math.round(avgThroughput),
-        commonBottlenecks
+        commonBottlenecks,
       },
       trends: {
         responseTimeImprovement: Math.round(responseTimeImprovement),
         throughputImprovement: Math.round(throughputImprovement),
-        stabilityImprovement: 0 // Would calculate based on error rates
+        stabilityImprovement: 0, // Would calculate based on error rates
       },
-      recommendations: recommendations.length > 0 ? recommendations : ['System performance is optimal']
+      recommendations:
+        recommendations.length > 0 ? recommendations : ['System performance is optimal'],
     }
   }
 }

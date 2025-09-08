@@ -1,4 +1,4 @@
-import { Pool, PoolClient, PoolConfig } from 'pg'
+import { Pool, type PoolClient, type PoolConfig } from 'pg'
 import { logger } from '../utils/logger'
 
 interface DatabaseNode {
@@ -43,7 +43,7 @@ export class DatabaseClusterService {
     slowQueries: 0,
     connectionErrors: 0,
   }
-  
+
   private config: LoadBalancerConfig = {
     strategy: 'health_weighted',
     healthCheckInterval: 30000, // 30 seconds
@@ -94,7 +94,6 @@ export class DatabaseClusterService {
         primary: 1,
         replicas: this.nodes.size - 1,
       })
-
     } catch (error) {
       logger.error('❌ Failed to initialize Database Cluster Service:', error)
       throw error
@@ -105,7 +104,17 @@ export class DatabaseClusterService {
     return process.env[key] || defaultValue
   }
 
-  private async addDatabaseNode(nodeConfig: Omit<DatabaseNode, 'pool' | 'isHealthy' | 'lastHealthCheck' | 'connectionCount' | 'queryCount' | 'avgResponseTime'>): Promise<void> {
+  private async addDatabaseNode(
+    nodeConfig: Omit<
+      DatabaseNode,
+      | 'pool'
+      | 'isHealthy'
+      | 'lastHealthCheck'
+      | 'connectionCount'
+      | 'queryCount'
+      | 'avgResponseTime'
+    >,
+  ): Promise<void> {
     const poolConfig: PoolConfig = {
       host: nodeConfig.host,
       port: nodeConfig.port,
@@ -159,8 +168,8 @@ export class DatabaseClusterService {
 
   // Load balancing strategies
   private selectNodeForRead(): DatabaseNode | null {
-    const healthyNodes = Array.from(this.nodes.values()).filter(node => node.isHealthy)
-    
+    const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
+
     if (healthyNodes.length === 0) {
       logger.error('❌ No healthy database nodes available')
       return null
@@ -169,13 +178,13 @@ export class DatabaseClusterService {
     switch (this.config.strategy) {
       case 'round_robin':
         return this.selectRoundRobin(healthyNodes)
-      
+
       case 'least_connections':
         return this.selectLeastConnections(healthyNodes)
-      
+
       case 'weighted_round_robin':
         return this.selectWeightedRoundRobin(healthyNodes)
-      
+
       case 'health_weighted':
       default:
         return this.selectHealthWeighted(healthyNodes)
@@ -184,7 +193,7 @@ export class DatabaseClusterService {
 
   private selectNodeForWrite(): DatabaseNode | null {
     const primaryNode = Array.from(this.nodes.values()).find(
-      node => node.role === 'primary' && node.isHealthy
+      (node) => node.role === 'primary' && node.isHealthy,
     )
 
     if (!primaryNode) {
@@ -201,32 +210,32 @@ export class DatabaseClusterService {
   }
 
   private selectLeastConnections(nodes: DatabaseNode[]): DatabaseNode {
-    return nodes.reduce((prev, current) => 
-      current.connectionCount < prev.connectionCount ? current : prev
+    return nodes.reduce((prev, current) =>
+      current.connectionCount < prev.connectionCount ? current : prev,
     )
   }
 
   private selectWeightedRoundRobin(nodes: DatabaseNode[]): DatabaseNode {
     const totalWeight = nodes.reduce((sum, node) => sum + node.weight, 0)
     let random = Math.random() * totalWeight
-    
+
     for (const node of nodes) {
       random -= node.weight
       if (random <= 0) {
         return node
       }
     }
-    
+
     return nodes[0] // Fallback
   }
 
   private selectHealthWeighted(nodes: DatabaseNode[]): DatabaseNode {
     // Combine connection count, response time, and base weight
-    const scoredNodes = nodes.map(node => {
+    const scoredNodes = nodes.map((node) => {
       const connectionScore = Math.max(1, 100 - node.connectionCount)
-      const responseScore = Math.max(1, 100 - (node.avgResponseTime / 10))
-      const score = (node.weight * 0.4) + (connectionScore * 0.3) + (responseScore * 0.3)
-      
+      const responseScore = Math.max(1, 100 - node.avgResponseTime / 10)
+      const score = node.weight * 0.4 + connectionScore * 0.3 + responseScore * 0.3
+
       return { node, score }
     })
 
@@ -235,7 +244,11 @@ export class DatabaseClusterService {
   }
 
   // Query execution with automatic retry and failover
-  async query(text: string, params?: any[], options: { writeQuery?: boolean; retries?: number } = {}): Promise<any> {
+  async query(
+    text: string,
+    params?: any[],
+    options: { writeQuery?: boolean; retries?: number } = {},
+  ): Promise<any> {
     const { writeQuery = false, retries = this.config.maxRetries } = options
     const startTime = Date.now()
 
@@ -243,13 +256,13 @@ export class DatabaseClusterService {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       const node = writeQuery ? this.selectNodeForWrite() : this.selectNodeForRead()
-      
+
       if (!node) {
         throw new Error(`No ${writeQuery ? 'primary' : 'available'} database node found`)
       }
 
       let client: PoolClient | null = null
-      
+
       try {
         // Get connection from pool
         client = await node.pool.connect()
@@ -262,25 +275,24 @@ export class DatabaseClusterService {
         })
 
         const result = await Promise.race([queryPromise, timeoutPromise])
-        
+
         // Update metrics
         const responseTime = Date.now() - startTime
         this.updateNodeMetrics(node, responseTime, true)
         this.metrics.successfulQueries++
-        
+
         if (responseTime > this.config.slowQueryThreshold) {
           this.metrics.slowQueries++
           logger.warn(`🐌 Slow query detected (${responseTime}ms): ${text.substring(0, 100)}`)
         }
 
         return result
-
       } catch (error) {
         const responseTime = Date.now() - startTime
         this.updateNodeMetrics(node, responseTime, false)
-        
+
         logger.error(`❌ Query failed on node ${node.id} (attempt ${attempt + 1}):`, error)
-        
+
         if (this.isConnectionError(error as Error)) {
           this.markNodeUnhealthy(node.id)
           this.metrics.connectionErrors++
@@ -293,8 +305,7 @@ export class DatabaseClusterService {
         }
 
         // Wait before retry
-        await this.sleep(100 * Math.pow(2, attempt))
-        
+        await this.sleep(100 * 2 ** attempt)
       } finally {
         if (client) {
           client.release()
@@ -306,19 +317,20 @@ export class DatabaseClusterService {
 
   private updateNodeMetrics(node: DatabaseNode, responseTime: number, success: boolean): void {
     node.queryCount++
-    
+
     // Update average response time using exponential moving average
     const alpha = 0.1
     node.avgResponseTime = node.avgResponseTime * (1 - alpha) + responseTime * alpha
-    
+
     // Update overall metrics
-    const totalResponseTime = this.metrics.avgResponseTime * (this.metrics.totalQueries - 1) + responseTime
+    const totalResponseTime =
+      this.metrics.avgResponseTime * (this.metrics.totalQueries - 1) + responseTime
     this.metrics.avgResponseTime = totalResponseTime / this.metrics.totalQueries
   }
 
   private isConnectionError(error: Error): boolean {
     const connectionErrorCodes = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET']
-    return connectionErrorCodes.some(code => error.message.includes(code))
+    return connectionErrorCodes.some((code) => error.message.includes(code))
   }
 
   private markNodeUnhealthy(nodeId: string): void {
@@ -330,52 +342,57 @@ export class DatabaseClusterService {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   // Health monitoring
   private startHealthMonitoring(): void {
     this.healthCheckInterval = setInterval(
       () => this.performHealthChecks(),
-      this.config.healthCheckInterval
+      this.config.healthCheckInterval,
     )
-    
+
     logger.info('🔍 Started database health monitoring')
   }
 
   private async performHealthChecks(): Promise<void> {
-    const healthCheckPromises = Array.from(this.nodes.entries()).map(
-      async ([nodeId, node]) => {
-        try {
-          const startTime = Date.now()
-          const client = await node.pool.connect()
-          await client.query('SELECT 1')
-          client.release()
-          
-          const responseTime = Date.now() - startTime
-          node.lastHealthCheck = Date.now()
-          
-          if (!node.isHealthy) {
-            node.isHealthy = true
-            logger.info(`✅ Node ${nodeId} is healthy again`)
-          }
-          
-          // Update response time
-          node.avgResponseTime = node.avgResponseTime * 0.9 + responseTime * 0.1
-          
-        } catch (error) {
-          logger.warn(`⚠️ Health check failed for node ${nodeId}:`, error)
-          this.markNodeUnhealthy(nodeId)
+    const healthCheckPromises = Array.from(this.nodes.entries()).map(async ([nodeId, node]) => {
+      try {
+        const startTime = Date.now()
+        const client = await node.pool.connect()
+        await client.query('SELECT 1')
+        client.release()
+
+        const responseTime = Date.now() - startTime
+        node.lastHealthCheck = Date.now()
+
+        if (!node.isHealthy) {
+          node.isHealthy = true
+          logger.info(`✅ Node ${nodeId} is healthy again`)
         }
+
+        // Update response time
+        node.avgResponseTime = node.avgResponseTime * 0.9 + responseTime * 0.1
+      } catch (error) {
+        logger.warn(`⚠️ Health check failed for node ${nodeId}:`, error)
+        this.markNodeUnhealthy(nodeId)
       }
-    )
+    })
 
     await Promise.allSettled(healthCheckPromises)
   }
 
   // Monitoring and metrics
-  getMetrics(): QueryMetrics & { nodes: Array<{ id: string; role: string; isHealthy: boolean; connectionCount: number; avgResponseTime: number }> } {
-    const nodeMetrics = Array.from(this.nodes.values()).map(node => ({
+  getMetrics(): QueryMetrics & {
+    nodes: Array<{
+      id: string
+      role: string
+      isHealthy: boolean
+      connectionCount: number
+      avgResponseTime: number
+    }>
+  } {
+    const nodeMetrics = Array.from(this.nodes.values()).map((node) => ({
       id: node.id,
       role: node.role,
       isHealthy: node.isHealthy,
@@ -390,11 +407,11 @@ export class DatabaseClusterService {
   }
 
   async healthCheck(): Promise<{ status: string; details: any }> {
-    const healthyNodes = Array.from(this.nodes.values()).filter(node => node.isHealthy)
-    const hasHealthyPrimary = healthyNodes.some(node => node.role === 'primary')
-    
+    const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
+    const hasHealthyPrimary = healthyNodes.some((node) => node.role === 'primary')
+
     const status = hasHealthyPrimary ? 'healthy' : 'degraded'
-    
+
     return {
       status,
       details: {
@@ -408,17 +425,15 @@ export class DatabaseClusterService {
 
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down Database Cluster Service...')
-    
+
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval)
     }
 
-    const shutdownPromises = Array.from(this.nodes.values()).map(
-      node => node.pool.end()
-    )
-    
+    const shutdownPromises = Array.from(this.nodes.values()).map((node) => node.pool.end())
+
     await Promise.allSettled(shutdownPromises)
-    
+
     logger.info('✅ Database Cluster Service shutdown complete')
   }
 }
