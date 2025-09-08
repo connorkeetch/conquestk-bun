@@ -459,7 +459,7 @@ if (isProductionLike) {
   )
 
   // Explicitly handle asset requests to ensure they don't fall through
-  app.get('/assets/:path*', (_req: Request, res: Response) => {
+  app.get('/assets/*', (_req: Request, res: Response) => {
     // If we reach here, the asset wasn't found
     res.status(404).send('Asset not found')
   })
