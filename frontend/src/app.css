@@ -364,6 +364,219 @@
     @apply text-sm text-muted mt-1;
   }
   
+  /* ===== MODAL/DIALOG COMPONENTS ===== */
+  .modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+  }
+  
+  .modal-backdrop {
+    @apply absolute inset-0 bg-black/50 backdrop-blur-sm;
+  }
+  
+  .modal-content {
+    @apply relative bg-surface-2 rounded-2xl border border-border/50 
+           shadow-2xl max-w-md w-full p-6 z-10;
+  }
+  
+  .modal-header {
+    @apply flex items-center justify-between mb-4;
+  }
+  
+  .modal-title {
+    @apply text-xl font-bold text-white;
+  }
+  
+  .modal-close {
+    @apply p-2 hover:bg-surface-1 rounded-lg transition-colors text-muted hover:text-white;
+  }
+  
+  .modal-body {
+    @apply space-y-4 mb-6;
+  }
+  
+  .modal-footer {
+    @apply flex gap-3 justify-end;
+  }
+  
+  /* ===== TERRITORY STATE CLASSES ===== */
+  .territory-selected {
+    @apply drop-shadow-lg;
+    stroke: var(--color-gold);
+    stroke-width: 4;
+  }
+  
+  .territory-target {
+    @apply drop-shadow-md;
+    stroke: var(--color-crimson);
+    stroke-width: 3;
+  }
+  
+  .territory-valid {
+    @apply drop-shadow-sm;
+    stroke: var(--color-success);
+    stroke-width: 3;
+  }
+  
+  .territory-hover {
+    @apply brightness-110;
+    stroke: var(--color-border);
+    stroke-width: 3;
+  }
+  
+  .territory-neutral {
+    stroke: var(--color-border);
+    stroke-width: 2;
+  }
+  
+  /* ===== GAME-SPECIFIC COMPONENTS ===== */
+  .lobby-card {
+    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 
+           rounded-xl p-4 hover:border-violet/30 transition-all cursor-pointer;
+  }
+  
+  .lobby-card-active {
+    @apply border-violet bg-violet/10;
+  }
+  
+  .lobby-card-header {
+    @apply flex items-center justify-between mb-3;
+  }
+  
+  .lobby-card-title {
+    @apply text-lg font-semibold text-white;
+  }
+  
+  .lobby-card-meta {
+    @apply text-sm text-muted space-x-2;
+  }
+  
+  /* ===== PLAYER COMPONENTS ===== */
+  .player-card {
+    @apply flex items-center gap-3 p-3 bg-surface-2/60 rounded-lg 
+           border border-border/30 hover:border-violet/30 transition-all;
+  }
+  
+  .player-avatar {
+    @apply w-10 h-10 rounded-full flex items-center justify-center 
+           text-sm font-bold text-white border-2 border-gray-400 shadow-sm;
+  }
+  
+  .player-info {
+    @apply flex-1;
+  }
+  
+  .player-name {
+    @apply font-medium text-white;
+  }
+  
+  .player-stats {
+    @apply text-sm text-muted;
+  }
+  
+  /* ===== NOTIFICATION/TOAST COMPONENTS ===== */
+  .toast {
+    @apply px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm;
+  }
+  
+  .toast-success {
+    @apply bg-success/20 border-success/30 text-success;
+  }
+  
+  .toast-error {
+    @apply bg-danger/20 border-danger/30 text-danger;
+  }
+  
+  .toast-warning {
+    @apply bg-warning/20 border-warning/30 text-warning;
+  }
+  
+  .toast-info {
+    @apply bg-info/20 border-info/30 text-info;
+  }
+  
+  /* ===== FORM LAYOUT HELPERS ===== */
+  .form-group {
+    @apply space-y-2;
+  }
+  
+  .form-row {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+  
+  .form-section {
+    @apply space-y-6;
+  }
+  
+  .form-label {
+    @apply block text-white font-medium mb-2;
+  }
+  
+  .form-help {
+    @apply text-sm text-muted mt-1;
+  }
+  
+  /* ===== PROGRESS COMPONENTS ===== */
+  .progress-bar {
+    @apply w-full bg-surface-2 rounded-full h-2 overflow-hidden;
+  }
+  
+  .progress-fill {
+    @apply h-full bg-violet transition-all duration-300;
+  }
+  
+  .progress-fill-success {
+    @apply h-full bg-success transition-all duration-300;
+  }
+  
+  .progress-fill-warning {
+    @apply h-full bg-warning transition-all duration-300;
+  }
+  
+  .progress-fill-danger {
+    @apply h-full bg-danger transition-all duration-300;
+  }
+  
+  /* ===== DROPDOWN COMPONENTS ===== */
+  .dropdown-menu {
+    @apply absolute mt-2 w-48 bg-surface-2 border border-border 
+           rounded-lg shadow-xl z-50 py-2 backdrop-blur-sm;
+  }
+  
+  .dropdown-item {
+    @apply flex items-center gap-2 px-4 py-2 hover:bg-surface-1 
+           transition-colors cursor-pointer text-white;
+  }
+  
+  .dropdown-item:hover {
+    @apply text-violet-soft;
+  }
+  
+  .dropdown-divider {
+    @apply my-1 border-t border-border/50;
+  }
+  
+  /* ===== PHASE INDICATOR COMPONENTS ===== */
+  .phase-indicator {
+    @apply inline-flex items-center px-3 py-1 rounded-full 
+           text-sm font-medium uppercase tracking-wider border;
+  }
+  
+  .phase-attack {
+    @apply bg-danger/20 text-danger border-danger/30;
+  }
+  
+  .phase-fortify {
+    @apply bg-info/20 text-info border-info/30;
+  }
+  
+  .phase-deploy {
+    @apply bg-success/20 text-success border-success/30;
+  }
+  
+  .phase-reinforcement {
+    @apply bg-warning/20 text-warning border-warning/30;
+  }
+  
   .glow-gold {
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
   }

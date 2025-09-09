@@ -1,4 +1,5 @@
 import type React from 'react'
+import { CORE_COLORS } from '../constants/colors'
 
 interface SimpleMapSVGProps {
   territories: { [key: string]: any }
@@ -27,25 +28,27 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
     const baseClasses = 'cursor-pointer transition-all duration-200'
     let extraClasses = ''
     let strokeWidth = '2'
-    let strokeColor = '#333'
+    let strokeColor = CORE_COLORS.border
 
-    // Visual feedback based on territory state
+    // Visual feedback based on territory state using unified system
     if (selectedTerritory === territoryId) {
-      extraClasses += ' drop-shadow-lg'
+      extraClasses += ' territory-selected'
       strokeWidth = '4'
-      strokeColor = '#FFD700' // Gold for selected
+      strokeColor = CORE_COLORS.gold // Gold for selected
     } else if (selectedTargetTerritory === territoryId) {
-      extraClasses += ' drop-shadow-md'
+      extraClasses += ' territory-target'
       strokeWidth = '3'
-      strokeColor = '#FF4444' // Red for selected target
+      strokeColor = CORE_COLORS.crimson // Red for selected target
     } else if (validTargets.includes(territoryId)) {
-      extraClasses += ' drop-shadow-sm'
+      extraClasses += ' territory-valid'
       strokeWidth = '3'
-      strokeColor = '#44FF44' // Green for valid targets
+      strokeColor = CORE_COLORS.success // Green for valid targets
     } else if (hoveredTerritory === territoryId) {
-      extraClasses += ' brightness-110'
+      extraClasses += ' territory-hover'
       strokeWidth = '3'
-      strokeColor = '#666'
+      strokeColor = CORE_COLORS.border
+    } else {
+      extraClasses += ' territory-neutral'
     }
 
     // Action-specific visual feedback
