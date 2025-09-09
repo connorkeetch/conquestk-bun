@@ -1,17 +1,61 @@
-/* Custom theme configuration for Tailwind v4 */
+/* Custom theme configuration for Tailwind v4 - Conquest K Brand System */
 @theme {
-  /* Custom section spacing for consistent layout */
-  --section-spacing: 3rem; /* 48px spacing between major sections */
-  --section-spacing-sm: 2rem; /* 32px for smaller gaps */
-
-  /* Custom colors for the Risk game */
-  --color-brand: oklch(62.3% 0.214 259.815);
-  --color-brand-dark: oklch(45% 0.2 259);
+  /* Core Brand Palette - The conquest identity */
+  --color-ink: #0B0B12;        /* Near-black indigo for deepest backgrounds */
+  --color-imperial: #2E1A47;    /* Royal purple, the essence of conquest */
+  --color-abyss: #000814;       /* True void with a hint of blue */
+  --color-violet: #7C3AED;      /* Primary brand, all main CTAs */
+  --color-violet-soft: #8B5CF6; /* Atmospheric glow and hover states */
+  --color-gold: #FFD700;        /* Reserved for victories and rewards only */
+  --color-crimson: #B22222;     /* Attack states and danger */
+  
+  /* UI Neutrals - The foundation */
+  --color-text: #F9FAFB;        /* Primary text, near white */
+  --color-muted: #94A3B8;       /* Secondary text, subdued */
+  --color-border: #475569;      /* Borders and dividers */
+  --color-surface-1: #0F172A;   /* Card backgrounds */
+  --color-surface-2: #111827;    /* Elevated surfaces */
+  
+  /* Semantic Colors - Clear communication */
+  --color-success: #10B981;     /* Emerald for positive actions */
+  --color-warning: #F59E0B;     /* Amber for caution */
+  --color-danger: #B22222;      /* Same as crimson for consistency */
+  --color-info: #06B6D4;        /* Cyan for informational states */
+  
+  /* Legacy compatibility - Map old vars to new system */
+  --color-brand: var(--color-violet);
+  --color-brand-dark: var(--color-imperial);
+  
+  /* Section spacing - Keep your existing spacing system */
+  --section-spacing: 3rem;
+  --section-spacing-sm: 2rem;
 }
 
-/* Custom utilities */
+/* Root CSS variables for complex values */
+:root {
+  /* The conquest gradient - Our signature background */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    var(--color-ink) 0%,
+    var(--color-imperial) 40%,
+    var(--color-abyss) 100%
+  );
+  
+  /* Atmospheric glow color */
+  --ck-glow: var(--color-violet-soft);
+  
+  /* Surface glass effects */
+  --surface-glass: rgba(15, 23, 42, 0.6);  /* --color-surface-1 with opacity */
+  --surface-glass-light: rgba(17, 24, 39, 0.4); /* --color-surface-2 with opacity */
+}
+
+/* Victory state - The golden moment */
+[data-theme="victory"] {
+  --ck-glow: var(--color-gold);
+}
+
+/* Utilities that use our color system */
 @layer utilities {
-  /* Section spacing utility - use on all major sections */
   .section-spacing {
     padding-top: var(--section-spacing);
     padding-bottom: var(--section-spacing);
@@ -22,19 +66,37 @@
     padding-bottom: var(--section-spacing-sm);
   }
 
+  /* Enhanced glass effects using new color system */
   .glass {
     backdrop-filter: blur(10px);
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
-  /* Force white text in buttons */
-  .btn-white-text,
-  .btn-white-text * {
-    color: white;
+    background-color: var(--surface-glass);
+    border: 1px solid rgba(71, 85, 105, 0.2);
   }
 
   .glass-light {
     backdrop-filter: blur(10px);
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--surface-glass-light);
+  }
+  
+  /* Conquest-specific utilities */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-violet) 0%, var(--color-gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glow-violet {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  }
+  
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  }
+  
+  /* Force white text utility kept for compatibility */
+  .btn-white-text,
+  .btn-white-text * {
+    color: white;
   }
 }

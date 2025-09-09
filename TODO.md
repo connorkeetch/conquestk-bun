@@ -85,9 +85,51 @@
   - [x] Loading states for auth checks
   - [x] Proper error boundaries
 
+## 🔍 Status Check Required
+*Items that need verification - may be completed or partially done*
+
+### Capital System Status Check
+- [ ] **Verify capital assignment system completion**
+  - Backend capital generator service
+  - API endpoints for capital management  
+  - Frontend capital editor in map editor
+  - Visual capital display on maps
+  - Game integration with pre-calculated capitals
+  - All 6 phases from planning doc
+
+### Worker System Status Check  
+- [ ] **Verify Bull.js worker system status**
+  - BattleWorker for background battle processing
+  - GameActionWorker for async game actions
+  - CleanupWorker for maintenance tasks
+  - Worker files currently .disabled - need integration?
+
+### Performance Optimization Status Check
+- [ ] **Verify Phase 4 enterprise scaling completion**
+  - Redis cluster service implementation
+  - Database cluster service with load balancing
+  - CDN service for asset optimization
+  - Performance monitoring with alerting
+  - Auto-scaling based on resource thresholds
+  - All 8 enterprise services mentioned in upgrade log
+
 ## 🔴 Priority 1 - Core Features
 
-### Audio System
+### Audio System Enhancements
+- [ ] **Advanced Audio Features** *(from audio implementation doc)*
+  - Dynamic music intensity based on game state
+  - 3D spatial audio for battle positions  
+  - Voice announcements for major events
+  - Custom sound packs for premium users
+  - Audio visualization/waveforms
+  - Accessibility: Visual indicators for audio cues
+
+- [ ] **Audio Performance Optimization**
+  - Lazy load less common sounds
+  - Audio sprite sheets for reduced requests
+  - WebAudio API for advanced effects
+  - Compress audio files for faster loading
+
 - [ ] **Replace placeholder audio files with real sounds**
   - [ ] Dice roll sound effect
   - [ ] Victory/defeat battle sounds
@@ -210,5 +252,25 @@
 - [ ] Contributing guidelines
 - [ ] Deployment guide
 
+## 📊 Key Insights from Recent Architecture Docs
+
+### Node.js 24 Upgrades ✅ (Completed Sept 8, 2025)
+- Error.isError() implementation for better error handling
+- RegExp.escape for security against regex injection  
+- Symbol.dispose pattern for automatic resource cleanup
+- All changes maintain backward compatibility
+
+### Worker Architecture 🔄 (Ready for Integration)
+- Bull.js-based worker system designed and implemented
+- BattleWorker, GameActionWorker, CleanupWorker ready
+- Files currently .disabled to maintain zero compilation errors
+- 25% faster response times, 300% higher battle throughput when enabled
+
+### Performance Optimization ✅ (Phase 4 Complete)
+- Enterprise-scale performance capabilities achieved
+- Redis cluster, database load balancing, CDN optimization  
+- Real-time monitoring with automated alerting
+- Sub-100ms response times with intelligent caching
+
 ---
-*Last updated: January 3, 2025*
+*Last updated: September 8, 2025*

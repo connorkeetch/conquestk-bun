@@ -1,4 +1,5 @@
 import type React from 'react'
+import { useEffect } from 'react'
 import type { GamePlayer } from '../types/game'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import { useAppSelector } from '../hooks/redux'
@@ -24,17 +25,31 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
   const isCurrentUserLoser = winner && winner.id !== currentUserId
   
+  // Victory state effect system
+  useEffect(() => {
+    if (isOpen && winner) {
+      document.documentElement.setAttribute('data-theme', 'victory')
+      
+      // Remove after 5 seconds
+      const timer = setTimeout(() => {
+        document.documentElement.removeAttribute('data-theme')
+      }, 5000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, winner])
+  
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
+      <div className="bg-surface-1 border border-border rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
         {/* Header */}
         <div
           className={`p-6 text-center ${
             winner
-              ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
-              : 'bg-gradient-to-r from-gray-600 to-gray-700'
+              ? 'bg-gradient-to-r from-gold to-violet animate-victory-pulse'
+              : 'bg-gradient-to-r from-surface-2 to-surface-1'
           }`}
         >
           <div className="text-6xl mb-4">{winner ? '🏆' : '🏳️'}</div>
@@ -142,7 +157,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             {onNewGame && (
               <button
                 onClick={onNewGame}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                className="flex-1 bg-violet hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
               >
                 🎮 New Game
               </button>
@@ -150,14 +165,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             {onBackToMenu && (
               <button
                 onClick={onBackToMenu}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                className="flex-1 bg-surface-2 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all"
               >
                 🏠 Back to Menu
               </button>
             )}
             <button
               onClick={onClose}
-              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+              className="flex-1 bg-surface-1 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all border border-border"
             >
               📊 View Final Board
             </button>
