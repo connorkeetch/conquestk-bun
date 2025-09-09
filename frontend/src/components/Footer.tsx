@@ -6,9 +6,9 @@ export default function Footer() {
   
   return (
     <footer className="footer">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+      <div className="w-full container-padding py-6">
         {/* Use justify-between like header for proper left/right alignment */}
-        <div className="flex flex-col sm:flex-row items-center text-sm text-muted">
+        <div className="flex flex-col sm:flex-row items-center text-body-sm text-secondary">
           <div className="w-full flex items-center justify-between">
             {/* Copyright - Far left */}
             <div className="text-left">
@@ -16,7 +16,7 @@ export default function Footer() {
             </div>
             
             {/* Version - Far right */}
-            <div className="text-xs text-right">
+            <div className="text-label-md text-right">
               Beta v0.9.1
             </div>
           </div>

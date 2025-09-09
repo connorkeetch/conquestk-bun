@@ -21,18 +21,18 @@ const Maps: React.FC = () => {
   // Note: getRatingStars function removed - will be re-added when map ratings are implemented
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container-margin container-padding section-spacing">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-display-lg mb-2">
             <span style={{ color: CORE_COLORS.white }}>Maps Gallery</span>
           </h1>
-          <p className="text-muted">Discover battlefields from around the world</p>
+          <p className="text-secondary text-body-md">Discover battlefields from around the world</p>
         </div>
         <Link
           to="/map-editor"
-          className="inline-flex items-center gap-2 bg-violet px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:brightness-110 transition-all duration-200 hover:scale-105"
+          className="btn-primary hover-lift hover-glow"
         >
           ✏️ Create Map
         </Link>
