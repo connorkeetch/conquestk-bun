@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PlayerColor } from '../constants/colors'
 
 // Theme types
-export type Theme = 'dark' | 'light'
+export type Theme = 'dark' | 'light' | 'high-contrast'
 export type DMPermission = 'everyone' | 'friends' | 'nobody'
 
 // Notification settings
