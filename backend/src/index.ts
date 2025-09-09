@@ -502,26 +502,33 @@ if (isProductionLike) {
     }),
   )
 
-  // Explicitly handle asset requests to ensure they don't fall through
-  app.get('/assets/*', (req: Request, res: Response) => {
-    logger.warn(`❌ Asset not found: ${req.path}`)
-    // If we reach here, the asset wasn't found
-    res.status(404).send('Asset not found')
-  })
-
   // Handle React Router - serve index.html for all non-API and non-asset routes
-  app.get('*', (req: Request, res: Response) => {
-    logger.info(`🌐 Request to: ${req.path}`)
-    
-    // Don't serve index.html for API routes or assets
-    if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
-      logger.warn(`❌ API/Asset route not found: ${req.path}`)
-      return res.status(404).send('Not found')
-    }
-
+  // This catch-all route MUST come after static middleware
+  app.get('/', (req: Request, res: Response) => {
+    logger.info(`🌐 Root request`)
     const indexPath = path.join(frontendPath, 'index.html')
     logger.info(`📄 Serving index.html from: ${indexPath}`)
     logger.info(`📄 index.html exists: ${fs.existsSync(indexPath)}`)
+    
+    return res.sendFile(indexPath, (err) => {
+      if (err) {
+        logger.error(`❌ Error serving index.html:`, err)
+        res.status(500).send('Error serving page')
+      } else {
+        logger.info(`✅ Successfully served index.html for root`)
+      }
+    })
+  })
+  
+  // Handle all other routes for React Router
+  app.use((req: Request, res: Response, next: Function) => {
+    // Don't interfere with API routes or static assets
+    if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/uploads')) {
+      return next()
+    }
+    
+    logger.info(`🌐 Request to: ${req.path}`)
+    const indexPath = path.join(frontendPath, 'index.html')
     
     return res.sendFile(indexPath, (err) => {
       if (err) {
