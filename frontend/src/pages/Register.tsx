@@ -108,7 +108,7 @@ export default function Register() {
                 required
                 maxLength={50}
                 autoComplete="username"
-                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                 placeholder="Enter your username (e.g., CommanderKeetch)"
               />
             </div>
@@ -126,7 +126,7 @@ export default function Register() {
                 required
                 maxLength={255}
                 autoComplete="email"
-                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                 placeholder="Enter your email address"
               />
             </div>
@@ -145,7 +145,7 @@ export default function Register() {
                   required
                   maxLength={128}
                   autoComplete="new-password"
-                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                   placeholder="Create a strong password"
                 />
                 <button
@@ -185,27 +185,27 @@ export default function Register() {
                 <p className="text-xs text-muted">Password must contain at least:</p>
                 <ul className="text-xs space-y-1">
                   <li
-                    className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-400' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-400' : 'text-muted'}`}
                   >
                     {password.length >= 8 ? '✓' : '○'} 8 characters
                   </li>
                   <li
-                    className={`flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-400' : 'text-muted'}`}
                   >
                     {/[A-Z]/.test(password) ? '✓' : '○'} 1 uppercase letter (A-Z)
                   </li>
                   <li
-                    className={`flex items-center gap-1 ${/[a-z]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 ${/[a-z]/.test(password) ? 'text-green-400' : 'text-muted'}`}
                   >
                     {/[a-z]/.test(password) ? '✓' : '○'} 1 lowercase letter (a-z)
                   </li>
                   <li
-                    className={`flex items-center gap-1 ${/\d/.test(password) ? 'text-green-400' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 ${/\d/.test(password) ? 'text-green-400' : 'text-muted'}`}
                   >
                     {/\d/.test(password) ? '✓' : '○'} 1 number (0-9)
                   </li>
                   <li
-                    className={`flex items-center gap-1 ${/[@$!%*?&]/.test(password) ? 'text-green-400' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 ${/[@$!%*?&]/.test(password) ? 'text-green-400' : 'text-muted'}`}
                   >
                     {/[@$!%*?&]/.test(password) ? '✓' : '○'} 1 special character (@$!%*?&)
                   </li>
@@ -245,7 +245,7 @@ export default function Register() {
                   required
                   maxLength={128}
                   autoComplete="new-password"
-                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                   placeholder="Confirm your password"
                 />
                 <button
@@ -393,7 +393,7 @@ export default function Register() {
                 Discord
               </button>
             </div>
-            <p className="text-xs text-gray-500 text-center mt-2">Coming Soon</p>
+            <p className="text-xs text-muted text-center mt-2">Coming Soon</p>
           </div>
 
           {/* Login Link */}
@@ -402,7 +402,7 @@ export default function Register() {
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="text-violet-soft hover:text-blue-300 font-medium hover:underline transition-colors"
+                className="text-violet-soft hover:text-violet-soft font-medium hover:underline transition-colors"
               >
                 Sign in here
               </Link>

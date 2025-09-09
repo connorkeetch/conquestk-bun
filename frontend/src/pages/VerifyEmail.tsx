@@ -42,11 +42,11 @@ export default function VerifyEmail() {
               ⚔️ CONQUEST K
             </h1>
           </Link>
-          <p className="text-gray-400">Email Verification Required</p>
+          <p className="text-muted">Email Verification Required</p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-surface-1/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl">
           <div className="text-center">
             {/* Warning Icon */}
             <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -65,7 +65,7 @@ export default function VerifyEmail() {
 
             <h2 className="text-2xl font-bold text-white mb-2">Verify Your Email</h2>
             <p className="text-purple-400 text-sm mb-6 font-medium italic">They always come back</p>
-            <p className="text-gray-300 mb-8">
+            <p className="text-muted mb-8">
               To access the game, please verify your email address. We've sent a verification link to{' '}
               <span className="text-yellow-400 font-medium">{user?.email}</span>
             </p>
@@ -112,15 +112,15 @@ export default function VerifyEmail() {
 
               <button
                 onClick={handleLogout}
-                className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-3 px-6 rounded-lg transition-colors"
+                className="w-full bg-surface-2 hover:bg-gray-600 text-muted font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Sign Out
               </button>
             </div>
 
             {/* Help Text */}
-            <div className="mt-8 pt-6 border-t border-gray-700">
-              <p className="text-gray-400 text-sm">
+            <div className="mt-8 pt-6 border-t border-border">
+              <p className="text-muted text-sm">
                 Didn't receive the email? Check your spam folder or{' '}
                 <button
                   onClick={handleResendVerification}

@@ -162,7 +162,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
           <span>Northern (3)</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-500 rounded"></div>
+          <div className="w-3 h-3 bg-violet rounded"></div>
           <span>Central (4)</span>
         </div>
         <div className="flex items-center gap-1">

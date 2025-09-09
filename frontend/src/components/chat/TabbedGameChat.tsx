@@ -87,9 +87,9 @@ export default function TabbedGameChat({
   }
   
   return (
-    <div className={`flex flex-col h-full bg-gray-900 rounded-lg ${className}`}>
+    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       {/* Tab Headers */}
-      <div className="flex overflow-x-auto bg-gray-800 rounded-t-lg border-b border-gray-700">
+      <div className="flex overflow-x-auto bg-surface-1 rounded-t-lg border-b border-border">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -99,8 +99,8 @@ export default function TabbedGameChat({
               flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap
               transition-all relative
               ${activeTab === tab.id
-                ? 'bg-gray-700 text-white border-b-2 border-blue-500'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                ? 'bg-surface-2 text-white border-b-2 border-violet'
+                : 'text-muted hover:text-white hover:bg-surface-2/50'
               }
               ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}

@@ -56,7 +56,7 @@ const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({
         {sign}
         {change} CP
       </div>
-      <div className="text-center mt-2 text-lg text-gray-300">
+      <div className="text-center mt-2 text-lg text-muted">
         Command Points {isPositive ? 'Gained' : 'Lost'}
       </div>
     </div>

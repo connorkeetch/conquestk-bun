@@ -110,10 +110,10 @@ export default function AdminUsers() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search users by username or email..."
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+                className="w-full px-4 py-2 bg-surface-2 border border-border rounded-lg"
               />
             </div>
-            <button type="submit" className="bg-blue-600 hover:brightness-110 px-6 py-2 rounded-lg">
+            <button type="submit" className="bg-violet hover:brightness-110 px-6 py-2 rounded-lg">
               🔍 Search
             </button>
             {searchTerm && (
@@ -134,7 +134,7 @@ export default function AdminUsers() {
 
         {/* Users Table */}
         <div className="bg-surface-2 rounded-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-700">
+          <div className="p-6 border-b border-border">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Users ({totalUsers.toLocaleString()})</h2>
               {searchTerm && (
@@ -154,7 +154,7 @@ export default function AdminUsers() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadUsers}
-                className="bg-blue-600 hover:brightness-110 px-4 py-2 rounded"
+                className="bg-violet hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -167,7 +167,7 @@ export default function AdminUsers() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-700">
+                <thead className="bg-surface-2">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                       User
@@ -193,7 +193,7 @@ export default function AdminUsers() {
                   {users.map((user) => {
                     const statusInfo = adminService.formatUserStatus(user.status)
                     return (
-                      <tr key={user.id} className="hover:bg-gray-700">
+                      <tr key={user.id} className="hover:bg-surface-2">
                         <td className="px-6 py-4">
                           <div>
                             <div className="font-medium">{user.username}</div>
@@ -216,7 +216,7 @@ export default function AdminUsers() {
                               {user.adminRoles.map((role, index) => (
                                 <span
                                   key={index}
-                                  className="inline-block bg-blue-600 text-xs px-2 py-1 rounded"
+                                  className="inline-block bg-violet text-xs px-2 py-1 rounded"
                                 >
                                   {role}
                                 </span>
@@ -236,7 +236,7 @@ export default function AdminUsers() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setEditModal({ user, isOpen: true })}
-                              className="bg-blue-600 hover:brightness-110 px-3 py-1 rounded text-xs"
+                              className="bg-violet hover:brightness-110 px-3 py-1 rounded text-xs"
                             >
                               Edit
                             </button>
@@ -258,7 +258,7 @@ export default function AdminUsers() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-700">
+            <div className="px-6 py-4 border-t border-border">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-muted">
                   Showing {(currentPage - 1) * limit + 1} to{' '}
@@ -315,7 +315,7 @@ export default function AdminUsers() {
                       }}
                       className={`w-full text-left px-4 py-2 rounded ${
                         editModal.user.status === status
-                          ? 'bg-blue-600'
+                          ? 'bg-violet'
                           : 'bg-surface-2 hover:brightness-110'
                       }`}
                     >
@@ -353,7 +353,7 @@ export default function AdminUsers() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded"
+                  className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
                   placeholder="Enter new password..."
                   minLength={6}
                 />

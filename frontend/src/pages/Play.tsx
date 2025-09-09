@@ -54,7 +54,7 @@ const Play: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-4">🎮 Choose Your Battle</h1>
-        <p className="text-gray-400 text-lg">Select a game mode and begin your conquest</p>
+        <p className="text-muted text-lg">Select a game mode and begin your conquest</p>
       </div>
 
       {/* Game Options Grid */}
@@ -86,7 +86,7 @@ const Play: React.FC = () => {
           <span className="mr-2">📊</span>
           Recent Activity
         </h2>
-        <div className="text-gray-400 text-center py-8">
+        <div className="text-muted text-center py-8">
           <div className="text-4xl mb-4">🎯</div>
           <p>No recent games found. Start a game to see your activity here!</p>
         </div>

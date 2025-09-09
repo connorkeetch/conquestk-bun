@@ -14,7 +14,7 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
     <div 
       onClick={handleClick}
       className={`mt-2 rounded-lg overflow-hidden cursor-pointer transition-opacity hover:opacity-90 ${
-        isOwnMessage ? 'bg-blue-700' : 'bg-gray-800'
+        isOwnMessage ? 'bg-violet' : 'bg-surface-1'
       }`}
     >
       {preview.image && (
@@ -43,14 +43,14 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
         
         {preview.description && (
           <p className={`text-xs line-clamp-2 mb-2 ${
-            isOwnMessage ? 'text-blue-100' : 'text-gray-400'
+            isOwnMessage ? 'text-blue-100' : 'text-muted'
           }`}>
             {preview.description}
           </p>
         )}
         
         <div className={`flex items-center gap-1 text-xs ${
-          isOwnMessage ? 'text-blue-200' : 'text-gray-500'
+          isOwnMessage ? 'text-blue-200' : 'text-muted'
         }`}>
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 

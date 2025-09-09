@@ -87,14 +87,14 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
+    <div className="bg-surface-1 rounded-lg p-6">
       <h3 className="text-xl font-bold text-white mb-4">
         Select {playerCount} Capital Territories
       </h3>
 
       <div className="mb-4">
-        <p className="text-gray-300 text-sm">👑 Capitals must be at least 2 territories apart</p>
-        <p className="text-gray-300 text-sm">
+        <p className="text-muted text-sm">👑 Capitals must be at least 2 territories apart</p>
+        <p className="text-muted text-sm">
           ⚔️ Capturing a capital eliminates the player instantly
         </p>
       </div>
@@ -122,13 +122,13 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
       </div>
 
       <div className="flex justify-between items-center">
-        <div className="text-gray-300">
+        <div className="text-muted">
           Selected: {selectedCapitals.length} / {playerCount}
         </div>
         <button
           onClick={handleConfirm}
           disabled={selectedCapitals.length !== playerCount || !!validationError}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="px-6 py-2 bg-violet hover:bg-violet disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
         >
           Confirm Capitals
         </button>

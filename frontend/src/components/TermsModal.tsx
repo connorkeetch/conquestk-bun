@@ -61,12 +61,12 @@ export default function TermsModal({
         <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{termsContent.title}</h2>
-            <p className="text-sm text-gray-500">Version {termsContent.version}</p>
+            <p className="text-sm text-muted">Version {termsContent.version}</p>
           </div>
           {onDecline && (
             <button
               onClick={handleDecline}
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+              className="rounded-lg p-2 text-muted transition-colors hover:bg-gray-200 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
@@ -102,7 +102,7 @@ export default function TermsModal({
 
           {!hasScrolledToBottom && (
             <div className="mt-4 text-center">
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-muted">
                 ↓ Please scroll down to read all terms ↓
               </p>
             </div>
@@ -118,9 +118,9 @@ export default function TermsModal({
                 checked={isAcceptChecked}
                 onChange={(e) => setIsAcceptChecked(e.target.checked)}
                 disabled={!hasScrolledToBottom}
-                className="mr-3 mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="mr-3 mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-violet disabled:opacity-50"
               />
-              <span className={`text-sm ${!hasScrolledToBottom ? 'text-gray-400' : 'text-gray-700'}`}>
+              <span className={`text-sm ${!hasScrolledToBottom ? 'text-muted' : 'text-gray-700'}`}>
                 I have read and agree to the {termsContent.title}. I understand that:
                 <ul className="mt-1 ml-4 text-xs">
                   <li>• I will not upload copyrighted material</li>
@@ -135,7 +135,7 @@ export default function TermsModal({
             <button
               onClick={handleAccept}
               disabled={!isAcceptChecked || !hasScrolledToBottom}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-violet px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet disabled:cursor-not-allowed disabled:opacity-50"
             >
               I Accept the Terms
             </button>
@@ -150,7 +150,7 @@ export default function TermsModal({
           </div>
 
           {!hasScrolledToBottom && (
-            <p className="mt-2 text-center text-xs text-gray-500">
+            <p className="mt-2 text-center text-xs text-muted">
               You must read all terms before accepting
             </p>
           )}

@@ -45,11 +45,11 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
 
   return (
     <div className={`absolute ${positionClasses[position]} z-20`}>
-      <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow-xl">
+      <div className="bg-surface-1/90 backdrop-blur-sm border border-border rounded-lg shadow-xl">
         {/* Header */}
         <div
-          className={`px-3 py-2 border-b border-gray-700 flex items-center justify-between ${
-            collapsible ? 'cursor-pointer hover:bg-gray-800/50' : ''
+          className={`px-3 py-2 border-b border-border flex items-center justify-between ${
+            collapsible ? 'cursor-pointer hover:bg-surface-1/50' : ''
           }`}
           onClick={() => collapsible && setIsCollapsed(!isCollapsed)}
         >
@@ -57,7 +57,7 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
             <span>⚡</span> Territory Modifiers
           </h3>
           {collapsible && (
-            <button className="text-gray-400 hover:text-white transition-colors">
+            <button className="text-muted hover:text-white transition-colors">
               {isCollapsed ? '▶' : '▼'}
             </button>
           )}
@@ -69,7 +69,7 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
             {Array.from(uniqueModifiers.values()).map((modifier) => (
               <div
                 key={modifier.name}
-                className="flex items-start gap-3 p-2 rounded hover:bg-gray-800/30 transition-colors"
+                className="flex items-start gap-3 p-2 rounded hover:bg-surface-1/30 transition-colors"
               >
                 {/* Icon */}
                 <div
@@ -85,10 +85,10 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
                 {/* Details */}
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-white text-sm">{modifier.name}</div>
-                  <div className="text-xs text-gray-400 mt-1 space-x-3">
+                  <div className="text-xs text-muted mt-1 space-x-3">
                     {modifier.defense_bonus !== 0 && (
                       <span
-                        className={modifier.defense_bonus > 0 ? 'text-blue-400' : 'text-red-400'}
+                        className={modifier.defense_bonus > 0 ? 'text-violet-soft' : 'text-red-400'}
                       >
                         🛡️ {modifier.defense_bonus > 0 ? '+' : ''}
                         {modifier.defense_bonus}
@@ -96,7 +96,7 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
                     )}
                     {modifier.attack_bonus !== 0 && (
                       <span
-                        className={modifier.attack_bonus > 0 ? 'text-red-400' : 'text-gray-500'}
+                        className={modifier.attack_bonus > 0 ? 'text-red-400' : 'text-muted'}
                       >
                         ⚔️ {modifier.attack_bonus > 0 ? '+' : ''}
                         {modifier.attack_bonus}

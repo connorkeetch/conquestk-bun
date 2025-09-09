@@ -274,7 +274,7 @@ const LobbyPage: React.FC = () => {
                   type="checkbox"
                   checked={filters.showFull}
                   onChange={(e) => setFilters((prev) => ({ ...prev, showFull: e.target.checked }))}
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-violet"
                 />
                 <span>Show Full Games</span>
               </label>
@@ -287,7 +287,7 @@ const LobbyPage: React.FC = () => {
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, showInProgress: e.target.checked }))
                   }
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-violet"
                 />
                 <span>Show In Progress</span>
               </label>

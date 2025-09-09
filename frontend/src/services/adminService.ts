@@ -217,9 +217,9 @@ class AdminService {
       case 'banned':
         return { text: 'Banned', color: 'text-red-400' }
       case 'pending':
-        return { text: 'Pending', color: 'text-gray-400' }
+        return { text: 'Pending', color: 'text-muted' }
       default:
-        return { text: status, color: 'text-gray-400' }
+        return { text: status, color: 'text-muted' }
     }
   }
 

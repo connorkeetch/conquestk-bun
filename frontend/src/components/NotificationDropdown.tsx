@@ -104,7 +104,7 @@ export default function NotificationDropdown() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-gray-900 border border-gray-800 rounded-lg shadow-2xl z-50 max-h-[60vh] sm:max-h-[80vh] flex flex-col">
+        <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-surface-1 border border-gray-800 rounded-lg shadow-2xl z-50 max-h-[60vh] sm:max-h-[80vh] flex flex-col">
           {/* Header */}
           <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-800 flex items-center justify-between">
             <h3 className="text-base sm:text-lg font-semibold text-white">Notifications</h3>
@@ -112,7 +112,7 @@ export default function NotificationDropdown() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs text-violet-soft hover:text-violet-soft transition-colors"
                 >
                   Mark all read
                 </button>
@@ -120,7 +120,7 @@ export default function NotificationDropdown() {
               {notifications.length > 0 && (
                 <button
                   onClick={handleClearAll}
-                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                  className="text-xs text-muted hover:text-muted transition-colors"
                 >
                   Clear all
                 </button>
@@ -133,8 +133,8 @@ export default function NotificationDropdown() {
             {notifications.length === 0 ? (
               <div className="px-3 sm:px-4 py-6 sm:py-8 text-center">
                 <div className="text-4xl mb-2">🔔</div>
-                <p className="text-gray-400">No notifications yet</p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-muted">No notifications yet</p>
+                <p className="text-xs text-muted mt-1">
                   We'll notify you when something happens
                 </p>
               </div>
@@ -142,16 +142,16 @@ export default function NotificationDropdown() {
               <div className="py-2">
                 {groupedNotifications.map((group) => (
                   <div key={group.date}>
-                    <div className="px-3 sm:px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <div className="px-3 sm:px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wider">
                       {group.date}
                     </div>
                     {group.notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`px-3 sm:px-4 py-2 sm:py-3 hover:bg-gray-800 transition-colors cursor-pointer border-l-2 ${
+                        className={`px-3 sm:px-4 py-2 sm:py-3 hover:bg-surface-1 transition-colors cursor-pointer border-l-2 ${
                           notification.read
                             ? 'border-transparent'
-                            : 'border-blue-500 bg-blue-900/10'
+                            : 'border-violet bg-blue-900/10'
                         }`}
                         onClick={() => handleNotificationClick(notification)}
                       >
@@ -167,12 +167,12 @@ export default function NotificationDropdown() {
                               <div className="flex-1">
                                 <p
                                   className={`text-sm font-medium ${
-                                    notification.read ? 'text-gray-300' : 'text-white'
+                                    notification.read ? 'text-muted' : 'text-white'
                                   }`}
                                 >
                                   {notification.title}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                <p className="text-xs text-muted mt-0.5">
                                   {notification.message}
                                 </p>
 
@@ -180,7 +180,7 @@ export default function NotificationDropdown() {
                                 {notification.actionUrl && (
                                   <Link
                                     to={notification.actionUrl}
-                                    className="inline-block mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                                    className="inline-block mt-2 px-3 py-1 bg-violet hover:bg-violet text-white text-xs rounded transition-colors"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {notification.actionLabel || 'View'}
@@ -190,7 +190,7 @@ export default function NotificationDropdown() {
 
                               {/* Time and Actions */}
                               <div className="flex items-center gap-2 ml-2">
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-muted">
                                   {getRelativeTime(notification.timestamp)}
                                 </span>
                                 <button
@@ -198,7 +198,7 @@ export default function NotificationDropdown() {
                                     e.stopPropagation()
                                     notificationService.deleteNotification(notification.id)
                                   }}
-                                  className="text-gray-500 hover:text-red-400 transition-colors"
+                                  className="text-muted hover:text-red-400 transition-colors"
                                   aria-label="Delete notification"
                                 >
                                   <svg
@@ -227,7 +227,7 @@ export default function NotificationDropdown() {
             <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-800">
               <Link
                 to="/notifications"
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors text-center block"
+                className="text-sm text-violet-soft hover:text-violet-soft transition-colors text-center block"
                 onClick={() => setIsOpen(false)}
               >
                 View all notifications →

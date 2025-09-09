@@ -111,8 +111,8 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   if (!isCurrentPlayerTurn) {
     return (
       <div className="bg-slate-800 border border-slate-600 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-2 text-gray-300">Waiting for Turn</h3>
-        <p className="text-sm text-gray-400">
+        <h3 className="text-lg font-semibold mb-2 text-muted">Waiting for Turn</h3>
+        <p className="text-sm text-muted">
           It's {gameState.players.find((p) => p.id === gameState.currentPlayer)?.username}'s turn
         </p>
       </div>
@@ -127,7 +127,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         </h3>
         <button
           onClick={onEndTurn}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
+          className="bg-violet hover:bg-violet text-white px-4 py-2 rounded font-medium"
           disabled={!isCurrentPlayerTurn}
         >
           End Turn
@@ -318,8 +318,8 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
             </div>
           </div>
 
-          <div className="bg-blue-900/30 border border-blue-600/50 p-3 rounded">
-            <h4 className="font-medium text-blue-300 mb-2">Fortify Territories</h4>
+          <div className="bg-blue-900/30 border border-violet/50 p-3 rounded">
+            <h4 className="font-medium text-violet-soft mb-2">Fortify Territories</h4>
 
             {/* Show movement restrictions */}
             {(gameState.gameConfig?.movementType === 'classic_adjacent' ||
@@ -334,11 +334,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
             {!selectedTerritory ? (
               <div className="space-y-2">
-                <p className="text-sm text-blue-400">
+                <p className="text-sm text-violet-soft">
                   Select one of your territories with 2+ armies to move armies from
                 </p>
                 {Object.keys(gameState.movementTracking || {}).length > 0 && (
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted">
                     <strong>Already moved:</strong>{' '}
                     {Object.keys(gameState.movementTracking || {})
                       .map((territoryId) => {
@@ -358,7 +358,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                     <span className="ml-2 text-xs bg-yellow-200 px-1 rounded">Already moved</span>
                   )}
                 </p>
-                <p className="text-sm text-blue-400">
+                <p className="text-sm text-violet-soft">
                   {validTargets.length > 0
                     ? `Select a destination territory (${validTargets.length} available)`
                     : gameState.gameConfig?.movementType?.includes('path')
@@ -385,7 +385,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   />
                   <button
                     onClick={handleFortify}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                    className="bg-violet hover:bg-violet text-white px-3 py-1 rounded text-sm"
                   >
                     Move
                   </button>
@@ -419,7 +419,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
       {/* Current Selection Info */}
       {(selectedTerritory || selectedTargetTerritory) && (
-        <div className="text-xs text-gray-400 pt-2 border-t border-slate-600">
+        <div className="text-xs text-muted pt-2 border-t border-slate-600">
           {selectedTerritory && <p>Selected: {selectedTerritoryData?.name}</p>}
           {selectedTargetTerritory && <p>Target: {selectedTargetData?.name}</p>}
           {pendingAction && <p>Action: {pendingAction}</p>}

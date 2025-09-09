@@ -111,7 +111,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             
             {/* Show error details in development */}
             {process.env.NODE_ENV === 'development' && (
-              <details className="text-left text-sm text-gray-300 mb-4">
+              <details className="text-left text-sm text-muted mb-4">
                 <summary className="cursor-pointer text-red-300 hover:text-red-200">
                   Error Details (Dev Only)
                 </summary>
@@ -125,7 +125,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <div className="space-x-3">
               <button
                 onClick={this.resetErrorBoundary}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-violet hover:bg-violet text-white rounded-lg transition-colors"
               >
                 Try Again
               </button>
@@ -133,7 +133,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               {isFullPage && (
                 <button
                   onClick={() => window.location.href = '/'}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
                 >
                   Go Home
                 </button>

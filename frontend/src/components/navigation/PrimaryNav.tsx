@@ -149,9 +149,9 @@ const PrimaryNav: React.FC = () => {
       'relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer'
 
     if (isActive(path)) {
-      return `${baseClass} bg-blue-600 text-white shadow-lg`
+      return `${baseClass} bg-violet text-white shadow-lg`
     }
-    return `${baseClass} text-gray-300 hover:text-white hover:bg-gray-700`
+    return `${baseClass} text-muted hover:text-white hover:bg-surface-2`
   }
 
   const handleNavItemClick = (item: NavItem, e: React.MouseEvent) => {
@@ -203,7 +203,7 @@ const PrimaryNav: React.FC = () => {
 
           {/* Dropdown Menu */}
           {item.dropdown && activeDropdown === item.path && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 py-2 z-50">
+            <div className="absolute top-full left-0 mt-2 w-64 bg-surface-1 rounded-xl shadow-2xl border border-border py-2 z-50">
               {item.dropdown.map((dropdownItem) =>
                 dropdownItem.comingSoon ? (
                   <div
@@ -212,14 +212,14 @@ const PrimaryNav: React.FC = () => {
                   >
                     <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
                     <div className="flex-1">
-                      <div className="font-medium text-gray-400 flex items-center">
+                      <div className="font-medium text-muted flex items-center">
                         {dropdownItem.label}
                         <span className="ml-2 bg-yellow-600/80 text-yellow-100 px-2 py-0.5 rounded-full text-xs font-medium">
                           Coming Soon
                         </span>
                       </div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-gray-500 mt-0.5">
+                        <div className="text-xs text-muted mt-0.5">
                           {dropdownItem.description}
                         </div>
                       )}
@@ -229,14 +229,14 @@ const PrimaryNav: React.FC = () => {
                   <Link
                     key={dropdownItem.path}
                     to={dropdownItem.path}
-                    className="flex items-start space-x-3 px-4 py-3 hover:bg-gray-700 transition-colors duration-150"
+                    className="flex items-start space-x-3 px-4 py-3 hover:bg-surface-2 transition-colors duration-150"
                     onClick={() => setActiveDropdown(null)}
                   >
                     <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
                     <div className="flex-1">
                       <div className="font-medium text-white">{dropdownItem.label}</div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <div className="text-xs text-muted mt-0.5">
                           {dropdownItem.description}
                         </div>
                       )}

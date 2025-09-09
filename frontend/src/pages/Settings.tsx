@@ -96,7 +96,7 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
         
         {/* Dropdown Arrow */}
         <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${
+          className={`w-4 h-4 text-muted transition-transform ${
             isDropdownOpen ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -112,7 +112,7 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
         <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
           {/* Standard Colors Section */}
           <div className="p-2">
-            <div className="text-xs text-gray-400 uppercase tracking-wider px-2 py-1">Standard Colors</div>
+            <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">Standard Colors</div>
             {STANDARD_COLORS.map((color) => {
               const isSelected = value === color
               return (
@@ -429,10 +429,10 @@ export default function Settings() {
     }`
 
     const labelClass = `text-base font-medium ${
-      setting.isWorking ? 'text-gray-200' : 'text-gray-400'
+      setting.isWorking ? 'text-gray-200' : 'text-muted'
     }`
 
-    const descriptionClass = `text-sm mt-1 ${setting.isWorking ? 'text-gray-400' : 'text-gray-500'}`
+    const descriptionClass = `text-sm mt-1 ${setting.isWorking ? 'text-muted' : 'text-muted'}`
 
     const renderComingSoonBadge = () => {
       if (!setting.isWorking) {
@@ -503,7 +503,7 @@ export default function Settings() {
                 }}
                 className={`w-full ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
-              <div className="text-xs text-gray-400 text-center mt-1">{setting.defaultValue}%</div>
+              <div className="text-xs text-muted text-center mt-1">{setting.defaultValue}%</div>
             </div>
           )
 
@@ -511,8 +511,8 @@ export default function Settings() {
           const buttonClass = setting.buttonVariant === 'danger'
             ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
             : setting.buttonVariant === 'primary' 
-            ? `px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
-            : `px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            ? `px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            : `px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
             <button
@@ -538,7 +538,7 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <>
-                  <span className="text-gray-300 text-sm">
+                  <span className="text-muted text-sm">
                     {fieldValues[setting.id] || setting.defaultValue || 'Not set'}
                   </span>
                   {setting.isWorking && (
@@ -554,7 +554,7 @@ export default function Settings() {
                           setUsernameAvailable(null)
                         }
                       }}
-                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                      className="px-3 py-1 bg-violet hover:bg-violet text-white text-sm rounded transition-colors"
                     >
                       Edit
                     </button>
@@ -595,7 +595,7 @@ export default function Settings() {
                       {isUsername && (
                         <div className="flex items-center">
                           {checkingUsername ? (
-                            <span className="text-gray-400">⏳</span>
+                            <span className="text-muted">⏳</span>
                           ) : usernameAvailable === true ? (
                             <span className="text-green-400">✓</span>
                           ) : usernameAvailable === false ? (
@@ -669,7 +669,7 @@ export default function Settings() {
                         setUsernameAvailable(null)
                       }
                     }}
-                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                    className="px-3 py-1 bg-gray-600 hover:bg-surface-2 text-white text-sm rounded transition-colors"
                   >
                     Cancel
                   </button>
@@ -730,7 +730,7 @@ export default function Settings() {
               <span>
                 Your account email for notifications and recovery •{' '}
                 {user?.emailVerified ? (
-                  <span className="text-blue-400 font-semibold">✓ Verified</span>
+                  <span className="text-violet-soft font-semibold">✓ Verified</span>
                 ) : (
                   <span className="text-red-400 font-semibold">⚠ Not Verified</span>
                 )}
@@ -1144,7 +1144,7 @@ export default function Settings() {
                 <td className="py-4 pr-4">
                   <div>
                     <div className="text-gray-200 font-medium">{notification.label}</div>
-                    <div className="text-sm text-gray-400">{notification.description}</div>
+                    <div className="text-sm text-muted">{notification.description}</div>
                   </div>
                 </td>
                 <td className="py-4 px-4 text-center">
@@ -1259,7 +1259,7 @@ export default function Settings() {
                     Coming Soon
                   </div>
                 </div>
-                <p className="text-sm text-gray-400">Recommended: 256x256px, JPG or PNG</p>
+                <p className="text-sm text-muted">Recommended: 256x256px, JPG or PNG</p>
               </div>
             </div>
           </div>
@@ -1302,8 +1302,8 @@ export default function Settings() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                       activeTab === tab.id
-                        ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
-                        : 'text-gray-300 hover:bg-slate-700/50 hover:text-white'
+                        ? 'bg-violet/20 text-violet-soft border border-violet/30'
+                        : 'text-muted hover:bg-slate-700/50 hover:text-white'
                     }`}
                   >
                     <span className="text-lg">{tab.icon}</span>

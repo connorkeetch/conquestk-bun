@@ -90,7 +90,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
         <div className="p-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Battle Results</h2>
-            <p className="text-gray-300">
+            <p className="text-muted">
               {battleResult.fromTerritory.name} vs {battleResult.toTerritory.name}
             </p>
           </div>
@@ -99,7 +99,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             {/* Attacker */}
             <div className="text-center">
               <h3 className="font-semibold text-red-600 mb-3">Attacker</h3>
-              <p className="text-sm text-gray-300 mb-2">{battleResult.fromTerritory.name}</p>
+              <p className="text-sm text-muted mb-2">{battleResult.fromTerritory.name}</p>
               {renderDice(battleResult.attackerDice, 'bg-red-500')}
               <p className="mt-2 text-sm">
                 {battleResult.attackerLosses > 0 ? (
@@ -110,7 +110,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   <span className="text-green-600 font-medium">No losses</span>
                 )}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted">
                 {battleResult.fromTerritory.armies} armies remaining
               </p>
             </div>
@@ -118,8 +118,8 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             {/* Defender */}
             <div className="text-center">
               <h3 className="font-semibold text-blue-600 mb-3">Defender</h3>
-              <p className="text-sm text-gray-300 mb-2">{battleResult.toTerritory.name}</p>
-              {renderDice(battleResult.defenderDice, 'bg-blue-500')}
+              <p className="text-sm text-muted mb-2">{battleResult.toTerritory.name}</p>
+              {renderDice(battleResult.defenderDice, 'bg-violet')}
               <p className="mt-2 text-sm">
                 {battleResult.defenderLosses > 0 ? (
                   <span className="text-red-600 font-medium">
@@ -129,7 +129,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   <span className="text-green-600 font-medium">No losses</span>
                 )}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted">
                 {battleResult.toTerritory.armies} armies remaining
               </p>
             </div>
@@ -148,7 +148,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
           )}
 
           {/* Battle Explanation */}
-          <div className="bg-slate-700/50 rounded-lg p-3 mb-4 text-xs text-gray-300">
+          <div className="bg-slate-700/50 rounded-lg p-3 mb-4 text-xs text-muted">
             <p className="font-medium mb-1">How the battle was resolved:</p>
             <p>
               Highest dice are compared first. Ties go to the defender.

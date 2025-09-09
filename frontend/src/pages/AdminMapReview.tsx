@@ -315,7 +315,7 @@ export const AdminMapReview: React.FC = () => {
                     <select
                       value={result?.status || 'pass'}
                       onChange={(e) => updateReviewResult(criterion.id, 'status', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-violet ${
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-violet focus:border-violet ${
                         result?.status ? getStatusColor(result.status) : 'border-gray-300'
                       }`}
                     >
@@ -336,7 +336,7 @@ export const AdminMapReview: React.FC = () => {
                         updateReviewResult(criterion.id, 'reviewerNotes', e.target.value)
                       }
                       placeholder="Add notes about this criterion..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-violet"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
                       rows={2}
                     />
                   </div>
@@ -357,7 +357,7 @@ export const AdminMapReview: React.FC = () => {
             <select
               value={decision}
               onChange={(e) => setDecision(e.target.value as any)}
-              className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-violet"
+              className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
             >
               <option value="approved">✅ Approve for Publication</option>
               <option value="needs_changes">⚠️ Needs Changes (Return to Draft)</option>
@@ -377,7 +377,7 @@ export const AdminMapReview: React.FC = () => {
                   ? 'Optional feedback for the creator...'
                   : 'Please provide specific feedback about what needs to be changed or why this was rejected...'
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-violet"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
               rows={4}
               required={decision !== 'approved'}
             />

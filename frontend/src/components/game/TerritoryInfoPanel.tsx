@@ -59,7 +59,7 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
           {owner ? (
             <span style={{ color: owner.color }}>{owner.username}</span>
           ) : (
-            <span className="text-gray-500">Neutral</span>
+            <span className="text-muted">Neutral</span>
           )}
         </div>
         <div>

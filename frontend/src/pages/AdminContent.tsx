@@ -80,7 +80,7 @@ export default function AdminContent() {
   const totalPages = Math.ceil(totalItems / limit)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-surface-1 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -88,7 +88,7 @@ export default function AdminContent() {
             <h1 className="text-3xl font-bold">🔍 Content Moderation</h1>
             <div className="text-muted">Review and moderate user-generated content</div>
           </div>
-          <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+          <a href="/admin" className="bg-surface-2 hover:bg-gray-600 px-4 py-2 rounded">
             ← Back to Dashboard
           </a>
         </div>
@@ -110,7 +110,7 @@ export default function AdminContent() {
           <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-blue-400">
+                <div className="text-2xl font-bold text-violet-soft">
                   {contentQueue.filter((item) => item.contentType === 'map').length}
                 </div>
                 <div className="text-sm text-muted">Maps to Review</div>
@@ -134,7 +134,7 @@ export default function AdminContent() {
 
         {/* Content Queue */}
         <div className="bg-surface-2 rounded-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-700">
+          <div className="p-6 border-b border-border">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Approval Queue</h2>
               <button
@@ -210,7 +210,7 @@ export default function AdminContent() {
 
                       {/* Preview for maps */}
                       {item.contentType === 'map' && (
-                        <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+                        <div className="mt-4 p-4 bg-surface-2 rounded-lg">
                           <div className="text-sm text-muted mb-2">Map Preview</div>
                           <div className="text-sm">
                             <div>
@@ -223,7 +223,7 @@ export default function AdminContent() {
                               href={`/map-editor?id=${item.contentId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 underline"
+                              className="text-violet-soft hover:text-violet-soft underline"
                             >
                               View in Map Editor →
                             </a>
@@ -254,7 +254,7 @@ export default function AdminContent() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-700">
+            <div className="px-6 py-4 border-t border-border">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-muted">
                   Showing {(currentPage - 1) * limit + 1} to{' '}
@@ -264,7 +264,7 @@ export default function AdminContent() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Previous
                   </button>
@@ -274,7 +274,7 @@ export default function AdminContent() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Next
                   </button>
@@ -293,7 +293,7 @@ export default function AdminContent() {
               {actionModal.action === 'approve' ? '✅ Approve Content' : '❌ Reject Content'}
             </h3>
 
-            <div className="mb-4 p-4 bg-gray-700 rounded">
+            <div className="mb-4 p-4 bg-surface-2 rounded">
               <div className="font-medium">{actionModal.item.contentName || 'Unnamed Content'}</div>
               <div className="text-sm text-muted">
                 {adminService.formatContentType(actionModal.item.contentType)} by{' '}
@@ -311,7 +311,7 @@ export default function AdminContent() {
                 <textarea
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded resize-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-border rounded resize-none"
                   rows={4}
                   placeholder={
                     actionModal.action === 'approve'

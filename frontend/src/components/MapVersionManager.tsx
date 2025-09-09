@@ -200,7 +200,7 @@ export const MapVersionManager: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet mx-auto mb-4"></div>
           <p className="text-gray-600">Loading versions...</p>
         </div>
       </div>
@@ -219,7 +219,7 @@ export const MapVersionManager: React.FC = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          className="bg-violet hover:bg-violet text-white px-4 py-2 rounded-lg font-medium"
         >
           Create New Version
         </button>
@@ -241,14 +241,14 @@ export const MapVersionManager: React.FC = () => {
       <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600">
         {versions.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="text-gray-400 text-6xl mb-4">📝</div>
+            <div className="text-muted text-6xl mb-4">📝</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Versions Yet</h3>
             <p className="text-gray-600 mb-6">
               Create your first version to start managing your map's development.
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium"
+              className="bg-violet hover:bg-violet text-white px-6 py-3 rounded-lg font-medium"
             >
               Create Version 1.0.0
             </button>
@@ -258,22 +258,22 @@ export const MapVersionManager: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Version
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Published
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -300,7 +300,7 @@ export const MapVersionManager: React.FC = () => {
                       <div>
                         <div className="text-sm font-medium text-gray-900">{version.name}</div>
                         {version.description && (
-                          <div className="text-sm text-gray-500">{version.description}</div>
+                          <div className="text-sm text-muted">{version.description}</div>
                         )}
                       </div>
                     </td>
@@ -361,7 +361,7 @@ export const MapVersionManager: React.FC = () => {
                       versionType: e.target.value as 'major' | 'minor' | 'patch',
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
                 >
                   <option value="patch">Patch (bug fixes, minor changes)</option>
                   <option value="minor">Minor (new features, improvements)</option>
@@ -375,7 +375,7 @@ export const MapVersionManager: React.FC = () => {
                   type="text"
                   value={newVersionData.name}
                   onChange={(e) => setNewVersionData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
                   placeholder="e.g., Updated Europe layout"
                   required
                 />
@@ -390,7 +390,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
                   rows={2}
                   placeholder="Brief description of this version..."
                 />
@@ -403,7 +403,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, changelog: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
                   rows={3}
                   placeholder="- Fixed territory adjacency issues&#10;- Improved continent balance&#10;- Added new special abilities"
                 />
@@ -421,7 +421,7 @@ export const MapVersionManager: React.FC = () => {
               <button
                 onClick={handleCreateVersion}
                 disabled={creating || !newVersionData.name.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-violet hover:bg-violet text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? 'Creating...' : 'Create Version'}
               </button>

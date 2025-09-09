@@ -139,11 +139,11 @@ export default function AdminGames() {
       case 'paused':
         return 'text-orange-400'
       case 'completed':
-        return 'text-blue-400'
+        return 'text-violet-soft'
       case 'abandoned':
         return 'text-red-400'
       default:
-        return 'text-gray-400'
+        return 'text-muted'
     }
   }
 
@@ -164,58 +164,58 @@ export default function AdminGames() {
   const totalPages = Math.ceil(totalGames / limit)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-surface-1 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">🎮 Game Management</h1>
-            <div className="text-gray-400">Monitor and manage active games</div>
+            <div className="text-muted">Monitor and manage active games</div>
           </div>
-          <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+          <a href="/admin" className="bg-surface-2 hover:bg-gray-600 px-4 py-2 rounded">
             ← Back to Dashboard
           </a>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-1 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
                   {games.filter((game) => game.status === 'active').length}
                 </div>
-                <div className="text-sm text-gray-400">Active Games</div>
+                <div className="text-sm text-muted">Active Games</div>
               </div>
               <div className="text-3xl">🎯</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-1 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
                   {games.filter((game) => game.status === 'waiting').length}
                 </div>
-                <div className="text-sm text-gray-400">Waiting for Players</div>
+                <div className="text-sm text-muted">Waiting for Players</div>
               </div>
               <div className="text-3xl">⏳</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-1 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-orange-400">
                   {games.filter((game) => game.status === 'paused').length}
                 </div>
-                <div className="text-sm text-gray-400">Paused Games</div>
+                <div className="text-sm text-muted">Paused Games</div>
               </div>
               <div className="text-3xl">⏸️</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-1 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
@@ -228,7 +228,7 @@ export default function AdminGames() {
                     }).length
                   }
                 </div>
-                <div className="text-sm text-gray-400">Potentially Stuck</div>
+                <div className="text-sm text-muted">Potentially Stuck</div>
               </div>
               <div className="text-3xl">🚨</div>
             </div>
@@ -236,7 +236,7 @@ export default function AdminGames() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-surface-1 rounded-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
             <form onSubmit={handleSearch} className="flex-1 flex space-x-4">
               <input
@@ -244,9 +244,9 @@ export default function AdminGames() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search games by name, map, or player..."
-                className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+                className="flex-1 px-4 py-2 bg-surface-2 border border-border rounded-lg"
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg">
+              <button type="submit" className="bg-violet hover:bg-violet px-6 py-2 rounded-lg">
                 🔍 Search
               </button>
             </form>
@@ -257,7 +257,7 @@ export default function AdminGames() {
                 setStatusFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
+              className="px-4 py-2 bg-surface-2 border border-border rounded-lg"
             >
               <option value="all">All Statuses</option>
               <option value="waiting">Waiting</option>
@@ -284,13 +284,13 @@ export default function AdminGames() {
         </div>
 
         {/* Games Table */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-700">
+        <div className="bg-surface-1 rounded-lg overflow-hidden">
+          <div className="p-6 border-b border-border">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Games ({totalGames.toLocaleString()})</h2>
               <button
                 onClick={loadGames}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
+                className="bg-violet hover:bg-violet px-4 py-2 rounded text-sm"
               >
                 🔄 Refresh
               </button>
@@ -308,7 +308,7 @@ export default function AdminGames() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadGames}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                className="bg-violet hover:bg-violet px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -317,7 +317,7 @@ export default function AdminGames() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4">🎮</div>
               <div className="text-lg font-medium mb-2">No games found</div>
-              <div className="text-gray-400">No games match your current filters</div>
+              <div className="text-muted">No games match your current filters</div>
             </div>
           ) : (
             <div className="divide-y divide-gray-700">
@@ -330,7 +330,7 @@ export default function AdminGames() {
                           <div className="font-medium text-lg">
                             {game.name || `Game ${game.id.slice(0, 8)}`}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted">
                             Map: {game.mapName} • Created by {game.createdByUsername}
                           </div>
                         </div>
@@ -341,23 +341,23 @@ export default function AdminGames() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
                         <div>
-                          <div className="text-gray-400">Players</div>
+                          <div className="text-muted">Players</div>
                           <div>
                             {game.players.length}/{game.maxPlayers}
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Turn</div>
+                          <div className="text-muted">Turn</div>
                           <div>
                             #{game.turnCount} ({game.phase})
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Current Player</div>
+                          <div className="text-muted">Current Player</div>
                           <div>{game.currentTurnUsername || 'None'}</div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Last Activity</div>
+                          <div className="text-muted">Last Activity</div>
                           <div>{getTimeSinceLastActivity(game.lastActivity)}</div>
                         </div>
                       </div>
@@ -367,14 +367,14 @@ export default function AdminGames() {
                         {game.players.map((player) => (
                           <div
                             key={player.id}
-                            className="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-1 text-sm"
+                            className="flex items-center space-x-2 bg-surface-2 rounded-lg px-3 py-1 text-sm"
                           >
                             <div
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: player.color }}
                             />
                             <span>{player.username}</span>
-                            <span className="text-gray-400">
+                            <span className="text-muted">
                               ({player.territoriesCount}T, {player.armiesCount}A)
                             </span>
                             {player.status !== 'active' && (
@@ -384,7 +384,7 @@ export default function AdminGames() {
                         ))}
                       </div>
 
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-muted">
                         Created: {new Date(game.createdAt).toLocaleString()} • Updated:{' '}
                         {new Date(game.updatedAt).toLocaleString()}
                       </div>
@@ -393,7 +393,7 @@ export default function AdminGames() {
                     <div className="flex flex-col space-y-2 ml-6">
                       <button
                         onClick={() => openActionModal(game, 'spectate')}
-                        className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                        className="bg-violet hover:bg-violet px-3 py-1 rounded text-sm"
                       >
                         👁️ Spectate
                       </button>
@@ -433,9 +433,9 @@ export default function AdminGames() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-700">
+            <div className="px-6 py-4 border-t border-border">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-muted">
                   Showing {(currentPage - 1) * limit + 1} to{' '}
                   {Math.min(currentPage * limit, totalGames)} of {totalGames} games
                 </div>
@@ -443,7 +443,7 @@ export default function AdminGames() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Previous
                   </button>
@@ -453,7 +453,7 @@ export default function AdminGames() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Next
                   </button>
@@ -467,7 +467,7 @@ export default function AdminGames() {
       {/* Action Modal */}
       {actionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-surface-1 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">
               {actionModal.action === 'spectate' && '👁️ Spectate Game'}
               {actionModal.action === 'force_end' && '🛑 Force End Game'}
@@ -476,11 +476,11 @@ export default function AdminGames() {
               {actionModal.action === 'adjust_settings' && '⚙️ Adjust Game Settings'}
             </h3>
 
-            <div className="mb-4 p-4 bg-gray-700 rounded">
+            <div className="mb-4 p-4 bg-surface-2 rounded">
               <div className="font-medium">
                 {actionModal.game.name || `Game ${actionModal.game.id.slice(0, 8)}`}
               </div>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted">
                 {actionModal.game.mapName} • {actionModal.game.players.length} players
               </div>
             </div>
@@ -494,7 +494,7 @@ export default function AdminGames() {
                   <textarea
                     value={actionNotes}
                     onChange={(e) => setActionNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded resize-none"
+                    className="w-full px-3 py-2 bg-surface-2 border border-border rounded resize-none"
                     rows={3}
                     placeholder={
                       actionModal.action === 'force_end'
@@ -518,14 +518,14 @@ export default function AdminGames() {
                 disabled={actionModal.action === 'force_end' && !actionNotes.trim()}
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
                   actionModal.action === 'spectate'
-                    ? 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-violet hover:bg-violet'
                     : actionModal.action === 'force_end'
                       ? 'bg-red-600 hover:bg-red-700'
                       : actionModal.action === 'pause'
                         ? 'bg-orange-600 hover:bg-orange-700'
                         : actionModal.action === 'resume'
                           ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-gray-600 hover:bg-gray-700'
+                          : 'bg-gray-600 hover:bg-surface-2'
                 }`}
               >
                 {actionModal.action === 'spectate' && '👁️ Open Spectator View'}

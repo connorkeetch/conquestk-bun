@@ -10,7 +10,7 @@ interface TeamAssignmentProps {
 
 const TEAM_COLORS = [
   { id: 1, name: 'Team Red', color: 'bg-red-600', border: 'border-red-500' },
-  { id: 2, name: 'Team Blue', color: 'bg-blue-600', border: 'border-blue-500' },
+  { id: 2, name: 'Team Blue', color: 'bg-violet', border: 'border-violet' },
   { id: 3, name: 'Team Green', color: 'bg-green-600', border: 'border-green-500' },
   { id: 4, name: 'Team Yellow', color: 'bg-yellow-600', border: 'border-yellow-500' },
 ]
@@ -84,7 +84,7 @@ export default function TeamAssignment({
         {teams.map(team => (
           <div
             key={team.id}
-            className={`p-4 rounded-lg border-2 ${team.border} bg-gray-800 ${
+            className={`p-4 rounded-lg border-2 ${team.border} bg-surface-1 ${
               isHost ? 'cursor-pointer' : ''
             }`}
             onDragOver={handleDragOver}
@@ -93,7 +93,7 @@ export default function TeamAssignment({
             <div className="flex items-center gap-2 mb-3">
               <div className={`w-4 h-4 rounded-full ${team.color}`} />
               <h4 className="font-semibold text-white">{team.name}</h4>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted">
                 ({team.players.length} players)
               </span>
             </div>
@@ -105,7 +105,7 @@ export default function TeamAssignment({
                   draggable={isHost}
                   onDragStart={() => handleDragStart(player.id)}
                   onDragEnd={handleDragEnd}
-                  className={`flex items-center gap-2 p-2 bg-gray-700 rounded ${
+                  className={`flex items-center gap-2 p-2 bg-surface-2 rounded ${
                     isHost ? 'cursor-move hover:bg-gray-600' : ''
                   } ${draggedPlayer === player.id ? 'opacity-50' : ''}`}
                 >
@@ -118,7 +118,7 @@ export default function TeamAssignment({
               ))}
               
               {team.players.length === 0 && (
-                <div className="text-center text-gray-500 text-sm py-2">
+                <div className="text-center text-muted text-sm py-2">
                   {isHost ? 'Drag players here' : 'No players yet'}
                 </div>
               )}
@@ -129,7 +129,7 @@ export default function TeamAssignment({
       
       {/* Unassigned players */}
       {unassignedPlayers.length > 0 && (
-        <div className="mt-4 p-4 bg-gray-800 rounded-lg border-2 border-gray-700">
+        <div className="mt-4 p-4 bg-surface-1 rounded-lg border-2 border-border">
           <h4 className="font-semibold text-white mb-3">Unassigned Players</h4>
           <div className="flex flex-wrap gap-2">
             {unassignedPlayers.map(player => (
@@ -138,7 +138,7 @@ export default function TeamAssignment({
                 draggable={isHost}
                 onDragStart={() => handleDragStart(player.id)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-2 p-2 bg-gray-700 rounded ${
+                className={`flex items-center gap-2 p-2 bg-surface-2 rounded ${
                   isHost ? 'cursor-move hover:bg-gray-600' : ''
                 } ${draggedPlayer === player.id ? 'opacity-50' : ''}`}
               >
@@ -152,7 +152,7 @@ export default function TeamAssignment({
           </div>
           
           {isHost && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-muted mt-2">
               Drag players to teams or click "Auto Balance" to distribute evenly
             </p>
           )}
@@ -161,7 +161,7 @@ export default function TeamAssignment({
       
       {/* Instructions */}
       {!isHost && (
-        <p className="text-sm text-gray-400 text-center">
+        <p className="text-sm text-muted text-center">
           Waiting for host to assign teams...
         </p>
       )}

@@ -110,7 +110,7 @@ export default function Login() {
                 required
                 maxLength={255}
                 autoComplete="username"
-                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                 placeholder="Enter username or email"
               />
             </div>
@@ -123,7 +123,7 @@ export default function Login() {
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-violet-soft hover:text-blue-300 transition-colors"
+                  className="text-sm text-violet-soft hover:text-violet-soft transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -137,7 +137,7 @@ export default function Login() {
                   required
                   maxLength={128}
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
+                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 text-base"
                   placeholder="Enter your password"
                 />
                 <button
@@ -275,7 +275,7 @@ export default function Login() {
                 Discord
               </button>
             </div>
-            <p className="text-xs text-gray-500 text-center mt-2">Coming Soon</p>
+            <p className="text-xs text-muted text-center mt-2">Coming Soon</p>
           </div>
 
           {/* Register Link */}
@@ -284,7 +284,7 @@ export default function Login() {
               Don't have an account?{' '}
               <Link
                 to="/register"
-                className="text-violet-soft hover:text-blue-300 font-medium hover:underline transition-colors"
+                className="text-violet-soft hover:text-violet-soft font-medium hover:underline transition-colors"
               >
                 Create one here
               </Link>

@@ -35,21 +35,21 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
         <div className="space-y-3">
           <button
             onClick={resetError}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            className="w-full px-4 py-2 bg-violet hover:bg-violet text-white rounded-lg transition-colors"
           >
             Try to Rejoin Game
           </button>
           
           <button
             onClick={handleLeaveGame}
-            className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            className="w-full px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
           >
             Return to Lobby
           </button>
         </div>
 
         {gameId && (
-          <p className="text-sm text-gray-400 mt-4">
+          <p className="text-sm text-muted mt-4">
             Game ID: {gameId}
           </p>
         )}

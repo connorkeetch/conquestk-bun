@@ -89,7 +89,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-surface-1 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
           <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-blue-400">
+                <div className="text-2xl font-bold text-violet-soft">
                   {systemStatus?.database.userCount.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted">Total Users</div>
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               <a
                 href="/admin/users"
-                className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/content"
-                className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/games"
-                className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/logs"
-                className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
                 Object.entries(systemStatus.featureFlags).map(([flagName, isEnabled]) => (
                   <div
                     key={flagName}
-                    className="flex items-center justify-between bg-gray-700 rounded-lg p-4"
+                    className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
                   >
                     <div>
                       <div className="font-medium capitalize">
