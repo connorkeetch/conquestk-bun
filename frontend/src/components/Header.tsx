@@ -7,6 +7,7 @@ import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import audioService from '../services/audioService'
 import MountainLogo from './MountainLogo'
+import { GRADIENTS } from '../constants/colors'
 
 interface MenuItem {
   path: string
@@ -79,8 +80,8 @@ export default function Header() {
             >
               <MountainLogo width={24} height={24} />
               <span className="hidden sm:inline">
-                CONQUEST <span className="text-yellow-400 font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                CONQUEST <span className="font-bold" style={{ 
+                  background: GRADIENTS.goldK, 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',
@@ -88,8 +89,8 @@ export default function Header() {
                 }}>K</span>
               </span>
               <span className="sm:hidden">
-                C<span className="text-yellow-400 font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                C<span className="font-bold" style={{ 
+                  background: GRADIENTS.goldK, 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',
@@ -293,9 +294,16 @@ export default function Header() {
         {/* Menu Header */}
         <div className="bg-gray-950 px-6 py-4 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚔️</span>
-            <span className="text-xl font-bold bg-gradient-to-r from-violet to-violet-soft bg-clip-text text-transparent">
-              CONQUEST K
+            <MountainLogo width={24} height={24} />
+            <span className="text-xl font-bold">
+              <span className="text-white">CONQUEST </span>
+              <span className="font-bold" style={{
+                background: GRADIENTS.goldK,
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>K</span>
             </span>
           </div>
           <button

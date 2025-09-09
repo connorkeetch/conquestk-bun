@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
+import { CORE_COLORS } from '../constants/colors'
 
 interface TroopMovementProps {
   from: { x: number; y: number }
@@ -112,8 +113,8 @@ export const BattleExplosion: React.FC<BattleExplosionProps> = ({ x, y, winner, 
     // Create explosion particles
     const colors =
       winner === 'attacker'
-        ? ['#EF4444', '#F87171', '#FCA5A5'] // Red shades
-        : ['#3B82F6', '#60A5FA', '#93C5FD'] // Blue shades
+        ? [CORE_COLORS.red500, CORE_COLORS.red400, CORE_COLORS.red300] // Red shades
+        : [CORE_COLORS.blue500, CORE_COLORS.blue400, CORE_COLORS.blue300] // Blue shades
 
     const newParticles = Array.from({ length: 20 }, (_, i) => {
       const angle = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.3
@@ -246,27 +247,26 @@ export const DiceRollAnimation: React.FC<DiceRollAnimationProps> = ({
     >
       <div className="flex gap-4 bg-black/80 rounded-lg p-3">
         <div className={`flex flex-col items-center ${rolling ? 'animate-bounce' : ''}`}>
-          <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: CORE_COLORS.red500 }}>
             {displayAttacker}
           </div>
-          <span className="text-xs text-red-400 mt-1">ATK</span>
+          <span className="text-xs mt-1" style={{ color: CORE_COLORS.red400 }}>ATK</span>
         </div>
 
         <div className="flex items-center text-white text-lg font-bold">VS</div>
 
         <div className={`flex flex-col items-center ${rolling ? 'animate-bounce' : ''}`}>
-          <div className="w-12 h-12 bg-violet rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: CORE_COLORS.violet }}>
             {displayDefender}
           </div>
-          <span className="text-xs text-violet-soft mt-1">DEF</span>
+          <span className="text-xs mt-1" style={{ color: CORE_COLORS.violetSoft }}>DEF</span>
         </div>
       </div>
 
       {!rolling && (
         <div
-          className={`text-center mt-2 font-bold ${
-            attacker > defender ? 'text-red-400' : 'text-violet-soft'
-          }`}
+          className="text-center mt-2 font-bold"
+          style={{ color: attacker > defender ? CORE_COLORS.red400 : CORE_COLORS.violetSoft }}
         >
           {attacker > defender ? 'Attacker Wins!' : 'Defender Wins!'}
         </div>
@@ -288,7 +288,7 @@ export const VictoryParticles: React.FC<{ territoryId: string }> = ({ territoryI
   >([])
 
   useEffect(() => {
-    const colors = ['#FFD700', '#FFA500', '#FF69B4', '#00CED1', '#9370DB']
+    const colors = [CORE_COLORS.gold, CORE_COLORS.orange500, CORE_COLORS.pink500, CORE_COLORS.cyan500, CORE_COLORS.purple500]
 
     const newParticles = Array.from({ length: 30 }, (_, i) => ({
       id: i,

@@ -1,4 +1,5 @@
 import type React from 'react'
+import { CORE_COLORS } from '../constants/colors'
 
 interface CapitalMarkerProps {
   x: number
@@ -12,13 +13,13 @@ interface CapitalMarkerProps {
 const CapitalMarker: React.FC<CapitalMarkerProps> = ({
   x,
   y,
-  color = '#FFD700', // Default gold color
+  color = CORE_COLORS.gold, // Default gold color from unified system
   isUnderAttack = false,
   size = 24,
   fogOfWar = false,
 }) => {
   // In fog of war, always show neutral gold color
-  const displayColor = fogOfWar ? '#FFD700' : color
+  const displayColor = fogOfWar ? CORE_COLORS.gold : color
   return (
     <div
       className={`absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 ${
