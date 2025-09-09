@@ -468,7 +468,19 @@ if (process.env.NODE_ENV !== 'production') {
 // Staging should behave exactly like production for testing
 const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
 if (isProductionLike) {
+  const fs = require('node:fs')
   const frontendPath = path.join(__dirname, '../public')
+  
+  logger.info(`📁 Setting up static file serving from: ${frontendPath}`)
+  logger.info(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`)
+  
+  if (fs.existsSync(frontendPath)) {
+    const files = fs.readdirSync(frontendPath)
+    logger.info(`📁 Files in frontend directory: ${files.join(', ')}`)
+    
+    const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'))
+    logger.info(`📁 index.html exists: ${indexExists}`)
+  }
 
   // IMPORTANT: Serve static files with explicit options
   // This MUST come before the catch-all route
@@ -476,6 +488,7 @@ if (isProductionLike) {
     express.static(frontendPath, {
       maxAge: '1d',
       setHeaders: (res: Response, filePath: string) => {
+        logger.debug(`📦 Serving static file: ${filePath}`)
         // Set proper content types for assets
         if (filePath.endsWith('.js')) {
           res.setHeader('Content-Type', 'application/javascript; charset=UTF-8')
@@ -490,20 +503,34 @@ if (isProductionLike) {
   )
 
   // Explicitly handle asset requests to ensure they don't fall through
-  app.get('/assets/*path', (_req: Request, res: Response) => {
+  app.get('/assets/*', (req: Request, res: Response) => {
+    logger.warn(`❌ Asset not found: ${req.path}`)
     // If we reach here, the asset wasn't found
     res.status(404).send('Asset not found')
   })
 
   // Handle React Router - serve index.html for all non-API and non-asset routes
-  app.get('/*path', (req: Request, res: Response) => {
+  app.get('*', (req: Request, res: Response) => {
+    logger.info(`🌐 Request to: ${req.path}`)
+    
     // Don't serve index.html for API routes or assets
     if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
+      logger.warn(`❌ API/Asset route not found: ${req.path}`)
       return res.status(404).send('Not found')
     }
 
     const indexPath = path.join(frontendPath, 'index.html')
-    return res.sendFile(indexPath)
+    logger.info(`📄 Serving index.html from: ${indexPath}`)
+    logger.info(`📄 index.html exists: ${fs.existsSync(indexPath)}`)
+    
+    return res.sendFile(indexPath, (err) => {
+      if (err) {
+        logger.error(`❌ Error serving index.html:`, err)
+        res.status(500).send('Error serving page')
+      } else {
+        logger.info(`✅ Successfully served index.html for: ${req.path}`)
+      }
+    })
   })
 }
 
