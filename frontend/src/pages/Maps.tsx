@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GRADIENTS } from '../constants/colors'
+import { GRADIENTS, CORE_COLORS } from '../constants/colors'
 
 // import Breadcrumb from '../components/Breadcrumb';
 
@@ -26,7 +26,7 @@ const Maps: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold mb-2">
-            <span style={{ background: GRADIENTS.redToGold, backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Maps Gallery</span>
+            <span style={{ color: CORE_COLORS.white }}>Maps Gallery</span>
           </h1>
           <p className="text-muted">Discover battlefields from around the world</p>
         </div>
