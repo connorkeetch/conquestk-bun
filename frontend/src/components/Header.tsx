@@ -7,7 +7,7 @@ import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import audioService from '../services/audioService'
 import MountainLogo from './MountainLogo'
-import { GRADIENTS } from '../constants/colors'
+import { GRADIENTS, CORE_COLORS } from '../constants/colors'
 
 interface MenuItem {
   path: string
@@ -179,7 +179,7 @@ export default function Header() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className={`transition-colors ${
-                      isMuted ? 'text-red-400' : 'text-green-400'
+                      isMuted ? 'text-crimson' : 'text-success'
                     }`}
                   >
                     {isMuted ? (
@@ -198,7 +198,7 @@ export default function Header() {
                   </svg>
                   
                   {/* Tooltip */}
-                  <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-surface-1 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <div className="tooltip">
                     {isMuted ? 'Audio Muted' : 'Audio Enabled'}
                   </div>
                 </button>
@@ -230,28 +230,28 @@ export default function Header() {
                         className="fixed inset-0 z-40"
                         onClick={() => setIsUserDropdownOpen(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 bg-surface-1 border border-border rounded-lg shadow-xl z-50">
+                      <div className="dropdown-menu">
                         <Link
                           to="/profile"
                           onClick={() => setIsUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-3 text-sm text-muted hover:text-white hover:bg-surface-2 transition-colors"
+                          className="dropdown-item"
                         >
                           <span>👤</span> View Profile
                         </Link>
                         <Link
                           to="/settings"
                           onClick={() => setIsUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-3 text-sm text-muted hover:text-white hover:bg-surface-2 transition-colors"
+                          className="dropdown-item"
                         >
                           <span>⚙️</span> Settings
                         </Link>
-                        <hr className="border-border my-1" />
+                        <hr className="dropdown-separator" />
                         <button
                           onClick={() => {
                             handleLogout()
                             setIsUserDropdownOpen(false)
                           }}
-                          className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-surface-2 transition-colors text-left"
+                          className="dropdown-item text-crimson hover:text-crimson-light"
                         >
                           <span>🚪</span> Logout
                         </button>
@@ -292,7 +292,7 @@ export default function Header() {
         } border-r border-border`}
       >
         {/* Menu Header */}
-        <div className="bg-gray-950 px-6 py-4 flex items-center justify-between border-b border-border">
+        <div className="nav-menu-header">
           <div className="flex items-center gap-2">
             <MountainLogo width={24} height={24} />
             <span className="text-xl font-bold">
@@ -310,7 +310,7 @@ export default function Header() {
             onClick={() => setIsMenuOpen(false)}
             className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" className="fill-gray-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" className="fill-muted">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>

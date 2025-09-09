@@ -2,6 +2,7 @@ import { Trophy, Medal, Users, Calendar, TrendingUp, MessageSquare, Shield, Cale
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import { CORE_COLORS } from '../constants/colors'
 
 interface LeaderboardEntry {
   id: string
@@ -73,7 +74,7 @@ const CommunityPage: React.FC = () => {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Community Hub</h1>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: CORE_COLORS.white }}>Community Hub</h1>
           <p className="text-muted">Connect, compete, and celebrate with fellow commanders</p>
         </div>
       </div>

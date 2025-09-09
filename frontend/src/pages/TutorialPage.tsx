@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { BookOpen, Gamepad2, Trophy, Shield, Map, Zap, Users, Settings } from 'lucide-react'
-import { RANK_COLORS, colorStyle } from '../constants/colors'
+import { RANK_COLORS, colorStyle, CORE_COLORS } from '../constants/colors'
 
 const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'>('basics')
@@ -9,7 +9,7 @@ const TutorialPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold gradient-text mb-2">How to Play</h1>
+        <h1 className="text-4xl font-bold mb-2" style={{ color: CORE_COLORS.white }}>How to Play</h1>
         <p className="text-muted">Master the art of conquest with our comprehensive guides</p>
       </div>
 
