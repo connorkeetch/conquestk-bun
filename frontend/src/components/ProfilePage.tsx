@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import RankInsignia from './RankInsignia'
-import { COLOR_CLASSES } from '../constants/colors'
+import { PLAYER_COLORS, PREMIUM_PLAYER_COLORS, getPlayerColor } from '../constants/colors'
 import type { PlayerColor } from '../constants/colors'
 
 interface UserProfile {

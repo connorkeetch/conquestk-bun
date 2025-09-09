@@ -33,12 +33,12 @@
 
 /* Root CSS variables for complex values */
 :root {
-  /* The conquest gradient - Our signature background */
+  /* The conquest gradient - Our signature background (more subtle) */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    var(--color-ink) 0%,
-    var(--color-imperial) 40%,
-    var(--color-abyss) 100%
+    #050508 0%,
+    #0A051C 40%,
+    #040509 100%
   );
   
   /* Atmospheric glow color */

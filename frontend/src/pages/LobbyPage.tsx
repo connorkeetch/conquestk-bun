@@ -184,9 +184,9 @@ const LobbyPage: React.FC = () => {
       case 'active':
         return 'text-yellow-400'
       case 'completed':
-        return 'text-gray-400'
+        return 'text-muted'
       default:
-        return 'text-gray-400'
+        return 'text-muted'
     }
   }
 
@@ -224,7 +224,7 @@ const LobbyPage: React.FC = () => {
               </svg>
               <div>
                 <h3 className="text-yellow-300 font-medium">Verify Your Email</h3>
-                <p className="text-gray-300 text-sm mt-1">
+                <p className="text-muted text-sm mt-1">
                   Please verify your email address to access all features. Check your inbox for the
                   verification link.
                 </p>
@@ -245,18 +245,18 @@ const LobbyPage: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold gradient-text mb-2">Game Lobby</h1>
-          <p className="text-gray-400">Find and join games, or create your own</p>
+          <p className="text-muted">Find and join games, or create your own</p>
         </div>
         <div className="flex gap-3">
           <Link
             to="/create"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors"
           >
             🎮 Create Game
           </Link>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
           >
             🔍 Filter Games
           </button>
@@ -265,7 +265,7 @@ const LobbyPage: React.FC = () => {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="mb-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="mb-6 p-4 bg-surface-1 border border-border rounded-lg">
           <h3 className="text-lg font-semibold text-white mb-4">Filter Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -274,7 +274,7 @@ const LobbyPage: React.FC = () => {
                   type="checkbox"
                   checked={filters.showFull}
                   onChange={(e) => setFilters((prev) => ({ ...prev, showFull: e.target.checked }))}
-                  className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Show Full Games</span>
               </label>
@@ -287,7 +287,7 @@ const LobbyPage: React.FC = () => {
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, showInProgress: e.target.checked }))
                   }
-                  className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Show In Progress</span>
               </label>
@@ -306,7 +306,7 @@ const LobbyPage: React.FC = () => {
                       minPlayers: parseInt(e.target.value, 10) || 2,
                     }))
                   }
-                  className="w-full mt-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-violet focus:outline-none"
                 />
               </label>
             </div>
@@ -324,7 +324,7 @@ const LobbyPage: React.FC = () => {
                       maxPlayers: parseInt(e.target.value, 10) || 12,
                     }))
                   }
-                  className="w-full mt-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-violet focus:outline-none"
                 />
               </label>
             </div>
@@ -333,12 +333,12 @@ const LobbyPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto">
+      <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'browse'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('browse')}
         >
@@ -348,8 +348,8 @@ const LobbyPage: React.FC = () => {
           <button
             className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeTab === 'my-games'
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-400 hover:text-white'
+                ? 'text-violet-soft border-b-2 border-violet'
+                : 'text-muted hover:text-white'
             }`}
             onClick={() => setActiveTab('my-games')}
           >
@@ -359,8 +359,8 @@ const LobbyPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'private'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('private')}
         >
@@ -369,8 +369,8 @@ const LobbyPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'tournaments'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('tournaments')}
         >
@@ -402,7 +402,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadPublicGames}
                 disabled={loading}
-                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -413,13 +413,13 @@ const LobbyPage: React.FC = () => {
                 {() => <GameCardSkeleton />}
               </SkeletonGroup>
             ) : publicGames.length === 0 ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-6xl mb-4">🎲</div>
                 <p className="text-lg mb-2">No public games available</p>
                 <p className="text-sm mb-6">Be the first to create a game for others to join!</p>
                 <Link
                   to="/create"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-block"
+                  className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
                 >
                   🎮 Create Game
                 </Link>
@@ -441,9 +441,9 @@ const LobbyPage: React.FC = () => {
 
                   if (filteredGames.length === 0) {
                     return (
-                      <div className="text-center text-gray-400 py-16">
+                      <div className="text-center text-muted py-16">
                         <div className="text-6xl mb-4">🔍</div>
-                        <p className="text-lg mb-2 text-gray-300">No games match your filters</p>
+                        <p className="text-lg mb-2 text-muted">No games match your filters</p>
                         <p className="text-sm mb-6">
                           Try adjusting your filter settings or create a new game
                         </p>
@@ -456,7 +456,7 @@ const LobbyPage: React.FC = () => {
                               maxPlayers: 12,
                             })
                           }
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                          className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                         >
                           Reset Filters
                         </button>
@@ -467,12 +467,12 @@ const LobbyPage: React.FC = () => {
                   return filteredGames.map((game) => (
                     <div
                       key={game.id}
-                      className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                      className="bg-surface-1 border border-border rounded-lg p-4 hover:border-border transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-white">{game.name}</h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <div className="flex items-center space-x-4 text-sm text-muted">
                             <span>
                               {game.currentPlayers}/{game.maxPlayers} players
                             </span>
@@ -483,7 +483,7 @@ const LobbyPage: React.FC = () => {
                         </div>
                         <div className="flex items-center space-x-3">
                           {game.hostUsername && (
-                            <div className="text-sm text-gray-400">by {game.hostUsername}</div>
+                            <div className="text-sm text-muted">by {game.hostUsername}</div>
                           )}
                           <button
                             onClick={() => handleJoinGame(game.id)}
@@ -492,8 +492,8 @@ const LobbyPage: React.FC = () => {
                             }
                             className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
                               game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
-                                ? 'bg-gray-700 text-gray-400 opacity-50 cursor-not-allowed'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                ? 'bg-surface-2 text-muted opacity-50 cursor-not-allowed'
+                                : 'bg-violet hover:brightness-110 text-white'
                             }`}
                           >
                             {game.currentPlayers >= game.maxPlayers
@@ -519,7 +519,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadMyGames}
                 disabled={loading}
-                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -531,8 +531,8 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('all')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-violet text-white'
+                    : 'bg-surface-2 text-muted hover:bg-gray-600'
                 }`}
               >
                 All Games
@@ -541,8 +541,8 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('active')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'active'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-violet text-white'
+                    : 'bg-surface-2 text-muted hover:bg-gray-600'
                 }`}
               >
                 <Gamepad2 className="inline w-4 h-4 mr-1" />
@@ -552,8 +552,8 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('waiting')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'waiting'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-violet text-white'
+                    : 'bg-surface-2 text-muted hover:bg-gray-600'
                 }`}
               >
                 <Clock className="inline w-4 h-4 mr-1" />
@@ -563,8 +563,8 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('finished')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'finished'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-violet text-white'
+                    : 'bg-surface-2 text-muted hover:bg-gray-600'
                 }`}
               >
                 <Trophy className="inline w-4 h-4 mr-1" />
@@ -577,20 +577,20 @@ const LobbyPage: React.FC = () => {
                 {() => <GameCardSkeleton />}
               </SkeletonGroup>
             ) : myGames.length === 0 ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-6xl mb-4">🎮</div>
                 <p className="text-lg mb-2">No games yet</p>
                 <p className="text-sm mb-6">Join or create a game to get started!</p>
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setActiveTab('browse')}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                    className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                   >
                     🌍 Browse Games
                   </button>
                   <Link
                     to="/create"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-block"
+                    className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
                   >
                     ➕ Create Game
                   </Link>
@@ -606,16 +606,16 @@ const LobbyPage: React.FC = () => {
 
                   if (filteredGames.length === 0) {
                     return (
-                      <div className="text-center text-gray-400 py-16">
+                      <div className="text-center text-muted py-16">
                         <div className="text-6xl mb-4">
                           {myGamesFilter === 'active' ? '🎮' : myGamesFilter === 'waiting' ? '⏰' : '🏆'}
                         </div>
-                        <p className="text-lg mb-2 text-gray-300">
+                        <p className="text-lg mb-2 text-muted">
                           No {myGamesFilter === 'all' ? '' : myGamesFilter} games
                         </p>
                         <button
                           onClick={() => setMyGamesFilter('all')}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                          className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                         >
                           Show All Games
                         </button>
@@ -626,12 +626,12 @@ const LobbyPage: React.FC = () => {
                   return filteredGames.map((game) => (
                     <div
                       key={game.id}
-                      className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                      className="bg-surface-1 border border-border rounded-lg p-4 hover:border-border transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-white">{game.name}</h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <div className="flex items-center space-x-4 text-sm text-muted">
                             <span>
                               {game.playerCount}/{game.maxPlayers} players
                             </span>
@@ -651,7 +651,7 @@ const LobbyPage: React.FC = () => {
                           {game.status === 'waiting' ? (
                             <Link
                               to={`/room/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                              className="px-3 py-1 text-sm font-medium bg-violet hover:brightness-110 text-white rounded-lg transition-colors"
                             >
                               📋 View Lobby
                             </Link>
@@ -665,7 +665,7 @@ const LobbyPage: React.FC = () => {
                           ) : (
                             <Link
                               to={`/game/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                              className="px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
                             >
                               📊 View Results
                             </Link>
@@ -685,8 +685,8 @@ const LobbyPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Join Private Game</h2>
             <div className="max-w-md mx-auto text-center py-16">
               <div className="text-6xl mb-4">🔐</div>
-              <p className="text-lg text-gray-300 mb-2">Enter game code to join private game</p>
-              <p className="text-sm text-gray-400 mb-6">
+              <p className="text-lg text-muted mb-2">Enter game code to join private game</p>
+              <p className="text-sm text-muted mb-6">
                 You'll need the invite code from the game host
               </p>
               <div className="space-y-4">
@@ -696,12 +696,12 @@ const LobbyPage: React.FC = () => {
                   value={privateGameCode}
                   onChange={(e) => setPrivateGameCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinPrivateGame()}
-                  className="w-full text-center text-lg bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-gray-600 focus:border-blue-500 focus:outline-none tracking-wider font-mono"
+                  className="w-full text-center text-lg bg-surface-2 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-border focus:border-violet focus:outline-none tracking-wider font-mono"
                 />
                 <button
                   onClick={handleJoinPrivateGame}
                   disabled={!privateGameCode.trim()}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   🎮 Join Game
                 </button>
@@ -713,9 +713,9 @@ const LobbyPage: React.FC = () => {
         {activeTab === 'tournaments' && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">Tournaments</h2>
-            <div className="text-center text-gray-400 py-16">
+            <div className="text-center text-muted py-16">
               <div className="text-6xl mb-4">🏆</div>
-              <p className="text-lg text-gray-300">Tournament system coming soon!</p>
+              <p className="text-lg text-muted">Tournament system coming soon!</p>
               <p className="text-sm mt-2">
                 This will show active tournaments, brackets, and registration
               </p>

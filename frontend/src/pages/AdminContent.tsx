@@ -86,7 +86,7 @@ export default function AdminContent() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">🔍 Content Moderation</h1>
-            <div className="text-gray-400">Review and moderate user-generated content</div>
+            <div className="text-muted">Review and moderate user-generated content</div>
           </div>
           <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
             ← Back to Dashboard
@@ -95,37 +95,37 @@ export default function AdminContent() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
                   {totalItems.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-400">Pending Reviews</div>
+                <div className="text-sm text-muted">Pending Reviews</div>
               </div>
               <div className="text-3xl">⏳</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-blue-400">
                   {contentQueue.filter((item) => item.contentType === 'map').length}
                 </div>
-                <div className="text-sm text-gray-400">Maps to Review</div>
+                <div className="text-sm text-muted">Maps to Review</div>
               </div>
               <div className="text-3xl">🗺️</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
                   {contentQueue.filter((item) => item.contentType !== 'map').length}
                 </div>
-                <div className="text-sm text-gray-400">Other Content</div>
+                <div className="text-sm text-muted">Other Content</div>
               </div>
               <div className="text-3xl">📝</div>
             </div>
@@ -133,13 +133,13 @@ export default function AdminContent() {
         </div>
 
         {/* Content Queue */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <div className="bg-surface-2 rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-700">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Approval Queue</h2>
               <button
                 onClick={loadContentQueue}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
+                className="bg-violet hover:brightness-110 px-4 py-2 rounded text-sm"
               >
                 🔄 Refresh
               </button>
@@ -157,7 +157,7 @@ export default function AdminContent() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadContentQueue}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                className="bg-violet hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -166,7 +166,7 @@ export default function AdminContent() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4">🎉</div>
               <div className="text-lg font-medium mb-2">All caught up!</div>
-              <div className="text-gray-400">No content pending review</div>
+              <div className="text-muted">No content pending review</div>
             </div>
           ) : (
             <div className="divide-y divide-gray-700">
@@ -182,7 +182,7 @@ export default function AdminContent() {
                           <div className="font-medium text-lg">
                             {item.contentName || 'Unnamed Content'}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted">
                             by {item.submitterUsername} •{' '}
                             {new Date(item.submittedAt).toLocaleDateString()}
                           </div>
@@ -191,19 +191,19 @@ export default function AdminContent() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <div className="text-gray-400">Content Type</div>
+                          <div className="text-muted">Content Type</div>
                           <div className="capitalize">{item.contentType}</div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Submitted</div>
+                          <div className="text-muted">Submitted</div>
                           <div>{new Date(item.submittedAt).toLocaleString()}</div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Submitter</div>
+                          <div className="text-muted">Submitter</div>
                           <div>{item.submitterUsername}</div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Status</div>
+                          <div className="text-muted">Status</div>
                           <div className="capitalize text-yellow-400">{item.status}</div>
                         </div>
                       </div>
@@ -211,7 +211,7 @@ export default function AdminContent() {
                       {/* Preview for maps */}
                       {item.contentType === 'map' && (
                         <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-                          <div className="text-sm text-gray-400 mb-2">Map Preview</div>
+                          <div className="text-sm text-muted mb-2">Map Preview</div>
                           <div className="text-sm">
                             <div>
                               <strong>Map ID:</strong> {item.contentId}
@@ -256,7 +256,7 @@ export default function AdminContent() {
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-muted">
                   Showing {(currentPage - 1) * limit + 1} to{' '}
                   {Math.min(currentPage * limit, totalItems)} of {totalItems} items
                 </div>
@@ -288,14 +288,14 @@ export default function AdminContent() {
       {/* Action Modal */}
       {actionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">
               {actionModal.action === 'approve' ? '✅ Approve Content' : '❌ Reject Content'}
             </h3>
 
             <div className="mb-4 p-4 bg-gray-700 rounded">
               <div className="font-medium">{actionModal.item.contentName || 'Unnamed Content'}</div>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted">
                 {adminService.formatContentType(actionModal.item.contentType)} by{' '}
                 {actionModal.item.submitterUsername}
               </div>

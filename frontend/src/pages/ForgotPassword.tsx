@@ -33,10 +33,10 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-700">
+      <div className="bg-surface-2 rounded-xl shadow-2xl p-8 max-w-md w-full border border-border">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">Forgot Password</h1>
-          <p className="text-gray-400">
+          <p className="text-muted">
             {!submitted ? 'Enter your email to reset your password' : 'Check your email'}
           </p>
         </div>
@@ -50,7 +50,7 @@ const ForgotPassword: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-gray-300 text-sm font-medium mb-2">
+              <label htmlFor="email" className="block text-muted text-sm font-medium mb-2">
                 Email Address
               </label>
               <input
@@ -60,7 +60,7 @@ const ForgotPassword: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200"
                 placeholder="Enter your email address"
               />
             </div>
@@ -68,7 +68,7 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-violet hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </button>
@@ -91,8 +91,8 @@ const ForgotPassword: React.FC = () => {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">Check Your Email</h2>
-            <p className="text-gray-300 mb-6">{message}</p>
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-muted mb-6">{message}</p>
+            <p className="text-sm text-muted mb-6">
               If you don't see the email, check your spam folder.
             </p>
 
@@ -102,7 +102,7 @@ const ForgotPassword: React.FC = () => {
                 setEmail('')
                 setMessage('')
               }}
-              className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
+              className="text-violet-soft hover:text-blue-300 text-sm font-medium transition-colors"
             >
               Try another email
             </button>
@@ -110,9 +110,9 @@ const ForgotPassword: React.FC = () => {
         )}
 
         <div className="mt-6 text-center">
-          <p className="text-gray-400 text-sm">
+          <p className="text-muted text-sm">
             Remember your password?{' '}
-            <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <Link to="/login" className="text-violet-soft hover:text-blue-300 transition-colors">
               Back to Login
             </Link>
           </p>

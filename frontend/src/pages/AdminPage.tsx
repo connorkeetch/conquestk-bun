@@ -72,7 +72,7 @@ const AdminPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-1 flex items-center justify-center">
         <div className="text-white">Loading admin panel...</div>
       </div>
     )
@@ -83,7 +83,7 @@ const AdminPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-surface-1">
       {/* Admin Header */}
       <div className="bg-gradient-to-r from-purple-800 to-red-800 text-white p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -98,7 +98,7 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-gray-800 border-b border-gray-700">
+      <div className="bg-surface-2 border-b border-gray-700">
         <div className="max-w-7xl mx-auto">
           <nav className="flex gap-1 p-2">
             {tabs.map((tab) => (
@@ -160,7 +160,7 @@ const AdminOverview: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="bg-surface-2 rounded-lg p-6">
         <h3 className="text-lg font-bold text-white mb-4">Recent Activity</h3>
         <div className="text-gray-300">
           Activity log will be displayed here...
@@ -216,7 +216,7 @@ const UserManagement: React.FC = () => {
       <h2 className="text-2xl font-bold text-white">User Management</h2>
 
       {/* Search Bar */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="bg-surface-2 rounded-lg p-4">
         <input
           type="text"
           placeholder="Search users by username or email..."
@@ -228,7 +228,7 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-surface-2 rounded-lg overflow-hidden">
         <table className="w-full text-white">
           <thead className="bg-gray-700">
             <tr>
@@ -275,7 +275,7 @@ const UserManagement: React.FC = () => {
                     )}
                     <button
                       onClick={() => setSelectedUser(user)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:brightness-110 text-sm"
                     >
                       View
                     </button>
@@ -331,19 +331,19 @@ const MapApproval: React.FC = () => {
 
       <div className="grid gap-4">
         {pendingMaps.length === 0 ? (
-          <div className="bg-gray-800 rounded-lg p-6 text-center text-gray-400">
+          <div className="bg-surface-2 rounded-lg p-6 text-center text-muted">
             No maps pending approval
           </div>
         ) : (
           pendingMaps.map((map) => (
-            <div key={map.id} className="bg-gray-800 rounded-lg p-6">
+            <div key={map.id} className="bg-surface-2 rounded-lg p-6">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white">{map.contentName}</h3>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-muted text-sm">
                     Submitted by: {map.submitterUsername}
                   </p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-muted text-sm">
                     Date: {new Date(map.submittedAt).toLocaleString()}
                   </p>
                 </div>
@@ -364,7 +364,7 @@ const MapApproval: React.FC = () => {
                     Reject
                   </button>
                   <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:brightness-110"
                   >
                     View Map
                   </button>
@@ -419,7 +419,7 @@ const GameManagement: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">Game Management</h2>
 
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-surface-2 rounded-lg overflow-hidden">
         <table className="w-full text-white">
           <thead className="bg-gray-700">
             <tr>
@@ -496,14 +496,14 @@ const AdminSettings: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">Admin Settings</h2>
 
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="bg-surface-2 rounded-lg p-6">
         <h3 className="text-lg font-bold text-white mb-4">Feature Flags</h3>
         <div className="space-y-2">
           {featureFlags.map((flag) => (
             <div key={flag.id} className="flex items-center justify-between p-3 bg-gray-700 rounded">
               <div>
                 <div className="text-white font-medium">{flag.flagName}</div>
-                <div className="text-gray-400 text-sm">{flag.description}</div>
+                <div className="text-muted text-sm">{flag.description}</div>
               </div>
               <button
                 onClick={() => handleToggleFlag(flag.flagName, !flag.isEnabled)}
@@ -525,8 +525,8 @@ const AdminSettings: React.FC = () => {
 
 // Stat Card Component
 const StatCard: React.FC<{ title: string; value: number }> = ({ title, value }) => (
-  <div className="bg-gray-800 rounded-lg p-4">
-    <div className="text-gray-400 text-sm">{title}</div>
+  <div className="bg-surface-2 rounded-lg p-4">
+    <div className="text-muted text-sm">{title}</div>
     <div className="text-2xl font-bold text-white">{value || 0}</div>
   </div>
 )

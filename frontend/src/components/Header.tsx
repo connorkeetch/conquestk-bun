@@ -66,7 +66,7 @@ export default function Header() {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               aria-label="Menu"
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               onClick={toggleMenu}
             >
               <svg width="22" height="22" viewBox="0 0 24 24" className="fill-white/70">
@@ -197,7 +197,7 @@ export default function Header() {
                   </svg>
                   
                   {/* Tooltip */}
-                  <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-surface-1 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     {isMuted ? 'Audio Muted' : 'Audio Enabled'}
                   </div>
                 </button>
@@ -229,28 +229,28 @@ export default function Header() {
                         className="fixed inset-0 z-40"
                         onClick={() => setIsUserDropdownOpen(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-lg shadow-xl z-50">
+                      <div className="absolute right-0 mt-2 w-48 bg-surface-1 border border-border rounded-lg shadow-xl z-50">
                         <Link
                           to="/profile"
                           onClick={() => setIsUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                          className="flex items-center gap-2 px-4 py-3 text-sm text-muted hover:text-white hover:bg-surface-2 transition-colors"
                         >
                           <span>👤</span> View Profile
                         </Link>
                         <Link
                           to="/settings"
                           onClick={() => setIsUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                          className="flex items-center gap-2 px-4 py-3 text-sm text-muted hover:text-white hover:bg-surface-2 transition-colors"
                         >
                           <span>⚙️</span> Settings
                         </Link>
-                        <hr className="border-gray-800 my-1" />
+                        <hr className="border-border my-1" />
                         <button
                           onClick={() => {
                             handleLogout()
                             setIsUserDropdownOpen(false)
                           }}
-                          className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800 transition-colors text-left"
+                          className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-surface-2 transition-colors text-left"
                         >
                           <span>🚪</span> Logout
                         </button>
@@ -269,7 +269,7 @@ export default function Header() {
                 </Link>
                 <Link
                   to="/register"
-                  className="hidden sm:inline-block px-3 py-1.5 rounded-md text-sm bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition"
+                  className="hidden sm:inline-block px-3 py-1.5 rounded-md text-sm bg-violet text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition"
                 >
                   Register
                 </Link>
@@ -286,21 +286,21 @@ export default function Header() {
 
       {/* Comprehensive Side Menu */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-gray-900 z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-surface-1 z-50 transform transition-transform duration-300 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } border-r border-gray-800`}
+        } border-r border-border`}
       >
         {/* Menu Header */}
-        <div className="bg-gray-950 px-6 py-4 flex items-center justify-between border-b border-gray-800">
+        <div className="bg-gray-950 px-6 py-4 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚔️</span>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-violet to-violet-soft bg-clip-text text-transparent">
               CONQUEST K
             </span>
           </div>
           <button
             onClick={() => setIsMenuOpen(false)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" className="fill-gray-400">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -320,8 +320,8 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     location.pathname === item.path
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                      ? 'bg-violet text-white shadow-lg'
+                      : 'text-muted hover:text-white hover:bg-surface-2'
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
@@ -331,15 +331,15 @@ export default function Header() {
             </div>
 
             {/* Coming Soon Section */}
-            <div className="mt-8 pt-6 border-t border-gray-800">
-              <div className="px-4 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="mt-8 pt-6 border-t border-border">
+              <div className="px-4 mb-3 text-xs font-semibold text-muted uppercase tracking-wider">
                 Coming Soon
               </div>
               <div className="space-y-1 opacity-50">
                 {futureItems.map((item) => (
                   <div
                     key={item.path}
-                    className="flex items-center gap-3 px-4 py-3 text-gray-500 cursor-not-allowed"
+                    className="flex items-center gap-3 px-4 py-3 text-muted cursor-not-allowed"
                   >
                     <span className="text-xl">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>
@@ -353,10 +353,10 @@ export default function Header() {
           </div>
 
           {/* Bottom Auth Section */}
-          <div className="px-4 py-4 border-t border-gray-800">
+          <div className="px-4 py-4 border-t border-border">
             {isAuthenticated ? (
               <div className="space-y-2">
-                <div className="px-3 py-2 text-sm text-gray-400">
+                <div className="px-3 py-2 text-sm text-muted">
                   Logged in as{' '}
                   <span className="text-white font-medium">
                     {user?.username ? sanitizeText(user.username) : ''}
@@ -371,18 +371,18 @@ export default function Header() {
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="text-sm text-gray-500 text-center mb-2">Login to play</div>
+                <div className="text-sm text-muted text-center mb-2">Login to play</div>
                 <Link
                   to="/login"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block w-full px-4 py-2 text-center text-gray-400 hover:text-white transition-colors"
+                  className="block w-full px-4 py-2 text-center text-muted hover:text-white transition-colors"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center font-medium"
+                  className="block w-full px-4 py-3 bg-violet hover:brightness-110 text-white rounded-lg transition-colors text-center font-medium"
                 >
                   Register
                 </Link>
