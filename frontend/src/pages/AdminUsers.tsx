@@ -88,21 +88,21 @@ export default function AdminUsers() {
   const totalPages = Math.ceil(totalUsers / limit)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-surface-1 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">👥 User Management</h1>
-            <div className="text-gray-400">Manage user accounts, roles, and permissions</div>
+            <div className="text-muted">Manage user accounts, roles, and permissions</div>
           </div>
-          <a href="/admin" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+          <a href="/admin" className="bg-surface-2 hover:brightness-110 px-4 py-2 rounded">
             ← Back to Dashboard
           </a>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
+        <div className="bg-surface-2 rounded-lg p-6 mb-6">
           <form onSubmit={handleSearch} className="flex space-x-4">
             <div className="flex-1">
               <input
@@ -113,7 +113,7 @@ export default function AdminUsers() {
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
               />
             </div>
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg">
+            <button type="submit" className="bg-blue-600 hover:brightness-110 px-6 py-2 rounded-lg">
               🔍 Search
             </button>
             {searchTerm && (
@@ -133,12 +133,12 @@ export default function AdminUsers() {
         </div>
 
         {/* Users Table */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <div className="bg-surface-2 rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-700">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Users ({totalUsers.toLocaleString()})</h2>
               {searchTerm && (
-                <div className="text-sm text-gray-400">Showing results for "{searchTerm}"</div>
+                <div className="text-sm text-muted">Showing results for "{searchTerm}"</div>
               )}
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function AdminUsers() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadUsers}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                className="bg-blue-600 hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -197,7 +197,7 @@ export default function AdminUsers() {
                         <td className="px-6 py-4">
                           <div>
                             <div className="font-medium">{user.username}</div>
-                            <div className="text-sm text-gray-400">{user.email}</div>
+                            <div className="text-sm text-muted">{user.email}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -206,7 +206,7 @@ export default function AdminUsers() {
                               {statusInfo.text}
                             </span>
                             {user.statusReason && (
-                              <div className="text-xs text-gray-400 mt-1">{user.statusReason}</div>
+                              <div className="text-xs text-muted mt-1">{user.statusReason}</div>
                             )}
                           </div>
                         </td>
@@ -223,7 +223,7 @@ export default function AdminUsers() {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-gray-400">None</span>
+                            <span className="text-muted">None</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm">
@@ -236,7 +236,7 @@ export default function AdminUsers() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setEditModal({ user, isOpen: true })}
-                              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs"
+                              className="bg-blue-600 hover:brightness-110 px-3 py-1 rounded text-xs"
                             >
                               Edit
                             </button>
@@ -260,7 +260,7 @@ export default function AdminUsers() {
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-muted">
                   Showing {(currentPage - 1) * limit + 1} to{' '}
                   {Math.min(currentPage * limit, totalUsers)} of {totalUsers} users
                 </div>
@@ -268,7 +268,7 @@ export default function AdminUsers() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Previous
                   </button>
@@ -278,7 +278,7 @@ export default function AdminUsers() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="bg-surface-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
                   >
                     Next
                   </button>
@@ -292,7 +292,7 @@ export default function AdminUsers() {
       {/* Edit User Modal */}
       {editModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Edit User: {editModal.user.username}</h3>
 
             <div className="space-y-4">
@@ -316,7 +316,7 @@ export default function AdminUsers() {
                       className={`w-full text-left px-4 py-2 rounded ${
                         editModal.user.status === status
                           ? 'bg-blue-600'
-                          : 'bg-gray-700 hover:bg-gray-600'
+                          : 'bg-surface-2 hover:brightness-110'
                       }`}
                     >
                       {adminService.formatUserStatus(status).text}
@@ -341,7 +341,7 @@ export default function AdminUsers() {
       {/* Reset Password Modal */}
       {resetPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">
               Reset Password: {resetPasswordModal.username}
             </h3>

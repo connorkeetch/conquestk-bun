@@ -119,7 +119,7 @@ const Dashboard: React.FC = () => {
     if (status === 'in_progress') return 'text-yellow-400'
     if (status === 'completed' && result === 'won') return 'text-green-400'
     if (status === 'completed' && result === 'lost') return 'text-red-400'
-    return 'text-blue-400'
+    return 'text-violet-soft'
   }
 
   const getGameStatusText = (status: string, result?: string) => {
@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Welcome back, {user?.username}! 👋</h1>
-            <p className="text-gray-400 mt-2">Ready to conquer some territories?</p>
+            <p className="text-muted mt-2">Ready to conquer some territories?</p>
           </div>
           {notifications > 0 && (
             <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
@@ -204,36 +204,36 @@ const Dashboard: React.FC = () => {
             {userStats && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Games Played</span>
+                  <span className="text-muted">Games Played</span>
                   <span className="text-white font-bold">{userStats.gamesPlayed}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Games Won</span>
+                  <span className="text-muted">Games Won</span>
                   <span className="text-green-400 font-bold">{userStats.gamesWon}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Win Rate</span>
-                  <span className="text-blue-400 font-bold">{userStats.winRate}%</span>
+                  <span className="text-muted">Win Rate</span>
+                  <span className="text-violet-soft font-bold">{userStats.winRate}%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Current Streak</span>
+                  <span className="text-muted">Current Streak</span>
                   <span className="text-yellow-400 font-bold">{userStats.currentStreak}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Total Playtime</span>
+                  <span className="text-muted">Total Playtime</span>
                   <span className="text-purple-400 font-bold">
                     {formatPlaytime(userStats.totalPlaytime)}
                   </span>
                 </div>
-                <div className="pt-2 border-t border-gray-700">
-                  <span className="text-gray-400 text-sm">Favorite Map</span>
+                <div className="pt-2 border-t border-border">
+                  <span className="text-muted text-sm">Favorite Map</span>
                   <div className="text-white font-medium">{userStats.favoriteMap}</div>
                 </div>
               </div>
             )}
             <Link
               to="/profile/stats"
-              className="block mt-4 text-center text-blue-400 hover:text-blue-300 text-sm font-medium"
+              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
             >
               View Detailed Stats →
             </Link>
@@ -259,7 +259,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div>
                       <div className="font-medium text-white">{game.mapName}</div>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-muted">
                         {game.players} players • {getTimeAgo(game.lastPlayed)}
                       </div>
                     </div>
@@ -271,7 +271,7 @@ const Dashboard: React.FC = () => {
                     {game.status === 'in_progress' && (
                       <Link
                         to={`/room/${game.id}`}
-                        className="text-sm text-blue-400 hover:text-blue-300"
+                        className="text-sm text-violet-soft hover:text-violet-soft"
                       >
                         Continue →
                       </Link>
@@ -282,7 +282,7 @@ const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/profile/history"
-              className="block mt-4 text-center text-blue-400 hover:text-blue-300 text-sm font-medium"
+              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
             >
               View All Games →
             </Link>
@@ -310,15 +310,15 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <div className="text-white font-medium">{activity.username}</div>
-                    <div className="text-gray-400 text-sm">{activity.activity}</div>
+                    <div className="text-muted text-sm">{activity.activity}</div>
                   </div>
-                  <div className="text-gray-500 text-xs">{getTimeAgo(activity.timestamp)}</div>
+                  <div className="text-muted text-xs">{getTimeAgo(activity.timestamp)}</div>
                 </div>
               ))}
             </div>
             <Link
               to="/community/friends"
-              className="block mt-4 text-center text-blue-400 hover:text-blue-300 text-sm font-medium"
+              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
             >
               View All Friends →
             </Link>

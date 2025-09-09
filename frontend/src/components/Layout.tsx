@@ -25,7 +25,7 @@ export default function Layout({ children }: LayoutProps) {
       <Header />
 
       {/* Main Content with consistent background */}
-      <main className="flex-1 relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
+      <main className="flex-1 relative bg-gradient-to-br from-surface-1 via-violet/20 to-black">
         {/* Grid pattern overlay - consistent across all pages */}
         <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
           <svg

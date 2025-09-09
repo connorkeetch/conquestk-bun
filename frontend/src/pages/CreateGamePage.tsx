@@ -4,13 +4,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import {
-  COLOR_CLASSES,
-  COLOR_DISPLAY_NAMES,
-  COLOR_HEX_VALUES,
-  isPremiumColor,
   PLAYER_COLORS,
-  PREMIUM_COLORS,
-  STANDARD_COLORS,
+  PREMIUM_PLAYER_COLORS,
+  getPlayerColor,
+  getPremiumPlayerColor,
   type PlayerColor,
 } from '../constants/colors'
 import { type CreateGameData, gameService } from '../services/gameService'
@@ -94,8 +91,8 @@ const CreateGamePage: React.FC = () => {
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   
-  // Get preferred color from settings, default to bright-red
-  const preferredColor = settings.game?.preferredColor || 'bright-red'
+  // Get preferred color from settings, default to first player color
+  const preferredColor = settings.game?.preferredColor || PLAYER_COLORS[0]
 
   // Form state
   const [gameVisibility, setGameVisibility] = useState<'public' | 'private' | 'tournament'>(
@@ -301,8 +298,9 @@ const CreateGamePage: React.FC = () => {
     })
   }
 
-  // Use colors from constants
-  const colors = PLAYER_COLORS
+  // Use new color system
+  const playerColors = PLAYER_COLORS
+  const premiumColors = Object.keys(PREMIUM_PLAYER_COLORS)
 
   return (
     <div className="min-h-screen text-white p-6">
@@ -339,10 +337,10 @@ const CreateGamePage: React.FC = () => {
         </div>
       )}
 
-      {/* Game Name and Visibility at the top */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Game Name and Visibility at the top - More condensed */}
+      <div className="max-w-7xl mx-auto mb-4">
+        <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Game Name */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -519,17 +517,6 @@ const CreateGamePage: React.FC = () => {
                   >
                     🕐 6 Hours
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setTurnTimeLimit('none')}
-                    className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                      turnTimeLimit === 'none'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    ♾️ No Limit
-                  </button>
                 </div>
               </div>
 
@@ -586,11 +573,75 @@ const CreateGamePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Responsive Grid Container */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {/* 1. Number of Players Card */}
+      {/* Responsive Grid Container - More condensed */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {/* 1. Choose Your Color Card - Updated with new color system */}
+        <OptionCard number="1" title="Choose Your Color">
+          <div className="space-y-3">
+            {/* Standard Player Colors */}
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Player Colors</p>
+              <div className="grid grid-cols-6 gap-1">
+                {PLAYER_COLORS.map((hexColor, index) => {
+                  return (
+                    <button
+                      key={hexColor}
+                      className={`group relative h-8 w-8 rounded border transition-all ${
+                        selectedColor === hexColor
+                          ? 'border-white scale-110 shadow-lg ring-2 ring-white/50'
+                          : 'border-gray-600 hover:border-gray-400 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: hexColor }}
+                      onClick={() => setSelectedColor(hexColor)}
+                    >
+                      {selectedColor === hexColor && (
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold drop-shadow-lg">✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Premium Colors */}
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Premium Colors</p>
+              <div className="grid grid-cols-3 gap-1">
+                {Object.entries(PREMIUM_PLAYER_COLORS).map(([key, colorData]) => {
+                  const hasGradient = 'gradient' in colorData
+                  const colorValue = hasGradient ? colorData.gradient : colorData.solid
+                  
+                  return (
+                    <button
+                      key={key}
+                      className={`group relative h-8 rounded border transition-all ${
+                        selectedColor === key
+                          ? 'border-yellow-400 scale-110 shadow-lg ring-2 ring-yellow-400/50'
+                          : 'border-gray-600 hover:border-yellow-600 hover:scale-105'
+                      } ${key === 'NeonGreen' ? 'shadow-[0_0_6px_rgba(57,255,20,0.3)]' : ''}`}
+                      style={{
+                        background: hasGradient ? colorValue : undefined,
+                        backgroundColor: !hasGradient ? colorValue : undefined,
+                      }}
+                      onClick={() => setSelectedColor(key)}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-yellow-400 text-xs">⭐</span>
+                        {selectedColor === key && (
+                          <span className="text-white text-sm font-bold drop-shadow-lg ml-1">✓</span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </OptionCard>
+
+        {/* 2. Number of Players Card */}
         <OptionCard
-          number="1"
+          number="2"
           title="Number of Players"
           lockable={!isRanked}
           isLocked={lockedSettings.has('maxPlayers')}
@@ -731,7 +782,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
 
-        {/* 4. Fortification Card */}
+        {/* 4. Fortification Card - Condensed */}
         <OptionCard
           number="4"
           title="Fortification"
@@ -739,402 +790,78 @@ const CreateGamePage: React.FC = () => {
           isLocked={lockedSettings.has('fortification')}
           onToggleLock={() => toggleLock('fortification')}
         >
-          <div className="space-y-2">
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="fortification"
-                value="adjacent"
-                checked={fortification === 'adjacent'}
-                onChange={(e) => setFortification(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <div className="flex-1">
-                <span className="text-white">Adjacent</span>
-                <p className="text-xs text-gray-400 mt-1">Move to neighboring territory only</p>
-              </div>
-            </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="fortification"
-                value="multiple-adjacent"
-                checked={fortification === 'multiple-adjacent'}
-                onChange={(e) => setFortification(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <div className="flex-1">
-                <span className="text-white">Multiple-Adjacent</span>
-                <p className="text-xs text-gray-400 mt-1">Move each troop up to one adjacent territory</p>
-              </div>
-            </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="fortification"
-                value="chained"
-                checked={fortification === 'chained'}
-                onChange={(e) => setFortification(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <div className="flex-1">
-                <span className="text-white">Chained</span>
-                <p className="text-xs text-gray-400 mt-1">Move once through any territory you own</p>
-              </div>
-            </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="fortification"
-                value="unlimited"
-                checked={fortification === 'unlimited'}
-                onChange={(e) => setFortification(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <div className="flex-1">
-                <span className="text-white">Unlimited</span>
-                <p className="text-xs text-gray-400 mt-1">Move as many times as you want through connected territories</p>
-              </div>
-            </label>
+          <div className="space-y-1">
+            {[
+              { value: 'adjacent', label: 'Adjacent' },
+              { value: 'multiple-adjacent', label: 'Multi-Adjacent' },
+              { value: 'chained', label: 'Chained' },
+              { value: 'unlimited', label: 'Unlimited' }
+            ].map(option => (
+              <span 
+                key={option.value}
+                onClick={() => setFortification(option.value)}
+                className={`block px-3 py-2 rounded cursor-pointer transition-colors text-sm ${
+                  fortification === option.value
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {option.label}
+              </span>
+            ))}
           </div>
         </OptionCard>
 
-        {/* 5. Player Color Card */}
-        <OptionCard number="5" title="Choose Your Color">
-          <div className="space-y-4">
-            {/* Standard Colors */}
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Standard Colors</p>
-              <div className="grid grid-cols-4 gap-2">
-                {STANDARD_COLORS.map((color) => {
-                  const hexValue = COLOR_HEX_VALUES[color]
-                  const isGradient = hexValue.includes('gradient')
-                  return (
-                    <button
-                      key={color}
-                      className={`group relative h-14 rounded-lg border-2 transition-all ${
-                        selectedColor === color
-                          ? 'border-white scale-105 shadow-lg ring-2 ring-white/50'
-                          : 'border-gray-600 hover:border-gray-400 hover:scale-102'
-                      }`}
-                      style={{
-                        background: isGradient ? hexValue : undefined,
-                        backgroundColor: !isGradient ? hexValue : undefined,
-                      }}
-                      onClick={() => setSelectedColor(color)}
-                    >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        {selectedColor === color && (
-                          <span className="text-white text-lg font-bold drop-shadow-lg">✓</span>
-                        )}
-                        <span className="text-[10px] text-white/90 font-medium drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
-                          {COLOR_DISPLAY_NAMES[color].replace(' ⭐', '')}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
 
-            {/* Premium Colors */}
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Premium Colors (Conquest Pass)</p>
-              <div className="grid grid-cols-3 gap-2">
-                {PREMIUM_COLORS.map((color) => {
-                  const hexValue = COLOR_HEX_VALUES[color]
-                  const isGradient = hexValue.includes('gradient')
-                  const isPulse = color === 'pulse'
-                  const isNeon = color === 'neon'
-                  const isMetallic = color === 'metallic'
-
-                  return (
-                    <button
-                      key={color}
-                      className={`group relative h-14 rounded-lg border-2 transition-all ${
-                        selectedColor === color
-                          ? 'border-yellow-400 scale-105 shadow-lg ring-2 ring-yellow-400/50'
-                          : 'border-gray-600 hover:border-yellow-600 hover:scale-102'
-                      } ${isPulse ? 'animate-pulse' : ''} ${
-                        isNeon ? 'shadow-[0_0_10px_rgba(57,255,20,0.5)]' : ''
-                      }`}
-                      style={{
-                        background:
-                          isGradient || isMetallic
-                            ? hexValue.includes('linear-gradient')
-                              ? hexValue
-                              : isMetallic
-                                ? 'linear-gradient(135deg, #B8860B, #FFD700, #B8860B)'
-                                : hexValue
-                            : undefined,
-                        backgroundColor: !isGradient && !isMetallic ? hexValue : undefined,
-                      }}
-                      onClick={() => setSelectedColor(color)}
-                      disabled={false} // Will be disabled for non-premium users
-                    >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-yellow-400 text-xs mb-0.5">⭐</span>
-                        {selectedColor === color && (
-                          <span className="text-white text-lg font-bold drop-shadow-lg">✓</span>
-                        )}
-                        <span className="text-[10px] text-white/90 font-medium drop-shadow-md">
-                          {COLOR_DISPLAY_NAMES[color].replace(' ⭐', '')}
-                        </span>
-                      </div>
-                      {isMetallic && (
-                        <div className="absolute inset-0 rounded-lg opacity-30 bg-gradient-to-t from-transparent via-white to-transparent animate-shimmer pointer-events-none" />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Selected Color Preview */}
-            {selectedColor && (
-              <div className="mt-3 p-3 bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-400 mb-1">Selected:</p>
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded ${COLOR_CLASSES[selectedColor]}`}
-                    style={{
-                      background: COLOR_HEX_VALUES[selectedColor].includes('gradient')
-                        ? COLOR_HEX_VALUES[selectedColor]
-                        : undefined,
-                      backgroundColor: !COLOR_HEX_VALUES[selectedColor].includes('gradient')
-                        ? COLOR_HEX_VALUES[selectedColor]
-                        : undefined,
-                    }}
-                  />
-                  <span className="text-sm font-medium">{COLOR_DISPLAY_NAMES[selectedColor]}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </OptionCard>
-
-        {/* 6. Spoils of War Card */}
+        {/* 5. Spoils of War Card - Condensed */}
         <OptionCard
-          number="6"
+          number="5"
           title="Spoils of War"
           lockable={!isRanked}
           isLocked={lockedSettings.has('cardTradeBonus')}
           onToggleLock={() => toggleLock('cardTradeBonus')}
         >
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-400 mb-2">Card Trade Bonus:</p>
-              <div className="space-y-2">
-                {[
-                  { value: 'progressive', label: 'Progressive (+5 each trade)' },
-                  { value: 'fixed', label: 'Fixed (4, 6, 8, 10...)' },
-                  { value: 'increasing', label: 'Increasing (4, 6, 8, 10, 12...)' },
-                  { value: 'static', label: 'Static (custom value)' },
-                ].map((option) => (
-                  <label key={option.value} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="cardBonus"
-                      value={option.value}
-                      checked={cardTradeBonus === option.value}
-                      onChange={(e) => setCardTradeBonus(e.target.value)}
-                      className="mr-2"
-                    />
-                    <span className="text-white">{option.label}</span>
-                  </label>
-                ))}
-              </div>
+          <div className="space-y-2">
+            <div className="space-y-1">
+              {[
+                { value: 'progressive', label: 'Progressive' },
+                { value: 'fixed', label: 'Fixed' },
+                { value: 'increasing', label: 'Increasing' },
+                { value: 'static', label: 'Static' }
+              ].map(option => (
+                <span 
+                  key={option.value}
+                  onClick={() => setCardTradeBonus(option.value)}
+                  className={`block px-3 py-2 rounded cursor-pointer transition-colors text-sm ${
+                    cardTradeBonus === option.value
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {option.label}
+                </span>
+              ))}
             </div>
             {cardTradeBonus === 'static' && (
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Static Bonus Value:</p>
-                <input
-                  type="number"
-                  value={staticBonusValue}
-                  onChange={(e) =>
-                    setStaticBonusValue(Math.max(1, parseInt(e.target.value, 10) || 1))
-                  }
-                  className="w-full p-2 bg-gray-700 text-white placeholder-gray-400 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none transition-all duration-200"
-                  min="1"
-                  placeholder="Armies per card trade"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Players get this many armies for each card trade
-                </p>
-              </div>
+              <input
+                type="number"
+                value={staticBonusValue}
+                onChange={(e) =>
+                  setStaticBonusValue(Math.max(1, parseInt(e.target.value, 10) || 1))
+                }
+                className="w-full p-2 bg-gray-700 text-white placeholder-gray-400 rounded text-sm border border-gray-600 focus:border-blue-400 focus:outline-none"
+                min="1"
+                placeholder="Static value"
+              />
             )}
           </div>
         </OptionCard>
 
 
-        {/* 7. Turn Timer Card */}
+
+        {/* 6. Advanced Options Card */}
         <OptionCard
-          number="7"
-          title="Turn Time Limits"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('turnTimeLimit')}
-          onToggleLock={() => toggleLock('turnTimeLimit')}
-        >
-          <div className="space-y-3">
-            {/* Game Speed Toggle */}
-            <div className="flex gap-2 p-1 bg-gray-700 rounded-lg">
-              <button
-                type="button"
-                onClick={() => {
-                  setGameSpeed('realtime')
-                  if (!['none', '5min', '10min'].includes(turnTimeLimit)) {
-                    setTurnTimeLimit('none')
-                  }
-                }}
-                className={`flex-1 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
-                  gameSpeed === 'realtime'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                ⚡ Real-time
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setGameSpeed('async')
-                  if (!['none', '6h', '12h', '24h'].includes(turnTimeLimit)) {
-                    setTurnTimeLimit('none')
-                  }
-                }}
-                className={`flex-1 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
-                  gameSpeed === 'async'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                📅 Async
-              </button>
-            </div>
-
-            {/* Time Limit Options */}
-            <div className="space-y-2">
-              <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                <input
-                  type="radio"
-                  name="timeLimit"
-                  value="none"
-                  checked={turnTimeLimit === 'none'}
-                  onChange={(e) => setTurnTimeLimit(e.target.value)}
-                  className="mr-3 accent-blue-500"
-                />
-                <div className="flex-1">
-                  <span className="text-white">♾️ No Time Limit</span>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Players can take as long as they need
-                  </p>
-                </div>
-              </label>
-
-              {gameSpeed === 'realtime' && (
-                <>
-                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                    <input
-                      type="radio"
-                      name="timeLimit"
-                      value="5min"
-                      checked={turnTimeLimit === '5min'}
-                      onChange={(e) => setTurnTimeLimit(e.target.value)}
-                      className="mr-3 accent-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-white">⏱️ 5 Minutes</span>
-                      <p className="text-xs text-gray-400 mt-1">Fast-paced competitive gameplay</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                    <input
-                      type="radio"
-                      name="timeLimit"
-                      value="10min"
-                      checked={turnTimeLimit === '10min'}
-                      onChange={(e) => setTurnTimeLimit(e.target.value)}
-                      className="mr-3 accent-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-white">⏰ 10 Minutes</span>
-                      <p className="text-xs text-gray-400 mt-1">Strategic with time pressure</p>
-                    </div>
-                  </label>
-                </>
-              )}
-
-              {gameSpeed === 'async' && (
-                <>
-                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                    <input
-                      type="radio"
-                      name="timeLimit"
-                      value="6h"
-                      checked={turnTimeLimit === '6h'}
-                      onChange={(e) => setTurnTimeLimit(e.target.value)}
-                      className="mr-3 accent-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-white">🕐 6 Hours</span>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Quick async - multiple turns per day
-                      </p>
-                    </div>
-                  </label>
-                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                    <input
-                      type="radio"
-                      name="timeLimit"
-                      value="12h"
-                      checked={turnTimeLimit === '12h'}
-                      onChange={(e) => setTurnTimeLimit(e.target.value)}
-                      className="mr-3 accent-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-white">🕰️ 12 Hours</span>
-                      <p className="text-xs text-gray-400 mt-1">Balanced async gameplay</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                    <input
-                      type="radio"
-                      name="timeLimit"
-                      value="24h"
-                      checked={turnTimeLimit === '24h'}
-                      onChange={(e) => setTurnTimeLimit(e.target.value)}
-                      className="mr-3 accent-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-white">📆 24 Hours</span>
-                      <p className="text-xs text-gray-400 mt-1">Relaxed pace - one turn per day</p>
-                    </div>
-                  </label>
-                </>
-              )}
-            </div>
-
-            <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
-              <p className="text-xs text-blue-300">
-                {gameSpeed === 'realtime' ? (
-                  <>
-                    ⚡ Real-time games require active participation. Turn automatically passes if
-                    time expires.
-                  </>
-                ) : (
-                  <>
-                    📅 Async games send notifications when it's your turn. Perfect for playing
-                    throughout the day.
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </OptionCard>
-
-        {/* 8. Advanced Options Card */}
-        <OptionCard
-          number="8"
+          number="6"
           title="Advanced Options"
           lockable={!isRanked}
           isLocked={lockedSettings.has('fogOfWar') || lockedSettings.has('territoryModifiers')}
@@ -1286,7 +1013,7 @@ const CreateGamePage: React.FC = () => {
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
             <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              9
+              7
             </span>
             <span className="text-white">Select Map</span>
           </h2>

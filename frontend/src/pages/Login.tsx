@@ -55,13 +55,13 @@ export default function Login() {
               </h1>
             </div>
           </Link>
-          <p className="text-gray-400">Welcome back, Commander</p>
+          <p className="text-muted">Welcome back, Commander</p>
           {/* Easter egg for friends */}
           <p className="text-purple-400 text-sm mt-2 font-medium italic">They always come back</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Login</h2>
 
           {successMessage && (
@@ -99,7 +99,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username/Email Field */}
             <div>
-              <label htmlFor="identifier" className="block text-gray-300 text-sm font-medium mb-2">
+              <label htmlFor="identifier" className="block text-muted text-sm font-medium mb-2">
                 👤 Username or Email
               </label>
               <input
@@ -110,7 +110,7 @@ export default function Login() {
                 required
                 maxLength={255}
                 autoComplete="username"
-                className="w-full px-4 py-3 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
                 placeholder="Enter username or email"
               />
             </div>
@@ -118,12 +118,12 @@ export default function Login() {
             {/* Password Field */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="password" className="block text-gray-300 text-sm font-medium">
+                <label htmlFor="password" className="block text-muted text-sm font-medium">
                   🔒 Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-sm text-violet-soft hover:text-blue-300 transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -137,13 +137,13 @@ export default function Login() {
                   required
                   maxLength={128}
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 pr-12 bg-gray-900/70 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
+                  className="w-full px-4 py-3 pr-12 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 text-base"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-muted transition-colors"
                 >
                   {showPassword ? (
                     <svg
@@ -230,10 +230,10 @@ export default function Login() {
           <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600"></div>
+                <div className="w-full border-t border-border"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-gray-800 text-gray-400">Or continue with</span>
+                <span className="px-4 bg-surface-2 text-muted">Or continue with</span>
               </div>
             </div>
 
@@ -242,7 +242,7 @@ export default function Login() {
               <button
                 type="button"
                 disabled
-                className="flex items-center justify-center px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 text-gray-200 transition-colors cursor-not-allowed opacity-50"
+                className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-surface-2 text-gray-200 transition-colors cursor-not-allowed opacity-50"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -267,7 +267,7 @@ export default function Login() {
               <button
                 type="button"
                 disabled
-                className="flex items-center justify-center px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 text-gray-200 transition-colors cursor-not-allowed opacity-50"
+                className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-surface-2 text-gray-200 transition-colors cursor-not-allowed opacity-50"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418Z" />
@@ -280,11 +280,11 @@ export default function Login() {
 
           {/* Register Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted text-sm">
               Don't have an account?{' '}
               <Link
                 to="/register"
-                className="text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors"
+                className="text-violet-soft hover:text-blue-300 font-medium hover:underline transition-colors"
               >
                 Create one here
               </Link>

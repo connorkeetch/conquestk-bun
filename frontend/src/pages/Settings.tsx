@@ -16,6 +16,8 @@ import {
   type NotificationPrefs,
 } from '../store/settingsSlice'
 import {
+  PLAYER_COLORS,
+  PREMIUM_PLAYER_COLORS,
   STANDARD_COLORS,
   PREMIUM_COLORS,
   COLOR_DISPLAY_NAMES,

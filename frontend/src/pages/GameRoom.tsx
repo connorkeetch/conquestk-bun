@@ -53,7 +53,7 @@ export default function GameRoom() {
         <div className="flex gap-2">
           <button
             onClick={handleToggleMute}
-            className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded flex items-center gap-2"
+            className="bg-surface-2 hover:brightness-110 px-4 py-2 rounded flex items-center gap-2"
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
@@ -78,8 +78,8 @@ export default function GameRoom() {
                 }}
               />
             ) : (
-              <div className="bg-gray-800 rounded-lg p-6 h-full flex items-center justify-center">
-                <div className="text-center text-gray-400">
+              <div className="bg-surface-1 rounded-lg p-6 h-full flex items-center justify-center">
+                <div className="text-center text-muted">
                   <h2 className="text-xl font-bold mb-4">Waiting for game to start...</h2>
                   <p>Need at least 2 players to begin</p>
                   <div className="mt-6">
@@ -94,7 +94,7 @@ export default function GameRoom() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Players */}
-          <div className="bg-gray-800 rounded-lg p-4">
+          <div className="bg-surface-1 rounded-lg p-4">
             <h3 className="text-lg font-bold mb-3">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
             </h3>
@@ -115,10 +115,10 @@ export default function GameRoom() {
 
           {/* Game Controls */}
           {currentGame && (
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-surface-1 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3">Game Controls</h3>
               <div className="space-y-2">
-                <button className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm">
+                <button className="w-full bg-violet hover:brightness-110 px-3 py-2 rounded text-sm">
                   Deploy Armies
                 </button>
                 <button className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm">
@@ -127,7 +127,7 @@ export default function GameRoom() {
                 <button className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm">
                   Fortify
                 </button>
-                <button className="w-full bg-gray-600 hover:bg-gray-700 px-3 py-2 rounded text-sm">
+                <button className="w-full bg-surface-2 hover:brightness-110 px-3 py-2 rounded text-sm">
                   End Turn
                 </button>
               </div>
@@ -135,7 +135,7 @@ export default function GameRoom() {
           )}
 
           {/* Chat */}
-          <div className="bg-gray-800 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+          <div className="bg-surface-1 rounded-lg overflow-hidden" style={{ height: '400px' }}>
             {roomId && user && (
               <TabbedGameChat
                 gameId={roomId}

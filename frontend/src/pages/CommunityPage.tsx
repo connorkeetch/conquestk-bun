@@ -60,8 +60,8 @@ const CommunityPage: React.FC = () => {
   const renderRankBadge = (rank: number) => {
     if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />
     if (rank === 2) return <Medal className="w-6 h-6 text-gray-300" />
-    if (rank === 3) return <Medal className="w-6 h-6 text-orange-400" />
-    return <span className="text-gray-500 font-medium">#{rank}</span>
+    if (rank === 3) return <Medal className="w-6 h-6 text-amber-500" />
+    return <span className="text-muted font-medium">#{rank}</span>
   }
 
   const currentLeaderboard = 
@@ -74,18 +74,18 @@ const CommunityPage: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold gradient-text mb-2">Community Hub</h1>
-          <p className="text-gray-400">Connect, compete, and celebrate with fellow commanders</p>
+          <p className="text-muted">Connect, compete, and celebrate with fellow commanders</p>
         </div>
       </div>
 
       {/* Main Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto">
+      <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab('leaderboard')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'leaderboard' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-blue-400' 
+              : 'text-muted hover:text-white'
           }`}
         >
           <Trophy className="w-4 h-4" />
@@ -95,8 +95,8 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('clans')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'clans' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
+              ? 'text-violet-soft border-b-2 border-blue-400' 
+              : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
@@ -108,8 +108,8 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('forums')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'forums' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
+              ? 'text-violet-soft border-b-2 border-blue-400' 
+              : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
@@ -121,8 +121,8 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('events')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'events' 
-              ? 'text-blue-400 border-b-2 border-blue-400' 
-              : 'text-gray-400 hover:text-gray-300 cursor-not-allowed'
+              ? 'text-violet-soft border-b-2 border-blue-400' 
+              : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
@@ -141,8 +141,8 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('global')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'global'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-violet text-white'
+                  : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
               <Trophy className="inline w-4 h-4 mr-2" />
@@ -152,8 +152,8 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('monthly')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'monthly'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-violet text-white'
+                  : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
               <Calendar className="inline w-4 h-4 mr-2" />
@@ -163,8 +163,8 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('friends')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'friends'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-violet text-white'
+                  : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
               <Users className="inline w-4 h-4 mr-2" />
@@ -173,32 +173,32 @@ const CommunityPage: React.FC = () => {
           </div>
 
           {/* Leaderboard Table */}
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="bg-surface-2 rounded-lg overflow-hidden">
             {loading ? (
               <div className="p-16 text-center">
-                <div className="text-gray-400">Loading leaderboard...</div>
+                <div className="text-muted">Loading leaderboard...</div>
               </div>
             ) : currentLeaderboard.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-900">
+                  <thead className="bg-surface-1">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                         Rank
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                         Player
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         ELO
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         Games
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         Wins
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         Win Rate
                       </th>
                     </tr>
@@ -207,8 +207,8 @@ const CommunityPage: React.FC = () => {
                     {currentLeaderboard.map((player, index) => (
                       <tr
                         key={player.id}
-                        className={`hover:bg-gray-700 transition-colors ${
-                          index < 3 ? 'bg-gray-800/50' : ''
+                        className={`hover:bg-surface-2 transition-colors ${
+                          index < 3 ? 'bg-surface-2/50' : ''
                         }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -229,7 +229,7 @@ const CommunityPage: React.FC = () => {
                             <span className="text-white font-medium">{player.elo}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-gray-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
                           {player.gamesPlayed || player.wins + player.losses}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center text-green-400">
@@ -252,8 +252,8 @@ const CommunityPage: React.FC = () => {
             ) : (
               <div className="p-16 text-center">
                 <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-2">No rankings available yet</p>
-                <p className="text-gray-500 text-sm">Play ranked games to appear on the leaderboard</p>
+                <p className="text-muted text-lg mb-2">No rankings available yet</p>
+                <p className="text-muted text-sm">Play ranked games to appear on the leaderboard</p>
               </div>
             )}
           </div>
@@ -262,28 +262,28 @@ const CommunityPage: React.FC = () => {
 
       {/* Clans Content */}
       {activeTab === 'clans' && (
-        <div className="bg-gray-800 rounded-lg p-16 text-center">
+        <div className="bg-surface-2 rounded-lg p-16 text-center">
           <Shield className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg mb-2">Clans Coming Soon</p>
-          <p className="text-gray-500 text-sm">Form alliances and compete as a team</p>
+          <p className="text-muted text-lg mb-2">Clans Coming Soon</p>
+          <p className="text-muted text-sm">Form alliances and compete as a team</p>
         </div>
       )}
 
       {/* Forums Content */}
       {activeTab === 'forums' && (
-        <div className="bg-gray-800 rounded-lg p-16 text-center">
+        <div className="bg-surface-2 rounded-lg p-16 text-center">
           <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg mb-2">Forums Coming Soon</p>
-          <p className="text-gray-500 text-sm">Discuss strategies and connect with players</p>
+          <p className="text-muted text-lg mb-2">Forums Coming Soon</p>
+          <p className="text-muted text-sm">Discuss strategies and connect with players</p>
         </div>
       )}
 
       {/* Events Content */}
       {activeTab === 'events' && (
-        <div className="bg-gray-800 rounded-lg p-16 text-center">
+        <div className="bg-surface-2 rounded-lg p-16 text-center">
           <CalendarDays className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg mb-2">Events & Tournaments Coming Soon</p>
-          <p className="text-gray-500 text-sm">Compete in special events for exclusive rewards</p>
+          <p className="text-muted text-lg mb-2">Events & Tournaments Coming Soon</p>
+          <p className="text-muted text-sm">Compete in special events for exclusive rewards</p>
         </div>
       )}
     </div>

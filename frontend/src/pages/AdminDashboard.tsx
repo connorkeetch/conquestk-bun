@@ -79,7 +79,7 @@ export default function AdminDashboard() {
           <div>Error: {error}</div>
           <button
             onClick={loadDashboardData}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+            className="mt-4 bg-violet hover:brightness-110 px-4 py-2 rounded"
           >
             Retry
           </button>
@@ -94,56 +94,56 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">🛡️ Admin Dashboard</h1>
-          <div className="text-gray-400">
+          <div className="text-muted">
             Welcome back, {adminInfo?.adminRoles.map((r) => r.roleName).join(', ')} admin
           </div>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-blue-400">
                   {systemStatus?.database.userCount.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-400">Total Users</div>
+                <div className="text-sm text-muted">Total Users</div>
               </div>
               <div className="text-3xl">👥</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
                   {systemStatus?.database.mapCount.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-400">Custom Maps</div>
+                <div className="text-sm text-muted">Custom Maps</div>
               </div>
               <div className="text-3xl">🗺️</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
                   {systemStatus?.database.activeGames.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-400">Active Games</div>
+                <div className="text-sm text-muted">Active Games</div>
               </div>
               <div className="text-3xl">🎮</div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
                   {systemStatus?.database.pendingApprovals.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-400">Pending Approvals</div>
+                <div className="text-sm text-muted">Pending Approvals</div>
               </div>
               <div className="text-3xl">⏳</div>
             </div>
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Admin Tools */}
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
             <div className="space-y-3">
               <a
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">User Management</div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-muted">
                       Manage user accounts, roles, and permissions
                     </div>
                   </div>
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">Content Moderation</div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-muted">
                       Review and approve user-generated content
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">Game Management</div>
-                    <div className="text-sm text-gray-400">Monitor and manage active games</div>
+                    <div className="text-sm text-muted">Monitor and manage active games</div>
                   </div>
                   <div className="text-2xl">🎮</div>
                 </div>
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">Activity Logs</div>
-                    <div className="text-sm text-gray-400">View admin and user activity logs</div>
+                    <div className="text-sm text-muted">View admin and user activity logs</div>
                   </div>
                   <div className="text-2xl">📊</div>
                 </div>
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Feature Flags */}
-          <div className="bg-gray-800 rounded-lg p-6">
+          <div className="bg-surface-2 rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">🚩 Feature Flags</h2>
             <div className="space-y-3">
               {systemStatus &&
@@ -229,7 +229,7 @@ export default function AdminDashboard() {
                           ? "💊 Gunt's Prescriptions" 
                           : flagName.replace(/_/g, ' ')}
                       </div>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-muted">
                         {flagName === 'gunts_prescriptions'
                           ? (isEnabled ? 'Doctor is IN' : 'Doctor is OUT')
                           : (isEnabled ? 'Enabled' : 'Disabled')}
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
                         onChange={(e) => toggleFeatureFlag(flagName, e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet"></div>
                     </label>
                   </div>
                 ))}
@@ -251,22 +251,22 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="mt-8 bg-gray-800 rounded-lg p-6">
+        <div className="mt-8 bg-surface-2 rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">📈 System Status</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="text-3xl mb-2">💿</div>
-              <div className="text-sm text-gray-400">Database</div>
+              <div className="text-sm text-muted">Database</div>
               <div className="text-lg font-medium text-green-400">Connected</div>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-2">🔧</div>
-              <div className="text-sm text-gray-400">System</div>
+              <div className="text-sm text-muted">System</div>
               <div className="text-lg font-medium text-green-400">Operational</div>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-2">⏰</div>
-              <div className="text-sm text-gray-400">Last Updated</div>
+              <div className="text-sm text-muted">Last Updated</div>
               <div className="text-lg font-medium">
                 {systemStatus && new Date(systemStatus.timestamp).toLocaleTimeString()}
               </div>

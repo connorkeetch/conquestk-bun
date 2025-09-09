@@ -66,7 +66,7 @@ const LeaderboardsPage: React.FC = () => {
       case 'down':
         return <span className="text-red-400">↓</span>
       default:
-        return <span className="text-gray-400">−</span>
+        return <span className="text-muted">−</span>
     }
   }
 
@@ -77,7 +77,7 @@ const LeaderboardsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Skill Leaderboard</h1>
-          <p className="text-gray-400">Top players ranked by Command Points (CP)</p>
+          <p className="text-muted">Top players ranked by Command Points (CP)</p>
         </div>
 
         {/* Tier Filter */}
@@ -92,8 +92,8 @@ const LeaderboardsPage: React.FC = () => {
                 }}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   tierFilter === tier
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-violet text-white'
+                    : 'bg-surface-1 text-muted hover:bg-gray-700'
                 }`}
               >
                 {tier === 'all' ? 'All Tiers' : tier}
@@ -105,36 +105,36 @@ const LeaderboardsPage: React.FC = () => {
         {/* Leaderboard Table */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-violet"></div>
           </div>
         ) : error ? (
           <div className="text-center py-12 text-red-400">{error}</div>
         ) : leaderboard.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">No players found in this tier</div>
+          <div className="text-center py-12 text-muted">No players found in this tier</div>
         ) : (
-          <div className="bg-gray-900 rounded-lg overflow-hidden">
+          <div className="bg-surface-1 rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-800">
+              <thead className="bg-surface-1">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Player
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Tier
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Rating
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Games
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Win Rate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Trend
                   </th>
                 </tr>
@@ -146,14 +146,14 @@ const LeaderboardsPage: React.FC = () => {
                     <tr
                       key={entry.userId}
                       className={`${
-                        isCurrentUser ? 'bg-blue-900 bg-opacity-20' : 'hover:bg-gray-800'
+                        isCurrentUser ? 'bg-blue-900 bg-opacity-20' : 'hover:bg-surface-1'
                       } transition-colors`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <span
                             className={`text-lg font-bold ${
-                              entry.rank <= 3 ? 'text-yellow-400' : 'text-gray-300'
+                              entry.rank <= 3 ? 'text-yellow-400' : 'text-muted'
                             }`}
                           >
                             {entry.rank === 1 && '🏆 '}
@@ -165,11 +165,11 @@ const LeaderboardsPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
                           to={`/profile/${entry.userId}`}
-                          className="text-blue-400 hover:text-blue-300 font-medium"
+                          className="text-violet-soft hover:text-blue-300 font-medium"
                         >
                           {entry.username}
                           {isCurrentUser && (
-                            <span className="ml-2 text-xs text-gray-400">(You)</span>
+                            <span className="ml-2 text-xs text-muted">(You)</span>
                           )}
                         </Link>
                       </td>
@@ -194,7 +194,7 @@ const LeaderboardsPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-muted">
                         {entry.totalGames}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -203,7 +203,7 @@ const LeaderboardsPage: React.FC = () => {
                             entry.winRate >= 60
                               ? 'text-green-400'
                               : entry.winRate >= 40
-                                ? 'text-gray-300'
+                                ? 'text-muted'
                                 : 'text-red-400'
                           }`}
                         >
@@ -227,15 +227,15 @@ const LeaderboardsPage: React.FC = () => {
             <button
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
-              className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            <span className="px-4 py-2 text-gray-400">Page {currentPage + 1}</span>
+            <span className="px-4 py-2 text-muted">Page {currentPage + 1}</span>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={leaderboard.length < ITEMS_PER_PAGE}
-              className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

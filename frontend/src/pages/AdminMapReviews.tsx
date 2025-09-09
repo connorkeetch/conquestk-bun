@@ -144,7 +144,7 @@ export const AdminMapReviews: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet mx-auto mb-4"></div>
           <p className="text-gray-600">Loading review queue...</p>
         </div>
       </div>
@@ -233,7 +233,7 @@ export const AdminMapReviews: React.FC = () => {
 
         {approvalRequests.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="text-gray-400 text-6xl mb-4">📋</div>
+            <div className="text-muted text-6xl mb-4">📋</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Pending Reviews</h3>
             <p className="text-gray-600">
               All maps have been reviewed! Check back later for new submissions.
@@ -249,25 +249,25 @@ export const AdminMapReviews: React.FC = () => {
                       type="checkbox"
                       checked={selectedRequests.size === approvalRequests.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                      className="rounded border-gray-300 focus:ring-blue-500 focus:border-violet"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Map
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Creator
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Priority
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Assigned To
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -280,7 +280,7 @@ export const AdminMapReviews: React.FC = () => {
                         type="checkbox"
                         checked={selectedRequests.has(request.id)}
                         onChange={(e) => handleRequestSelection(request.id, e.target.checked)}
-                        className="rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        className="rounded border-gray-300 focus:ring-blue-500 focus:border-violet"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -288,9 +288,9 @@ export const AdminMapReviews: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900">
                           {request.versionName}
                         </div>
-                        <div className="text-sm text-gray-500">v{request.versionNumber}</div>
+                        <div className="text-sm text-muted">v{request.versionNumber}</div>
                         {request.submissionNotes && (
-                          <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
+                          <div className="text-xs text-muted mt-1 max-w-xs truncate">
                             "{request.submissionNotes}"
                           </div>
                         )}
@@ -322,7 +322,7 @@ export const AdminMapReviews: React.FC = () => {
                       ) : (
                         <div className="flex items-center">
                           <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-500">Unassigned</span>
+                          <span className="text-sm text-muted">Unassigned</span>
                         </div>
                       )}
                     </td>
@@ -361,7 +361,7 @@ export const AdminMapReviews: React.FC = () => {
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">Review Criteria</div>
-            <div className="text-xs text-gray-500 mt-1">Manage standardized review criteria</div>
+            <div className="text-xs text-muted mt-1">Manage standardized review criteria</div>
           </button>
 
           <button
@@ -369,7 +369,7 @@ export const AdminMapReviews: React.FC = () => {
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">All Maps</div>
-            <div className="text-xs text-gray-500 mt-1">View and manage all maps in the system</div>
+            <div className="text-xs text-muted mt-1">View and manage all maps in the system</div>
           </button>
 
           <button
@@ -377,7 +377,7 @@ export const AdminMapReviews: React.FC = () => {
             className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
           >
             <div className="text-sm font-medium text-gray-900">Analytics</div>
-            <div className="text-xs text-gray-500 mt-1">View map usage and review statistics</div>
+            <div className="text-xs text-muted mt-1">View map usage and review statistics</div>
           </button>
         </div>
       </div>

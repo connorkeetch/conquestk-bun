@@ -1,131 +1,7 @@
-/**
- * Player colors available for game selection
- * 12 free colors plus 6 premium options
- */
-export const STANDARD_COLORS = [
-  // Free colors - exactly 12
-  'bright-red',
-  'maroon',
-  'orange',
-  'yellow',
-  'light-green',
-  'dark-green',
-  'light-blue',
-  'dark-blue',
-  'purple',
-  'pink',
-  'brown',
-  'gray',
-] as const
-
-export const PREMIUM_COLORS = [
-  'black',
-  'silver',
-  'rainbow', // Animated gradient
-  'pulse', // Animated pulse effect
-  'metallic', // Metallic sheen effect
-  'neon', // Neon glow effect
-] as const
-
-export const PLAYER_COLORS = [...STANDARD_COLORS, ...PREMIUM_COLORS] as const
-
-export type PlayerColor = (typeof PLAYER_COLORS)[number]
-export type StandardColor = (typeof STANDARD_COLORS)[number]
-export type PremiumColor = (typeof PREMIUM_COLORS)[number]
-
-/**
- * Color hex values for rendering
- * These provide good contrast on dark backgrounds
- */
-export const COLOR_HEX_VALUES: Record<PlayerColor, string> = {
-  // Free colors - exactly 12
-  'bright-red': '#FF0000', // Bright red
-  maroon: '#800000', // Maroon
-  orange: '#FFA500', // Orange
-  yellow: '#FFD700', // Yellow/Gold
-  'light-green': '#90EE90', // Light green
-  'dark-green': '#006400', // Dark green
-  'light-blue': '#87CEEB', // Sky blue
-  'dark-blue': '#000080', // Navy blue
-  purple: '#800080', // Purple
-  pink: '#FFC0CB', // Pink
-  brown: '#8B4513', // Brown
-  gray: '#808080', // Gray
-  // Premium colors
-  black: '#000000',
-  silver: '#C0C0C0',
-  rainbow: 'linear-gradient(90deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3)',
-  pulse: '#FF1493', // Base color for pulse animation
-  metallic: '#B8860B', // Base color for metallic effect
-  neon: '#39FF14', // Base color for neon effect
-}
-
-/**
- * Tailwind color classes for player colors
- * Used for consistent styling across the app
- */
-export const COLOR_CLASSES: Record<PlayerColor, string> = {
-  // Free colors - exactly 12
-  'bright-red': 'bg-red-600 text-white',
-  maroon: 'bg-red-900 text-white',
-  orange: 'bg-orange-500 text-white',
-  yellow: 'bg-yellow-400 text-black',
-  'light-green': 'bg-green-400 text-black',
-  'dark-green': 'bg-green-800 text-white',
-  'light-blue': 'bg-sky-400 text-black',
-  'dark-blue': 'bg-blue-900 text-white',
-  purple: 'bg-purple-600 text-white',
-  pink: 'bg-pink-300 text-black',
-  brown: 'bg-amber-800 text-white',
-  gray: 'bg-gray-500 text-white',
-  // Premium colors
-  black: 'bg-black text-white border border-gray-600',
-  silver: 'bg-gray-400 text-black',
-  rainbow: 'bg-gradient-to-r from-red-500 via-yellow-500 to-purple-500 text-white',
-  pulse: 'bg-pink-500 text-white animate-pulse',
-  metallic: 'bg-gradient-to-br from-yellow-600 via-yellow-400 to-yellow-600 text-black',
-  neon: 'bg-green-400 text-black shadow-[0_0_10px_#39FF14]',
-}
-
-/**
- * Check if a color is premium
- */
-export const isPremiumColor = (color: PlayerColor): color is PremiumColor => {
-  return PREMIUM_COLORS.includes(color as PremiumColor)
-}
-
-/**
- * Color display names for UI
- */
-export const COLOR_DISPLAY_NAMES: Record<PlayerColor, string> = {
-  // Free colors - exactly 12
-  'bright-red': 'Bright Red',
-  maroon: 'Maroon',
-  orange: 'Orange',
-  yellow: 'Yellow',
-  'light-green': 'Light Green',
-  'dark-green': 'Dark Green',
-  'light-blue': 'Light Blue',
-  'dark-blue': 'Dark Blue',
-  purple: 'Purple',
-  pink: 'Pink',
-  brown: 'Brown',
-  gray: 'Gray',
-  // Premium colors
-  black: 'Midnight Black ⭐',
-  silver: 'Silver ⭐',
-  rainbow: 'Rainbow ⭐',
-  pulse: 'Pulse ⭐',
-  metallic: 'Metallic Gold ⭐',
-  neon: 'Neon Green ⭐',
-}
-
-// =============================================================================
-// CONQUEST K COMPREHENSIVE COLOR SYSTEM
-// =============================================================================
+// Conquest K Color System Constants
 
 // Player colors - Optimized for gameplay visibility against dark backgrounds
-export const PLAYER_COLORS_NEW = [
+export const PLAYER_COLORS = [
   '#DC2626', // Red - Classic aggressive
   '#2563EB', // Blue - Traditional defensive
   '#059669', // Forest Green - Distinct from premium neon
@@ -245,7 +121,7 @@ export const RANK_COLORS = {
     minElo: 2000,
     maxElo: 2499
   },
-  WORLDBREAKER: { 
+  APOCALYPSE: { 
     base: 'linear-gradient(90deg, #EF4444, #F59E0B)', 
     glow: 'glow-rank-divine', 
     name: 'Inferno',
@@ -277,3 +153,85 @@ export const UI_COLORS = {
   error: 'danger',
   info: 'info'
 } as const;
+
+// Legacy compatibility - keeping some old exports for backward compatibility
+export type PlayerColor = string;
+
+// Helper functions
+export const getPlayerColor = (index: number): string => {
+  return PLAYER_COLORS[index % PLAYER_COLORS.length];
+};
+
+export const getPremiumPlayerColor = (key: keyof typeof PREMIUM_PLAYER_COLORS) => {
+  return PREMIUM_PLAYER_COLORS[key];
+};
+
+export const getRankColor = (elo: number) => {
+  const ranks = Object.values(RANK_COLORS);
+  return ranks.find(rank => elo >= rank.minElo && elo <= rank.maxElo) || RANK_COLORS.CHIEFTAIN;
+};
+
+// Legacy compatibility functions for components that haven't been fully migrated
+export const getColorValue = (color: PlayerColor): string => {
+  // Check if it's a regular player color (hex value)
+  if ((PLAYER_COLORS as readonly string[]).includes(color)) {
+    return color;
+  }
+  
+  // Check if it's a premium color
+  const premiumColor = PREMIUM_PLAYER_COLORS[color as keyof typeof PREMIUM_PLAYER_COLORS];
+  if (premiumColor) {
+    return 'gradient' in premiumColor ? premiumColor.gradient || premiumColor.solid : premiumColor.solid;
+  }
+  
+  // Fallback to first player color
+  return PLAYER_COLORS[0];
+};
+
+export const getColorDisplayName = (color: PlayerColor): string => {
+  // If it's a hex color, find its index in PLAYER_COLORS
+  const colorIndex = (PLAYER_COLORS as readonly string[]).indexOf(color);
+  if (colorIndex !== -1) {
+    const colorNames = ['Red', 'Blue', 'Green', 'Amber', 'Purple', 'Orange', 'Cyan', 'Pink', 'Bronze', 'Maroon', 'Teal', 'Indigo'];
+    return colorNames[colorIndex] || `Color ${colorIndex + 1}`;
+  }
+  
+  // If it's a premium color, use its key
+  if (color in PREMIUM_PLAYER_COLORS) {
+    return `${color.replace(/([A-Z])/g, ' $1').trim()} ⭐`;
+  }
+  
+  return color;
+};
+
+export const isPremiumColor = (color: PlayerColor): boolean => {
+  return color in PREMIUM_PLAYER_COLORS;
+};
+
+export const isGradientColor = (color: PlayerColor): boolean => {
+  const premiumColor = PREMIUM_PLAYER_COLORS[color as keyof typeof PREMIUM_PLAYER_COLORS];
+  return premiumColor && 'gradient' in premiumColor;
+};
+
+// Create arrays for compatibility
+export const STANDARD_COLORS = PLAYER_COLORS;
+export const PREMIUM_COLORS = Object.keys(PREMIUM_PLAYER_COLORS);
+export const COLOR_HEX_VALUES: Record<string, string> = {
+  ...Object.fromEntries(PLAYER_COLORS.map(color => [color, color])),
+  ...Object.fromEntries(
+    Object.entries(PREMIUM_PLAYER_COLORS).map(([key, value]) => [
+      key, 
+      'gradient' in value ? value.gradient || value.solid : value.solid
+    ])
+  )
+};
+export const COLOR_DISPLAY_NAMES: Record<string, string> = {
+  ...Object.fromEntries(PLAYER_COLORS.map(color => [color, getColorDisplayName(color)])),
+  ...Object.fromEntries(
+    Object.keys(PREMIUM_PLAYER_COLORS).map(key => [key, getColorDisplayName(key)])
+  )
+};
+export const COLOR_CLASSES: Record<string, string> = {
+  ...Object.fromEntries(PLAYER_COLORS.map(color => [color, 'text-white'])),
+  ...Object.fromEntries(Object.keys(PREMIUM_PLAYER_COLORS).map(key => [key, 'text-white']))
+};
