@@ -87,6 +87,78 @@
   --section-spacing-sm: 2rem;
 }
 
+/* ===== THEME SYSTEM - PHASE 4 ===== */
+/* Theme-aware color overrides using existing Redux theme system */
+
+/* Dark Theme (default) - Uses existing colors */
+:root,
+:root[data-theme="dark"] {
+  /* Colors stay the same - already optimized for dark theme */
+}
+
+/* Light Theme Overrides */
+:root[data-theme="light"] {
+  /* Background Colors - Inverted for light theme */
+  --color-ink: #F8F9FA;           /* Light background instead of #0B0B12 */
+  --color-surface-1: #FFFFFF;     /* White cards instead of #0F172A */
+  --color-surface-2: #F1F5F9;     /* Light gray instead of #1E293B */
+  --color-surface-3: #E2E8F0;     /* Lighter gray instead of #334155 */
+  
+  /* Text Colors - Inverted for readability */
+  --color-text: #1E293B;          /* Dark text instead of #F8FAFC */
+  --color-text-soft: #334155;     /* Medium dark instead of #E2E8F0 */
+  --color-muted: #64748B;         /* Gray text instead of #94A3B8 */
+  
+  /* Border Colors */
+  --color-border: #E2E8F0;        /* Light border instead of #334155 */
+  
+  /* Keep brand colors the same */
+  /* --color-violet, --color-gold, --color-crimson stay unchanged */
+  /* --color-success, --color-warning, --color-info stay unchanged */
+  
+  /* Update gradient for light theme */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #F8F9FA 0%,
+    #F1F5F9 30%,
+    #E2E8F0 60%,
+    #F8F9FA 100%
+  );
+}
+
+/* High Contrast Mode - Accessibility Enhancement */
+:root[data-theme="high-contrast"] {
+  /* Maximum contrast colors for accessibility */
+  --color-ink: #000000;           /* Pure black */
+  --color-surface-1: #000000;     /* Pure black cards */
+  --color-surface-2: #111111;     /* Near black */
+  --color-surface-3: #222222;     /* Dark gray */
+  
+  --color-text: #FFFFFF;          /* Pure white text */
+  --color-text-soft: #FFFFFF;     /* All text white */
+  --color-muted: #CCCCCC;         /* Light gray for secondary */
+  
+  --color-border: #FFFFFF;        /* White borders */
+  
+  /* Enhanced brand colors for contrast */
+  --color-violet: #9F5AFF;        /* Brighter violet */
+  --color-gold: #FFFF00;          /* Bright yellow gold */
+  --color-crimson: #FF0000;       /* Pure red */
+  --color-success: #00FF00;       /* Pure green */
+  --color-warning: #FFFF00;       /* Bright yellow */
+  --color-info: #00FFFF;          /* Bright cyan */
+}
+
+/* Victory theme enhancement (already exists but we can improve it) */
+:root[data-theme="victory"] {
+  /* Keep existing victory theme but enhance with our color system */
+  --ck-glow: var(--color-gold);
+  
+  /* Add subtle gold tint to backgrounds during victory */
+  --color-surface-1: color-mix(in srgb, var(--color-surface-1) 95%, var(--color-gold) 5%);
+  --color-surface-2: color-mix(in srgb, var(--color-surface-2) 95%, var(--color-gold) 5%);
+}
+
 /* Root CSS variables for complex values */
 :root {
   /* The conquest gradient - Synced with GRADIENTS.background in colors.ts */
@@ -784,13 +856,22 @@
     @apply transition-opacity duration-200 ease-smooth hover:opacity-80;
   }
   
-  /* Focus States */
+  /* Focus States - Theme-aware and accessible */
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-violet focus:ring-offset-2 focus:ring-offset-surface-1;
   }
   
   .focus-ring-inset {
     @apply focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet;
+  }
+  
+  /* Enhanced focus for high contrast mode */
+  :root[data-theme="high-contrast"] .focus-ring {
+    @apply focus:ring-4 focus:ring-gold;
+  }
+  
+  :root[data-theme="high-contrast"] .focus-ring-inset {
+    @apply focus:ring-4 focus:ring-gold;
   }
   
   /* Loading States */
@@ -840,6 +921,68 @@
     to { 
       opacity: 1;
       transform: scale(1);
+    }
+  }
+  
+  /* ===== ACCESSIBILITY & SCREEN READER SUPPORT ===== */
+  /* Screen reader only content */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+  
+  /* Screen reader only content that becomes visible on focus */
+  .sr-only-focusable:focus {
+    @apply static w-auto h-auto p-1 m-0 overflow-visible whitespace-normal;
+    clip: auto;
+  }
+  
+  /* Skip links for keyboard navigation */
+  .skip-link {
+    @apply sr-only-focusable fixed top-4 left-4 z-50 bg-violet text-white px-4 py-2 rounded-lg font-medium;
+  }
+  
+  /* High contrast mode enhancements */
+  :root[data-theme="high-contrast"] {
+    /* Ensure all interactive elements have visible borders */
+  }
+  
+  :root[data-theme="high-contrast"] button,
+  :root[data-theme="high-contrast"] .btn-primary,
+  :root[data-theme="high-contrast"] .btn-secondary {
+    @apply border-2 border-white;
+  }
+  
+  :root[data-theme="high-contrast"] input,
+  :root[data-theme="high-contrast"] textarea,
+  :root[data-theme="high-contrast"] select {
+    @apply border-2 border-white bg-black text-white;
+  }
+  
+  /* Motion preferences - respect user's motion settings */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-scale-in,
+    .hover-lift,
+    .click-scale,
+    .loading-spin {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+    }
+  }
+  
+  /* Color scheme preference detection */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      /* Apply light theme if user prefers light and no theme is set */
+      --color-ink: #F8F9FA;
+      --color-surface-1: #FFFFFF;
+      --color-surface-2: #F1F5F9;
+      --color-text: #1E293B;
+      --color-muted: #64748B;
+      --color-border: #E2E8F0;
     }
   }
   
