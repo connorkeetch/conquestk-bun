@@ -17,46 +17,51 @@ git push origin dev  # Auto-deploys via Railway
 
 ## 🔐 Environment Variables
 
-### Required for Production
-Set these in Railway dashboard → Variables tab:
+### Current Production Setup (September 2025)
+**Verified working configuration in Railway:**
 
 ```bash
-# Core (Railway provides DATABASE_URL and PORT)
+# Core (Railway auto-provides DATABASE_URL and PORT)
 NODE_ENV=production
-JWT_SECRET=[generate with: openssl rand -base64 32]
-SESSION_SECRET=[generate with: openssl rand -base64 32]
+JWT_SECRET=[32+ char secret - rotate every 90 days]
+SESSION_SECRET=[32+ char secret - rotate every 90 days]
 
-# URLs
+# URLs & CORS
 CORS_ORIGIN=https://conquestk.com
 FRONTEND_URL=https://conquestk.com
 
-# Email Service (Resend)
-RESEND_API_KEY=[your-resend-api-key from Resend dashboard]
-EMAIL_FROM=noreply@conquestk.com  # Must be verified domain in Resend
+# Email Service (Resend - REQUIRED)
+RESEND_API_KEY=[from Resend dashboard]
+EMAIL_FROM=noreply@updates.conquestk.com  # Updates subdomain verified
 EMAIL_FROM_NAME=ConquestK
 EMAIL_ENABLED=true
 EMAIL_VERIFICATION_EXPIRE_HOURS=24
 REQUIRE_EMAIL_VERIFICATION=true
 
-# Monitoring
-SENTRY_DSN=https://your-sentry-dsn
+# Error Tracking
+SENTRY_DSN=[your-sentry-dsn]
 LOG_LEVEL=info
 
-# Redis (Optional)
-REDIS_URL=redis://...
-
-# Database Tuning
+# Performance & Scaling (Enterprise Features)
+REDIS_URL=[Railway Redis addon if using caching]
 DB_POOL_MAX=20
 DB_POOL_IDLE_TIMEOUT=30000
 DB_POOL_CONNECTION_TIMEOUT=2000
-DB_STATEMENT_TIMEOUT=30000
-DB_QUERY_TIMEOUT=30000
+ENABLE_PERFORMANCE_MONITORING=true
+ENABLE_AUTO_SCALING=true
 
-# Feature Flags (Optional)
-ENABLE_AI_PLAYERS=false
-ENABLE_DEBUG_LOGS=false
-ENABLE_NEW_FEATURES=false
-ENABLE_TOURNAMENTS=false
+# Node.js 24 Features
+NODE_ENV=production  # Enables Node.js 24 optimizations
+ENGINE_VERSION=24    # Explicit version specification
+```
+
+### Staging Environment Differences
+```bash
+NODE_ENV=staging  # Important: staging mode, not production
+CORS_ORIGIN=https://risk-game-production-9935.up.railway.app
+FRONTEND_URL=https://risk-game-production-9935.up.railway.app
+ENABLE_DEBUG_LOGS=true
+SENTRY_ENVIRONMENT=staging
 ```
 
 ### Generate Secure Secrets
@@ -109,13 +114,18 @@ main (production) ← dev (staging) ← feature branches
 
 ## 🚨 Emergency Procedures
 
-### Quick Rollback
-```powershell
-# Windows - rollback to last known good
-.\scripts\rollback.ps1 -LastKnownGood
+### Quick Rollback (September 2025)
+```bash
+# Railway CLI method (recommended)
+railway rollback --environment production
 
-# Specify exact commit
-.\scripts\rollback.ps1 -CommitHash abc123
+# Git method
+git revert HEAD --no-edit
+git push origin main  # Auto-deploys rollback
+
+# Specific commit rollback
+git reset --hard <last-good-commit-hash>
+git push origin main --force-with-lease
 ```
 
 ### Database Recovery
@@ -156,22 +166,30 @@ WHERE state = 'idle'
 AND query_start < NOW() - INTERVAL '10 minutes';
 ```
 
-## 🏠 Local Development
+## 🏠 Local Development (Current Setup)
 
-### Using Docker (Recommended)
+### Railway PostgreSQL (Recommended)
 ```bash
-# Start services
-docker-compose up -d
-
-# Use local environment
-cp backend/.env.local backend/.env
-npm run dev
+# Current working setup (September 2025)
+npm install                    # Install all dependencies
+npm run setup                  # Configure environment
+npm run dev                    # Start both frontend (5173) and backend (5001)
 ```
 
-### Docker Services
-- PostgreSQL on localhost:5432
-- Redis on localhost:6379
-- Credentials in docker-compose.yml
+**Default Configuration:**
+- **Frontend**: http://localhost:5173
+- **Backend**: http://localhost:5001  
+- **Database**: Railway PostgreSQL (shared dev instance)
+- **No Docker required** - Railway handles database hosting
+
+### Alternative: Docker (If needed)
+```bash
+# Only if Railway connection issues
+docker-compose up -d postgres redis
+cp backend/.env.example backend/.env
+# Update DATABASE_URL to localhost
+npm run dev
+```
 
 ## 📋 Deployment Checklist
 

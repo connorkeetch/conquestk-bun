@@ -151,14 +151,24 @@ socket.on('game:state', (state) => {
 })
 ```
 
-## 🎯 Current Focus Areas
-1. **UI Consistency** - Tailwind-only styling (no DaisyUI)
-2. **Production** - Railway deployment at conquestk.com
-3. **Staging** - Dev branch at risk-game-production-9935.up.railway.app
-4. **Map Editor** - Canvas-based territory creation with ImageProcessor
-5. **PostgreSQL** - All queries must use $1, $2 format (not ? placeholders)
-6. **Database Schema** - Comprehensive tables for all features (game rooms, achievements, tournaments, etc.)
-7. **Performance** - Optimized with Redis caching, delta updates, and bulk database operations (see PERFORMANCE-OPTIMIZATIONS.md)
+## 🎯 Current Project Status (September 2025)
+
+### ✅ Recently Completed Major Upgrades
+1. **Node.js 24 Migration** - Error handling, regex security, resource cleanup
+2. **React 19.1 + Vite 7.1** - Latest stable with performance improvements  
+3. **PostgreSQL-Only** - Removed SQLite complexity, Railway-hosted everywhere
+4. **Enterprise Performance** - Phase 4 scaling with Redis cluster, CDN, auto-scaling
+5. **31 Backend Services** - Comprehensive service architecture built out
+
+### 🔄 Ready for Integration
+- **Bull.js Worker System** - BattleWorker, GameActionWorker, CleanupWorker (.disabled)
+- **Performance Monitoring** - Real-time metrics with automated alerting
+- **Advanced Audio Features** - Spatial audio, dynamic music, voice announcements
+
+### 🎯 Current Development Focus
+- **Audio System Enhancement** - Advanced features and performance optimization
+- **Worker Integration** - Enable Bull.js background processing
+- **Status Verification** - Confirm completion status of capital system, performance features
 
 ## 💾 Database Management
 
@@ -190,27 +200,49 @@ socket.on('game:state', (state) => {
 - **Support**: notifications, user_reports, territory_modifiers, territory_events
 
 ## 📁 Environment Configuration
-Backend requires `.env` file with:
+
+### Email Setup (Resend - Required)
 ```bash
-DATABASE_URL=postgresql://...      # Railway PostgreSQL URL
-JWT_SECRET=...                      # JWT signing secret (min 32 chars)
-SESSION_SECRET=...                  # Session secret (min 32 chars)
-PORT=5001                           # Backend port
-NODE_ENV=development               # or production
+# Quick Resend Setup:
+# 1. Get API key from https://resend.com dashboard
+# 2. Add to backend/.env:
+RESEND_API_KEY=re_YOUR_API_KEY_HERE
+EMAIL_FROM=noreply@updates.conquestk.com  # Updates subdomain verified
+EMAIL_FROM_NAME=ConquestK
+EMAIL_ENABLED=true
+REQUIRE_EMAIL_VERIFICATION=true
 
-# Email Service (Required for password reset & verification)
-RESEND_API_KEY=...                     # From Resend dashboard
-EMAIL_FROM=noreply@updates.conquestk.com  # Updates subdomain verified in Resend
-EMAIL_FROM_NAME=ConquestK              # Display name in emails
-EMAIL_ENABLED=true                     # Set to false to disable
-
-# Optional
-SENTRY_DSN=...                     # Error tracking
-REDIS_URL=...                      # Redis cache
+# 3. Add same variables to Railway production environment
+# 4. Test with: cd backend && npm run test:email
 ```
 
-Frontend proxies `/api` requests to backend port 5001 (configured in `vite.config.ts`).
-See `backend/.env.example` for complete configuration template.
+### Backend Environment (.env)
+```bash
+# Core (Railway auto-provides DATABASE_URL in production)
+DATABASE_URL=postgresql://...      # Railway PostgreSQL URL
+JWT_SECRET=...                      # JWT signing secret (32+ chars)
+SESSION_SECRET=...                  # Session secret (32+ chars)
+PORT=5001                           # Backend port
+NODE_ENV=development               # development/staging/production
+
+# Email (Required - see above)
+RESEND_API_KEY=...
+EMAIL_FROM=noreply@updates.conquestk.com
+EMAIL_ENABLED=true
+
+# Performance & Monitoring (Optional)
+SENTRY_DSN=...                     # Error tracking
+REDIS_URL=...                      # Redis cache
+ENABLE_PERFORMANCE_MONITORING=true
+ENABLE_AUTO_SCALING=true
+```
+
+### Current Deployment URLs
+- **Production**: https://conquestk.com (main branch)
+- **Staging**: https://risk-game-production-9935.up.railway.app (dev branch)
+- **Local Dev**: Frontend http://localhost:5173, Backend http://localhost:5001
+
+Frontend proxies `/api` requests to backend (configured in `vite.config.ts`).
 
 ## 🧪 Testing Strategy
 - **Unit Tests**: Core game logic, utility functions

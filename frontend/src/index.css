@@ -89,16 +89,56 @@
   animation: slideDown 0.5s ease-in-out;
 }
 
-/* Shimmer animation for metallic colors */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
+/* Victory celebration animation */
+@keyframes victory-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--color-gold);
+    transform: scale(1);
   }
-  100% {
-    transform: translateX(200%);
+  50% {
+    box-shadow: 0 0 40px var(--color-gold), 0 0 60px var(--color-violet);
+    transform: scale(1.02);
   }
 }
 
+/* Shimmer animation for metallic colors */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-victory-pulse {
+  animation: victory-pulse 2s ease-in-out infinite;
+}
+
 .animate-shimmer {
+  background: linear-gradient(
+    90deg, 
+    transparent, 
+    rgba(255, 215, 0, 0.3), 
+    transparent
+  );
+  background-size: 200% 100%;
   animation: shimmer 3s infinite linear;
+}
+
+/* Rank glow effects using our new color system */
+.glow-rank-low {
+  filter: drop-shadow(0 0 2px var(--color-border));
+}
+
+.glow-rank-medium {
+  filter: drop-shadow(0 0 4px var(--color-violet-soft));
+}
+
+.glow-rank-high {
+  filter: drop-shadow(0 0 6px var(--color-gold));
+}
+
+.glow-rank-divine {
+  filter: drop-shadow(0 0 8px var(--color-gold)) drop-shadow(0 0 16px var(--color-violet));
 }

@@ -119,3 +119,161 @@ export const COLOR_DISPLAY_NAMES: Record<PlayerColor, string> = {
   metallic: 'Metallic Gold ⭐',
   neon: 'Neon Green ⭐',
 }
+
+// =============================================================================
+// CONQUEST K COMPREHENSIVE COLOR SYSTEM
+// =============================================================================
+
+// Player colors - Optimized for gameplay visibility against dark backgrounds
+export const PLAYER_COLORS_NEW = [
+  '#DC2626', // Red - Classic aggressive
+  '#2563EB', // Blue - Traditional defensive
+  '#059669', // Forest Green - Distinct from premium neon
+  '#F59E0B', // Amber - Better than pure yellow
+  '#9333EA', // Purple - Clear and distinct
+  '#EA580C', // Orange - Vibrant energy
+  '#06B6D4', // Cyan - Cool and calculating
+  '#EC4899', // Pink - Surprisingly visible
+  '#D97706', // Tan/Bronze - Earthy warfare
+  '#881337', // Maroon - Deep and rich
+  '#14B8A6', // Teal - Ocean depths
+  '#6366F1', // Indigo - Bridge between blue and purple
+] as const;
+
+// Premium player colors with special effects
+export const PREMIUM_PLAYER_COLORS = {
+  MidnightBlack: {
+    solid: '#000000',
+    outline: '#FFFFFF',
+    effect: 'subtle-starfield',
+    description: 'The void between stars'
+  },
+  PureWhite: {
+    solid: '#FFFFFF',
+    outline: '#000000',
+    effect: 'pearl-shimmer',
+    description: 'Pristine and untouchable'
+  },
+  MetallicGold: {
+    solid: '#FFD700',
+    effect: 'metallic-gradient',
+    outline: '#B8860B',
+    description: 'The color of victory'
+  },
+  MetallicSilver: {
+    solid: '#C0C0C0',
+    effect: 'chrome-reflection',
+    outline: '#808080',
+    description: 'Polished steel'
+  },
+  NeonGreen: {
+    solid: '#39FF14',
+    effect: 'electric-glow',
+    outline: '#2FB510',
+    description: 'Radioactive power'
+  },
+  Dragonfire: {
+    gradient: 'linear-gradient(45deg, #DC2626, #FB923C, #FDE047)',
+    solid: '#FB923C',
+    effect: 'flame-particles',
+    description: 'Burning conquest'
+  }
+} as const;
+
+// Rank colors - The progression of power
+export const RANK_COLORS = {
+  CHIEFTAIN: { 
+    base: '#9CA3AF', 
+    glow: 'glow-rank-low', 
+    name: 'Iron',
+    minElo: 0,
+    maxElo: 599
+  },
+  WARLORD: { 
+    base: '#CD7F32', 
+    glow: 'glow-rank-low', 
+    name: 'Bronze',
+    minElo: 600,
+    maxElo: 799
+  },
+  RAIDER_KING: { 
+    base: '#B22222', 
+    glow: 'glow-rank-medium', 
+    name: 'Crimson',
+    minElo: 800,
+    maxElo: 999
+  },
+  SULTAN: { 
+    base: '#10B981', 
+    glow: 'glow-rank-medium', 
+    name: 'Emerald',
+    minElo: 1000,
+    maxElo: 1199
+  },
+  CAESAR: { 
+    base: '#C0C0C0', 
+    glow: 'glow-rank-medium', 
+    name: 'Silver',
+    minElo: 1200,
+    maxElo: 1399
+  },
+  KHAN: { 
+    base: '#9B111E', 
+    glow: 'glow-rank-medium', 
+    name: 'Ruby',
+    minElo: 1400,
+    maxElo: 1599
+  },
+  EMPEROR: { 
+    base: '#2563EB', 
+    glow: 'glow-rank-high', 
+    name: 'Sapphire',
+    minElo: 1600,
+    maxElo: 1799
+  },
+  GREAT_KING: { 
+    base: '#FFD700', 
+    glow: 'glow-rank-high', 
+    name: 'Gold',
+    minElo: 1800,
+    maxElo: 1999
+  },
+  OVERLORD: { 
+    base: '#0B0B0B', 
+    glow: 'glow-rank-divine', 
+    name: 'Obsidian',
+    minElo: 2000,
+    maxElo: 2499
+  },
+  WORLDBREAKER: { 
+    base: 'linear-gradient(90deg, #EF4444, #F59E0B)', 
+    glow: 'glow-rank-divine', 
+    name: 'Inferno',
+    minElo: 2500,
+    maxElo: Infinity
+  }
+} as const;
+
+// UI Color mappings for easy access
+export const UI_COLORS = {
+  // Brand
+  primary: 'violet',
+  primarySoft: 'violet-soft',
+  accent: 'gold',
+  danger: 'crimson',
+  
+  // Surfaces
+  background: 'ink',
+  surface: 'surface-1',
+  surfaceElevated: 'surface-2',
+  
+  // Text
+  text: 'text',
+  textMuted: 'muted',
+  
+  // Semantic
+  success: 'success',
+  warning: 'warning',
+  error: 'danger',
+  info: 'info'
+} as const;
