@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Header from './Header'
 import Footer from './Footer'
+import { CORE_COLORS } from '../constants/colors'
 
 interface LayoutProps {
   children: ReactNode
@@ -38,13 +39,13 @@ export default function Layout({ children }: LayoutProps) {
                 <path
                   d="M 40 0 L 0 0 0 40"
                   fill="none"
-                  stroke="rgba(255,255,255,.08)"
+                  stroke={`${CORE_COLORS.white}14`}
                   strokeWidth="1"
                 />
               </pattern>
               <radialGradient id="glow" cx="50%" cy="40%" r="80%">
-                <stop offset="0%" stopColor="#6ee7ff" stopOpacity=".12" />
-                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                <stop offset="0%" stopColor={CORE_COLORS.cyan} stopOpacity=".12" />
+                <stop offset="100%" stopColor={CORE_COLORS.black} stopOpacity="0" />
               </radialGradient>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
