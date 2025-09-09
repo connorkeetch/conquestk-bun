@@ -122,7 +122,7 @@
 @layer utilities {
   /* Gradient text utility - Updated with new colors */
   .gradient-text {
-    background: linear-gradient(135deg, var(--color-violet), var(--color-gold));
+    background: linear-gradient(135deg, var(--color-text), var(--color-gold));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
