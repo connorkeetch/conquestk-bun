@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { GRADIENTS } from '../constants/colors'
 
 // import Breadcrumb from '../components/Breadcrumb';
 
@@ -24,12 +25,14 @@ const Maps: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Maps Gallery</h1>
+          <h1 className="text-4xl font-bold mb-2">
+            <span style={{ background: GRADIENTS.redToGold, backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Maps Gallery</span>
+          </h1>
           <p className="text-muted">Discover battlefields from around the world</p>
         </div>
         <Link
           to="/map-editor"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:scale-105"
+          className="inline-flex items-center gap-2 bg-violet px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:brightness-110 transition-all duration-200 hover:scale-105"
         >
           ✏️ Create Map
         </Link>

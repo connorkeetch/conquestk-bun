@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, login } from '../store/authSlice'
 import MountainLogo from '../components/MountainLogo'
+import { GRADIENTS } from '../constants/colors'
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('')
@@ -45,8 +46,8 @@ export default function Login() {
             <div className="flex items-center justify-center gap-3 mb-2">
               <MountainLogo width={48} height={48} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
-                CONQUEST <span className="text-yellow-400 font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)', 
+                CONQUEST <span className="font-bold" style={{ 
+                  background: GRADIENTS.goldK, 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',

@@ -2,6 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
+import { CORE_COLORS, getPlayerColor } from '../constants/colors'
 
 const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>()
@@ -16,10 +17,10 @@ const GamePage: React.FC = () => {
     phase: 'ATTACK' as const,
     turn: 12,
     players: [
-      { id: '1', name: 'You', color: '#3b82f6', territories: 18, armies: 45 },
-      { id: '2', name: 'Player 2', color: '#ef4444', territories: 12, armies: 32 },
-      { id: '3', name: 'Player 3', color: '#10b981', territories: 8, armies: 24 },
-      { id: '4', name: 'Player 4', color: '#f59e0b', territories: 4, armies: 16 },
+      { id: '1', name: 'You', color: getPlayerColor(0), territories: 18, armies: 45 },
+      { id: '2', name: 'Player 2', color: getPlayerColor(1), territories: 12, armies: 32 },
+      { id: '3', name: 'Player 3', color: getPlayerColor(2), territories: 8, armies: 24 },
+      { id: '4', name: 'Player 4', color: getPlayerColor(3), territories: 4, armies: 16 },
     ],
   }
 

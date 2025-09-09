@@ -1,4 +1,5 @@
 import type React from 'react'
+import { RANK_COLORS } from '../constants/colors'
 
 export interface ConquestRank {
   name: string
@@ -7,17 +8,18 @@ export interface ConquestRank {
   insignia: string
 }
 
+// 🎯 NOW USING UNIFIED COLOR SYSTEM - All colors reference RANK_COLORS from colors.ts
 export const CONQUEST_RANKS: ConquestRank[] = [
-  { name: 'Chieftain', minRating: 0, color: '#8B7355', insignia: '🛡️' },
-  { name: 'Warlord', minRating: 800, color: '#C41E3A', insignia: '⚔️' },
-  { name: 'Raider King', minRating: 1000, color: '#4682B4', insignia: '⚓' },
-  { name: 'Sultan', minRating: 1200, color: '#228B22', insignia: '☪️' },
-  { name: 'Caesar', minRating: 1400, color: '#B8860B', insignia: '🦅' },
-  { name: 'Khan', minRating: 1600, color: '#8B4513', insignia: '🏹' },
-  { name: 'Emperor', minRating: 1800, color: '#483D8B', insignia: '👑' },
-  { name: 'The Great King', minRating: 2000, color: '#FF8C00', insignia: '☀️' },
-  { name: 'Overlord', minRating: 2200, color: '#8B008B', insignia: '💀' },
-  { name: 'Worldbreaker', minRating: 2400, color: '#DC143C', insignia: '☄️' },
+  { name: 'Chieftain', minRating: 0, color: RANK_COLORS.CHIEFTAIN.base, insignia: '🛡️' },
+  { name: 'Warlord', minRating: 800, color: RANK_COLORS.WARLORD.base, insignia: '⚔️' },
+  { name: 'Raider King', minRating: 1000, color: RANK_COLORS.RAIDER_KING.base, insignia: '⚓' },
+  { name: 'Sultan', minRating: 1200, color: RANK_COLORS.SULTAN.base, insignia: '☪️' },
+  { name: 'Caesar', minRating: 1400, color: RANK_COLORS.CAESAR.base, insignia: '🦅' },
+  { name: 'Khan', minRating: 1600, color: RANK_COLORS.KHAN.base, insignia: '🏹' },
+  { name: 'Emperor', minRating: 1800, color: RANK_COLORS.EMPEROR.base, insignia: '👑' },
+  { name: 'The Great King', minRating: 2000, color: RANK_COLORS.GREAT_KING.base, insignia: '☀️' },
+  { name: 'Overlord', minRating: 2200, color: RANK_COLORS.OVERLORD.base, insignia: '💀' },
+  { name: 'Worldbreaker', minRating: 2400, color: RANK_COLORS.APOCALYPSE.base, insignia: '☄️' },
 ]
 
 export function getConquestRank(skillRating: number): ConquestRank {

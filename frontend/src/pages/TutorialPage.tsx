@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { BookOpen, Gamepad2, Trophy, Shield, Map, Zap, Users, Settings } from 'lucide-react'
+import { RANK_COLORS, colorStyle } from '../constants/colors'
 
 const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'>('basics')
@@ -277,7 +278,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">🛡️</span>
                     <div>
-                      <div className="font-semibold text-amber-700">Chieftain (0-599)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.CHIEFTAIN.base }}>Chieftain (0-599)</div>
                       <div className="text-sm text-muted">Leads a tribe or small clan, fighting for survival • Example: Vercingetorix</div>
                     </div>
                   </div>
@@ -285,7 +286,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">⚔️</span>
                     <div>
-                      <div className="font-semibold text-red-600">Warlord (600-799)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.WARLORD.base }}>Warlord (600-799)</div>
                       <div className="text-sm text-muted">Rules by might, feared by neighboring villages • Example: Shaka Zulu</div>
                     </div>
                   </div>
@@ -293,7 +294,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">⚓</span>
                     <div>
-                      <div className="font-semibold text-violet">Raider King (800-999)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.RAIDER_KING.base }}>Raider King (800-999)</div>
                       <div className="text-sm text-muted">Expands by plunder and coastal terror • Example: Ragnar Lothbrok</div>
                     </div>
                   </div>
@@ -301,7 +302,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">☪️</span>
                     <div>
-                      <div className="font-semibold text-green-600">Sultan (1000-1199)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.SULTAN.base }}>Sultan (1000-1199)</div>
                       <div className="text-sm text-muted">Wields faith and politics alongside armies • Example: Saladin</div>
                     </div>
                   </div>
@@ -309,7 +310,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">🦅</span>
                     <div>
-                      <div className="font-semibold text-yellow-500">Caesar (1200-1399)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.CAESAR.base }}>Caesar (1200-1399)</div>
                       <div className="text-sm text-muted">Transforms republic into empire • Example: Julius Caesar</div>
                     </div>
                   </div>
@@ -317,7 +318,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">🏹</span>
                     <div>
-                      <div className="font-semibold text-orange-500">Khan (1400-1599)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.KHAN.base }}>Khan (1400-1599)</div>
                       <div className="text-sm text-muted">Masters of cavalry and mobility • Example: Genghis Khan</div>
                     </div>
                   </div>
@@ -325,7 +326,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">👑</span>
                     <div>
-                      <div className="font-semibold text-purple-500">Emperor (1600-1799)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.EMPEROR.base }}>Emperor (1600-1799)</div>
                       <div className="text-sm text-muted">Commands massive armies • Example: Napoleon Bonaparte</div>
                     </div>
                   </div>
@@ -333,7 +334,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">☀️</span>
                     <div>
-                      <div className="font-semibold text-orange-400">The Great King (1800-1999)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.GREAT_KING.base }}>The Great King (1800-1999)</div>
                       <div className="text-sm text-muted">Ruler of kings, empire spanning continents • Example: Alexander the Great</div>
                     </div>
                   </div>
@@ -341,7 +342,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">💀</span>
                     <div>
-                      <div className="font-semibold text-gray-600">Overlord (2000-2199)</div>
+                      <div className="font-semibold" style={{ color: RANK_COLORS.OVERLORD.base, textShadow: '0 0 8px rgba(255, 255, 255, 0.8)' }}>Overlord (2000-2199)</div>
                       <div className="text-sm text-muted">Tyrant who demands tribute and burns resistance • Example: Attila the Hun</div>
                     </div>
                   </div>
@@ -349,7 +350,7 @@ const TutorialPage: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">☄️</span>
                     <div>
-                      <div className="font-semibold text-red-800">Worldbreaker (2200+)</div>
+                      <div className="font-semibold" style={{ background: RANK_COLORS.APOCALYPSE.base, backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Worldbreaker (2200+)</div>
                       <div className="text-sm text-muted">Apocalyptic conqueror, remembered for brutality • Example: Tamerlane</div>
                     </div>
                   </div>

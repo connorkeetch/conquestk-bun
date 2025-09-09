@@ -146,7 +146,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold">
-              <span className="gradient-text">Core Features</span>
+              <span className="text-white">Core Features</span>
             </h2>
           </div>
 
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              <span className="gradient-text">How to Dominate</span>
+              <span className="text-white">How to Dominate</span>
             </h2>
             <p className="text-muted text-sm">
               Master these three fundamentals to become a legendary commander

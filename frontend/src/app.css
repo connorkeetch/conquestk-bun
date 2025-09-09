@@ -1,28 +1,84 @@
-/* Custom theme configuration for Tailwind v4 - Conquest K Brand System */
+/* 
+  CONQUEST K COLOR SYSTEM - SINGLE SOURCE OF TRUTH
+  
+  🎯 All colors are defined in /src/constants/colors.ts
+  This file imports and applies them to CSS variables.
+  
+  To change any color: Go to colors.ts and modify CORE_COLORS
+*/
+
+/* 
+  ===== COMPLETE CSS VARIABLES =====
+  🎯 ALL SYNCED WITH CORE_COLORS IN /src/constants/colors.ts
+  
+  To change any color globally:
+  1. Go to /src/constants/colors.ts
+  2. Update the CORE_COLORS object
+  3. Update the matching CSS variable here
+  
+  These CSS variables enable Tailwind classes like:
+  - bg-violet, text-gold, border-crimson, etc.
+*/
 @theme {
-  /* Core Brand Palette - The conquest identity */
-  --color-ink: #0B0B12;        /* Near-black indigo for deepest backgrounds */
-  --color-imperial: #170B1D;    /* Even deeper royal purple, minimal brightness */
-  --color-abyss: #080A14;       /* Darker void, consistent with gradient flow */
-  --color-violet: #7C3AED;      /* Primary brand, all main CTAs */
-  --color-violet-soft: #8B5CF6; /* Atmospheric glow and hover states */
-  --color-gold: #FFD700;        /* Reserved for victories and rewards only */
-  --color-crimson: #B22222;     /* Attack states and danger */
+  /* ===== BRAND COLORS ===== */
+  --color-violet: #7C3AED;      /* CORE_COLORS.violet - Primary brand */
+  --color-violet-soft: #8B5CF6; /* CORE_COLORS.violetSoft - Hover states */
+  --color-gold: #FFD700;        /* CORE_COLORS.gold - Victory, rewards */
+  --color-crimson: #B22222;     /* CORE_COLORS.crimson - Danger, attack */
   
-  /* UI Neutrals - The foundation */
-  --color-text: #F9FAFB;        /* Primary text, near white */
-  --color-muted: #94A3B8;       /* Secondary text, subdued */
-  --color-border: #475569;      /* Borders and dividers */
-  --color-surface-1: #0F172A;   /* Card backgrounds */
-  --color-surface-2: #111827;    /* Elevated surfaces */
+  /* ===== BACKGROUND COLORS ===== */
+  --color-ink: #0B0B12;         /* CORE_COLORS.ink - Deepest backgrounds */
+  --color-imperial: #170B1D;    /* CORE_COLORS.imperial - Dark purple */
+  --color-abyss: #080A14;       /* CORE_COLORS.abyss - Void dark */
+  --color-surface-1: #0F172A;   /* CORE_COLORS.surface1 - Card backgrounds */
+  --color-surface-2: #111827;   /* CORE_COLORS.surface2 - Elevated surfaces */
   
-  /* Semantic Colors - Clear communication */
-  --color-success: #10B981;     /* Emerald for positive actions */
-  --color-warning: #F59E0B;     /* Amber for caution */
-  --color-danger: #B22222;      /* Same as crimson for consistency */
-  --color-info: #06B6D4;        /* Cyan for informational states */
+  /* ===== TEXT COLORS ===== */
+  --color-text: #F9FAFB;        /* CORE_COLORS.text - Primary text */
+  --color-muted: #94A3B8;       /* CORE_COLORS.muted - Secondary text */
+  --color-border: #475569;      /* CORE_COLORS.border - Borders, dividers */
   
-  /* Legacy compatibility - Map old vars to new system */
+  /* ===== SEMANTIC COLORS ===== */
+  --color-success: #10B981;     /* CORE_COLORS.success - Success states */
+  --color-warning: #F59E0B;     /* CORE_COLORS.warning - Warning states */
+  --color-danger: #B22222;      /* CORE_COLORS.danger - Error states */
+  --color-info: #06B6D4;        /* CORE_COLORS.info - Info states */
+  
+  /* ===== NEUTRAL GRAYS ===== */
+  --color-black: #000000;       /* CORE_COLORS.black */
+  --color-white: #FFFFFF;       /* CORE_COLORS.white */
+  --color-gray-100: #F3F4F6;    /* CORE_COLORS.gray100 */
+  --color-gray-200: #E5E7EB;    /* CORE_COLORS.gray200 */
+  --color-gray-300: #D1D5DB;    /* CORE_COLORS.gray300 */
+  --color-gray-400: #9CA3AF;    /* CORE_COLORS.gray400 - Chieftain rank */
+  --color-gray-500: #6B7280;    /* CORE_COLORS.gray500 */
+  --color-gray-600: #4B5563;    /* CORE_COLORS.gray600 */
+  --color-gray-700: #374151;    /* CORE_COLORS.gray700 */
+  --color-gray-800: #1F2937;    /* CORE_COLORS.gray800 */
+  --color-gray-900: #111827;    /* CORE_COLORS.gray900 */
+  
+  /* ===== PLAYER COLOR SPECTRUM ===== */
+  --color-red-400: #F87171;     /* CORE_COLORS.red400 */
+  --color-red-500: #EF4444;     /* CORE_COLORS.red500 */
+  --color-red-600: #DC2626;     /* CORE_COLORS.red600 - Player red */
+  --color-blue-600: #2563EB;    /* CORE_COLORS.blue600 - Player blue */
+  --color-green-600: #059669;   /* CORE_COLORS.green600 - Player green */
+  --color-amber-500: #F59E0B;    /* CORE_COLORS.amber500 - Player amber */
+  --color-purple-900: #9333EA;  /* CORE_COLORS.purple900 - Player purple */
+  --color-orange-600: #EA580C;  /* CORE_COLORS.orange600 - Player orange */
+  --color-cyan-500: #06B6D4;    /* CORE_COLORS.cyan500 - Player cyan */
+  --color-pink-500: #EC4899;    /* CORE_COLORS.pink500 - Player pink */
+  --color-amber-600: #D97706;    /* CORE_COLORS.amber600 - Player bronze */
+  --color-maroon-600: #881337;  /* CORE_COLORS.maroon600 - Player maroon */
+  --color-teal-500: #14B8A6;    /* CORE_COLORS.teal500 - Player teal */
+  --color-indigo-500: #6366F1;  /* CORE_COLORS.indigo500 - Player indigo */
+  
+  /* ===== METALLIC COLORS ===== */
+  --color-bronze: #CD7F32;      /* CORE_COLORS.bronze - Warlord rank */
+  --color-silver: #C0C0C0;      /* CORE_COLORS.silver - Caesar rank */
+  --color-ruby: #9B111E;        /* CORE_COLORS.ruby - Khan rank */
+  
+  /* ===== LEGACY COMPATIBILITY ===== */
   --color-brand: var(--color-violet);
   --color-brand-dark: var(--color-imperial);
   
@@ -33,11 +89,12 @@
 
 /* Root CSS variables for complex values */
 :root {
-  /* The conquest gradient - Our signature background (more subtle) */
+  /* The conquest gradient - Synced with GRADIENTS.background in colors.ts */
   --ck-bg-gradient: linear-gradient(
     135deg,
     #050508 0%,
-    #0A051C 40%,
+    #030308 30%,
+    #060612 60%,
     #040509 100%
   );
   
@@ -88,6 +145,223 @@
   
   .glow-violet {
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  }
+}
+
+/* ===== TAILWIND v4 COMPONENT CLASSES ===== */
+/* Define reusable component patterns for common UI elements */
+@layer components {
+  
+  /* Box1 - Primary Card Component */
+  .box1 {
+    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg;
+  }
+  
+  .box1-header {
+    @apply flex items-center gap-3 mb-4;
+  }
+  
+  .box1-title {
+    @apply text-lg font-semibold text-white;
+  }
+  
+  .box1-content {
+    @apply space-y-4;
+  }
+  
+  /* Box2 - Secondary Card Component */
+  .box2 {
+    @apply bg-surface-1/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-md;
+  }
+  
+  /* Primary Button Component */
+  .btn-primary {
+    @apply px-4 py-2 bg-violet hover:bg-violet/90 text-white font-semibold rounded-lg 
+           transition-all duration-200 transform hover:scale-[1.02] shadow-lg;
+  }
+  
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed hover:scale-100;
+  }
+  
+  /* Secondary Button Component */
+  .btn-secondary {
+    @apply px-4 py-2 bg-surface-2 hover:bg-surface-2/80 text-white font-medium 
+           rounded-lg border border-border transition-colors;
+  }
+  
+  /* Danger Button Component */
+  .btn-danger {
+    @apply px-4 py-2 bg-crimson hover:bg-crimson/90 text-white font-semibold 
+           rounded-lg transition-all duration-200 shadow-lg;
+  }
+  
+  /* Success Button Component */
+  .btn-success {
+    @apply px-4 py-2 bg-success hover:bg-success/90 text-white font-semibold 
+           rounded-lg transition-all duration-200 shadow-lg;
+  }
+  
+  /* Input Field Component */
+  .input-field {
+    @apply w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg 
+           text-white placeholder-gray-400 focus:ring-2 focus:ring-violet 
+           focus:border-violet transition-all duration-200;
+  }
+  
+  /* Select Dropdown Component */
+  .select-field {
+    @apply w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg 
+           text-white focus:ring-2 focus:ring-violet focus:border-violet 
+           transition-all duration-200;
+  }
+  
+  /* Toggle Switch Component */
+  .toggle-switch input {
+    @apply sr-only;
+  }
+  
+  .toggle-switch label {
+    @apply relative inline-flex items-center cursor-pointer;
+  }
+  
+  .toggle-switch .slider {
+    @apply w-11 h-6 bg-gray-600 rounded-full transition-colors duration-200;
+  }
+  
+  .toggle-switch input:checked + .slider {
+    @apply bg-violet;
+  }
+  
+  .toggle-switch .slider:before {
+    @apply content-[''] absolute left-1 top-1 w-4 h-4 bg-white rounded-full 
+           transition-transform duration-200;
+  }
+  
+  .toggle-switch input:checked + .slider:before {
+    @apply transform translate-x-5;
+  }
+  
+  /* Status Badge Components */
+  .badge-success {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-success/20 
+           text-success rounded-full border border-success/30;
+  }
+  
+  .badge-warning {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-warning/20 
+           text-warning rounded-full border border-warning/30;
+  }
+  
+  .badge-danger {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-danger/20 
+           text-danger rounded-full border border-danger/30;
+  }
+  
+  .badge-info {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-info/20 
+           text-info rounded-full border border-info/30;
+  }
+  
+  /* Loading Spinner Component */
+  .spinner {
+    @apply inline-block w-4 h-4 border-2 border-gray-300 border-t-violet 
+           rounded-full animate-spin;
+  }
+  
+  .spinner-lg {
+    @apply inline-block w-8 h-8 border-4 border-gray-300 border-t-violet 
+           rounded-full animate-spin;
+  }
+  
+  /* Stat Card Component */
+  .stat-card {
+    @apply bg-surface-2/60 backdrop-blur-sm border border-border/50 rounded-xl 
+           p-4 text-center hover:border-violet/30 transition-all duration-200;
+  }
+  
+  .stat-card-icon {
+    @apply text-2xl mb-2;
+  }
+  
+  .stat-card-value {
+    @apply text-xl font-bold text-white;
+  }
+  
+  .stat-card-label {
+    @apply text-sm text-muted;
+  }
+  
+  /* Navigation Tab Component */
+  .nav-tab {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200;
+  }
+  
+  .nav-tab-active {
+    @apply bg-violet text-white shadow-lg;
+  }
+  
+  .nav-tab-inactive {
+    @apply text-muted hover:text-white hover:bg-surface-2/50;
+  }
+  
+  /* Game Room Card Component */
+  .game-card {
+    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl 
+           p-6 hover:border-violet/30 hover:bg-surface-2/70 transition-all 
+           duration-200 cursor-pointer;
+  }
+  
+  .game-card-header {
+    @apply flex items-center justify-between mb-3;
+  }
+  
+  .game-card-title {
+    @apply text-lg font-semibold text-white;
+  }
+  
+  .game-card-status {
+    @apply text-sm px-2 py-1 rounded-full font-medium;
+  }
+  
+  /* Player Color Selector Component */
+  .color-selector {
+    @apply grid grid-cols-4 gap-2;
+  }
+  
+  .color-option {
+    @apply w-10 h-10 rounded-lg border-2 border-transparent hover:border-white/50 
+           transition-all duration-200 cursor-pointer;
+  }
+  
+  .color-option-selected {
+    @apply border-white shadow-lg scale-110;
+  }
+  
+  /* Settings Section Component */
+  .settings-section {
+    @apply space-y-6;
+  }
+  
+  .settings-group {
+    @apply bg-surface-2/30 rounded-lg p-4 border border-border/30;
+  }
+  
+  .settings-group-title {
+    @apply text-lg font-semibold text-white mb-4;
+  }
+  
+  .settings-item {
+    @apply flex items-center justify-between py-3 border-b border-border/20 
+           last:border-b-0;
+  }
+  
+  .settings-label {
+    @apply text-white font-medium;
+  }
+  
+  .settings-description {
+    @apply text-sm text-muted mt-1;
   }
   
   .glow-gold {

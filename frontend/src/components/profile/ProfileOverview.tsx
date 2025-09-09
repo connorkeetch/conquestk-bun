@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 import api from '../../services/api'
 import { authService } from '../../services/authService'
+import { CORE_COLORS, RANK_COLORS } from '../../constants/colors'
 
 interface UserProfile {
   id: string
@@ -149,12 +150,12 @@ const ProfileOverview: React.FC = () => {
   }
 
   const getRankTitle = (elo: number): { rank: string; color: string } => {
-    if (elo < 1000) return { rank: 'Bronze', color: '#CD7F32' }
-    if (elo < 1200) return { rank: 'Silver', color: '#C0C0C0' }
-    if (elo < 1500) return { rank: 'Gold', color: '#FFD700' }
-    if (elo < 1800) return { rank: 'Platinum', color: '#E5E4E2' }
-    if (elo < 2100) return { rank: 'Diamond', color: '#B9F2FF' }
-    return { rank: 'Master', color: '#FF69B4' }
+    if (elo < 1000) return { rank: 'Bronze', color: RANK_COLORS.CHIEFTAIN.base }
+    if (elo < 1200) return { rank: 'Silver', color: RANK_COLORS.BARONET.base }
+    if (elo < 1500) return { rank: 'Gold', color: RANK_COLORS.DUKE.base }
+    if (elo < 1800) return { rank: 'Platinum', color: RANK_COLORS.EMPEROR.base }
+    if (elo < 2100) return { rank: 'Diamond', color: RANK_COLORS.WARLORD.base }
+    return { rank: 'Master', color: RANK_COLORS.SOVEREIGN.base }
   }
 
   if (loading) {
