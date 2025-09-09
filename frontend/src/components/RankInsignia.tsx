@@ -83,7 +83,7 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
       
       {/* Rating */}
       {showRating && (
-        <span className={`text-gray-400 ${labelSizeClasses[size]}`}>
+        <span className={`text-muted ${labelSizeClasses[size]}`}>
           ({rating})
         </span>
       )}

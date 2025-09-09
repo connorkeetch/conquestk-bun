@@ -68,7 +68,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
             className={`p-1.5 rounded transition-all ${
               isLocked
                 ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30'
-                : 'text-gray-400 bg-gray-600/20 hover:bg-gray-600/30'
+                : 'text-muted bg-gray-600/20 hover:bg-gray-600/30'
             }`}
             title={isLocked ? 'Locked from randomization' : 'Click to lock from randomization'}
           >
@@ -309,10 +309,10 @@ const CreateGamePage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">Create New Game</h1>
-            <p className="text-gray-400">
+            <p className="text-muted">
               Configure your perfect strategic warfare experience
               {guntsPrescriptions && (
-                <span className="block mt-1 text-sm text-blue-400 italic">
+                <span className="block mt-1 text-sm text-violet-soft italic">
                   💊 "Just what the doctor ordered!" - Dr. Gunt
                 </span>
               )}
@@ -320,7 +320,7 @@ const CreateGamePage: React.FC = () => {
           </div>
           <Link
             to="/lobby"
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg transition-colors"
           >
             ← Back to Lobby
           </Link>
@@ -357,17 +357,17 @@ const CreateGamePage: React.FC = () => {
                         setGameName('')
                       }
                     }}
-                    className="mr-2 accent-blue-500"
+                    className="mr-2 accent-violet"
                   />
-                  <span className="text-xs text-gray-400">Auto-name</span>
+                  <span className="text-xs text-muted">Auto-name</span>
                 </label>
               </div>
               <div className="relative">
                 <input
                   type="text"
                   placeholder={useAutoName ? generateSmartName() : "Enter custom game name"}
-                  className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-all duration-200 pr-12 ${
-                    useAutoName ? 'bg-gray-700/50 cursor-not-allowed' : ''
+                  className={`w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-violet focus:outline-none transition-all duration-200 pr-12 ${
+                    useAutoName ? 'bg-surface-2/50 cursor-not-allowed' : ''
                   }`}
                   value={gameName}
                   onChange={(e) => {
@@ -382,7 +382,7 @@ const CreateGamePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setGameName(generateSmartName())}
-                      className="p-1.5 text-blue-400 hover:text-blue-300 bg-blue-900/30 hover:bg-blue-900/50 rounded transition-all"
+                      className="p-1.5 text-violet-soft hover:text-violet-soft bg-blue-900/30 hover:bg-blue-900/50 rounded transition-all"
                       title="Generate smart name"
                     >
                       ✨
@@ -390,7 +390,7 @@ const CreateGamePage: React.FC = () => {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted mt-1">
                 {useAutoName 
                   ? 'Name auto-updates based on your settings' 
                   : gameName 
@@ -406,15 +406,15 @@ const CreateGamePage: React.FC = () => {
               
               {/* Game Visibility */}
               <div className="mb-4">
-                <p className="text-xs text-gray-400 mb-2">Visibility</p>
+                <p className="text-xs text-muted mb-2">Visibility</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setGameVisibility('public')}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'public'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     🌍 Public
@@ -424,8 +424,8 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setGameVisibility('private')}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'private'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     🔒 Private
@@ -436,8 +436,8 @@ const CreateGamePage: React.FC = () => {
                     disabled
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'tournament'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted cursor-not-allowed opacity-50'
                     }`}
                   >
                     🏆 Tournament
@@ -447,7 +447,7 @@ const CreateGamePage: React.FC = () => {
 
               {/* Game Type - Ranked/Casual */}
               <div className="mb-4">
-                <p className="text-xs text-gray-400 mb-2">Game Type</p>
+                <p className="text-xs text-muted mb-2">Game Type</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -458,7 +458,7 @@ const CreateGamePage: React.FC = () => {
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameType === 'casual'
                         ? 'bg-green-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     😎 Casual
@@ -472,7 +472,7 @@ const CreateGamePage: React.FC = () => {
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameType === 'ranked'
                         ? 'bg-purple-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     ⚔️ Ranked
@@ -482,15 +482,15 @@ const CreateGamePage: React.FC = () => {
 
               {/* Time Limit */}
               <div className="mb-4">
-                <p className="text-xs text-gray-400 mb-2">Turn Time Limit</p>
+                <p className="text-xs text-muted mb-2">Turn Time Limit</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setTurnTimeLimit('24h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '24h'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     📆 24 Hours
@@ -500,8 +500,8 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTurnTimeLimit('12h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '12h'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     🕰️ 12 Hours
@@ -511,8 +511,8 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTurnTimeLimit('6h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '6h'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-violet text-white'
+                        : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
                     🕐 6 Hours
@@ -526,11 +526,11 @@ const CreateGamePage: React.FC = () => {
                   <input
                     type="text"
                     placeholder="Enter invite code (e.g., GAME123)"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-all duration-200"
+                    className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-violet focus:outline-none transition-all duration-200"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   />
-                  <p className="text-xs text-gray-400 mt-1">Players will need this code to join</p>
+                  <p className="text-xs text-muted mt-1">Players will need this code to join</p>
                 </div>
               )}
             </div>
@@ -541,7 +541,7 @@ const CreateGamePage: React.FC = () => {
             <div className="mt-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
               <div className="p-3 bg-yellow-900/30 rounded-lg border border-yellow-600/50">
                 <p className="text-sm font-semibold text-yellow-400 mb-2">⚔️ Ranked Game Requirements:</p>
-                <ul className="text-xs text-gray-300 space-y-1">
+                <ul className="text-xs text-muted space-y-1">
                   <li>• Minimum 3 players required</li>
                   <li>• No AI players allowed</li>
                   <li>• Must be a public game</li>
@@ -561,7 +561,7 @@ const CreateGamePage: React.FC = () => {
               disabled={isRanked}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
                 isRanked
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  ? 'bg-surface-2 text-muted cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
               }`}
             >
@@ -575,67 +575,60 @@ const CreateGamePage: React.FC = () => {
 
       {/* Responsive Grid Container - More condensed */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {/* 1. Choose Your Color Card - Updated with new color system */}
-        <OptionCard number="1" title="Choose Your Color">
-          <div className="space-y-3">
-            {/* Standard Player Colors */}
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Player Colors</p>
-              <div className="grid grid-cols-6 gap-1">
-                {PLAYER_COLORS.map((hexColor, index) => {
-                  return (
-                    <button
-                      key={hexColor}
-                      className={`group relative h-8 w-8 rounded border transition-all ${
-                        selectedColor === hexColor
-                          ? 'border-white scale-110 shadow-lg ring-2 ring-white/50'
-                          : 'border-gray-600 hover:border-gray-400 hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: hexColor }}
-                      onClick={() => setSelectedColor(hexColor)}
-                    >
-                      {selectedColor === hexColor && (
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold drop-shadow-lg">✓</span>
-                      )}
-                    </button>
-                  )
-                })}
+        {/* 1. Game Mode Card */}
+        <OptionCard 
+          number="1" 
+          title="Game Mode"
+          lockable={!isRanked}
+          isLocked={lockedSettings.has('gameMode')}
+          onToggleLock={() => toggleLock('gameMode')}
+        >
+          <div className="space-y-2">
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="gameMode"
+                value="classic"
+                checked={gameMode === 'classic'}
+                onChange={(e) => setGameMode(e.target.value)}
+                className="mr-3 accent-violet"
+              />
+              <span className="text-white">Classic Risk</span>
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+              <input
+                type="radio"
+                name="gameMode"
+                value="capitals"
+                checked={gameMode === 'capitals'}
+                onChange={(e) => setGameMode(e.target.value)}
+                className="mr-3 accent-violet"
+              />
+              <div className="flex-1">
+                <span className="text-white">Capitals</span>
+                <p className="text-xs text-muted mt-1">Protect your capital territory to win</p>
               </div>
-            </div>
-
-            {/* Premium Colors */}
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Premium Colors</p>
-              <div className="grid grid-cols-3 gap-1">
-                {Object.entries(PREMIUM_PLAYER_COLORS).map(([key, colorData]) => {
-                  const hasGradient = 'gradient' in colorData
-                  const colorValue = hasGradient ? colorData.gradient : colorData.solid
-                  
-                  return (
-                    <button
-                      key={key}
-                      className={`group relative h-8 rounded border transition-all ${
-                        selectedColor === key
-                          ? 'border-yellow-400 scale-110 shadow-lg ring-2 ring-yellow-400/50'
-                          : 'border-gray-600 hover:border-yellow-600 hover:scale-105'
-                      } ${key === 'NeonGreen' ? 'shadow-[0_0_6px_rgba(57,255,20,0.3)]' : ''}`}
-                      style={{
-                        background: hasGradient ? colorValue : undefined,
-                        backgroundColor: !hasGradient ? colorValue : undefined,
-                      }}
-                      onClick={() => setSelectedColor(key)}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-yellow-400 text-xs">⭐</span>
-                        {selectedColor === key && (
-                          <span className="text-white text-sm font-bold drop-shadow-lg ml-1">✓</span>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
+            </label>
+            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200 relative overflow-hidden">
+              <input
+                type="radio"
+                name="gameMode"
+                value="domination"
+                checked={gameMode === 'domination'}
+                onChange={(e) => setGameMode(e.target.value)}
+                className="mr-3 accent-violet"
+                disabled
+              />
+              <div className="flex-1">
+                <span className="text-muted">Domination</span>
+                <p className="text-xs text-muted mt-1">Control key strategic points</p>
               </div>
-            </div>
+              <div className="absolute top-1 right-1">
+                <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-0.5 text-orange-400 font-semibold">
+                  Soon
+                </span>
+              </div>
+            </label>
           </div>
         </OptionCard>
 
@@ -659,9 +652,9 @@ const CreateGamePage: React.FC = () => {
                   key={playerCount}
                   className={`p-3 rounded-lg font-bold transition-all duration-200 ${
                     isDisabled
-                      ? 'bg-white/5 text-gray-400 cursor-not-allowed opacity-50'
+                      ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
                       : maxPlayers === playerCount
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                        ? 'bg-violet text-white shadow-lg'
                         : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
                   }`}
                   disabled={isDisabled}
@@ -674,9 +667,9 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 2. Teams Card */}
+        {/* 3. Teams Card */}
         <OptionCard
-          number="2"
+          number="3"
           title="Teams"
           lockable={!isRanked}
           isLocked={lockedSettings.has('teams')}
@@ -695,9 +688,9 @@ const CreateGamePage: React.FC = () => {
                   disabled={!isValid}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     !isValid
-                      ? 'bg-white/5 text-gray-400 cursor-not-allowed opacity-50'
+                      ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
                       : teams === teamOption
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                        ? 'bg-violet text-white'
                         : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -707,8 +700,8 @@ const CreateGamePage: React.FC = () => {
             })}
           </div>
           {teams > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-600">
-              <p className="text-sm text-gray-400 mb-2">Team Assignment:</p>
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-sm text-muted mb-2">Team Assignment:</p>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input
@@ -737,131 +730,156 @@ const CreateGamePage: React.FC = () => {
           )}
         </OptionCard>
 
-        {/* 3. Game Mode Card */}
-        <OptionCard 
-          number="3" 
-          title="Game Mode"
+        {/* 4. Turn Time Limits Card */}
+        <OptionCard
+          number="4"
+          title="Turn Time Limits"
           lockable={!isRanked}
-          isLocked={lockedSettings.has('gameMode')}
-          onToggleLock={() => toggleLock('gameMode')}
+          isLocked={lockedSettings.has('turnTimeLimit')}
+          onToggleLock={() => toggleLock('turnTimeLimit')}
         >
-          <div className="space-y-2">
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="gameMode"
-                value="classic"
-                checked={gameMode === 'classic'}
-                onChange={(e) => setGameMode(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <span className="text-white">Classic Risk</span>
-            </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-              <input
-                type="radio"
-                name="gameMode"
-                value="capitals"
-                checked={gameMode === 'capitals'}
-                onChange={(e) => setGameMode(e.target.value)}
-                className="mr-3 accent-blue-500"
-              />
-              <div className="flex-1">
-                <span className="text-white">👑 Capitals</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Capture enemy capitals for instant elimination
-                </p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-muted mb-2">Real-Time Games</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTurnTimeLimit(5)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    turnTimeLimit === 5
+                      ? 'bg-violet text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  5 minutes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTurnTimeLimit(10)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    turnTimeLimit === 10
+                      ? 'bg-violet text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  10 minutes
+                </button>
               </div>
-            </label>
-            <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg opacity-50 transition-all duration-200">
-              <input type="radio" name="gameMode" disabled className="mr-3" />
-              <span className="text-gray-400">Domination</span>
-              <span className="ml-auto text-xs text-gray-500">Coming Soon</span>
-            </label>
+            </div>
+            
+            <div>
+              <p className="text-xs text-muted mb-2">Long-Term Games</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTurnTimeLimit(6 * 60)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    turnTimeLimit === 6 * 60
+                      ? 'bg-violet text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  6 hours
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTurnTimeLimit(12 * 60)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    turnTimeLimit === 12 * 60
+                      ? 'bg-violet text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  12 hours
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTurnTimeLimit(24 * 60)}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    turnTimeLimit === 24 * 60
+                      ? 'bg-violet text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  24 hours
+                </button>
+              </div>
+            </div>
           </div>
         </OptionCard>
 
-
-        {/* 4. Fortification Card - Condensed */}
+        {/* 5. Fortification Card */}
         <OptionCard
-          number="4"
+          number="5"
           title="Fortification"
           lockable={!isRanked}
           isLocked={lockedSettings.has('fortification')}
           onToggleLock={() => toggleLock('fortification')}
         >
-          <div className="space-y-1">
+          <div className="grid grid-cols-1 gap-2">
             {[
-              { value: 'adjacent', label: 'Adjacent' },
-              { value: 'multiple-adjacent', label: 'Multi-Adjacent' },
-              { value: 'chained', label: 'Chained' },
-              { value: 'unlimited', label: 'Unlimited' }
+              { value: 'adjacent', label: '🔗 Adjacent Only', description: 'Move troops only between connected territories' },
+              { value: 'unlimited', label: '🌍 Unlimited', description: 'Move troops between any owned territories' }
             ].map(option => (
               <span 
                 key={option.value}
-                onClick={() => setFortification(option.value)}
-                className={`block px-3 py-2 rounded cursor-pointer transition-colors text-sm ${
+                className={`group relative px-3 py-3 rounded-lg font-medium text-sm transition-colors cursor-pointer ${
                   fortification === option.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-violet text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
+                onClick={() => setFortification(option.value)}
               >
-                {option.label}
+                <div className="flex items-center justify-between">
+                  <span>{option.label}</span>
+                  {/* Hover tooltip */}
+                  <div className="opacity-0 group-hover:opacity-100 absolute left-full top-0 ml-2 px-3 py-2 bg-surface-1 text-muted text-xs rounded-lg shadow-lg z-10 whitespace-nowrap transition-opacity duration-200 pointer-events-none">
+                    {option.description}
+                  </div>
+                </div>
               </span>
             ))}
           </div>
         </OptionCard>
 
-
-        {/* 5. Spoils of War Card - Condensed */}
+        {/* 6. Spoils of War Card */}
         <OptionCard
-          number="5"
+          number="6"
           title="Spoils of War"
           lockable={!isRanked}
-          isLocked={lockedSettings.has('cardTradeBonus')}
-          onToggleLock={() => toggleLock('cardTradeBonus')}
+          isLocked={lockedSettings.has('spoilsType')}
+          onToggleLock={() => toggleLock('spoilsType')}
         >
-          <div className="space-y-2">
-            <div className="space-y-1">
-              {[
-                { value: 'progressive', label: 'Progressive' },
-                { value: 'fixed', label: 'Fixed' },
-                { value: 'increasing', label: 'Increasing' },
-                { value: 'static', label: 'Static' }
-              ].map(option => (
-                <span 
-                  key={option.value}
-                  onClick={() => setCardTradeBonus(option.value)}
-                  className={`block px-3 py-2 rounded cursor-pointer transition-colors text-sm ${
-                    cardTradeBonus === option.value
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {option.label}
-                </span>
-              ))}
-            </div>
-            {cardTradeBonus === 'static' && (
-              <input
-                type="number"
-                value={staticBonusValue}
-                onChange={(e) =>
-                  setStaticBonusValue(Math.max(1, parseInt(e.target.value, 10) || 1))
-                }
-                className="w-full p-2 bg-gray-700 text-white placeholder-gray-400 rounded text-sm border border-gray-600 focus:border-blue-400 focus:outline-none"
-                min="1"
-                placeholder="Static value"
-              />
-            )}
+          <div className="grid grid-cols-1 gap-2">
+            {[
+              { value: 'escalating', label: '📈 Escalating', description: 'Card values increase each turn (2,4,6,8...)' },
+              { value: 'fixed', label: '⚖️ Fixed Value', description: 'Cards always worth the same amount' },
+              { value: 'static', label: '🔒 Static', description: 'No card bonuses, pure strategy' }
+            ].map(option => (
+              <span 
+                key={option.value}
+                className={`group relative px-3 py-3 rounded-lg font-medium text-sm transition-colors cursor-pointer ${
+                  spoilsType === option.value
+                    ? 'bg-violet text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+                onClick={() => setSpoilsType(option.value)}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{option.label}</span>
+                  {/* Hover tooltip */}
+                  <div className="opacity-0 group-hover:opacity-100 absolute left-full top-0 ml-2 px-3 py-2 bg-surface-1 text-muted text-xs rounded-lg shadow-lg z-10 whitespace-nowrap transition-opacity duration-200 pointer-events-none">
+                    {option.description}
+                  </div>
+                </div>
+              </span>
+            ))}
           </div>
         </OptionCard>
 
-
-
-        {/* 6. Advanced Options Card */}
+        {/* 7. Advanced Options Card */}
         <OptionCard
-          number="6"
+          number="7"
           title="Advanced Options"
           lockable={!isRanked}
           isLocked={lockedSettings.has('fogOfWar') || lockedSettings.has('territoryModifiers')}
@@ -873,7 +891,7 @@ const CreateGamePage: React.FC = () => {
           <div className="space-y-6">
             {/* Fog of War Section */}
             <div>
-              <h4 className="text-sm font-medium text-white mb-3">🌫️ Fog of War</h4>
+              <h4 className="text-sm font-medium text-white mb-3">☀️ Fog of War</h4>
               <div className="space-y-2">
                 <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
                   <input
@@ -882,11 +900,11 @@ const CreateGamePage: React.FC = () => {
                     value="off"
                     checked={fogOfWar === 'off'}
                     onChange={(e) => setFogOfWar(e.target.value)}
-                    className="mr-3 accent-blue-500"
+                    className="mr-3 accent-violet"
                   />
                   <div className="flex-1">
-                    <span className="text-white">🌞 No Fog</span>
-                    <p className="text-xs text-gray-400 mt-1">See entire map at all times</p>
+                    <span className="text-white">☀️ No Fog</span>
+                    <p className="text-xs text-muted mt-1">See entire map at all times</p>
                   </div>
                 </label>
                 <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -896,11 +914,11 @@ const CreateGamePage: React.FC = () => {
                     value="adjacent"
                     checked={fogOfWar === 'adjacent'}
                     onChange={(e) => setFogOfWar(e.target.value)}
-                    className="mr-3 accent-blue-500"
+                    className="mr-3 accent-violet"
                   />
                   <div className="flex-1">
-                    <span className="text-white">🌫️ Adjacent Only</span>
-                    <p className="text-xs text-gray-400 mt-1">Only see territories next to your own</p>
+                    <span className="text-white">🔗 Adjacent Only</span>
+                    <p className="text-xs text-muted mt-1">Only see territories next to your own</p>
                   </div>
                 </label>
                 <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -910,11 +928,11 @@ const CreateGamePage: React.FC = () => {
                     value="persistent"
                     checked={fogOfWar === 'persistent'}
                     onChange={(e) => setFogOfWar(e.target.value)}
-                    className="mr-3 accent-blue-500"
+                    className="mr-3 accent-violet"
                   />
                   <div className="flex-1">
                     <span className="text-white">🗺️ Persistent Vision</span>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Once revealed, territories stay visible
                     </p>
                   </div>
@@ -923,7 +941,7 @@ const CreateGamePage: React.FC = () => {
             </div>
 
             {/* Territory Modifiers Section */}
-            <div className="pt-4 border-t border-gray-600">
+            <div className="pt-4 border-t border-border">
               <h4 className="text-sm font-medium text-white mb-3">⚡ Territory Modifiers</h4>
               <div className="space-y-3">
                 <label className="flex items-center p-3 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -931,11 +949,11 @@ const CreateGamePage: React.FC = () => {
                     type="checkbox"
                     checked={useTerritoryModifiers}
                     onChange={(e) => setUseTerritoryModifiers(e.target.checked)}
-                    className="mr-3 accent-blue-500"
+                    className="mr-3 accent-violet"
                   />
                   <div className="flex-1">
                     <span className="text-white">Enable Territory Modifiers</span>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Add special properties to territories (defense bonuses, supply lines, etc.)
                     </p>
                   </div>
@@ -943,7 +961,7 @@ const CreateGamePage: React.FC = () => {
 
                 {useTerritoryModifiers && (
                   <div className="mt-3 pt-3 border-t border-gray-500">
-                    <p className="text-sm text-gray-400 mb-2">Modifier Distribution:</p>
+                    <p className="text-sm text-muted mb-2">Modifier Distribution:</p>
                     <div className="space-y-2">
                       <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
                         <input
@@ -960,7 +978,7 @@ const CreateGamePage: React.FC = () => {
                         />
                         <div className="flex-1">
                           <span className="text-white text-sm">Sparse (15%)</span>
-                          <p className="text-xs text-gray-400">Few strategic territories</p>
+                          <p className="text-xs text-muted">Few strategic territories</p>
                         </div>
                       </label>
                       <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
@@ -978,7 +996,7 @@ const CreateGamePage: React.FC = () => {
                         />
                         <div className="flex-1">
                           <span className="text-white text-sm">Balanced (30%)</span>
-                          <p className="text-xs text-gray-400">Moderate strategic depth</p>
+                          <p className="text-xs text-muted">Moderate strategic depth</p>
                         </div>
                       </label>
                       <label className="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-white/20">
@@ -996,7 +1014,7 @@ const CreateGamePage: React.FC = () => {
                         />
                         <div className="flex-1">
                           <span className="text-white text-sm">Abundant (50%)</span>
-                          <p className="text-xs text-gray-400">Many strategic territories</p>
+                          <p className="text-xs text-muted">Many strategic territories</p>
                         </div>
                       </label>
                     </div>
@@ -1008,12 +1026,84 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
       </div>
 
+      {/* Choose Your Color - Before Map Selection */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl hover:shadow-2xl">
+          <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
+            <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              8
+            </span>
+            <span className="text-white">Choose Your Color</span>
+          </h2>
+          <div className="space-y-4">
+            {/* Standard Player Colors */}
+            <div>
+              <p className="text-xs text-muted mb-2">Player Colors</p>
+              <div className="grid grid-cols-6 gap-2">
+                {PLAYER_COLORS.map((hexColor, index) => {
+                  return (
+                    <button
+                      key={hexColor}
+                      className={`group relative h-10 w-10 rounded border transition-all ${
+                        selectedColor === hexColor
+                          ? 'border-white scale-110 shadow-lg ring-2 ring-white/50'
+                          : 'border-border hover:border-gray-400 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: hexColor }}
+                      onClick={() => setSelectedColor(hexColor)}
+                    >
+                      {selectedColor === hexColor && (
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold drop-shadow-lg">✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Premium Colors */}
+            <div>
+              <p className="text-xs text-muted mb-2">Premium Colors</p>
+              <div className="grid grid-cols-6 gap-2">
+                {Object.entries(PREMIUM_PLAYER_COLORS).map(([key, colorData]) => {
+                  const hasGradient = 'gradient' in colorData
+                  const colorValue = hasGradient ? colorData.gradient : colorData.solid
+                  
+                  return (
+                    <button
+                      key={key}
+                      className={`group relative h-10 w-10 rounded border transition-all ${
+                        selectedColor === key
+                          ? 'border-yellow-400 scale-110 shadow-lg ring-2 ring-yellow-400/50'
+                          : 'border-border hover:border-yellow-600 hover:scale-105'
+                      } ${key === 'NeonGreen' ? 'shadow-[0_0_6px_rgba(57,255,20,0.3)]' : ''}`}
+                      style={{
+                        background: hasGradient ? colorValue : undefined,
+                        backgroundColor: !hasGradient ? colorValue : undefined,
+                      }}
+                      onClick={() => setSelectedColor(key)}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-yellow-400 text-xs">⭐</span>
+                        {selectedColor === key && (
+                          <span className="text-white text-sm font-bold drop-shadow-lg ml-1">✓</span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Map Selector - Full Width */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
-            <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              7
+            <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              9
             </span>
             <span className="text-white">Select Map</span>
           </h2>
@@ -1023,7 +1113,7 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-1">
               <input
                 placeholder="Search maps..."
-                className="w-full p-2 bg-gray-700 text-white rounded-lg border border-gray-600 placeholder-gray-400 mb-3 focus:border-blue-400 focus:outline-none transition-all duration-200"
+                className="w-full p-2 bg-surface-2 text-white rounded-lg border border-border placeholder-muted mb-3 focus:border-violet focus:outline-none transition-all duration-200"
               />
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {maps.map((map) => (
@@ -1031,13 +1121,13 @@ const CreateGamePage: React.FC = () => {
                     key={map.id}
                     className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedMap === map.id
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
+                        ? 'bg-violet shadow-lg'
                         : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                     }`}
                     onClick={() => setSelectedMap(map.id)}
                   >
                     <div className="font-bold text-white">{map.name}</div>
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm text-muted">
                       {map.territories} territories • {map.players} players
                     </div>
                   </div>
@@ -1049,23 +1139,23 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-2">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10">
-                  <span className="text-gray-400">Map Preview (Coming Soon)</span>
+                  <span className="text-muted">Map Preview (Coming Soon)</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-400">Map Size:</span>
+                    <span className="text-muted">Map Size:</span>
                     <span className="ml-2 text-white">Large</span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Territories:</span>
+                    <span className="text-muted">Territories:</span>
                     <span className="ml-2 text-white">42</span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Regions:</span>
+                    <span className="text-muted">Regions:</span>
                     <span className="ml-2 text-white">6</span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Games Played:</span>
+                    <span className="text-muted">Games Played:</span>
                     <span className="ml-2 text-white">12,847</span>
                   </div>
                 </div>
@@ -1078,7 +1168,7 @@ const CreateGamePage: React.FC = () => {
       {/* Action Buttons */}
       <div className="max-w-7xl mx-auto flex gap-4">
         <button
-          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+          className="flex-1 py-3 bg-violet hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
           onClick={handleCreateGame}
           disabled={isCreating || (gameVisibility === 'private' && !inviteCode.trim())}
         >

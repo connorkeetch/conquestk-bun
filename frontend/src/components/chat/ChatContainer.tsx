@@ -180,9 +180,9 @@ export default function ChatContainer({
   }
   
   return (
-    <div className={`flex flex-col h-full bg-gray-900 rounded-lg ${className}`}>
+    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 rounded-t-lg">
+      <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
         <h3 className="font-semibold text-white">
           {conversationType === 'game' ? '🎮 Game Chat' : 
            conversationType === 'team' ? '👥 Team Chat' : 
@@ -198,11 +198,11 @@ export default function ChatContainer({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         {isLoadingHistory ? (
-          <div className="text-center text-gray-400 py-4">
+          <div className="text-center text-muted py-4">
             Loading chat history...
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 py-4">
+          <div className="text-center text-muted py-4">
             No messages yet. Start the conversation!
           </div>
         ) : (
@@ -211,7 +211,7 @@ export default function ChatContainer({
         
         {/* Typing indicators */}
         {typingUsers.length > 0 && (
-          <div className="text-sm text-gray-400 italic mt-2">
+          <div className="text-sm text-muted italic mt-2">
             {typingUsers.map(u => u.username).join(', ')} 
             {typingUsers.length === 1 ? ' is' : ' are'} typing...
           </div>

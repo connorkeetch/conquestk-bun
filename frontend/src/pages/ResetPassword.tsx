@@ -132,7 +132,7 @@ const ResetPassword: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200 pr-12"
+                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 pr-12"
                 placeholder="Enter new password"
               />
               <button
@@ -162,7 +162,7 @@ const ResetPassword: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={isLoading}
-              className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-violet transition-all duration-200"
+              className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200"
               placeholder="Confirm new password"
             />
           </div>
@@ -179,7 +179,7 @@ const ResetPassword: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-muted text-sm">
             Remember your password?{' '}
-            <Link to="/login" className="text-violet-soft hover:text-blue-300 transition-colors">
+            <Link to="/login" className="text-violet-soft hover:text-violet-soft transition-colors">
               Back to Login
             </Link>
           </p>

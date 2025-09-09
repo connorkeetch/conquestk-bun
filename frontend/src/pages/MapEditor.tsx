@@ -1077,12 +1077,12 @@ export default function MapEditor() {
       <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">🚧 Coming Soon</h1>
-          <p className="text-xl text-gray-300 mb-6">
+          <p className="text-xl text-muted mb-6">
             The polygon-based map editor is currently under development
           </p>
           <button
             onClick={() => window.location.href = '/map-editor'}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium text-white"
+            className="bg-violet hover:bg-violet px-6 py-3 rounded-lg font-medium text-white"
           >
             Return to Current Map Editor
           </button>
@@ -1092,15 +1092,15 @@ export default function MapEditor() {
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+          <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
-            <p className="text-gray-400 mb-6">
+            <p className="text-muted mb-6">
               How would you like to use this image?
             </p>
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
-                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 bg-violet hover:bg-violet rounded-lg text-white font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
                 <span className="text-sm text-blue-200">No cropping</span>
@@ -1117,7 +1117,7 @@ export default function MapEditor() {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
                 }}
-                className="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium"
+                className="w-full px-4 py-3 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
               >
                 Cancel
               </button>
@@ -1213,47 +1213,47 @@ export default function MapEditor() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Canvas */}
           <div className="lg:col-span-3">
-            <div className="bg-gray-800 rounded-lg p-6">
+            <div className="bg-surface-1 rounded-lg p-6">
               <h2 className="text-xl font-bold mb-4">Map Canvas</h2>
-              <div className="bg-gray-700 rounded overflow-hidden">
+              <div className="bg-surface-2 rounded overflow-hidden">
                 <canvas
                   ref={canvasRef}
                   width={800}
                   height={600}
                   onClick={handleCanvasClick}
                   onDoubleClick={handleCanvasDoubleClick}
-                  className="w-full cursor-crosshair border border-gray-600"
+                  className="w-full cursor-crosshair border border-border"
                   style={{ maxHeight: '600px' }}
                 />
               </div>
-              <div className="mt-4 text-sm text-gray-400">
+              <div className="mt-4 text-sm text-muted">
                 <p>
                   <strong>How to Create Your Map:</strong>
                 </p>
                 <div className="space-y-1 mt-2">
                   <p>
-                    <span className="text-blue-400">1.</span> Upload a background image (PNG/JPG) of
+                    <span className="text-violet-soft">1.</span> Upload a background image (PNG/JPG) of
                     your map
                   </p>
                   <p>
-                    <span className="text-blue-400">2.</span> Create continents with bonus armies
+                    <span className="text-violet-soft">2.</span> Create continents with bonus armies
                   </p>
                   <p>
-                    <span className="text-blue-400">3.</span> Use Territory Tool to trace
+                    <span className="text-violet-soft">3.</span> Use Territory Tool to trace
                     territories on the image
                   </p>
                   <p>
-                    <span className="text-blue-400">4.</span> Assign territories to continents
+                    <span className="text-violet-soft">4.</span> Assign territories to continents
                   </p>
                   <p>
-                    <span className="text-blue-400">5.</span> Connect territories with adjacency
+                    <span className="text-violet-soft">5.</span> Connect territories with adjacency
                     lines
                   </p>
                   <p>
-                    <span className="text-blue-400">6.</span> Save your custom map!
+                    <span className="text-violet-soft">6.</span> Save your custom map!
                   </p>
                 </div>
-                <div className="mt-3 p-2 bg-gray-700 rounded text-xs">
+                <div className="mt-3 p-2 bg-surface-2 rounded text-xs">
                   <p>
                     <strong>Controls:</strong> Click to add points • Double-click to finish •
                     Right-click to cancel
@@ -1273,8 +1273,8 @@ export default function MapEditor() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Background Image</label>
                   <div
-                    className={`bg-gray-700 rounded-lg p-3 border-2 border-dashed transition-colors ${
-                      isDragOver ? 'border-blue-400 bg-blue-900/20' : 'border-gray-600'
+                    className={`bg-surface-2 rounded-lg p-3 border-2 border-dashed transition-colors ${
+                      isDragOver ? 'border-violet bg-blue-900/20' : 'border-border'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -1290,7 +1290,7 @@ export default function MapEditor() {
                       
                       {/* Upload Info Display */}
                       {uploadInfo && (
-                        <div className="mb-3 p-2 bg-blue-900/50 border border-blue-600 rounded text-blue-300 text-xs">
+                        <div className="mb-3 p-2 bg-blue-900/50 border border-violet rounded text-violet-soft text-xs">
                           ℹ️ {uploadInfo}
                         </div>
                       )}
@@ -1301,7 +1301,7 @@ export default function MapEditor() {
                           <div className="text-slate-300 text-xs">Processing image...</div>
                           <div className="w-full bg-slate-700 rounded-full h-1.5">
                             <div
-                              className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                              className="bg-violet h-1.5 rounded-full transition-all duration-300"
                               style={{ width: `${uploadProgress}%` }}
                             ></div>
                           </div>
@@ -1320,7 +1320,7 @@ export default function MapEditor() {
                           <div className="flex justify-center space-x-2">
                             <button
                               onClick={() => fileInputRef.current?.click()}
-                              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs transition-colors"
+                              className="bg-violet hover:bg-violet px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
                             >
                               Change
@@ -1354,7 +1354,7 @@ export default function MapEditor() {
                                 <br />
                                 PNG, JPG, GIF, WEBP, SVG (max 10MB)
                                 <br />
-                                <span className="text-blue-300">
+                                <span className="text-violet-soft">
                                   💡 Min: 400×300px | Max: 1600×1200px
                                 </span>
                                 <br />
@@ -1369,7 +1369,7 @@ export default function MapEditor() {
                           {!isDragOver && !isUploading && (
                             <button
                               onClick={() => fileInputRef.current?.click()}
-                              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition-colors"
+                              className="bg-violet hover:bg-violet px-4 py-2 rounded text-sm font-medium transition-colors"
                             >
                               Choose File
                             </button>
@@ -1385,7 +1385,7 @@ export default function MapEditor() {
 
                 {/* Image Scale Control */}
                 {state.imageUrl && (
-                  <div className="mt-4 p-3 bg-gray-700 rounded">
+                  <div className="mt-4 p-3 bg-surface-2 rounded">
                     <label className="block text-sm font-medium mb-2 text-slate-200">
                       Image Scale: {Math.round(state.imageScale * 100)}%
                     </label>
@@ -1416,7 +1416,7 @@ export default function MapEditor() {
                     type="text"
                     value={mapName}
                     onChange={(e) => setMapName(e.target.value)}
-                    className="max-w-md px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    className="max-w-md px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
                     placeholder="Enter map name..."
                   />
                 </div>
@@ -1427,7 +1427,7 @@ export default function MapEditor() {
                   <textarea
                     value={mapDescription}
                     onChange={(e) => setMapDescription(e.target.value)}
-                    className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
                     rows={3}
                     placeholder="Describe your map..."
                   />
@@ -1438,7 +1438,7 @@ export default function MapEditor() {
                     id="isPublic"
                     checked={isPublic}
                     onChange={(e) => setIsPublic(e.target.checked)}
-                    className="rounded text-blue-500 bg-slate-700 border-slate-600 focus:ring-blue-500"
+                    className="rounded text-violet bg-slate-700 border-slate-600 focus:ring-violet"
                   />
                   <label htmlFor="isPublic" className="text-sm text-slate-200">
                     Make Public
@@ -1464,7 +1464,7 @@ export default function MapEditor() {
                     }
                     className={`w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${
                       state.selectedTool === tool.id
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-violet text-white'
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
@@ -1488,7 +1488,7 @@ export default function MapEditor() {
                       type="text"
                       value={newTerritoryName}
                       onChange={(e) => setNewTerritoryName(e.target.value)}
-                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
                       placeholder="Enter name..."
                     />
                   </div>
@@ -1504,7 +1504,7 @@ export default function MapEditor() {
                           selectedContinent: e.target.value || undefined,
                         }))
                       }
-                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
                     >
                       <option value="">No continent</option>
                       {state.continents.map((continent) => (
@@ -1515,12 +1515,12 @@ export default function MapEditor() {
                     </select>
                   </div>
                   {state.isDrawing && (
-                    <div className="text-sm text-blue-400">
+                    <div className="text-sm text-violet-soft">
                       Drawing... ({state.currentPolygon.length} points)
                       <br />
                       <button
                         onClick={finishTerritory}
-                        className="mt-2 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs"
+                        className="mt-2 bg-violet hover:bg-violet px-3 py-1 rounded text-xs"
                       >
                         Finish Territory
                       </button>
@@ -1531,12 +1531,12 @@ export default function MapEditor() {
             )}
 
             {/* Continent Management */}
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-surface-1 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold">Continents ({state.continents.length})</h3>
                 <button
                   onClick={() => setShowContinentTerritories(!showContinentTerritories)}
-                  className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded"
+                  className="text-xs bg-surface-2 hover:bg-gray-600 px-2 py-1 rounded"
                 >
                   {showContinentTerritories ? 'Hide Details' : 'Show Details'}
                 </button>
@@ -1549,14 +1549,14 @@ export default function MapEditor() {
                       type="text"
                       value={newContinentName}
                       onChange={(e) => setNewContinentName(e.target.value)}
-                      className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                      className="px-2 py-1 bg-surface-2 border border-border rounded text-sm"
                       placeholder="Continent name..."
                     />
                     <input
                       type="number"
                       value={newContinentBonus}
                       onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 2)}
-                      className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                      className="px-2 py-1 bg-surface-2 border border-border rounded text-sm"
                       placeholder="Bonus armies"
                       min="1"
                       max="20"
@@ -1567,19 +1567,19 @@ export default function MapEditor() {
                       type="color"
                       value={newContinentColor}
                       onChange={(e) => setNewContinentColor(e.target.value)}
-                      className="flex-1 h-8 bg-gray-700 border border-gray-600 rounded"
+                      className="flex-1 h-8 bg-surface-2 border border-border rounded"
                     />
                     {editingContinent ? (
                       <>
                         <button
                           onClick={updateContinent}
-                          className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                          className="bg-violet hover:bg-violet px-3 py-1 rounded text-sm"
                         >
                           Update
                         </button>
                         <button
                           onClick={cancelEditContinent}
-                          className="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm"
+                          className="bg-gray-600 hover:bg-surface-2 px-3 py-1 rounded text-sm"
                         >
                           Cancel
                         </button>
@@ -1598,7 +1598,7 @@ export default function MapEditor() {
                 {/* Continents List */}
                 <div className="max-h-40 overflow-y-auto space-y-1">
                   {state.continents.length === 0 ? (
-                    <div className="text-sm text-gray-400 text-center py-4">
+                    <div className="text-sm text-muted text-center py-4">
                       No continents created yet
                       <br />
                       <span className="text-xs">
@@ -1609,7 +1609,7 @@ export default function MapEditor() {
                     state.continents.map((continent) => {
                       const territoryCount = getContinentTerritoryCount(continent.id)
                       return (
-                        <div key={continent.id} className="bg-gray-700 rounded p-2">
+                        <div key={continent.id} className="bg-surface-2 rounded p-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <div
@@ -1617,7 +1617,7 @@ export default function MapEditor() {
                                 style={{ backgroundColor: continent.color }}
                               />
                               <span className="font-medium text-sm">{continent.name}</span>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-muted">
                                 ({territoryCount} territories)
                               </span>
                             </div>
@@ -1627,7 +1627,7 @@ export default function MapEditor() {
                               </span>
                               <button
                                 onClick={() => editContinent(continent.id)}
-                                className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded"
+                                className="text-xs bg-violet hover:bg-violet px-2 py-1 rounded"
                               >
                                 Edit
                               </button>
@@ -1643,7 +1643,7 @@ export default function MapEditor() {
                           {/* Show territories in this continent */}
                           {showContinentTerritories && territoryCount > 0 && (
                             <div className="mt-2 text-xs">
-                              <div className="text-gray-400 mb-1">Territories:</div>
+                              <div className="text-muted mb-1">Territories:</div>
                               <div className="flex flex-wrap gap-1">
                                 {state.territories
                                   .filter((t) => t.continentId === continent.id)
@@ -1667,11 +1667,11 @@ export default function MapEditor() {
             </div>
 
             {/* Territories List */}
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-surface-1 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3">Territories ({state.territories.length})</h3>
               <div className="max-h-48 overflow-y-auto space-y-1">
                 {state.territories.length === 0 ? (
-                  <div className="text-sm text-gray-400 text-center py-4">
+                  <div className="text-sm text-muted text-center py-4">
                     No territories created yet
                     <br />
                     <span className="text-xs">Use the Territory Tool to draw new territories</span>
@@ -1684,8 +1684,8 @@ export default function MapEditor() {
                         key={territory.id}
                         className={`text-sm p-2 rounded border ${
                           state.selectedTerritory === territory.id
-                            ? 'bg-blue-600 text-white border-blue-400'
-                            : 'bg-gray-700 hover:bg-gray-600 border-gray-600'
+                            ? 'bg-violet text-white border-violet'
+                            : 'bg-surface-2 hover:bg-gray-600 border-border'
                         }`}
                       >
                         <div
@@ -1711,7 +1711,7 @@ export default function MapEditor() {
 
                         {/* Continent reassignment dropdown */}
                         {state.selectedTerritory === territory.id && (
-                          <div className="mt-2 pt-2 border-t border-gray-600">
+                          <div className="mt-2 pt-2 border-t border-border">
                             <label className="block text-xs mb-1">Reassign to continent:</label>
                             <select
                               value={territory.continentId || ''}
@@ -1740,7 +1740,7 @@ export default function MapEditor() {
             </div>
 
             {/* Actions */}
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-surface-1 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3">Actions</h3>
               <div className="space-y-2">
                 <button

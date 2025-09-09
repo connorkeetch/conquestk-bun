@@ -98,7 +98,7 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-surface-2 border-b border-gray-700">
+      <div className="bg-surface-2 border-b border-border">
         <div className="max-w-7xl mx-auto">
           <nav className="flex gap-1 p-2">
             {tabs.map((tab) => (
@@ -110,7 +110,7 @@ const AdminPage: React.FC = () => {
                   ${
                     activeTab === tab.id
                       ? 'bg-purple-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      : 'text-muted hover:bg-surface-2 hover:text-white'
                   }
                 `}
               >
@@ -162,7 +162,7 @@ const AdminOverview: React.FC = () => {
 
       <div className="bg-surface-2 rounded-lg p-6">
         <h3 className="text-lg font-bold text-white mb-4">Recent Activity</h3>
-        <div className="text-gray-300">
+        <div className="text-muted">
           Activity log will be displayed here...
         </div>
       </div>
@@ -223,14 +223,14 @@ const UserManagement: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyUp={(e) => e.key === 'Enter' && fetchUsers()}
-          className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-4 py-2 bg-surface-2 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
       </div>
 
       {/* Users Table */}
       <div className="bg-surface-2 rounded-lg overflow-hidden">
         <table className="w-full text-white">
-          <thead className="bg-gray-700">
+          <thead className="bg-surface-2">
             <tr>
               <th className="px-4 py-3 text-left">Username</th>
               <th className="px-4 py-3 text-left">Email</th>
@@ -241,7 +241,7 @@ const UserManagement: React.FC = () => {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-t border-gray-700">
+              <tr key={user.id} className="border-t border-border">
                 <td className="px-4 py-3">{user.username}</td>
                 <td className="px-4 py-3">{user.email}</td>
                 <td className="px-4 py-3">
@@ -275,7 +275,7 @@ const UserManagement: React.FC = () => {
                     )}
                     <button
                       onClick={() => setSelectedUser(user)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded hover:brightness-110 text-sm"
+                      className="px-3 py-1 bg-violet text-white rounded hover:brightness-110 text-sm"
                     >
                       View
                     </button>
@@ -364,7 +364,7 @@ const MapApproval: React.FC = () => {
                     Reject
                   </button>
                   <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:brightness-110"
+                    className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
                   >
                     View Map
                   </button>
@@ -421,7 +421,7 @@ const GameManagement: React.FC = () => {
 
       <div className="bg-surface-2 rounded-lg overflow-hidden">
         <table className="w-full text-white">
-          <thead className="bg-gray-700">
+          <thead className="bg-surface-2">
             <tr>
               <th className="px-4 py-3 text-left">Game ID</th>
               <th className="px-4 py-3 text-left">Players</th>
@@ -432,7 +432,7 @@ const GameManagement: React.FC = () => {
           </thead>
           <tbody>
             {activeGames.map((game) => (
-              <tr key={game.id} className="border-t border-gray-700">
+              <tr key={game.id} className="border-t border-border">
                 <td className="px-4 py-3 font-mono text-sm">{game.id.slice(0, 8)}</td>
                 <td className="px-4 py-3">{game.playerCount}/{game.maxPlayers}</td>
                 <td className="px-4 py-3">
@@ -500,7 +500,7 @@ const AdminSettings: React.FC = () => {
         <h3 className="text-lg font-bold text-white mb-4">Feature Flags</h3>
         <div className="space-y-2">
           {featureFlags.map((flag) => (
-            <div key={flag.id} className="flex items-center justify-between p-3 bg-gray-700 rounded">
+            <div key={flag.id} className="flex items-center justify-between p-3 bg-surface-2 rounded">
               <div>
                 <div className="text-white font-medium">{flag.flagName}</div>
                 <div className="text-muted text-sm">{flag.description}</div>

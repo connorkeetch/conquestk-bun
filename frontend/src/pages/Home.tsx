@@ -133,7 +133,7 @@ const Home: React.FC = () => {
                   CONQUER THE WORLD
                 </span>
               </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              <p className="text-xl text-muted max-w-2xl mx-auto">
                 Deploy armies • Capture territories • Achieve total domination
               </p>
             </div>
@@ -184,7 +184,7 @@ const Home: React.FC = () => {
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
               <span className="gradient-text">How to Dominate</span>
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted text-sm">
               Master these three fundamentals to become a legendary commander
             </p>
           </div>

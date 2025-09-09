@@ -68,7 +68,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
       <div className="flex items-center justify-center h-full bg-blue-50 rounded-lg">
         <div className="text-center">
           <h2 className="text-xl font-bold text-gray-600 mb-2">No Game in Progress</h2>
-          <p className="text-gray-500">Join a game room to start playing!</p>
+          <p className="text-muted">Join a game room to start playing!</p>
         </div>
       </div>
     )
@@ -338,7 +338,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
                         </span>
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted">
                         <div className="mb-1">Not controlled by any player</div>
                         <div className="text-xs">
                           {/* Show partial control status */}
@@ -401,7 +401,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
                     )
                   })}
                 {allPlayersContinentStatus.every((ps) => ps.totalBonusArmies === 0) && (
-                  <div className="text-gray-500 italic">No continent bonuses this turn</div>
+                  <div className="text-muted italic">No continent bonuses this turn</div>
                 )}
               </div>
             </div>

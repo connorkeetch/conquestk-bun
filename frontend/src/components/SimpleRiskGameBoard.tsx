@@ -76,7 +76,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-700 mb-4">🏰 Fantasy Realms</h2>
           <p className="text-gray-600 mb-2">No Game in Progress</p>
-          <p className="text-gray-500 text-sm">Join a game room to start conquering the realms!</p>
+          <p className="text-muted text-sm">Join a game room to start conquering the realms!</p>
         </div>
       </div>
     )

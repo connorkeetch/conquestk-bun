@@ -38,7 +38,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
           </Link>
         </div>
 
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-surface-1/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl">
           <div className="text-center">
             {/* Success Icon */}
             <div className="mb-6 flex justify-center">
@@ -49,18 +49,18 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
 
             <h2 className="text-2xl font-bold text-white mb-4">Verify Your Email</h2>
             
-            <p className="text-gray-300 mb-2">
+            <p className="text-muted mb-2">
               Welcome, <span className="font-semibold text-white">{username}</span>!
             </p>
             
-            <p className="text-gray-400 mb-6">
+            <p className="text-muted mb-6">
               We've sent a verification email to:
               <br />
-              <span className="font-mono text-blue-400">{email}</span>
+              <span className="font-mono text-violet-soft">{email}</span>
             </p>
 
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-300">
+            <div className="bg-violet/10 border border-violet/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-violet-soft">
                 Please check your email and click the verification link to activate your account.
                 The link will expire in 24 hours.
               </p>
@@ -100,14 +100,14 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
 
               <Link
                 to="/login"
-                className="block w-full py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all duration-200 text-center"
+                className="block w-full py-2.5 bg-surface-2 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all duration-200 text-center"
               >
                 Back to Login
               </Link>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-700">
-              <p className="text-sm text-gray-500">
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted">
                 Didn't receive the email? Check your spam folder or try resending.
               </p>
             </div>

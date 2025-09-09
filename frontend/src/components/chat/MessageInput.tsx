@@ -105,7 +105,7 @@ export default function MessageInput({
   const isNearLimit = charactersRemaining < 50
   
   return (
-    <div className="border-t border-gray-700 p-3 bg-gray-800 rounded-b-lg relative">
+    <div className="border-t border-border p-3 bg-surface-1 rounded-b-lg relative">
       {/* Emoji Picker Popup */}
       {showEmojiPicker && (
         <div className="absolute bottom-full left-0 mb-2 z-50">
@@ -138,7 +138,7 @@ export default function MessageInput({
               onChange={(e) => setMessage(e.target.value.slice(0, maxLength))}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              className="flex-1 px-3 py-2 bg-surface-2 text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-violet placeholder-gray-400"
               rows={1}
               style={{
                 minHeight: '40px',
@@ -161,8 +161,8 @@ export default function MessageInput({
           disabled={message.trim().length === 0}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             message.trim().length > 0
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              ? 'bg-violet hover:bg-violet text-white'
+              : 'bg-surface-2 text-muted cursor-not-allowed'
           }`}
         >
           Send
@@ -170,7 +170,7 @@ export default function MessageInput({
       </div>
       
       {/* Hint text */}
-      <div className="mt-1 text-xs text-gray-500">
+      <div className="mt-1 text-xs text-muted">
         Press Enter to send, Shift+Enter for new line
       </div>
     </div>

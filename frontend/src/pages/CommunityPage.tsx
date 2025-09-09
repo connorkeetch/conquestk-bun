@@ -59,7 +59,7 @@ const CommunityPage: React.FC = () => {
 
   const renderRankBadge = (rank: number) => {
     if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />
-    if (rank === 2) return <Medal className="w-6 h-6 text-gray-300" />
+    if (rank === 2) return <Medal className="w-6 h-6 text-muted" />
     if (rank === 3) return <Medal className="w-6 h-6 text-amber-500" />
     return <span className="text-muted font-medium">#{rank}</span>
   }
@@ -84,7 +84,7 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('leaderboard')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'leaderboard' 
-              ? 'text-violet-soft border-b-2 border-blue-400' 
+              ? 'text-violet-soft border-b-2 border-violet' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -95,7 +95,7 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('clans')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'clans' 
-              ? 'text-violet-soft border-b-2 border-blue-400' 
+              ? 'text-violet-soft border-b-2 border-violet' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
@@ -108,7 +108,7 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('forums')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'forums' 
-              ? 'text-violet-soft border-b-2 border-blue-400' 
+              ? 'text-violet-soft border-b-2 border-violet' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
@@ -121,7 +121,7 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('events')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'events' 
-              ? 'text-violet-soft border-b-2 border-blue-400' 
+              ? 'text-violet-soft border-b-2 border-violet' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled

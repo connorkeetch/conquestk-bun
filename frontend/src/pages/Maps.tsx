@@ -41,11 +41,11 @@ const Maps: React.FC = () => {
           <input
             type="text"
             placeholder="Search maps..."
-            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet"
           />
           <div className="absolute right-3 top-3 text-muted">🔍</div>
         </div>
-        <select className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet">
           <option>Sort by Popularity</option>
           <option>Sort by Rating</option>
           <option>Sort by Date</option>

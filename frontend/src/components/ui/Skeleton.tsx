@@ -17,7 +17,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height,
   rounded = false,
 }) => {
-  const baseClasses = 'bg-gray-700/50'
+  const baseClasses = 'bg-surface-2/50'
 
   const animationClasses = {
     pulse: 'animate-pulse',
@@ -68,7 +68,7 @@ export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({
 
 // Preset skeleton components
 export const GameCardSkeleton: React.FC = () => (
-  <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+  <div className="bg-surface-1 rounded-lg p-4 space-y-3">
     <div className="flex justify-between items-start">
       <Skeleton variant="text" width="60%" height={20} />
       <Skeleton variant="rectangular" width={60} height={24} rounded />
@@ -87,7 +87,7 @@ export const GameCardSkeleton: React.FC = () => (
 )
 
 export const PlayerListSkeleton: React.FC = () => (
-  <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+  <div className="flex items-center gap-3 p-3 bg-surface-1 rounded-lg">
     <Skeleton variant="circular" width={40} height={40} />
     <div className="flex-1 space-y-2">
       <Skeleton variant="text" width="50%" />
@@ -98,7 +98,7 @@ export const PlayerListSkeleton: React.FC = () => (
 )
 
 export const LeaderboardRowSkeleton: React.FC = () => (
-  <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg">
+  <div className="flex items-center gap-4 p-4 bg-surface-1/50 rounded-lg">
     <Skeleton variant="text" width={30} />
     <Skeleton variant="circular" width={48} height={48} />
     <div className="flex-1 space-y-2">
@@ -114,7 +114,7 @@ export const LeaderboardRowSkeleton: React.FC = () => (
 )
 
 export const TerritoryCardSkeleton: React.FC = () => (
-  <div className="bg-gray-800 rounded-lg p-3 space-y-2">
+  <div className="bg-surface-1 rounded-lg p-3 space-y-2">
     <Skeleton variant="rectangular" width="100%" height={120} rounded />
     <Skeleton variant="text" width="70%" />
     <div className="flex justify-between">

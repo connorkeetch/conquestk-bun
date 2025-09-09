@@ -255,17 +255,17 @@ export const DiceRollAnimation: React.FC<DiceRollAnimationProps> = ({
         <div className="flex items-center text-white text-lg font-bold">VS</div>
 
         <div className={`flex flex-col items-center ${rolling ? 'animate-bounce' : ''}`}>
-          <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+          <div className="w-12 h-12 bg-violet rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
             {displayDefender}
           </div>
-          <span className="text-xs text-blue-400 mt-1">DEF</span>
+          <span className="text-xs text-violet-soft mt-1">DEF</span>
         </div>
       </div>
 
       {!rolling && (
         <div
           className={`text-center mt-2 font-bold ${
-            attacker > defender ? 'text-red-400' : 'text-blue-400'
+            attacker > defender ? 'text-red-400' : 'text-violet-soft'
           }`}
         >
           {attacker > defender ? 'Attacker Wins!' : 'Defender Wins!'}

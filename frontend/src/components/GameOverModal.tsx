@@ -89,7 +89,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
           {eliminatedPlayers.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-300 mb-3 text-center">
+              <h4 className="font-semibold text-muted mb-3 text-center">
                 Players Eliminated This Turn
               </h4>
               <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4">
@@ -139,14 +139,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
           {/* Game Statistics */}
           <div className="bg-slate-700/50 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-gray-300 mb-3 text-center">Game Summary</h4>
+            <h4 className="font-semibold text-muted mb-3 text-center">Game Summary</h4>
             <div className="grid grid-cols-2 gap-4 text-sm text-center">
               <div>
-                <div className="font-medium text-gray-400">Duration</div>
+                <div className="font-medium text-muted">Duration</div>
                 <div className="text-gray-200">Epic Battle</div>
               </div>
               <div>
-                <div className="font-medium text-gray-400">Final Turn</div>
+                <div className="font-medium text-muted">Final Turn</div>
                 <div className="text-gray-200">Turn Complete</div>
               </div>
             </div>

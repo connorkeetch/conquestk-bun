@@ -39,8 +39,8 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 isOwnMessage 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-700 text-gray-200'
+                  ? 'bg-violet text-white' 
+                  : 'bg-surface-2 text-gray-200'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
               {/* Username for other users */}
@@ -74,7 +74,7 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
               
               {/* Timestamp and edit indicator */}
               <div className={`text-xs mt-1 flex items-center gap-2 ${
-                isOwnMessage ? 'text-blue-200' : 'text-gray-400'
+                isOwnMessage ? 'text-blue-200' : 'text-muted'
               }`}>
                 <span>{formatTime(message.created_at)}</span>
                 {message.edited_at && !isDeleted && (

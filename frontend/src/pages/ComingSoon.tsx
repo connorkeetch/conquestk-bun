@@ -26,7 +26,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
         <h1 className="text-4xl font-bold text-white mb-4">{title}</h1>
 
         {/* Description */}
-        <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">{description}</p>
+        <p className="text-xl text-muted mb-8 max-w-2xl mx-auto">{description}</p>
 
         {/* Features List */}
         {features.length > 0 && (
@@ -34,7 +34,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
             <h3 className="text-lg font-semibold text-white mb-4">Planned Features:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
               {features.map((feature, index) => (
-                <div key={index} className="flex items-center text-gray-300">
+                <div key={index} className="flex items-center text-muted">
                   <span className="text-green-400 mr-2">✓</span>
                   {feature}
                 </div>
@@ -46,7 +46,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
         {/* Timeline */}
         <div className="bg-slate-700/30 rounded-lg p-6 mb-8">
           <h3 className="text-lg font-semibold text-white mb-2">Development Status</h3>
-          <p className="text-gray-400 text-sm">
+          <p className="text-muted text-sm">
             We're focusing on perfecting the core game experience first. This feature will be
             implemented in a future update once the main gameplay is fully polished.
           </p>
@@ -56,7 +56,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             to="/dashboard"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            className="bg-violet hover:bg-violet text-white px-6 py-3 rounded-lg font-semibold transition-colors"
           >
             🏠 Back to Dashboard
           </Link>
@@ -70,9 +70,9 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-slate-600">
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted text-sm">
             Want to be notified when this feature launches?
-            <Link to="/settings" className="text-blue-400 hover:text-blue-300 ml-1">
+            <Link to="/settings" className="text-violet-soft hover:text-violet-soft ml-1">
               Check your notification settings
             </Link>
           </p>

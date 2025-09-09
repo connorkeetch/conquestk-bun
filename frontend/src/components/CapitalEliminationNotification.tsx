@@ -46,13 +46,13 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: conquerorColor }} />
               <span className="text-white font-bold">{conquerorName}</span>
             </div>
-            <span className="text-gray-400">⚔️ CONQUERED ⚔️</span>
+            <span className="text-muted">⚔️ CONQUERED ⚔️</span>
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded-full opacity-50 line-through"
                 style={{ backgroundColor: eliminatedColor }}
               />
-              <span className="text-gray-500 line-through">{eliminatedName}</span>
+              <span className="text-muted line-through">{eliminatedName}</span>
             </div>
           </div>
 
@@ -65,15 +65,15 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
             <div className="text-green-400 text-2xl font-bold">{territoriesGained}</div>
             <div className="text-green-300 text-sm">Territories Gained</div>
           </div>
-          <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-3 text-center">
-            <div className="text-blue-400 text-2xl font-bold">{troopsGained}</div>
-            <div className="text-blue-300 text-sm">Troops Gained</div>
+          <div className="bg-blue-900/30 border border-violet rounded-lg p-3 text-center">
+            <div className="text-violet-soft text-2xl font-bold">{troopsGained}</div>
+            <div className="text-violet-soft text-sm">Troops Gained</div>
           </div>
         </div>
 
         {/* Dramatic message */}
         <div className="text-center">
-          <p className="text-gray-300 text-sm italic">
+          <p className="text-muted text-sm italic">
             "{eliminatedName}'s empire has fallen to {conquerorName}!"
           </p>
         </div>
@@ -81,7 +81,7 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 transition-colors"
+          className="absolute top-2 right-2 text-muted hover:text-muted transition-colors"
         >
           ✕
         </button>

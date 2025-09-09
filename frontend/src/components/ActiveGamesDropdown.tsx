@@ -53,12 +53,12 @@ const ActiveGamesDropdown: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-gray-800 transition-colors"
+        className="relative p-2 rounded-lg hover:bg-surface-1 transition-colors"
         title="My Games"
       >
-        <Gamepad2 className="w-6 h-6 text-gray-300" />
+        <Gamepad2 className="w-6 h-6 text-muted" />
         {totalActive > 0 && (
-          <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+          <span className="absolute -top-1 -right-1 bg-violet text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
             {totalActive}
           </span>
         )}
@@ -73,9 +73,9 @@ const ActiveGamesDropdown: React.FC = () => {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-80 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
             {/* Header */}
-            <div className="p-4 border-b border-gray-700">
+            <div className="p-4 border-b border-border">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Gamepad2 className="w-5 h-5" />
                 My Games
@@ -83,15 +83,15 @@ const ActiveGamesDropdown: React.FC = () => {
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-gray-400">
+              <div className="p-8 text-center text-muted">
                 Loading games...
               </div>
             ) : games.length === 0 ? (
               <div className="p-8 text-center">
-                <p className="text-gray-400 mb-4">No games yet</p>
+                <p className="text-muted mb-4">No games yet</p>
                 <Link
                   to="/play"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                  className="px-4 py-2 bg-violet text-white rounded-lg hover:bg-violet transition-colors inline-flex items-center gap-2"
                   onClick={() => setIsOpen(false)}
                 >
                   Start Playing <ChevronRight className="w-4 h-4" />
@@ -101,8 +101,8 @@ const ActiveGamesDropdown: React.FC = () => {
               <>
                 {/* Active Games */}
                 {activeGames.length > 0 && (
-                  <div className="p-4 border-b border-gray-700">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase">
+                  <div className="p-4 border-b border-border">
+                    <h4 className="text-sm font-semibold text-muted mb-2 uppercase">
                       Active Games ({activeGames.length})
                     </h4>
                     <div className="space-y-2">
@@ -110,13 +110,13 @@ const ActiveGamesDropdown: React.FC = () => {
                         <Link
                           key={game.id}
                           to={`/game/${game.id}`}
-                          className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                          className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
                           onClick={() => setIsOpen(false)}
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <p className="text-white font-medium">{game.name}</p>
-                              <div className="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                              <div className="flex items-center gap-3 text-sm text-muted mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="w-3 h-3" />
                                   {game.playerCount}/{game.maxPlayers}
@@ -128,7 +128,7 @@ const ActiveGamesDropdown: React.FC = () => {
                                 )}
                               </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-gray-400 mt-1" />
+                            <ChevronRight className="w-4 h-4 text-muted mt-1" />
                           </div>
                         </Link>
                       ))}
@@ -138,8 +138,8 @@ const ActiveGamesDropdown: React.FC = () => {
 
                 {/* Waiting Games */}
                 {waitingGames.length > 0 && (
-                  <div className="p-4 border-b border-gray-700">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase flex items-center gap-2">
+                  <div className="p-4 border-b border-border">
+                    <h4 className="text-sm font-semibold text-muted mb-2 uppercase flex items-center gap-2">
                       <Clock className="w-3 h-3" />
                       Waiting to Start ({waitingGames.length})
                     </h4>
@@ -148,17 +148,17 @@ const ActiveGamesDropdown: React.FC = () => {
                         <Link
                           key={game.id}
                           to={`/lobby/${game.id}`}
-                          className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                          className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
                           onClick={() => setIsOpen(false)}
                         >
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="text-white font-medium">{game.name}</p>
-                              <p className="text-sm text-gray-400">
+                              <p className="text-sm text-muted">
                                 {game.playerCount}/{game.maxPlayers} players
                               </p>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-gray-400 mt-1" />
+                            <ChevronRight className="w-4 h-4 text-muted mt-1" />
                           </div>
                         </Link>
                       ))}
@@ -168,8 +168,8 @@ const ActiveGamesDropdown: React.FC = () => {
 
                 {/* Finished Games */}
                 {finishedGames.length > 0 && (
-                  <div className="p-4 border-b border-gray-700">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase flex items-center gap-2">
+                  <div className="p-4 border-b border-border">
+                    <h4 className="text-sm font-semibold text-muted mb-2 uppercase flex items-center gap-2">
                       <Trophy className="w-3 h-3" />
                       Recently Finished
                     </h4>
@@ -177,10 +177,10 @@ const ActiveGamesDropdown: React.FC = () => {
                       {finishedGames.map((game) => (
                         <div
                           key={game.id}
-                          className="p-3 bg-gray-700 rounded-lg opacity-75"
+                          className="p-3 bg-surface-2 rounded-lg opacity-75"
                         >
                           <p className="text-white font-medium">{game.name}</p>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-muted">
                             Winner: {game.winner || 'Unknown'}
                           </p>
                         </div>
@@ -190,10 +190,10 @@ const ActiveGamesDropdown: React.FC = () => {
                 )}
 
                 {/* Footer */}
-                <div className="p-4 bg-gray-900">
+                <div className="p-4 bg-surface-1">
                   <Link
                     to="/games"
-                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-center block"
+                    className="w-full px-4 py-2 bg-surface-2 text-white rounded-lg hover:bg-gray-600 transition-colors text-center block"
                     onClick={() => setIsOpen(false)}
                   >
                     View All Games

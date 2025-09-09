@@ -57,12 +57,12 @@ export default function VerifyEmailToken() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl text-center">
+        <div className="bg-surface-1/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl text-center">
           {status === 'verifying' && (
             <>
-              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-16 h-16 border-4 border-violet border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">Verifying Email</h2>
-              <p className="text-gray-400">Please wait while we verify your email address...</p>
+              <p className="text-muted">Please wait while we verify your email address...</p>
             </>
           )}
 
@@ -78,7 +78,7 @@ export default function VerifyEmailToken() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-white mb-2">Email Verified!</h2>
-              <p className="text-gray-400">{message}</p>
+              <p className="text-muted">{message}</p>
             </>
           )}
 
@@ -94,10 +94,10 @@ export default function VerifyEmailToken() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-white mb-2">Verification Failed</h2>
-              <p className="text-gray-400 mb-4">{message}</p>
+              <p className="text-muted mb-4">{message}</p>
               <button
                 onClick={() => navigate('/login')}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-surface-2 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Back to Login
               </button>

@@ -189,29 +189,29 @@ export default function ImageCropper({
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg max-w-4xl w-full">
-        <div className="p-4 border-b border-gray-700">
+      <div className="bg-surface-1 rounded-lg max-w-4xl w-full">
+        <div className="p-4 border-b border-border">
           <h2 className="text-xl font-bold text-white">Crop Image</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-muted mt-1">
             Drag to position the crop area. Image will be resized to {targetWidth}×{targetHeight}px
           </p>
         </div>
 
         <div className="p-4">
-          <div className="flex justify-center bg-gray-900 rounded p-4">
+          <div className="flex justify-center bg-surface-1 rounded p-4">
             <canvas
               ref={canvasRef}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className="cursor-move border border-gray-700"
+              className="cursor-move border border-border"
               style={{ maxWidth: '100%', height: 'auto' }}
             />
           </div>
 
           <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted">
               {image && (
                 <>
                   Original: {image.width}×{image.height}px | Crop: {Math.round(cropArea.width)}×
@@ -223,13 +223,13 @@ export default function ImageCropper({
             <div className="flex gap-2">
               <button
                 onClick={onCancel}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
+                className="px-4 py-2 bg-surface-2 hover:bg-gray-600 rounded text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCrop}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                className="px-4 py-2 bg-violet hover:bg-violet rounded text-white"
               >
                 Apply Crop
               </button>

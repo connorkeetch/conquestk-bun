@@ -110,7 +110,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
               {linkPath && !isLast ? (
                 <Link
                   to={linkPath}
-                  className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors"
+                  className="flex items-center space-x-1 text-muted hover:text-white transition-colors"
                 >
                   {item.icon && <span>{item.icon}</span>}
                   <span>{item.label}</span>

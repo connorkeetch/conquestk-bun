@@ -303,8 +303,8 @@ const ProfileOverview: React.FC = () => {
           </>
         ) : (
           <div className="no-games">
-            <p className="text-gray-400">No games played yet</p>
-            <p className="text-sm text-gray-500 mt-2">Start playing to see your game history!</p>
+            <p className="text-muted">No games played yet</p>
+            <p className="text-sm text-muted mt-2">Start playing to see your game history!</p>
           </div>
         )}
       </div>

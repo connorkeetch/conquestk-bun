@@ -43,7 +43,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
   return (
     <div
       ref={pickerRef}
-      className="absolute z-50 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-xl"
+      className="absolute z-50 bg-surface-1 border border-border rounded-lg p-2 shadow-xl"
       style={position ? { left: position.x, top: position.y } : {}}
     >
       <div className="grid grid-cols-4 gap-1">
@@ -51,7 +51,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
           <button
             key={emoji}
             onClick={() => handleReaction(emoji)}
-            className="w-10 h-10 flex items-center justify-center text-xl hover:bg-gray-700 rounded transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-xl hover:bg-surface-2 rounded transition-colors"
             title={`React with ${emoji}`}
           >
             {emoji}

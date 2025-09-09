@@ -225,27 +225,27 @@ const EditableProfile: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
+      <div className="bg-surface-1/50 backdrop-blur-sm rounded-xl p-6 border border-border/50">
         <div className="space-y-6">
           {/* Username Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+            <label className="block text-sm font-medium text-muted mb-2">Username</label>
             <div className="relative">
               <input
                 type="text"
                 value={isEditing ? editedProfile.username : profile.username}
                 onChange={handleUsernameChange}
                 disabled={!isEditing}
-                className={`w-full px-4 py-2 bg-gray-900/50 border rounded-lg text-white transition-all duration-200 ${
+                className={`w-full px-4 py-2 bg-surface-1/50 border rounded-lg text-white transition-all duration-200 ${
                   isEditing
-                    ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    : 'border-gray-700 cursor-not-allowed opacity-75'
+                    ? 'border-violet focus:outline-none focus:ring-2 focus:ring-violet'
+                    : 'border-border cursor-not-allowed opacity-75'
                 }`}
               />
               {isEditing && editedProfile.username !== profile.username && (
                 <div className="absolute right-3 top-2.5">
                   {checkingUsername ? (
-                    <span className="text-gray-400">⏳</span>
+                    <span className="text-muted">⏳</span>
                   ) : usernameAvailable === true ? (
                     <span className="text-green-400">✓</span>
                   ) : usernameAvailable === false ? (
@@ -261,16 +261,16 @@ const EditableProfile: React.FC = () => {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+            <label className="block text-sm font-medium text-muted mb-2">Email</label>
             <input
               type="email"
               value={isEditing ? editedProfile.email : profile.email}
               onChange={(e) => setEditedProfile((prev) => ({ ...prev, email: e.target.value }))}
               disabled={!isEditing}
-              className={`w-full px-4 py-2 bg-gray-900/50 border rounded-lg text-white transition-all duration-200 ${
+              className={`w-full px-4 py-2 bg-surface-1/50 border rounded-lg text-white transition-all duration-200 ${
                 isEditing
-                  ? 'border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  : 'border-gray-700 cursor-not-allowed opacity-75'
+                  ? 'border-violet focus:outline-none focus:ring-2 focus:ring-violet'
+                  : 'border-border cursor-not-allowed opacity-75'
               }`}
             />
           </div>
@@ -281,13 +281,13 @@ const EditableProfile: React.FC = () => {
               <>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-violet hover:bg-violet text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Edit Profile
                 </button>
                 <button
                   onClick={() => setShowPasswordChange(!showPasswordChange)}
-                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Change Password
                 </button>
@@ -296,7 +296,7 @@ const EditableProfile: React.FC = () => {
               <div className="flex gap-3">
                 <button
                   onClick={handleCancel}
-                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
@@ -314,38 +314,38 @@ const EditableProfile: React.FC = () => {
 
         {/* Password Change Section */}
         {showPasswordChange && !isEditing && (
-          <div className="mt-6 pt-6 border-t border-gray-700">
+          <div className="mt-6 pt-6 border-t border-border">
             <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted mb-2">
                   Current Password
                 </label>
                 <input
                   type="password"
                   value={passwords.current}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, current: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                <label className="block text-sm font-medium text-muted mb-2">New Password</label>
                 <input
                   type="password"
                   value={passwords.new}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, new: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted mb-2">
                   Confirm New Password
                 </label>
                 <input
                   type="password"
                   value={passwords.confirm}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, confirm: e.target.value }))}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-blue-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
                 />
               </div>
               <div className="flex gap-3">
@@ -355,14 +355,14 @@ const EditableProfile: React.FC = () => {
                     setPasswords({ current: '', new: '', confirm: '' })
                     setError(null)
                   }}
-                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handlePasswordChange}
                   disabled={saving || !passwords.current || !passwords.new || !passwords.confirm}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-violet hover:bg-violet disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   {saving ? 'Changing...' : 'Change Password'}
                 </button>

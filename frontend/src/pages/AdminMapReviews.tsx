@@ -249,7 +249,7 @@ export const AdminMapReviews: React.FC = () => {
                       type="checkbox"
                       checked={selectedRequests.size === approvalRequests.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-gray-300 focus:ring-blue-500 focus:border-violet"
+                      className="rounded border-gray-300 focus:ring-violet focus:border-violet"
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -280,7 +280,7 @@ export const AdminMapReviews: React.FC = () => {
                         type="checkbox"
                         checked={selectedRequests.has(request.id)}
                         onChange={(e) => handleRequestSelection(request.id, e.target.checked)}
-                        className="rounded border-gray-300 focus:ring-blue-500 focus:border-violet"
+                        className="rounded border-gray-300 focus:ring-violet focus:border-violet"
                       />
                     </td>
                     <td className="px-6 py-4">

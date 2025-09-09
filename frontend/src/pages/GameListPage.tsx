@@ -33,9 +33,9 @@ const GameListPage: React.FC = () => {
       case 'active':
         return 'text-green-400'
       case 'completed':
-        return 'text-blue-400'
+        return 'text-violet-soft'
       default:
-        return 'text-gray-400'
+        return 'text-muted'
     }
   }
 
@@ -64,19 +64,19 @@ const GameListPage: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold gradient-text mb-2">My Games</h1>
-          <p className="text-gray-400">Manage your active and completed games</p>
+          <p className="text-muted">Manage your active and completed games</p>
         </div>
         <div className="flex gap-3">
           <Link
             to="/lobby"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors"
           >
             🎮 New Game
           </Link>
           <button
             onClick={loadUserGames}
             disabled={loading}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '🔄 Loading...' : '🔄 Refresh'}
           </button>
@@ -99,12 +99,12 @@ const GameListPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-700">
+      <div className="flex gap-2 mb-8 border-b border-border">
         <button
           className={`px-6 py-3 font-medium transition-colors relative ${
             activeTab === 'active'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('active')}
         >
@@ -118,8 +118,8 @@ const GameListPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'completed'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('completed')}
         >
@@ -128,8 +128,8 @@ const GameListPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'spectate'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-violet-soft border-b-2 border-violet'
+              : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('spectate')}
         >
@@ -142,18 +142,18 @@ const GameListPage: React.FC = () => {
         {activeTab === 'active' && (
           <div>
             {loading ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-4xl mb-4">🔄</div>
                 <p className="text-lg">Loading your games...</p>
               </div>
             ) : activeGames.length === 0 ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-6xl mb-4">🎮</div>
                 <p className="text-lg mb-2">No active games</p>
                 <p className="text-sm mb-6">Create or join a game to get started!</p>
                 <Link
                   to="/lobby"
-                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                  className="inline-block px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors"
                 >
                   🎮 Find Games
                 </Link>
@@ -165,7 +165,7 @@ const GameListPage: React.FC = () => {
                     <div className="card-header">
                       <div className="flex-1">
                         <h3 className="card-title">{game.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
+                        <div className="flex items-center space-x-4 text-sm text-muted">
                           <span>
                             {game.currentPlayers}/{game.maxPlayers} players
                           </span>
@@ -183,7 +183,7 @@ const GameListPage: React.FC = () => {
                                 ? 'Game in Progress'
                                 : game.status}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted">
                             Created {formatTimeAgo(game.createdAt)}
                           </div>
                         </div>
@@ -207,12 +207,12 @@ const GameListPage: React.FC = () => {
         {activeTab === 'completed' && (
           <div>
             {loading ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-4xl mb-4">🔄</div>
                 <p className="text-lg">Loading completed games...</p>
               </div>
             ) : completedGames.length === 0 ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center text-muted py-16">
                 <div className="text-6xl mb-4">📚</div>
                 <p className="text-lg">No completed games yet</p>
                 <p className="text-sm mt-2">
@@ -226,25 +226,25 @@ const GameListPage: React.FC = () => {
                     <div className="card-header">
                       <div className="flex-1">
                         <h3 className="card-title">{game.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-400">
+                        <div className="flex items-center space-x-4 text-sm text-muted">
                           <span>
                             {game.currentPlayers}/{game.maxPlayers} players
                           </span>
                           {game.mapName && <span>• {game.mapName}</span>}
-                          <span className="text-blue-400">• Completed</span>
+                          <span className="text-violet-soft">• Completed</span>
                           <span>• Finished {formatTimeAgo(game.updatedAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-blue-400">Game Completed</div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-lg font-bold text-violet-soft">Game Completed</div>
+                          <div className="text-sm text-muted">
                             Duration: {formatTimeAgo(game.createdAt)}
                           </div>
                         </div>
                         <Link
                           to={`/room/${game.id}`}
-                          className="px-3 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors text-sm"
+                          className="px-3 py-1 text-muted hover:text-white hover:bg-surface-2 rounded transition-colors text-sm"
                         >
                           📊 View Results
                         </Link>
@@ -258,7 +258,7 @@ const GameListPage: React.FC = () => {
         )}
 
         {activeTab === 'spectate' && (
-          <div className="text-center text-gray-400 py-16">
+          <div className="text-center text-muted py-16">
             <div className="text-6xl mb-4">👁️</div>
             <p className="text-lg">Live game spectating will be implemented here</p>
             <p className="text-sm mt-2">This will show public games you can watch</p>

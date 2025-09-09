@@ -49,14 +49,14 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, clas
           <span className="text-2xl">{currentTier.icon}</span>
           <div>
             <p className="text-sm font-semibold text-gray-200">{currentTier.name}</p>
-            <p className="text-xs text-gray-400">{currentRating} CP</p>
+            <p className="text-xs text-muted">{currentRating} CP</p>
           </div>
         </div>
         {nextTier && (
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-200">{nextTier.name}</p>
-              <p className="text-xs text-gray-400">{pointsToNext} to go</p>
+              <p className="text-xs text-muted">{pointsToNext} to go</p>
             </div>
             <span className="text-2xl opacity-50">{nextTier.icon}</span>
           </div>
@@ -64,14 +64,14 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, clas
         {!nextTier && currentTier.name === 'Grandmaster' && (
           <div className="text-right">
             <p className="text-sm font-semibold text-red-600">Peak Rank</p>
-            <p className="text-xs text-gray-400">Top Tier</p>
+            <p className="text-xs text-muted">Top Tier</p>
           </div>
         )}
       </div>
 
       {/* Progress Bar */}
       <div className="relative">
-        <div className="w-full h-6 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+        <div className="w-full h-6 bg-surface-1 rounded-full overflow-hidden border border-border">
           <div
             className={`h-full transition-all duration-500 ease-out ${currentTier.color} bg-opacity-80`}
             style={{ width: `${progress}%` }}
@@ -90,9 +90,9 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, clas
 
       {/* Milestone Markers */}
       {nextTier && (
-        <div className="flex justify-between mt-2 text-xs text-gray-500">
+        <div className="flex justify-between mt-2 text-xs text-muted">
           <span>{currentTier.minRating} CP</span>
-          <span className="text-gray-400">
+          <span className="text-muted">
             {currentTier.minRating + Math.floor((nextTier.minRating - currentTier.minRating) / 2)}{' '}
             CP
           </span>

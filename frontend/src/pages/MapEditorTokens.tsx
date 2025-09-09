@@ -652,19 +652,19 @@ export default function MapEditorTokens() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-surface-1 text-white p-4">
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+          <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
-            <p className="text-gray-400 mb-6">
+            <p className="text-muted mb-6">
               How would you like to use this image?
             </p>
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
-                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 bg-violet hover:bg-violet rounded-lg text-white font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
                 <span className="text-sm text-blue-200">No cropping</span>
@@ -681,13 +681,13 @@ export default function MapEditorTokens() {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
                 }}
-                className="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium"
+                className="w-full px-4 py-3 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
               >
                 Cancel
               </button>
             </div>
             {uploadInfo && (
-              <div className="mt-4 p-2 bg-blue-900/50 border border-blue-600 rounded text-blue-300 text-sm">
+              <div className="mt-4 p-2 bg-blue-900/50 border border-violet rounded text-violet-soft text-sm">
                 ℹ️ {uploadInfo}
               </div>
             )}
@@ -707,38 +707,38 @@ export default function MapEditorTokens() {
             >
               🏪 Try Polygon Editor (Beta)
             </a>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted">
               <p className="text-xs">Token-based: Place circular tokens as territories</p>
               <p className="text-xs">Polygon-based: Draw custom territory shapes</p>
             </div>
           </div>
         </div>
         {/* Toolbar */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4">
+        <div className="bg-surface-1 rounded-lg p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Mode Selector */}
             <div className="flex gap-2">
               <button
                 onClick={() => setEditorMode('territories')}
-                className={`px-4 py-2 rounded ${editorMode === 'territories' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'territories' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🗺️ Territories
               </button>
               <button
                 onClick={() => setEditorMode('continents')}
-                className={`px-4 py-2 rounded ${editorMode === 'continents' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'continents' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🌍 Continents
               </button>
               <button
                 onClick={() => setEditorMode('connections')}
-                className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🔗 Connections
               </button>
               <button
                 onClick={() => setEditorMode('capitals')}
-                className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 👑 Capitals
               </button>
@@ -749,19 +749,19 @@ export default function MapEditorTokens() {
               <span className="text-sm">Shape:</span>
               <button
                 onClick={() => setTokenShape('hexagon')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'hexagon' ? 'bg-blue-600' : 'bg-gray-700'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'hexagon' ? 'bg-violet' : 'bg-surface-2'}`}
               >
                 Hexagon
               </button>
               <button
                 onClick={() => setTokenShape('square')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-blue-600' : 'bg-gray-700'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-violet' : 'bg-surface-2'}`}
               >
                 Square
               </button>
               <button
                 onClick={() => setTokenShape('circle')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-blue-600' : 'bg-gray-700'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-violet' : 'bg-surface-2'}`}
               >
                 Circle
               </button>
@@ -776,7 +776,7 @@ export default function MapEditorTokens() {
                 onChange={(e) =>
                   setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1200 }))
                 }
-                className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
+                className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
                 min="400"
                 max="1600"
               />
@@ -787,7 +787,7 @@ export default function MapEditorTokens() {
                 onChange={(e) =>
                   setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 800 }))
                 }
-                className="w-20 px-2 py-1 bg-gray-700 rounded text-sm"
+                className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
                 min="300"
                 max="1200"
               />
@@ -805,14 +805,14 @@ export default function MapEditorTokens() {
                   onChange={(e) => handleScaleChange(parseInt(e.target.value) / 100)}
                   className="w-32"
                 />
-                <span className="text-xs text-gray-400">{Math.round(state.imageScale * 100)}%</span>
+                <span className="text-xs text-muted">{Math.round(state.imageScale * 100)}%</span>
               </div>
             )}
 
             {/* Grid Toggle */}
             <button
               onClick={() => setShowGrid(!showGrid)}
-              className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-blue-600' : 'bg-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-violet' : 'bg-surface-2'}`}
             >
               📏 Grid
             </button>
@@ -852,7 +852,7 @@ export default function MapEditorTokens() {
                 <select
                   value={selectedContinentId || ''}
                   onChange={(e) => setSelectedContinentId(e.target.value)}
-                  className="px-3 py-1 bg-gray-700 rounded text-white"
+                  className="px-3 py-1 bg-surface-2 rounded text-white"
                 >
                   <option value="">No Continent (Unassigned)</option>
                   {state.continents.map((c) => (
@@ -864,7 +864,7 @@ export default function MapEditorTokens() {
               </div>
               <button
                 onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
-                className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-gray-700'}`}
+                className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
               >
                 {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
               </button>
@@ -894,20 +894,20 @@ export default function MapEditorTokens() {
                   placeholder="Continent Name"
                   value={newContinentName}
                   onChange={(e) => setNewContinentName(e.target.value)}
-                  className="px-3 py-1 bg-gray-700 rounded text-white"
+                  className="px-3 py-1 bg-surface-2 rounded text-white"
                 />
                 <input
                   type="color"
                   value={newContinentColor}
                   onChange={(e) => setNewContinentColor(e.target.value)}
-                  className="w-12 h-8 bg-gray-700 rounded cursor-pointer"
+                  className="w-12 h-8 bg-surface-2 rounded cursor-pointer"
                 />
                 <input
                   type="number"
                   placeholder="Bonus"
                   value={newContinentBonus}
                   onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 0)}
-                  className="w-20 px-3 py-1 bg-gray-700 rounded text-white"
+                  className="w-20 px-3 py-1 bg-surface-2 rounded text-white"
                   min="0"
                   max="10"
                 />
@@ -932,7 +932,7 @@ export default function MapEditorTokens() {
                       setNewContinentColor('#3B82F6')
                       setNewContinentBonus(3)
                     }}
-                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded"
+                    className="px-3 py-1 bg-gray-600 hover:bg-surface-2 rounded"
                   >
                     Cancel
                   </button>
@@ -957,7 +957,7 @@ export default function MapEditorTokens() {
                         setNewContinentColor(c.color)
                         setNewContinentBonus(c.bonus)
                       }}
-                      className="text-blue-400 hover:text-blue-300 text-sm px-1"
+                      className="text-violet-soft hover:text-violet-soft text-sm px-1"
                     >
                       ✏️
                     </button>
@@ -983,7 +983,7 @@ export default function MapEditorTokens() {
 
           {editorMode === 'connections' && (
             <div className="mt-4">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted">
                 {isConnecting && connectingFromId
                   ? `Click another territory to connect/disconnect from ${state.territories.find((t) => t.id === connectingFromId)?.name}`
                   : 'Click a territory to start connecting'}
@@ -994,7 +994,7 @@ export default function MapEditorTokens() {
                     setIsConnecting(false)
                     setConnectingFromId(null)
                   }}
-                  className="mt-2 px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+                  className="mt-2 px-4 py-1 bg-surface-2 hover:bg-gray-600 rounded"
                 >
                   Cancel Connection
                 </button>
@@ -1012,7 +1012,7 @@ export default function MapEditorTokens() {
                 >
                   {isGeneratingCapitals ? '⏳ Generating...' : '✨ Generate Capitals'}
                 </button>
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-muted">
                   Auto-generate optimal starting positions for all player counts
                 </span>
               </div>
@@ -1026,10 +1026,10 @@ export default function MapEditorTokens() {
                     disabled={state.territories.length < count}
                     className={`px-3 py-1 rounded text-sm ${
                       selectedPlayerCount === count
-                        ? 'bg-blue-600'
+                        ? 'bg-violet'
                         : state.territories.length < count
-                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                        : 'bg-gray-700 hover:bg-gray-600'
+                        ? 'bg-surface-1 text-gray-600 cursor-not-allowed'
+                        : 'bg-surface-2 hover:bg-gray-600'
                     }`}
                   >
                     {count}
@@ -1041,13 +1041,13 @@ export default function MapEditorTokens() {
                 <button
                   onClick={() => setIsAssigningCapital(!isAssigningCapital)}
                   className={`px-4 py-2 rounded ${
-                    isAssigningCapital ? 'bg-yellow-600' : 'bg-gray-700'
+                    isAssigningCapital ? 'bg-yellow-600' : 'bg-surface-2'
                   }`}
                 >
                   {isAssigningCapital ? '🎯 Click Territories' : '📍 Assign Capitals'}
                 </button>
                 <div className="text-sm">
-                  <span className="text-gray-400">Capitals for {selectedPlayerCount} players: </span>
+                  <span className="text-muted">Capitals for {selectedPlayerCount} players: </span>
                   <span className="text-white">
                     {(capitalAssignments[selectedPlayerCount.toString()] || []).length}/{selectedPlayerCount}
                   </span>
@@ -1089,12 +1089,12 @@ export default function MapEditorTokens() {
           {/* Map Canvas - Main area taking most space */}
           <div
             ref={mapContainerRef}
-            className="flex-1 bg-gray-800 rounded-lg overflow-auto"
+            className="flex-1 bg-surface-1 rounded-lg overflow-auto"
             style={{ height: 'calc(100vh - 280px)' }}
           >
             <div
               ref={containerRef}
-              className="relative bg-gray-700"
+              className="relative bg-surface-2"
               style={{
                 width: `${state.mapWidth}px`,
                 height: `${state.mapHeight}px`,
@@ -1208,14 +1208,14 @@ export default function MapEditorTokens() {
                         ❌ {uploadError}
                       </div>
                     )}
-                    <p className="text-gray-400 mb-2">Drop an image here or</p>
+                    <p className="text-muted mb-2">Drop an image here or</p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                      className="px-4 py-2 bg-violet hover:bg-violet rounded"
                     >
                       Upload Map Image
                     </button>
-                    <div className="mt-4 text-xs text-gray-500">
+                    <div className="mt-4 text-xs text-muted">
                       <p>💡 Min: 400×300px | Max: 1600×1200px</p>
                       <p>⚡ Small images auto-expand to minimum size</p>
                       <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
@@ -1225,7 +1225,7 @@ export default function MapEditorTokens() {
               )}
 
               {isDragOver && (
-                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                <div className="absolute inset-0 bg-violet/20 flex items-center justify-center">
                   <p className="text-2xl text-white">Drop image here</p>
                 </div>
               )}
@@ -1234,7 +1234,7 @@ export default function MapEditorTokens() {
 
           {/* Properties Panel - Fixed right sidebar */}
           <div
-            className="w-80 bg-gray-800 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
+            className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
             style={{ height: 'calc(100vh - 280px)' }}
           >
             <h2 className="text-xl font-bold mb-4">Properties</h2>
@@ -1246,7 +1246,7 @@ export default function MapEditorTokens() {
                 type="text"
                 value={state.name}
                 onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-1 bg-gray-700 rounded text-white"
+                className="w-full px-3 py-1 bg-surface-2 rounded text-white"
               />
             </div>
 
@@ -1262,7 +1262,7 @@ export default function MapEditorTokens() {
 
             {/* Selected Territory */}
             {state.selectedTerritoryId && (
-              <div className="mb-4 p-3 bg-gray-700 rounded">
+              <div className="mb-4 p-3 bg-surface-2 rounded">
                 <h3 className="font-bold mb-2">Selected Territory</h3>
                 {(() => {
                   const territory = state.territories.find(
@@ -1289,7 +1289,7 @@ export default function MapEditorTokens() {
                         className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
                       />
                       <div className="mb-2">
-                        <label className="text-xs text-gray-400">Continent:</label>
+                        <label className="text-xs text-muted">Continent:</label>
                         <select
                           value={territory.continentId || ''}
                           onChange={(e) => {
@@ -1312,15 +1312,15 @@ export default function MapEditorTokens() {
                           ))}
                         </select>
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-muted">
                         Position: ({Math.round(territory.x)}, {Math.round(territory.y)})
                       </p>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-muted">
                         Connections: {territory.connections.length}
                       </p>
                       {territory.connections.length > 0 && (
                         <div className="mt-2">
-                          <p className="text-xs text-gray-400 mb-1">Connected to:</p>
+                          <p className="text-xs text-muted mb-1">Connected to:</p>
                           <div className="space-y-1">
                             {territory.connections.map((connId) => {
                               const connTerritory = state.territories.find((t) => t.id === connId)

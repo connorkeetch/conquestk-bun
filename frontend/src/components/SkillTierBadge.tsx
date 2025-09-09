@@ -40,7 +40,7 @@ const SKILL_TIERS: SkillTier[] = [
     minRating: 800, 
     maxRating: 999, 
     icon: '⚓', 
-    color: 'text-blue-500',
+    color: 'text-violet',
     description: 'Expands by plunder and coastal terror campaigns'
   },
   { 
@@ -128,12 +128,12 @@ const SkillTierBadge: React.FC<SkillTierBadgeProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-full bg-gray-800 border border-gray-700 ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-surface-1 border border-border ${sizeClasses[size]} ${className}`}
     >
       <span className={`${iconSizes[size]} ${skillTier.color}`}>{skillTier.icon}</span>
       <div className="flex flex-col">
         <span className={`font-semibold ${skillTier.color}`}>{currentTier}</span>
-        {showRating && <span className="text-xs text-gray-400">{rating} CP</span>}
+        {showRating && <span className="text-xs text-muted">{rating} CP</span>}
       </div>
     </div>
   )
