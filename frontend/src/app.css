@@ -2,8 +2,8 @@
 @theme {
   /* Core Brand Palette - The conquest identity */
   --color-ink: #0B0B12;        /* Near-black indigo for deepest backgrounds */
-  --color-imperial: #2E1A47;    /* Royal purple, the essence of conquest */
-  --color-abyss: #000814;       /* True void with a hint of blue */
+  --color-imperial: #170B1D;    /* Even deeper royal purple, minimal brightness */
+  --color-abyss: #080A14;       /* Darker void, consistent with gradient flow */
   --color-violet: #7C3AED;      /* Primary brand, all main CTAs */
   --color-violet-soft: #8B5CF6; /* Atmospheric glow and hover states */
   --color-gold: #FFD700;        /* Reserved for victories and rewards only */
