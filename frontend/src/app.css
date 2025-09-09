@@ -620,11 +620,227 @@
 
   /* ===== INTERACTIVE ELEMENTS ===== */
   .hover-lift {
-    @apply hover:scale-105 transition-transform duration-200;
+    @apply hover:scale-105 transition-transform duration-200 ease-smooth;
   }
 
   .click-scale {
-    @apply active:scale-95 transition-transform duration-100;
+    @apply active:scale-95 transition-transform duration-100 ease-smooth;
+  }
+
+  /* ===== TYPOGRAPHY SYSTEM ===== */
+  /* Standardized font scales and semantic text classes */
+  
+  /* Display Typography - For heroes and major headings */
+  .text-display-xl {
+    @apply text-5xl md:text-6xl font-bold leading-tight tracking-tight;
+  }
+  
+  .text-display-lg {
+    @apply text-4xl md:text-5xl font-bold leading-tight tracking-tight;
+  }
+  
+  .text-display-md {
+    @apply text-3xl md:text-4xl font-bold leading-snug;
+  }
+  
+  /* Heading Typography - For section titles */
+  .text-heading-xl {
+    @apply text-2xl md:text-3xl font-semibold leading-snug;
+  }
+  
+  .text-heading-lg {
+    @apply text-xl md:text-2xl font-semibold leading-snug;
+  }
+  
+  .text-heading-md {
+    @apply text-lg md:text-xl font-semibold leading-normal;
+  }
+  
+  .text-heading-sm {
+    @apply text-base md:text-lg font-medium leading-normal;
+  }
+  
+  /* Body Typography - For content and UI */
+  .text-body-lg {
+    @apply text-lg leading-relaxed;
+  }
+  
+  .text-body-md {
+    @apply text-base leading-relaxed;
+  }
+  
+  .text-body-sm {
+    @apply text-sm leading-normal;
+  }
+  
+  /* Label Typography - For forms and small UI elements */
+  .text-label-lg {
+    @apply text-sm font-medium leading-normal uppercase tracking-wider;
+  }
+  
+  .text-label-md {
+    @apply text-xs font-medium leading-normal uppercase tracking-wide;
+  }
+  
+  .text-label-sm {
+    @apply text-xs leading-normal uppercase tracking-wide;
+  }
+  
+  /* Semantic Text Classes */
+  .text-primary {
+    @apply text-white;
+  }
+  
+  .text-secondary {
+    @apply text-muted;
+  }
+  
+  .text-accent {
+    @apply text-violet-soft;
+  }
+  
+  .text-success-semantic {
+    @apply text-success;
+  }
+  
+  .text-warning-semantic {
+    @apply text-warning;
+  }
+  
+  .text-danger-semantic {
+    @apply text-crimson;
+  }
+
+  /* ===== SPACING SYSTEM ===== */
+  /* Consistent spacing patterns for components */
+  
+  /* Container Spacing */
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .container-margin {
+    @apply mx-auto max-w-7xl;
+  }
+  
+  /* Section Spacing */
+  .section-spacing {
+    @apply py-8 lg:py-12;
+  }
+  
+  .section-spacing-lg {
+    @apply py-12 lg:py-16;
+  }
+  
+  /* Component Spacing */
+  .component-gap {
+    @apply gap-4 lg:gap-6;
+  }
+  
+  .component-gap-sm {
+    @apply gap-2 lg:gap-3;
+  }
+  
+  .component-gap-lg {
+    @apply gap-6 lg:gap-8;
+  }
+  
+  /* Content Spacing */
+  .content-stack {
+    @apply space-y-4;
+  }
+  
+  .content-stack-sm {
+    @apply space-y-2;
+  }
+  
+  .content-stack-lg {
+    @apply space-y-6;
+  }
+
+  /* ===== ANIMATION & TRANSITION LIBRARY ===== */
+  /* Standardized animations and easing functions */
+  
+  /* Easing Functions */
+  .ease-smooth {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .ease-bounce {
+    transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  
+  .ease-sharp {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  
+  /* Hover States - Note: .hover-lift provides same functionality */
+  
+  .hover-glow {
+    @apply transition-shadow duration-300 ease-smooth hover:shadow-lg hover:shadow-violet/20;
+  }
+  
+  .hover-fade {
+    @apply transition-opacity duration-200 ease-smooth hover:opacity-80;
+  }
+  
+  /* Focus States */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-violet focus:ring-offset-2 focus:ring-offset-surface-1;
+  }
+  
+  .focus-ring-inset {
+    @apply focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet;
+  }
+  
+  /* Loading States */
+  .loading-pulse {
+    @apply animate-pulse;
+  }
+  
+  .loading-spin {
+    @apply animate-spin;
+  }
+  
+  /* Entrance Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-smooth forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-smooth forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-bounce forwards;
+  }
+
+  /* Animation Keyframes */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
   }
   
   /* Force white text utility kept for compatibility */

@@ -62,12 +62,12 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 glass border-b border-white/10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between relative">
+        <div className="w-full container-padding h-14 flex items-center justify-between relative">
           {/* Left */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               aria-label="Menu"
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="p-2 rounded-lg hover:bg-white/5 transition-colors focus-ring"
               onClick={toggleMenu}
             >
               <svg width="22" height="22" viewBox="0 0 24 24" className="fill-white/70">
@@ -101,7 +101,7 @@ export default function Header() {
           </div>
 
           {/* Center nav - hidden on mobile, visible on desktop */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm absolute left-1/2 transform -translate-x-1/2">
+          <nav className="hidden lg:flex items-center component-gap text-body-sm absolute left-1/2 transform -translate-x-1/2">
             {isAuthenticated ? (
               <>
                 <Link
