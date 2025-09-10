@@ -728,7 +728,7 @@ export default function Settings() {
               <button
                 onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
                 disabled={!setting.isWorking}
-                className="w-full flex items-center justify-between p-3 bg-surface-2 border border-border rounded-lg hover:bg-surface-1 transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px] disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   {/* Color Circle */}
@@ -739,15 +739,10 @@ export default function Settings() {
                       borderColor: selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.displayColor
                     }}
                   />
-                  {/* Theme Info */}
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium text-white">
-                      {selectedTheme.name}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {selectedTheme.description}
-                    </span>
-                  </div>
+                  {/* Theme Name */}
+                  <span className="flex-1 text-left text-white">
+                    {selectedTheme.name}
+                  </span>
                 </div>
                 
                 {/* Dropdown Arrow */}
@@ -765,7 +760,7 @@ export default function Settings() {
               
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-2 border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                   {THEMES.map((theme) => (
                     <button
                       key={theme.id}
@@ -776,7 +771,7 @@ export default function Settings() {
                         setIsThemeDropdownOpen(false)
                       }}
                       disabled={!setting.isWorking}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-surface-1 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
                     >
                       {/* Color Circle */}
                       <div 
