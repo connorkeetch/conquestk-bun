@@ -787,12 +787,9 @@ export default function Settings() {
                         }}
                       />
                       {/* Theme Info */}
-                      <div className="flex flex-col items-start flex-grow">
+                      <div className="flex items-center flex-grow">
                         <span className="text-sm font-medium text-white">
                           {theme.name}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {theme.description}
                         </span>
                       </div>
                       
