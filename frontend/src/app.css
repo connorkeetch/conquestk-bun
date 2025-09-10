@@ -147,14 +147,23 @@ To switch themes: Use Redux setTheme() action
 
 /* ===== DEFAULT THEME (Dark Violet) ===== */
 :root,
-/* ===== DEFAULT THEME (Original ConquestK colors) ===== */
+/* ===== DEFAULT THEME (Dark Blue-Purple - matches screenshot) ===== */
 :root[data-theme="default"] {
-  --color-primary: #4a9eff;        /* Original blue from maps.mhtml */
-  --color-primary-soft: #60a5fa;   /* Lighter blue */
+  --color-primary: #4338CA;        /* Dark blue-purple primary */
+  --color-primary-soft: #5B21B6;   /* Purple accent */
   --color-secondary: #FFD700;      /* Gold accent */
-  --color-accent: #dc2626;         /* Red accent from original meta theme-color */
-  --color-bg-deep: #1a1a1a;        /* Original dark background */
+  --color-accent: #dc2626;         /* Red accent */
+  --color-bg-deep: #1a1a1a;        /* Dark background */
   --color-bg-alt: #0f172a;         /* Slightly different dark */
+  
+  /* Dark blue-purple gradient to match screenshot */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #1e1b4b 0%,    /* Dark indigo */
+    #312e81 30%,   /* Darker center */
+    #4c1d95 60%,   /* Purple center */
+    #1e1b4b 100%   /* Dark indigo */
+  );
 }
 
 /* ===== DARK THEME (Current violet theme as dark) ===== */
@@ -165,27 +174,30 @@ To switch themes: Use Redux setTheme() action
 
 /* ===== LIGHT THEME ===== */
 :root[data-theme="light"] {
-  /* Keep semantic theme colors the same */
-  /* --color-primary, --color-secondary, --color-accent unchanged */
+  /* Light theme primary colors */
+  --color-primary: #3B82F6;        /* Blue for light theme */
+  --color-primary-soft: #60A5FA;   /* Lighter blue */
+  --color-secondary: #F59E0B;       /* Amber for light theme */
+  --color-accent: #DC2626;          /* Red accent */
   
-  /* Override background and text for light theme */
+  /* Light theme backgrounds */
   --color-bg-deep: #F8F9FA;        /* Light background */
   --color-bg-alt: #F1F5F9;         /* Alternative light background */
   --color-surface-1: #FFFFFF;      /* White cards */
   --color-surface-2: #F1F5F9;      /* Light gray elevated surfaces */
   
-  /* Text colors for light theme */
+  /* Light theme text colors */
   --color-text: #1E293B;           /* Dark text for readability */
   --color-text-muted: #64748B;     /* Medium gray text */
   --color-border: #E2E8F0;         /* Light borders */
   
-  /* Update gradient for light theme */
+  /* Light theme gradient with subtle variations */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #F8F9FA 0%,
-    #F1F5F9 30%,
-    #E2E8F0 60%,
-    #F8F9FA 100%
+    #f8fafc 0%,    /* Very light blue-gray */
+    #f1f5f9 30%,   /* Slightly darker center */
+    #e2e8f0 60%,   /* Light gray center */
+    #f8fafc 100%   /* Very light blue-gray */
   );
 }
 
@@ -196,6 +208,15 @@ To switch themes: Use Redux setTheme() action
   --color-primary-soft: #EF4444;   /* Softer red */
   --color-secondary: #FFD700;      /* Keep gold as secondary */
   --color-accent: #F59E0B;         /* Amber accent */
+  
+  /* Red theme gradient with darker centers */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #450a0a 0%,    /* Dark red corners */
+    #220505 30%,   /* Much darker red center */
+    #380808 60%,   /* Dark red center */
+    #450a0a 100%   /* Dark red corners */
+  );
 }
 
 /* 🔵 BLUE THEME */
@@ -204,6 +225,15 @@ To switch themes: Use Redux setTheme() action
   --color-primary-soft: #3B82F6;   /* Softer blue */
   --color-secondary: #FFD700;      /* Keep gold as secondary */
   --color-accent: #06B6D4;         /* Cyan accent */
+  
+  /* Blue theme gradient with darker centers */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #0f172a 0%,    /* Dark blue corners */
+    #020617 30%,   /* Much darker blue center */
+    #0c1229 60%,   /* Dark blue center */
+    #0f172a 100%   /* Dark blue corners */
+  );
 }
 
 /* 🟢 GREEN THEME */
@@ -212,6 +242,15 @@ To switch themes: Use Redux setTheme() action
   --color-primary-soft: #10B981;   /* Softer green */
   --color-secondary: #FFD700;      /* Keep gold as secondary */
   --color-accent: #14B8A6;         /* Teal accent */
+  
+  /* Green theme gradient with darker centers */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #14332a 0%,    /* Dark green corners */
+    #0a1f1a 30%,   /* Much darker green center */
+    #102920 60%,   /* Dark green center */
+    #14332a 100%   /* Dark green corners */
+  );
 }
 
 /* 💜 VIOLET THEME */
@@ -220,6 +259,15 @@ To switch themes: Use Redux setTheme() action
   --color-primary-soft: #8B5CF6;   /* Softer violet */
   --color-secondary: #FFD700;      /* Keep gold as secondary */
   --color-accent: #B22222;         /* Crimson accent */
+  
+  /* Violet theme gradient with darker centers */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #2d1b47 0%,    /* Dark violet corners */
+    #1a0e2e 30%,   /* Much darker violet center */
+    #261838 60%,   /* Dark violet center */
+    #2d1b47 100%   /* Dark violet corners */
+  );
 }
 
 /* ⚫ BLACK THEME */
@@ -232,6 +280,15 @@ To switch themes: Use Redux setTheme() action
   --color-bg-alt: #111827;         /* Very dark gray */
   --color-surface-1: #1f2937;      /* Dark gray cards */
   --color-surface-2: #374151;      /* Elevated dark surfaces */
+  
+  /* Black theme gradient - pure black with subtle variations */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #111111 0%,    /* Near black corners */
+    #000000 30%,   /* Pure black center */
+    #0a0a0a 60%,   /* Very dark center */
+    #111111 100%   /* Near black corners */
+  );
 }
 
 /* ===== STYLE THEMES ===== */
@@ -294,13 +351,13 @@ To switch themes: Use Redux setTheme() action
 
 /* Root CSS variables for complex values */
 :root {
-  /* The conquest gradient - Synced with GRADIENTS.background in colors.ts */
+  /* The conquest gradient - Darker centers for all themes */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #050508 0%,
-    #030308 30%,
-    #060612 60%,
-    #040509 100%
+    #020204 0%,    /* Darker corners */
+    #010102 30%,   /* Much darker center */
+    #030306 60%,   /* Darker center */ 
+    #020204 100%   /* Darker corners */
   );
   
   /* Atmospheric glow color */

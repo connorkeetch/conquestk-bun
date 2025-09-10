@@ -709,68 +709,101 @@ export default function Settings() {
           return null
           
         case 'color-theme-selector':
-          return (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: 'default', name: 'Default', color: '#4a9eff', emoji: '🔵', description: 'Original ConquestK theme' },
+          const themes = [
+                  { id: 'default', name: 'Default', color: '#4338CA', emoji: '🌌', description: 'Dark blue-purple gradient' },
                   { id: 'light', name: 'Light', color: '#f8fafc', emoji: '☀️', description: 'Bright and clean' },
                   { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '💜', description: 'Purple accent' },
                   { id: 'red', name: 'Red', color: '#DC2626', emoji: '❤️', description: 'Crimson theme' },
                   { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '💙', description: 'Ocean blue' },
                   { id: 'green', name: 'Green', color: '#059669', emoji: '💚', description: 'Forest green' },
                   { id: 'black', name: 'Black', color: '#1f2937', emoji: '⚫', description: 'Dark and minimal' },
-                ].map((theme) => (
-                  <button
-                    key={theme.id}
-                    onClick={() => {
-                      if (setting.isWorking && setting.onChange) {
-                        setting.onChange(theme.id as ColorTheme)
-                      }
+                ]
+          const selectedTheme = themes.find(t => t.id === setting.defaultValue) || themes[0]
+          const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
+          return (
+            <div className="relative">
+              {/* Dropdown Button */}
+              <button
+                onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+                disabled={!setting.isWorking}
+                className="w-full flex items-center justify-between p-3 bg-surface-2 border border-border rounded-lg hover:bg-surface-1 transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Color Circle */}
+                  <div 
+                    className="w-6 h-6 rounded-full border-2"
+                    style={{ 
+                      backgroundColor: selectedTheme.color,
+                      borderColor: selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.color
                     }}
-                    disabled={!setting.isWorking}
-                    className={`
-                      relative flex flex-col items-center p-4 rounded-xl border-2 transition-all
-                      ${setting.defaultValue === theme.id
-                        ? 'border-white bg-white/10 scale-105'
-                        : 'border-slate-600 hover:border-slate-400 hover:bg-slate-700/30'
-                      }
-                      ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : 'hover:scale-102'}
-                    `}
-                  >
-                    {/* Theme Preview Circle */}
-                    <div 
-                      className="w-8 h-8 rounded-full mb-2 shadow-lg"
-                      style={{ 
-                        backgroundColor: theme.color,
-                        border: theme.id === 'light' ? '2px solid #e5e7eb' : 'none'
-                      }}
-                    />
-                    
-                    {/* Theme Name */}
-                    <span className="text-xs font-medium text-white text-center">
-                      {theme.emoji} {theme.name}
+                  />
+                  {/* Theme Info */}
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium text-white">
+                      {selectedTheme.emoji} {selectedTheme.name}
                     </span>
-                    
-                    {/* Theme Description */}
-                    <span className="text-xs text-muted text-center mt-1">
-                      {theme.description}
+                    <span className="text-xs text-muted">
+                      {selectedTheme.description}
                     </span>
-                    
-                    {/* Selected Indicator */}
-                    {setting.defaultValue === theme.id && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs">✓</span>
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
+                  </div>
+                </div>
+                
+                {/* Dropdown Arrow */}
+                <svg
+                  className={`w-5 h-5 text-muted transition-transform ${
+                    isThemeDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               
-              {/* Current Theme Label */}
-              <div className="text-center text-sm text-muted">
-                Current theme: <span className="text-white font-medium capitalize">{setting.defaultValue}</span>
-              </div>
+              {/* Dropdown Menu */}
+              {isThemeDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-2 border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                  {themes.map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => {
+                        if (setting.isWorking && setting.onChange) {
+                          setting.onChange(theme.id as ColorTheme)
+                        }
+                        setIsThemeDropdownOpen(false)
+                      }}
+                      disabled={!setting.isWorking}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-surface-1 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    >
+                      {/* Color Circle */}
+                      <div 
+                        className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+                        style={{ 
+                          backgroundColor: theme.color,
+                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.color
+                        }}
+                      />
+                      {/* Theme Info */}
+                      <div className="flex flex-col items-start flex-grow">
+                        <span className="text-sm font-medium text-white">
+                          {theme.emoji} {theme.name}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {theme.description}
+                        </span>
+                      </div>
+                      
+                      {/* Selected Check */}
+                      {setting.defaultValue === theme.id && (
+                        <svg className="w-5 h-5 text-violet flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )
           
