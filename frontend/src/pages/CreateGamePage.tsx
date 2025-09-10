@@ -112,6 +112,7 @@ const CreateGamePage: React.FC = () => {
   const [gameSpeed, setGameSpeed] = useState<'realtime' | 'async'>('realtime')
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
   const [staticBonusValue, setStaticBonusValue] = useState(10)
+  const [spoilsType, setSpoilsType] = useState('escalating')
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState(false)
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
