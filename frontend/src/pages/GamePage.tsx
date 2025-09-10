@@ -44,7 +44,7 @@ const GamePage: React.FC = () => {
             {!isFullScreen && (
               <Link
                 to="/games/active"
-                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="btn-secondary px-3 py-1 text-sm"
               >
                 ← My Games
               </Link>
@@ -93,16 +93,16 @@ const GamePage: React.FC = () => {
             )}
 
             {/* Game Actions */}
-            <button className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+            <button className="btn-secondary px-3 py-1 text-sm">
               ⚙️
             </button>
             <button
-              className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className="btn-secondary px-3 py-1 text-sm"
               onClick={toggleFullScreen}
             >
               {isFullScreen ? '🗗' : '🗖'}
             </button>
-            <button className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <button className="px-3 py-1 bg-danger hover:brightness-110 text-white text-sm font-medium rounded-lg transition-colors">
               🏳️
             </button>
           </div>
@@ -159,7 +159,7 @@ const GamePage: React.FC = () => {
                     <button className="w-full px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors">
                       End Attack Phase
                     </button>
-                    <button className="w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+                    <button className="btn-secondary w-full px-4 py-2">
                       View Help
                     </button>
                   </div>

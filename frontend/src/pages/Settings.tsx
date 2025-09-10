@@ -529,7 +529,7 @@ export default function Settings() {
             ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
             : setting.buttonVariant === 'primary' 
             ? `px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
-            : `px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            : `btn-secondary text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
             <button
@@ -669,7 +669,7 @@ export default function Settings() {
                       }
                     }}
                     disabled={profileUpdateLoading || (isUsername && (checkingUsername || usernameAvailable === false))}
-                    className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+                    className="px-3 py-1 bg-success hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
                   >
                     {profileUpdateLoading ? 'Saving...' : 'Save'}
                   </button>
@@ -686,7 +686,7 @@ export default function Settings() {
                         setUsernameAvailable(null)
                       }
                     }}
-                    className="px-3 py-1 bg-gray-600 hover:bg-surface-2 text-white text-sm rounded transition-colors"
+                    className="btn-secondary px-3 py-1 text-sm"
                   >
                     Cancel
                   </button>
@@ -1338,7 +1338,7 @@ export default function Settings() {
               <div>
                 <div className="relative">
                   <button
-                    className="px-4 py-2 bg-gray-600 text-white font-medium rounded-lg mb-3 opacity-50 cursor-not-allowed"
+                    className="btn-secondary opacity-50 cursor-not-allowed mb-3"
                     disabled
                   >
                     📁 Upload New Avatar

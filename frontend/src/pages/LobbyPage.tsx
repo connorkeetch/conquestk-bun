@@ -256,7 +256,7 @@ const LobbyPage: React.FC = () => {
           </Link>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+            className="btn-secondary px-4 py-2"
           >
             🔍 Filter Games
           </button>
@@ -380,7 +380,7 @@ const LobbyPage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-900/50 border border-red-500 rounded-lg">
+        <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-red-400">❌</span>
@@ -402,7 +402,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadPublicGames}
                 disabled={loading}
-                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="btn-secondary px-3 py-1 text-sm"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -456,7 +456,7 @@ const LobbyPage: React.FC = () => {
                               maxPlayers: 12,
                             })
                           }
-                          className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                          className="btn-secondary px-4 py-2"
                         >
                           Reset Filters
                         </button>
@@ -519,7 +519,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadMyGames}
                 disabled={loading}
-                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="btn-secondary px-3 py-1 text-sm"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -532,7 +532,7 @@ const LobbyPage: React.FC = () => {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'all'
                     ? 'bg-violet text-white'
-                    : 'bg-surface-2 text-muted hover:bg-gray-600'
+                    : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
                 All Games
@@ -542,7 +542,7 @@ const LobbyPage: React.FC = () => {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'active'
                     ? 'bg-violet text-white'
-                    : 'bg-surface-2 text-muted hover:bg-gray-600'
+                    : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
                 <Gamepad2 className="inline w-4 h-4 mr-1" />
@@ -553,7 +553,7 @@ const LobbyPage: React.FC = () => {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'waiting'
                     ? 'bg-violet text-white'
-                    : 'bg-surface-2 text-muted hover:bg-gray-600'
+                    : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
                 <Clock className="inline w-4 h-4 mr-1" />
@@ -564,7 +564,7 @@ const LobbyPage: React.FC = () => {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'finished'
                     ? 'bg-violet text-white'
-                    : 'bg-surface-2 text-muted hover:bg-gray-600'
+                    : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
                 <Trophy className="inline w-4 h-4 mr-1" />
@@ -584,7 +584,7 @@ const LobbyPage: React.FC = () => {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setActiveTab('browse')}
-                    className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                    className="btn-secondary px-4 py-2"
                   >
                     🌍 Browse Games
                   </button>
@@ -615,7 +615,7 @@ const LobbyPage: React.FC = () => {
                         </p>
                         <button
                           onClick={() => setMyGamesFilter('all')}
-                          className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                          className="btn-secondary px-4 py-2"
                         >
                           Show All Games
                         </button>
@@ -665,7 +665,7 @@ const LobbyPage: React.FC = () => {
                           ) : (
                             <Link
                               to={`/game/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
+                              className="btn-secondary px-3 py-1 text-sm"
                             >
                               📊 View Results
                             </Link>
