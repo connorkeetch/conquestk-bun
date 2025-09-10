@@ -101,36 +101,36 @@ export default function Header() {
           </div>
 
           {/* Center nav - hidden on mobile, visible on desktop */}
-          <nav className="hidden lg:flex items-center component-gap text-body-sm absolute left-1/2 transform -translate-x-1/2">
+          <nav className="hidden lg:flex items-center gap-6 text-body-sm absolute left-1/2 transform -translate-x-1/2">
             {isAuthenticated ? (
               <>
                 <Link
-                  className={`transition nav-link ${location.pathname === '/lobby' ? 'nav-link-active' : 'nav-link-inactive'}`}
+                  className={`transition ${location.pathname === '/lobby' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                   to="/lobby"
                 >
                   Play
                 </Link>
                 <Link
-                  className={`transition nav-link ${location.pathname === '/maps' ? 'nav-link-active' : 'nav-link-inactive'}`}
+                  className={`transition ${location.pathname === '/maps' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                   to="/maps"
                 >
                   Maps
                 </Link>
                 <Link
-                  className={`transition nav-link ${location.pathname === '/community' ? 'nav-link-active' : 'nav-link-inactive'}`}
+                  className={`transition ${location.pathname === '/community' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                   to="/community"
                 >
                   Community
                 </Link>
                 <Link
-                  className={`transition nav-link ${location.pathname === '/tutorial' ? 'nav-link-active' : 'nav-link-inactive'}`}
+                  className={`transition ${location.pathname === '/tutorial' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                   to="/tutorial"
                 >
                   How to Play
                 </Link>
                 {user?.isAdmin && (
                   <Link
-                    className={`transition nav-link ${location.pathname === '/admin' ? 'nav-link-active' : 'nav-link-inactive'}`}
+                    className={`transition ${location.pathname === '/admin' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                     to="/admin"
                   >
                     Admin
@@ -139,19 +139,19 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link className="nav-link nav-link-inactive transition" to="/">
+                <Link className="text-white/70 hover:text-primary-soft transition" to="/">
                   Home
                 </Link>
-                <Link className="nav-link nav-link-inactive transition" to="/lobby">
+                <Link className="text-white/70 hover:text-primary-soft transition" to="/lobby">
                   Play Now
                 </Link>
-                <Link className="nav-link nav-link-inactive transition" to="/maps">
+                <Link className="text-white/70 hover:text-primary-soft transition" to="/maps">
                   Browse Maps
                 </Link>
-                <Link className="nav-link nav-link-inactive transition" to="/community">
+                <Link className="text-white/70 hover:text-primary-soft transition" to="/community">
                   Community
                 </Link>
-                <Link className="nav-link nav-link-inactive transition" to="/tutorial">
+                <Link className="text-white/70 hover:text-primary-soft transition" to="/tutorial">
                   How to Play
                 </Link>
               </>
@@ -197,10 +197,6 @@ export default function Header() {
                     )}
                   </svg>
                   
-                  {/* Tooltip */}
-                  <div className="tooltip">
-                    {isMuted ? 'Audio Muted' : 'Audio Enabled'}
-                  </div>
                 </button>
                 
                 {/* Active Games Dropdown */}
@@ -251,7 +247,7 @@ export default function Header() {
                             handleLogout()
                             setIsUserDropdownOpen(false)
                           }}
-                          className="dropdown-item text-accent hover:brightness-110"
+                          className="dropdown-item text-red-400 hover:text-red-300"
                         >
                           <span>🚪</span> Logout
                         </button>
@@ -328,7 +324,7 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     location.pathname === item.path
-                      ? 'bg-violet text-white shadow-lg'
+                      ? 'bg-primary text-white shadow-lg'
                       : 'text-muted hover:text-white hover:bg-surface-2'
                   }`}
                 >
@@ -390,7 +386,7 @@ export default function Header() {
                 <Link
                   to="/register"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block w-full px-4 py-3 bg-violet hover:brightness-110 text-white rounded-lg transition-colors text-center font-medium"
+                  className="btn-primary block w-full text-center"
                 >
                   Register
                 </Link>
