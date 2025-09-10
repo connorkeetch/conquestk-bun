@@ -59,6 +59,20 @@ cd backend && npm run make-admin   # Make user admin (interactive)
 - **Testing**: Jest (backend) + Vitest (frontend)
 - **Code Style**: Biome (2 spaces, single quotes JS, double quotes JSX)
 
+### 🎨 Theme Architecture (NEW)
+**Semantic CSS Variable System** - Complete single-source-of-truth theming:
+- **Semantic Variables**: `--color-primary`, `--color-secondary`, `--color-accent` (not color-specific)
+- **3D Theming**: Base (dark/light) × Color (violet/red/blue/green/gold) × Style (modern/cowboy/myspace)
+- **Component Classes**: `btn-primary`, `form-input`, `box1` - all adapt automatically to themes
+- **Theme Switching**: `document.setAttribute('data-theme', 'red')` changes entire app
+
+**Key Files:**
+- `src/constants/colors.ts` - Color definitions & theme palettes (THEME_COLORS, SEMANTIC_COLORS)
+- `src/app.css` - Semantic CSS variables + component classes + theme definitions
+- `src/store/settingsSlice.ts` - Theme state management (ColorTheme, StyleTheme types)
+
+**Usage:** Change colors globally by modifying CORE_COLORS. Switch themes via Redux setTheme().
+
 ### Key Files & Components
 ```
 backend/

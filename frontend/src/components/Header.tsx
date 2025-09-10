@@ -105,32 +105,32 @@ export default function Header() {
             {isAuthenticated ? (
               <>
                 <Link
-                  className={`transition ${location.pathname === '/lobby' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  className={`transition nav-link ${location.pathname === '/lobby' ? 'nav-link-active' : 'nav-link-inactive'}`}
                   to="/lobby"
                 >
                   Play
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/maps' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  className={`transition nav-link ${location.pathname === '/maps' ? 'nav-link-active' : 'nav-link-inactive'}`}
                   to="/maps"
                 >
                   Maps
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/community' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  className={`transition nav-link ${location.pathname === '/community' ? 'nav-link-active' : 'nav-link-inactive'}`}
                   to="/community"
                 >
                   Community
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/tutorial' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                  className={`transition nav-link ${location.pathname === '/tutorial' ? 'nav-link-active' : 'nav-link-inactive'}`}
                   to="/tutorial"
                 >
                   How to Play
                 </Link>
                 {user?.isAdmin && (
                   <Link
-                    className={`transition ${location.pathname === '/admin' ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                    className={`transition nav-link ${location.pathname === '/admin' ? 'nav-link-active' : 'nav-link-inactive'}`}
                     to="/admin"
                   >
                     Admin
@@ -139,19 +139,19 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link className="text-white/70 hover:text-white transition" to="/">
+                <Link className="nav-link nav-link-inactive transition" to="/">
                   Home
                 </Link>
-                <Link className="text-white/70 hover:text-white transition" to="/lobby">
+                <Link className="nav-link nav-link-inactive transition" to="/lobby">
                   Play Now
                 </Link>
-                <Link className="text-white/70 hover:text-white transition" to="/maps">
+                <Link className="nav-link nav-link-inactive transition" to="/maps">
                   Browse Maps
                 </Link>
-                <Link className="text-white/70 hover:text-white transition" to="/community">
+                <Link className="nav-link nav-link-inactive transition" to="/community">
                   Community
                 </Link>
-                <Link className="text-white/70 hover:text-white transition" to="/tutorial">
+                <Link className="nav-link nav-link-inactive transition" to="/tutorial">
                   How to Play
                 </Link>
               </>
@@ -179,7 +179,7 @@ export default function Header() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className={`transition-colors ${
-                      isMuted ? 'text-crimson' : 'text-success'
+                      isMuted ? 'text-accent' : 'text-success'
                     }`}
                   >
                     {isMuted ? (
@@ -251,7 +251,7 @@ export default function Header() {
                             handleLogout()
                             setIsUserDropdownOpen(false)
                           }}
-                          className="dropdown-item text-crimson hover:text-crimson-light"
+                          className="dropdown-item text-accent hover:brightness-110"
                         >
                           <span>🚪</span> Logout
                         </button>
@@ -270,7 +270,7 @@ export default function Header() {
                 </Link>
                 <Link
                   to="/register"
-                  className="hidden sm:inline-block px-3 py-1.5 rounded-md text-sm bg-violet text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition"
+                  className="hidden sm:inline-block btn-primary text-sm shadow-lg hover:shadow-lg transition-all"
                 >
                   Register
                 </Link>
