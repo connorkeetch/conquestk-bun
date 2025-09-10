@@ -383,6 +383,10 @@ To switch themes: Use Redux setTheme() action
   &:hover {
     background-color: var(--color-primary-soft);
     transform: scale(1.02);
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
   
   &:disabled {
@@ -743,4 +747,58 @@ To switch themes: Use Redux setTheme() action
     white-space: normal;
     clip: auto;
   }
+}
+
+/* ===== POLISH & REFINEMENT UTILITIES ===== */
+
+/* Enhanced hover effects for better UX */
+@utility hover-lift {
+  transition: all 0.2s ease-out;
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@utility hover-glow {
+  transition: all 0.2s ease-out;
+  &:hover {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+}
+
+/* Status indicator utilities */
+@utility status-online {
+  background-color: var(--color-success);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+@utility status-away {
+  background-color: var(--color-warning);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+@utility status-offline {
+  background-color: var(--color-text-muted);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+/* Loading spinner utility */
+@utility loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border-top: 2px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
