@@ -1,8 +1,18 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PlayerColor } from '../constants/colors'
 
-// Theme types
-export type Theme = 'dark' | 'light' | 'high-contrast'
+// Theme types - Extended for multi-theme support
+export type ColorTheme = 'violet' | 'red' | 'blue' | 'green' | 'gold'
+export type StyleTheme = 'modern' | 'cowboy' | 'myspace' | 'minimal' | 'gaming'
+export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy compatibility
+
+// New theme system for future theme switching
+export interface ThemeSettings {
+  baseTheme: 'dark' | 'light' | 'high-contrast'  // Core theme (dark/light)
+  colorTheme: ColorTheme                          // Color palette 
+  styleTheme: StyleTheme                          // UI style/components
+}
+
 export type DMPermission = 'everyone' | 'friends' | 'nobody'
 
 // Notification settings

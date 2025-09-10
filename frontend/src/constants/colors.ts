@@ -1,123 +1,324 @@
 // Conquest K Color System Constants
 // 🎯 SINGLE SOURCE OF TRUTH FOR ALL COLORS IN THE APP
-// Change any color here and it affects everything throughout the application
+// Restructured for Multi-Theme Support (Red Theme, Blue Theme, Cowboy Theme, etc.)
 
-// ===== EVERY COLOR IN THE APP =====
-// 🎯 THE COMPLETE COLOR SYSTEM - Your single source of truth for ALL colors
-// Change any color here and it will affect everywhere it's used throughout the app
+// ===== SEMANTIC COLOR CATEGORIES =====
+// 🎨 Organized by PURPOSE not HUE - enables theme switching
+// Each category serves different themes while maintaining consistency
+
+// ===== THEME ROLE COLORS =====
+// These will be dynamically overridden per theme
+export const THEME_COLORS = {
+  // Current default theme uses these values
+  primary: '#7C3AED',         // Main brand color (violet in default theme)
+  primarySoft: '#8B5CF6',     // Softer version for hover states
+  secondary: '#FFD700',       // Supporting color (gold in default theme)
+  accent: '#B22222',          // Attention color (crimson in default theme)
+  
+  // Surface colors that adapt to theme
+  backgroundDeep: '#0B0B12',  // Deepest background
+  backgroundAlt: '#170B1D',   // Alternative deep background
+  surface1: '#0F172A',        // Card backgrounds
+  surface2: '#111827',        // Elevated surfaces
+} as const;
+
+// ===== SEMANTIC STATE COLORS =====
+// These stay consistent across themes for UX clarity
+export const SEMANTIC_COLORS = {
+  success: '#10B981',         // Success states (always green spectrum)
+  warning: '#F59E0B',         // Warning states (always yellow/orange spectrum)
+  danger: '#B22222',          // Error states (always red spectrum)
+  info: '#06B6D4',            // Info states (always blue/cyan spectrum)
+} as const;
+
+// ===== NEUTRAL COLORS =====
+// Foundation colors that work across all themes
+export const NEUTRAL_COLORS = {
+  black: '#000000',           // Pure black
+  white: '#FFFFFF',           // Pure white
+  text: '#F9FAFB',            // Primary text
+  textMuted: '#94A3B8',       // Secondary text
+  border: '#475569',          // Borders and dividers
+  
+  // Gray spectrum - fundamental across themes
+  gray100: '#F3F4F6',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray400: '#9CA3AF',
+  gray500: '#6B7280',
+  gray600: '#4B5563',
+  gray700: '#374151',
+  gray800: '#1F2937',
+  gray900: '#111827',
+} as const;
+
+// ===== THEME PALETTE LIBRARY =====
+// All colors available for different themes (organized by hue)
+export const THEME_PALETTE = {
+  // VIOLET FAMILY (current default)
+  violets: {
+    violet: '#7C3AED',
+    violetSoft: '#8B5CF6',
+    purple400: '#A78BFA',
+    purple500: '#8B5CF6',
+    purple600: '#7C3AED',
+    purple700: '#6D28D9',
+    purple800: '#5B21B6',
+    purple900: '#9333EA',
+  },
+  
+  // RED FAMILY (for red theme)
+  reds: {
+    crimson: '#B22222',
+    red400: '#F87171',
+    red500: '#EF4444',
+    red600: '#DC2626',
+    red700: '#B91C1C',
+    red800: '#991B1B',
+    maroon600: '#881337',
+    maroon700: '#701A2F',
+    ruby: '#9B111E',
+  },
+  
+  // BLUE FAMILY (for blue theme)
+  blues: {
+    blue400: '#60A5FA',
+    blue500: '#3B82F6',
+    blue600: '#2563EB',
+    blue700: '#1D4ED8',
+    cyan400: '#22D3EE',
+    cyan500: '#06B6D4',
+    indigo400: '#818CF8',
+    indigo500: '#6366F1',
+    indigo600: '#4F46E5',
+  },
+  
+  // GREEN FAMILY (for green theme)
+  greens: {
+    green400: '#4ADE80',
+    green500: '#22C55E',
+    green600: '#059669',
+    green700: '#047857',
+    teal500: '#14B8A6',
+    teal600: '#0D9488',
+    neonGreen: '#39FF14',
+    neonGreenOutline: '#2FB510',
+  },
+  
+  // WARM FAMILY (for orange/amber themes)
+  warms: {
+    gold: '#FFD700',
+    goldOutline: '#B8860B',
+    yellow400: '#FBBF24',
+    amber500: '#F59E0B',
+    amber600: '#D97706',
+    orange400: '#FB923C',
+    orange500: '#F97316',
+    orange600: '#EA580C',
+    orange700: '#C2410C',
+  },
+  
+  // COOL FAMILY (for pink/purple themes)
+  cools: {
+    pink400: '#F472B6',
+    pink500: '#EC4899',
+    pink600: '#DB2777',
+  },
+  
+  // METALLIC FAMILY (for premium/metallic themes)
+  metallics: {
+    bronze: '#CD7F32',
+    silver: '#C0C0C0',
+    silverOutline: '#808080',
+  },
+  
+  // BACKGROUND VARIATIONS (for different theme depths)
+  backgrounds: {
+    ink: '#0B0B12',
+    imperial: '#170B1D',
+    abyss: '#080A14',
+    gradientDark1: '#050508',
+    gradientDark2: '#030308',
+    gradientDark3: '#060612',
+    gradientDark4: '#040509',
+  },
+} as const;
+
+// ===== LEGACY COMPATIBILITY =====
+// Maintaining backward compatibility during transition
 export const CORE_COLORS = {
-  // ===== BRAND COLORS =====
-  violet: '#7C3AED',           // Primary brand, all main CTAs, focus states
-  violetSoft: '#8B5CF6',       // Atmospheric glow and hover states
-  gold: '#FFD700',             // Victory, rewards, "K" in logo, premium highlights
-  crimson: '#B22222',          // Attack states, danger, errors
+  // ===== THEME ROLE COLORS ===== 
+  // NOTE: These will be replaced with semantic CSS variables in next phase
+  violet: THEME_COLORS.primary,           // Primary brand color
+  violetSoft: THEME_COLORS.primarySoft,   // Primary hover states
+  gold: THEME_COLORS.secondary,           // Secondary brand color
+  crimson: THEME_COLORS.accent,           // Accent/danger color
   
   // ===== BACKGROUND COLORS =====
-  ink: '#0B0B12',              // Near-black indigo for deepest backgrounds
-  imperial: '#170B1D',         // Even deeper royal purple, minimal brightness
-  abyss: '#080A14',            // Darker void, consistent with gradient flow
-  surface1: '#0F172A',         // Card backgrounds, elevated surfaces
-  surface2: '#111827',         // Higher elevation cards, dropdowns
+  ink: THEME_COLORS.backgroundDeep,       // Deepest background (theme-aware)
+  imperial: THEME_COLORS.backgroundAlt,   // Alternative deep background
+  abyss: THEME_PALETTE.backgrounds.abyss, // Void background
+  surface1: THEME_COLORS.surface1,        // Card backgrounds (theme-aware)
+  surface2: THEME_COLORS.surface2,        // Elevated surfaces (theme-aware)
   
-  // Background gradient stops
-  gradientDark1: '#050508',    // Background gradient start (darkest)
-  gradientDark2: '#030308',    // Background gradient 30%
-  gradientDark3: '#060612',    // Background gradient 60%  
-  gradientDark4: '#040509',    // Background gradient end
+  // Background gradient stops (from theme palette)
+  gradientDark1: THEME_PALETTE.backgrounds.gradientDark1,
+  gradientDark2: THEME_PALETTE.backgrounds.gradientDark2,
+  gradientDark3: THEME_PALETTE.backgrounds.gradientDark3,
+  gradientDark4: THEME_PALETTE.backgrounds.gradientDark4,
   
   // ===== TEXT COLORS =====
-  text: '#F9FAFB',             // Primary text, near white
-  muted: '#94A3B8',            // Secondary text, subdued descriptions
-  border: '#475569',           // Borders, dividers, input borders
+  text: NEUTRAL_COLORS.text,               // Primary text (theme-neutral)
+  muted: NEUTRAL_COLORS.textMuted,         // Secondary text (theme-neutral)
+  border: NEUTRAL_COLORS.border,           // Borders, dividers (theme-neutral)
   
   // ===== SEMANTIC COLORS =====
-  success: '#10B981',          // Success messages, positive actions, green states
-  warning: '#F59E0B',          // Warning messages, caution states, amber
-  danger: '#B22222',           // Error messages, danger states (same as crimson)
-  info: '#06B6D4',             // Info messages, cyan highlights
+  success: SEMANTIC_COLORS.success,        // Success states (theme-consistent)
+  warning: SEMANTIC_COLORS.warning,        // Warning states (theme-consistent)
+  danger: SEMANTIC_COLORS.danger,          // Error states (theme-consistent)
+  info: SEMANTIC_COLORS.info,              // Info states (theme-consistent)
   
-  // ===== NEUTRAL COLORS =====
-  black: '#000000',            // Pure black (premium colors, overlord rank)
-  white: '#FFFFFF',            // Pure white (premium colors, text highlights)
-  gray100: '#F3F4F6',         // Lightest gray
-  gray200: '#E5E7EB',         // Light gray  
-  gray300: '#D1D5DB',         // Medium-light gray
-  gray400: '#9CA3AF',         // Medium gray (Chieftain rank)
-  gray500: '#6B7280',         // Medium-dark gray
-  gray600: '#4B5563',         // Dark gray
-  gray700: '#374151',         // Darker gray
-  gray800: '#1F2937',         // Very dark gray
-  gray900: '#111827',         // Nearly black gray
+  // ===== NEUTRAL COLORS ===== 
+  black: NEUTRAL_COLORS.black,             // Pure black (theme-neutral)
+  white: NEUTRAL_COLORS.white,             // Pure white (theme-neutral)
+  gray100: NEUTRAL_COLORS.gray100,         // Lightest gray
+  gray200: NEUTRAL_COLORS.gray200,         // Light gray
+  gray300: NEUTRAL_COLORS.gray300,         // Medium-light gray
+  gray400: NEUTRAL_COLORS.gray400,         // Medium gray (Chieftain rank)
+  gray500: NEUTRAL_COLORS.gray500,         // Medium-dark gray
+  gray600: NEUTRAL_COLORS.gray600,         // Dark gray
+  gray700: NEUTRAL_COLORS.gray700,         // Darker gray
+  gray800: NEUTRAL_COLORS.gray800,         // Very dark gray
+  gray900: NEUTRAL_COLORS.gray900,         // Nearly black gray
   
   // ===== METALLIC COLORS =====
-  bronze: '#CD7F32',           // Warlord rank, bronze metals
-  silver: '#C0C0C0',           // Caesar rank, silver metals
-  goldOutline: '#B8860B',      // Gold outlines and borders
-  silverOutline: '#808080',    // Silver outlines and borders
+  bronze: THEME_PALETTE.metallics.bronze,           // Warlord rank
+  silver: THEME_PALETTE.metallics.silver,           // Caesar rank
+  goldOutline: THEME_PALETTE.warms.goldOutline,     // Gold outlines
+  silverOutline: THEME_PALETTE.metallics.silverOutline, // Silver outlines
   
   // ===== SPECIAL ACCENT COLORS =====
-  neonGreen: '#39FF14',        // Premium neon green player color
-  neonGreenOutline: '#2FB510', // Neon green borders
-  ruby: '#9B111E',             // Khan rank, deep red
+  neonGreen: THEME_PALETTE.greens.neonGreen,        // Premium neon green
+  neonGreenOutline: THEME_PALETTE.greens.neonGreenOutline, // Neon green borders
+  ruby: THEME_PALETTE.reds.ruby,                    // Khan rank, deep red
   
   // ===== RED SPECTRUM =====
-  red400: '#F87171',           // Light red
-  red500: '#EF4444',           // Medium red
-  red600: '#DC2626',           // Strong red (player color)
-  red700: '#B91C1C',           // Dark red
-  red800: '#991B1B',           // Very dark red
+  red400: THEME_PALETTE.reds.red400,            // Light red
+  red500: THEME_PALETTE.reds.red500,            // Medium red
+  red600: THEME_PALETTE.reds.red600,            // Strong red (player color)
+  red700: THEME_PALETTE.reds.red700,            // Dark red
+  red800: THEME_PALETTE.reds.red800,            // Very dark red
   
   // ===== BLUE SPECTRUM =====
-  blue400: '#60A5FA',          // Light blue
-  blue500: '#3B82F6',          // Medium blue  
-  blue600: '#2563EB',          // Strong blue (player color, Emperor rank)
-  blue700: '#1D4ED8',          // Dark blue
+  blue400: THEME_PALETTE.blues.blue400,         // Light blue
+  blue500: THEME_PALETTE.blues.blue500,         // Medium blue
+  blue600: THEME_PALETTE.blues.blue600,         // Strong blue (player color, Emperor rank)
+  blue700: THEME_PALETTE.blues.blue700,         // Dark blue
   
   // ===== GREEN SPECTRUM =====
-  green400: '#4ADE80',         // Light green
-  green500: '#22C55E',         // Medium green
-  green600: '#059669',         // Forest green (player color)
-  green700: '#047857',         // Dark green
+  green400: THEME_PALETTE.greens.green400,      // Light green
+  green500: THEME_PALETTE.greens.green500,      // Medium green
+  green600: THEME_PALETTE.greens.green600,      // Forest green (player color)
+  green700: THEME_PALETTE.greens.green700,      // Dark green
   
   // ===== YELLOW/AMBER SPECTRUM =====
-  yellow400: '#FBBF24',        // Light yellow (used in gold gradients)
-  amber500: '#F59E0B',         // Amber (warning, player color)
-  amber600: '#D97706',         // Dark amber (player color, bronze tones)
+  yellow400: THEME_PALETTE.warms.yellow400,     // Light yellow (used in gold gradients)
+  amber500: THEME_PALETTE.warms.amber500,       // Amber (warning, player color)
+  amber600: THEME_PALETTE.warms.amber600,       // Dark amber (player color, bronze tones)
   
   // ===== PURPLE SPECTRUM =====
-  purple400: '#A78BFA',        // Light purple
-  purple500: '#8B5CF6',        // Medium purple (violetSoft)
-  purple600: '#7C3AED',        // Strong purple (main violet)
-  purple700: '#6D28D9',        // Dark purple
-  purple800: '#5B21B6',        // Very dark purple
-  purple900: '#9333EA',        // Player color purple
+  purple400: THEME_PALETTE.violets.purple400,   // Light purple
+  purple500: THEME_PALETTE.violets.purple500,   // Medium purple (violetSoft)
+  purple600: THEME_PALETTE.violets.purple600,   // Strong purple (main violet)
+  purple700: THEME_PALETTE.violets.purple700,   // Dark purple
+  purple800: THEME_PALETTE.violets.purple800,   // Very dark purple
+  purple900: THEME_PALETTE.violets.purple900,   // Player color purple
   
   // ===== ORANGE SPECTRUM =====
-  orange400: '#FB923C',        // Light orange (dragonfire)
-  orange500: '#F97316',        // Medium orange
-  orange600: '#EA580C',        // Strong orange (player color)
-  orange700: '#C2410C',        // Dark orange
+  orange400: THEME_PALETTE.warms.orange400,     // Light orange (dragonfire)
+  orange500: THEME_PALETTE.warms.orange500,     // Medium orange
+  orange600: THEME_PALETTE.warms.orange600,     // Strong orange (player color)
+  orange700: THEME_PALETTE.warms.orange700,     // Dark orange
   
   // ===== CYAN/TEAL SPECTRUM =====
-  cyan400: '#22D3EE',          // Light cyan
-  cyan500: '#06B6D4',          // Medium cyan (info, player color)
-  teal500: '#14B8A6',          // Teal (player color)
-  teal600: '#0D9488',          // Dark teal
+  cyan400: THEME_PALETTE.blues.cyan400,         // Light cyan
+  cyan500: THEME_PALETTE.blues.cyan500,         // Medium cyan (info, player color)
+  teal500: THEME_PALETTE.greens.teal500,        // Teal (player color)
+  teal600: THEME_PALETTE.greens.teal600,        // Dark teal
   
   // ===== PINK SPECTRUM =====
-  pink400: '#F472B6',          // Light pink
-  pink500: '#EC4899',          // Medium pink (player color)
-  pink600: '#DB2777',          // Dark pink
+  pink400: THEME_PALETTE.cools.pink400,         // Light pink
+  pink500: THEME_PALETTE.cools.pink500,         // Medium pink (player color)
+  pink600: THEME_PALETTE.cools.pink600,         // Dark pink
   
   // ===== INDIGO SPECTRUM =====
-  indigo400: '#818CF8',        // Light indigo
-  indigo500: '#6366F1',        // Medium indigo (player color)
-  indigo600: '#4F46E5',        // Dark indigo
+  indigo400: THEME_PALETTE.blues.indigo400,     // Light indigo
+  indigo500: THEME_PALETTE.blues.indigo500,     // Medium indigo (player color)
+  indigo600: THEME_PALETTE.blues.indigo600,     // Dark indigo
   
   // ===== MAROON SPECTRUM =====
-  maroon600: '#881337',        // Maroon (player color)
-  maroon700: '#701A2F',        // Dark maroon
+  maroon600: THEME_PALETTE.reds.maroon600,      // Maroon (player color)
+  maroon700: THEME_PALETTE.reds.maroon700,      // Dark maroon
+  
+  // ===== UNUSED COLORS (marked for potential removal) =====
+  // TODO: Audit usage of these colors before removing
+  // Note: Keeping them for now as they may be useful for future themes
+  // If confirmed unused after component audit, these can be removed
 } as const;
+
+// ===== FUTURE THEME DEFINITIONS =====
+// 🎨 Examples of how different themes will override THEME_COLORS
+// This architecture enables both color themes and style themes
+
+/* EXAMPLE THEME DEFINITIONS (for future implementation):
+
+export const AVAILABLE_THEMES = {
+  // Color-based themes
+  'red-theme': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.reds.red600,
+    primarySoft: THEME_PALETTE.reds.red500,
+    secondary: THEME_PALETTE.warms.gold,
+    accent: THEME_PALETTE.warms.amber600,
+  },
+  
+  'blue-theme': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.blues.blue600,
+    primarySoft: THEME_PALETTE.blues.blue500,
+    secondary: THEME_PALETTE.warms.gold,
+    accent: THEME_PALETTE.blues.cyan500,
+  },
+  
+  'green-theme': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.greens.green600,
+    primarySoft: THEME_PALETTE.greens.green500,
+    secondary: THEME_PALETTE.warms.gold,
+    accent: THEME_PALETTE.greens.teal500,
+  },
+  
+  // Style-based themes (extend beyond just colors)
+  'cowboy-theme': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.warms.amber600,      // Leather brown
+    primarySoft: THEME_PALETTE.warms.amber500,
+    secondary: THEME_PALETTE.warms.gold,        // Gold belt buckle
+    accent: THEME_PALETTE.reds.red700,          // Western red
+    // Would also include: custom fonts, textures, component styles
+  },
+  
+  'myspace-theme': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.blues.blue500,       // MySpace blue
+    primarySoft: THEME_PALETTE.blues.blue400,
+    secondary: THEME_PALETTE.warms.orange500,   // Friend request orange
+    accent: THEME_PALETTE.cools.pink500,        // Profile accent pink
+    // Would also include: custom fonts, gradients, sparkle effects
+  }
+} as const;
+
+*/
 
 // ===== GRADIENTS =====
 // All gradients now reference CORE_COLORS for consistency
