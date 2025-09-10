@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import { authenticateToken } from '../middleware/auth';
 import { UserPreferencesService } from '../services/UserPreferencesService';
 
-export function createPreferencesRouter(pool: Pool) {
+export function createPreferencesRouter(pool: Pool): Router {
   const router = Router();
   const preferencesService = new UserPreferencesService(pool);
 
@@ -17,10 +17,10 @@ export function createPreferencesRouter(pool: Pool) {
         return res.status(404).json({ error: 'Preferences not found' });
       }
       
-      res.json(preferences);
+      return res.json(preferences);
     } catch (error) {
       console.error('Error fetching preferences:', error);
-      res.status(500).json({ error: 'Failed to fetch preferences' });
+      return res.status(500).json({ error: 'Failed to fetch preferences' });
     }
   });
 
@@ -34,10 +34,10 @@ export function createPreferencesRouter(pool: Pool) {
         return res.status(500).json({ error: 'Failed to update preferences' });
       }
       
-      res.json(preferences);
+      return res.json(preferences);
     } catch (error) {
       console.error('Error updating preferences:', error);
-      res.status(500).json({ error: 'Failed to update preferences' });
+      return res.status(500).json({ error: 'Failed to update preferences' });
     }
   });
 
@@ -57,10 +57,10 @@ export function createPreferencesRouter(pool: Pool) {
         return res.status(500).json({ error: 'Failed to update theme' });
       }
       
-      res.json({ success: true, theme });
+      return res.json({ success: true, theme });
     } catch (error) {
       console.error('Error updating theme:', error);
-      res.status(500).json({ error: 'Failed to update theme' });
+      return res.status(500).json({ error: 'Failed to update theme' });
     }
   });
 
