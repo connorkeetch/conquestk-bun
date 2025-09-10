@@ -89,7 +89,7 @@ export const THEME_PALETTE = {
     cyan400: '#22D3EE',
     cyan500: '#06B6D4',
     indigo400: '#818CF8',
-    indigo500: '#6366F1',
+    indigo500: '#8B5CF6',        // More distinct violet-purple (player color)
     indigo600: '#4F46E5',
   },
   
@@ -99,8 +99,10 @@ export const THEME_PALETTE = {
     green500: '#22C55E',
     green600: '#059669',
     green700: '#047857',
-    teal500: '#14B8A6',
-    teal600: '#0D9488',
+    limeGreen: '#84CC16',        // Bright lime green (player color)
+    forestGreen: '#14532D',      // Dark forest green (player color)
+    teal500: '#14B8A6',          // Teal (player color)
+    teal600: '#0F766E',          // Dark teal
     neonGreen: '#39FF14',
     neonGreenOutline: '#2FB510',
   },
@@ -125,9 +127,16 @@ export const THEME_PALETTE = {
     pink600: '#DB2777',
   },
   
+  // EARTH TONES FAMILY (for natural/rustic themes)
+  earthTones: {
+    brown: '#92400E',           // Rich brown (player color)
+    tan: '#D2691E',             // Tan (player color)
+    darkTan: '#A16207',         // Dark tan alternative
+    bronze: '#CD7F32',          // True bronze color
+  },
+  
   // METALLIC FAMILY (for premium/metallic themes)
   metallics: {
-    bronze: '#CD7F32',
     silver: '#C0C0C0',
     silverOutline: '#808080',
   },
@@ -191,8 +200,12 @@ export const CORE_COLORS = {
   gray800: NEUTRAL_COLORS.gray800,         // Very dark gray
   gray900: NEUTRAL_COLORS.gray900,         // Nearly black gray
   
+  // ===== EARTH TONE COLORS =====
+  brown: THEME_PALETTE.earthTones.brown,            // Rich brown (player color)
+  tan: THEME_PALETTE.earthTones.tan,                // Tan (player color)
+  bronze: THEME_PALETTE.earthTones.bronze,          // True bronze
+  
   // ===== METALLIC COLORS =====
-  bronze: THEME_PALETTE.metallics.bronze,           // Warlord rank
   silver: THEME_PALETTE.metallics.silver,           // Caesar rank
   goldOutline: THEME_PALETTE.warms.goldOutline,     // Gold outlines
   silverOutline: THEME_PALETTE.metallics.silverOutline, // Silver outlines
@@ -380,18 +393,21 @@ export const GRADIENTS = {
 // ===== PLAYER COLORS =====
 // All player colors now reference CORE_COLORS - change any color by updating CORE_COLORS above
 export const PLAYER_COLORS = [
+  // Ordered by spectrum for better visual distinction
   CORE_COLORS.red600,      // Red - Classic aggressive
-  CORE_COLORS.blue600,     // Blue - Traditional defensive  
-  CORE_COLORS.green600,    // Forest Green - Distinct from premium neon
-  CORE_COLORS.amber500,    // Amber - Better than pure yellow
-  CORE_COLORS.purple900,   // Purple - Clear and distinct
   CORE_COLORS.orange600,   // Orange - Vibrant energy
-  CORE_COLORS.cyan500,     // Cyan - Cool and calculating
-  CORE_COLORS.pink500,     // Pink - Surprisingly visible
-  CORE_COLORS.amber600,    // Tan/Bronze - Earthy warfare
-  CORE_COLORS.maroon600,   // Maroon - Deep and rich
+  CORE_COLORS.amber500,    // Amber - Better than pure yellow
+  THEME_PALETTE.greens.limeGreen,  // Lime - Bright and distinct
+  THEME_PALETTE.greens.forestGreen, // Forest Green - Deep natural
   CORE_COLORS.teal500,     // Teal - Ocean depths
-  CORE_COLORS.indigo500,   // Indigo - Bridge between blue and purple
+  CORE_COLORS.cyan500,     // Cyan - Cool and calculating
+  CORE_COLORS.blue600,     // Blue - Traditional defensive
+  CORE_COLORS.indigo500,   // Indigo - More distinct purple-blue
+  CORE_COLORS.purple900,   // Purple - Clear and distinct
+  CORE_COLORS.pink500,     // Pink - Surprisingly visible
+  CORE_COLORS.maroon600,   // Maroon - Deep and rich
+  CORE_COLORS.brown,       // Brown - Earthy warfare
+  CORE_COLORS.tan,         // Tan - Desert theme
 ] as const;
 
 // ===== PREMIUM PLAYER COLORS =====
@@ -446,7 +462,7 @@ export const RANK_COLORS = {
     maxElo: 599
   },
   WARLORD: { 
-    base: CORE_COLORS.bronze,       // Bronze metal
+    base: '#92400E',                 // Brown metal
     glow: 'glow-rank-low', 
     name: 'Bronze',
     minElo: 600,
@@ -578,7 +594,7 @@ export const getColorDisplayName = (color: PlayerColor): string => {
   
   // If it's a premium color, use its key
   if (color in PREMIUM_PLAYER_COLORS) {
-    return `${color.replace(/([A-Z])/g, ' $1').trim()} ⭐`;
+    return color.replace(/([A-Z])/g, ' $1').trim();
   }
   
   return color;
