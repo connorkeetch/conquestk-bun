@@ -145,219 +145,24 @@ To switch themes: Use Redux setTheme() action
 /* 🎨 Multi-Theme Support - Red, Blue, Green, Cowboy, MySpace, etc. */
 /* Uses semantic CSS variables to enable complete theme switching */
 
-/* ===== DEFAULT THEME (Dark Violet) ===== */
-:root,
-/* ===== DEFAULT THEME (Dark Blue-Purple - matches screenshot) ===== */
-:root[data-theme="default"] {
-  --color-primary: #4338CA;        /* Dark blue-purple primary */
-  --color-primary-soft: #5B21B6;   /* Purple accent */
-  --color-secondary: #FFD700;      /* Gold accent */
-  --color-accent: #dc2626;         /* Red accent */
-  --color-bg-deep: #1a1a1a;        /* Dark background */
-  --color-bg-alt: #0f172a;         /* Slightly different dark */
+/* 
+  ===== THEME SYSTEM ===== 
+  Themes are applied dynamically via JavaScript from themes.config.ts
+  This ensures a single source of truth and follows DRY principles
   
-  /* Dark blue-purple gradient to match screenshot */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #1e1b4b 0%,    /* Dark indigo */
-    #312e81 30%,   /* Darker center */
-    #4c1d95 60%,   /* Purple center */
-    #1e1b4b 100%   /* Dark indigo */
-  );
-}
-
-/* ===== DARK THEME (Current violet theme as dark) ===== */
-:root[data-theme="dark"] {
-  /* Default violet theme values already set in @theme above */
-  /* This preserves current violet look as the dark theme */
-}
-
-/* ===== LIGHT THEME ===== */
-:root[data-theme="light"] {
-  /* Light theme primary colors */
-  --color-primary: #3B82F6;        /* Blue for light theme */
-  --color-primary-soft: #60A5FA;   /* Lighter blue */
-  --color-secondary: #F59E0B;       /* Amber for light theme */
-  --color-accent: #DC2626;          /* Red accent */
+  Default values are set here for initial load and fallback
+*/
   
-  /* Light theme backgrounds */
-  --color-bg-deep: #F8F9FA;        /* Light background */
-  --color-bg-alt: #F1F5F9;         /* Alternative light background */
-  --color-surface-1: #FFFFFF;      /* White cards */
-  --color-surface-2: #F1F5F9;      /* Light gray elevated surfaces */
-  
-  /* Light theme text colors */
-  --color-text: #1E293B;           /* Dark text for readability */
-  --color-text-muted: #64748B;     /* Medium gray text */
-  --color-border: #E2E8F0;         /* Light borders */
-  
-  /* Light theme gradient with subtle variations */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #f8fafc 0%,    /* Very light blue-gray */
-    #f1f5f9 30%,   /* Slightly darker center */
-    #e2e8f0 60%,   /* Light gray center */
-    #f8fafc 100%   /* Very light blue-gray */
-  );
-}
-
-/* ===== COLOR THEMES ===== */
-/* 🔴 RED THEME */
-:root[data-theme="red"] {
-  --color-primary: #DC2626;        /* Red primary */
-  --color-primary-soft: #EF4444;   /* Softer red */
-  --color-secondary: #FFD700;      /* Keep gold as secondary */
-  --color-accent: #F59E0B;         /* Amber accent */
-  
-  /* Red theme gradient with darker centers */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #450a0a 0%,    /* Dark red corners */
-    #220505 30%,   /* Much darker red center */
-    #380808 60%,   /* Dark red center */
-    #450a0a 100%   /* Dark red corners */
-  );
-}
-
-/* 🔵 BLUE THEME */
-:root[data-theme="blue"] {
-  --color-primary: #2563EB;        /* Blue primary */
-  --color-primary-soft: #3B82F6;   /* Softer blue */
-  --color-secondary: #FFD700;      /* Keep gold as secondary */
-  --color-accent: #06B6D4;         /* Cyan accent */
-  
-  /* Blue theme gradient with darker centers */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #0f172a 0%,    /* Dark blue corners */
-    #020617 30%,   /* Much darker blue center */
-    #0c1229 60%,   /* Dark blue center */
-    #0f172a 100%   /* Dark blue corners */
-  );
-}
-
-/* 🟢 GREEN THEME */
-:root[data-theme="green"] {
-  --color-primary: #059669;        /* Green primary */
-  --color-primary-soft: #10B981;   /* Softer green */
-  --color-secondary: #FFD700;      /* Keep gold as secondary */
-  --color-accent: #14B8A6;         /* Teal accent */
-  
-  /* Green theme gradient with darker centers */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #14332a 0%,    /* Dark green corners */
-    #0a1f1a 30%,   /* Much darker green center */
-    #102920 60%,   /* Dark green center */
-    #14332a 100%   /* Dark green corners */
-  );
-}
-
-/* 💜 VIOLET THEME */
-:root[data-theme="violet"] {
-  --color-primary: #7C3AED;        /* Violet primary */
-  --color-primary-soft: #8B5CF6;   /* Softer violet */
-  --color-secondary: #FFD700;      /* Keep gold as secondary */
-  --color-accent: #B22222;         /* Crimson accent */
-  
-  /* Violet theme gradient with darker centers */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #2d1b47 0%,    /* Dark violet corners */
-    #1a0e2e 30%,   /* Much darker violet center */
-    #261838 60%,   /* Dark violet center */
-    #2d1b47 100%   /* Dark violet corners */
-  );
-}
-
-/* ⚫ BLACK THEME */
-:root[data-theme="black"] {
-  --color-primary: #1f2937;        /* Dark gray as primary */
-  --color-primary-soft: #374151;   /* Lighter dark gray */
-  --color-secondary: #9ca3af;      /* Medium gray */
-  --color-accent: #f3f4f6;         /* Light gray accent */
-  --color-bg-deep: #000000;        /* Pure black */
-  --color-bg-alt: #111827;         /* Very dark gray */
-  --color-surface-1: #1f2937;      /* Dark gray cards */
-  --color-surface-2: #374151;      /* Elevated dark surfaces */
-  
-  /* Black theme gradient - pure black with subtle variations */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #111111 0%,    /* Near black corners */
-    #000000 30%,   /* Pure black center */
-    #0a0a0a 60%,   /* Very dark center */
-    #111111 100%   /* Near black corners */
-  );
-}
-
-/* ===== STYLE THEMES ===== */
-/* 🤠 COWBOY THEME */
-:root[data-theme="cowboy"] {
-  --color-primary: #8B4513;        /* Saddle brown */
-  --color-primary-soft: #A0522D;   /* Sienna brown */
-  --color-secondary: #FFD700;      /* Gold belt buckle */
-  --color-accent: #B22222;         /* Western red */
-  
-  /* Adjust backgrounds for western feel */
-  --color-bg-deep: #2F1B14;        /* Dark leather brown */
-  --color-bg-alt: #3D2817;         /* Slightly lighter brown */
-  /* Note: Would also include custom fonts, textures in full implementation */
-}
-
-/* 💖 MYSPACE THEME */
-:root[data-theme="myspace"] {
-  --color-primary: #3B82F6;        /* MySpace blue */
-  --color-primary-soft: #60A5FA;   /* Lighter MySpace blue */
-  --color-secondary: #F97316;      /* Friend request orange */
-  --color-accent: #EC4899;         /* Profile accent pink */
-  
-  /* MySpace-style gradients and effects would go here */
-  /* Note: Would include sparkle effects, custom fonts in full implementation */
-}
-
-/* High Contrast Mode - Accessibility Enhancement */
-:root[data-theme="high-contrast"] {
-  /* Maximum contrast colors for accessibility */
-  --color-ink: #000000;           /* Pure black */
-  --color-surface-1: #000000;     /* Pure black cards */
-  --color-surface-2: #111111;     /* Near black */
-  --color-surface-3: #222222;     /* Dark gray */
-  
-  --color-text: #FFFFFF;          /* Pure white text */
-  --color-text-soft: #FFFFFF;     /* All text white */
-  --color-muted: #CCCCCC;         /* Light gray for secondary */
-  
-  --color-border: #FFFFFF;        /* White borders */
-  
-  /* Enhanced brand colors for contrast */
-  --color-violet: #9F5AFF;        /* Brighter violet */
-  --color-gold: #FFFF00;          /* Bright yellow gold */
-  --color-crimson: #FF0000;       /* Pure red */
-  --color-success: #00FF00;       /* Pure green */
-  --color-warning: #FFFF00;       /* Bright yellow */
-  --color-info: #00FFFF;          /* Bright cyan */
-}
-
-/* Victory theme enhancement (already exists but we can improve it) */
-:root[data-theme="victory"] {
-  /* Keep existing victory theme but enhance with our color system */
-  --ck-glow: var(--color-gold);
-  
-  /* Add subtle gold tint to backgrounds during victory */
-  --color-surface-1: color-mix(in srgb, var(--color-surface-1) 95%, var(--color-gold) 5%);
-  --color-surface-2: color-mix(in srgb, var(--color-surface-2) 95%, var(--color-gold) 5%);
-}
-
-/* Root CSS variables for complex values */
+/* Root CSS variables with default values */
 :root {
-  /* The conquest gradient - Darker centers for all themes */
+  /* Default theme will be applied by JavaScript on load */
+  /* These are fallback values if JS fails */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #020204 0%,    /* Darker corners */
-    #010102 30%,   /* Much darker center */
-    #030306 60%,   /* Darker center */ 
-    #020204 100%   /* Darker corners */
+    #0a0814 0%,    /* Nearly black with blue tint */
+    #050308 30%,   /* Inky black center */
+    #0d0615 60%,   /* Very dark purple */
+    #0a0814 100%   /* Nearly black with blue tint */
   );
   
   /* Atmospheric glow color */
@@ -719,8 +524,8 @@ To switch themes: Use Redux setTheme() action
 /* Footer Container */
 @utility footer {
   margin-top: auto;
-  border-top: 1px solid var(--color-border);
-  background-color: color-mix(in srgb, var(--color-surface-1) 30%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color-bg-deep) 80%, transparent);
 }
 
 /* Footer Link */

@@ -143,7 +143,7 @@ const CommunityPage: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'global'
                   ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-muted hover:bg-surface-2'
+                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
               }`}
             >
               <Trophy className="inline w-4 h-4 mr-2" />
@@ -154,7 +154,7 @@ const CommunityPage: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'monthly'
                   ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-muted hover:bg-surface-2'
+                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
               }`}
             >
               <Calendar className="inline w-4 h-4 mr-2" />
@@ -165,7 +165,7 @@ const CommunityPage: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'friends'
                   ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-muted hover:bg-surface-2'
+                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
               }`}
             >
               <Users className="inline w-4 h-4 mr-2" />
@@ -174,7 +174,7 @@ const CommunityPage: React.FC = () => {
           </div>
 
           {/* Leaderboard Table */}
-          <div className="bg-surface-2 rounded-lg overflow-hidden">
+          <div className="bg-surface-1 rounded-lg overflow-hidden border border-border">
             {loading ? (
               <div className="p-16 text-center">
                 <div className="text-muted">Loading leaderboard...</div>
@@ -182,7 +182,7 @@ const CommunityPage: React.FC = () => {
             ) : currentLeaderboard.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface-1">
+                  <thead className="bg-ink border-b border-border">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                         Rank
@@ -208,8 +208,8 @@ const CommunityPage: React.FC = () => {
                     {currentLeaderboard.map((player, index) => (
                       <tr
                         key={player.id}
-                        className={`hover:bg-surface-2 transition-colors ${
-                          index < 3 ? 'bg-surface-2/50' : ''
+                        className={`hover:bg-surface-2/50 transition-colors ${
+                          index < 3 ? 'bg-surface-2/30' : ''
                         }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">

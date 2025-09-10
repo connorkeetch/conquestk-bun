@@ -1073,17 +1073,10 @@ export default function Settings() {
               applyTheme(value)
               // Store theme preference through centralized system
               storeTheme(value)
-              // Dispatch Redux action (now without side effects)
+              // Dispatch Redux action
               dispatch(setColorTheme(value))
-              // For light theme, also update base theme
-              if (value === 'light') {
-                dispatch(setTheme('light'))
-                await persistSetting('theme', 'light')
-              } else {
-                dispatch(setTheme('dark'))
-                await persistSetting('theme', 'dark')
-              }
-              // TODO: Persist to server when backend supports color themes
+              // Persist to server
+              await persistSetting('theme', value)
             },
           },
           {
@@ -1410,7 +1403,8 @@ export default function Settings() {
     <div className="container mx-auto px-6 py-8">
 
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 gradient-text">Settings</h1>
+        <h1 className="text-3xl font-bold text-primary-soft mb-2">Settings</h1>
+        <p className="text-muted text-lg mb-8">Customize your game experience</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Settings Navigation */}

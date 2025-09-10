@@ -291,7 +291,7 @@ export default function Header() {
         <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
             <MountainLogo width={28} height={28} />
-            <span className="text-xl font-bold">
+            <span className="text-xl font-bold text-white">
               CONQUEST <span className="font-bold" style={{ 
                 background: GRADIENTS.goldK, 
                 backgroundClip: 'text', 

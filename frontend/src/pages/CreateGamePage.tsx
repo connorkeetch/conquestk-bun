@@ -309,7 +309,7 @@ const CreateGamePage: React.FC = () => {
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Create New Game</h1>
+            <h1 className="text-3xl font-bold text-primary-soft mb-2">Create New Game</h1>
             <p className="text-muted">
               Configure your perfect strategic warfare experience
               {guntsPrescriptions && (
@@ -321,7 +321,7 @@ const CreateGamePage: React.FC = () => {
           </div>
           <Link
             to="/lobby"
-            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-surface-2 hover:bg-surface-1 text-white rounded-lg transition-colors"
           >
             ← Back to Lobby
           </Link>
@@ -340,7 +340,7 @@ const CreateGamePage: React.FC = () => {
 
       {/* Game Name and Visibility at the top - More condensed */}
       <div className="max-w-7xl mx-auto mb-4">
-        <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
+        <div className="bg-surface-2/50 backdrop-blur-md rounded-xl p-4 border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Game Name */}
             <div>
