@@ -288,10 +288,18 @@ export default function Header() {
         } border-r border-border`}
       >
         {/* Menu Header */}
-        <div className="bg-surface-1 px-6 py-4 flex items-center justify-between border-b border-border">
+        <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚔️</span>
-            <span className="text-xl font-bold text-white">CONQUEST K</span>
+            <MountainLogo width={28} height={28} />
+            <span className="text-xl font-bold">
+              CONQUEST <span className="font-bold" style={{ 
+                background: GRADIENTS.goldK, 
+                backgroundClip: 'text', 
+                textFillColor: 'transparent',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>K</span>
+            </span>
           </div>
           <button
             onClick={() => setIsMenuOpen(false)}

@@ -244,7 +244,7 @@ const LobbyPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">Game Lobby</h1>
+          <h1 className="text-4xl font-bold text-primary-soft mb-2">Game Lobby</h1>
           <p className="text-muted">Find and join games, or create your own</p>
         </div>
         <div className="flex gap-3">

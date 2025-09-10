@@ -25,7 +25,7 @@ const Maps: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2 text-white">Maps Gallery</h1>
+          <h1 className="text-3xl font-bold mb-2 text-primary-soft">Maps Gallery</h1>
           <p className="text-muted text-lg">Discover battlefields from around the world</p>
         </div>
         <Link
