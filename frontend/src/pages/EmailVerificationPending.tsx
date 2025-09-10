@@ -28,7 +28,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
@@ -38,7 +38,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
           </Link>
         </div>
 
-        <div className="bg-surface-1/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl">
+        <div className="box1">
           <div className="text-center">
             {/* Success Icon */}
             <div className="mb-6 flex justify-center">
@@ -56,11 +56,11 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
             <p className="text-muted mb-6">
               We've sent a verification email to:
               <br />
-              <span className="font-mono text-violet-soft">{email}</span>
+              <span className="font-mono text-primary-soft">{email}</span>
             </p>
 
-            <div className="bg-violet/10 border border-violet/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-violet-soft">
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-primary-soft">
                 Please check your email and click the verification link to activate your account.
                 The link will expire in 24 hours.
               </p>
@@ -83,7 +83,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
               <button
                 onClick={handleResend}
                 disabled={resending}
-                className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-700 disabled:to-gray-800 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2"
+                className="btn-primary w-full flex items-center justify-center gap-2"
               >
                 {resending ? (
                   <>
@@ -100,7 +100,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
 
               <Link
                 to="/login"
-                className="block w-full py-2.5 bg-surface-2 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all duration-200 text-center"
+                className="btn-secondary block w-full text-center"
               >
                 Back to Login
               </Link>

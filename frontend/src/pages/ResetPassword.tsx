@@ -76,8 +76,8 @@ const ResetPassword: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="bg-surface-2 rounded-xl shadow-2xl p-8 max-w-md w-full border border-border">
+      <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
+        <div className="box1 max-w-md w-full">
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -106,8 +106,8 @@ const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-surface-2 rounded-xl shadow-2xl p-8 max-w-md w-full border border-border">
+    <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
+      <div className="box1 max-w-md w-full">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">Reset Password</h1>
           <p className="text-muted">Enter your new password</p>
@@ -132,13 +132,13 @@ const ResetPassword: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200 pr-12"
+                className="form-input pr-12"
                 placeholder="Enter new password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
@@ -162,7 +162,7 @@ const ResetPassword: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={isLoading}
-              className="w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-violet transition-all duration-200"
+              className="form-input"
               placeholder="Confirm new password"
             />
           </div>
@@ -170,7 +170,7 @@ const ResetPassword: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-violet hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            className="btn-primary w-full"
           >
             {isLoading ? 'Resetting...' : 'Reset Password'}
           </button>
@@ -179,7 +179,7 @@ const ResetPassword: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-muted text-sm">
             Remember your password?{' '}
-            <Link to="/login" className="text-violet-soft hover:text-violet-soft transition-colors">
+            <Link to="/login" className="text-primary-soft hover:text-primary transition-colors">
               Back to Login
             </Link>
           </p>
