@@ -222,6 +222,17 @@ const settingsSlice = createSlice({
       // Don't call saveSettings here - we don't want to overwrite localStorage with server data
       console.log('✅ Server settings loaded into Redux')
     },
+
+    // Color theme settings (new semantic theme system)
+    setColorTheme: (state, action: PayloadAction<ColorTheme>) => {
+      // For now, we'll store this in localStorage and apply via data-theme
+      // In the future, this could be part of a nested theme object in state
+      document.documentElement.setAttribute('data-theme', action.payload)
+      try {
+        localStorage.setItem('colorTheme', action.payload)
+      } catch (_error) {}
+      console.log('✅ Color theme set:', action.payload)
+    },
   },
 })
 
@@ -234,6 +245,7 @@ export const {
   setShowOnlineStatus,
   setDirectMessages,
   setNotificationPref,
+  setColorTheme,
   clearCache,
   resetSettings,
   loadServerSettings,

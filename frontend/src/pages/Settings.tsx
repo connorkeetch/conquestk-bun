@@ -12,8 +12,11 @@ import {
   setShowOnlineStatus,
   setDirectMessages,
   setNotificationPref,
+  setColorTheme,
   type DMPermission,
   type NotificationPrefs,
+  type ColorTheme,
+  type StyleTheme,
 } from '../store/settingsSlice'
 import {
   PLAYER_COLORS,
@@ -261,7 +264,7 @@ interface SettingItem {
   id: string
   label: string
   description: string | React.ReactNode
-  type: 'toggle' | 'select' | 'range' | 'button' | 'input' | 'custom'
+  type: 'toggle' | 'select' | 'range' | 'button' | 'input' | 'custom' | 'color-theme-selector'
   isWorking: boolean
   defaultValue?: any
   options?: { value: string; label: string }[]
@@ -276,6 +279,20 @@ export default function Settings() {
   const { user } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
+
+  // Get current color theme from localStorage (defaults to 'violet')
+  const [currentColorTheme, setCurrentColorTheme] = useState<ColorTheme>(() => {
+    try {
+      return (localStorage.getItem('colorTheme') as ColorTheme) || 'violet'
+    } catch (_error) {
+      return 'violet'
+    }
+  })
+
+  // Apply stored color theme on component mount
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentColorTheme)
+  }, []) // Only run on mount
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -691,6 +708,62 @@ export default function Settings() {
           }
           return null
           
+        case 'color-theme-selector':
+          return (
+            <div className="space-y-3">
+              <div className="grid grid-cols-5 gap-3">
+                {[
+                  { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '💜' },
+                  { id: 'red', name: 'Red', color: '#DC2626', emoji: '❤️' },
+                  { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '💙' },
+                  { id: 'green', name: 'Green', color: '#059669', emoji: '💚' },
+                  { id: 'gold', name: 'Gold', color: '#F59E0B', emoji: '💛' },
+                ].map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => {
+                      if (setting.isWorking && setting.onChange) {
+                        setting.onChange(theme.id as ColorTheme)
+                      }
+                    }}
+                    disabled={!setting.isWorking}
+                    className={`
+                      relative flex flex-col items-center p-4 rounded-xl border-2 transition-all
+                      ${setting.defaultValue === theme.id
+                        ? 'border-white bg-white/10 scale-105'
+                        : 'border-slate-600 hover:border-slate-400 hover:bg-slate-700/30'
+                      }
+                      ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : 'hover:scale-102'}
+                    `}
+                  >
+                    {/* Theme Preview Circle */}
+                    <div 
+                      className="w-8 h-8 rounded-full mb-2 shadow-lg"
+                      style={{ backgroundColor: theme.color }}
+                    />
+                    
+                    {/* Theme Name */}
+                    <span className="text-xs font-medium text-white">
+                      {theme.emoji} {theme.name}
+                    </span>
+                    
+                    {/* Selected Indicator */}
+                    {setting.defaultValue === theme.id && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Current Theme Label */}
+              <div className="text-center text-sm text-muted">
+                Current theme: <span className="text-white font-medium capitalize">{setting.defaultValue}</span>
+              </div>
+            </div>
+          )
+          
         default:
           return null
       }
@@ -942,9 +1015,9 @@ export default function Settings() {
       case 'display':
         return [
           {
-            id: 'theme',
-            label: 'Theme Selection',
-            description: 'Choose your preferred color theme',
+            id: 'base-theme',
+            label: 'Base Theme',
+            description: 'Choose between light and dark modes',
             type: 'select',
             isWorking: true,
             defaultValue: settings.display.theme,
@@ -958,6 +1031,21 @@ export default function Settings() {
             ],
           },
           {
+            id: 'color-theme',
+            label: 'Color Theme',
+            description: 'Select your brand color palette - changes take effect immediately',
+            type: 'color-theme-selector',
+            isWorking: true,
+            defaultValue: currentColorTheme,
+            onChange: async (value: ColorTheme) => {
+              // Update local state for immediate UI feedback
+              setCurrentColorTheme(value)
+              // Dispatch Redux action (handles document.setAttribute and localStorage)
+              dispatch(setColorTheme(value))
+              // TODO: Persist to server when backend supports color themes
+            },
+          },
+          {
             id: 'colorblind-mode',
             label: 'Colorblind Mode',
             description: 'Use colorblind-friendly territory colors',
@@ -966,12 +1054,12 @@ export default function Settings() {
             defaultValue: false,
           },
           {
-            id: 'custom-themes',
-            label: 'Custom Theme Styles',
-            description: '90s retro, MySpace, Vaporwave, and more nostalgic themes',
+            id: 'style-themes',
+            label: 'Style Themes (Coming Soon)',
+            description: 'MySpace, Cowboy, Gaming, and more personality themes',
             type: 'button',
             isWorking: false,
-            buttonText: '🎨 Browse Themes',
+            buttonText: '🎨 Coming Soon',
           },
         ]
 
