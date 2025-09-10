@@ -122,13 +122,13 @@ export default function PrivacyPage() {
               <h2 className="text-xl font-semibold text-gray-100 mb-3">11. Contact Us</h2>
               <p className="text-muted">
                 Privacy questions? Email{' '}
-                <a href="mailto:privacy@conquestk.com" className="text-violet-soft hover:text-violet-soft">
+                <a href="mailto:privacy@conquestk.com" className="text-primary-soft hover:text-primary-soft">
                   privacy@conquestk.com
                 </a>
               </p>
               <p className="text-muted mt-2">
                 For general support:{' '}
-                <a href="mailto:support@conquestk.com" className="text-violet-soft hover:text-violet-soft">
+                <a href="mailto:support@conquestk.com" className="text-primary-soft hover:text-primary-soft">
                   support@conquestk.com
                 </a>
               </p>

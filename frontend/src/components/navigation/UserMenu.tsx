@@ -94,7 +94,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
                 <div className="text-sm text-muted">{user?.email}</div>
                 <div className="flex items-center space-x-4 mt-1">
                   <span className="text-xs text-green-400">Level {stats.level}</span>
-                  <span className="text-xs text-violet-soft">{stats.gamesWon} wins</span>
+                  <span className="text-xs text-primary-soft">{stats.gamesWon} wins</span>
                   <span className="text-xs text-purple-400">{stats.winRate}% rate</span>
                 </div>
               </div>
@@ -120,7 +120,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
           <div className="border-t border-border pt-2 mt-2">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-red-900/20 text-red-400 hover:text-red-300 transition-colors duration-150"
+              className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-danger-soft text-red-400 hover:text-red-300 transition-colors duration-150"
             >
               <span className="text-lg">🚪</span>
               <span className="font-medium">Logout</span>

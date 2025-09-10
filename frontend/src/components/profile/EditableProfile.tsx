@@ -238,7 +238,7 @@ const EditableProfile: React.FC = () => {
                 disabled={!isEditing}
                 className={`w-full px-4 py-2 bg-surface-1/50 border rounded-lg text-white transition-all duration-200 ${
                   isEditing
-                    ? 'border-violet focus:outline-none focus:ring-2 focus:ring-violet'
+                    ? 'border-primary focus:outline-none focus:ring-2 focus:ring-primary'
                     : 'border-border cursor-not-allowed opacity-75'
                 }`}
               />
@@ -269,7 +269,7 @@ const EditableProfile: React.FC = () => {
               disabled={!isEditing}
               className={`w-full px-4 py-2 bg-surface-1/50 border rounded-lg text-white transition-all duration-200 ${
                 isEditing
-                  ? 'border-violet focus:outline-none focus:ring-2 focus:ring-violet'
+                  ? 'border-primary focus:outline-none focus:ring-2 focus:ring-primary'
                   : 'border-border cursor-not-allowed opacity-75'
               }`}
             />
@@ -281,7 +281,7 @@ const EditableProfile: React.FC = () => {
               <>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-2 bg-violet hover:bg-violet text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Edit Profile
                 </button>
@@ -325,7 +325,7 @@ const EditableProfile: React.FC = () => {
                   type="password"
                   value={passwords.current}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, current: e.target.value }))}
-                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
@@ -334,7 +334,7 @@ const EditableProfile: React.FC = () => {
                   type="password"
                   value={passwords.new}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, new: e.target.value }))}
-                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
@@ -345,7 +345,7 @@ const EditableProfile: React.FC = () => {
                   type="password"
                   value={passwords.confirm}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, confirm: e.target.value }))}
-                  className="w-full px-4 py-2 bg-surface-1/50 border border-violet rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="flex gap-3">
@@ -362,7 +362,7 @@ const EditableProfile: React.FC = () => {
                 <button
                   onClick={handlePasswordChange}
                   disabled={saving || !passwords.current || !passwords.new || !passwords.confirm}
-                  className="px-6 py-2 bg-violet hover:bg-violet disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
+                  className="px-6 py-2 bg-primary hover:bg-primary disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   {saving ? 'Changing...' : 'Change Password'}
                 </button>

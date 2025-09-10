@@ -127,7 +127,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         </h3>
         <button
           onClick={onEndTurn}
-          className="bg-violet hover:bg-violet text-white px-4 py-2 rounded font-medium"
+          className="bg-primary hover:bg-primary text-white px-4 py-2 rounded font-medium"
           disabled={!isCurrentPlayerTurn}
         >
           End Turn
@@ -137,7 +137,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
       {/* Reinforcement Phase Controls */}
       {gameState.phase === 'reinforcement' && (
         <div className="space-y-3">
-          <div className="bg-green-900/30 border border-green-600/50 p-3 rounded">
+          <div className="bg-success-soft border border-green-600/50 p-3 rounded">
             <h4 className="font-medium text-green-300 mb-2">Deploy New Armies</h4>
             <div className="text-sm text-green-200 mb-3">
               <p className="font-medium mb-2">
@@ -241,7 +241,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         <div className="space-y-3">
           {/* Go Back Button - Only show if no attacks made yet */}
           {!gameState.hasAttackedThisTurn && (
-            <div className="bg-yellow-900/30 border border-yellow-600/50 p-2 rounded">
+            <div className="bg-warning-soft border border-yellow-600/50 p-2 rounded">
               <button
                 onClick={() => dispatch(goBackToReinforcement())}
                 className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm w-full"
@@ -254,7 +254,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
             </div>
           )}
 
-          <div className="bg-red-900/30 border border-red-600/50 p-3 rounded">
+          <div className="bg-danger-soft border border-red-600/50 p-3 rounded">
             <h4 className="font-medium text-red-300 mb-2">Attack Territories</h4>
 
             {!selectedTerritory ? (
@@ -318,14 +318,14 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
             </div>
           </div>
 
-          <div className="bg-blue-900/30 border border-violet/50 p-3 rounded">
-            <h4 className="font-medium text-violet-soft mb-2">Fortify Territories</h4>
+          <div className="bg-primary-soft-bg border border-primary/50 p-3 rounded">
+            <h4 className="font-medium text-primary-soft mb-2">Fortify Territories</h4>
 
             {/* Show movement restrictions */}
             {(gameState.gameConfig?.movementType === 'classic_adjacent' ||
               gameState.gameConfig?.movementType === 'path_single') &&
               Object.keys(gameState.movementTracking || {}).length > 0 && (
-                <div className="bg-yellow-900/30 border border-yellow-600/50 rounded p-2 mb-3">
+                <div className="bg-warning-soft border border-yellow-600/50 rounded p-2 mb-3">
                   <p className="text-xs text-yellow-300 font-medium">
                     ⚠️ Only one move allowed per fortify phase (already used)
                   </p>
@@ -334,7 +334,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
             {!selectedTerritory ? (
               <div className="space-y-2">
-                <p className="text-sm text-violet-soft">
+                <p className="text-sm text-primary-soft">
                   Select one of your territories with 2+ armies to move armies from
                 </p>
                 {Object.keys(gameState.movementTracking || {}).length > 0 && (
@@ -358,7 +358,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                     <span className="ml-2 text-xs bg-yellow-200 px-1 rounded">Already moved</span>
                   )}
                 </p>
-                <p className="text-sm text-violet-soft">
+                <p className="text-sm text-primary-soft">
                   {validTargets.length > 0
                     ? `Select a destination territory (${validTargets.length} available)`
                     : gameState.gameConfig?.movementType?.includes('path')
@@ -385,7 +385,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   />
                   <button
                     onClick={handleFortify}
-                    className="bg-violet hover:bg-violet text-white px-3 py-1 rounded text-sm"
+                    className="bg-primary hover:bg-primary text-white px-3 py-1 rounded text-sm"
                   >
                     Move
                   </button>

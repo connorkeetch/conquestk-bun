@@ -38,7 +38,7 @@ export default function Register() {
     if (password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
       return { strength: 'strong', color: 'bg-green-500', width: '100%' }
     }
-    return { strength: 'good', color: 'bg-violet', width: '75%' }
+    return { strength: 'good', color: 'bg-primary', width: '75%' }
   }
 
   const passwordStrength = getPasswordStrength(password)

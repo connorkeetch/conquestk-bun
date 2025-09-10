@@ -58,7 +58,7 @@ const ActiveGamesDropdown: React.FC = () => {
       >
         <Gamepad2 className="w-6 h-6 text-muted" />
         {totalActive > 0 && (
-          <span className="absolute -top-1 -right-1 bg-violet text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+          <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
             {totalActive}
           </span>
         )}
@@ -91,7 +91,7 @@ const ActiveGamesDropdown: React.FC = () => {
                 <p className="text-muted mb-4">No games yet</p>
                 <Link
                   to="/play"
-                  className="px-4 py-2 bg-violet text-white rounded-lg hover:bg-violet transition-colors inline-flex items-center gap-2"
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors inline-flex items-center gap-2"
                   onClick={() => setIsOpen(false)}
                 >
                   Start Playing <ChevronRight className="w-4 h-4" />

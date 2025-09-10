@@ -91,14 +91,14 @@ const TutorialPage: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Objective</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Objective</h3>
                 <p className="text-muted">
                   The goal is simple: conquer territories, build armies, and eliminate all opponents to achieve global domination.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Turn Phases</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Turn Phases</h3>
                 <div className="space-y-3">
                   <div className="bg-surface-2 p-4 rounded-lg">
                     <h4 className="font-semibold text-yellow-400">1. Reinforce</h4>
@@ -126,7 +126,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Basic Controls</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Basic Controls</h3>
                 <ul className="text-muted space-y-2">
                   <li>• Click on your territories during reinforcement to place troops</li>
                   <li>• Click and drag from your territory to an enemy territory to attack</li>
@@ -152,7 +152,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-violet-soft mb-2">Capital Cities</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-2">Capital Cities</h3>
                 <p className="text-muted">
                   Each player has a capital city. Protect your capital while capturing enemy capitals. Lose your capital 
                   and you're eliminated immediately!
@@ -192,7 +192,7 @@ const TutorialPage: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Early Game</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Early Game</h3>
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
                     <Zap className="w-5 h-5 text-yellow-400 mt-0.5" />
@@ -210,7 +210,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Mid Game</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Mid Game</h3>
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
                     <Shield className="w-5 h-5 text-green-400 mt-0.5" />
@@ -228,7 +228,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Late Game</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Late Game</h3>
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
                     <Trophy className="w-5 h-5 text-purple-400 mt-0.5" />
@@ -264,7 +264,7 @@ const TutorialPage: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">How ELO Works</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">How ELO Works</h3>
                 <p className="text-muted">
                   The ELO rating system measures your skill level based on game results. Everyone starts at 1000 ELO.
                   Win against higher-rated players to gain more points, lose to lower-rated players to lose more points.
@@ -273,7 +273,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">The Conqueror's Path</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">The Conqueror's Path</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
                     <span className="text-2xl">🛡️</span>
@@ -358,7 +358,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Earning Points</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Earning Points</h3>
                 <ul className="text-muted space-y-2">
                   <li>• Win games to increase your rating</li>
                   <li>• Performance matters - eliminating more players gives bonus points</li>
@@ -376,7 +376,7 @@ const TutorialPage: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Getting Started</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Getting Started</h3>
                 <p className="text-muted mb-3">
                   Create your own custom maps using our intuitive token-based map editor. Share your creations with the community!
                 </p>
@@ -394,7 +394,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Editor Modes</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Editor Modes</h3>
                 <div className="grid gap-3">
                   <div className="bg-surface-2 p-4 rounded-lg">
                     <h4 className="font-semibold text-green-400">🗺️ Territories Mode</h4>
@@ -404,7 +404,7 @@ const TutorialPage: React.FC = () => {
                   </div>
                   
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-semibold text-violet-soft">🌍 Continents Mode</h4>
+                    <h4 className="font-semibold text-primary-soft">🌍 Continents Mode</h4>
                     <p className="text-muted text-sm mt-1">
                       Create continent groups with bonus army values. Assign colors for visual distinction.
                     </p>
@@ -427,7 +427,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Capital Assignment System</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Capital Assignment System</h3>
                 <p className="text-muted mb-3">
                   The new capital system ensures balanced starting positions for all player counts:
                 </p>
@@ -437,7 +437,7 @@ const TutorialPage: React.FC = () => {
                     <span><strong>Auto-Generation:</strong> Uses maximin distance algorithm to maximize spacing between starting positions</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-violet-soft">🎯</span>
+                    <span className="text-primary-soft">🎯</span>
                     <span><strong>Manual Override:</strong> Click territories in Capitals mode to customize assignments</span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -452,7 +452,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Map Requirements</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Map Requirements</h3>
                 <table className="w-full text-muted">
                   <thead>
                     <tr className="border-b border-border">
@@ -487,7 +487,7 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Getting Maps Approved</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Getting Maps Approved</h3>
                 <div className="bg-surface-2 p-4 rounded-lg">
                   <h4 className="font-semibold text-green-400 mb-2">Approval Process:</h4>
                   <ol className="text-muted space-y-2 list-decimal list-inside">
@@ -505,14 +505,14 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Advanced Features</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Features</h3>
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="text-purple-400">📏</span>
                     <span><strong>Grid Snap:</strong> Enable grid for precise territory placement</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-violet-soft">🔄</span>
+                    <span className="text-primary-soft">🔄</span>
                     <span><strong>Import/Export:</strong> Save work as JSON for backup or sharing</span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -539,7 +539,7 @@ const TutorialPage: React.FC = () => {
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Game Settings</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Game Settings</h3>
                 <div className="space-y-4">
                   <div className="bg-surface-2 p-4 rounded-lg">
                     <h4 className="font-semibold text-yellow-400">Turn Timer</h4>
@@ -556,7 +556,7 @@ const TutorialPage: React.FC = () => {
                   </div>
                   
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-semibold text-violet-soft">Card Trade-In</h4>
+                    <h4 className="font-semibold text-primary-soft">Card Trade-In</h4>
                     <p className="text-muted text-sm mt-1">
                       Fixed bonuses (4, 6, 8, 10...) or progressive (4, 7, 10, 15, 20...). Progressive makes late game explosive.
                     </p>
@@ -572,29 +572,29 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Room Options</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Room Options</h3>
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-violet-soft mt-0.5" />
+                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
                     <span><strong>Player Count:</strong> 2-8 players per game</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-violet-soft mt-0.5" />
+                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
                     <span><strong>Private Games:</strong> Create password-protected rooms</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-violet-soft mt-0.5" />
+                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
                     <span><strong>AI Players:</strong> Fill empty slots with computer opponents</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-violet-soft mt-0.5" />
+                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
                     <span><strong>Spectators:</strong> Allow others to watch your game</span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-violet-soft mb-3">Advanced Options</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Options</h3>
                 <div className="bg-surface-2 p-4 rounded-lg">
                   <ul className="text-muted space-y-2">
                     <li>• <strong>Alliance Mode:</strong> Team up for 2v2 or 3v3 battles</li>

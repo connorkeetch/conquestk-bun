@@ -110,7 +110,7 @@ export default function AdminContent() {
           <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-violet-soft">
+                <div className="text-2xl font-bold text-primary-soft">
                   {contentQueue.filter((item) => item.contentType === 'map').length}
                 </div>
                 <div className="text-sm text-muted">Maps to Review</div>
@@ -139,7 +139,7 @@ export default function AdminContent() {
               <h2 className="text-xl font-bold">Approval Queue</h2>
               <button
                 onClick={loadContentQueue}
-                className="bg-violet hover:brightness-110 px-4 py-2 rounded text-sm"
+                className="bg-primary hover:brightness-110 px-4 py-2 rounded text-sm"
               >
                 🔄 Refresh
               </button>
@@ -157,7 +157,7 @@ export default function AdminContent() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadContentQueue}
-                className="bg-violet hover:brightness-110 px-4 py-2 rounded"
+                className="bg-primary hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -223,7 +223,7 @@ export default function AdminContent() {
                               href={`/map-editor?id=${item.contentId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-violet-soft hover:text-violet-soft underline"
+                              className="text-primary-soft hover:text-primary-soft underline"
                             >
                               View in Map Editor →
                             </a>

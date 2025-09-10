@@ -250,7 +250,7 @@ const LobbyPage: React.FC = () => {
         <div className="flex gap-3">
           <Link
             to="/create"
-            className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors"
           >
             🎮 Create Game
           </Link>
@@ -274,7 +274,7 @@ const LobbyPage: React.FC = () => {
                   type="checkbox"
                   checked={filters.showFull}
                   onChange={(e) => setFilters((prev) => ({ ...prev, showFull: e.target.checked }))}
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-violet"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-primary"
                 />
                 <span>Show Full Games</span>
               </label>
@@ -287,7 +287,7 @@ const LobbyPage: React.FC = () => {
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, showInProgress: e.target.checked }))
                   }
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-violet"
+                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-primary"
                 />
                 <span>Show In Progress</span>
               </label>
@@ -306,7 +306,7 @@ const LobbyPage: React.FC = () => {
                       minPlayers: parseInt(e.target.value, 10) || 2,
                     }))
                   }
-                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-violet focus:outline-none"
+                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-primary focus:outline-none"
                 />
               </label>
             </div>
@@ -324,7 +324,7 @@ const LobbyPage: React.FC = () => {
                       maxPlayers: parseInt(e.target.value, 10) || 12,
                     }))
                   }
-                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-violet focus:outline-none"
+                  className="w-full mt-1 px-2 py-1 bg-surface-2 text-white rounded border border-border focus:border-primary focus:outline-none"
                 />
               </label>
             </div>
@@ -337,7 +337,7 @@ const LobbyPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'browse'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('browse')}
@@ -348,7 +348,7 @@ const LobbyPage: React.FC = () => {
           <button
             className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeTab === 'my-games'
-                ? 'text-violet-soft border-b-2 border-violet'
+                ? 'text-primary-soft border-b-2 border-primary'
                 : 'text-muted hover:text-white'
             }`}
             onClick={() => setActiveTab('my-games')}
@@ -359,7 +359,7 @@ const LobbyPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'private'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('private')}
@@ -369,7 +369,7 @@ const LobbyPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'tournaments'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('tournaments')}
@@ -419,7 +419,7 @@ const LobbyPage: React.FC = () => {
                 <p className="text-sm mb-6">Be the first to create a game for others to join!</p>
                 <Link
                   to="/create"
-                  className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
+                  className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
                 >
                   🎮 Create Game
                 </Link>
@@ -493,7 +493,7 @@ const LobbyPage: React.FC = () => {
                             className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
                               game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
                                 ? 'bg-surface-2 text-muted opacity-50 cursor-not-allowed'
-                                : 'bg-violet hover:brightness-110 text-white'
+                                : 'bg-primary hover:brightness-110 text-white'
                             }`}
                           >
                             {game.currentPlayers >= game.maxPlayers
@@ -531,7 +531,7 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('all')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'all'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
@@ -541,7 +541,7 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('active')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'active'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
@@ -552,7 +552,7 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('waiting')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'waiting'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
@@ -563,7 +563,7 @@ const LobbyPage: React.FC = () => {
                 onClick={() => setMyGamesFilter('finished')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   myGamesFilter === 'finished'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-2 text-muted hover:bg-surface-1'
                 }`}
               >
@@ -590,7 +590,7 @@ const LobbyPage: React.FC = () => {
                   </button>
                   <Link
                     to="/create"
-                    className="px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
+                    className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
                   >
                     ➕ Create Game
                   </Link>
@@ -651,7 +651,7 @@ const LobbyPage: React.FC = () => {
                           {game.status === 'waiting' ? (
                             <Link
                               to={`/room/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-violet hover:brightness-110 text-white rounded-lg transition-colors"
+                              className="px-3 py-1 text-sm font-medium bg-primary hover:brightness-110 text-white rounded-lg transition-colors"
                             >
                               📋 View Lobby
                             </Link>
@@ -696,12 +696,12 @@ const LobbyPage: React.FC = () => {
                   value={privateGameCode}
                   onChange={(e) => setPrivateGameCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinPrivateGame()}
-                  className="w-full text-center text-lg bg-surface-2 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-border focus:border-violet focus:outline-none tracking-wider font-mono"
+                  className="w-full text-center text-lg bg-surface-2 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-border focus:border-primary focus:outline-none tracking-wider font-mono"
                 />
                 <button
                   onClick={handleJoinPrivateGame}
                   disabled={!privateGameCode.trim()}
-                  className="w-full px-4 py-2 bg-violet hover:brightness-110 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   🎮 Join Game
                 </button>

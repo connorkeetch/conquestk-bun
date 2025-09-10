@@ -14,7 +14,7 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
     <div 
       onClick={handleClick}
       className={`mt-2 rounded-lg overflow-hidden cursor-pointer transition-opacity hover:opacity-90 ${
-        isOwnMessage ? 'bg-violet' : 'bg-surface-1'
+        isOwnMessage ? 'bg-primary' : 'bg-surface-1'
       }`}
     >
       {preview.image && (

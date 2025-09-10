@@ -39,7 +39,7 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 isOwnMessage 
-                  ? 'bg-violet text-white' 
+                  ? 'bg-primary text-white' 
                   : 'bg-surface-2 text-gray-200'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >

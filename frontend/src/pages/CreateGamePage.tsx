@@ -313,7 +313,7 @@ const CreateGamePage: React.FC = () => {
             <p className="text-muted">
               Configure your perfect strategic warfare experience
               {guntsPrescriptions && (
-                <span className="block mt-1 text-sm text-violet-soft italic">
+                <span className="block mt-1 text-sm text-primary-soft italic">
                   💊 "Just what the doctor ordered!" - Dr. Gunt
                 </span>
               )}
@@ -367,7 +367,7 @@ const CreateGamePage: React.FC = () => {
                 <input
                   type="text"
                   placeholder={useAutoName ? generateSmartName() : "Enter custom game name"}
-                  className={`w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-violet focus:outline-none transition-all duration-200 pr-12 ${
+                  className={`w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-primary focus:outline-none transition-all duration-200 pr-12 ${
                     useAutoName ? 'bg-surface-2/50 cursor-not-allowed' : ''
                   }`}
                   value={gameName}
@@ -383,7 +383,7 @@ const CreateGamePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setGameName(generateSmartName())}
-                      className="p-1.5 text-violet-soft hover:text-violet-soft bg-blue-900/30 hover:bg-blue-900/50 rounded transition-all"
+                      className="p-1.5 text-primary-soft hover:text-primary-soft bg-primary-soft-bg hover:bg-blue-900/50 rounded transition-all"
                       title="Generate smart name"
                     >
                       ✨
@@ -414,7 +414,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setGameVisibility('public')}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'public'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
@@ -425,7 +425,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setGameVisibility('private')}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'private'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
@@ -437,7 +437,7 @@ const CreateGamePage: React.FC = () => {
                     disabled
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                       gameVisibility === 'tournament'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted cursor-not-allowed opacity-50'
                     }`}
                   >
@@ -490,7 +490,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTurnTimeLimit('24h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '24h'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
@@ -501,7 +501,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTurnTimeLimit('12h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '12h'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
@@ -512,7 +512,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTurnTimeLimit('6h')}
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       turnTimeLimit === '6h'
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-2 text-muted hover:bg-gray-600'
                     }`}
                   >
@@ -527,7 +527,7 @@ const CreateGamePage: React.FC = () => {
                   <input
                     type="text"
                     placeholder="Enter invite code (e.g., GAME123)"
-                    className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-violet focus:outline-none transition-all duration-200"
+                    className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-primary focus:outline-none transition-all duration-200"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   />
@@ -540,7 +540,7 @@ const CreateGamePage: React.FC = () => {
           {/* Ranked Game Info */}
           {isRanked && (
             <div className="mt-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
-              <div className="p-3 bg-yellow-900/30 rounded-lg border border-yellow-600/50">
+              <div className="p-3 bg-warning-soft rounded-lg border border-yellow-600/50">
                 <p className="text-sm font-semibold text-yellow-400 mb-2">⚔️ Ranked Game Requirements:</p>
                 <ul className="text-xs text-muted space-y-1">
                   <li>• Minimum 3 players required</li>
@@ -655,7 +655,7 @@ const CreateGamePage: React.FC = () => {
                     isDisabled
                       ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
                       : maxPlayers === playerCount
-                        ? 'bg-violet text-white shadow-lg'
+                        ? 'bg-primary text-white shadow-lg'
                         : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
                   }`}
                   disabled={isDisabled}
@@ -691,7 +691,7 @@ const CreateGamePage: React.FC = () => {
                     !isValid
                       ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
                       : teams === teamOption
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -748,7 +748,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(5)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     turnTimeLimit === 5
-                      ? 'bg-violet text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -759,7 +759,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(10)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     turnTimeLimit === 10
-                      ? 'bg-violet text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -776,7 +776,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(6 * 60)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     turnTimeLimit === 6 * 60
-                      ? 'bg-violet text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -787,7 +787,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(12 * 60)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     turnTimeLimit === 12 * 60
-                      ? 'bg-violet text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -798,7 +798,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(24 * 60)}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     turnTimeLimit === 24 * 60
-                      ? 'bg-violet text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -826,7 +826,7 @@ const CreateGamePage: React.FC = () => {
                 key={option.value}
                 className={`group relative px-3 py-3 rounded-lg font-medium text-sm transition-colors cursor-pointer ${
                   fortification === option.value
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
                 onClick={() => setFortification(option.value)}
@@ -861,7 +861,7 @@ const CreateGamePage: React.FC = () => {
                 key={option.value}
                 className={`group relative px-3 py-3 rounded-lg font-medium text-sm transition-colors cursor-pointer ${
                   spoilsType === option.value
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
                 onClick={() => setSpoilsType(option.value)}
@@ -1122,7 +1122,7 @@ const CreateGamePage: React.FC = () => {
                     key={map.id}
                     className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedMap === map.id
-                        ? 'bg-violet shadow-lg'
+                        ? 'bg-primary shadow-lg'
                         : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                     }`}
                     onClick={() => setSelectedMap(map.id)}
@@ -1169,7 +1169,7 @@ const CreateGamePage: React.FC = () => {
       {/* Action Buttons */}
       <div className="max-w-7xl mx-auto flex gap-4">
         <button
-          className="flex-1 py-3 bg-violet hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+          className="flex-1 py-3 bg-primary hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
           onClick={handleCreateGame}
           disabled={isCreating || (gameVisibility === 'private' && !inviteCode.trim())}
         >

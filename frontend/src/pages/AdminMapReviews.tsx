@@ -144,7 +144,7 @@ export const AdminMapReviews: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading review queue...</p>
         </div>
       </div>
@@ -249,7 +249,7 @@ export const AdminMapReviews: React.FC = () => {
                       type="checkbox"
                       checked={selectedRequests.size === approvalRequests.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-gray-300 focus:ring-violet focus:border-violet"
+                      className="rounded border-gray-300 focus:ring-primary focus:border-primary"
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -280,7 +280,7 @@ export const AdminMapReviews: React.FC = () => {
                         type="checkbox"
                         checked={selectedRequests.has(request.id)}
                         onChange={(e) => handleRequestSelection(request.id, e.target.checked)}
-                        className="rounded border-gray-300 focus:ring-violet focus:border-violet"
+                        className="rounded border-gray-300 focus:ring-primary focus:border-primary"
                       />
                     </td>
                     <td className="px-6 py-4">

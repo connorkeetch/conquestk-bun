@@ -88,7 +88,7 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
                   <div className="text-xs text-muted mt-1 space-x-3">
                     {modifier.defense_bonus !== 0 && (
                       <span
-                        className={modifier.defense_bonus > 0 ? 'text-violet-soft' : 'text-red-400'}
+                        className={modifier.defense_bonus > 0 ? 'text-primary-soft' : 'text-red-400'}
                       >
                         🛡️ {modifier.defense_bonus > 0 ? '+' : ''}
                         {modifier.defense_bonus}

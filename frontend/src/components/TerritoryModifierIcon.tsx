@@ -68,7 +68,7 @@ export const TerritoryModifierIcon: React.FC<TerritoryModifierIconProps> = ({
 
       {/* Bonus indicators */}
       {modifier.defense_bonus > 0 && (
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-violet rounded-full text-[8px] text-white flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full text-[8px] text-white flex items-center justify-center">
           +{modifier.defense_bonus}
         </span>
       )}

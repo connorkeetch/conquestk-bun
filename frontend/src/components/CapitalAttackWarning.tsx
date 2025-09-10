@@ -29,7 +29,7 @@ const CapitalAttackWarning: React.FC<CapitalAttackWarningProps> = ({
           </p>
           <p className="text-2xl font-bold text-red-400">👑 {territoryName}</p>
 
-          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 my-6">
+          <div className="bg-danger-soft border border-red-700 rounded-lg p-4 my-6">
             <p className="text-red-300 font-semibold text-lg mb-2">⚔️ INSTANT ELIMINATION</p>
             <p className="text-muted">
               If you capture this capital, {defenderName} will be{' '}

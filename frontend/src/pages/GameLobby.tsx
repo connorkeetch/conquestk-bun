@@ -125,7 +125,7 @@ export default function GameLobby() {
                   disabled={
                     room.status !== 'waiting' || (room.players?.length || 0) >= room.maxPlayers
                   }
-                  className="bg-violet hover:bg-violet disabled:bg-gray-600 px-4 py-2 rounded"
+                  className="bg-primary hover:bg-primary disabled:bg-gray-600 px-4 py-2 rounded"
                 >
                   Join
                 </button>

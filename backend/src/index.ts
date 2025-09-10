@@ -282,6 +282,7 @@ app.use('/api/feature-flags', require('./routes/featureFlags').default)
 app.use('/api/queues', require('./routes/queueRoutes').default)
 app.use('/api/performance', require('./routes/performanceRoutes').default)
 app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
+app.use('/api/preferences', require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()))
 
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {

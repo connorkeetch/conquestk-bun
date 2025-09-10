@@ -60,7 +60,7 @@ export default function VerifyEmailToken() {
         <div className="bg-surface-1/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 shadow-2xl text-center">
           {status === 'verifying' && (
             <>
-              <div className="w-16 h-16 border-4 border-violet border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">Verifying Email</h2>
               <p className="text-muted">Please wait while we verify your email address...</p>
             </>

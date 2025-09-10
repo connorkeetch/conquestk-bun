@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { authService } from '../services/authService'
 import type { User } from '../types/user'
+import { applyTheme } from '../config/themes.config'
 
 interface AuthState {
   user: User | null
@@ -31,6 +32,13 @@ export const login = createAsyncThunk(
     try {
       const response = await authService.login(credentials)
       localStorage.setItem('token', response.token)
+      
+      // Apply theme from user preferences if available
+      if (response.user?.preferences?.theme) {
+        applyTheme(response.user.preferences.theme)
+        localStorage.setItem('colorTheme', response.user.preferences.theme)
+      }
+      
       return response
     } catch (error: any) {
       // authService throws the error.response.data directly for API errors
@@ -67,6 +75,12 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWi
     if (response.user.settings) {
       const { loadServerSettings } = await import('./settingsSlice')
       dispatch(loadServerSettings(response.user.settings))
+    }
+    
+    // Apply theme from user preferences if available
+    if (response.user?.preferences?.theme) {
+      applyTheme(response.user.preferences.theme)
+      localStorage.setItem('colorTheme', response.user.preferences.theme)
     }
     
     return { user: response.user, token }

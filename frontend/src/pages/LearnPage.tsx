@@ -19,7 +19,7 @@ const LearnPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'tutorial'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('tutorial')}
@@ -29,7 +29,7 @@ const LearnPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'rules'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('rules')}
@@ -39,7 +39,7 @@ const LearnPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'strategies'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('strategies')}
@@ -49,7 +49,7 @@ const LearnPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'videos'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('videos')}

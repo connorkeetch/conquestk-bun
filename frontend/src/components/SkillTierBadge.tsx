@@ -40,7 +40,7 @@ const SKILL_TIERS: SkillTier[] = [
     minRating: 800, 
     maxRating: 999, 
     icon: '⚓', 
-    color: 'text-violet',
+    color: 'text-primary',
     description: 'Expands by plunder and coastal terror campaigns'
   },
   { 

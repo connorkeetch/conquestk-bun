@@ -139,7 +139,7 @@ export default function AdminGames() {
       case 'paused':
         return 'text-orange-400'
       case 'completed':
-        return 'text-violet-soft'
+        return 'text-primary-soft'
       case 'abandoned':
         return 'text-red-400'
       default:
@@ -246,7 +246,7 @@ export default function AdminGames() {
                 placeholder="Search games by name, map, or player..."
                 className="flex-1 px-4 py-2 bg-surface-2 border border-border rounded-lg"
               />
-              <button type="submit" className="bg-violet hover:bg-violet px-6 py-2 rounded-lg">
+              <button type="submit" className="bg-primary hover:bg-primary px-6 py-2 rounded-lg">
                 🔍 Search
               </button>
             </form>
@@ -290,7 +290,7 @@ export default function AdminGames() {
               <h2 className="text-xl font-bold">Games ({totalGames.toLocaleString()})</h2>
               <button
                 onClick={loadGames}
-                className="bg-violet hover:bg-violet px-4 py-2 rounded text-sm"
+                className="bg-primary hover:bg-primary px-4 py-2 rounded text-sm"
               >
                 🔄 Refresh
               </button>
@@ -308,7 +308,7 @@ export default function AdminGames() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadGames}
-                className="bg-violet hover:bg-violet px-4 py-2 rounded"
+                className="bg-primary hover:bg-primary px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -393,7 +393,7 @@ export default function AdminGames() {
                     <div className="flex flex-col space-y-2 ml-6">
                       <button
                         onClick={() => openActionModal(game, 'spectate')}
-                        className="bg-violet hover:bg-violet px-3 py-1 rounded text-sm"
+                        className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                       >
                         👁️ Spectate
                       </button>
@@ -518,7 +518,7 @@ export default function AdminGames() {
                 disabled={actionModal.action === 'force_end' && !actionNotes.trim()}
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
                   actionModal.action === 'spectate'
-                    ? 'bg-violet hover:bg-violet'
+                    ? 'bg-primary hover:bg-primary'
                     : actionModal.action === 'force_end'
                       ? 'bg-red-600 hover:bg-red-700'
                       : actionModal.action === 'pause'

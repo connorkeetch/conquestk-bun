@@ -79,7 +79,7 @@ export default function AdminDashboard() {
           <div>Error: {error}</div>
           <button
             onClick={loadDashboardData}
-            className="mt-4 bg-violet hover:brightness-110 px-4 py-2 rounded"
+            className="mt-4 bg-primary hover:brightness-110 px-4 py-2 rounded"
           >
             Retry
           </button>
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
           <div className="bg-surface-2 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-violet-soft">
+                <div className="text-2xl font-bold text-primary-soft">
                   {systemStatus?.database.userCount.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted">Total Users</div>
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
                         onChange={(e) => toggleFeatureFlag(flagName, e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet"></div>
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                 ))}

@@ -540,7 +540,7 @@ export default function Settings() {
           const buttonClass = setting.buttonVariant === 'danger'
             ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
             : setting.buttonVariant === 'primary' 
-            ? `px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+            ? `px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
             : `btn-secondary text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
@@ -583,7 +583,7 @@ export default function Settings() {
                           setUsernameAvailable(null)
                         }
                       }}
-                      className="px-3 py-1 bg-violet hover:bg-violet text-white text-sm rounded transition-colors"
+                      className="px-3 py-1 bg-primary hover:bg-primary text-white text-sm rounded transition-colors"
                     >
                       Edit
                     </button>
@@ -798,7 +798,7 @@ export default function Settings() {
                       
                       {/* Selected Check */}
                       {setting.defaultValue === theme.id && (
-                        <svg className="w-5 h-5 text-violet flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       )}
@@ -848,7 +848,7 @@ export default function Settings() {
               <span>
                 Your account email for notifications and recovery •{' '}
                 {user?.emailVerified ? (
-                  <span className="text-violet-soft font-semibold">✓ Verified</span>
+                  <span className="text-primary-soft font-semibold">✓ Verified</span>
                 ) : (
                   <span className="text-red-400 font-semibold">⚠ Not Verified</span>
                 )}
@@ -1417,7 +1417,7 @@ export default function Settings() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                       activeTab === tab.id
-                        ? 'bg-violet/20 text-violet-soft border border-violet/30'
+                        ? 'bg-primary/20 text-primary-soft border border-primary/30'
                         : 'text-muted hover:bg-slate-700/50 hover:text-white'
                     }`}
                   >

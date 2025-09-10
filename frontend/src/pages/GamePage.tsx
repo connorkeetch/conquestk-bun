@@ -67,7 +67,7 @@ const GamePage: React.FC = () => {
               <div className="flex gap-1">
                 <button
                   className={`px-3 py-1 rounded text-sm ${
-                    activeTab === 'board' ? 'bg-violet' : 'bg-surface-2'
+                    activeTab === 'board' ? 'bg-primary' : 'bg-surface-2'
                   }`}
                   onClick={() => setActiveTab('board')}
                 >
@@ -75,7 +75,7 @@ const GamePage: React.FC = () => {
                 </button>
                 <button
                   className={`px-3 py-1 rounded text-sm ${
-                    activeTab === 'chat' ? 'bg-violet' : 'bg-surface-2'
+                    activeTab === 'chat' ? 'bg-primary' : 'bg-surface-2'
                   }`}
                   onClick={() => setActiveTab('chat')}
                 >
@@ -83,7 +83,7 @@ const GamePage: React.FC = () => {
                 </button>
                 <button
                   className={`px-3 py-1 rounded text-sm ${
-                    activeTab === 'stats' ? 'bg-violet' : 'bg-surface-2'
+                    activeTab === 'stats' ? 'bg-primary' : 'bg-surface-2'
                   }`}
                   onClick={() => setActiveTab('stats')}
                 >
@@ -119,7 +119,7 @@ const GamePage: React.FC = () => {
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'board'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('board')}
@@ -128,7 +128,7 @@ const GamePage: React.FC = () => {
               </button>
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'chat' ? 'bg-violet text-white' : 'text-muted hover:text-white'
+                  activeTab === 'chat' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('chat')}
               >
@@ -137,7 +137,7 @@ const GamePage: React.FC = () => {
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'stats'
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('stats')}
@@ -152,11 +152,11 @@ const GamePage: React.FC = () => {
                 <div>
                   <h3 className="font-bold mb-4">Game Controls</h3>
                   <div className="space-y-3">
-                    <div className="text-center p-3 bg-violet rounded">
+                    <div className="text-center p-3 bg-primary rounded">
                       <div className="font-bold">ATTACK PHASE</div>
                       <div className="text-sm">Click territories to attack</div>
                     </div>
-                    <button className="w-full px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors">
+                    <button className="w-full px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors">
                       End Attack Phase
                     </button>
                     <button className="btn-secondary w-full px-4 py-2">

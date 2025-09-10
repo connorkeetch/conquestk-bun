@@ -546,6 +546,26 @@ To switch themes: Use Redux setTheme() action
   color: var(--color-success);
 }
 
+@utility bg-success-soft {
+  background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
+}
+
+@utility bg-warning-soft {
+  background-color: color-mix(in srgb, var(--color-warning) 15%, transparent);
+}
+
+@utility bg-danger-soft {
+  background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
+}
+
+@utility bg-info-soft {
+  background-color: color-mix(in srgb, var(--color-info) 15%, transparent);
+}
+
+@utility bg-primary-soft-bg {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
 @utility text-warning {
   color: var(--color-warning);
 }
