@@ -62,7 +62,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 glass border-b border-white/10">
-        <div className="w-full container-padding h-14 flex items-center justify-between relative">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between relative">
           {/* Left */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -374,12 +374,11 @@ export default function Header() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="text-sm text-muted text-center mb-2">Login to play</div>
+              <div className="space-y-3">
                 <Link
                   to="/login"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block w-full px-4 py-2 text-center text-muted hover:text-white transition-colors"
+                  className="btn-secondary block w-full text-center"
                 >
                   Login
                 </Link>

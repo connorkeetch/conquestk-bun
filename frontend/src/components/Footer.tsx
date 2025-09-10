@@ -6,23 +6,14 @@ export default function Footer() {
   
   return (
     <footer className="footer">
-      <div className="w-full container-padding py-6">
-        {/* Use justify-between like header for proper left/right alignment */}
-        <div className="flex flex-col sm:flex-row items-center text-body-sm text-muted">
-          <div className="w-full flex items-center justify-between">
-            {/* Copyright - Far left */}
-            <div className="text-left">
-              © 2025 Conquest K. All rights reserved.
-            </div>
-            
-            {/* Version - Far right */}
-            <div className="text-right">
-              Beta v0.9.1
-            </div>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted">
+          <div className="text-center sm:text-left">
+            <div>© 2025 Conquest K. All rights reserved.</div>
+            <div className="text-xs mt-1">Not affiliated with Hasbro or Risk®</div>
           </div>
           
-          {/* Legal Links - Centered below on mobile, between on desktop */}
-          <nav className="flex gap-4 text-xs sm:text-sm justify-center mt-2 sm:mt-0 sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">
+          <nav className="flex gap-4 text-xs sm:text-sm">
             <Link 
               to="/terms" 
               className="footer-link"
@@ -44,6 +35,8 @@ export default function Footer() {
               Contact
             </a>
           </nav>
+          
+          <div className="text-xs">Beta v0.9.1</div>
         </div>
       </div>
     </footer>
