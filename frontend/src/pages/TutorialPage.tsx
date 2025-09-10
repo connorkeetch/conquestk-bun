@@ -19,7 +19,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('basics')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'basics' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -30,7 +30,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('gametypes')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'gametypes' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -41,7 +41,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('strategy')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'strategy' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -52,7 +52,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('rankings')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'rankings' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -63,7 +63,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('editor')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'editor' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -74,7 +74,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('options')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'options' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >

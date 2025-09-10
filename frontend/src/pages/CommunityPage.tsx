@@ -59,9 +59,9 @@ const CommunityPage: React.FC = () => {
   }
 
   const renderRankBadge = (rank: number) => {
-    if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />
+    if (rank === 1) return <Crown className="w-6 h-6 text-warning" />
     if (rank === 2) return <Medal className="w-6 h-6 text-muted" />
-    if (rank === 3) return <Medal className="w-6 h-6 text-amber-500" />
+    if (rank === 3) return <Medal className="w-6 h-6 text-warning" />
     return <span className="text-muted font-medium">#{rank}</span>
   }
 
@@ -85,7 +85,7 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('leaderboard')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'leaderboard' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-white'
           }`}
         >
@@ -96,40 +96,40 @@ const CommunityPage: React.FC = () => {
           onClick={() => setActiveTab('clans')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'clans' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
           <Shield className="w-4 h-4" />
           Clans
-          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
+          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
         </button>
         <button
           onClick={() => setActiveTab('forums')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'forums' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
           <MessageSquare className="w-4 h-4" />
           Forums
-          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
+          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
         </button>
         <button
           onClick={() => setActiveTab('events')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'events' 
-              ? 'text-violet-soft border-b-2 border-violet' 
+              ? 'text-primary-soft border-b-2 border-primary' 
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
         >
           <CalendarDays className="w-4 h-4" />
           Events
-          <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded">Soon</span>
+          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
         </button>
       </div>
 
@@ -142,7 +142,7 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('global')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'global'
-                  ? 'bg-violet text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
@@ -153,7 +153,7 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('monthly')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'monthly'
-                  ? 'bg-violet text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
@@ -164,7 +164,7 @@ const CommunityPage: React.FC = () => {
               onClick={() => setLeaderboardTab('friends')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 leaderboardTab === 'friends'
-                  ? 'bg-violet text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-surface-2 text-muted hover:bg-surface-2'
               }`}
             >
@@ -204,7 +204,7 @@ const CommunityPage: React.FC = () => {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-700">
+                  <tbody className="divide-y divide-border">
                     {currentLeaderboard.map((player, index) => (
                       <tr
                         key={player.id}
@@ -226,21 +226,21 @@ const CommunityPage: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <TrendingUp className="w-4 h-4 text-green-400" />
+                            <TrendingUp className="w-4 h-4 text-success" />
                             <span className="text-white font-medium">{player.elo}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
                           {player.gamesPlayed || player.wins + player.losses}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-green-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-success">
                           {player.wins}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className={`font-medium ${
-                            player.winRate > 60 ? 'text-green-400' :
-                            player.winRate > 50 ? 'text-yellow-400' :
-                            'text-red-400'
+                            player.winRate > 60 ? 'text-success' :
+                            player.winRate > 50 ? 'text-warning' :
+                            'text-danger'
                           }`}>
                             {player.winRate.toFixed(1)}%
                           </span>
@@ -252,7 +252,7 @@ const CommunityPage: React.FC = () => {
               </div>
             ) : (
               <div className="p-16 text-center">
-                <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <Trophy className="w-16 h-16 text-muted mx-auto mb-4" />
                 <p className="text-muted text-lg mb-2">No rankings available yet</p>
                 <p className="text-muted text-sm">Play ranked games to appear on the leaderboard</p>
               </div>
@@ -264,7 +264,7 @@ const CommunityPage: React.FC = () => {
       {/* Clans Content */}
       {activeTab === 'clans' && (
         <div className="bg-surface-2 rounded-lg p-16 text-center">
-          <Shield className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <Shield className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Clans Coming Soon</p>
           <p className="text-muted text-sm">Form alliances and compete as a team</p>
         </div>
@@ -273,7 +273,7 @@ const CommunityPage: React.FC = () => {
       {/* Forums Content */}
       {activeTab === 'forums' && (
         <div className="bg-surface-2 rounded-lg p-16 text-center">
-          <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <MessageSquare className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Forums Coming Soon</p>
           <p className="text-muted text-sm">Discuss strategies and connect with players</p>
         </div>
@@ -282,7 +282,7 @@ const CommunityPage: React.FC = () => {
       {/* Events Content */}
       {activeTab === 'events' && (
         <div className="bg-surface-2 rounded-lg p-16 text-center">
-          <CalendarDays className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <CalendarDays className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Events & Tournaments Coming Soon</p>
           <p className="text-muted text-sm">Compete in special events for exclusive rewards</p>
         </div>
