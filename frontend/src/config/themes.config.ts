@@ -44,15 +44,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#5B21B6',
       secondary: '#FFD700',
       accent: '#dc2626',
-      bgDeep: '#1a1a1a',
-      bgAlt: '#0f172a',
+      bgDeep: '#0a0a0f',        // Much darker, nearly black
+      bgAlt: '#080812',         // Inky dark blue
+      surface1: '#0f172a',      // Dark surface
+      surface2: '#111827',      // Slightly lighter surface
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#1e1b4b' },    // Dark indigo
-        { position: '30%', color: '#312e81' },   // Darker center
-        { position: '60%', color: '#4c1d95' },   // Purple center
-        { position: '100%', color: '#1e1b4b' },  // Dark indigo
+        { position: '0%', color: '#0a0814' },    // Nearly black with blue tint
+        { position: '30%', color: '#050308' },   // Inky black center
+        { position: '60%', color: '#0d0615' },   // Very dark purple
+        { position: '100%', color: '#0a0814' },  // Nearly black with blue tint
       ],
     },
   },
@@ -93,13 +98,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#8B5CF6',
       secondary: '#FFD700',
       accent: '#B22222',
+      bgDeep: '#0b0812',        // Inky black with violet tint
+      bgAlt: '#090510',         // Nearly pure black
+      surface1: '#0f172a',
+      surface2: '#111827',
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#2d1b47' },
-        { position: '30%', color: '#1a0e2e' },
-        { position: '60%', color: '#261838' },
-        { position: '100%', color: '#2d1b47' },
+        { position: '0%', color: '#0d0814' },    // Nearly black violet
+        { position: '30%', color: '#040207' },   // Inky black center
+        { position: '60%', color: '#0a0610' },   // Very dark violet
+        { position: '100%', color: '#0d0814' },  // Nearly black violet
       ],
     },
   },
@@ -113,13 +125,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#EF4444',
       secondary: '#FFD700',
       accent: '#F59E0B',
+      bgDeep: '#0d0505',        // Inky black with red tint
+      bgAlt: '#0a0303',         // Nearly pure black
+      surface1: '#0f172a',
+      surface2: '#111827',
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#450a0a' },
-        { position: '30%', color: '#220505' },
-        { position: '60%', color: '#380808' },
-        { position: '100%', color: '#450a0a' },
+        { position: '0%', color: '#110303' },    // Nearly black red
+        { position: '30%', color: '#050101' },   // Inky black center
+        { position: '60%', color: '#0f0202' },   // Very dark red
+        { position: '100%', color: '#110303' },  // Nearly black red
       ],
     },
   },
@@ -133,13 +152,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#3B82F6',
       secondary: '#FFD700',
       accent: '#06B6D4',
+      bgDeep: '#05080f',        // Inky black with blue tint
+      bgAlt: '#03050a',         // Nearly pure black
+      surface1: '#0f172a',
+      surface2: '#111827',
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#0f172a' },
-        { position: '30%', color: '#020617' },
-        { position: '60%', color: '#0c1229' },
-        { position: '100%', color: '#0f172a' },
+        { position: '0%', color: '#06090f' },    // Nearly black blue
+        { position: '30%', color: '#020305' },   // Inky black center
+        { position: '60%', color: '#05070c' },   // Very dark blue
+        { position: '100%', color: '#06090f' },  // Nearly black blue
       ],
     },
   },
@@ -153,13 +179,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#10B981',
       secondary: '#FFD700',
       accent: '#14B8A6',
+      bgDeep: '#050a08',        // Inky black with green tint
+      bgAlt: '#030605',         // Nearly pure black
+      surface1: '#0f172a',
+      surface2: '#111827',
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#14332a' },
-        { position: '30%', color: '#0a1f1a' },
-        { position: '60%', color: '#102920' },
-        { position: '100%', color: '#14332a' },
+        { position: '0%', color: '#060c0a' },    // Nearly black green
+        { position: '30%', color: '#020403' },   // Inky black center
+        { position: '60%', color: '#050907' },   // Very dark green
+        { position: '100%', color: '#060c0a' },  // Nearly black green
       ],
     },
   },
@@ -173,17 +206,20 @@ export const THEMES: ThemeDefinition[] = [
       primarySoft: '#374151',
       secondary: '#9ca3af',
       accent: '#f3f4f6',
-      bgDeep: '#000000',
-      bgAlt: '#111827',
-      surface1: '#1f2937',
-      surface2: '#374151',
+      bgDeep: '#000000',        // Pure black
+      bgAlt: '#050505',         // Nearly black
+      surface1: '#0a0a0a',      // Very dark gray
+      surface2: '#111111',      // Dark gray
+      text: '#F9FAFB',
+      textMuted: '#94A3B8',
+      border: '#1e293b',
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#111111' },
-        { position: '30%', color: '#000000' },
-        { position: '60%', color: '#0a0a0a' },
-        { position: '100%', color: '#111111' },
+        { position: '0%', color: '#050505' },    // Nearly black
+        { position: '30%', color: '#000000' },   // Pure black center
+        { position: '60%', color: '#030303' },   // Inky black
+        { position: '100%', color: '#050505' },  // Nearly black
       ],
     },
   },
@@ -228,7 +264,7 @@ export function generateCSSVariables(theme: ThemeDefinition): Record<string, str
 export function applyTheme(themeId: string): void {
   const theme = getThemeById(themeId)
   if (!theme) {
-    console.warn(`Theme "${themeId}" not found`)
+    // Theme not found, use default
     return
   }
   
@@ -254,7 +290,7 @@ export function getStoredTheme(): string {
 export function storeTheme(themeId: string): void {
   try {
     localStorage.setItem('colorTheme', themeId)
-  } catch (error) {
-    console.warn('Failed to store theme preference:', error)
+  } catch (_error) {
+    // Silently fail if localStorage is not available
   }
 }
