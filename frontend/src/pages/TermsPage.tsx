@@ -108,7 +108,7 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-100 mb-3">10. Contact</h2>
               <p className="text-muted">
                 Questions? Email us at{' '}
-                <a href="mailto:support@conquestk.com" className="text-violet-soft hover:text-violet-soft">
+                <a href="mailto:support@conquestk.com" className="text-primary-soft hover:text-primary-soft">
                   support@conquestk.com
                 </a>
               </p>

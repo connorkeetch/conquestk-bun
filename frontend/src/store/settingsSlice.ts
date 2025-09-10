@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PlayerColor } from '../constants/colors'
+import preferencesService from '../services/preferencesService'
 
 // Theme types - Extended for multi-theme support
 export type ColorTheme = 'violet' | 'red' | 'blue' | 'green' | 'black' | 'default'
@@ -127,6 +128,10 @@ const settingsSlice = createSlice({
     setTheme: (state, action: PayloadAction<Theme>) => {
       state.display.theme = action.payload
       saveSettings(state)
+      // Also save to backend if user is logged in
+      preferencesService.updateTheme(action.payload).catch(() => {
+        // Silently fail if not logged in or backend unavailable
+      })
     },
 
     // Audio settings

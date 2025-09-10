@@ -10,7 +10,7 @@ interface TeamAssignmentProps {
 
 const TEAM_COLORS = [
   { id: 1, name: 'Team Red', color: 'bg-red-600', border: 'border-red-500' },
-  { id: 2, name: 'Team Blue', color: 'bg-violet', border: 'border-violet' },
+  { id: 2, name: 'Team Blue', color: 'bg-primary', border: 'border-primary' },
   { id: 3, name: 'Team Green', color: 'bg-green-600', border: 'border-green-500' },
   { id: 4, name: 'Team Yellow', color: 'bg-yellow-600', border: 'border-yellow-500' },
 ]

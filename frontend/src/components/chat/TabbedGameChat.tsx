@@ -99,7 +99,7 @@ export default function TabbedGameChat({
               flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap
               transition-all relative
               ${activeTab === tab.id
-                ? 'bg-surface-2 text-white border-b-2 border-violet'
+                ? 'bg-surface-2 text-white border-b-2 border-primary'
                 : 'text-muted hover:text-white hover:bg-surface-2/50'
               }
               ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : ''}

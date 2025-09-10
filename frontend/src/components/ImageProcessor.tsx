@@ -250,7 +250,7 @@ export default function ImageProcessor({
               </button>
               <button
                 onClick={handleProcess}
-                className="px-4 py-2 bg-violet hover:bg-violet rounded text-white"
+                className="px-4 py-2 bg-primary hover:bg-primary rounded text-white"
               >
                 Apply Crop
               </button>

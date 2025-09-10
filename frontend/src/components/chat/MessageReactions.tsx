@@ -30,7 +30,7 @@ export default function MessageReactions({
             onClick={() => hasReacted ? onRemoveReaction(reaction.emoji) : onReact(reaction.emoji)}
             className={`px-2 py-1 rounded-full text-sm flex items-center gap-1 transition-all ${
               hasReacted
-                ? 'bg-violet text-white hover:bg-violet'
+                ? 'bg-primary text-white hover:bg-primary'
                 : 'bg-surface-2 text-gray-200 hover:bg-gray-600'
             }`}
             title={reaction.users.map(u => u.username).join(', ')}

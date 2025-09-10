@@ -112,7 +112,7 @@ export default function NotificationDropdown() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs text-violet-soft hover:text-violet-soft transition-colors"
+                  className="text-xs text-primary-soft hover:text-primary-soft transition-colors"
                 >
                   Mark all read
                 </button>
@@ -151,7 +151,7 @@ export default function NotificationDropdown() {
                         className={`px-3 sm:px-4 py-2 sm:py-3 hover:bg-surface-1 transition-colors cursor-pointer border-l-2 ${
                           notification.read
                             ? 'border-transparent'
-                            : 'border-violet bg-blue-900/10'
+                            : 'border-primary bg-primary-soft-bg'
                         }`}
                         onClick={() => handleNotificationClick(notification)}
                       >
@@ -180,7 +180,7 @@ export default function NotificationDropdown() {
                                 {notification.actionUrl && (
                                   <Link
                                     to={notification.actionUrl}
-                                    className="inline-block mt-2 px-3 py-1 bg-violet hover:bg-violet text-white text-xs rounded transition-colors"
+                                    className="inline-block mt-2 px-3 py-1 bg-primary hover:bg-primary text-white text-xs rounded transition-colors"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {notification.actionLabel || 'View'}
@@ -227,7 +227,7 @@ export default function NotificationDropdown() {
             <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-800">
               <Link
                 to="/notifications"
-                className="text-sm text-violet-soft hover:text-violet-soft transition-colors text-center block"
+                className="text-sm text-primary-soft hover:text-primary-soft transition-colors text-center block"
                 onClick={() => setIsOpen(false)}
               >
                 View all notifications →

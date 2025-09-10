@@ -56,7 +56,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             to="/dashboard"
-            className="bg-violet hover:bg-violet text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            className="bg-primary hover:bg-primary text-white px-6 py-3 rounded-lg font-semibold transition-colors"
           >
             🏠 Back to Dashboard
           </Link>
@@ -72,7 +72,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
         <div className="mt-8 pt-6 border-t border-slate-600">
           <p className="text-muted text-sm">
             Want to be notified when this feature launches?
-            <Link to="/settings" className="text-violet-soft hover:text-violet-soft ml-1">
+            <Link to="/settings" className="text-primary-soft hover:text-primary-soft ml-1">
               Check your notification settings
             </Link>
           </p>

@@ -182,7 +182,7 @@ export const AdminMapReview: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading review data...</p>
         </div>
       </div>
@@ -315,7 +315,7 @@ export const AdminMapReview: React.FC = () => {
                     <select
                       value={result?.status || 'pass'}
                       onChange={(e) => updateReviewResult(criterion.id, 'status', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-violet focus:border-violet ${
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
                         result?.status ? getStatusColor(result.status) : 'border-gray-300'
                       }`}
                     >
@@ -336,7 +336,7 @@ export const AdminMapReview: React.FC = () => {
                         updateReviewResult(criterion.id, 'reviewerNotes', e.target.value)
                       }
                       placeholder="Add notes about this criterion..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                       rows={2}
                     />
                   </div>
@@ -357,7 +357,7 @@ export const AdminMapReview: React.FC = () => {
             <select
               value={decision}
               onChange={(e) => setDecision(e.target.value as any)}
-              className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+              className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
             >
               <option value="approved">✅ Approve for Publication</option>
               <option value="needs_changes">⚠️ Needs Changes (Return to Draft)</option>
@@ -377,7 +377,7 @@ export const AdminMapReview: React.FC = () => {
                   ? 'Optional feedback for the creator...'
                   : 'Please provide specific feedback about what needs to be changed or why this was rejected...'
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
               rows={4}
               required={decision !== 'approved'}
             />
@@ -403,7 +403,7 @@ export const AdminMapReview: React.FC = () => {
             <button
               onClick={handleSubmitReview}
               disabled={submitting || (decision !== 'approved' && !moderatorFeedback.trim())}
-              className="px-4 py-2 bg-violet hover:brightness-110 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-primary hover:brightness-110 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting...' : 'Submit Review'}
             </button>

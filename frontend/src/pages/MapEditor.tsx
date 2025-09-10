@@ -1082,7 +1082,7 @@ export default function MapEditor() {
           </p>
           <button
             onClick={() => window.location.href = '/map-editor'}
-            className="bg-violet hover:bg-violet px-6 py-3 rounded-lg font-medium text-white"
+            className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
           >
             Return to Current Map Editor
           </button>
@@ -1100,7 +1100,7 @@ export default function MapEditor() {
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
-                className="w-full px-4 py-3 bg-violet hover:bg-violet rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 bg-primary hover:bg-primary rounded-lg text-white font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
                 <span className="text-sm text-blue-200">No cropping</span>
@@ -1232,25 +1232,25 @@ export default function MapEditor() {
                 </p>
                 <div className="space-y-1 mt-2">
                   <p>
-                    <span className="text-violet-soft">1.</span> Upload a background image (PNG/JPG) of
+                    <span className="text-primary-soft">1.</span> Upload a background image (PNG/JPG) of
                     your map
                   </p>
                   <p>
-                    <span className="text-violet-soft">2.</span> Create continents with bonus armies
+                    <span className="text-primary-soft">2.</span> Create continents with bonus armies
                   </p>
                   <p>
-                    <span className="text-violet-soft">3.</span> Use Territory Tool to trace
+                    <span className="text-primary-soft">3.</span> Use Territory Tool to trace
                     territories on the image
                   </p>
                   <p>
-                    <span className="text-violet-soft">4.</span> Assign territories to continents
+                    <span className="text-primary-soft">4.</span> Assign territories to continents
                   </p>
                   <p>
-                    <span className="text-violet-soft">5.</span> Connect territories with adjacency
+                    <span className="text-primary-soft">5.</span> Connect territories with adjacency
                     lines
                   </p>
                   <p>
-                    <span className="text-violet-soft">6.</span> Save your custom map!
+                    <span className="text-primary-soft">6.</span> Save your custom map!
                   </p>
                 </div>
                 <div className="mt-3 p-2 bg-surface-2 rounded text-xs">
@@ -1274,7 +1274,7 @@ export default function MapEditor() {
                   <label className="block text-sm font-medium mb-2">Background Image</label>
                   <div
                     className={`bg-surface-2 rounded-lg p-3 border-2 border-dashed transition-colors ${
-                      isDragOver ? 'border-violet bg-blue-900/20' : 'border-border'
+                      isDragOver ? 'border-primary bg-blue-900/20' : 'border-border'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -1290,7 +1290,7 @@ export default function MapEditor() {
                       
                       {/* Upload Info Display */}
                       {uploadInfo && (
-                        <div className="mb-3 p-2 bg-blue-900/50 border border-violet rounded text-violet-soft text-xs">
+                        <div className="mb-3 p-2 bg-blue-900/50 border border-primary rounded text-primary-soft text-xs">
                           ℹ️ {uploadInfo}
                         </div>
                       )}
@@ -1301,7 +1301,7 @@ export default function MapEditor() {
                           <div className="text-slate-300 text-xs">Processing image...</div>
                           <div className="w-full bg-slate-700 rounded-full h-1.5">
                             <div
-                              className="bg-violet h-1.5 rounded-full transition-all duration-300"
+                              className="bg-primary h-1.5 rounded-full transition-all duration-300"
                               style={{ width: `${uploadProgress}%` }}
                             ></div>
                           </div>
@@ -1320,7 +1320,7 @@ export default function MapEditor() {
                           <div className="flex justify-center space-x-2">
                             <button
                               onClick={() => fileInputRef.current?.click()}
-                              className="bg-violet hover:bg-violet px-3 py-1 rounded text-xs transition-colors"
+                              className="bg-primary hover:bg-primary px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
                             >
                               Change
@@ -1354,7 +1354,7 @@ export default function MapEditor() {
                                 <br />
                                 PNG, JPG, GIF, WEBP, SVG (max 10MB)
                                 <br />
-                                <span className="text-violet-soft">
+                                <span className="text-primary-soft">
                                   💡 Min: 400×300px | Max: 1600×1200px
                                 </span>
                                 <br />
@@ -1369,7 +1369,7 @@ export default function MapEditor() {
                           {!isDragOver && !isUploading && (
                             <button
                               onClick={() => fileInputRef.current?.click()}
-                              className="bg-violet hover:bg-violet px-4 py-2 rounded text-sm font-medium transition-colors"
+                              className="bg-primary hover:bg-primary px-4 py-2 rounded text-sm font-medium transition-colors"
                             >
                               Choose File
                             </button>
@@ -1416,7 +1416,7 @@ export default function MapEditor() {
                     type="text"
                     value={mapName}
                     onChange={(e) => setMapName(e.target.value)}
-                    className="max-w-md px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
+                    className="max-w-md px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     placeholder="Enter map name..."
                   />
                 </div>
@@ -1427,7 +1427,7 @@ export default function MapEditor() {
                   <textarea
                     value={mapDescription}
                     onChange={(e) => setMapDescription(e.target.value)}
-                    className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
+                    className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     rows={3}
                     placeholder="Describe your map..."
                   />
@@ -1438,7 +1438,7 @@ export default function MapEditor() {
                     id="isPublic"
                     checked={isPublic}
                     onChange={(e) => setIsPublic(e.target.checked)}
-                    className="rounded text-violet bg-slate-700 border-slate-600 focus:ring-violet"
+                    className="rounded text-primary bg-slate-700 border-slate-600 focus:ring-primary"
                   />
                   <label htmlFor="isPublic" className="text-sm text-slate-200">
                     Make Public
@@ -1464,7 +1464,7 @@ export default function MapEditor() {
                     }
                     className={`w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${
                       state.selectedTool === tool.id
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                     }`}
                   >
@@ -1488,7 +1488,7 @@ export default function MapEditor() {
                       type="text"
                       value={newTerritoryName}
                       onChange={(e) => setNewTerritoryName(e.target.value)}
-                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
+                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                       placeholder="Enter name..."
                     />
                   </div>
@@ -1504,7 +1504,7 @@ export default function MapEditor() {
                           selectedContinent: e.target.value || undefined,
                         }))
                       }
-                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-violet focus:ring-1 focus:ring-violet transition-colors"
+                      className="w-full max-w-xs px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                     >
                       <option value="">No continent</option>
                       {state.continents.map((continent) => (
@@ -1515,12 +1515,12 @@ export default function MapEditor() {
                     </select>
                   </div>
                   {state.isDrawing && (
-                    <div className="text-sm text-violet-soft">
+                    <div className="text-sm text-primary-soft">
                       Drawing... ({state.currentPolygon.length} points)
                       <br />
                       <button
                         onClick={finishTerritory}
-                        className="mt-2 bg-violet hover:bg-violet px-3 py-1 rounded text-xs"
+                        className="mt-2 bg-primary hover:bg-primary px-3 py-1 rounded text-xs"
                       >
                         Finish Territory
                       </button>
@@ -1573,7 +1573,7 @@ export default function MapEditor() {
                       <>
                         <button
                           onClick={updateContinent}
-                          className="bg-violet hover:bg-violet px-3 py-1 rounded text-sm"
+                          className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                         >
                           Update
                         </button>
@@ -1627,7 +1627,7 @@ export default function MapEditor() {
                               </span>
                               <button
                                 onClick={() => editContinent(continent.id)}
-                                className="text-xs bg-violet hover:bg-violet px-2 py-1 rounded"
+                                className="text-xs bg-primary hover:bg-primary px-2 py-1 rounded"
                               >
                                 Edit
                               </button>
@@ -1684,7 +1684,7 @@ export default function MapEditor() {
                         key={territory.id}
                         className={`text-sm p-2 rounded border ${
                           state.selectedTerritory === territory.id
-                            ? 'bg-violet text-white border-violet'
+                            ? 'bg-primary text-white border-primary'
                             : 'bg-surface-2 hover:bg-gray-600 border-border'
                         }`}
                       >

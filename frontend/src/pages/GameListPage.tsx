@@ -33,7 +33,7 @@ const GameListPage: React.FC = () => {
       case 'active':
         return 'text-green-400'
       case 'completed':
-        return 'text-violet-soft'
+        return 'text-primary-soft'
       default:
         return 'text-muted'
     }
@@ -69,7 +69,7 @@ const GameListPage: React.FC = () => {
         <div className="flex gap-3">
           <Link
             to="/lobby"
-            className="px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors"
           >
             🎮 New Game
           </Link>
@@ -103,7 +103,7 @@ const GameListPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors relative ${
             activeTab === 'active'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('active')}
@@ -118,7 +118,7 @@ const GameListPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'completed'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('completed')}
@@ -128,7 +128,7 @@ const GameListPage: React.FC = () => {
         <button
           className={`px-6 py-3 font-medium transition-colors ${
             activeTab === 'spectate'
-              ? 'text-violet-soft border-b-2 border-violet'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
           onClick={() => setActiveTab('spectate')}
@@ -153,7 +153,7 @@ const GameListPage: React.FC = () => {
                 <p className="text-sm mb-6">Create or join a game to get started!</p>
                 <Link
                   to="/lobby"
-                  className="inline-block px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors"
+                  className="inline-block px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors"
                 >
                   🎮 Find Games
                 </Link>
@@ -231,13 +231,13 @@ const GameListPage: React.FC = () => {
                             {game.currentPlayers}/{game.maxPlayers} players
                           </span>
                           {game.mapName && <span>• {game.mapName}</span>}
-                          <span className="text-violet-soft">• Completed</span>
+                          <span className="text-primary-soft">• Completed</span>
                           <span>• Finished {formatTimeAgo(game.updatedAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-violet-soft">Game Completed</div>
+                          <div className="text-lg font-bold text-primary-soft">Game Completed</div>
                           <div className="text-sm text-muted">
                             Duration: {formatTimeAgo(game.createdAt)}
                           </div>

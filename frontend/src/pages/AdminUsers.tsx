@@ -113,7 +113,7 @@ export default function AdminUsers() {
                 className="w-full px-4 py-2 bg-surface-2 border border-border rounded-lg"
               />
             </div>
-            <button type="submit" className="bg-violet hover:brightness-110 px-6 py-2 rounded-lg">
+            <button type="submit" className="bg-primary hover:brightness-110 px-6 py-2 rounded-lg">
               🔍 Search
             </button>
             {searchTerm && (
@@ -154,7 +154,7 @@ export default function AdminUsers() {
               <div className="text-red-400 mb-4">{error}</div>
               <button
                 onClick={loadUsers}
-                className="bg-violet hover:brightness-110 px-4 py-2 rounded"
+                className="bg-primary hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
               </button>
@@ -216,7 +216,7 @@ export default function AdminUsers() {
                               {user.adminRoles.map((role, index) => (
                                 <span
                                   key={index}
-                                  className="inline-block bg-violet text-xs px-2 py-1 rounded"
+                                  className="inline-block bg-primary text-xs px-2 py-1 rounded"
                                 >
                                   {role}
                                 </span>
@@ -236,7 +236,7 @@ export default function AdminUsers() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setEditModal({ user, isOpen: true })}
-                              className="bg-violet hover:brightness-110 px-3 py-1 rounded text-xs"
+                              className="bg-primary hover:brightness-110 px-3 py-1 rounded text-xs"
                             >
                               Edit
                             </button>
@@ -315,7 +315,7 @@ export default function AdminUsers() {
                       }}
                       className={`w-full text-left px-4 py-2 rounded ${
                         editModal.user.status === status
-                          ? 'bg-violet'
+                          ? 'bg-primary'
                           : 'bg-surface-2 hover:brightness-110'
                       }`}
                     >

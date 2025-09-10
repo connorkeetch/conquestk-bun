@@ -42,7 +42,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50">
       <div className="bg-surface-1 border border-border rounded-xl shadow-2xl max-w-lg w-full m-4 overflow-hidden">
         {/* Header */}
         <div
@@ -72,7 +72,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 {winner.username.charAt(0).toUpperCase()}
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Champion: {winner.username}</h3>
-              <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
+              <div className="bg-warning-soft border border-yellow-600/50 rounded-lg p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-yellow-300">Final Territories:</span>
@@ -92,7 +92,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               <h4 className="font-semibold text-muted mb-3 text-center">
                 Players Eliminated This Turn
               </h4>
-              <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4">
+              <div className="bg-danger-soft border border-red-600/50 rounded-lg p-4">
                 <div className="flex flex-wrap gap-2 justify-center">
                   {eliminatedPlayers.map((playerId) => (
                     <div
@@ -109,7 +109,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
           {/* Gunt's Prescription - Loss Message */}
           {guntsPrescriptions && isCurrentUserLoser && (
-            <div className="bg-red-900/20 border-2 border-red-600/50 rounded-lg p-6 mb-6">
+            <div className="bg-danger-soft border-2 border-red-600/50 rounded-lg p-6 mb-6">
               <div className="text-center">
                 <h4 className="text-xl font-bold text-red-400 mb-4">
                   💊 Dr. Gunt's Prescription 💊
@@ -138,7 +138,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           )}
 
           {/* Game Statistics */}
-          <div className="bg-slate-700/50 rounded-lg p-4 mb-6">
+          <div className="bg-surface-2/50 rounded-lg p-4 mb-6">
             <h4 className="font-semibold text-muted mb-3 text-center">Game Summary</h4>
             <div className="grid grid-cols-2 gap-4 text-sm text-center">
               <div>
@@ -157,7 +157,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             {onNewGame && (
               <button
                 onClick={onNewGame}
-                className="flex-1 bg-violet hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                className="flex-1 bg-primary hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
               >
                 🎮 New Game
               </button>

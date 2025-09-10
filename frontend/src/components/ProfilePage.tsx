@@ -118,7 +118,7 @@ const ProfilePage: React.FC = () => {
           <div className="text-white text-lg mb-2">{error}</div>
           <button
             onClick={fetchProfile}
-            className="px-4 py-2 bg-violet hover:bg-violet text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg transition-colors"
           >
             Try Again
           </button>
@@ -146,7 +146,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Avatar Section */}
             <div className="flex flex-col items-center sm:items-start">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-3 border-violet flex items-center justify-center mb-3">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-3 border-primary flex items-center justify-center mb-3">
                 {profile.avatarUrl ? (
                   <img 
                     src={profile.avatarUrl} 
@@ -166,7 +166,7 @@ const ProfilePage: React.FC = () => {
 
             {/* Profile Info */}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl sm:text-4xl font-bold text-violet-soft mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold text-primary-soft mb-2">
                 {profile.username}
               </h1>
               
@@ -204,9 +204,9 @@ const ProfilePage: React.FC = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-surface-1/50 backdrop-blur-sm rounded-xl p-4 border border-border/50 text-center hover:border-violet/30 transition-colors">
+          <div className="bg-surface-1/50 backdrop-blur-sm rounded-xl p-4 border border-border/50 text-center hover:border-primary/30 transition-colors">
             <div className="text-2xl mb-2">🎮</div>
-            <div className="text-2xl font-bold text-violet-soft">{profile.gamesPlayed}</div>
+            <div className="text-2xl font-bold text-primary-soft">{profile.gamesPlayed}</div>
             <div className="text-muted text-sm">Games Played</div>
           </div>
           
@@ -233,13 +233,13 @@ const ProfilePage: React.FC = () => {
 
         {/* Additional Stats */}
         <div className="bg-surface-1/50 backdrop-blur-sm rounded-xl p-6 border border-border/50 mb-6">
-          <h2 className="text-xl font-bold text-violet-soft mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
             📈 Rating History
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <div className="text-muted text-sm mb-1">Current Rating</div>
-              <div className="text-2xl font-bold text-violet-soft">{profile.elo}</div>
+              <div className="text-2xl font-bold text-primary-soft">{profile.elo}</div>
             </div>
             <div>
               <div className="text-muted text-sm mb-1">Peak Rating</div>
@@ -250,7 +250,7 @@ const ProfilePage: React.FC = () => {
 
         {/* Recent Games Section */}
         <div className="bg-surface-1/50 backdrop-blur-sm rounded-xl p-6 border border-border/50">
-          <h2 className="text-xl font-bold text-violet-soft mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
             📊 Recent Games
           </h2>
           <div className="text-center py-8">

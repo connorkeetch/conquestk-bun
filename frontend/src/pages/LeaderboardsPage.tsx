@@ -92,7 +92,7 @@ const LeaderboardsPage: React.FC = () => {
                 }}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   tierFilter === tier
-                    ? 'bg-violet text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-1 text-muted hover:bg-surface-2'
                 }`}
               >
@@ -105,7 +105,7 @@ const LeaderboardsPage: React.FC = () => {
         {/* Leaderboard Table */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-violet"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : error ? (
           <div className="text-center py-12 text-red-400">{error}</div>
@@ -165,7 +165,7 @@ const LeaderboardsPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
                           to={`/profile/${entry.userId}`}
-                          className="text-violet-soft hover:text-violet-soft font-medium"
+                          className="text-primary-soft hover:text-primary-soft font-medium"
                         >
                           {entry.username}
                           {isCurrentUser && (

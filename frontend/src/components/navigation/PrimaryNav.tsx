@@ -149,7 +149,7 @@ const PrimaryNav: React.FC = () => {
       'relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer'
 
     if (isActive(path)) {
-      return `${baseClass} bg-violet text-white shadow-lg`
+      return `${baseClass} bg-primary text-white shadow-lg`
     }
     return `${baseClass} text-muted hover:text-white hover:bg-surface-2`
   }

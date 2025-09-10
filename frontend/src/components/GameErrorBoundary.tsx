@@ -23,7 +23,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
-      <div className="text-center p-8 bg-red-900/20 border border-red-500/30 rounded-lg max-w-lg">
+      <div className="text-center p-8 bg-danger-soft border border-red-500/30 rounded-lg max-w-lg">
         <div className="text-6xl mb-4">🎮💥</div>
         <h2 className="text-2xl font-bold text-red-400 mb-4">
           Game Error
@@ -35,7 +35,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
         <div className="space-y-3">
           <button
             onClick={resetError}
-            className="w-full px-4 py-2 bg-violet hover:bg-violet text-white rounded-lg transition-colors"
+            className="w-full px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg transition-colors"
           >
             Try to Rejoin Game
           </button>

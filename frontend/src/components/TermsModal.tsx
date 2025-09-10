@@ -118,7 +118,7 @@ export default function TermsModal({
                 checked={isAcceptChecked}
                 onChange={(e) => setIsAcceptChecked(e.target.checked)}
                 disabled={!hasScrolledToBottom}
-                className="mr-3 mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-violet disabled:opacity-50"
+                className="mr-3 mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-primary disabled:opacity-50"
               />
               <span className={`text-sm ${!hasScrolledToBottom ? 'text-muted' : 'text-gray-700'}`}>
                 I have read and agree to the {termsContent.title}. I understand that:
@@ -135,7 +135,7 @@ export default function TermsModal({
             <button
               onClick={handleAccept}
               disabled={!isAcceptChecked || !hasScrolledToBottom}
-              className="flex-1 rounded-lg bg-violet px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               I Accept the Terms
             </button>

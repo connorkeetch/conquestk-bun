@@ -275,7 +275,7 @@ const UserManagement: React.FC = () => {
                     )}
                     <button
                       onClick={() => setSelectedUser(user)}
-                      className="px-3 py-1 bg-violet text-white rounded hover:brightness-110 text-sm"
+                      className="px-3 py-1 bg-primary text-white rounded hover:brightness-110 text-sm"
                     >
                       View
                     </button>
@@ -364,7 +364,7 @@ const MapApproval: React.FC = () => {
                     Reject
                   </button>
                   <button
-                    className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
+                    className="px-4 py-2 bg-primary text-white rounded hover:brightness-110"
                   >
                     View Map
                   </button>

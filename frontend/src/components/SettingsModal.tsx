@@ -79,7 +79,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">Username</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     placeholder="Enter username"
                     defaultValue="Player123"
                   />
@@ -88,7 +88,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">Email</label>
                   <input
                     type="email"
-                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     placeholder="Enter email"
                     defaultValue="player@example.com"
                   />
@@ -184,7 +184,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Default Turn Time (seconds)
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="60">60 seconds</option>
                     <option value="120" selected>
                       120 seconds
@@ -204,7 +204,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Preferred Map Style
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="classic">Classic Risk</option>
                     <option value="custom" selected>
                       Custom Maps
@@ -290,15 +290,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Theme</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-violet transition-colors bg-surface-1">
+                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors bg-surface-1">
                   <div className="w-full h-8 bg-gradient-to-r from-gray-800 to-gray-900 rounded mb-2"></div>
                   <p className="text-sm text-center">Dark (Current)</p>
                 </div>
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-violet transition-colors">
+                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors">
                   <div className="w-full h-8 bg-gradient-to-r from-gray-100 to-gray-200 rounded mb-2"></div>
                   <p className="text-sm text-center">Light</p>
                 </div>
-                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-violet transition-colors">
+                <div className="border border-border rounded-lg p-3 cursor-pointer hover:border-primary transition-colors">
                   <div className="w-full h-8 bg-gradient-to-r from-blue-800 to-purple-800 rounded mb-2"></div>
                   <p className="text-sm text-center">Gaming</p>
                 </div>
@@ -350,7 +350,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Territory Label Size
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="small">Small</option>
                     <option value="medium" selected>
                       Medium
@@ -483,7 +483,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Profile Visibility
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="public" selected>
                       Public - Anyone can view
                     </option>
@@ -527,7 +527,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Who can message you
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="everyone">Everyone</option>
                     <option value="friends" selected>
                       Friends Only
@@ -540,7 +540,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Who can invite you to games
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="everyone" selected>
                       Everyone
                     </option>
@@ -592,7 +592,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-medium text-muted mb-2">
                     Graphics Quality
                   </label>
-                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-violet focus:border-transparent transition-all">
+                  <select className="w-full px-4 py-3 bg-surface-2/50 border border-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                     <option value="low">Low</option>
                     <option value="medium" selected>
                       Medium
@@ -683,7 +683,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div
         ref={modalRef}
         className="bg-surface-1 rounded-xl border border-border w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
@@ -722,7 +722,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-violet text-white'
+                        ? 'bg-primary text-white'
                         : 'text-muted hover:bg-surface-1 hover:text-white'
                     }`}
                   >
@@ -752,7 +752,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-violet hover:bg-violet text-white font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors"
             >
               Save & Close
             </button>

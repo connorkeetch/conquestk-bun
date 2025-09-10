@@ -96,7 +96,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         } flex items-center justify-center ${
           isFullPage ? 'bg-gradient-to-br from-gray-900 via-purple-900/20 to-black' : ''
         }`}>
-          <div className="text-center p-8 bg-red-900/20 border border-red-500/30 rounded-lg max-w-lg">
+          <div className="text-center p-8 bg-danger-soft border border-red-500/30 rounded-lg max-w-lg">
             <div className="text-5xl mb-4">
               {isFullPage ? '💥' : '⚠️'}
             </div>
@@ -125,7 +125,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <div className="space-x-3">
               <button
                 onClick={this.resetErrorBoundary}
-                className="px-4 py-2 bg-violet hover:bg-violet text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg transition-colors"
               >
                 Try Again
               </button>

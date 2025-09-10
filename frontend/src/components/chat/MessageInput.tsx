@@ -138,7 +138,7 @@ export default function MessageInput({
               onChange={(e) => setMessage(e.target.value.slice(0, maxLength))}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 px-3 py-2 bg-surface-2 text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-violet placeholder-gray-400"
+              className="flex-1 px-3 py-2 bg-surface-2 text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary placeholder-gray-400"
               rows={1}
               style={{
                 minHeight: '40px',
@@ -161,7 +161,7 @@ export default function MessageInput({
           disabled={message.trim().length === 0}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             message.trim().length > 0
-              ? 'bg-violet hover:bg-violet text-white'
+              ? 'bg-primary hover:bg-primary text-white'
               : 'bg-surface-2 text-muted cursor-not-allowed'
           }`}
         >

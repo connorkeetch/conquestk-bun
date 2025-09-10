@@ -118,7 +118,7 @@ export default function GameRoom() {
             <div className="bg-surface-1 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3">Game Controls</h3>
               <div className="space-y-2">
-                <button className="w-full bg-violet hover:brightness-110 px-3 py-2 rounded text-sm">
+                <button className="w-full bg-primary hover:brightness-110 px-3 py-2 rounded text-sm">
                   Deploy Armies
                 </button>
                 <button className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm">

@@ -664,7 +664,7 @@ export default function MapEditorTokens() {
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
-                className="w-full px-4 py-3 bg-violet hover:bg-violet rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 bg-primary hover:bg-primary rounded-lg text-white font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
                 <span className="text-sm text-blue-200">No cropping</span>
@@ -687,7 +687,7 @@ export default function MapEditorTokens() {
               </button>
             </div>
             {uploadInfo && (
-              <div className="mt-4 p-2 bg-blue-900/50 border border-violet rounded text-violet-soft text-sm">
+              <div className="mt-4 p-2 bg-blue-900/50 border border-primary rounded text-primary-soft text-sm">
                 ℹ️ {uploadInfo}
               </div>
             )}
@@ -720,25 +720,25 @@ export default function MapEditorTokens() {
             <div className="flex gap-2">
               <button
                 onClick={() => setEditorMode('territories')}
-                className={`px-4 py-2 rounded ${editorMode === 'territories' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'territories' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🗺️ Territories
               </button>
               <button
                 onClick={() => setEditorMode('continents')}
-                className={`px-4 py-2 rounded ${editorMode === 'continents' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'continents' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🌍 Continents
               </button>
               <button
                 onClick={() => setEditorMode('connections')}
-                className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 🔗 Connections
               </button>
               <button
                 onClick={() => setEditorMode('capitals')}
-                className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
+                className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
               >
                 👑 Capitals
               </button>
@@ -749,19 +749,19 @@ export default function MapEditorTokens() {
               <span className="text-sm">Shape:</span>
               <button
                 onClick={() => setTokenShape('hexagon')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'hexagon' ? 'bg-violet' : 'bg-surface-2'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'hexagon' ? 'bg-primary' : 'bg-surface-2'}`}
               >
                 Hexagon
               </button>
               <button
                 onClick={() => setTokenShape('square')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-violet' : 'bg-surface-2'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-primary' : 'bg-surface-2'}`}
               >
                 Square
               </button>
               <button
                 onClick={() => setTokenShape('circle')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-violet' : 'bg-surface-2'}`}
+                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-primary' : 'bg-surface-2'}`}
               >
                 Circle
               </button>
@@ -812,7 +812,7 @@ export default function MapEditorTokens() {
             {/* Grid Toggle */}
             <button
               onClick={() => setShowGrid(!showGrid)}
-              className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-violet' : 'bg-surface-2'}`}
+              className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-primary' : 'bg-surface-2'}`}
             >
               📏 Grid
             </button>
@@ -957,7 +957,7 @@ export default function MapEditorTokens() {
                         setNewContinentColor(c.color)
                         setNewContinentBonus(c.bonus)
                       }}
-                      className="text-violet-soft hover:text-violet-soft text-sm px-1"
+                      className="text-primary-soft hover:text-primary-soft text-sm px-1"
                     >
                       ✏️
                     </button>
@@ -1026,7 +1026,7 @@ export default function MapEditorTokens() {
                     disabled={state.territories.length < count}
                     className={`px-3 py-1 rounded text-sm ${
                       selectedPlayerCount === count
-                        ? 'bg-violet'
+                        ? 'bg-primary'
                         : state.territories.length < count
                         ? 'bg-surface-1 text-gray-600 cursor-not-allowed'
                         : 'bg-surface-2 hover:bg-gray-600'
@@ -1211,7 +1211,7 @@ export default function MapEditorTokens() {
                     <p className="text-muted mb-2">Drop an image here or</p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-violet hover:bg-violet rounded"
+                      className="px-4 py-2 bg-primary hover:bg-primary rounded"
                     >
                       Upload Map Image
                     </button>
@@ -1225,7 +1225,7 @@ export default function MapEditorTokens() {
               )}
 
               {isDragOver && (
-                <div className="absolute inset-0 bg-violet/20 flex items-center justify-center">
+                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                   <p className="text-2xl text-white">Drop image here</p>
                 </div>
               )}

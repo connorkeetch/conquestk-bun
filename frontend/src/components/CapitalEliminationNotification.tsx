@@ -61,13 +61,13 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
 
         {/* Gains */}
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 text-center">
+          <div className="bg-success-soft border border-green-600 rounded-lg p-3 text-center">
             <div className="text-green-400 text-2xl font-bold">{territoriesGained}</div>
             <div className="text-green-300 text-sm">Territories Gained</div>
           </div>
-          <div className="bg-blue-900/30 border border-violet rounded-lg p-3 text-center">
-            <div className="text-violet-soft text-2xl font-bold">{troopsGained}</div>
-            <div className="text-violet-soft text-sm">Troops Gained</div>
+          <div className="bg-primary-soft-bg border border-primary rounded-lg p-3 text-center">
+            <div className="text-primary-soft text-2xl font-bold">{troopsGained}</div>
+            <div className="text-primary-soft text-sm">Troops Gained</div>
           </div>
         </div>
 

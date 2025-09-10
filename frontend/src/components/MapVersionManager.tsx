@@ -200,7 +200,7 @@ export const MapVersionManager: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Loading versions...</p>
         </div>
       </div>
@@ -219,7 +219,7 @@ export const MapVersionManager: React.FC = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-violet hover:bg-violet text-white px-4 py-2 rounded-lg font-medium"
+          className="bg-primary hover:bg-primary text-white px-4 py-2 rounded-lg font-medium"
         >
           Create New Version
         </button>
@@ -248,7 +248,7 @@ export const MapVersionManager: React.FC = () => {
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-violet hover:bg-violet text-white px-6 py-3 rounded-lg font-medium"
+              className="bg-primary hover:bg-primary text-white px-6 py-3 rounded-lg font-medium"
             >
               Create Version 1.0.0
             </button>
@@ -361,7 +361,7 @@ export const MapVersionManager: React.FC = () => {
                       versionType: e.target.value as 'major' | 'minor' | 'patch',
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                 >
                   <option value="patch">Patch (bug fixes, minor changes)</option>
                   <option value="minor">Minor (new features, improvements)</option>
@@ -375,7 +375,7 @@ export const MapVersionManager: React.FC = () => {
                   type="text"
                   value={newVersionData.name}
                   onChange={(e) => setNewVersionData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                   placeholder="e.g., Updated Europe layout"
                   required
                 />
@@ -390,7 +390,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                   rows={2}
                   placeholder="Brief description of this version..."
                 />
@@ -403,7 +403,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, changelog: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-violet focus:border-violet"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                   rows={3}
                   placeholder="- Fixed territory adjacency issues&#10;- Improved continent balance&#10;- Added new special abilities"
                 />
@@ -421,7 +421,7 @@ export const MapVersionManager: React.FC = () => {
               <button
                 onClick={handleCreateVersion}
                 disabled={creating || !newVersionData.name.trim()}
-                className="px-4 py-2 bg-violet hover:bg-violet text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? 'Creating...' : 'Create Version'}
               </button>
