@@ -60,33 +60,34 @@ export const THEMES: ThemeDefinition[] = [
       ],
     },
   },
-  {
-    id: 'light',
-    name: 'Light',
-    displayColor: '#f8fafc',
-    description: '',
-    colors: {
-      primary: '#2563EB',      // Darker blue for better contrast (WCAG AA)
-      primarySoft: '#3B82F6',   // Adjusted for hierarchy
-      secondary: '#EA580C',     // Darker orange for better contrast
-      accent: '#DC2626',        // Keep red accent
-      bgDeep: '#F9FAFB',        // Slightly lighter for better hierarchy
-      bgAlt: '#F3F4F6',         // More distinct from bgDeep
-      surface1: '#FFFFFF',      // Pure white for cards
-      surface2: '#E5E7EB',      // Much darker for better contrast with surface1
-      text: '#111827',          // Much darker for WCAG AAA compliance
-      textMuted: '#4B5563',     // Darker muted text for better readability
-      border: '#9CA3AF',        // Darker border for visibility
-    },
-    gradient: {
-      stops: [
-        { position: '0%', color: '#ffffff' },
-        { position: '30%', color: '#f9fafb' },
-        { position: '60%', color: '#f3f4f6' },
-        { position: '100%', color: '#ffffff' },
-      ],
-    },
-  },
+  // Light theme temporarily disabled - needs more work
+  // {
+  //   id: 'light',
+  //   name: 'Light',
+  //   displayColor: '#f8fafc',
+  //   description: '',
+  //   colors: {
+  //     primary: '#2563EB',
+  //     primarySoft: '#3B82F6',
+  //     secondary: '#EA580C',
+  //     accent: '#DC2626',
+  //     bgDeep: '#F9FAFB',
+  //     bgAlt: '#F3F4F6',
+  //     surface1: '#FFFFFF',
+  //     surface2: '#E5E7EB',
+  //     text: '#111827',
+  //     textMuted: '#4B5563',
+  //     border: '#9CA3AF',
+  //   },
+  //   gradient: {
+  //     stops: [
+  //       { position: '0%', color: '#ffffff' },
+  //       { position: '30%', color: '#f9fafb' },
+  //       { position: '60%', color: '#f3f4f6' },
+  //       { position: '100%', color: '#ffffff' },
+  //     ],
+  //   },
+  // },
   {
     id: 'violet',
     name: 'Violet',
@@ -224,7 +225,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'highcontrast',
-    name: 'High Contrast',
+    name: 'Blue High Contrast',
     displayColor: '#000000',
     description: '',
     colors: {
