@@ -50,7 +50,7 @@ export const THEMES: ThemeDefinition[] = [
       surface2: '#111827',      // Slightly lighter surface
       text: '#F9FAFB',
       textMuted: '#94A3B8',
-      border: '#1e293b',
+      border: '#334155',  // Lighter border for better visibility in dark themes
     },
     gradient: {
       stops: [
@@ -67,24 +67,24 @@ export const THEMES: ThemeDefinition[] = [
     displayColor: '#f8fafc',
     description: 'Bright and clean',
     colors: {
-      primary: '#3B82F6',
-      primarySoft: '#60A5FA',
-      secondary: '#F59E0B',
-      accent: '#DC2626',
-      bgDeep: '#F8F9FA',
-      bgAlt: '#F1F5F9',
-      surface1: '#FFFFFF',
-      surface2: '#F1F5F9',
-      text: '#1E293B',
-      textMuted: '#64748B',
-      border: '#E2E8F0',
+      primary: '#2563EB',      // Darker blue for better contrast (WCAG AA)
+      primarySoft: '#3B82F6',   // Adjusted for hierarchy
+      secondary: '#EA580C',     // Darker orange for better contrast
+      accent: '#DC2626',        // Keep red accent
+      bgDeep: '#F9FAFB',        // Slightly lighter for better hierarchy
+      bgAlt: '#F3F4F6',         // More distinct from bgDeep
+      surface1: '#FFFFFF',      // Pure white for cards
+      surface2: '#E5E7EB',      // Much darker for better contrast with surface1
+      text: '#111827',          // Much darker for WCAG AAA compliance
+      textMuted: '#4B5563',     // Darker muted text for better readability
+      border: '#9CA3AF',        // Darker border for visibility
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#f8fafc' },
-        { position: '30%', color: '#f1f5f9' },
-        { position: '60%', color: '#e2e8f0' },
-        { position: '100%', color: '#f8fafc' },
+        { position: '0%', color: '#ffffff' },
+        { position: '30%', color: '#f9fafb' },
+        { position: '60%', color: '#f3f4f6' },
+        { position: '100%', color: '#ffffff' },
       ],
     },
   },
@@ -104,7 +104,7 @@ export const THEMES: ThemeDefinition[] = [
       surface2: '#111827',
       text: '#F9FAFB',
       textMuted: '#94A3B8',
-      border: '#1e293b',
+      border: '#334155',  // Lighter border for better visibility in dark themes
     },
     gradient: {
       stops: [
@@ -131,7 +131,7 @@ export const THEMES: ThemeDefinition[] = [
       surface2: '#111827',
       text: '#F9FAFB',
       textMuted: '#94A3B8',
-      border: '#1e293b',
+      border: '#334155',  // Lighter border for better visibility in dark themes
     },
     gradient: {
       stops: [
@@ -158,7 +158,7 @@ export const THEMES: ThemeDefinition[] = [
       surface2: '#111827',
       text: '#F9FAFB',
       textMuted: '#94A3B8',
-      border: '#1e293b',
+      border: '#334155',  // Lighter border for better visibility in dark themes
     },
     gradient: {
       stops: [
@@ -185,7 +185,7 @@ export const THEMES: ThemeDefinition[] = [
       surface2: '#111827',
       text: '#F9FAFB',
       textMuted: '#94A3B8',
-      border: '#1e293b',
+      border: '#334155',  // Lighter border for better visibility in dark themes
     },
     gradient: {
       stops: [
@@ -211,8 +211,8 @@ export const THEMES: ThemeDefinition[] = [
       surface1: '#0a0a0a',      // Very dark gray
       surface2: '#111111',      // Dark gray
       text: '#F9FAFB',
-      textMuted: '#94A3B8',
-      border: '#1e293b',
+      textMuted: '#9CA3AF',  // Slightly lighter for better readability in pure black
+      border: '#374151',  // Even lighter border for pure black theme
     },
     gradient: {
       stops: [
@@ -220,6 +220,33 @@ export const THEMES: ThemeDefinition[] = [
         { position: '30%', color: '#000000' },   // Pure black center
         { position: '60%', color: '#030303' },   // Inky black
         { position: '100%', color: '#050505' },  // Nearly black
+      ],
+    },
+  },
+  {
+    id: 'highcontrast',
+    name: 'High Contrast',
+    displayColor: '#000000',
+    description: 'Maximum contrast for accessibility',
+    colors: {
+      primary: '#0066FF',      // Bright blue for WCAG AAA
+      primarySoft: '#3385FF',   // Lighter bright blue
+      secondary: '#FFD700',     // Gold remains high contrast
+      accent: '#FF0000',        // Pure red for maximum visibility
+      bgDeep: '#000000',        // Pure black background
+      bgAlt: '#000000',         // Pure black alt
+      surface1: '#1A1A1A',      // Very dark gray for cards
+      surface2: '#262626',      // Slightly lighter for nested
+      text: '#FFFFFF',          // Pure white text
+      textMuted: '#B3B3B3',     // Light gray for WCAG AA
+      border: '#666666',        // Medium gray for clear borders
+    },
+    gradient: {
+      stops: [
+        { position: '0%', color: '#000000' },    // Pure black
+        { position: '30%', color: '#000000' },   // Pure black
+        { position: '60%', color: '#0A0A0A' },   // Tiny variation
+        { position: '100%', color: '#000000' },  // Pure black
       ],
     },
   },
