@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import authService from '../services/authService'
 import pushNotificationService from '../services/pushNotificationService'
+import { THEMES, getStoredTheme, applyTheme, storeTheme } from '../config/themes.config'
 import {
   clearCache,
   resetSettings,
@@ -280,19 +281,30 @@ export default function Settings() {
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
 
-  // Get current color theme from localStorage (defaults to 'default')
-  const [currentColorTheme, setCurrentColorTheme] = useState<ColorTheme>(() => {
-    try {
-      return (localStorage.getItem('colorTheme') as ColorTheme) || 'default'
-    } catch (_error) {
-      return 'default'
-    }
-  })
+  // Get current color theme from centralized config
+  const [currentColorTheme, setCurrentColorTheme] = useState<ColorTheme>(() => getStoredTheme() as ColorTheme)
+  // State for theme dropdown (moved here to avoid re-declaration)
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
+  const themeDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Apply stored color theme on component mount
+  // Apply stored color theme on component mount and when it changes
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', currentColorTheme)
-  }, []) // Only run on mount
+    applyTheme(currentColorTheme)
+  }, [currentColorTheme])
+  
+  // Click outside handler for theme dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
+        setIsThemeDropdownOpen(false)
+      }
+    }
+    
+    if (isThemeDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isThemeDropdownOpen])
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -709,19 +721,9 @@ export default function Settings() {
           return null
           
         case 'color-theme-selector':
-          const themes = [
-                  { id: 'default', name: 'Default', color: '#4338CA', description: 'Dark blue-purple gradient' },
-                  { id: 'light', name: 'Light', color: '#f8fafc', description: 'Bright and clean' },
-                  { id: 'violet', name: 'Violet', color: '#7C3AED', description: 'Purple accent' },
-                  { id: 'red', name: 'Red', color: '#DC2626', description: 'Crimson theme' },
-                  { id: 'blue', name: 'Blue', color: '#2563EB', description: 'Ocean blue' },
-                  { id: 'green', name: 'Green', color: '#059669', description: 'Forest green' },
-                  { id: 'black', name: 'Black', color: '#1f2937', description: 'Dark and minimal' },
-                ]
-          const selectedTheme = themes.find(t => t.id === setting.defaultValue) || themes[0]
-          const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
+          const selectedTheme = THEMES.find(t => t.id === setting.defaultValue) || THEMES[0]
           return (
-            <div className="relative">
+            <div className="relative" ref={themeDropdownRef}>
               {/* Dropdown Button */}
               <button
                 onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
@@ -733,8 +735,8 @@ export default function Settings() {
                   <div 
                     className="w-6 h-6 rounded-full border-2"
                     style={{ 
-                      backgroundColor: selectedTheme.color,
-                      borderColor: selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.color
+                      backgroundColor: selectedTheme.displayColor,
+                      borderColor: selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.displayColor
                     }}
                   />
                   {/* Theme Info */}
@@ -764,7 +766,7 @@ export default function Settings() {
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-surface-2 border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
-                  {themes.map((theme) => (
+                  {THEMES.map((theme) => (
                     <button
                       key={theme.id}
                       onClick={() => {
@@ -780,8 +782,8 @@ export default function Settings() {
                       <div 
                         className="w-6 h-6 rounded-full border-2 flex-shrink-0"
                         style={{ 
-                          backgroundColor: theme.color,
-                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.color
+                          backgroundColor: theme.displayColor,
+                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.displayColor
                         }}
                       />
                       {/* Theme Info */}
@@ -1067,7 +1069,11 @@ export default function Settings() {
             onChange: async (value: ColorTheme) => {
               // Update local state for immediate UI feedback
               setCurrentColorTheme(value)
-              // Dispatch Redux action (handles document.setAttribute and localStorage)
+              // Apply theme immediately through centralized system
+              applyTheme(value)
+              // Store theme preference through centralized system
+              storeTheme(value)
+              // Dispatch Redux action (now without side effects)
               dispatch(setColorTheme(value))
               // For light theme, also update base theme
               if (value === 'light') {

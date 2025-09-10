@@ -126,12 +126,6 @@ const settingsSlice = createSlice({
     // Display settings
     setTheme: (state, action: PayloadAction<Theme>) => {
       state.display.theme = action.payload
-      // Apply theme to document immediately
-      document.documentElement.setAttribute('data-theme', action.payload)
-      // Store in localStorage for persistence
-      try {
-        localStorage.setItem('colorTheme', action.payload)
-      } catch (_error) {}
       saveSettings(state)
     },
 
@@ -245,15 +239,8 @@ const settingsSlice = createSlice({
     setColorTheme: (state, action: PayloadAction<ColorTheme>) => {
       // Update the Redux state for consistency
       state.display.theme = action.payload
-      // Apply theme to document immediately
-      document.documentElement.setAttribute('data-theme', action.payload)
-      // Store in localStorage for persistence
-      try {
-        localStorage.setItem('colorTheme', action.payload)
-      } catch (_error) {}
       // Save full settings to maintain consistency
       saveSettings(state)
-      console.log('✅ Color theme set:', action.payload)
     },
   },
 })
