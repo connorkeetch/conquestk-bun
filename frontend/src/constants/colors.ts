@@ -271,14 +271,14 @@ export const CORE_COLORS = {
 // This architecture enables both color themes and style themes
 
 export const AVAILABLE_THEMES = {
-  // Default theme - matches original design colors from maps.mhtml
+  // Default theme - dark blue-purple to match screenshot
   'default': {
     ...THEME_COLORS,
-    primary: '#4a9eff',           // Original blue from maps.mhtml
-    primarySoft: '#60a5fa',       // Lighter blue
+    primary: '#4338CA',           // Dark blue-purple primary
+    primarySoft: '#5B21B6',       // Purple accent
     secondary: '#ffd700',         // Gold accent
-    accent: '#dc2626',            // Red accent from original meta theme-color
-    backgroundDeep: '#1a1a1a',    // Original dark background
+    accent: '#dc2626',            // Red accent
+    backgroundDeep: '#1a1a1a',    // Dark background
     backgroundAlt: '#0f172a',     // Slightly different dark
   },
   
