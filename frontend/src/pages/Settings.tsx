@@ -712,10 +712,10 @@ export default function Settings() {
           const themes = [
                   { id: 'default', name: 'Default', color: '#4338CA', emoji: '🌌', description: 'Dark blue-purple gradient' },
                   { id: 'light', name: 'Light', color: '#f8fafc', emoji: '☀️', description: 'Bright and clean' },
-                  { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '💜', description: 'Purple accent' },
-                  { id: 'red', name: 'Red', color: '#DC2626', emoji: '❤️', description: 'Crimson theme' },
-                  { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '💙', description: 'Ocean blue' },
-                  { id: 'green', name: 'Green', color: '#059669', emoji: '💚', description: 'Forest green' },
+                  { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '🔮', description: 'Purple accent' },
+                  { id: 'red', name: 'Red', color: '#DC2626', emoji: '🔥', description: 'Crimson theme' },
+                  { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '🌊', description: 'Ocean blue' },
+                  { id: 'green', name: 'Green', color: '#059669', emoji: '🌲', description: 'Forest green' },
                   { id: 'black', name: 'Black', color: '#1f2937', emoji: '⚫', description: 'Dark and minimal' },
                 ]
           const selectedTheme = themes.find(t => t.id === setting.defaultValue) || themes[0]
