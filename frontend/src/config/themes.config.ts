@@ -37,27 +37,26 @@ export const THEMES: ThemeDefinition[] = [
   {
     id: 'default',
     name: 'Default',
-    displayColor: '#4338CA',
-    description: 'Dark blue-purple gradient',
+    displayColor: '#4a5fff',
+    description: '',
     colors: {
-      primary: '#4338CA',
-      primarySoft: '#5B21B6',
-      secondary: '#FFD700',
-      accent: '#dc2626',
-      bgDeep: '#0a0a0f',        // Much darker, nearly black
-      bgAlt: '#080812',         // Inky dark blue
-      surface1: '#0f172a',      // Dark surface
-      surface2: '#111827',      // Slightly lighter surface
-      text: '#F9FAFB',
-      textMuted: '#94A3B8',
-      border: '#334155',  // Lighter border for better visibility in dark themes
+      primary: '#4a5fff',       // Blue-purple primary
+      primarySoft: '#6366f1',   // Softer blue-purple
+      secondary: '#38bdf8',     // Cyan-blue for interactive
+      accent: '#dc2626',        // Keep red accent
+      bgDeep: '#0a0a12',        // Very dark blue-black
+      bgAlt: '#14141f',         // Slightly lighter dark blue
+      surface1: '#1a1a2e',      // Card background
+      surface2: '#252538',      // Slightly lighter for nested
+      text: '#e0e0e6',          // Primary text
+      textMuted: '#9ca3af',     // Secondary text
+      border: 'rgba(255, 255, 255, 0.08)',  // Subtle white border
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#0a0814' },    // Nearly black with blue tint
-        { position: '30%', color: '#050308' },   // Inky black center
-        { position: '60%', color: '#0d0615' },   // Very dark purple
-        { position: '100%', color: '#0a0814' },  // Nearly black with blue tint
+        { position: '0%', color: '#0a0a12' },
+        { position: '50%', color: 'rgba(88, 28, 135, 0.15)' },
+        { position: '100%', color: '#0a0a12' },
       ],
     },
   },
@@ -65,7 +64,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'light',
     name: 'Light',
     displayColor: '#f8fafc',
-    description: 'Bright and clean',
+    description: '',
     colors: {
       primary: '#2563EB',      // Darker blue for better contrast (WCAG AA)
       primarySoft: '#3B82F6',   // Adjusted for hierarchy
@@ -92,7 +91,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'violet',
     name: 'Violet',
     displayColor: '#7C3AED',
-    description: 'Purple accent',
+    description: '',
     colors: {
       primary: '#7C3AED',
       primarySoft: '#8B5CF6',
@@ -119,7 +118,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'red',
     name: 'Red',
     displayColor: '#DC2626',
-    description: 'Crimson theme',
+    description: '',
     colors: {
       primary: '#DC2626',
       primarySoft: '#EF4444',
@@ -146,7 +145,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'blue',
     name: 'Blue',
     displayColor: '#2563EB',
-    description: 'Ocean blue',
+    description: '',
     colors: {
       primary: '#2563EB',
       primarySoft: '#3B82F6',
@@ -173,7 +172,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'green',
     name: 'Green',
     displayColor: '#059669',
-    description: 'Forest green',
+    description: '',
     colors: {
       primary: '#059669',
       primarySoft: '#10B981',
@@ -200,7 +199,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'black',
     name: 'Black',
     displayColor: '#1f2937',
-    description: 'Dark and minimal',
+    description: '',
     colors: {
       primary: '#1f2937',
       primarySoft: '#374151',
@@ -227,7 +226,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'highcontrast',
     name: 'High Contrast',
     displayColor: '#000000',
-    description: 'Maximum contrast for accessibility',
+    description: '',
     colors: {
       primary: '#0066FF',      // Bright blue for WCAG AAA
       primarySoft: '#3385FF',   // Lighter bright blue
