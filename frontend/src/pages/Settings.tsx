@@ -59,14 +59,14 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
             <polygon
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
-                fill: COLOR_HEX_VALUES[value].includes('gradient') 
+                fill: (COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient'))
                   ? 'url(#gradient)' 
                   : COLOR_HEX_VALUES[value],
                 stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
                 strokeWidth: '1.5',
               }}
             />
-            {COLOR_HEX_VALUES[value].includes('gradient') && (
+            {(COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient')) && (
               <defs>
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
@@ -134,14 +134,14 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                     <polygon
                       points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                       style={{
-                        fill: COLOR_HEX_VALUES[color].includes('gradient') 
+                        fill: (COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient'))
                           ? 'url(#gradient-' + color + ')' 
                           : COLOR_HEX_VALUES[color],
                         stroke: isSelected ? '#ffffff' : '#ffffff30',
                         strokeWidth: '1.5',
                       }}
                     />
-                    {COLOR_HEX_VALUES[color].includes('gradient') && (
+                    {(COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')) && (
                       <defs>
                         <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" style={{ stopColor: color === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
@@ -196,7 +196,7 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                       <polygon
                         points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                         style={{
-                          fill: COLOR_HEX_VALUES[color].includes('gradient') 
+                          fill: (COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient'))
                             ? 'url(#gradient-' + color + ')' 
                             : COLOR_HEX_VALUES[color],
                           stroke: '#FBBF24',
@@ -204,7 +204,7 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                           filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
-                      {COLOR_HEX_VALUES[color].includes('gradient') && (
+                      {(COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')) && (
                         <defs>
                           <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
