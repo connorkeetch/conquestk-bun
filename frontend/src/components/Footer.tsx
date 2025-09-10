@@ -6,14 +6,13 @@ export default function Footer() {
   
   return (
     <footer className="footer">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted">
+      <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-muted">
           <div className="text-center sm:text-left">
-            <div>© 2025 Conquest K. All rights reserved.</div>
-            <div className="text-xs mt-1">Not affiliated with Hasbro or Risk®</div>
+            © 2025 Conquest K. All rights reserved.
           </div>
           
-          <nav className="flex gap-4 text-xs sm:text-sm">
+          <nav className="flex gap-3 text-xs">
             <Link 
               to="/terms" 
               className="footer-link"

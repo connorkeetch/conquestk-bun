@@ -1113,7 +1113,7 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-1">
               <input
                 placeholder="Search maps..."
-                className="w-full p-2 bg-surface-2 text-white rounded-lg border border-border placeholder-muted mb-3 focus:border-violet focus:outline-none transition-all duration-200"
+                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {maps.map((map) => (
