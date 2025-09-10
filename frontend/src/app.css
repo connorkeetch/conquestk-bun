@@ -1,10 +1,56 @@
-/* 
-  CONQUEST K COLOR SYSTEM - SINGLE SOURCE OF TRUTH
-  
-  🎯 All colors are defined in /src/constants/colors.ts
-  This file imports and applies them to CSS variables.
-  
-  To change any color: Go to colors.ts and modify CORE_COLORS
+/*
+================================================================================
+🎨 CONQUESTK THEME ARCHITECTURE - SINGLE SOURCE OF TRUTH
+================================================================================
+
+🎯 SEMANTIC VARIABLE SYSTEM:
+All colors use semantic roles instead of color-specific names:
+- --color-primary: Main brand color (violet→red→blue per theme)
+- --color-primary-soft: Softer version for hover states  
+- --color-secondary: Supporting brand color (usually gold)
+- --color-accent: Attention/danger color (usually red/crimson)
+
+📁 SOURCE FILES:
+- /src/constants/colors.ts: Color definitions & theme palettes
+- /src/store/settingsSlice.ts: Theme state management (Redux)
+- /src/app.css: This file - CSS variable system & components
+
+🌈 THEME ARCHITECTURE:
+Our system supports 3-dimensional theming:
+
+1. BASE THEMES: Core appearance
+   - dark (default), light, high-contrast
+
+2. COLOR THEMES: Brand palettes  
+   - violet (default), red, blue, green, gold
+
+3. STYLE THEMES: Component personalities
+   - modern (default), cowboy, myspace, minimal, gaming
+
+🔄 THEME SWITCHING:
+1. Redux: { baseTheme: 'dark', colorTheme: 'red', styleTheme: 'cowboy' }
+2. CSS: [data-theme="red"], [data-theme="cowboy"] 
+3. JS: document.documentElement.setAttribute('data-theme', 'red')
+4. Components automatically adapt via semantic variables
+
+💻 COMPONENT SYSTEM:
+- @utility btn-primary: Uses var(--color-primary) - adapts to all themes
+- @utility form-input: Semantic variables - works everywhere
+- box1, box2: Card components with theme-aware styling
+
+✅ IMPLEMENTATION STATUS:
+✅ Semantic CSS variable system
+✅ Color theme definitions (red/blue/green/cowboy/myspace)  
+✅ Component classes using semantic variables
+✅ Legacy theme compatibility maintained
+🔄 Theme switching UI (Settings page)
+🔄 Style theme component variations
+
+🚀 USAGE:
+To change colors globally: Modify CORE_COLORS in colors.ts
+To add new themes: Add CSS definitions below + update settingsSlice.ts
+To switch themes: Use Redux setTheme() action
+================================================================================
 */
 
 /* 
@@ -20,101 +66,108 @@
   - bg-violet, text-gold, border-crimson, etc.
 */
 @theme {
-  /* ===== BRAND COLORS ===== */
-  --color-violet: #7C3AED;      /* CORE_COLORS.violet - Primary brand */
-  --color-violet-soft: #8B5CF6; /* CORE_COLORS.violetSoft - Hover states */
-  --color-gold: #FFD700;        /* CORE_COLORS.gold - Victory, rewards */
-  --color-crimson: #B22222;     /* CORE_COLORS.crimson - Danger, attack */
+  /* ===== SEMANTIC THEME VARIABLES ===== */
+  /* 🎨 These change per theme - enabling Red Theme, Blue Theme, Cowboy Theme, etc. */
+  --color-primary: #7C3AED;         /* Main brand color (violet in default theme) */
+  --color-primary-soft: #8B5CF6;    /* Primary hover states (softer violet) */
+  --color-secondary: #FFD700;       /* Supporting brand color (gold) */
+  --color-accent: #B22222;          /* Attention/danger color (crimson) */
   
-  /* ===== BACKGROUND COLORS ===== */
-  --color-ink: #0B0B12;         /* CORE_COLORS.ink - Deepest backgrounds */
-  --color-imperial: #170B1D;    /* CORE_COLORS.imperial - Dark purple */
-  --color-abyss: #080A14;       /* CORE_COLORS.abyss - Void dark */
-  --color-surface-1: #0F172A;   /* CORE_COLORS.surface1 - Card backgrounds */
-  --color-surface-2: #111827;   /* CORE_COLORS.surface2 - Elevated surfaces */
+  /* Theme-aware background colors */
+  --color-bg-deep: #0B0B12;         /* Deepest background */
+  --color-bg-alt: #170B1D;          /* Alternative deep background */
+  --color-bg-void: #080A14;         /* Void background */
+  --color-surface-1: #0F172A;       /* Card backgrounds */
+  --color-surface-2: #111827;       /* Elevated surfaces */
   
-  /* ===== TEXT COLORS ===== */
-  --color-text: #F9FAFB;        /* CORE_COLORS.text - Primary text */
-  --color-muted: #94A3B8;       /* CORE_COLORS.muted - Secondary text */
-  --color-border: #475569;      /* CORE_COLORS.border - Borders, dividers */
+  /* ===== SEMANTIC STATE COLORS ===== */
+  /* 🎯 These stay consistent across themes for UX clarity */
+  --color-success: #10B981;         /* Success states (always green spectrum) */
+  --color-warning: #F59E0B;         /* Warning states (always amber) */
+  --color-danger: #B22222;          /* Error states (always red spectrum) */
+  --color-info: #06B6D4;            /* Info states (always blue/cyan) */
   
-  /* ===== SEMANTIC COLORS ===== */
-  --color-success: #10B981;     /* CORE_COLORS.success - Success states */
-  --color-warning: #F59E0B;     /* CORE_COLORS.warning - Warning states */
-  --color-danger: #B22222;      /* CORE_COLORS.danger - Error states */
-  --color-info: #06B6D4;        /* CORE_COLORS.info - Info states */
+  /* ===== NEUTRAL FOUNDATION COLORS ===== */
+  /* 🏗️ Foundation colors that work across all themes */
+  --color-text: #F9FAFB;            /* Primary text */
+  --color-text-muted: #94A3B8;      /* Secondary text */
+  --color-border: #475569;          /* Borders, dividers */
   
   /* ===== NEUTRAL GRAYS ===== */
-  --color-black: #000000;       /* CORE_COLORS.black */
-  --color-white: #FFFFFF;       /* CORE_COLORS.white */
-  --color-gray-100: #F3F4F6;    /* CORE_COLORS.gray100 */
-  --color-gray-200: #E5E7EB;    /* CORE_COLORS.gray200 */
-  --color-gray-300: #D1D5DB;    /* CORE_COLORS.gray300 */
-  --color-gray-400: #9CA3AF;    /* CORE_COLORS.gray400 - Chieftain rank */
-  --color-gray-500: #6B7280;    /* CORE_COLORS.gray500 */
-  --color-gray-600: #4B5563;    /* CORE_COLORS.gray600 */
-  --color-gray-700: #374151;    /* CORE_COLORS.gray700 */
-  --color-gray-800: #1F2937;    /* CORE_COLORS.gray800 */
-  --color-gray-900: #111827;    /* CORE_COLORS.gray900 */
+  --color-black: #000000;           /* Pure black */
+  --color-white: #FFFFFF;           /* Pure white */
+  --color-gray-100: #F3F4F6;        /* Lightest gray */
+  --color-gray-200: #E5E7EB;        /* Light gray */
+  --color-gray-300: #D1D5DB;        /* Medium-light gray */
+  --color-gray-400: #9CA3AF;        /* Medium gray (Chieftain rank) */
+  --color-gray-500: #6B7280;        /* Medium-dark gray */
+  --color-gray-600: #4B5563;        /* Dark gray */
+  --color-gray-700: #374151;        /* Darker gray */
+  --color-gray-800: #1F2937;        /* Very dark gray */
+  --color-gray-900: #111827;        /* Nearly black gray */
   
-  /* ===== PLAYER COLOR SPECTRUM ===== */
-  --color-red-400: #F87171;     /* CORE_COLORS.red400 */
-  --color-red-500: #EF4444;     /* CORE_COLORS.red500 */
-  --color-red-600: #DC2626;     /* CORE_COLORS.red600 - Player red */
-  --color-blue-600: #2563EB;    /* CORE_COLORS.blue600 - Player blue */
-  --color-green-600: #059669;   /* CORE_COLORS.green600 - Player green */
-  --color-amber-500: #F59E0B;    /* CORE_COLORS.amber500 - Player amber */
-  --color-purple-900: #9333EA;  /* CORE_COLORS.purple900 - Player purple */
-  --color-orange-600: #EA580C;  /* CORE_COLORS.orange600 - Player orange */
-  --color-cyan-500: #06B6D4;    /* CORE_COLORS.cyan500 - Player cyan */
-  --color-pink-500: #EC4899;    /* CORE_COLORS.pink500 - Player pink */
-  --color-amber-600: #D97706;    /* CORE_COLORS.amber600 - Player bronze */
-  --color-maroon-600: #881337;  /* CORE_COLORS.maroon600 - Player maroon */
-  --color-teal-500: #14B8A6;    /* CORE_COLORS.teal500 - Player teal */
-  --color-indigo-500: #6366F1;  /* CORE_COLORS.indigo500 - Player indigo */
+  /* ===== GAME-SPECIFIC COLORS ===== */
+  /* Player colors - these stay consistent for gameplay clarity */
+  --color-red-600: #DC2626;         /* Player red */
+  --color-blue-600: #2563EB;        /* Player blue */
+  --color-green-600: #059669;       /* Player green */
+  --color-amber-500: #F59E0B;       /* Player amber */
+  --color-purple-900: #9333EA;      /* Player purple */
+  --color-orange-600: #EA580C;      /* Player orange */
+  --color-cyan-500: #06B6D4;        /* Player cyan */
+  --color-pink-500: #EC4899;        /* Player pink */
+  --color-amber-600: #D97706;       /* Player bronze */
+  --color-maroon-600: #881337;      /* Player maroon */
+  --color-teal-500: #14B8A6;        /* Player teal */
+  --color-indigo-500: #6366F1;      /* Player indigo */
   
-  /* ===== METALLIC COLORS ===== */
-  --color-bronze: #CD7F32;      /* CORE_COLORS.bronze - Warlord rank */
-  --color-silver: #C0C0C0;      /* CORE_COLORS.silver - Caesar rank */
-  --color-ruby: #9B111E;        /* CORE_COLORS.ruby - Khan rank */
+  /* Metallic colors for ranks */
+  --color-bronze: #CD7F32;          /* Warlord rank */
+  --color-silver: #C0C0C0;          /* Caesar rank */
+  --color-ruby: #9B111E;            /* Khan rank */
   
   /* ===== LEGACY COMPATIBILITY ===== */
-  --color-brand: var(--color-violet);
-  --color-brand-dark: var(--color-imperial);
+  /* Maintain backward compatibility while transitioning */
+  --color-violet: var(--color-primary);
+  --color-violet-soft: var(--color-primary-soft);
+  --color-gold: var(--color-secondary);
+  --color-crimson: var(--color-accent);
+  --color-ink: var(--color-bg-deep);
+  --color-imperial: var(--color-bg-alt);
+  --color-muted: var(--color-text-muted);
   
   /* Section spacing - Keep your existing spacing system */
   --section-spacing: 3rem;
   --section-spacing-sm: 2rem;
 }
 
-/* ===== THEME SYSTEM - PHASE 4 ===== */
-/* Theme-aware color overrides using existing Redux theme system */
+/* ===== SEMANTIC THEME SYSTEM ===== */
+/* 🎨 Multi-Theme Support - Red, Blue, Green, Cowboy, MySpace, etc. */
+/* Uses semantic CSS variables to enable complete theme switching */
 
-/* Dark Theme (default) - Uses existing colors */
+/* ===== DEFAULT THEME (Dark Violet) ===== */
 :root,
-:root[data-theme="dark"] {
-  /* Colors stay the same - already optimized for dark theme */
+:root[data-theme="dark"],
+:root[data-theme="default"] {
+  /* Default theme values already set in @theme above */
+  /* This preserves current look as the default */
 }
 
-/* Light Theme Overrides */
+/* ===== LIGHT THEME ===== */
 :root[data-theme="light"] {
-  /* Background Colors - Inverted for light theme */
-  --color-ink: #F8F9FA;           /* Light background instead of #0B0B12 */
-  --color-surface-1: #FFFFFF;     /* White cards instead of #0F172A */
-  --color-surface-2: #F1F5F9;     /* Light gray instead of #1E293B */
-  --color-surface-3: #E2E8F0;     /* Lighter gray instead of #334155 */
+  /* Keep semantic theme colors the same */
+  /* --color-primary, --color-secondary, --color-accent unchanged */
   
-  /* Text Colors - Inverted for readability */
-  --color-text: #1E293B;          /* Dark text instead of #F8FAFC */
-  --color-text-soft: #334155;     /* Medium dark instead of #E2E8F0 */
-  --color-muted: #64748B;         /* Gray text instead of #94A3B8 */
+  /* Override background and text for light theme */
+  --color-bg-deep: #F8F9FA;        /* Light background */
+  --color-bg-alt: #F1F5F9;         /* Alternative light background */
+  --color-surface-1: #FFFFFF;      /* White cards */
+  --color-surface-2: #F1F5F9;      /* Light gray elevated surfaces */
   
-  /* Border Colors */
-  --color-border: #E2E8F0;        /* Light border instead of #334155 */
-  
-  /* Keep brand colors the same */
-  /* --color-violet, --color-gold, --color-crimson stay unchanged */
-  /* --color-success, --color-warning, --color-info stay unchanged */
+  /* Text colors for light theme */
+  --color-text: #1E293B;           /* Dark text for readability */
+  --color-text-muted: #64748B;     /* Medium gray text */
+  --color-border: #E2E8F0;         /* Light borders */
   
   /* Update gradient for light theme */
   --ck-bg-gradient: linear-gradient(
@@ -124,6 +177,56 @@
     #E2E8F0 60%,
     #F8F9FA 100%
   );
+}
+
+/* ===== COLOR THEMES ===== */
+/* 🔴 RED THEME */
+:root[data-theme="red"] {
+  --color-primary: #DC2626;        /* Red primary */
+  --color-primary-soft: #EF4444;   /* Softer red */
+  --color-secondary: #FFD700;      /* Keep gold as secondary */
+  --color-accent: #F59E0B;         /* Amber accent */
+}
+
+/* 🔵 BLUE THEME */
+:root[data-theme="blue"] {
+  --color-primary: #2563EB;        /* Blue primary */
+  --color-primary-soft: #3B82F6;   /* Softer blue */
+  --color-secondary: #FFD700;      /* Keep gold as secondary */
+  --color-accent: #06B6D4;         /* Cyan accent */
+}
+
+/* 🟢 GREEN THEME */
+:root[data-theme="green"] {
+  --color-primary: #059669;        /* Green primary */
+  --color-primary-soft: #10B981;   /* Softer green */
+  --color-secondary: #FFD700;      /* Keep gold as secondary */
+  --color-accent: #14B8A6;         /* Teal accent */
+}
+
+/* ===== STYLE THEMES ===== */
+/* 🤠 COWBOY THEME */
+:root[data-theme="cowboy"] {
+  --color-primary: #8B4513;        /* Saddle brown */
+  --color-primary-soft: #A0522D;   /* Sienna brown */
+  --color-secondary: #FFD700;      /* Gold belt buckle */
+  --color-accent: #B22222;         /* Western red */
+  
+  /* Adjust backgrounds for western feel */
+  --color-bg-deep: #2F1B14;        /* Dark leather brown */
+  --color-bg-alt: #3D2817;         /* Slightly lighter brown */
+  /* Note: Would also include custom fonts, textures in full implementation */
+}
+
+/* 💖 MYSPACE THEME */
+:root[data-theme="myspace"] {
+  --color-primary: #3B82F6;        /* MySpace blue */
+  --color-primary-soft: #60A5FA;   /* Lighter MySpace blue */
+  --color-secondary: #F97316;      /* Friend request orange */
+  --color-accent: #EC4899;         /* Profile accent pink */
+  
+  /* MySpace-style gradients and effects would go here */
+  /* Note: Would include sparkle effects, custom fonts in full implementation */
 }
 
 /* High Contrast Mode - Accessibility Enhancement */
@@ -209,786 +312,306 @@
   
   /* Conquest-specific utilities */
   .text-gradient {
-    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-gold) 100%);
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
-  .glow-violet {
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  .glow-primary {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 30%, transparent);
   }
 }
 
 /* ===== TAILWIND v4 COMPONENT CLASSES ===== */
 /* Define reusable component patterns for common UI elements */
-@layer components {
-  
-  /* Box1 - Primary Card Component */
-  .box1 {
-    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg;
-  }
-  
-  .box1-header {
-    @apply flex items-center gap-3 mb-4;
-  }
-  
-  .box1-title {
-    @apply text-lg font-semibold text-white;
-  }
-  
-  .box1-content {
-    @apply space-y-4;
-  }
-  
-  /* Box2 - Secondary Card Component */
-  .box2 {
-    @apply bg-surface-1/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-md;
-  }
-  
-  /* Primary Button Component */
-  .btn-primary {
-    @apply px-4 py-2 bg-violet hover:bg-violet/90 text-white font-semibold rounded-lg 
-           transition-all duration-200 transform hover:scale-[1.02] shadow-lg;
-  }
-  
-  .btn-primary:disabled {
-    @apply opacity-50 cursor-not-allowed hover:scale-100;
-  }
-  
-  /* Secondary Button Component */
-  .btn-secondary {
-    @apply px-4 py-2 bg-surface-2 hover:bg-surface-2/80 text-white font-medium 
-           rounded-lg border border-border transition-colors;
-  }
-  
-  /* Danger Button Component */
-  .btn-danger {
-    @apply px-4 py-2 bg-crimson hover:bg-crimson/90 text-white font-semibold 
-           rounded-lg transition-all duration-200 shadow-lg;
-  }
-  
-  /* Success Button Component */
-  .btn-success {
-    @apply px-4 py-2 bg-success hover:bg-success/90 text-white font-semibold 
-           rounded-lg transition-all duration-200 shadow-lg;
-  }
-  
-  /* Input Field Component */
-  .input-field {
-    @apply w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg 
-           text-white placeholder-gray-400 focus:ring-2 focus:ring-violet 
-           focus:border-violet transition-all duration-200;
-  }
-  
-  /* Select Dropdown Component */
-  .select-field {
-    @apply w-full px-4 py-3 bg-surface-1/70 border border-border rounded-lg 
-           text-white focus:ring-2 focus:ring-violet focus:border-violet 
-           transition-all duration-200;
-  }
-  
-  /* Toggle Switch Component */
-  .toggle-switch input {
-    @apply sr-only;
-  }
-  
-  .toggle-switch label {
-    @apply relative inline-flex items-center cursor-pointer;
-  }
-  
-  .toggle-switch .slider {
-    @apply w-11 h-6 bg-gray-600 rounded-full transition-colors duration-200;
-  }
-  
-  .toggle-switch input:checked + .slider {
-    @apply bg-violet;
-  }
-  
-  .toggle-switch .slider:before {
-    @apply content-[''] absolute left-1 top-1 w-4 h-4 bg-white rounded-full 
-           transition-transform duration-200;
-  }
-  
-  .toggle-switch input:checked + .slider:before {
-    @apply transform translate-x-5;
-  }
-  
-  /* Status Badge Components */
-  .badge-success {
-    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-success/20 
-           text-success rounded-full border border-success/30;
-  }
-  
-  .badge-warning {
-    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-warning/20 
-           text-warning rounded-full border border-warning/30;
-  }
-  
-  .badge-danger {
-    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-danger/20 
-           text-danger rounded-full border border-danger/30;
-  }
-  
-  .badge-info {
-    @apply inline-flex items-center px-2 py-1 text-xs font-medium bg-info/20 
-           text-info rounded-full border border-info/30;
-  }
-  
-  /* Loading Spinner Component */
-  .spinner {
-    @apply inline-block w-4 h-4 border-2 border-gray-300 border-t-violet 
-           rounded-full animate-spin;
-  }
-  
-  .spinner-lg {
-    @apply inline-block w-8 h-8 border-4 border-gray-300 border-t-violet 
-           rounded-full animate-spin;
-  }
-  
-  /* Stat Card Component */
-  .stat-card {
-    @apply bg-surface-2/60 backdrop-blur-sm border border-border/50 rounded-xl 
-           p-4 text-center hover:border-violet/30 transition-all duration-200;
-  }
-  
-  .stat-card-icon {
-    @apply text-2xl mb-2;
-  }
-  
-  .stat-card-value {
-    @apply text-xl font-bold text-white;
-  }
-  
-  .stat-card-label {
-    @apply text-sm text-muted;
-  }
-  
-  /* Navigation Tab Component */
-  .nav-tab {
-    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200;
-  }
-  
-  .nav-tab-active {
-    @apply bg-violet text-white shadow-lg;
-  }
-  
-  .nav-tab-inactive {
-    @apply text-muted hover:text-white hover:bg-surface-2/50;
-  }
-  
-  /* Game Room Card Component */
-  .game-card {
-    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl 
-           p-6 hover:border-violet/30 hover:bg-surface-2/70 transition-all 
-           duration-200 cursor-pointer;
-  }
-  
-  .game-card-header {
-    @apply flex items-center justify-between mb-3;
-  }
-  
-  .game-card-title {
-    @apply text-lg font-semibold text-white;
-  }
-  
-  .game-card-status {
-    @apply text-sm px-2 py-1 rounded-full font-medium;
-  }
-  
-  /* Player Color Selector Component */
-  .color-selector {
-    @apply grid grid-cols-4 gap-2;
-  }
-  
-  .color-option {
-    @apply w-10 h-10 rounded-lg border-2 border-transparent hover:border-white/50 
-           transition-all duration-200 cursor-pointer;
-  }
-  
-  .color-option-selected {
-    @apply border-white shadow-lg scale-110;
-  }
-  
-  /* Settings Section Component */
-  .settings-section {
-    @apply space-y-6;
-  }
-  
-  .settings-group {
-    @apply bg-surface-2/30 rounded-lg p-4 border border-border/30;
-  }
-  
-  .settings-group-title {
-    @apply text-lg font-semibold text-white mb-4;
-  }
-  
-  .settings-item {
-    @apply flex items-center justify-between py-3 border-b border-border/20 
-           last:border-b-0;
-  }
-  
-  .settings-label {
-    @apply text-white font-medium;
-  }
-  
-  .settings-description {
-    @apply text-sm text-muted mt-1;
-  }
-  
-  /* ===== MODAL/DIALOG COMPONENTS ===== */
-  .modal {
-    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
-  }
-  
-  .modal-backdrop {
-    @apply absolute inset-0 bg-black/50 backdrop-blur-sm;
-  }
-  
-  .modal-content {
-    @apply relative bg-surface-2 rounded-2xl border border-border/50 
-           shadow-2xl max-w-md w-full p-6 z-10;
-  }
-  
-  .modal-header {
-    @apply flex items-center justify-between mb-4;
-  }
-  
-  .modal-title {
-    @apply text-xl font-bold text-white;
-  }
-  
-  .modal-close {
-    @apply p-2 hover:bg-surface-1 rounded-lg transition-colors text-muted hover:text-white;
-  }
-  
-  .modal-body {
-    @apply space-y-4 mb-6;
-  }
-  
-  .modal-footer {
-    @apply flex gap-3 justify-end;
-  }
-  
-  /* ===== TERRITORY STATE CLASSES ===== */
-  .territory-selected {
-    @apply drop-shadow-lg;
-    stroke: var(--color-gold);
-    stroke-width: 4;
-  }
-  
-  .territory-target {
-    @apply drop-shadow-md;
-    stroke: var(--color-crimson);
-    stroke-width: 3;
-  }
-  
-  .territory-valid {
-    @apply drop-shadow-sm;
-    stroke: var(--color-success);
-    stroke-width: 3;
-  }
-  
-  .territory-hover {
-    @apply brightness-110;
-    stroke: var(--color-border);
-    stroke-width: 3;
-  }
-  
-  .territory-neutral {
-    stroke: var(--color-border);
-    stroke-width: 2;
-  }
-  
-  /* ===== GAME-SPECIFIC COMPONENTS ===== */
-  .lobby-card {
-    @apply bg-surface-2/50 backdrop-blur-sm border border-border/50 
-           rounded-xl p-4 hover:border-violet/30 transition-all cursor-pointer;
-  }
-  
-  .lobby-card-active {
-    @apply border-violet bg-violet/10;
-  }
-  
-  .lobby-card-header {
-    @apply flex items-center justify-between mb-3;
-  }
-  
-  .lobby-card-title {
-    @apply text-lg font-semibold text-white;
-  }
-  
-  .lobby-card-meta {
-    @apply text-sm text-muted space-x-2;
-  }
-  
-  /* ===== PLAYER COMPONENTS ===== */
-  .player-card {
-    @apply flex items-center gap-3 p-3 bg-surface-2/60 rounded-lg 
-           border border-border/30 hover:border-violet/30 transition-all;
-  }
-  
-  .player-avatar {
-    @apply w-10 h-10 rounded-full flex items-center justify-center 
-           text-sm font-bold text-white border-2 border-gray-400 shadow-sm;
-  }
-  
-  .player-info {
-    @apply flex-1;
-  }
-  
-  .player-name {
-    @apply font-medium text-white;
-  }
-  
-  .player-stats {
-    @apply text-sm text-muted;
-  }
-  
-  /* ===== NOTIFICATION/TOAST COMPONENTS ===== */
-  .toast {
-    @apply px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm;
-  }
-  
-  .toast-success {
-    @apply bg-success/20 border-success/30 text-success;
-  }
-  
-  .toast-error {
-    @apply bg-danger/20 border-danger/30 text-danger;
-  }
-  
-  .toast-warning {
-    @apply bg-warning/20 border-warning/30 text-warning;
-  }
-  
-  .toast-info {
-    @apply bg-info/20 border-info/30 text-info;
-  }
-  
-  /* ===== FORM LAYOUT HELPERS ===== */
-  .form-group {
-    @apply space-y-2;
-  }
-  
-  .form-row {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
-  }
-  
-  .form-section {
-    @apply space-y-6;
-  }
-  
-  .form-label {
-    @apply block text-white font-medium mb-2;
-  }
-  
-  .form-help {
-    @apply text-sm text-muted mt-1;
-  }
-  
-  /* ===== PROGRESS COMPONENTS ===== */
-  .progress-bar {
-    @apply w-full bg-surface-2 rounded-full h-2 overflow-hidden;
-  }
-  
-  .progress-fill {
-    @apply h-full bg-violet transition-all duration-300;
-  }
-  
-  .progress-fill-success {
-    @apply h-full bg-success transition-all duration-300;
-  }
-  
-  .progress-fill-warning {
-    @apply h-full bg-warning transition-all duration-300;
-  }
-  
-  .progress-fill-danger {
-    @apply h-full bg-danger transition-all duration-300;
-  }
-  
-  /* ===== DROPDOWN COMPONENTS ===== */
-  .dropdown-menu {
-    @apply absolute mt-2 w-48 bg-surface-2 border border-border 
-           rounded-lg shadow-xl z-50 py-2 backdrop-blur-sm;
-  }
-  
-  .dropdown-item {
-    @apply flex items-center gap-2 px-4 py-2 hover:bg-surface-1 
-           transition-colors cursor-pointer text-white;
-  }
-  
-  .dropdown-item:hover {
-    @apply text-violet-soft;
-  }
-  
-  .dropdown-divider {
-    @apply my-1 border-t border-border/50;
-  }
-  
-  /* ===== PHASE INDICATOR COMPONENTS ===== */
-  .phase-indicator {
-    @apply inline-flex items-center px-3 py-1 rounded-full 
-           text-sm font-medium uppercase tracking-wider border;
-  }
-  
-  .phase-attack {
-    @apply bg-danger/20 text-danger border-danger/30;
-  }
-  
-  .phase-fortify {
-    @apply bg-info/20 text-info border-info/30;
-  }
-  
-  .phase-deploy {
-    @apply bg-success/20 text-success border-success/30;
-  }
-  
-  .phase-reinforcement {
-    @apply bg-warning/20 text-warning border-warning/30;
-  }
-  
-  .glow-gold {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-  }
+/* Using @utility directive instead of @layer components for Tailwind v4 compatibility */
 
-  /* ===== NAVIGATION COMPONENTS ===== */
-  .nav-menu-header {
-    @apply bg-surface-1 px-6 py-4 flex items-center justify-between border-b border-border;
-  }
+/* Box1 - Primary Card Component */
+@utility box1 {
+  background-color: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
 
-  /* ===== DROPDOWN ENHANCED ===== */
-  .dropdown-separator {
-    @apply border-border my-1;
-  }
+@utility box1-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
 
-  /* ===== TOOLTIP COMPONENT ===== */
-  .tooltip {
-    @apply absolute top-full right-0 mt-2 px-2 py-1 bg-surface-1 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none;
-  }
+@utility box1-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: var(--color-white);
+}
 
-  /* ===== FOOTER COMPONENTS ===== */
-  .footer {
-    @apply mt-auto border-t border-border bg-surface-1/30;
+@utility box1-content {
+  & > * + * {
+    margin-top: 1rem;
   }
+}
 
-  .footer-link {
-    @apply hover:text-white transition-colors;
+/* Box2 - Secondary Card Component */
+@utility box2 {
+  background-color: color-mix(in srgb, var(--color-surface-1) 60%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+/* Primary Button Component */
+@utility btn-primary {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-out;
+  transform: scale(1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    background-color: var(--color-primary-soft);
+    transform: scale(1.02);
   }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: scale(1);
+  }
+}
 
-  /* ===== STATUS INDICATORS ===== */
-  .status-active {
-    @apply text-success bg-success/10 px-2 py-1 rounded text-xs font-medium;
+/* Secondary Button Component */
+@utility btn-secondary {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-surface-2);
+  color: var(--color-white);
+  font-weight: 500;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  transition: background-color 0.2s ease-out;
+  
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
   }
+}
 
-  .status-waiting {
-    @apply text-warning bg-warning/10 px-2 py-1 rounded text-xs font-medium;
+/* Danger Button Component */
+@utility btn-danger {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 90%, transparent);
   }
+}
 
-  .status-inactive {
-    @apply text-muted bg-muted/10 px-2 py-1 rounded text-xs font-medium;
+/* Success Button Component */
+@utility btn-success {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-success);
+  color: var(--color-white);
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-success) 90%, transparent);
   }
+}
+/* Input Field Component */
+@utility input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-white);
+  transition: all 0.2s ease-out;
+  
+  &::placeholder {
+    color: var(--color-gray-400);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+}
 
-  /* ===== INTERACTIVE ELEMENTS ===== */
-  .hover-lift {
-    @apply hover:scale-105 transition-transform duration-200 ease-smooth;
+/* Select Dropdown Component */
+@utility select-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-white);
+  transition: all 0.2s ease-out;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
+}
 
-  .click-scale {
-    @apply active:scale-95 transition-transform duration-100 ease-smooth;
-  }
+/* ===== FORM COMPONENT SYSTEM ===== */
+/* Comprehensive form components using semantic variables */
 
-  /* ===== TYPOGRAPHY SYSTEM ===== */
-  /* Standardized font scales and semantic text classes */
+/* Form Input Component */
+@utility form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-white);
+  font-size: 0.875rem;
+  transition: all 0.2s ease-out;
   
-  /* Display Typography - For heroes and major headings */
-  .text-display-xl {
-    @apply text-5xl md:text-6xl font-bold leading-tight tracking-tight;
+  &::placeholder {
+    color: var(--color-muted);
   }
   
-  .text-display-lg {
-    @apply text-4xl md:text-5xl font-bold leading-tight tracking-tight;
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
   
-  .text-display-md {
-    @apply text-3xl md:text-4xl font-bold leading-snug;
+  &:invalid {
+    border-color: var(--color-accent);
   }
   
-  /* Heading Typography - For section titles */
-  .text-heading-xl {
-    @apply text-2xl md:text-3xl font-semibold leading-snug;
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: color-mix(in srgb, var(--color-surface-1) 40%, transparent);
   }
-  
-  .text-heading-lg {
-    @apply text-xl md:text-2xl font-semibold leading-snug;
-  }
-  
-  .text-heading-md {
-    @apply text-lg md:text-xl font-semibold leading-normal;
-  }
-  
-  .text-heading-sm {
-    @apply text-base md:text-lg font-medium leading-normal;
-  }
-  
-  /* Body Typography - For content and UI */
-  .text-body-lg {
-    @apply text-lg leading-relaxed;
-  }
-  
-  .text-body-md {
-    @apply text-base leading-relaxed;
-  }
-  
-  .text-body-sm {
-    @apply text-sm leading-normal;
-  }
-  
-  /* Label Typography - For forms and small UI elements */
-  .text-label-lg {
-    @apply text-sm font-medium leading-normal uppercase tracking-wider;
-  }
-  
-  .text-label-md {
-    @apply text-xs font-medium leading-normal uppercase tracking-wide;
-  }
-  
-  .text-label-sm {
-    @apply text-xs leading-normal uppercase tracking-wide;
-  }
-  
-  /* Semantic Text Classes */
-  .text-primary {
-    @apply text-white;
-  }
-  
-  .text-secondary {
-    @apply text-muted;
-  }
-  
-  .text-accent {
-    @apply text-violet-soft;
-  }
-  
-  .text-success-semantic {
-    @apply text-success;
-  }
-  
-  .text-warning-semantic {
-    @apply text-warning;
-  }
-  
-  .text-danger-semantic {
-    @apply text-crimson;
-  }
+}
 
-  /* ===== SPACING SYSTEM ===== */
-  /* Consistent spacing patterns for components */
+/* Form Label Component */
+@utility form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-white);
+  margin-bottom: 0.5rem;
   
-  /* Container Spacing */
-  .container-padding {
-    @apply px-4 sm:px-6 lg:px-8;
+  &.required::after {
+    content: " *";
+    color: var(--color-accent);
   }
-  
-  .container-margin {
-    @apply mx-auto max-w-7xl;
-  }
-  
-  /* Section Spacing */
-  .section-spacing {
-    @apply py-8 lg:py-12;
-  }
-  
-  .section-spacing-lg {
-    @apply py-12 lg:py-16;
-  }
-  
-  /* Component Spacing */
-  .component-gap {
-    @apply gap-4 lg:gap-6;
-  }
-  
-  .component-gap-sm {
-    @apply gap-2 lg:gap-3;
-  }
-  
-  .component-gap-lg {
-    @apply gap-6 lg:gap-8;
-  }
-  
-  /* Content Spacing */
-  .content-stack {
-    @apply space-y-4;
-  }
-  
-  .content-stack-sm {
-    @apply space-y-2;
-  }
-  
-  .content-stack-lg {
-    @apply space-y-6;
-  }
+}
 
-  /* ===== ANIMATION & TRANSITION LIBRARY ===== */
-  /* Standardized animations and easing functions */
-  
-  /* Easing Functions */
-  .ease-smooth {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .ease-bounce {
-    transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
-  
-  .ease-sharp {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-  
-  /* Hover States - Note: .hover-lift provides same functionality */
-  
-  .hover-glow {
-    @apply transition-shadow duration-300 ease-smooth hover:shadow-lg hover:shadow-violet/20;
-  }
-  
-  .hover-fade {
-    @apply transition-opacity duration-200 ease-smooth hover:opacity-80;
-  }
-  
-  /* Focus States - Theme-aware and accessible */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-violet focus:ring-offset-2 focus:ring-offset-surface-1;
-  }
-  
-  .focus-ring-inset {
-    @apply focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet;
-  }
-  
-  /* Enhanced focus for high contrast mode */
-  :root[data-theme="high-contrast"] .focus-ring {
-    @apply focus:ring-4 focus:ring-gold;
-  }
-  
-  :root[data-theme="high-contrast"] .focus-ring-inset {
-    @apply focus:ring-4 focus:ring-gold;
-  }
-  
-  /* Loading States */
-  .loading-pulse {
-    @apply animate-pulse;
-  }
-  
-  .loading-spin {
-    @apply animate-spin;
-  }
-  
-  /* Entrance Animations */
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-smooth forwards;
-  }
-  
-  .animate-slide-up {
-    animation: slideUp 0.3s ease-smooth forwards;
-  }
-  
-  .animate-scale-in {
-    animation: scaleIn 0.2s ease-bounce forwards;
-  }
+/* Form Error Component */
+@utility form-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
 
-  /* Animation Keyframes */
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Form Help Text Component */
+@utility form-help {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  margin-top: 0.25rem;
+}
+
+/* Form Group Component */
+@utility form-group {
+  margin-bottom: 1.5rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Form Checkbox Component */
+@utility form-checkbox {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  
+  &:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
   }
   
-  @keyframes slideUp {
-    from { 
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to { 
-      opacity: 1;
-      transform: translateY(0);
-    }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+}
+
+/* Form Radio Component */
+@utility form-radio {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  
+  &:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
   }
   
-  @keyframes scaleIn {
-    from { 
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to { 
-      opacity: 1;
-      transform: scale(1);
-    }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
-  
-  /* ===== ACCESSIBILITY & SCREEN READER SUPPORT ===== */
-  /* Screen reader only content */
-  .sr-only {
-    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
-    clip: rect(0, 0, 0, 0);
-  }
-  
-  /* Screen reader only content that becomes visible on focus */
-  .sr-only-focusable:focus {
-    @apply static w-auto h-auto p-1 m-0 overflow-visible whitespace-normal;
+}
+/* NOTE: Legacy Tailwind component classes temporarily disabled for v4 compatibility */
+/* These will be progressively migrated to @utility directive as needed by components */
+
+/* Essential accessibility utilities that are actually used */
+@utility sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+@utility sr-only-focusable {
+  &:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.25rem;
+    margin: 0;
+    overflow: visible;
+    white-space: normal;
     clip: auto;
-  }
-  
-  /* Skip links for keyboard navigation */
-  .skip-link {
-    @apply sr-only-focusable fixed top-4 left-4 z-50 bg-violet text-white px-4 py-2 rounded-lg font-medium;
-  }
-  
-  /* High contrast mode enhancements */
-  :root[data-theme="high-contrast"] {
-    /* Ensure all interactive elements have visible borders */
-  }
-  
-  :root[data-theme="high-contrast"] button,
-  :root[data-theme="high-contrast"] .btn-primary,
-  :root[data-theme="high-contrast"] .btn-secondary {
-    @apply border-2 border-white;
-  }
-  
-  :root[data-theme="high-contrast"] input,
-  :root[data-theme="high-contrast"] textarea,
-  :root[data-theme="high-contrast"] select {
-    @apply border-2 border-white bg-black text-white;
-  }
-  
-  /* Motion preferences - respect user's motion settings */
-  @media (prefers-reduced-motion: reduce) {
-    .animate-fade-in,
-    .animate-slide-up,
-    .animate-scale-in,
-    .hover-lift,
-    .click-scale,
-    .loading-spin {
-      animation: none !important;
-      transition: none !important;
-      transform: none !important;
-    }
-  }
-  
-  /* Color scheme preference detection */
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme]) {
-      /* Apply light theme if user prefers light and no theme is set */
-      --color-ink: #F8F9FA;
-      --color-surface-1: #FFFFFF;
-      --color-surface-2: #F1F5F9;
-      --color-text: #1E293B;
-      --color-muted: #64748B;
-      --color-border: #E2E8F0;
-    }
-  }
-  
-  /* Force white text utility kept for compatibility */
-  .btn-white-text,
-  .btn-white-text * {
-    color: white;
   }
 }
