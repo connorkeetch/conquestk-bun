@@ -100,7 +100,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username/Email Field */}
             <div>
-              <label htmlFor="identifier" className="block text-muted text-sm font-medium mb-2">
+              <label htmlFor="identifier" className="form-label">
                 👤 Username or Email
               </label>
               <input
@@ -119,7 +119,7 @@ export default function Login() {
             {/* Password Field */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="password" className="block text-muted text-sm font-medium">
+                <label htmlFor="password" className="form-label">
                   🔒 Password
                 </label>
                 <Link

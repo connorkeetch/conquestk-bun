@@ -98,7 +98,7 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Field */}
             <div>
-              <label htmlFor="username" className="block text-muted text-sm font-medium mb-2">
+              <label htmlFor="username" className="form-label">
                 👤 Username
               </label>
               <input
@@ -116,7 +116,7 @@ export default function Register() {
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-muted text-sm font-medium mb-2">
+              <label htmlFor="email" className="form-label">
                 ✉️ Email Address
               </label>
               <input
@@ -134,7 +134,7 @@ export default function Register() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-muted text-sm font-medium mb-2">
+              <label htmlFor="password" className="form-label">
                 🔒 Password
               </label>
               <div className="relative">
@@ -231,10 +231,7 @@ export default function Register() {
 
             {/* Confirm Password Field */}
             <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-muted text-sm font-medium mb-2"
-              >
+              <label htmlFor="confirmPassword" className="form-label">
                 🔒 Confirm Password
               </label>
               <div className="relative">

@@ -116,10 +116,10 @@ const Dashboard: React.FC = () => {
   }
 
   const getGameStatusColor = (status: string, result?: string) => {
-    if (status === 'in_progress') return 'text-yellow-400'
-    if (status === 'completed' && result === 'won') return 'text-green-400'
-    if (status === 'completed' && result === 'lost') return 'text-red-400'
-    return 'text-violet-soft'
+    if (status === 'in_progress') return 'text-warning'
+    if (status === 'completed' && result === 'won') return 'text-success'
+    if (status === 'completed' && result === 'lost') return 'text-danger'
+    return 'text-primary-soft'
   }
 
   const getGameStatusText = (status: string, result?: string) => {
@@ -150,45 +150,45 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Link
           to="/play/quick-match"
-          className="group relative bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
+          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🚀</div>
             <h3 className="text-xl font-bold text-white mb-2">Quick Match</h3>
-            <p className="text-blue-100 text-sm">Find a game instantly</p>
+            <p className="text-primary-soft text-sm">Find a game instantly</p>
           </div>
         </Link>
 
         <Link
           to="/play/create"
-          className="group relative bg-gradient-to-br from-green-600/20 to-teal-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
+          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">➕</div>
             <h3 className="text-xl font-bold text-white mb-2">Create Lobby</h3>
-            <p className="text-green-100 text-sm">Host a custom game</p>
+            <p className="text-success text-sm">Host a custom game</p>
           </div>
         </Link>
 
         <Link
           to="/maps"
-          className="group relative bg-gradient-to-br from-orange-600/20 to-red-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
+          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🗺️</div>
             <h3 className="text-xl font-bold text-white mb-2">Explore Maps</h3>
-            <p className="text-orange-100 text-sm">Discover new territories</p>
+            <p className="text-warning text-sm">Discover new territories</p>
           </div>
         </Link>
 
         <Link
           to="/community/tournaments"
-          className="group relative bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg border border-white/10 hover:border-white/20 overflow-hidden"
+          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">
             <div className="text-3xl mb-3">🏆</div>
             <h3 className="text-xl font-bold text-white mb-2">Tournaments</h3>
-            <p className="text-purple-100 text-sm">Compete for glory</p>
+            <p className="text-primary-soft text-sm">Compete for glory</p>
           </div>
         </Link>
       </div>
@@ -196,7 +196,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Stats Overview */}
         <div className="lg:col-span-1">
-          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
+          <div className="box1">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">📊</span>
               Your Stats
@@ -209,19 +209,19 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Games Won</span>
-                  <span className="text-green-400 font-bold">{userStats.gamesWon}</span>
+                  <span className="text-success font-bold">{userStats.gamesWon}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Win Rate</span>
-                  <span className="text-violet-soft font-bold">{userStats.winRate}%</span>
+                  <span className="text-primary-soft font-bold">{userStats.winRate}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Current Streak</span>
-                  <span className="text-yellow-400 font-bold">{userStats.currentStreak}</span>
+                  <span className="text-warning font-bold">{userStats.currentStreak}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Total Playtime</span>
-                  <span className="text-purple-400 font-bold">
+                  <span className="text-primary-soft font-bold">
                     {formatPlaytime(userStats.totalPlaytime)}
                   </span>
                 </div>
@@ -233,7 +233,7 @@ const Dashboard: React.FC = () => {
             )}
             <Link
               to="/profile/stats"
-              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
+              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
             >
               View Detailed Stats →
             </Link>
@@ -242,7 +242,7 @@ const Dashboard: React.FC = () => {
 
         {/* Recent Games */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
+          <div className="box1">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">🎮</span>
               Recent Games
@@ -251,10 +251,10 @@ const Dashboard: React.FC = () => {
               {recentGames.map((game) => (
                 <div
                   key={game.id}
-                  className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-all duration-200 border border-white/5 hover:border-white/10"
+                  className="flex items-center justify-between p-4 bg-surface-2/50 rounded-lg hover:bg-surface-2 transition-all duration-200 border border-border/50 hover:border-border"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-800 rounded-lg flex items-center justify-center">
+                    <div className="w-12 h-12 bg-surface-2 rounded-lg flex items-center justify-center border border-border">
                       🗺️
                     </div>
                     <div>
@@ -271,7 +271,7 @@ const Dashboard: React.FC = () => {
                     {game.status === 'in_progress' && (
                       <Link
                         to={`/room/${game.id}`}
-                        className="text-sm text-violet-soft hover:text-violet-soft"
+                        className="text-sm text-primary-soft hover:text-primary"
                       >
                         Continue →
                       </Link>
@@ -282,14 +282,14 @@ const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/profile/history"
-              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
+              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
             >
               View All Games →
             </Link>
           </div>
 
           {/* Friends Activity */}
-          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
+          <div className="box1">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center">
               <span className="mr-2">👥</span>
               Friends Activity
@@ -298,14 +298,14 @@ const Dashboard: React.FC = () => {
               {friendsActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-center space-x-4 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all duration-200 border border-white/5 hover:border-white/10"
+                  className="flex items-center space-x-4 p-3 bg-surface-2/50 rounded-lg hover:bg-surface-2 transition-all duration-200 border border-border/50 hover:border-border"
                 >
                   <div className="relative">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-sm font-bold text-white">
                       {activity.username.charAt(0)}
                     </div>
                     {activity.online && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-surface-1"></div>
                     )}
                   </div>
                   <div className="flex-1">
@@ -318,7 +318,7 @@ const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/community/friends"
-              className="block mt-4 text-center text-violet-soft hover:text-violet-soft text-sm font-medium"
+              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
             >
               View All Friends →
             </Link>

@@ -44,11 +44,11 @@ const Maps: React.FC = () => {
           <input
             type="text"
             placeholder="Search maps..."
-            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet"
+            className="form-input"
           />
           <div className="absolute right-3 top-3 text-muted">🔍</div>
         </div>
-        <select className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet">
+        <select className="form-input">
           <option>Sort by Popularity</option>
           <option>Sort by Rating</option>
           <option>Sort by Date</option>
@@ -64,7 +64,7 @@ const Maps: React.FC = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
                 activeTab === tab.id
-                  ? 'bg-violet text-white shadow-lg'
+                  ? 'bg-primary text-white shadow-lg'
                   : 'text-muted hover:text-white hover:bg-surface-2'
               }`}
             >
@@ -85,32 +85,32 @@ const Maps: React.FC = () => {
             be able to play on classic maps, browse community creations, and even build your own
             territories with our map editor.
           </p>
-          <div className="bg-surface-2/50 backdrop-blur-sm rounded-xl p-8 border border-border/50">
+          <div className="box1 p-8">
             <h3 className="text-xl font-bold text-white mb-4">What's Coming:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               <div className="flex items-start gap-3">
-                <span className="text-green-400 mt-1">✓</span>
+                <span className="text-success mt-1">✓</span>
                 <div>
                   <div className="font-semibold text-white">Classic Risk Maps</div>
                   <div className="text-muted text-sm">World, Europe, Asia & more</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-violet-soft mt-1">🚧</span>
+                <span className="text-primary-soft mt-1">🚧</span>
                 <div>
                   <div className="font-semibold text-white">Map Editor</div>
                   <div className="text-muted text-sm">Create custom battlefields</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-violet-soft mt-1">🚧</span>
+                <span className="text-primary-soft mt-1">🚧</span>
                 <div>
                   <div className="font-semibold text-white">Community Maps</div>
                   <div className="text-muted text-sm">Share & discover creations</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-violet-soft mt-1">🚧</span>
+                <span className="text-primary-soft mt-1">🚧</span>
                 <div>
                   <div className="font-semibold text-white">Map Ratings</div>
                   <div className="text-muted text-sm">Community feedback system</div>
