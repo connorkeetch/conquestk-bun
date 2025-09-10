@@ -329,15 +329,15 @@ To switch themes: Use Redux setTheme() action
 
 /* Box1 - Primary Card Component */
 @utility box1 {
-  background-color: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
   backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: 1rem;
-  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  border-radius: 1.5rem;
+  padding: 2rem;
   box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.3), 
-    0 10px 10px -5px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 0 color-mix(in srgb, var(--color-white) 10%, transparent);
+    0 25px 50px -12px rgba(0, 0, 0, 0.4),
+    0 8px 16px -4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 color-mix(in srgb, var(--color-white) 8%, transparent);
 }
 
 @utility box1-header {
@@ -484,14 +484,13 @@ To switch themes: Use Redux setTheme() action
 /* Form Input Component */
 @utility form-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  padding: 0.875rem 1rem;
+  background-color: color-mix(in srgb, var(--color-bg-deep) 70%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   color: var(--color-white);
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: all 0.2s ease-out;
-  backdrop-filter: blur(8px);
   
   &::placeholder {
     color: var(--color-text-muted);
@@ -500,12 +499,12 @@ To switch themes: Use Redux setTheme() action
   &:focus {
     outline: none;
     border-color: var(--color-primary);
-    background-color: color-mix(in srgb, var(--color-surface-2) 95%, transparent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    background-color: color-mix(in srgb, var(--color-bg-deep) 85%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
   
   &:hover {
-    background-color: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
+    background-color: color-mix(in srgb, var(--color-bg-deep) 75%, transparent);
   }
   
   &:invalid {

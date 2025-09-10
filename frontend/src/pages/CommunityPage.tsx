@@ -71,11 +71,11 @@ const CommunityPage: React.FC = () => {
     globalLeaderboard
 
   return (
-    <div className="container-margin container-padding section-spacing">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-display-lg text-primary mb-2">Community Hub</h1>
-          <p className="text-secondary text-body-md">Connect, compete, and celebrate with fellow commanders</p>
+          <h1 className="text-3xl font-bold text-primary mb-2">Community Hub</h1>
+          <p className="text-muted text-lg">Connect, compete, and celebrate with fellow commanders</p>
         </div>
       </div>
 
