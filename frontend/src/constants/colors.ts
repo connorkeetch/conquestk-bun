@@ -266,15 +266,45 @@ export const CORE_COLORS = {
   // If confirmed unused after component audit, these can be removed
 } as const;
 
-// ===== FUTURE THEME DEFINITIONS =====
-// 🎨 Examples of how different themes will override THEME_COLORS
+// ===== THEME DEFINITIONS =====
+// 🎨 Different themes that override THEME_COLORS
 // This architecture enables both color themes and style themes
 
-/* EXAMPLE THEME DEFINITIONS (for future implementation):
-
 export const AVAILABLE_THEMES = {
+  // Default theme - matches original design colors from maps.mhtml
+  'default': {
+    ...THEME_COLORS,
+    primary: '#4a9eff',           // Original blue from maps.mhtml
+    primarySoft: '#60a5fa',       // Lighter blue
+    secondary: '#ffd700',         // Gold accent
+    accent: '#dc2626',            // Red accent from original meta theme-color
+    backgroundDeep: '#1a1a1a',    // Original dark background
+    backgroundAlt: '#0f172a',     // Slightly different dark
+  },
+  
+  // Light theme
+  'light': {
+    ...THEME_COLORS,
+    primary: '#3b82f6',           // Blue for light theme
+    primarySoft: '#60a5fa',       // Lighter blue
+    secondary: '#f59e0b',         // Amber
+    accent: '#dc2626',            // Red accent
+    backgroundDeep: '#ffffff',    // White background
+    backgroundAlt: '#f8fafc',     // Very light gray
+    surface1: '#f1f5f9',          // Light surface
+    surface2: '#e2e8f0',          // Elevated light surface
+  },
+  
   // Color-based themes
-  'red-theme': {
+  'violet': {
+    ...THEME_COLORS,
+    primary: THEME_PALETTE.violets.violet,
+    primarySoft: THEME_PALETTE.violets.violetSoft,
+    secondary: THEME_PALETTE.warms.gold,
+    accent: THEME_PALETTE.reds.crimson,
+  },
+  
+  'red': {
     ...THEME_COLORS,
     primary: THEME_PALETTE.reds.red600,
     primarySoft: THEME_PALETTE.reds.red500,
@@ -282,7 +312,7 @@ export const AVAILABLE_THEMES = {
     accent: THEME_PALETTE.warms.amber600,
   },
   
-  'blue-theme': {
+  'blue': {
     ...THEME_COLORS,
     primary: THEME_PALETTE.blues.blue600,
     primarySoft: THEME_PALETTE.blues.blue500,
@@ -290,7 +320,7 @@ export const AVAILABLE_THEMES = {
     accent: THEME_PALETTE.blues.cyan500,
   },
   
-  'green-theme': {
+  'green': {
     ...THEME_COLORS,
     primary: THEME_PALETTE.greens.green600,
     primarySoft: THEME_PALETTE.greens.green500,
@@ -298,7 +328,19 @@ export const AVAILABLE_THEMES = {
     accent: THEME_PALETTE.greens.teal500,
   },
   
-  // Style-based themes (extend beyond just colors)
+  'black': {
+    ...THEME_COLORS,
+    primary: '#1f2937',           // Dark gray as primary
+    primarySoft: '#374151',       // Lighter dark gray
+    secondary: '#9ca3af',         // Medium gray
+    accent: '#f3f4f6',            // Light gray accent
+    backgroundDeep: '#000000',    // Pure black
+    backgroundAlt: '#111827',     // Very dark gray
+  },
+} as const;
+
+/* STYLE THEME EXAMPLES (for future implementation):
+  
   'cowboy-theme': {
     ...THEME_COLORS,
     primary: THEME_PALETTE.warms.amber600,      // Leather brown
@@ -316,7 +358,6 @@ export const AVAILABLE_THEMES = {
     accent: THEME_PALETTE.cools.pink500,        // Profile accent pink
     // Would also include: custom fonts, gradients, sparkle effects
   }
-} as const;
 
 */
 

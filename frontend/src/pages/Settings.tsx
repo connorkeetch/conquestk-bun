@@ -280,12 +280,12 @@ export default function Settings() {
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
 
-  // Get current color theme from localStorage (defaults to 'violet')
+  // Get current color theme from localStorage (defaults to 'default')
   const [currentColorTheme, setCurrentColorTheme] = useState<ColorTheme>(() => {
     try {
-      return (localStorage.getItem('colorTheme') as ColorTheme) || 'violet'
+      return (localStorage.getItem('colorTheme') as ColorTheme) || 'default'
     } catch (_error) {
-      return 'violet'
+      return 'default'
     }
   })
 
@@ -711,13 +711,15 @@ export default function Settings() {
         case 'color-theme-selector':
           return (
             <div className="space-y-3">
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '💜' },
-                  { id: 'red', name: 'Red', color: '#DC2626', emoji: '❤️' },
-                  { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '💙' },
-                  { id: 'green', name: 'Green', color: '#059669', emoji: '💚' },
-                  { id: 'gold', name: 'Gold', color: '#F59E0B', emoji: '💛' },
+                  { id: 'default', name: 'Default', color: '#4a9eff', emoji: '🔵', description: 'Original ConquestK theme' },
+                  { id: 'light', name: 'Light', color: '#f8fafc', emoji: '☀️', description: 'Bright and clean' },
+                  { id: 'violet', name: 'Violet', color: '#7C3AED', emoji: '💜', description: 'Purple accent' },
+                  { id: 'red', name: 'Red', color: '#DC2626', emoji: '❤️', description: 'Crimson theme' },
+                  { id: 'blue', name: 'Blue', color: '#2563EB', emoji: '💙', description: 'Ocean blue' },
+                  { id: 'green', name: 'Green', color: '#059669', emoji: '💚', description: 'Forest green' },
+                  { id: 'black', name: 'Black', color: '#1f2937', emoji: '⚫', description: 'Dark and minimal' },
                 ].map((theme) => (
                   <button
                     key={theme.id}
@@ -739,12 +741,20 @@ export default function Settings() {
                     {/* Theme Preview Circle */}
                     <div 
                       className="w-8 h-8 rounded-full mb-2 shadow-lg"
-                      style={{ backgroundColor: theme.color }}
+                      style={{ 
+                        backgroundColor: theme.color,
+                        border: theme.id === 'light' ? '2px solid #e5e7eb' : 'none'
+                      }}
                     />
                     
                     {/* Theme Name */}
-                    <span className="text-xs font-medium text-white">
+                    <span className="text-xs font-medium text-white text-center">
                       {theme.emoji} {theme.name}
+                    </span>
+                    
+                    {/* Theme Description */}
+                    <span className="text-xs text-muted text-center mt-1">
+                      {theme.description}
                     </span>
                     
                     {/* Selected Indicator */}
@@ -1015,25 +1025,9 @@ export default function Settings() {
       case 'display':
         return [
           {
-            id: 'base-theme',
-            label: 'Base Theme',
-            description: 'Choose between light and dark modes',
-            type: 'select',
-            isWorking: true,
-            defaultValue: settings.display.theme,
-            onChange: async (value: 'dark' | 'light') => {
-              dispatch(setTheme(value))
-              await persistSetting('theme', value)
-            },
-            options: [
-              { value: 'dark', label: '🌙 Dark Theme' },
-              { value: 'light', label: '☀️ Light Theme' },
-            ],
-          },
-          {
-            id: 'color-theme',
-            label: 'Color Theme',
-            description: 'Select your brand color palette - changes take effect immediately',
+            id: 'unified-theme',
+            label: 'Theme',
+            description: 'Choose your preferred theme - includes light/dark and color options',
             type: 'color-theme-selector',
             isWorking: true,
             defaultValue: currentColorTheme,
@@ -1042,6 +1036,14 @@ export default function Settings() {
               setCurrentColorTheme(value)
               // Dispatch Redux action (handles document.setAttribute and localStorage)
               dispatch(setColorTheme(value))
+              // For light theme, also update base theme
+              if (value === 'light') {
+                dispatch(setTheme('light'))
+                await persistSetting('theme', 'light')
+              } else {
+                dispatch(setTheme('dark'))
+                await persistSetting('theme', 'dark')
+              }
               // TODO: Persist to server when backend supports color themes
             },
           },
@@ -1052,14 +1054,6 @@ export default function Settings() {
             type: 'toggle',
             isWorking: false,
             defaultValue: false,
-          },
-          {
-            id: 'style-themes',
-            label: 'Style Themes (Coming Soon)',
-            description: 'MySpace, Cowboy, Gaming, and more personality themes',
-            type: 'button',
-            isWorking: false,
-            buttonText: '🎨 Coming Soon',
           },
         ]
 

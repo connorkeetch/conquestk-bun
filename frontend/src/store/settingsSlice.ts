@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PlayerColor } from '../constants/colors'
 
 // Theme types - Extended for multi-theme support
-export type ColorTheme = 'violet' | 'red' | 'blue' | 'green' | 'gold'
+export type ColorTheme = 'violet' | 'red' | 'blue' | 'green' | 'black' | 'default'
 export type StyleTheme = 'modern' | 'cowboy' | 'myspace' | 'minimal' | 'gaming'
 export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy compatibility
 
@@ -84,7 +84,7 @@ const loadSettings = (): SettingsState => {
     if (saved) {
       const parsed = JSON.parse(saved)
       // Merge with defaults to ensure all fields exist
-      return {
+      const mergedSettings = {
         ...defaultSettings,
         ...parsed,
         display: { ...defaultSettings.display, ...parsed.display },
@@ -93,8 +93,22 @@ const loadSettings = (): SettingsState => {
         privacy: { ...defaultSettings.privacy, ...parsed.privacy },
         notifications: { ...defaultSettings.notifications, ...parsed.notifications },
       }
+      
+      // Apply stored color theme from localStorage on load to fix persistence
+      const storedColorTheme = localStorage.getItem('colorTheme') as ColorTheme
+      if (storedColorTheme) {
+        document.documentElement.setAttribute('data-theme', storedColorTheme)
+      }
+      
+      return mergedSettings
     }
-  } catch (_error) {}
+  } catch (_error) {
+    // Even on error, try to load stored color theme
+    const storedColorTheme = localStorage.getItem('colorTheme') as ColorTheme
+    if (storedColorTheme) {
+      document.documentElement.setAttribute('data-theme', storedColorTheme)
+    }
+  }
   return defaultSettings
 }
 
