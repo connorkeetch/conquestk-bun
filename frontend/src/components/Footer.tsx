@@ -8,7 +8,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="w-full container-padding py-6">
         {/* Use justify-between like header for proper left/right alignment */}
-        <div className="flex flex-col sm:flex-row items-center text-body-sm text-secondary">
+        <div className="flex flex-col sm:flex-row items-center text-body-sm text-muted">
           <div className="w-full flex items-center justify-between">
             {/* Copyright - Far left */}
             <div className="text-left">
@@ -16,7 +16,7 @@ export default function Footer() {
             </div>
             
             {/* Version - Far right */}
-            <div className="text-label-md text-right">
+            <div className="text-right">
               Beta v0.9.1
             </div>
           </div>
@@ -29,14 +29,14 @@ export default function Footer() {
             >
               Terms
             </Link>
-            <span className="text-border">|</span>
+            <span className="text-muted">|</span>
             <Link 
               to="/privacy" 
               className="footer-link"
             >
               Privacy
             </Link>
-            <span className="text-border">|</span>
+            <span className="text-muted">|</span>
             <a 
               href="mailto:support@conquestk.com" 
               className="footer-link"
