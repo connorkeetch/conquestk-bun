@@ -85,7 +85,6 @@ export default function MapEditorTokens() {
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('territories')
-  const [showImageControls, setShowImageControls] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
@@ -975,16 +974,6 @@ export default function MapEditorTokens() {
               </button>
             </div>
 
-            {/* Image Controls Button */}
-            {state.imageUrl && (
-              <button
-                onClick={() => setShowImageControls(!showImageControls)}
-                className={`px-3 py-1 rounded text-sm ${showImageControls ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
-                title="Toggle image controls panel"
-              >
-                🖼️ Image Controls
-              </button>
-            )}
 
             {/* Import/Export */}
             <div className="flex gap-2 ml-auto">
@@ -1445,33 +1434,6 @@ export default function MapEditorTokens() {
             </div>
           </div>
 
-          {/* Image Controls Panel - Conditional left sidebar */}
-          {showImageControls && state.imageUrl && (
-            <div
-              className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto mr-4"
-              style={{ height: 'calc(100vh - 280px)' }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">🖼️ Image Controls</h2>
-                <button
-                  onClick={() => setShowImageControls(false)}
-                  className="text-muted hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <MapImageControls
-                imageWidth={state.imageWidth}
-                imageHeight={state.imageHeight}
-                mapWidth={state.mapWidth}
-                mapHeight={state.mapHeight}
-                onScaleImage={handleScaleImage}
-                onResizeCanvas={handleResizeCanvas}
-                onCropImage={handleOpenCropTool}
-              />
-            </div>
-          )}
-
           {/* Properties Panel - Fixed right sidebar */}
           <div
             className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
@@ -1499,6 +1461,22 @@ export default function MapEditorTokens() {
                 {state.territories.reduce((acc, t) => acc + t.connections.length, 0) / 2}
               </p>
             </div>
+
+            {/* Image Controls */}
+            {state.imageUrl && (
+              <div className="mb-4">
+                <h3 className="text-sm font-bold mb-2">🖼️ Image Controls</h3>
+                <MapImageControls
+                  imageWidth={state.imageWidth}
+                  imageHeight={state.imageHeight}
+                  mapWidth={state.mapWidth}
+                  mapHeight={state.mapHeight}
+                  onScaleImage={handleScaleImage}
+                  onResizeCanvas={handleResizeCanvas}
+                  onCropImage={handleOpenCropTool}
+                />
+              </div>
+            )}
 
             {/* Selected Territory */}
             {state.selectedTerritoryId && (
