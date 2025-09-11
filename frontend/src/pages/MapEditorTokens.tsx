@@ -85,6 +85,7 @@ export default function MapEditorTokens() {
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('territories')
+  const [showImageControls, setShowImageControls] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
@@ -953,17 +954,15 @@ export default function MapEditorTokens() {
               </button>
             </div>
 
-            {/* Image Controls */}
+            {/* Image Controls Button */}
             {state.imageUrl && (
-              <MapImageControls
-                imageWidth={Math.round(state.imageWidth * state.imageScale)}
-                imageHeight={Math.round(state.imageHeight * state.imageScale)}
-                mapWidth={state.mapWidth}
-                mapHeight={state.mapHeight}
-                onScaleImage={handleScaleImage}
-                onResizeCanvas={handleResizeCanvas}
-                onCropImage={handleOpenCropTool}
-              />
+              <button
+                onClick={() => setShowImageControls(!showImageControls)}
+                className={`px-3 py-1 rounded text-sm ${showImageControls ? 'bg-violet' : 'bg-surface-2 hover:bg-gray-600'}`}
+                title="Toggle image controls panel"
+              >
+                🖼️ Image Controls
+              </button>
             )}
 
             {/* Import/Export */}
@@ -1284,7 +1283,7 @@ export default function MapEditorTokens() {
                 width: `${state.mapWidth}px`,
                 height: `${state.mapHeight}px`,
                 backgroundImage: state.imageUrl ? `url(${state.imageUrl})` : undefined,
-                backgroundSize: 'cover',
+                backgroundSize: `${state.imageWidth * state.imageScale}px ${state.imageHeight * state.imageScale}px`,
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }}
@@ -1416,6 +1415,33 @@ export default function MapEditorTokens() {
               )}
             </div>
           </div>
+
+          {/* Image Controls Panel - Conditional left sidebar */}
+          {showImageControls && state.imageUrl && (
+            <div
+              className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto mr-4"
+              style={{ height: 'calc(100vh - 280px)' }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">🖼️ Image Controls</h2>
+                <button
+                  onClick={() => setShowImageControls(false)}
+                  className="text-muted hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <MapImageControls
+                imageWidth={state.imageWidth}
+                imageHeight={state.imageHeight}
+                mapWidth={state.mapWidth}
+                mapHeight={state.mapHeight}
+                onScaleImage={handleScaleImage}
+                onResizeCanvas={handleResizeCanvas}
+                onCropImage={handleOpenCropTool}
+              />
+            </div>
+          )}
 
           {/* Properties Panel - Fixed right sidebar */}
           <div
@@ -1609,6 +1635,9 @@ export default function MapEditorTokens() {
               setState((prev) => ({
                 ...prev,
                 imageUrl: croppedUrl,
+                imageWidth: state.mapWidth,
+                imageHeight: state.mapHeight,
+                imageScale: 1,
               }))
               setShowCropper(false)
             }}
