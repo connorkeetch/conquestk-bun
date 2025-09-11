@@ -69,28 +69,28 @@ const getColorName = (color: string | PlayerColor): string => {
     const premiumNames: Record<string, string> = {
       Gold: 'Gold',
       Silver: 'Silver',
-      Bronze: 'Bronze',
-      Rainbow: 'Rainbow',
       NeonGreen: 'Neon Green',
-      Electric: 'Electric',
+      HotPink: 'Hot Pink',
+      NeonCyan: 'Neon Cyan',
+      Magenta: 'Magenta',
     }
     return premiumNames[color] || color
   }
   
-  // Map player colors to names
+  // Map player colors to names (matching exact order in PLAYER_COLORS)
   const playerColorNames: string[] = [
-    'Red',           // red600
-    'Orange',        // orange600
-    'Amber',         // amber500
-    'Lime',          // limeGreen
-    'Forest Green',  // forestGreen
-    'Teal',          // teal500
-    'Cyan',          // cyan500
-    'Blue',          // blue600
-    'Indigo',        // indigo500
-    'Purple',        // purple900
-    'Pink',          // pink500
-    'Maroon',        // maroon600
+    'Red',           // #DC2626
+    'Maroon',        // #881337
+    'Pink',          // #EC4899
+    'Orange',        // #EA580C
+    'Amber',         // #F59E0B
+    'Sienna',        // #A0522D
+    'Forest Green',  // #059669
+    'Teal',          // #14B8A6
+    'Blue',          // #2563EB
+    'Cyan',          // #06B6D4
+    'Purple',        // #9333EA
+    'Violet',        // #7C3AED
   ]
   
   // For standard player colors, get the index and return the name
