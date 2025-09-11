@@ -30,6 +30,7 @@ import {
   isPremiumColor,
   type PlayerColor,
 } from '../constants/colors'
+import preferencesService from '../services/preferencesService'
 
 // Color Dropdown Component
 function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (color: PlayerColor) => void }) {
@@ -407,13 +408,20 @@ export default function Settings() {
   // Helper function to persist important settings to server
   const persistSetting = async (settingKey: string, value: any) => {
     try {
+      // For theme specifically, use the preferences API
+      if (settingKey === 'theme') {
+        const success = await preferencesService.updateTheme(value)
+        if (success) {
+          console.log('✅ Theme persisted to database:', value)
+        }
+        return
+      }
+      
+      // For other settings, continue using the existing method
       const settingsToSave: any = {}
       
       // Map Redux setting keys to server setting keys
       switch (settingKey) {
-        case 'theme':
-          settingsToSave.theme = value
-          break
         case 'preferredColor':
           settingsToSave.preferredColor = value
           break

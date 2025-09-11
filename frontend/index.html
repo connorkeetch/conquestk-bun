@@ -7,6 +7,20 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#dc2626" />
     <title>Conquest K</title>
+    <script>
+      // Load theme immediately to prevent flash
+      (function() {
+        try {
+          const theme = localStorage.getItem('colorTheme') || 'default';
+          // Apply CSS variables immediately
+          const root = document.documentElement;
+          root.setAttribute('data-theme', theme);
+          // This will be properly initialized when the app loads
+        } catch (e) {
+          // Silently fail if localStorage is not available
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

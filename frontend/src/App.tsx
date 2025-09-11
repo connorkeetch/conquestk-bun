@@ -42,6 +42,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 import { checkAuth } from './store/authSlice'
+import { applyTheme, getStoredTheme } from './config/themes.config'
 
 function App() {
   console.log('[APP] App component rendering...')
@@ -69,18 +70,9 @@ function App() {
     
     initAuth()
 
-    // Apply saved theme on app load
-    const savedSettings = localStorage.getItem('userSettings')
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings)
-        if (settings.display?.theme) {
-          document.documentElement.setAttribute('data-theme', settings.display.theme)
-        }
-      } catch (_error) {
-        // Silently ignore theme loading errors
-      }
-    }
+    // Apply saved theme on app load using centralized system
+    const savedTheme = getStoredTheme()
+    applyTheme(savedTheme)
   }, [dispatch])
 
   // Show loading screen while initial auth check is happening

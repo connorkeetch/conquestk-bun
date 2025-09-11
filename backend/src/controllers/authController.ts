@@ -203,6 +203,24 @@ export class AuthController {
       const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
       const needsVerification = requireVerification && !user.email_verified
 
+      // Get user preferences for theme loading
+      let preferences = null
+      try {
+        const { query } = await import('../config/database')
+        const preferencesResult = await query(
+          `SELECT theme FROM user_preferences WHERE user_id = $1`,
+          [user.id]
+        )
+        if (preferencesResult.rows[0]) {
+          preferences = {
+            theme: preferencesResult.rows[0].theme || 'default',
+          }
+        }
+      } catch (preferencesError) {
+        // Continue without preferences if error
+        logger.warn('Could not load user preferences on login:', preferencesError)
+      }
+
       return res.json({
         message: 'Login successful',
         token,
@@ -212,6 +230,7 @@ export class AuthController {
           email: user.email,
           emailVerified: user.email_verified || false,
           isAdmin: user.is_admin || false,
+          preferences: preferences,
         },
         requiresVerification: needsVerification,
       })
@@ -247,6 +266,34 @@ export class AuthController {
         logger.warn('Could not load user settings:', settingsError)
       }
 
+      // Get user preferences (theme, etc) from user_preferences table
+      let preferences = null
+      try {
+        const { query } = await import('../config/database')
+        const preferencesResult = await query(
+          `SELECT theme, sound_enabled, music_enabled, notification_enabled, 
+           auto_ready, show_timer, show_army_numbers, animation_speed, language 
+           FROM user_preferences WHERE user_id = $1`,
+          [userId]
+        )
+        if (preferencesResult.rows[0]) {
+          preferences = {
+            theme: preferencesResult.rows[0].theme || 'default',
+            soundEnabled: preferencesResult.rows[0].sound_enabled,
+            musicEnabled: preferencesResult.rows[0].music_enabled,
+            notificationEnabled: preferencesResult.rows[0].notification_enabled,
+            autoReady: preferencesResult.rows[0].auto_ready,
+            showTimer: preferencesResult.rows[0].show_timer,
+            showArmyNumbers: preferencesResult.rows[0].show_army_numbers,
+            animationSpeed: preferencesResult.rows[0].animation_speed,
+            language: preferencesResult.rows[0].language,
+          }
+        }
+      } catch (preferencesError) {
+        // If preferences table doesn't exist yet or other error, continue without preferences
+        logger.warn('Could not load user preferences:', preferencesError)
+      }
+
       return res.json({
         user: {
           id: user.id,
@@ -255,6 +302,7 @@ export class AuthController {
           emailVerified: user.email_verified,
           isAdmin: user.is_admin || false,
           settings: settings,
+          preferences: preferences,
         },
       })
     } catch (error) {
