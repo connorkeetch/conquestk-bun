@@ -89,6 +89,7 @@ export default function MapEditorTokens() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
+  const [tokenSize, setTokenSize] = useState<number>(20)
   const [showGrid, setShowGrid] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadInfo, setUploadInfo] = useState<string | null>(null)
@@ -943,6 +944,26 @@ export default function MapEditorTokens() {
                 <option value="square">◼ Square</option>
                 <option value="circle">● Circle</option>
               </select>
+              
+              {/* Token Size Controls */}
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted">Size:</span>
+                <button
+                  onClick={() => setTokenSize(Math.max(10, tokenSize - 2))}
+                  className="px-2 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                  title="Decrease token size"
+                >
+                  ➖
+                </button>
+                <span className="text-sm px-2">{tokenSize}</span>
+                <button
+                  onClick={() => setTokenSize(Math.min(40, tokenSize + 2))}
+                  className="px-2 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                  title="Increase token size"
+                >
+                  ➕
+                </button>
+              </div>
 
               {/* Grid Toggle */}
               <button
@@ -1346,26 +1367,30 @@ export default function MapEditorTokens() {
                 return (
                   <div
                     key={territory.id}
-                    className="absolute cursor-pointer"
+                    className="absolute"
                     style={{
-                      left: territory.x - 10, // Adjust for smaller tokens
-                      top: territory.y - 10,
+                      left: territory.x - tokenSize * 1.5, // Invisible click area
+                      top: territory.y - tokenSize * 1.5,
+                      width: tokenSize * 3,
+                      height: tokenSize * 3,
                       transform: 'translate(-50%, -50%)',
+                      cursor: 'pointer',
                     }}
                     onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
                     onClick={(e) => handleTokenClick(territory.id, e)}
                   >
-                    <TerritoryToken
-                      x={0}
-                      y={0}
-                      armies={territory.armies}
-                      color={continent?.color || '#808080'} // Gray for unassigned
-                      outlineColor={continent?.color} // Continent color for outline
-                      shape={tokenShape}
-                      isSelected={state.selectedTerritoryId === territory.id}
-                      isDragging={state.draggedTerritoryId === territory.id}
-                      size={20} // Smaller tokens
-                      opacity={0.7}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <TerritoryToken
+                        x={0}
+                        y={0}
+                        armies={territory.armies}
+                        color={continent?.color || '#808080'} // Gray for unassigned
+                        outlineColor={continent?.color} // Continent color for outline
+                        shape={tokenShape}
+                        isSelected={state.selectedTerritoryId === territory.id}
+                        isDragging={state.draggedTerritoryId === territory.id}
+                        size={tokenSize}
+                        opacity={0.7}
                     />
                     {editorMode === 'capitals' && getCapitalForTerritory(territory.id) && (
                       <div className="absolute -top-3 -right-3 text-lg">
@@ -1374,8 +1399,12 @@ export default function MapEditorTokens() {
                         </span>
                       </div>
                     )}
+                    </div>
                     {state.selectedTerritoryId === territory.id && (
-                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-black/80 px-2 py-1 rounded whitespace-nowrap">
+                      <div 
+                        className="absolute left-1/2 transform -translate-x-1/2 text-xs bg-black/40 px-2 py-1 rounded whitespace-nowrap z-10"
+                        style={{ top: `${tokenSize + 10}px` }}
+                      >
                         {territory.name}
                       </div>
                     )}
