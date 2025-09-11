@@ -64,7 +64,7 @@ const defaultSettings: SettingsState = {
     musicVolume: 50,
   },
   game: {
-    preferredColor: 'bright-red' as PlayerColor,
+    preferredColor: '#DC2626' as PlayerColor, // Red - first standard color
   },
   privacy: {
     showOnlineStatus: true,

@@ -977,7 +977,7 @@ export default function Settings() {
             description: 'Your preferred player color in games',
             type: 'custom',
             isWorking: true,
-            defaultValue: settings.game?.preferredColor || 'bright-red',
+            defaultValue: settings.game?.preferredColor || '#DC2626',
             onChange: async (value: PlayerColor) => {
               dispatch(setPreferredColor(value))
               await persistSetting('preferredColor', value)

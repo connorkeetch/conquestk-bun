@@ -107,19 +107,19 @@ To switch themes: Use Redux setTheme() action
   --color-gray-900: #111827;        /* Nearly black gray */
   
   /* ===== GAME-SPECIFIC COLORS ===== */
-  /* Player colors - these stay consistent for gameplay clarity */
+  /* Player colors - organized by hue for distinguishability */
   --color-red-600: #DC2626;         /* Player red */
-  --color-blue-600: #2563EB;        /* Player blue */
-  --color-green-600: #059669;       /* Player green */
-  --color-amber-500: #F59E0B;       /* Player amber */
-  --color-purple-900: #9333EA;      /* Player purple */
-  --color-orange-600: #EA580C;      /* Player orange */
-  --color-cyan-500: #06B6D4;        /* Player cyan */
-  --color-pink-500: #EC4899;        /* Player pink */
-  --color-amber-600: #D97706;       /* Player bronze */
   --color-maroon-600: #881337;      /* Player maroon */
+  --color-pink-500: #EC4899;        /* Player pink */
+  --color-orange-600: #EA580C;      /* Player orange */
+  --color-amber-500: #F59E0B;       /* Player amber */
+  --color-sienna: #A0522D;          /* Player sienna (brown-orange) */
+  --color-green-600: #059669;       /* Player forest green */
   --color-teal-500: #14B8A6;        /* Player teal */
-  --color-indigo-500: #6366F1;      /* Player indigo */
+  --color-blue-600: #2563EB;        /* Player blue */
+  --color-cyan-500: #06B6D4;        /* Player cyan */
+  --color-purple-900: #9333EA;      /* Player purple */
+  --color-violet-700: #7C3AED;      /* Player violet */
   
   /* Metallic colors for ranks */
   --color-bronze: #CD7F32;          /* Warlord rank */

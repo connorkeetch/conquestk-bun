@@ -2,6 +2,47 @@
 // 🎯 SINGLE SOURCE OF TRUTH FOR ALL COLORS IN THE APP
 // Restructured for Multi-Theme Support (Red Theme, Blue Theme, Cowboy Theme, etc.)
 
+/* ===========================================================================
+ * PLAYER COLOR SYSTEM DOCUMENTATION
+ * ===========================================================================
+ * 
+ * 🎨 PLAYER COLORS LOCATION:
+ * - Main definition: PLAYER_COLORS array (line ~395)
+ * - Premium colors: PREMIUM_PLAYER_COLORS object (line ~415)
+ * - Display names: getColorDisplayName() function (line ~585)
+ * 
+ * 📍 WHERE PLAYER COLORS ARE USED:
+ * 1. /frontend/src/constants/colors.ts - Main definitions
+ * 2. /frontend/src/pages/CreateGamePage.tsx - Color picker in game creation
+ * 3. /frontend/src/pages/Settings.tsx - Preferred color selection
+ * 4. /frontend/src/components/ProfilePage.tsx - Avatar backgrounds
+ * 5. /frontend/src/pages/GamePage.tsx - Active game player colors
+ * 6. /frontend/src/components/SimpleRiskGameBoard.tsx - Game board rendering
+ * 7. /frontend/src/app.css - CSS variables for Tailwind (lines 110-122)
+ * 8. /frontend/src/store/settingsSlice.ts - Default preferred color
+ * 
+ * 🔧 HOW TO CHANGE PLAYER COLORS:
+ * 1. Update PLAYER_COLORS array with new hex values (12 colors total)
+ * 2. Update playerColorNames in CreateGamePage.tsx to match the order
+ * 3. Update getColorDisplayName() function with new color mappings
+ * 4. Update CSS variables in app.css if color variables changed
+ * 5. Search for hardcoded hex values and update them
+ * 
+ * ⚠️ IMPORTANT NOTES:
+ * - Always use exactly 12 standard colors for player selection
+ * - Colors must be distinguishable on dark backgrounds
+ * - Order colors by hue for better visual organization
+ * - Premium colors (6 total) are separate and require special handling
+ * - Default color is PLAYER_COLORS[0] (currently Red #DC2626)
+ * 
+ * 🎯 COLOR REQUIREMENTS:
+ * - Must be visible on dark backgrounds (#0F172A, #111827)
+ * - Must be distinguishable from each other at small sizes
+ * - Should avoid colors too similar within the set
+ * - Should support colorblind users when possible
+ * ===========================================================================
+ */
+
 // ===== SEMANTIC COLOR CATEGORIES =====
 // 🎨 Organized by PURPOSE not HUE - enables theme switching
 // Each category serves different themes while maintaining consistency
@@ -391,63 +432,70 @@ export const GRADIENTS = {
 } as const;
 
 // ===== PLAYER COLORS =====
-// All player colors now reference CORE_COLORS - change any color by updating CORE_COLORS above
+// Player colors - Organized by hue for maximum distinguishability
+// Each color tested to be visually distinct on dark backgrounds
 export const PLAYER_COLORS = [
-  // Ordered by spectrum for better visual distinction
-  CORE_COLORS.red600,      // Red - Classic aggressive
-  CORE_COLORS.orange600,   // Orange - Vibrant energy
-  CORE_COLORS.amber500,    // Amber - Better than pure yellow
-  THEME_PALETTE.greens.limeGreen,  // Lime - Bright and distinct
-  THEME_PALETTE.greens.forestGreen, // Forest Green - Deep natural
-  CORE_COLORS.teal500,     // Teal - Ocean depths
-  CORE_COLORS.cyan500,     // Cyan - Cool and calculating
-  CORE_COLORS.blue600,     // Blue - Traditional defensive
-  CORE_COLORS.indigo500,   // Indigo - More distinct purple-blue
-  CORE_COLORS.purple900,   // Purple - Clear and distinct
-  CORE_COLORS.pink500,     // Pink - Surprisingly visible
-  CORE_COLORS.maroon600,   // Maroon - Deep and rich
-  CORE_COLORS.brown,       // Brown - Earthy warfare
-  CORE_COLORS.tan,         // Tan - Desert theme
+  // Reds & Pinks
+  '#DC2626', // Red - Classic aggressive (bright red)
+  '#881337', // Maroon - Deep wine red (very different from bright red)
+  '#EC4899', // Pink - Vibrant magenta-pink (distinct from reds)
+  
+  // Oranges & Yellows  
+  '#EA580C', // Orange - True orange (distinct from amber)
+  '#F59E0B', // Amber - Golden yellow-orange (yellower than orange)
+  '#A0522D', // Sienna - Brown-orange (earthier, replaces similar bronze)
+  
+  // Greens & Teals
+  '#059669', // Forest Green - Deep green (distinct from teal)
+  '#14B8A6', // Teal - Blue-green (clearly different from pure green)
+  
+  // Blues & Cyans
+  '#2563EB', // Blue - Pure blue (traditional)
+  '#06B6D4', // Cyan - Light blue (clearly lighter than pure blue)
+  
+  // Purples
+  '#9333EA', // Purple - True purple (vivid violet)
+  '#7C3AED', // Violet - Blue-purple (more blue than purple, replaces too-similar indigo)
 ] as const;
 
 // ===== PREMIUM PLAYER COLORS =====
-// All premium colors now reference CORE_COLORS
+// Premium player colors with special effects - all highly distinct
 export const PREMIUM_PLAYER_COLORS = {
-  MidnightBlack: {
-    solid: CORE_COLORS.black,
-    outline: CORE_COLORS.white,
-    effect: 'subtle-starfield',
-    description: 'The void between stars'
-  },
-  PureWhite: {
-    solid: CORE_COLORS.white,
-    outline: CORE_COLORS.black,
-    effect: 'pearl-shimmer',
-    description: 'Pristine and untouchable'
-  },
-  MetallicGold: {
-    solid: CORE_COLORS.gold,
+  Gold: {
+    solid: '#FFD700',
     effect: 'metallic-gradient',
-    outline: CORE_COLORS.goldOutline,
+    outline: '#B8860B',
     description: 'The color of victory'
   },
-  MetallicSilver: {
-    solid: CORE_COLORS.silver,
+  Silver: {
+    solid: '#C0C0C0',
     effect: 'chrome-reflection',
-    outline: CORE_COLORS.silverOutline,
+    outline: '#808080',
     description: 'Polished steel'
   },
   NeonGreen: {
-    solid: CORE_COLORS.neonGreen,
+    solid: '#39FF14',
     effect: 'electric-glow',
-    outline: CORE_COLORS.neonGreenOutline,
+    outline: '#2FB510',
     description: 'Radioactive power'
   },
-  Dragonfire: {
-    gradient: GRADIENTS.dragonfire,
-    solid: CORE_COLORS.orange400,
-    effect: 'flame-particles',
-    description: 'Burning conquest'
+  HotPink: {
+    solid: '#FF1493',
+    effect: 'neon-glow',
+    outline: '#C71585',
+    description: 'Electric pink'
+  },
+  NeonCyan: {
+    solid: '#00FFFF',
+    effect: 'aqua-glow',
+    outline: '#00CED1',
+    description: 'Digital cyan'
+  },
+  Magenta: {
+    solid: '#FF00FF',
+    effect: 'plasma-glow',
+    outline: '#DA70D6',
+    description: 'Pure magenta'
   }
 } as const;
 
@@ -584,20 +632,31 @@ export const getColorValue = (color: PlayerColor): string => {
   return PLAYER_COLORS[0];
 };
 
-export const getColorDisplayName = (color: PlayerColor): string => {
-  // If it's a hex color, find its index in PLAYER_COLORS
-  const colorIndex = (PLAYER_COLORS as readonly string[]).indexOf(color);
-  if (colorIndex !== -1) {
-    const colorNames = ['Red', 'Blue', 'Green', 'Amber', 'Purple', 'Orange', 'Cyan', 'Pink', 'Bronze', 'Maroon', 'Teal', 'Indigo'];
-    return colorNames[colorIndex] || `Color ${colorIndex + 1}`;
-  }
+export const getColorDisplayName = (color: string): string => {
+  const colorMap: Record<string, string> = {
+    // Standard colors (12) - organized by hue
+    '#DC2626': 'Red',
+    '#881337': 'Maroon',
+    '#EC4899': 'Pink',
+    '#EA580C': 'Orange',
+    '#F59E0B': 'Amber',
+    '#A0522D': 'Sienna',
+    '#059669': 'Forest Green',
+    '#14B8A6': 'Teal',
+    '#2563EB': 'Blue',
+    '#06B6D4': 'Cyan',
+    '#9333EA': 'Purple',
+    '#7C3AED': 'Violet',
+    // Premium colors (6)
+    '#FFD700': 'Gold',
+    '#C0C0C0': 'Silver',
+    '#39FF14': 'Neon Green',
+    '#FF1493': 'Hot Pink',
+    '#00FFFF': 'Neon Cyan',
+    '#FF00FF': 'Magenta',
+  };
   
-  // If it's a premium color, use its key
-  if (color in PREMIUM_PLAYER_COLORS) {
-    return color.replace(/([A-Z])/g, ' $1').trim();
-  }
-  
-  return color;
+  return colorMap[color] || color;
 };
 
 export const isPremiumColor = (color: PlayerColor): boolean => {

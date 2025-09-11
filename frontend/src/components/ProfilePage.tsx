@@ -139,7 +139,7 @@ const ProfilePage: React.FC = () => {
   }
 
   // Get the player color for avatar background
-  const playerColor = profile.preferredColor || settings.game.preferredColor || 'bright-red'
+  const playerColor = profile.preferredColor || settings.game.preferredColor || '#DC2626'
   const colorClass = getPlayerColor(playerColor as PlayerColor)
   
   return (
