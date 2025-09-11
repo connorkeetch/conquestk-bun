@@ -10,6 +10,7 @@ import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import { mapService } from '../services/mapService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
+import { parseJsonField, parseTags } from '../utils/tagParser'
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
@@ -355,17 +356,14 @@ router.post(
       // Parse metadata if provided
       let metadata: any = null
       if (req.body.metadata) {
-        try {
-          metadata =
-            typeof req.body.metadata === 'string'
-              ? JSON.parse(req.body.metadata)
-              : req.body.metadata
+        metadata = parseJsonField(req.body.metadata, null)
+        if (metadata) {
           logger.info('Parsed metadata:', {
             territories: metadata.territories?.length || 0,
             continents: metadata.continents?.length || 0,
           })
-        } catch (parseError) {
-          logger.error('Failed to parse metadata:', parseError)
+        } else if (req.body.metadata) {
+          logger.error('Failed to parse metadata')
           return res.status(400).json({
             error: 'Invalid metadata format',
             details: 'The map data (territories and continents) could not be parsed',
@@ -430,7 +428,7 @@ router.put(
         name: req.body.name,
         description: req.body.description,
         isPublic: req.body.isPublic,
-        tags: req.body.tags,
+        tags: parseTags(req.body.tags),
       }
 
       if (req.file) {

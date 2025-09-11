@@ -474,7 +474,9 @@ export default function MapEditorTokens() {
         `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
       )
       formData.append('isPublic', 'true')
-      formData.append('tags', JSON.stringify(['custom', 'user-created']))
+      // Send tags as JSON string - backend expects this format
+      const tags = ['custom', 'user-created']
+      formData.append('tags', JSON.stringify(tags))
 
       // Store territories and continents as metadata
       const metadata = {
