@@ -77,23 +77,29 @@ const getColorName = (color: string | PlayerColor): string => {
     return premiumNames[color] || color
   }
   
-  // Map standard colors to names
-  const standardColorNames: Record<string, string> = {
-    '#FF0000': 'Red',
-    '#0000FF': 'Blue',
-    '#00FF00': 'Green',
-    '#FFFF00': 'Yellow',
-    '#800080': 'Purple',
-    '#FFA500': 'Orange',
-    '#00FFFF': 'Cyan',
-    '#FFC0CB': 'Pink',
-    '#A52A2A': 'Brown',
-    '#32CD32': 'Lime',
-    '#4B0082': 'Indigo',
-    '#008080': 'Teal',
+  // Map player colors to names
+  const playerColorNames: string[] = [
+    'Red',           // red600
+    'Orange',        // orange600
+    'Amber',         // amber500
+    'Lime',          // limeGreen
+    'Forest Green',  // forestGreen
+    'Teal',          // teal500
+    'Cyan',          // cyan500
+    'Blue',          // blue600
+    'Indigo',        // indigo500
+    'Purple',        // purple900
+    'Pink',          // pink500
+    'Maroon',        // maroon600
+  ]
+  
+  // For standard player colors, get the index and return the name
+  const colorIndex = PLAYER_COLORS.indexOf(color as any)
+  if (colorIndex !== -1) {
+    return playerColorNames[colorIndex]
   }
   
-  return standardColorNames[color] || 'Custom'
+  return 'Custom'
 }
 
 // Reusable OptionCard component
@@ -102,10 +108,6 @@ interface OptionCardProps {
   title: string
   children: React.ReactNode
   comingSoon?: boolean
-  lockable?: boolean
-  isLocked?: boolean
-  onToggleLock?: () => void
-  settingName?: string
   className?: string
 }
 
@@ -114,9 +116,6 @@ const OptionCard: React.FC<OptionCardProps> = ({
   title,
   children,
   comingSoon = false,
-  lockable = false,
-  isLocked = false,
-  onToggleLock,
   className = '',
 }) => (
   <div
@@ -129,26 +128,11 @@ const OptionCard: React.FC<OptionCardProps> = ({
         </span>
         <span className="text-white">{title}</span>
       </h2>
-      <div className="flex items-center gap-2">
-        {lockable && onToggleLock && (
-          <button
-            onClick={onToggleLock}
-            className={`p-1.5 rounded transition-all ${
-              isLocked
-                ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30'
-                : 'text-muted bg-gray-600/20 hover:bg-gray-600/30'
-            }`}
-            title={isLocked ? 'Locked from randomization' : 'Click to lock from randomization'}
-          >
-            {isLocked ? '🔒' : '🔓'}
-          </button>
-        )}
-        {comingSoon && (
-          <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
-            Coming Soon
-          </span>
-        )}
-      </div>
+      {comingSoon && (
+        <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
+          Coming Soon
+        </span>
+      )}
     </div>
     <div className={comingSoon ? 'pointer-events-none' : ''}>{children}</div>
   </div>
@@ -171,7 +155,7 @@ const CreateGamePage: React.FC = () => {
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [selectedMap, setSelectedMap] = useState('classic')
   const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'random'>('classic')
-  const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent' | 'random'>('off')
+  const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent'>('off')
   const [teams, setTeams] = useState<number | 'random'>(0)
   const [teamAssignment, setTeamAssignment] = useState('random')
   const [fortification, setFortification] = useState<'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited' | 'random'>('adjacent')
@@ -181,7 +165,7 @@ const CreateGamePage: React.FC = () => {
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
   const [staticBonusValue, setStaticBonusValue] = useState(10)
   const [spoilsType, setSpoilsType] = useState<'escalating' | 'fixed' | 'static' | 'random'>('escalating')
-  const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean | 'random'>(false)
+  const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean>(false)
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
   >('balanced')
@@ -193,9 +177,6 @@ const CreateGamePage: React.FC = () => {
   const [playersOption, setPlayersOption] = useState<number | 'random'>(6)
   const [createAndStay, setCreateAndStay] = useState(false)
 
-  // Settings lock state for randomization
-  const [lockedSettings, setLockedSettings] = useState<Set<string>>(new Set())
-
   // Mock maps data (moved here so it's available for generateSmartName)
   const maps = [
     { id: 'classic', name: 'Classic World', territories: 42, players: '2-6', size: 'Large' },
@@ -204,8 +185,20 @@ const CreateGamePage: React.FC = () => {
     { id: 'random', name: 'Random Map', territories: 0, players: 'Any', size: 'Random' },
   ]
 
-  // Generate smart game name
-  const generateSmartName = () => {
+  // Generate smart game name (with placeholder for random options)
+  const generateSmartName = (resolveRandom = false) => {
+    // If we have random options and not resolving, return placeholder
+    if (!resolveRandom && (
+      gameMode === 'random' || 
+      playersOption === 'random' || 
+      teams === 'random' || 
+      fortification === 'random' || 
+      spoilsType === 'random' || 
+      selectedMap === 'random'
+    )) {
+      return '(autoname)'
+    }
+    
     const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
     const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
 
@@ -236,7 +229,6 @@ const CreateGamePage: React.FC = () => {
     if (gameMode === 'random') specialRules.push('RND-Mode')
     if (fogOfWar === 'adjacent') specialRules.push('Fog')
     if (fogOfWar === 'persistent') specialRules.push('PersistentFog')
-    if (fogOfWar === 'random') specialRules.push('RND-Fog')
     if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
     if (fortification === 'chained') specialRules.push('ChainedMove')
     if (fortification === 'adjacent_multi') specialRules.push('MultiMove')
@@ -246,7 +238,6 @@ const CreateGamePage: React.FC = () => {
       else specialRules.push(`${Math.floor(turnTimeLimit / 60)}h`)
     }
     if (useTerritoryModifiers === true) specialRules.push('Modifiers')
-    if (useTerritoryModifiers === 'random') specialRules.push('RND-Mods')
     if (spoilsType === 'random') specialRules.push('RND-Spoils')
 
     if (specialRules.length > 0) {
@@ -303,10 +294,8 @@ const CreateGamePage: React.FC = () => {
       // Reset random options
       if (gameMode === 'random') setGameMode('classic')
       if (teams === 'random') setTeams(0)
-      if (fogOfWar === 'random') setFogOfWar('off')
       if (fortification === 'random') setFortification('adjacent')
       if (spoilsType === 'random') setSpoilsType('escalating')
-      if (useTerritoryModifiers === 'random') setUseTerritoryModifiers(false)
       if (playersOption === 'random') setPlayersOption(6)
     }
   }, [isRanked, maxPlayers, gameVisibility, teams])
@@ -329,7 +318,7 @@ const CreateGamePage: React.FC = () => {
         : gameMode as 'classic' | 'capitals'
       
       let finalPlayers = playersOption === 'random'
-        ? Math.floor(Math.random() * 6) + 2
+        ? Math.floor(Math.random() * 11) + 2  // 2-12 players
         : maxPlayers
         
       let finalTeams = teams === 'random'
@@ -344,20 +333,16 @@ const CreateGamePage: React.FC = () => {
         ? ['escalating', 'fixed', 'static'][Math.floor(Math.random() * 3)] as 'escalating' | 'fixed' | 'static'
         : spoilsType
         
-      let finalFog = fogOfWar === 'random'
-        ? ['off', 'adjacent', 'persistent'][Math.floor(Math.random() * 3)] as 'off' | 'adjacent' | 'persistent'
-        : fogOfWar
+      let finalFog = fogOfWar
         
-      let finalModifiers = useTerritoryModifiers === 'random'
-        ? Math.random() > 0.5
-        : useTerritoryModifiers as boolean
+      let finalModifiers = useTerritoryModifiers
         
       let finalMap = selectedMap === 'random'
         ? maps.filter(m => m.id !== 'random')[Math.floor(Math.random() * (maps.length - 1))].id
         : selectedMap
 
       const gameData: CreateGameData = {
-        name: gameName || generateSmartName(),
+        name: gameName || generateSmartName(true),  // Resolve random options when creating
         maxPlayers: finalPlayers,
         isPrivate: gameVisibility === 'private',
         isRanked,
@@ -395,21 +380,7 @@ const CreateGamePage: React.FC = () => {
     }
   }
 
-  const toggleLock = (settingName: string) => {
-    setLockedSettings((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(settingName)) {
-        newSet.delete(settingName)
-      } else {
-        newSet.add(settingName)
-      }
-      return newSet
-    })
-  }
 
-  // Use new color system
-  const playerColors = PLAYER_COLORS
-  const premiumColors = Object.keys(PREMIUM_PLAYER_COLORS)
 
   return (
     <div className="min-h-screen text-white p-6">
@@ -574,9 +545,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard 
           number="2" 
           title="Game Mode"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('gameMode')}
-          onToggleLock={() => toggleLock('gameMode')}
         >
           <div className="space-y-2">
             <button
@@ -624,9 +592,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="3"
           title="Turn Time Limits"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('turnTimeLimit')}
-          onToggleLock={() => toggleLock('turnTimeLimit')}
         >
           <div className="space-y-3">
             <div>
@@ -705,13 +670,10 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="4"
           title="Number of Players"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('maxPlayers')}
-          onToggleLock={() => toggleLock('maxPlayers')}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-4 gap-2">
-              {[2, 3, 4, 5, 6, 7, 8].map((playerCount) => {
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((playerCount) => {
                 const validTeamOptions = getValidTeamOptions(playerCount)
                 const isTeamCompatible = teams === 0 || teams === 'random' || validTeamOptions.includes(teams as number)
                 const isDisabled = teams !== 0 && teams !== 'random' && !isTeamCompatible
@@ -748,7 +710,7 @@ const CreateGamePage: React.FC = () => {
             </div>
             <p className="text-xs text-muted">
               {playersOption === 'random' 
-                ? 'Random player count (2-8) chosen when game starts'
+                ? 'Random player count (2-12) chosen when game starts'
                 : `Game will start with ${playersOption} players`
               }
             </p>
@@ -759,9 +721,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="5"
           title="Teams"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('teams')}
-          onToggleLock={() => toggleLock('teams')}
         >
           <div className="space-y-2">
             <button
@@ -777,7 +736,7 @@ const CreateGamePage: React.FC = () => {
               <p className="text-xs opacity-70">Every player for themselves</p>
             </button>
             
-            {playersOption !== 'random' && [2, 3, 4].map((teamOption) => {
+            {playersOption !== 'random' && [2, 3, 4, 5, 6].map((teamOption) => {
               const validTeamOptions = getValidTeamOptions(maxPlayers)
               const isValid = validTeamOptions.includes(teamOption)
               
@@ -819,9 +778,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="6"
           title="Fortification"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('fortification')}
-          onToggleLock={() => toggleLock('fortification')}
         >
           <div className="space-y-2">
             <button
@@ -897,9 +853,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="7"
           title="Spoils of War"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('spoilsType')}
-          onToggleLock={() => toggleLock('spoilsType')}
         >
           <div className="space-y-2">
             <button
@@ -962,12 +915,6 @@ const CreateGamePage: React.FC = () => {
         <OptionCard
           number="8"
           title="Advanced Options"
-          lockable={!isRanked}
-          isLocked={lockedSettings.has('fogOfWar') || lockedSettings.has('territoryModifiers')}
-          onToggleLock={() => {
-            toggleLock('fogOfWar')
-            toggleLock('territoryModifiers')
-          }}
         >
           <div className="space-y-4">
             {/* Fog of War Section */}
@@ -998,52 +945,94 @@ const CreateGamePage: React.FC = () => {
                   <div className="text-sm">🔗 Adjacent</div>
                   <p className="text-xs opacity-70">See neighbors only</p>
                 </button>
-                {!isRanked && (
-                  <button
-                    type="button"
-                    onClick={() => setFogOfWar('random')}
-                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                      fogOfWar === 'random'
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    <div className="text-sm">🎲 Random</div>
-                    <p className="text-xs opacity-70">Random fog setting</p>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setFogOfWar('persistent')}
+                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                    fogOfWar === 'persistent'
+                      ? 'bg-primary text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  <div className="text-sm">🗺️ Persistent</div>
+                  <p className="text-xs opacity-70">Once revealed, stays visible</p>
+                </button>
               </div>
             </div>
 
             {/* Territory Modifiers Section */}
             <div className="pt-3 border-t border-border">
               <h4 className="text-sm font-medium text-white mb-2">Territory Modifiers</h4>
-              <button
-                type="button"
-                onClick={() => {
-                  if (useTerritoryModifiers === false) setUseTerritoryModifiers(true)
-                  else if (useTerritoryModifiers === true && !isRanked) setUseTerritoryModifiers('random')
-                  else setUseTerritoryModifiers(false)
-                }}
-                className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                  useTerritoryModifiers === true
-                    ? 'bg-primary text-white'
-                    : useTerritoryModifiers === 'random'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => setUseTerritoryModifiers(false)}
+                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                    !useTerritoryModifiers
+                      ? 'bg-primary text-white'
                       : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-              >
-                <div className="text-sm">
-                  {useTerritoryModifiers === true && '⚡ Enabled'}
-                  {useTerritoryModifiers === false && '❌ Disabled'}
-                  {useTerritoryModifiers === 'random' && '🎲 Random'}
+                  }`}
+                >
+                  <div className="text-sm">❌ Disabled</div>
+                  <p className="text-xs opacity-70">Standard territories only</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseTerritoryModifiers(true)}
+                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                    useTerritoryModifiers
+                      ? 'bg-primary text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  <div className="text-sm">⚡ Enabled</div>
+                  <p className="text-xs opacity-70">Territories have special properties</p>
+                </button>
+              </div>
+              
+              {useTerritoryModifiers && (
+                <div className="mt-3 pt-3 border-t border-gray-500">
+                  <p className="text-sm text-muted mb-2">Distribution:</p>
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setModifierDistribution('sparse')}
+                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                        modifierDistribution === 'sparse'
+                          ? 'bg-primary text-white'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      <div className="text-sm">Sparse (15%)</div>
+                      <p className="text-xs opacity-70">Few strategic territories</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModifierDistribution('balanced')}
+                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                        modifierDistribution === 'balanced'
+                          ? 'bg-primary text-white'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      <div className="text-sm">Balanced (30%)</div>
+                      <p className="text-xs opacity-70">Moderate strategic depth</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModifierDistribution('abundant')}
+                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                        modifierDistribution === 'abundant'
+                          ? 'bg-primary text-white'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      <div className="text-sm">Abundant (50%)</div>
+                      <p className="text-xs opacity-70">Many strategic territories</p>
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs opacity-70">
-                  {useTerritoryModifiers === true && 'Territories have special properties'}
-                  {useTerritoryModifiers === false && 'Standard territories only'}
-                  {useTerritoryModifiers === 'random' && 'Randomly chosen when game starts'}
-                </p>
-              </button>
+              )}
             </div>
           </div>
         </OptionCard>
