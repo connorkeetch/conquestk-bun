@@ -49,10 +49,15 @@ interface CapitalMetadata {
   }
 }
 
+// LocalStorage key for auto-save
+const AUTOSAVE_KEY = 'map-editor-draft'
+const AUTOSAVE_INTERVAL = 10000 // Auto-save every 10 seconds
+
 export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [state, setState] = useState<MapState>({
     name: 'New Map',
@@ -61,8 +66,8 @@ export default function MapEditorTokens() {
     continents: [],
     selectedTerritoryId: null,
     draggedTerritoryId: null,
-    mapWidth: 1200,
-    mapHeight: 800,
+    mapWidth: 1920,  // Default to full HD
+    mapHeight: 1080,
     imageScale: 1,  // Default scale
   })
 
@@ -79,6 +84,8 @@ export default function MapEditorTokens() {
   const [showGrid, setShowGrid] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadInfo, setUploadInfo] = useState<string | null>(null)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [showLoadDraftDialog, setShowLoadDraftDialog] = useState(false)
   const [showImageOptions, setShowImageOptions] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
 
@@ -94,6 +101,63 @@ export default function MapEditorTokens() {
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(4)
   const [isGeneratingCapitals, setIsGeneratingCapitals] = useState(false)
   const [isAssigningCapital, setIsAssigningCapital] = useState(false)
+
+  // Auto-save to localStorage
+  const saveToLocalStorage = useCallback(() => {
+    try {
+      const dataToSave = {
+        state,
+        capitalAssignments,
+        capitalMetadata,
+        savedAt: new Date().toISOString(),
+      }
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave))
+      setLastSaved(new Date())
+    } catch (error) {
+      console.error('Failed to save draft:', error)
+    }
+  }, [state, capitalAssignments, capitalMetadata])
+
+  // Load from localStorage
+  const loadFromLocalStorage = () => {
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY)
+      if (saved) {
+        const data = JSON.parse(saved)
+        setState(data.state)
+        setCapitalAssignments(data.capitalAssignments || {})
+        setCapitalMetadata(data.capitalMetadata || {})
+        setLastSaved(data.savedAt ? new Date(data.savedAt) : null)
+        setShowLoadDraftDialog(false)
+      }
+    } catch (error) {
+      console.error('Failed to load draft:', error)
+    }
+  }
+
+  // Check for saved draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(AUTOSAVE_KEY)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        if (data.savedAt) {
+          setShowLoadDraftDialog(true)
+        }
+      } catch (error) {
+        console.error('Error checking for saved draft:', error)
+      }
+    }
+  }, [])
+
+  // Auto-save timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      saveToLocalStorage()
+    }, AUTOSAVE_INTERVAL)
+
+    return () => clearInterval(timer)
+  }, [saveToLocalStorage])
 
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,8 +193,8 @@ export default function MapEditorTokens() {
       img.onload = () => {
         const MIN_WIDTH = 400
         const MIN_HEIGHT = 300
-        const MAX_WIDTH = 1600
-        const MAX_HEIGHT = 1200
+        const MAX_WIDTH = 2560  // Allow up to 2560x1440 for modern displays
+        const MAX_HEIGHT = 1440
         
         let finalWidth = img.width
         let finalHeight = img.height
@@ -542,8 +606,8 @@ export default function MapEditorTokens() {
         setState({
           name: mapData.name || 'Imported Map',
           imageUrl: mapData.imageUrl || '',
-          mapWidth: mapData.width || 1200,
-          mapHeight: mapData.height || 800,
+          mapWidth: mapData.width || 1920,
+          mapHeight: mapData.height || 1080,
           territories: mapData.territories.map((t: any) => ({
             id: t.id,
             name: t.name || `Territory ${t.id}`,
@@ -653,6 +717,35 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-4">
+      {/* Load Draft Dialog */}
+      {showLoadDraftDialog && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-white mb-4">📝 Auto-Saved Draft Found</h2>
+            <p className="text-muted mb-6">
+              Would you like to load your previous work? You have an auto-saved draft from your last session.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={loadFromLocalStorage}
+                className="w-full px-4 py-3 bg-primary hover:brightness-110 rounded-lg text-white font-medium"
+              >
+                ✅ Load Draft
+              </button>
+              <button
+                onClick={() => {
+                  setShowLoadDraftDialog(false)
+                  localStorage.removeItem(AUTOSAVE_KEY)
+                }}
+                className="w-full px-4 py-3 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
+              >
+                🆕 Start Fresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -699,11 +792,17 @@ export default function MapEditorTokens() {
         {' '}
         {/* Full width with max limit */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
+            <p className="text-sm text-muted mt-1">
+              Create custom Risk-style maps in 5 easy steps: Upload image → Place territories → Create continents → Connect territories → Set capitals
+            </p>
+          </div>
           <div className="flex gap-4 items-center">
             <a 
               href="/map-editor-polygon" 
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+              title="Try the polygon-based editor for drawing custom territory shapes"
             >
               🏪 Try Polygon Editor (Beta)
             </a>
@@ -713,135 +812,226 @@ export default function MapEditorTokens() {
             </div>
           </div>
         </div>
-        {/* Toolbar */}
+        {/* Toolbar - Reorganized for better workflow */}
         <div className="bg-surface-1 rounded-lg p-4 mb-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Mode Selector */}
+          {/* Row 1: Core Workflow - Image → Modes → Save */}
+          <div className="flex flex-wrap gap-4 items-center mb-3 pb-3 border-b border-border">
+            {/* Step 1: Upload Image */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 bg-violet hover:brightness-110 rounded font-medium"
+              title="Step 1: Upload a background image for your map"
+            >
+              📤 Upload Image
+            </button>
+
+            {/* Step 2-5: Edit Modes */}
             <div className="flex gap-2">
+              <span className="text-sm text-muted self-center">Edit:</span>
               <button
                 onClick={() => setEditorMode('territories')}
                 className={`px-4 py-2 rounded ${editorMode === 'territories' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
+                title="Step 2: Place territory markers on the map"
               >
                 🗺️ Territories
               </button>
               <button
                 onClick={() => setEditorMode('continents')}
                 className={`px-4 py-2 rounded ${editorMode === 'continents' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
+                title="Step 3: Group territories into continents"
               >
                 🌍 Continents
               </button>
               <button
                 onClick={() => setEditorMode('connections')}
                 className={`px-4 py-2 rounded ${editorMode === 'connections' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
+                title="Step 4: Connect adjacent territories"
               >
                 🔗 Connections
               </button>
               <button
                 onClick={() => setEditorMode('capitals')}
                 className={`px-4 py-2 rounded ${editorMode === 'capitals' ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'}`}
+                title="Step 5: Assign capital territories for different player counts"
               >
                 👑 Capitals
               </button>
             </div>
 
-            {/* Token Shape */}
+            {/* Save/Load Actions */}
+            <div className="flex gap-2 ml-auto">
+              {/* Auto-save status */}
+              {lastSaved && (
+                <div className="text-xs text-muted self-center">
+                  Auto-saved {lastSaved.toLocaleTimeString()}
+                </div>
+              )}
+              
+              <button
+                onClick={handleSaveMap}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-medium"
+                title="Save your map to the database"
+              >
+                💾 Save Map
+              </button>
+              
+              <button
+                onClick={() => {
+                  if (confirm('Clear all territories and start over? Your work is auto-saved.')) {
+                    setState({
+                      name: 'New Map',
+                      imageUrl: undefined,
+                      territories: [],
+                      continents: [],
+                      selectedTerritoryId: null,
+                      draggedTerritoryId: null,
+                      mapWidth: 1920,
+                      mapHeight: 1080,
+                      imageScale: 1,
+                    })
+                    setCapitalAssignments({})
+                    setCapitalMetadata({})
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+                title="Clear everything and start over"
+              >
+                🗑️ Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Tools & Settings */}
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Visual Options */}
             <div className="flex gap-2 items-center">
-              <span className="text-sm">Shape:</span>
-              <button
-                onClick={() => setTokenShape('hexagon')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'hexagon' ? 'bg-primary' : 'bg-surface-2'}`}
+              <span className="text-sm text-muted">Display:</span>
+              
+              {/* Token Shape */}
+              <select
+                value={tokenShape}
+                onChange={(e) => setTokenShape(e.target.value as TokenShape)}
+                className="px-2 py-1 bg-surface-2 rounded text-sm"
+                title="Change the shape of territory markers"
               >
-                Hexagon
-              </button>
+                <option value="hexagon">⬡ Hexagon</option>
+                <option value="square">◼ Square</option>
+                <option value="circle">● Circle</option>
+              </select>
+
+              {/* Grid Toggle */}
               <button
-                onClick={() => setTokenShape('square')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'square' ? 'bg-primary' : 'bg-surface-2'}`}
+                onClick={() => setShowGrid(!showGrid)}
+                className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-primary' : 'bg-surface-2'}`}
+                title="Show/hide alignment grid"
               >
-                Square
-              </button>
-              <button
-                onClick={() => setTokenShape('circle')}
-                className={`px-3 py-1 rounded text-sm ${tokenShape === 'circle' ? 'bg-primary' : 'bg-surface-2'}`}
-              >
-                Circle
+                📏 Grid
               </button>
             </div>
 
-            {/* Map Size */}
+            {/* Map Dimensions */}
             <div className="flex gap-2 items-center">
-              <span className="text-sm">Map Size:</span>
+              <span className="text-sm text-muted">Canvas:</span>
+              <select
+                onChange={(e) => {
+                  const [w, h] = e.target.value.split('x').map(Number)
+                  setState(prev => ({ ...prev, mapWidth: w, mapHeight: h }))
+                }}
+                className="px-2 py-1 bg-surface-2 rounded text-sm"
+                title="Quick canvas size presets"
+              >
+                <option value="">Custom</option>
+                <option value="1920x1080">1920×1080 (Full HD)</option>
+                <option value="1600x900">1600×900 (HD+)</option>
+                <option value="1280x720">1280×720 (HD)</option>
+                <option value="2560x1440">2560×1440 (2K)</option>
+              </select>
               <input
                 type="number"
                 value={state.mapWidth}
                 onChange={(e) =>
-                  setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1200 }))
+                  setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1920 }))
                 }
                 className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
                 min="400"
-                max="1600"
+                max="2560"
+                step="10"
+                title="Map width in pixels"
               />
-              <span className="text-sm">×</span>
+              <span className="text-sm text-muted">×</span>
               <input
                 type="number"
                 value={state.mapHeight}
                 onChange={(e) =>
-                  setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 800 }))
+                  setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 1080 }))
                 }
                 className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
                 min="300"
-                max="1200"
+                max="1440"
+                step="10"
+                title="Map height in pixels"
               />
             </div>
 
-            {/* Image Scale Control */}
-            {state.imageUrl && (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm">Scale:</span>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={state.imageScale * 100}
-                  onChange={(e) => handleScaleChange(parseInt(e.target.value) / 100)}
-                  className="w-32"
-                />
-                <span className="text-xs text-muted">{Math.round(state.imageScale * 100)}%</span>
+            {/* Import/Export */}
+            <div className="flex gap-2 ml-auto">
+              <button
+                onClick={handleExport}
+                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                title="Export map data as JSON file"
+              >
+                💾 Export JSON
+              </button>
+              <button
+                onClick={() => document.getElementById('json-import')?.click()}
+                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                title="Import map data from JSON file"
+              >
+                📂 Import JSON
+              </button>
+              <button
+                onClick={loadFromLocalStorage}
+                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                title="Load auto-saved draft"
+              >
+                🔄 Load Draft
+              </button>
+            </div>
+          </div>
+
+          {/* Help Text for Current Mode */}
+          <div className="mt-3 pt-3 border-t border-border">
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-medium text-primary">💡</span>
+              <div className="text-sm text-muted">
+                {editorMode === 'territories' && (
+                  <span>
+                    <strong>Territories Mode:</strong> Click on the map to place territory markers. Drag territories to reposition them. 
+                    Select a continent first to assign territories to it. Right-click or use Delete button to remove territories.
+                  </span>
+                )}
+                {editorMode === 'continents' && (
+                  <span>
+                    <strong>Continents Mode:</strong> Create continent groups to organize territories. Each continent provides bonus armies. 
+                    Click territories to assign them to continents. Use the form above to create new continents with custom colors and bonuses.
+                  </span>
+                )}
+                {editorMode === 'connections' && (
+                  <span>
+                    <strong>Connections Mode:</strong> Click a territory, then click another to create a connection between them. 
+                    Connected territories can attack each other. Click the same pair again to remove the connection. 
+                    Lines show which territories are connected.
+                  </span>
+                )}
+                {editorMode === 'capitals' && (
+                  <span>
+                    <strong>Capitals Mode:</strong> Set starting positions for different player counts (2-8 players). 
+                    Click "Generate" to auto-assign capitals using optimal spacing, or click territories manually to assign them. 
+                    Each player count can have different capital positions.
+                  </span>
+                )}
               </div>
-            )}
-
-            {/* Grid Toggle */}
-            <button
-              onClick={() => setShowGrid(!showGrid)}
-              className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-primary' : 'bg-surface-2'}`}
-            >
-              📏 Grid
-            </button>
-
-            {/* Actions */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
-            >
-              📤 Upload Image
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
-            >
-              📥 Export JSON
-            </button>
-            <button
-              onClick={() => document.getElementById('json-import')?.click()}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded"
-            >
-              📤 Import JSON
-            </button>
-            <button
-              onClick={handleSaveMap}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
-            >
-              💾 Save to Database
-            </button>
+            </div>
           </div>
 
           {/* Mode-specific controls */}
@@ -865,6 +1055,7 @@ export default function MapEditorTokens() {
               <button
                 onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
                 className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
+                title={isPlacingTerritory ? 'Click to stop placing territories' : 'Click to start placing territories on the map'}
               >
                 {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
               </button>
@@ -879,6 +1070,7 @@ export default function MapEditorTokens() {
                     }))
                   }}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+                  title="Remove the selected territory from the map"
                 >
                   🗑️ Delete Selected
                 </button>
