@@ -264,6 +264,19 @@ export default function MapEditorTokens() {
     const y = event.clientY - rect.top + scrollTop
 
     if (editorMode === 'territories' && isPlacingTerritory) {
+      // Check if click is too close to existing territories
+      const clickPadding = tokenSize * 0.25
+      const minDistance = tokenSize + clickPadding * 2
+      
+      const tooClose = state.territories.some(t => {
+        const distance = Math.sqrt(Math.pow(t.x - x, 2) + Math.pow(t.y - y, 2))
+        return distance < minDistance
+      })
+      
+      if (tooClose) {
+        // Just ignore clicks that are too close to existing tokens
+        return
+      }
       // Allow placing without continent
       const newTerritory: Territory = {
         id: uuidv4(),
@@ -962,6 +975,9 @@ export default function MapEditorTokens() {
                 >
                   ➕
                 </button>
+                <div className="ml-2 text-xs text-muted" title="Tokens have a 25% padding for easier clicking">
+                  🎯
+                </div>
               </div>
 
               {/* Grid Toggle */}
@@ -1356,18 +1372,26 @@ export default function MapEditorTokens() {
                 return (
                   <div
                     key={territory.id}
-                    className="absolute"
+                    className="absolute group"
                     style={{
-                      left: territory.x - tokenSize * 1.5, // Invisible click area
-                      top: territory.y - tokenSize * 1.5,
-                      width: tokenSize * 3,
-                      height: tokenSize * 3,
-                      transform: 'translate(-50%, -50%)',
+                      left: territory.x - tokenSize / 2 - tokenSize * 0.25,
+                      top: territory.y - tokenSize / 2 - tokenSize * 0.25,
+                      width: tokenSize + tokenSize * 0.5,
+                      height: tokenSize + tokenSize * 0.5,
                       cursor: 'pointer',
                     }}
                     onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
                     onClick={(e) => handleTokenClick(territory.id, e)}
                   >
+                    {/* Ultra-transparent click area indicator (visible on hover) */}
+                    <div 
+                      className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 100%)',
+                        border: '1px solid rgba(124, 58, 237, 0.08)',
+                      }}
+                    />
+                    
                     <div className="absolute inset-0 flex items-center justify-center">
                       <TerritoryToken
                         x={0}
@@ -1391,8 +1415,8 @@ export default function MapEditorTokens() {
                     </div>
                     {state.selectedTerritoryId === territory.id && (
                       <div 
-                        className="absolute left-1/2 transform -translate-x-1/2 text-xs bg-black/40 px-2 py-1 rounded whitespace-nowrap z-10"
-                        style={{ top: `${tokenSize + 10}px` }}
+                        className="absolute left-1/2 transform -translate-x-1/2 text-xs bg-black/60 px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none"
+                        style={{ top: `${tokenSize + tokenSize * 0.5 + 4}px` }}
                       >
                         {territory.name}
                       </div>
@@ -1478,6 +1502,18 @@ export default function MapEditorTokens() {
               </div>
             )}
 
+            {/* Editor Help Text */}
+            {editorMode === 'territories' && (
+              <div className="mb-4 p-3 bg-violet/10 border border-violet/20 rounded text-sm">
+                <div className="text-muted mb-1">
+                  🎯 <strong>Placing Territories:</strong> Click anywhere on the map
+                </div>
+                <div className="text-xs text-muted opacity-80">
+                  💡 <strong>Easy Selection:</strong> Each token has an invisible click area (25% larger) for easier selection. Hover to see a subtle glow.
+                </div>
+              </div>
+            )}
+            
             {/* Selected Territory */}
             {state.selectedTerritoryId && (
               <div className="mb-4 p-3 bg-surface-2 rounded">
