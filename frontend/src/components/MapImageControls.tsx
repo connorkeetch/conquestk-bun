@@ -53,12 +53,12 @@ export default function MapImageControls({
   }
 
   const canvasPresets = [
-    { label: 'Full HD', width: 1920, height: 1080 },
-    { label: 'HD+', width: 1600, height: 900 },
-    { label: 'HD', width: 1280, height: 720 },
-    { label: '2K', width: 2560, height: 1440 },
+    { label: 'Default (HD)', width: 1280, height: 720, recommended: true },
+    { label: 'Small', width: 800, height: 600 },
+    { label: 'Large', width: 1600, height: 900 },
     { label: 'Square', width: 1000, height: 1000 },
-    { label: 'Portrait', width: 900, height: 1600 },
+    { label: 'Wide', width: 1400, height: 700 },
+    { label: 'Tall', width: 900, height: 1200 },
   ]
 
   return (
@@ -193,8 +193,17 @@ export default function MapImageControls({
       {/* Canvas Size Tab */}
       {activeTab === 'canvas' && (
         <div className="space-y-3">
-          <div className="text-sm text-muted mb-2">
-            Adjust the working canvas size (doesn't affect image)
+          <div className="bg-surface-1 p-3 rounded-lg mb-3">
+            <h4 className="font-semibold text-sm mb-1">📖 What is Canvas?</h4>
+            <p className="text-xs text-muted leading-relaxed">
+              The <span className="text-violet-soft">canvas</span> is your playable map area where players will interact.
+              The <span className="text-violet-soft">image</span> is your background map graphic.
+            </p>
+            <ul className="text-xs text-muted mt-2 space-y-1">
+              <li>• <strong>Canvas</strong> = Game play area (what players see)</li>
+              <li>• <strong>Image</strong> = Your map picture (can be larger/smaller)</li>
+              <li>• Recommended: <strong>1280×720</strong> for best compatibility</li>
+            </ul>
           </div>
           
           {/* Current canvas size */}
@@ -213,10 +222,15 @@ export default function MapImageControls({
                   setCustomHeight(preset.height)
                   onResizeCanvas(preset.width, preset.height)
                 }}
-                className="px-3 py-2 bg-surface-1 hover:bg-violet rounded text-sm"
+                className={`px-3 py-2 rounded text-sm ${
+                  preset.recommended 
+                    ? 'bg-violet text-white hover:brightness-110' 
+                    : 'bg-surface-1 hover:bg-violet'
+                }`}
               >
                 {preset.label}
-                <span className="block text-xs text-muted">
+                {preset.recommended && <span className="ml-1">⭐</span>}
+                <span className="block text-xs opacity-75">
                   {preset.width}×{preset.height}
                 </span>
               </button>
@@ -232,8 +246,8 @@ export default function MapImageControls({
                 value={customWidth}
                 onChange={(e) => setCustomWidth(parseInt(e.target.value) || 800)}
                 className="flex-1 px-2 py-1 bg-surface-1 rounded text-sm"
-                min="400"
-                max="4000"
+                min="600"
+                max="1920"
                 step="10"
               />
               <span className="text-muted">×</span>
@@ -242,8 +256,8 @@ export default function MapImageControls({
                 value={customHeight}
                 onChange={(e) => setCustomHeight(parseInt(e.target.value) || 600)}
                 className="flex-1 px-2 py-1 bg-surface-1 rounded text-sm"
-                min="300"
-                max="3000"
+                min="400"
+                max="1080"
                 step="10"
               />
             </div>
@@ -255,9 +269,10 @@ export default function MapImageControls({
             </button>
           </div>
           
-          {/* Aspect ratio helpers */}
-          <div className="text-xs text-muted">
-            💡 Tip: Canvas size sets the working area. Use Scale to resize the image itself.
+          {/* Tips */}
+          <div className="bg-amber-900/20 border border-amber-600/30 p-2 rounded text-xs">
+            💡 <strong>Tip:</strong> During gameplay, all maps auto-scale to fit the screen.
+            Larger canvases give more detail but may run slower on some devices.
           </div>
         </div>
       )}

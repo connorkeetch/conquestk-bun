@@ -11,6 +11,8 @@ import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
 import { CORE_COLORS } from '../constants/colors'
+import CustomMapDisplay from './CustomMapDisplay'
+import ResponsiveMapContainer from './ResponsiveMapContainer'
 
 interface TerritoryDisplay {
   id: string
@@ -51,7 +53,20 @@ const createTerritoryDisplayMap = (
   return displayMap
 }
 
-export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }) => {
+interface RiskGameBoardPropsExtended extends RiskGameBoardProps {
+  mapId?: string
+  customMapMetadata?: {
+    width: number
+    height: number
+    territories?: any[]
+  }
+}
+
+export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({ 
+  onTerritoryClick,
+  mapId = 'classic',
+  customMapMetadata
+}) => {
   const dispatch = useDispatch<AppDispatch>()
   const gameState = useSelector((state: RootState) => state.game.currentGame)
   const selectedTerritory = useSelector((state: RootState) => state.game.selectedTerritory)
@@ -150,20 +165,42 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({ onTerritoryClick }
         {/* Map Area */}
         <div className="flex-1 relative bg-blue-100 p-4">
           <div className="relative w-full h-full">
-            <WorldMapSVG
-              territories={territories}
-              onTerritoryClick={handleTerritoryClick}
-              onTerritoryHover={handleTerritoryHover}
-              getTerritoryColor={getTerritoryColor}
-              hoveredTerritory={hoveredTerritory}
-              selectedTerritory={selectedTerritory}
-              selectedTargetTerritory={selectedTargetTerritory}
-              validTargets={validTargets}
-              pendingAction={pendingAction}
-            />
+            {mapId === 'classic' ? (
+              <ResponsiveMapContainer mapWidth={800} mapHeight={500}>
+                <WorldMapSVG
+                  territories={territories}
+                  onTerritoryClick={handleTerritoryClick}
+                  onTerritoryHover={handleTerritoryHover}
+                  getTerritoryColor={getTerritoryColor}
+                  hoveredTerritory={hoveredTerritory}
+                  selectedTerritory={selectedTerritory}
+                  selectedTargetTerritory={selectedTargetTerritory}
+                  validTargets={validTargets}
+                  pendingAction={pendingAction}
+                />
+              </ResponsiveMapContainer>
+            ) : (
+              <CustomMapDisplay
+                mapId={mapId}
+                territories={Object.values(territories).map(t => ({
+                  id: t.id,
+                  name: t.name,
+                  x: t.armyPosition.x,
+                  y: t.armyPosition.y,
+                  armies: t.armies,
+                  owner: t.owner,
+                  continent: t.continent,
+                }))}
+                onTerritoryClick={handleTerritoryClick}
+                selectedTerritoryId={selectedTerritory}
+                playerColors={Object.fromEntries(
+                  players.map(p => [p.id, p.color])
+                )}
+              />
+            )}
 
-            {/* Army Count Overlays */}
-            {Object.entries(territories).map(([territoryId, territory]) => {
+            {/* Army Count Overlays - only for classic map, custom maps handle their own */}
+            {mapId === 'classic' && Object.entries(territories).map(([territoryId, territory]) => {
               if (!territory.armies) return null
               const modifier = gameState.territoryModifiers?.[territoryId]
 
