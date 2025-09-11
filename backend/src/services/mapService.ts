@@ -51,7 +51,7 @@ export class MapService {
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
-            JSON.stringify(mapData.tags || []),
+            mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
             mapData.metadata ? JSON.stringify(mapData.metadata) : null,
           ]
@@ -63,7 +63,7 @@ export class MapService {
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
-            JSON.stringify(mapData.tags || []),
+            mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
           ]
 
@@ -95,7 +95,7 @@ export class MapService {
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
-            JSON.stringify(mapData.tags || []),
+            mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
           ],
         )
@@ -259,7 +259,7 @@ export class MapService {
       }
       if (updates.tags !== undefined) {
         updateFields.push(`tags = $${++paramCount}`)
-        updateValues.push(JSON.stringify(updates.tags))
+        updateValues.push(updates.tags)
       }
       if (updates.imageUrl !== undefined) {
         updateFields.push(`image_url = $${++paramCount}`)
