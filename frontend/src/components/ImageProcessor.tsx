@@ -221,8 +221,8 @@ export default function ImageProcessor({
     } else if (isDragging) {
       const newX = Math.max(0, Math.min(image.width - cropArea.width, x - dragStart.x))
       const newY = Math.max(0, Math.min(image.height - cropArea.height, y - dragStart.y))
-
-    setCropArea((prev) => ({ ...prev, x: newX, y: newY }))
+      setCropArea((prev) => ({ ...prev, x: newX, y: newY }))
+    }
   }
 
   const handleMouseUp = () => {
