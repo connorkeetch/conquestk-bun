@@ -1368,16 +1368,19 @@ export default function MapEditorTokens() {
               {/* Territory Tokens */}
               {state.territories.map((territory) => {
                 const continent = getContinentForTerritory(territory.id)
+                const clickPadding = tokenSize * 0.25 // 25% padding
+                const totalSize = tokenSize + clickPadding * 2
 
                 return (
                   <div
                     key={territory.id}
                     className="absolute group"
                     style={{
-                      left: territory.x - tokenSize / 2 - tokenSize * 0.25,
-                      top: territory.y - tokenSize / 2 - tokenSize * 0.25,
-                      width: tokenSize + tokenSize * 0.5,
-                      height: tokenSize + tokenSize * 0.5,
+                      left: territory.x,
+                      top: territory.y,
+                      width: totalSize,
+                      height: totalSize,
+                      transform: 'translate(-50%, -50%)',
                       cursor: 'pointer',
                     }}
                     onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
@@ -1392,6 +1395,7 @@ export default function MapEditorTokens() {
                       }}
                     />
                     
+                    {/* Territory token centered in the click area */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <TerritoryToken
                         x={0}
@@ -1413,10 +1417,14 @@ export default function MapEditorTokens() {
                       </div>
                     )}
                     </div>
+                    {/* Territory name label */}
                     {state.selectedTerritoryId === territory.id && (
                       <div 
                         className="absolute left-1/2 transform -translate-x-1/2 text-xs bg-black/60 px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none"
-                        style={{ top: `${tokenSize + tokenSize * 0.5 + 4}px` }}
+                        style={{ 
+                          top: '100%',
+                          marginTop: '4px' 
+                        }}
                       >
                         {territory.name}
                       </div>
