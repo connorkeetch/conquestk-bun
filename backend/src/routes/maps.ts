@@ -118,13 +118,45 @@ const validateCreateMap = [
     .optional()
     .isLength({ max: 500 })
     .withMessage('Description must be under 500 characters'),
-  body('isPublic').optional().isBoolean().withMessage('isPublic must be boolean'),
-  body('tags').optional().isArray().withMessage('Tags must be an array'),
-  body('tags.*')
+  body('isPublic')
     .optional()
-    .isString()
-    .isLength({ min: 1, max: 30 })
-    .withMessage('Each tag must be 1-30 characters'),
+    .custom(value => {
+      // Handle both boolean and string values from multipart form data
+      return value === true || value === false || value === 'true' || value === 'false'
+    })
+    .withMessage('isPublic must be boolean or "true"/"false" string'),
+  body('tags')
+    .optional()
+    .custom(value => {
+      // Handle both array and JSON string from multipart form data
+      if (Array.isArray(value)) return true
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value)
+          return Array.isArray(parsed)
+        } catch {
+          return false
+        }
+      }
+      return false
+    })
+    .withMessage('Tags must be an array or valid JSON array string'),
+  body('metadata')
+    .optional()
+    .custom(value => {
+      // Handle JSON string from multipart form data
+      if (typeof value === 'object' && value !== null) return true
+      if (typeof value === 'string') {
+        try {
+          JSON.parse(value)
+          return true
+        } catch {
+          return false
+        }
+      }
+      return false
+    })
+    .withMessage('Metadata must be a valid JSON object or string'),
 ]
 
 const validateUpdateMap = [

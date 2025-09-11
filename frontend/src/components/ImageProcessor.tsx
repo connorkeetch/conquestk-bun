@@ -13,14 +13,16 @@ export default function ImageProcessor({
   imageUrl,
   onComplete,
   onCancel,
-  maxWidth = 1600,
-  maxHeight = 1200,
+  maxWidth = 2560,
+  maxHeight = 1440,
 }: ImageProcessorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [cropArea, setCropArea] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [isResizing, setIsResizing] = useState(false)
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
   const [targetWidth, setTargetWidth] = useState(800)
   const [targetHeight, setTargetHeight] = useState(600)
@@ -105,9 +107,11 @@ export default function ImageProcessor({
     ctx.lineWidth = 2
     ctx.strokeRect(scaledCrop.x, scaledCrop.y, scaledCrop.width, scaledCrop.height)
 
-    // Draw corner handles
-    const handleSize = 8
+    // Draw corner handles (make them bigger and more visible)
+    const handleSize = 12
     ctx.fillStyle = '#3B82F6'
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
     const handles = [
       { x: scaledCrop.x, y: scaledCrop.y },
       { x: scaledCrop.x + scaledCrop.width, y: scaledCrop.y },
@@ -115,6 +119,11 @@ export default function ImageProcessor({
       { x: scaledCrop.x + scaledCrop.width, y: scaledCrop.y + scaledCrop.height },
     ]
     handles.forEach((handle) => {
+      // White border for visibility
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(handle.x - handleSize / 2 - 1, handle.y - handleSize / 2 - 1, handleSize + 2, handleSize + 2)
+      // Blue handle
+      ctx.fillStyle = '#3B82F6'
       ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize)
     })
   }, [image, cropArea, scale])
@@ -126,7 +135,28 @@ export default function ImageProcessor({
     const x = (e.clientX - rect.left) / scale
     const y = (e.clientY - rect.top) / scale
 
-    // Check if click is inside crop area
+    // Check if clicking on a resize handle (corners)
+    const handleSize = 20 // Larger hit area for easier grabbing
+    const handles = [
+      { id: 'tl', x: cropArea.x, y: cropArea.y },
+      { id: 'tr', x: cropArea.x + cropArea.width, y: cropArea.y },
+      { id: 'bl', x: cropArea.x, y: cropArea.y + cropArea.height },
+      { id: 'br', x: cropArea.x + cropArea.width, y: cropArea.y + cropArea.height },
+    ]
+
+    for (const handle of handles) {
+      if (
+        Math.abs(x - handle.x) < handleSize &&
+        Math.abs(y - handle.y) < handleSize
+      ) {
+        setIsResizing(true)
+        setResizeHandle(handle.id)
+        setDragStart({ x, y })
+        return
+      }
+    }
+
+    // Check if click is inside crop area (for dragging)
     if (
       x >= cropArea.x &&
       x <= cropArea.x + cropArea.width &&
@@ -139,20 +169,66 @@ export default function ImageProcessor({
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !canvasRef.current || !image) return
-
+    if (!canvasRef.current || !image) return
+    
     const rect = canvasRef.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) / scale
     const y = (e.clientY - rect.top) / scale
 
-    const newX = Math.max(0, Math.min(image.width - cropArea.width, x - dragStart.x))
-    const newY = Math.max(0, Math.min(image.height - cropArea.height, y - dragStart.y))
+    if (isResizing && resizeHandle) {
+      // Handle resizing based on which corner is being dragged
+      let newCrop = { ...cropArea }
+      const minSize = 100 // Minimum crop size
+      
+      switch (resizeHandle) {
+        case 'tl': // Top-left
+          newCrop.width = Math.max(minSize, cropArea.x + cropArea.width - x)
+          newCrop.height = Math.max(minSize, cropArea.y + cropArea.height - y)
+          newCrop.x = Math.min(x, cropArea.x + cropArea.width - minSize)
+          newCrop.y = Math.min(y, cropArea.y + cropArea.height - minSize)
+          break
+        case 'tr': // Top-right
+          newCrop.width = Math.max(minSize, x - cropArea.x)
+          newCrop.height = Math.max(minSize, cropArea.y + cropArea.height - y)
+          newCrop.y = Math.min(y, cropArea.y + cropArea.height - minSize)
+          break
+        case 'bl': // Bottom-left
+          newCrop.width = Math.max(minSize, cropArea.x + cropArea.width - x)
+          newCrop.height = Math.max(minSize, y - cropArea.y)
+          newCrop.x = Math.min(x, cropArea.x + cropArea.width - minSize)
+          break
+        case 'br': // Bottom-right
+          newCrop.width = Math.max(minSize, x - cropArea.x)
+          newCrop.height = Math.max(minSize, y - cropArea.y)
+          break
+      }
+      
+      // Keep within image bounds
+      newCrop.x = Math.max(0, newCrop.x)
+      newCrop.y = Math.max(0, newCrop.y)
+      newCrop.width = Math.min(image.width - newCrop.x, newCrop.width)
+      newCrop.height = Math.min(image.height - newCrop.y, newCrop.height)
+      
+      setCropArea(newCrop)
+      
+      // Update target dimensions to match aspect ratio
+      const aspectRatio = newCrop.width / newCrop.height
+      if (aspectRatio > 1) {
+        setTargetWidth(Math.min(maxWidth, Math.round(targetHeight * aspectRatio)))
+      } else {
+        setTargetHeight(Math.min(maxHeight, Math.round(targetWidth / aspectRatio)))
+      }
+    } else if (isDragging) {
+      const newX = Math.max(0, Math.min(image.width - cropArea.width, x - dragStart.x))
+      const newY = Math.max(0, Math.min(image.height - cropArea.height, y - dragStart.y))
 
     setCropArea((prev) => ({ ...prev, x: newX, y: newY }))
   }
 
   const handleMouseUp = () => {
     setIsDragging(false)
+    setIsResizing(false)
+    setResizeHandle(null)
   }
 
   const handleProcess = () => {
@@ -226,8 +302,14 @@ export default function ImageProcessor({
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className="cursor-move border border-border"
-              style={{ maxWidth: '100%', height: 'auto' }}
+              className="border border-border"
+              style={{ 
+                maxWidth: '100%', 
+                height: 'auto',
+                cursor: isResizing ? 
+                  (resizeHandle === 'tl' || resizeHandle === 'br' ? 'nwse-resize' : 'nesw-resize') : 
+                  isDragging ? 'move' : 'default'
+              }}
             />
           </div>
 
