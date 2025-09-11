@@ -2,6 +2,8 @@ import axios from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import ImageProcessor from '../components/ImageProcessor'
+import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
+import MapImageControls from '../components/MapImageControls'
 import TerritoryToken from '../components/TerritoryToken'
 
 interface Territory {
@@ -31,6 +33,8 @@ interface MapState {
   draggedTerritoryId: string | null
   mapWidth: number
   mapHeight: number
+  imageWidth: number  // Actual image dimensions
+  imageHeight: number
   imageScale: number  // Scale factor for resizing image
 }
 
@@ -68,10 +72,13 @@ export default function MapEditorTokens() {
     draggedTerritoryId: null,
     mapWidth: 1920,  // Default to full HD
     mapHeight: 1080,
+    imageWidth: 800,  // Default image dimensions
+    imageHeight: 600,
     imageScale: 1,  // Default scale
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
+  const [showCropper, setShowCropper] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -230,6 +237,9 @@ export default function MapEditorTokens() {
         // Update map dimensions
         setState((prev) => ({
           ...prev,
+          imageUrl: dataUrl,
+          imageWidth: img.width,
+          imageHeight: img.height,
           mapWidth: Math.min(finalWidth, MAX_WIDTH),
           mapHeight: Math.min(finalHeight, MAX_HEIGHT),
         }))
@@ -651,16 +661,28 @@ export default function MapEditorTokens() {
 
   const handleCropImage = () => {
     setShowImageOptions(false)
-    setShowProcessor(true)
+    setShowCropper(true)
   }
 
-  const handleScaleChange = (newScale: number) => {
+  const handleScaleImage = (scale: number) => {
     setState((prev) => ({
       ...prev,
-      imageScale: newScale,
-      mapWidth: Math.round(prev.mapWidth * (newScale / prev.imageScale)),
-      mapHeight: Math.round(prev.mapHeight * (newScale / prev.imageScale)),
+      imageScale: scale,
     }))
+  }
+
+  const handleResizeCanvas = (width: number, height: number) => {
+    setState((prev) => ({
+      ...prev,
+      mapWidth: width,
+      mapHeight: height,
+    }))
+  }
+
+  const handleOpenCropTool = () => {
+    if (state.imageUrl) {
+      setShowCropper(true)
+    }
   }
   
   // Capital management functions
@@ -929,49 +951,18 @@ export default function MapEditorTokens() {
               </button>
             </div>
 
-            {/* Map Dimensions */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-muted">Canvas:</span>
-              <select
-                onChange={(e) => {
-                  const [w, h] = e.target.value.split('x').map(Number)
-                  setState(prev => ({ ...prev, mapWidth: w, mapHeight: h }))
-                }}
-                className="px-2 py-1 bg-surface-2 rounded text-sm"
-                title="Quick canvas size presets"
-              >
-                <option value="">Custom</option>
-                <option value="1920x1080">1920×1080 (Full HD)</option>
-                <option value="1600x900">1600×900 (HD+)</option>
-                <option value="1280x720">1280×720 (HD)</option>
-                <option value="2560x1440">2560×1440 (2K)</option>
-              </select>
-              <input
-                type="number"
-                value={state.mapWidth}
-                onChange={(e) =>
-                  setState((prev) => ({ ...prev, mapWidth: parseInt(e.target.value, 10) || 1920 }))
-                }
-                className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
-                min="400"
-                max="2560"
-                step="10"
-                title="Map width in pixels"
+            {/* Image Controls */}
+            {state.imageUrl && (
+              <MapImageControls
+                imageWidth={Math.round(state.imageWidth * state.imageScale)}
+                imageHeight={Math.round(state.imageHeight * state.imageScale)}
+                mapWidth={state.mapWidth}
+                mapHeight={state.mapHeight}
+                onScaleImage={handleScaleImage}
+                onResizeCanvas={handleResizeCanvas}
+                onCropImage={handleOpenCropTool}
               />
-              <span className="text-sm text-muted">×</span>
-              <input
-                type="number"
-                value={state.mapHeight}
-                onChange={(e) =>
-                  setState((prev) => ({ ...prev, mapHeight: parseInt(e.target.value, 10) || 1080 }))
-                }
-                className="w-20 px-2 py-1 bg-surface-2 rounded text-sm"
-                min="300"
-                max="1440"
-                step="10"
-                title="Map height in pixels"
-              />
-            </div>
+            )}
 
             {/* Import/Export */}
             <div className="flex gap-2 ml-auto">
@@ -1588,6 +1579,8 @@ export default function MapEditorTokens() {
               setState((prev) => ({
                 ...prev,
                 imageUrl: processedUrl,
+                imageWidth: dimensions.width,
+                imageHeight: dimensions.height,
                 mapWidth: dimensions.width,
                 mapHeight: dimensions.height,
               }))
@@ -1601,6 +1594,23 @@ export default function MapEditorTokens() {
             maxWidth={2000}
             maxHeight={1500}
             maxFileSize={10}
+          />
+        )}
+        
+        {/* Enhanced Cropper Modal */}
+        {showCropper && state.imageUrl && (
+          <ImageCropperEnhanced
+            imageUrl={state.imageUrl}
+            targetWidth={state.mapWidth}
+            targetHeight={state.mapHeight}
+            onCrop={(croppedUrl) => {
+              setState((prev) => ({
+                ...prev,
+                imageUrl: croppedUrl,
+              }))
+              setShowCropper(false)
+            }}
+            onCancel={() => setShowCropper(false)}
           />
         )}
       </div>
