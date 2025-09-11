@@ -826,10 +826,9 @@ export default function MapEditorTokens() {
         </div>
       )}
       
-      <div className="w-full max-w-[1920px] mx-auto">
-        {' '}
-        {/* Full width with max limit */}
-        <div className="flex items-center justify-between mb-6">
+      <div className="w-full">
+        {/* Reduced padding, more screen real estate */}
+        <div className="flex items-center justify-between mb-4 px-3">
           <div>
             <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
             <p className="text-sm text-muted mt-1">
@@ -851,7 +850,7 @@ export default function MapEditorTokens() {
           </div>
         </div>
         {/* Toolbar - Reorganized for better workflow */}
-        <div className="bg-surface-1 rounded-lg p-4 mb-4">
+        <div className="bg-surface-1 rounded-lg p-4 mb-3 mx-3">
           {/* Row 1: Core Workflow - Image → Modes → Save */}
           <div className="flex flex-wrap gap-4 items-center mb-3 pb-3 border-b border-border">
             {/* Step 1: Upload Image */}
@@ -1295,19 +1294,21 @@ export default function MapEditorTokens() {
           )}
         </div>
         {/* Main Editor Area - Full width with right sidebar */}
-        <div className="flex gap-4">
-          {/* Map Canvas - Main area taking most space */}
+        <div className="flex gap-3 px-3">
+          {/* Map Canvas - Main area taking most space, centered content */}
           <div
             ref={mapContainerRef}
-            className="flex-1 bg-surface-1 rounded-lg overflow-auto"
-            style={{ height: 'calc(100vh - 280px)' }}
+            className="flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
+            style={{ height: 'calc(100vh - 240px)' }}
           >
             <div
               ref={containerRef}
-              className="relative bg-surface-2"
+              className="relative flex-shrink-0"
               style={{
                 width: `${state.mapWidth}px`,
                 height: `${state.mapHeight}px`,
+                backgroundColor: '#2a2a2a', // Charcoal color for canvas
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
                 backgroundImage: state.imageUrl ? `url(${state.imageUrl})` : undefined,
                 backgroundSize: `${state.imageWidth * state.imageScale}px ${state.imageHeight * state.imageScale}px`,
                 backgroundPosition: 'center',
@@ -1434,7 +1435,12 @@ export default function MapEditorTokens() {
               })}
 
               {!state.imageUrl && !isDragOver && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px)',
+                  }}
+                >
                   <div className="text-center">
                     {/* Upload Error Display */}
                     {uploadError && (
@@ -1442,17 +1448,19 @@ export default function MapEditorTokens() {
                         ❌ {uploadError}
                       </div>
                     )}
-                    <p className="text-muted mb-2">Drop an image here or</p>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-primary hover:bg-primary rounded"
-                    >
-                      Upload Map Image
-                    </button>
-                    <div className="mt-4 text-xs text-muted">
-                      <p>💡 Min: 400×300px | Max: 1600×1200px</p>
-                      <p>⚡ Small images auto-expand to minimum size</p>
-                      <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
+                    <div className="bg-black/40 backdrop-blur-sm p-6 rounded-lg">
+                      <p className="text-muted mb-3">Drop an image here or</p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-6 py-3 bg-violet hover:brightness-110 rounded-lg font-medium"
+                      >
+                        📤 Upload Map Image
+                      </button>
+                      <div className="mt-4 text-xs text-muted space-y-1">
+                        <p>💡 Canvas: {state.mapWidth}×{state.mapHeight}px</p>
+                        <p>📏 Min: 400×300px | Max: 1600×1200px</p>
+                        <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1469,7 +1477,7 @@ export default function MapEditorTokens() {
           {/* Properties Panel - Fixed right sidebar */}
           <div
             className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
-            style={{ height: 'calc(100vh - 280px)' }}
+            style={{ height: 'calc(100vh - 240px)' }}
           >
             <h2 className="text-xl font-bold mb-4">Properties</h2>
 
