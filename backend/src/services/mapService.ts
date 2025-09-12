@@ -209,7 +209,7 @@ export class MapService {
             const territory2 = territories.find((t) => t.id === capitals[j])
 
             if (territory1 && territory2) {
-              const adjacencies1 = JSON.parse(territory1.adjacencies || '[]')
+              const adjacencies1 = this.safeJsonParse<number[]>(territory1.adjacencies, [])
               if (adjacencies1.includes(capitals[j])) {
                 return {
                   valid: false,
@@ -590,7 +590,7 @@ export class MapService {
       id: row.id,
       name: row.name,
       description: row.description,
-      config: JSON.parse(row.config),
+      config: this.safeJsonParse(row.config, { type: 'classic' as const }), 
       isDefault: row.is_default,
       createdAt: new Date(row.created_at),
     }))
@@ -603,7 +603,7 @@ export class MapService {
       name: row.name,
       description: row.description,
       icon: row.icon,
-      effectConfig: JSON.parse(row.effect_config),
+      effectConfig: this.safeJsonParse(row.effect_config, { type: 'defense' as const }),
       createdAt: new Date(row.created_at),
     }))
   }
@@ -657,6 +657,67 @@ export class MapService {
 
   // ============= PRIVATE HELPER METHODS =============
 
+  /**
+   * Safely parse tags from various PostgreSQL array formats
+   * Handles: arrays, PostgreSQL array strings, JSON strings, comma-separated strings
+   */
+  private parseTags(tags: any): string[] {
+    if (!tags) return []
+    
+    // Already an array
+    if (Array.isArray(tags)) return tags
+    
+    // String handling
+    if (typeof tags === 'string') {
+      // PostgreSQL array format: {tag1,tag2,"tag with spaces"}
+      if (tags.startsWith('{') && tags.endsWith('}')) {
+        const content = tags.slice(1, -1)
+        // Handle quoted values for tags with commas/spaces
+        const result: string[] = []
+        let current = ''
+        let inQuotes = false
+        
+        for (let i = 0; i < content.length; i++) {
+          const char = content[i]
+          if (char === '"' && (i === 0 || content[i - 1] !== '\\')) {
+            inQuotes = !inQuotes
+          } else if (char === ',' && !inQuotes) {
+            if (current) result.push(current)
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        if (current) result.push(current)
+        return result
+      }
+      
+      // Try JSON parse
+      try {
+        const parsed = JSON.parse(tags)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        // Fallback to comma-separated
+        return tags.split(',').map(t => t.trim()).filter(Boolean)
+      }
+    }
+    
+    return []
+  }
+
+  /**
+   * Safely parse JSON with fallback to default value
+   */
+  private safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
+    if (!json) return defaultValue
+    try {
+      return JSON.parse(json)
+    } catch (error) {
+      logger.warn('Failed to parse JSON:', { json, error })
+      return defaultValue
+    }
+  }
+
   private formatMapFromDb(row: any): CustomMap {
     return {
       id: row.id,
@@ -675,8 +736,8 @@ export class MapService {
       playCount: row.play_count || 0,
       ratingAverage: parseFloat(row.rating_average) || 0,
       ratingCount: row.rating_count || 0,
-      tags: row.tags ? JSON.parse(row.tags) : [],
-      capitalTerritories: row.capital_territories ? JSON.parse(row.capital_territories) : undefined,
+      tags: this.parseTags(row.tags),
+      capitalTerritories: row.capital_territories ? this.safeJsonParse(row.capital_territories, undefined) : undefined,
       submittedAt: row.submitted_at ? new Date(row.submitted_at) : undefined,
       reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : undefined,
       reviewedBy: row.reviewed_by,
@@ -694,11 +755,11 @@ export class MapService {
       territoryId: row.territory_id,
       name: row.name,
       continentId: row.continent_id,
-      boundaryCoords: JSON.parse(row.boundary_coords),
+      boundaryCoords: this.safeJsonParse(row.boundary_coords, []),
       armyPosition: { x: row.army_position_x, y: row.army_position_y },
       abilityTypeId: row.ability_type_id,
       customAbilityConfig: row.custom_ability_config
-        ? JSON.parse(row.custom_ability_config)
+        ? this.safeJsonParse(row.custom_ability_config, undefined)
         : undefined,
       startingOwnerSlot: row.starting_owner_slot,
       startingArmies: row.starting_armies || 1,
@@ -713,7 +774,7 @@ export class MapService {
       name: row.name,
       bonusArmies: row.bonus_armies,
       color: row.color,
-      specialRules: row.special_rules ? JSON.parse(row.special_rules) : undefined,
+      specialRules: row.special_rules ? this.safeJsonParse(row.special_rules, undefined) : undefined,
       createdAt: new Date(row.created_at),
     }
   }
@@ -726,7 +787,7 @@ export class MapService {
       connectionType: row.connection_type,
       isBidirectional: row.is_bidirectional,
       specialRequirements: row.special_requirements
-        ? JSON.parse(row.special_requirements)
+        ? this.safeJsonParse(row.special_requirements, undefined)
         : undefined,
     }
   }

@@ -664,4 +664,61 @@ router.get(
   },
 )
 
+// ============= CACHE MANAGEMENT =============
+
+// Refresh server caches
+router.post(
+  '/cache/refresh',
+  requirePermission('system.manage'),
+  logAdminActivity('cache.refresh'),
+  async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId
+      logger.info('Admin cache refresh requested', { adminId: userId })
+
+      // Clear any in-memory caches (if you have any)
+      // For example, if you have a map cache or user cache:
+      
+      // Clear map service cache if it exists
+      const { mapService } = require('../services/mapService')
+      if (mapService && typeof mapService.clearCache === 'function') {
+        mapService.clearCache()
+      }
+
+      // Clear any Redis cache if configured
+      const redisUrl = process.env.REDIS_URL
+      if (redisUrl) {
+        try {
+          const Redis = require('ioredis')
+          const redis = new Redis(redisUrl)
+          await redis.flushdb()
+          await redis.quit()
+          logger.info('Redis cache cleared')
+        } catch (redisError) {
+          logger.warn('Redis cache clear failed (non-critical):', redisError)
+        }
+      }
+
+      // Clear any Node.js module cache for hot-reloading (development only)
+      if (process.env.NODE_ENV === 'development') {
+        Object.keys(require.cache).forEach(key => {
+          if (key.includes('/services/') || key.includes('/config/')) {
+            delete require.cache[key]
+          }
+        })
+      }
+
+      logger.info('Cache refresh completed successfully', { adminId: userId })
+      res.json({ 
+        success: true, 
+        message: 'Cache refreshed successfully',
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      logger.error('Error refreshing cache:', error)
+      res.status(500).json({ error: 'Failed to refresh cache' })
+    }
+  },
+)
+
 export default router
