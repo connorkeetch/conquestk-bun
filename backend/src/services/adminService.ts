@@ -139,7 +139,7 @@ export class AdminService {
       userId: row.user_id,
       roleId: row.role_id,
       roleName: row.role_name,
-      permissions: JSON.parse(row.permissions),
+      permissions: Array.isArray(row.permissions) ? row.permissions : JSON.parse(row.permissions),
       assignedBy: row.assigned_by,
       assignedAt: new Date(row.assigned_at),
       expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
