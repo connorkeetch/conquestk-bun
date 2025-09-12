@@ -38,7 +38,7 @@ export const AdminMapReviews: React.FC = () => {
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+  }, [])
 
   const loadData = async () => {
     try {
