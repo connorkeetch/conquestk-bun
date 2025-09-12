@@ -419,6 +419,32 @@ router.get(
   },
 )
 
+// Get active games count
+router.get(
+  '/games/active',
+  requirePermission('games.view'),
+  async (_req: Request, res: Response) => {
+    try {
+      const { query } = require('../config/database')
+      
+      const result = await query(`
+        SELECT COUNT(*) as count 
+        FROM games 
+        WHERE status = 'active' OR status = 'in_progress'
+      `)
+      
+      res.json({ 
+        activeGames: parseInt(result.rows[0]?.count || '0', 10)
+      })
+    } catch (error) {
+      logger.error('Error getting active games:', error)
+      res.status(500).json({ 
+        error: 'Failed to get active games count'
+      })
+    }
+  },
+)
+
 // Force end a game
 router.post(
   '/games/:gameId/force-end',

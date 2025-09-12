@@ -1,4 +1,5 @@
 import { getClient, query } from '../config/database'
+import { logger } from '../utils/logger'
 
 export interface AdminRole {
   id: string
@@ -471,20 +472,35 @@ export class AdminService {
   // ============= FEATURE FLAGS =============
 
   async getFeatureFlags(): Promise<FeatureFlag[]> {
-    const result = await query(`
-      SELECT * FROM feature_flags ORDER BY flag_name
-    `)
+    try {
+      const result = await query(`
+        SELECT * FROM feature_flags ORDER BY flag_name
+      `)
 
-    return result.rows.map((row) => ({
-      id: row.id,
-      flagName: row.flag_name,
-      description: row.description,
-      isEnabled: row.is_enabled,
-      config: JSON.parse(row.config || '{}'),
-      createdBy: row.created_by,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-    }))
+      return result.rows.map((row) => ({
+        id: row.id,
+        flagName: row.flag_name,
+        description: row.description,
+        isEnabled: row.is_enabled,
+        config: this.safeJsonParse(row.config, {}),
+        createdBy: row.created_by,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+      }))
+    } catch (error) {
+      logger.warn('Error fetching feature flags:', error)
+      // Return empty array if table doesn't exist or error occurs
+      return []
+    }
+  }
+
+  private safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
+    if (!json) return defaultValue
+    try {
+      return JSON.parse(json)
+    } catch {
+      return defaultValue
+    }
   }
 
   async toggleFeatureFlag(flagName: string, enabled: boolean, adminUserId: string): Promise<void> {
