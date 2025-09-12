@@ -40,9 +40,9 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       SELECT 
         u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
-        us.preferred_color
+        up.preferred_color
       FROM users u
-      LEFT JOIN user_settings us ON u.id = us.user_id
+      LEFT JOIN user_preferences up ON u.id = up.user_id
       WHERE u.username = $1 AND u.deleted_at IS NULL
     `,
       [username],
@@ -95,9 +95,9 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       SELECT 
         u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
-        us.preferred_color
+        up.preferred_color
       FROM users u
-      LEFT JOIN user_settings us ON u.id = us.user_id
+      LEFT JOIN user_preferences up ON u.id = up.user_id
       WHERE u.id = $1
     `,
       [userId],

@@ -717,11 +717,11 @@ router.get(
           m.*,
           u.username as creator_username,
           COUNT(DISTINCT g.id) as play_count,
-          AVG(mr.rating) as avg_rating
+          COALESCE(AVG(mr.rating), 0) as avg_rating
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN games g ON g.map_id = m.id
-        LEFT JOIN map_reviews mr ON mr.map_id = m.id
+        LEFT JOIN map_ratings mr ON mr.map_id = m.id
         WHERE 1=1
       `
       const queryParams: any[] = []
