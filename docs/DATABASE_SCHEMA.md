@@ -1,9 +1,9 @@
 # ConquestK Database Schema Documentation
 
-> **Version**: 1.0.0  
+> **Version**: 1.1.0  
 > **Last Updated**: 2025-01-12  
 > **Database**: PostgreSQL 14+ (Railway-hosted)  
-> **Status**: 🔴 Needs Consolidation
+> **Status**: 🟡 Consolidation In Progress
 
 ## 📋 Table of Contents
 1. [Overview](#overview)
@@ -139,14 +139,14 @@ erDiagram
 | id | UUID | gen_random_uuid() | Primary key | ✅ Exists |
 | user_id | UUID | - | Foreign key to users | ✅ Exists |
 | theme | VARCHAR(50) | 'default' | UI theme | ✅ Exists |
-| sound_enabled | BOOLEAN | true | Sound effects toggle | ❌ MISSING |
-| music_enabled | BOOLEAN | true | Background music toggle | ❌ MISSING |
-| notification_enabled | BOOLEAN | true | Push notifications | ❌ MISSING |
-| auto_ready | BOOLEAN | false | Auto-ready in games | ❌ MISSING |
-| show_timer | BOOLEAN | true | Display turn timer | ❌ MISSING |
-| show_army_numbers | BOOLEAN | true | Display troop counts | ❌ MISSING |
-| animation_speed | VARCHAR(20) | 'normal' | Animation speed | ❌ MISSING |
-| language | VARCHAR(10) | 'en' | Language preference | ❌ MISSING |
+| sound_enabled | BOOLEAN | true | Sound effects toggle | ✅ Added via migration 015 |
+| music_enabled | BOOLEAN | true | Background music toggle | ✅ Added via migration 015 |
+| notification_enabled | BOOLEAN | true | Push notifications | ✅ Added via migration 015 |
+| auto_ready | BOOLEAN | false | Auto-ready in games | ✅ Added via migration 015 |
+| show_timer | BOOLEAN | true | Display turn timer | ✅ Added via migration 015 |
+| show_army_numbers | BOOLEAN | true | Display troop counts | ✅ Added via migration 015 |
+| animation_speed | VARCHAR(20) | 'normal' | Animation speed | ✅ Added via migration 015 |
+| language | VARCHAR(10) | 'en' | Language preference | ✅ Added via migration 015 |
 | chat_privacy | VARCHAR(20) | 'everyone' | Who can message user | ✅ Exists (unused?) |
 | profanity_filter | BOOLEAN | false | Filter profanity | ✅ Exists (unused?) |
 | auto_decline_invites | BOOLEAN | false | Auto-decline game invites | ✅ Exists (unused?) |
@@ -282,10 +282,10 @@ erDiagram
 
 ## 🔄 Consolidation Plan
 
-### Tables to Remove
-1. **`user_settings`** → Merge into `user_preferences`
-2. **`user_profiles`** → Move useful columns to `users` table
-3. **`user_terms_acceptance`** → Add `terms_accepted_at` and `terms_version` to `users`
+### Tables to Remove (Status: Ready to Drop)
+1. **`user_settings`** → ✅ Data migrated to `user_preferences` 
+2. **`user_profiles`** → ✅ Data migrated to `users` table
+3. **`user_terms_acceptance`** → ✅ Data migrated to `users` table columns
 
 ### Tables to Keep
 - ✅ `user_sessions` - Keep for future session management
@@ -332,10 +332,10 @@ WHERE EXISTS (SELECT 1 FROM user_terms_acceptance WHERE user_id = u.id);
 -- DROP COLUMN IF EXISTS profanity_filter,
 -- DROP COLUMN IF EXISTS auto_decline_invites;
 
--- Step 6: Drop redundant tables (CAREFUL - ensure data is migrated first!)
--- DROP TABLE IF EXISTS user_settings;
--- DROP TABLE IF EXISTS user_profiles;
--- DROP TABLE IF EXISTS user_terms_acceptance;
+-- Step 6: Drop redundant tables (READY TO EXECUTE)
+DROP TABLE IF EXISTS user_settings CASCADE;
+DROP TABLE IF EXISTS user_profiles CASCADE;
+DROP TABLE IF EXISTS user_terms_acceptance CASCADE;
 ```
 
 ---
@@ -432,7 +432,7 @@ CHECK (status IN ('waiting', 'in_progress', 'completed', 'cancelled'));
 | 012 | remove_unused_is_verified.sql | Remove duplicate column | 2025-01-11 | ✅ Applied |
 | 013 | add_creator_id_to_maps.sql | Add map creator | 2025-01-11 | ✅ Applied |
 | 014 | add_map_status_column.sql | Add map status | 2025-01-11 | ✅ Applied |
-| 015 | consolidate_user_tables.sql | Fix user table redundancy | 2025-01-12 | 🔄 Pending |
+| 015 | consolidate_user_tables.sql | Fix user table redundancy | 2025-01-12 | ✅ Applied |
 
 ---
 
@@ -479,6 +479,22 @@ ORDER BY n_distinct DESC;
 ```
 
 ---
+
+## Recent Fixes (2025-01-12)
+
+### Fixed Issues:
+1. ✅ **user_settings table references** - Migrated to user_preferences
+2. ✅ **Missing columns in user_preferences** - Added via migration 015
+3. ✅ **Admin authentication JSON parsing** - Fixed permissions array handling
+4. ✅ **maps.created_by column** - Fixed to use correct column name (creator_id)
+
+### Pending Cleanup:
+Execute in production after verification:
+```sql
+DROP TABLE IF EXISTS user_settings CASCADE;
+DROP TABLE IF EXISTS user_profiles CASCADE;
+DROP TABLE IF EXISTS user_terms_acceptance CASCADE;
+```
 
 ## Future Considerations
 
