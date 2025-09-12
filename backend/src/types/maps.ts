@@ -254,6 +254,8 @@ export interface CreateMapRequest {
   isPublic?: boolean
   tags?: string[]
   capitalTerritories?: Record<string, number[]>
+  minPlayers?: number
+  maxPlayers?: number
 }
 
 export interface UpdateMapRequest {

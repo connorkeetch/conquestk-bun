@@ -26,6 +26,9 @@ interface Continent {
 
 interface MapState {
   name: string
+  description?: string
+  minPlayers: number
+  maxPlayers: number
   imageUrl?: string
   territories: Territory[]
   continents: Continent[]
@@ -72,6 +75,9 @@ export default function MapEditorTokens() {
 
   const [state, setState] = useState<MapState>({
     name: generateMapName(),
+    description: '',
+    minPlayers: 2,
+    maxPlayers: 6,
     imageUrl: undefined,
     territories: [],
     continents: [],
@@ -527,9 +533,11 @@ export default function MapEditorTokens() {
       // Create JSON payload
       const mapData = {
         name: state.name,
-        description: `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
+        description: state.description || `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
         isPublic: true,
         tags: ['custom', 'user-created'],
+        minPlayers: state.minPlayers,
+        maxPlayers: state.maxPlayers,
         metadata: {
           territories: state.territories,
           continents: state.continents,
@@ -925,6 +933,9 @@ export default function MapEditorTokens() {
                   if (confirm('Clear all territories and start over? Your work is auto-saved.')) {
                     setState({
                       name: generateMapName(),
+                      description: '',
+                      minPlayers: 2,
+                      maxPlayers: 6,
                       imageUrl: undefined,
                       territories: [],
                       continents: [],
@@ -932,6 +943,8 @@ export default function MapEditorTokens() {
                       draggedTerritoryId: null,
                       mapWidth: 1920,
                       mapHeight: 1080,
+                      imageWidth: 800,
+                      imageHeight: 600,
                       imageScale: 1,
                     })
                     setCapitalAssignments({})
@@ -1498,6 +1511,52 @@ export default function MapEditorTokens() {
                 onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-1 bg-surface-2 rounded text-white"
               />
+            </div>
+
+            {/* Map Description */}
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Description</label>
+              <textarea
+                value={state.description}
+                onChange={(e) => setState((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3 py-1 bg-surface-2 rounded text-white h-16 resize-none"
+                placeholder="Brief description of your map"
+              />
+            </div>
+
+            {/* Player Count */}
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Recommended Players</label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted">Min</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={state.minPlayers}
+                    onChange={(e) => setState((prev) => ({ 
+                      ...prev, 
+                      minPlayers: Math.min(Math.max(2, parseInt(e.target.value) || 2), prev.maxPlayers) 
+                    }))}
+                    className="w-full px-3 py-1 bg-surface-2 rounded text-white"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-muted">Max</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={state.maxPlayers}
+                    onChange={(e) => setState((prev) => ({ 
+                      ...prev, 
+                      maxPlayers: Math.max(Math.min(12, parseInt(e.target.value) || 6), prev.minPlayers) 
+                    }))}
+                    className="w-full px-3 py-1 bg-surface-2 rounded text-white"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Statistics */}
