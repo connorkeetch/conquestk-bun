@@ -32,13 +32,13 @@ export class MapService {
       // Create the map record
       const mapQuery = hasMetadataColumn
         ? `
-          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata, status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           RETURNING *
         `
         : `
-          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *
         `
 
@@ -54,6 +54,7 @@ export class MapService {
             mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
             mapData.metadata ? JSON.stringify(mapData.metadata) : null,
+            'pending_review', // status
           ]
         : [
             mapData.name,
@@ -65,6 +66,7 @@ export class MapService {
             mapData.isPublic || false,
             mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
+            'pending_review', // status
           ]
 
       const mapResult = await client.query(mapQuery, mapValues)
@@ -76,6 +78,22 @@ export class MapService {
         continents: mapData.metadata?.continents?.length || 0,
       })
 
+      // Add to content approval queue for admin review
+      try {
+        await client.query(
+          `
+          INSERT INTO content_approval_queue (
+            content_type, content_id, submitter_id, status, submitted_at
+          ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+          `,
+          ['map', map.id, userId, 'pending']
+        )
+        logger.info(`Added map ${map.id} to approval queue`)
+      } catch (queueError) {
+        logger.warn('Failed to add map to approval queue (non-critical):', queueError)
+        // Don't fail the map creation if queue insertion fails
+      }
+
       return this.formatMapFromDb(map)
     } catch (error: any) {
       // If metadata column doesn't exist, try without it
@@ -83,8 +101,8 @@ export class MapService {
         logger.warn('Metadata column not found, creating map without metadata')
         const mapResult = await client.query(
           `
-          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *
         `,
           [
@@ -97,10 +115,27 @@ export class MapService {
             mapData.isPublic || false,
             mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
+            'pending_review', // status
           ],
         )
         const map = mapResult.rows[0]
         logger.info(`Created new map without metadata: ${map.name} (${map.id})`)
+        
+        // Add to content approval queue for admin review
+        try {
+          await client.query(
+            `
+            INSERT INTO content_approval_queue (
+              content_type, content_id, submitter_id, status, submitted_at
+            ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+            `,
+            ['map', map.id, userId, 'pending']
+          )
+          logger.info(`Added map ${map.id} to approval queue`)
+        } catch (queueError) {
+          logger.warn('Failed to add map to approval queue (non-critical):', queueError)
+        }
+        
         return this.formatMapFromDb(map)
       }
       throw error
@@ -729,7 +764,7 @@ export class MapService {
       imageHeight: row.image_height || 450,
       isPublic: row.is_public,
       isFeatured: row.is_featured,
-      status: row.status || 'draft',
+      status: row.status || 'pending_review',
       version: row.version || 1,
       parentMapId: row.parent_map_id,
       downloadCount: row.download_count || 0,
