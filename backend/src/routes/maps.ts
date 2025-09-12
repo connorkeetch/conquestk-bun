@@ -350,7 +350,7 @@ router.post(
         name: req.body.name,
         description: req.body.description,
         isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
-        tags: typeof req.body.tags === 'string' ? JSON.parse(req.body.tags) : req.body.tags || [],
+        tags: parseTags(req.body.tags),
       }
 
       // Parse metadata if provided

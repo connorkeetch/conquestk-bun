@@ -63,8 +63,15 @@ export default function MapEditorTokens() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Generate unique map name with timestamp
+  const generateMapName = () => {
+    const now = new Date()
+    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    return `Map ${timestamp}`
+  }
+
   const [state, setState] = useState<MapState>({
-    name: 'New Map',
+    name: generateMapName(),
     imageUrl: undefined,
     territories: [],
     continents: [],
@@ -916,7 +923,7 @@ export default function MapEditorTokens() {
                 onClick={() => {
                   if (confirm('Clear all territories and start over? Your work is auto-saved.')) {
                     setState({
-                      name: 'New Map',
+                      name: generateMapName(),
                       imageUrl: undefined,
                       territories: [],
                       continents: [],

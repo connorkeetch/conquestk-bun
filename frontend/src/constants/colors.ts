@@ -138,11 +138,11 @@ export const THEME_PALETTE = {
   greens: {
     green400: '#4ADE80',
     green500: '#22C55E',
-    green600: '#059669',
+    green600: '#014421',         // Forest green (player color) - updated
     green700: '#047857',
-    limeGreen: '#84CC16',        // Bright lime green (player color)
-    forestGreen: '#14532D',      // Dark forest green (player color)
-    teal500: '#14B8A6',          // Teal (player color)
+    limeGreen: '#32CD32',        // Lime green (player color) - replaced teal
+    forestGreen: '#014421',      // Forest green (player color) - updated
+    teal500: '#14B8A6',          // Teal (no longer used as player color)
     teal600: '#0F766E',          // Dark teal
     neonGreen: '#39FF14',
     neonGreenOutline: '#2FB510',
@@ -170,8 +170,8 @@ export const THEME_PALETTE = {
   
   // EARTH TONES FAMILY (for natural/rustic themes)
   earthTones: {
-    brown: '#92400E',           // Rich brown (player color)
-    tan: '#D2691E',             // Tan (player color)
+    brown: '#8B4513',           // Sienna - more brown (player color)
+    tan: '#918151',             // Tan (player color) - updated
     darkTan: '#A16207',         // Dark tan alternative
     bronze: '#CD7F32',          // True bronze color
   },
@@ -443,31 +443,43 @@ export const PLAYER_COLORS = [
   // Oranges & Yellows  
   '#EA580C', // Orange - True orange (distinct from amber)
   '#F59E0B', // Amber - Golden yellow-orange (yellower than orange)
-  '#A0522D', // Sienna - Brown-orange (earthier, replaces similar bronze)
   
-  // Greens & Teals
-  '#059669', // Forest Green - Deep green (distinct from teal)
-  '#14B8A6', // Teal - Blue-green (clearly different from pure green)
+  // Greens
+  '#014421', // Forest Green - Deep forest green
+  '#32CD32', // Lime Green - Bright lime green (replaced teal)
   
   // Blues & Cyans
   '#2563EB', // Blue - Pure blue (traditional)
   '#06B6D4', // Cyan - Light blue (clearly lighter than pure blue)
   
-  // Purples
-  '#9333EA', // Purple - True purple (vivid violet)
-  '#7C3AED', // Violet - Blue-purple (more blue than purple, replaces too-similar indigo)
+  // Earth Tones
+  '#918151', // Tan - Light brown/tan (replaced purple)
+  '#851D2D', // Crimson - Dark crimson (replaced violet/magenta)
+  '#8B4513', // Sienna - More brown (moved to end)
 ] as const;
 
 // ===== PREMIUM PLAYER COLORS =====
-// Premium player colors with special effects - all highly distinct
+// Premium player colors with special effects
 export const PREMIUM_PLAYER_COLORS = {
-  Gold: {
-    solid: '#FFD700',
+  MidnightBlack: {
+    solid: '#000000',
+    outline: '#FFFFFF',
+    effect: 'subtle-starfield',
+    description: 'The void between stars'
+  },
+  PureWhite: {
+    solid: '#FFFFFF',
+    outline: '#000000',
+    effect: 'pearl-shimmer',
+    description: 'Pristine and untouchable'
+  },
+  MetallicGold: {
+    solid: '#DFAF37',
     effect: 'metallic-gradient',
     outline: '#B8860B',
     description: 'The color of victory'
   },
-  Silver: {
+  MetallicSilver: {
     solid: '#C0C0C0',
     effect: 'chrome-reflection',
     outline: '#808080',
@@ -479,23 +491,11 @@ export const PREMIUM_PLAYER_COLORS = {
     outline: '#2FB510',
     description: 'Radioactive power'
   },
-  HotPink: {
-    solid: '#FF1493',
-    effect: 'neon-glow',
-    outline: '#C71585',
-    description: 'Electric pink'
-  },
-  NeonCyan: {
-    solid: '#00FFFF',
-    effect: 'aqua-glow',
-    outline: '#00CED1',
-    description: 'Digital cyan'
-  },
-  Magenta: {
-    solid: '#FF00FF',
-    effect: 'plasma-glow',
-    outline: '#DA70D6',
-    description: 'Pure magenta'
+  Dragonfire: {
+    gradient: 'linear-gradient(45deg, #DC2626, #FB923C, #FDE047)',
+    solid: '#FB923C',
+    effect: 'flame-particles',
+    description: 'Burning conquest'
   }
 } as const;
 
@@ -640,20 +640,20 @@ export const getColorDisplayName = (color: string): string => {
     '#EC4899': 'Pink',
     '#EA580C': 'Orange',
     '#F59E0B': 'Amber',
-    '#A0522D': 'Sienna',
-    '#059669': 'Forest Green',
-    '#14B8A6': 'Teal',
+    '#014421': 'Forest Green',
+    '#32CD32': 'Lime Green',
     '#2563EB': 'Blue',
     '#06B6D4': 'Cyan',
-    '#9333EA': 'Purple',
-    '#7C3AED': 'Violet',
+    '#918151': 'Tan',
+    '#851D2D': 'Crimson',
+    '#8B4513': 'Sienna',
     // Premium colors (6)
-    '#FFD700': 'Gold',
-    '#C0C0C0': 'Silver',
+    '#000000': 'Midnight Black',
+    '#FFFFFF': 'Pure White',
+    '#DFAF37': 'Metallic Gold',
+    '#C0C0C0': 'Metallic Silver',
     '#39FF14': 'Neon Green',
-    '#FF1493': 'Hot Pink',
-    '#00FFFF': 'Neon Cyan',
-    '#FF00FF': 'Magenta',
+    '#FB923C': 'Dragonfire',
   };
   
   return colorMap[color] || color;
