@@ -613,37 +613,29 @@ export class AuthController {
 
       const { query } = await import('../config/database')
 
-      // Upsert user settings
+      // Upsert user preferences
       const updateQuery = `
-        INSERT INTO user_settings (user_id, theme, notifications, privacy, preferences)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO user_preferences (user_id, theme, notification_enabled, show_online_status, direct_messages, preferred_color)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (user_id) 
         DO UPDATE SET 
-          theme = COALESCE(EXCLUDED.theme, user_settings.theme),
-          notifications = COALESCE(EXCLUDED.notifications, user_settings.notifications),
-          privacy = COALESCE(EXCLUDED.privacy, user_settings.privacy),
-          preferences = COALESCE(EXCLUDED.preferences, user_settings.preferences),
+          theme = COALESCE(EXCLUDED.theme, user_preferences.theme),
+          notification_enabled = COALESCE(EXCLUDED.notification_enabled, user_preferences.notification_enabled),
+          show_online_status = COALESCE(EXCLUDED.show_online_status, user_preferences.show_online_status),
+          direct_messages = COALESCE(EXCLUDED.direct_messages, user_preferences.direct_messages),
+          preferred_color = COALESCE(EXCLUDED.preferred_color, user_preferences.preferred_color),
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `
 
-      // Prepare the data for storage
-      const privacySettings = {
-        show_online_status:
-          settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : null,
-      }
-
-      const preferencesData = {
-        preferred_color: settings.preferredColor || null,
-        direct_messages: settings.directMessages || null,
-      }
-
+      // Prepare the data for storage - use defaults if null
       const result = await query(updateQuery, [
         userId,
-        settings.theme || null,
-        settings.notifications ? JSON.stringify(settings.notifications) : null,
-        JSON.stringify(privacySettings),
-        JSON.stringify(preferencesData),
+        settings.theme || 'dark',  // Default theme
+        settings.notifications?.enabled !== undefined ? settings.notifications.enabled : true,
+        settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : true,
+        settings.directMessages || 'friends',
+        settings.preferredColor || '#DC2626',
       ])
 
       logger.info('User settings updated:', { userId, settings: Object.keys(settings) })
