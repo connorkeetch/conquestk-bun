@@ -715,9 +715,10 @@ router.get(
       let mapsQuery = `
         SELECT 
           m.*,
-          u.username as creator_username,
-          COUNT(DISTINCT g.id) as play_count,
-          COALESCE(AVG(mr.rating), 0) as avg_rating
+          u.username as "creatorName",
+          COUNT(DISTINCT g.id) as "playCount",
+          COALESCE(AVG(mr.rating), 0) as "ratingAverage",
+          COUNT(DISTINCT mr.id) as "ratingCount"
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN games g ON g.map_id = m.id
