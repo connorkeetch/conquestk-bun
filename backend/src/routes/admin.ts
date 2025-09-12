@@ -719,7 +719,7 @@ router.get(
           COUNT(DISTINCT g.id) as play_count,
           AVG(mr.rating) as avg_rating
         FROM maps m
-        LEFT JOIN users u ON m.created_by = u.id
+        LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN games g ON g.map_id = m.id
         LEFT JOIN map_reviews mr ON mr.map_id = m.id
         WHERE 1=1
