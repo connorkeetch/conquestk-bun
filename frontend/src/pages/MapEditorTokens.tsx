@@ -1,10 +1,12 @@
 import axios from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import ImageProcessor from '../components/ImageProcessor'
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import MapImageControls from '../components/MapImageControls'
 import TerritoryToken from '../components/TerritoryToken'
+import api from '../services/api'
 
 interface Territory {
   id: string
@@ -65,6 +67,10 @@ export default function MapEditorTokens() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [searchParams] = useSearchParams()
+  const [editingMapId, setEditingMapId] = useState<string | null>(null)
+  const [showDraftsList, setShowDraftsList] = useState(false)
+  const [availableDrafts, setAvailableDrafts] = useState<any[]>([])
 
   // Generate unique map name with timestamp
   const generateMapName = () => {
@@ -157,19 +163,76 @@ export default function MapEditorTokens() {
   }
 
   // Check for saved draft on mount
+  // Check URL params for edit mode and load drafts
   useEffect(() => {
-    const saved = localStorage.getItem(AUTOSAVE_KEY)
-    if (saved) {
-      try {
-        const data = JSON.parse(saved)
-        if (data.savedAt) {
-          setShowLoadDraftDialog(true)
+    const mapId = searchParams.get('edit')
+    if (mapId) {
+      setEditingMapId(mapId)
+      loadMapForEditing(mapId)
+    } else {
+      // Check for local auto-saved draft if not editing
+      const saved = localStorage.getItem(AUTOSAVE_KEY)
+      if (saved) {
+        try {
+          const data = JSON.parse(saved)
+          if (data.savedAt) {
+            setShowLoadDraftDialog(true)
+          }
+        } catch (error) {
+          console.error('Error checking for saved draft:', error)
         }
-      } catch (error) {
-        console.error('Error checking for saved draft:', error)
       }
     }
-  }, [])
+  }, [searchParams])
+
+  // Load map for editing
+  const loadMapForEditing = async (mapId: string) => {
+    try {
+      const response = await api.get(`/maps/${mapId}`)
+      const map = response.data
+      
+      // Load map data into editor state
+      setState(prev => ({
+        ...prev,
+        name: map.name,
+        description: map.description || '',
+        minPlayers: map.min_players || 2,
+        maxPlayers: map.max_players || 6,
+        imageUrl: map.image_url,
+        territories: map.metadata?.territories || [],
+        continents: map.metadata?.continents || [],
+        mapWidth: map.metadata?.width || 1920,
+        mapHeight: map.metadata?.height || 1080,
+      }))
+    } catch (error) {
+      console.error('Failed to load map for editing:', error)
+      alert('Failed to load map. Starting with a new map instead.')
+    }
+  }
+
+  // Load user's draft maps from database
+  const loadDraftMaps = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const isAdmin = user.isAdmin || false
+      
+      // Get maps with draft status
+      const response = await api.get('/maps', {
+        params: {
+          status: 'draft',
+          creator: isAdmin ? undefined : user.id
+        }
+      })
+      
+      setAvailableDrafts(response.data.filter((map: any) => 
+        map.status === 'draft' && (isAdmin || map.creator_id === user.id)
+      ))
+      setShowDraftsList(true)
+    } catch (error) {
+      console.error('Failed to load draft maps:', error)
+      alert('Failed to load draft maps')
+    }
+  }
 
   // Auto-save timer
   useEffect(() => {
@@ -484,7 +547,53 @@ export default function MapEditorTokens() {
     return state.continents.find((c) => c.id === territory.continentId)
   }
 
-  // Save map to database
+  // Submit map for approval
+  const handleSubmitForApproval = async () => {
+    try {
+      if (!editingMapId) {
+        alert('Please save your map as a draft first')
+        return
+      }
+
+      if (state.territories.length < 10) {
+        alert('Maps must have at least 10 territories to be submitted for approval')
+        return
+      }
+
+      if (state.continents.length < 2) {
+        alert('Maps must have at least 2 continents to be submitted for approval')
+        return
+      }
+
+      const confirmed = confirm(
+        'Submit this map for approval?\n\n' +
+        'Once submitted, the map will be reviewed by admins.\n' +
+        'You will not be able to edit it until it is approved or rejected.'
+      )
+
+      if (!confirmed) return
+
+      // Update map status to pending_review
+      const apiUrl = import.meta.env.MODE === 'production' 
+        ? `/api/maps/${editingMapId}` 
+        : `http://localhost:5001/api/maps/${editingMapId}`
+
+      const result = await api.patch(apiUrl, {
+        status: 'pending_review'
+      })
+
+      alert('Map submitted for approval! You will be notified when it is reviewed.')
+      
+      // Clear editing state and redirect
+      setEditingMapId(null)
+      window.location.href = '/maps'
+    } catch (error: any) {
+      console.error('Failed to submit map:', error)
+      alert(`Failed to submit map for approval: ${error.response?.data?.error || error.message}`)
+    }
+  }
+
+  // Save map as draft to database
   const handleSaveMap = async () => {
     try {
       if (state.territories.length < 2) {
@@ -534,7 +643,8 @@ export default function MapEditorTokens() {
       const mapData = {
         name: state.name,
         description: state.description || `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
-        isPublic: true,
+        isPublic: false, // Drafts are private by default
+        status: 'draft', // Always save as draft
         tags: ['custom', 'user-created'],
         minPlayers: state.minPlayers,
         maxPlayers: state.maxPlayers,
@@ -564,15 +674,29 @@ export default function MapEditorTokens() {
         ? '/api/maps/json' 
         : 'http://localhost:5001/api/maps/json'
       
-      const result = await axios.post(apiUrl, mapData, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      console.log('Map upload successful:', result.data)
-      alert('Map saved successfully! It will appear in the Create Game map selection.')
+      let result
+      if (editingMapId) {
+        // Update existing map
+        result = await axios.patch(`${apiUrl.replace('/json', '')}/${editingMapId}/json`, mapData, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+        console.log('Map updated successfully:', result.data)
+        alert('Draft map updated successfully!')
+      } else {
+        // Create new map
+        result = await axios.post(apiUrl, mapData, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        })
+        console.log('Map created successfully:', result.data)
+        setEditingMapId(result.data.id) // Now editing this map
+        alert('Map saved as draft! You can continue editing or submit for approval.')
+      }
     } catch (error: any) {
       console.error('Map upload failed:', error)
 
@@ -771,7 +895,7 @@ export default function MapEditorTokens() {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-4">
-      {/* Load Draft Dialog */}
+      {/* Load Draft Dialog - Local Storage */}
       {showLoadDraftDialog && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
@@ -784,7 +908,7 @@ export default function MapEditorTokens() {
                 onClick={loadFromLocalStorage}
                 className="w-full px-4 py-3 bg-primary hover:brightness-110 rounded-lg text-white font-medium"
               >
-                ✅ Load Draft
+                ✅ Load Local Draft
               </button>
               <button
                 onClick={() => {
@@ -796,6 +920,51 @@ export default function MapEditorTokens() {
                 🆕 Start Fresh
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draft Maps List Dialog */}
+      {showDraftsList && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-1 rounded-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-white mb-4">📂 Load Draft Map</h2>
+            {availableDrafts.length === 0 ? (
+              <p className="text-muted">No draft maps found. Start creating a new map!</p>
+            ) : (
+              <div className="space-y-3">
+                {availableDrafts.map((map) => (
+                  <div key={map.id} className="bg-surface-2 p-4 rounded-lg hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setEditingMapId(map.id)
+                      loadMapForEditing(map.id)
+                      setShowDraftsList(false)
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-white">{map.name}</h3>
+                        <p className="text-sm text-muted mt-1">
+                          {map.description || 'No description'}
+                        </p>
+                        <p className="text-xs text-muted mt-2">
+                          Created: {new Date(map.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button className="text-primary hover:text-primary-dark">
+                        Load →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowDraftsList(false)}
+              className="mt-4 w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
@@ -922,10 +1091,28 @@ export default function MapEditorTokens() {
               
               <button
                 onClick={handleSaveMap}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-medium"
-                title="Save your map to the database"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-medium"
+                title="Save your map as a draft"
               >
-                💾 Save Map
+                💾 {editingMapId ? 'Update Draft' : 'Save as Draft'}
+              </button>
+
+              {editingMapId && (
+                <button
+                  onClick={handleSubmitForApproval}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-medium"
+                  title="Submit your map for approval"
+                >
+                  ✅ Submit for Approval
+                </button>
+              )}
+
+              <button
+                onClick={loadDraftMaps}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-medium"
+                title="Load a draft map from the database"
+              >
+                📂 Load Draft
               </button>
               
               <button
