@@ -1190,7 +1190,7 @@ export default function Settings() {
         ]
 
       case 'advanced':
-        return [
+        const advancedSettings: SettingItem[] = [
           {
             id: 'reset-settings',
             label: 'Reset All Settings',
@@ -1207,6 +1207,44 @@ export default function Settings() {
             },
           },
         ]
+
+        // Add admin-only cache refresh button
+        if (user?.isAdmin) {
+          advancedSettings.push({
+            id: 'refresh-cache',
+            label: 'Refresh Server Cache',
+            description: 'Force refresh of server-side caches (Admin only)',
+            type: 'button',
+            isWorking: true,
+            buttonText: '🔄 Refresh Cache',
+            buttonVariant: 'primary',
+            onClick: async () => {
+              try {
+                const response = await fetch('/api/admin/cache/refresh', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  },
+                })
+                
+                if (response.ok) {
+                  alert('✅ Cache refreshed successfully!')
+                  // Also clear local cache
+                  dispatch(clearCache())
+                } else {
+                  const error = await response.json()
+                  alert(`❌ Failed to refresh cache: ${error.message || 'Unknown error'}`)
+                }
+              } catch (error) {
+                console.error('Cache refresh error:', error)
+                alert('❌ Failed to refresh cache')
+              }
+            },
+          })
+        }
+
+        return advancedSettings
 
       default:
         return []
