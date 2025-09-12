@@ -67,12 +67,12 @@ const getColorName = (color: string | PlayerColor): string => {
   if (color in PREMIUM_PLAYER_COLORS) {
     // Map premium color keys to display names
     const premiumNames: Record<string, string> = {
-      Gold: 'Gold',
-      Silver: 'Silver',
+      MidnightBlack: 'Midnight Black',
+      PureWhite: 'Pure White',
+      MetallicGold: 'Metallic Gold',
+      MetallicSilver: 'Metallic Silver',
       NeonGreen: 'Neon Green',
-      HotPink: 'Hot Pink',
-      NeonCyan: 'Neon Cyan',
-      Magenta: 'Magenta',
+      Dragonfire: 'Dragonfire',
     }
     return premiumNames[color] || color
   }
@@ -84,13 +84,13 @@ const getColorName = (color: string | PlayerColor): string => {
     'Pink',          // #EC4899
     'Orange',        // #EA580C
     'Amber',         // #F59E0B
-    'Sienna',        // #A0522D
-    'Forest Green',  // #059669
-    'Teal',          // #14B8A6
+    'Forest Green',  // #014421
+    'Lime Green',    // #32CD32
     'Blue',          // #2563EB
     'Cyan',          // #06B6D4
-    'Purple',        // #9333EA
-    'Violet',        // #7C3AED
+    'Tan',           // #918151
+    'Crimson',       // #851D2D
+    'Sienna',        // #8B4513
   ]
   
   // For standard player colors, get the index and return the name
