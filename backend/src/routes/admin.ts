@@ -780,12 +780,18 @@ router.get(
 
       const countResult = await query(countQuery, countParams)
 
-      // Convert numeric strings to numbers for proper frontend handling
+      // Convert numeric strings to numbers and map property names for proper frontend handling
       const maps = mapsResult.rows.map((map: any) => ({
         ...map,
         playCount: parseInt(map.playCount || '0', 10),
         ratingAverage: parseFloat(map.ratingAverage || '0'),
         ratingCount: parseInt(map.ratingCount || '0', 10),
+        // Map snake_case to camelCase for dates
+        createdAt: map.created_at,
+        updatedAt: map.updated_at,
+        creatorId: map.creator_id,
+        minPlayers: map.min_players,
+        maxPlayers: map.max_players,
       }))
 
       res.json({
@@ -809,11 +815,12 @@ router.patch(
   body('description').optional().isString().isLength({ max: 1000 }),
   body('minPlayers').optional().isInt({ min: 2, max: 20 }),
   body('maxPlayers').optional().isInt({ min: 2, max: 20 }),
+  body('status').optional().isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const { name, description, minPlayers, maxPlayers } = req.body
+      const { name, description, minPlayers, maxPlayers, status } = req.body
       const adminUserId = (req as any).userId
 
       const { query } = require('../config/database')
@@ -844,6 +851,12 @@ router.patch(
       if (maxPlayers !== undefined) {
         updates.push(`max_players = $${paramIndex}`)
         params.push(maxPlayers)
+        paramIndex++
+      }
+
+      if (status !== undefined) {
+        updates.push(`status = $${paramIndex}`)
+        params.push(status)
         paramIndex++
       }
 
@@ -888,6 +901,108 @@ router.patch(
     } catch (error) {
       logger.error('Error updating map:', error)
       res.status(500).json({ error: 'Failed to update map' })
+    }
+  },
+)
+
+// Clone a map
+router.post(
+  '/maps/:mapId/clone',
+  requirePermission('content.create'),
+  logAdminActivity('map_clone'),
+  param('mapId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const adminUserId = (req as any).userId
+      const { query } = require('../config/database')
+
+      // Get the original map
+      const originalMapResult = await query('SELECT * FROM maps WHERE id = $1', [mapId])
+      
+      if (originalMapResult.rows.length === 0) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      const originalMap = originalMapResult.rows[0]
+      const clonedName = `${originalMap.name} (Copy)`
+
+      // Create the cloned map
+      const cloneResult = await query(
+        `INSERT INTO maps (name, description, image_url, min_players, max_players, creator_id, status, capital_assignments, capital_metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [
+          clonedName,
+          originalMap.description,
+          originalMap.image_url,
+          originalMap.min_players,
+          originalMap.max_players,
+          adminUserId,
+          'draft', // Always start clones as draft
+          originalMap.capital_assignments,
+          originalMap.capital_metadata,
+        ]
+      )
+
+      const clonedMap = cloneResult.rows[0]
+
+      // Clone territories if they exist
+      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [mapId])
+      
+      if (territoriesResult.rows.length > 0) {
+        for (const territory of territoriesResult.rows) {
+          await query(
+            `INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, continent, army_position, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              clonedMap.id,
+              territory.name,
+              territory.polygon,
+              territory.center_x,
+              territory.center_y,
+              territory.continent,
+              territory.army_position,
+              territory.metadata,
+            ]
+          )
+        }
+      }
+
+      // Clone adjacencies if they exist
+      const adjacenciesResult = await query('SELECT * FROM territory_adjacencies WHERE map_id = $1', [mapId])
+      
+      if (adjacenciesResult.rows.length > 0) {
+        for (const adjacency of adjacenciesResult.rows) {
+          await query(
+            `INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
+             VALUES ($1, $2, $3)`,
+            [clonedMap.id, adjacency.territory_from, adjacency.territory_to]
+          )
+        }
+      }
+
+      // Log the action
+      await query(
+        `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          adminUserId,
+          'map_clone',
+          JSON.stringify({ originalMapId: mapId, clonedMapId: clonedMap.id }),
+          'map',
+          clonedMap.id,
+          req.ip,
+          req.get('User-Agent'),
+        ]
+      )
+
+      res.json({ message: 'Map cloned successfully', map: clonedMap, name: clonedName })
+    } catch (error) {
+      logger.error('Error cloning map:', error)
+      res.status(500).json({ error: 'Failed to clone map' })
     }
   },
 )
