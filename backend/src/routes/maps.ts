@@ -389,6 +389,8 @@ router.post(
         description: req.body.description,
         isPublic: req.body.isPublic === true || req.body.isPublic === 'true',
         tags: tags,
+        minPlayers: req.body.minPlayers || 2,
+        maxPlayers: req.body.maxPlayers || 6,
       }
 
       // Handle base64 image if provided

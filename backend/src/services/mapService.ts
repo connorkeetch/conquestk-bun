@@ -32,13 +32,13 @@ export class MapService {
       // Create the map record
       const mapQuery = hasMetadataColumn
         ? `
-          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, metadata, status, min_players, max_players)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING *
         `
         : `
-          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          INSERT INTO maps (name, description, creator_id, image_url, image_width, image_height, is_public, tags, capital_territories, status, min_players, max_players)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           RETURNING *
         `
 
@@ -55,6 +55,8 @@ export class MapService {
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
             mapData.metadata ? JSON.stringify(mapData.metadata) : null,
             'pending_review', // status
+            mapData.minPlayers || 2,
+            mapData.maxPlayers || 6,
           ]
         : [
             mapData.name,
@@ -67,6 +69,8 @@ export class MapService {
             mapData.tags || [],
             mapData.capitalTerritories ? JSON.stringify(mapData.capitalTerritories) : null,
             'pending_review', // status
+            mapData.minPlayers || 2,
+            mapData.maxPlayers || 6,
           ]
 
       const mapResult = await client.query(mapQuery, mapValues)
