@@ -379,7 +379,16 @@ export class AdminService {
 
         // Update content to be public/approved
         if (content_type === 'map') {
-          await client.query('UPDATE maps SET is_public = TRUE WHERE id = $1', [content_id])
+          await client.query(
+            `UPDATE maps 
+             SET is_public = TRUE, 
+                 status = 'approved',
+                 reviewed_at = CURRENT_TIMESTAMP,
+                 reviewed_by = $1,
+                 review_notes = $2
+             WHERE id = $3`,
+            [adminUserId, notes, content_id]
+          )
         }
 
         await this.logAdminAction(
@@ -406,19 +415,57 @@ export class AdminService {
   }
 
   async rejectContent(queueId: string, adminUserId: string, reason: string): Promise<void> {
-    await query(
-      `
-      UPDATE content_approval_queue 
-      SET status = 'rejected', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
-      WHERE id = $3
-    `,
-      [adminUserId, reason, queueId],
-    )
+    const client = await getClient()
+    try {
+      await client.query('BEGIN')
+      
+      // Update approval queue
+      await client.query(
+        `
+        UPDATE content_approval_queue 
+        SET status = 'rejected', admin_user_id = $1, admin_notes = $2, reviewed_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `,
+        [adminUserId, reason, queueId],
+      )
 
-    await this.logAdminAction(adminUserId, 'content_rejected', {
-      queueId,
-      reason,
-    })
+      // Get the content details
+      const result = await client.query(
+        `SELECT content_type, content_id FROM content_approval_queue WHERE id = $1`,
+        [queueId],
+      )
+
+      if (result.rows.length > 0) {
+        const { content_type, content_id } = result.rows[0]
+
+        // Update map status to rejected
+        if (content_type === 'map') {
+          await client.query(
+            `UPDATE maps 
+             SET status = 'rejected',
+                 reviewed_at = CURRENT_TIMESTAMP,
+                 reviewed_by = $1,
+                 rejection_reason = $2
+             WHERE id = $3`,
+            [adminUserId, reason, content_id]
+          )
+        }
+
+        await this.logAdminAction(adminUserId, 'content_rejected', {
+          queueId,
+          contentType: content_type,
+          contentId: content_id,
+          reason,
+        })
+      }
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      if (client.release) client.release()
+    }
   }
 
   // ============= FEATURE FLAGS =============

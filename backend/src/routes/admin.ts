@@ -201,9 +201,9 @@ router.delete(
 
 // ============= CONTENT MODERATION =============
 
-// Get content approval queue
+// Get content approval queue (support both routes for compatibility)
 router.get(
-  '/content/approval-queue',
+  '/content/queue',
   requirePermission('content.moderate'),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('offset').optional().isInt({ min: 0 }),
