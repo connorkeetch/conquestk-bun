@@ -290,6 +290,7 @@ export interface MapSearchFilters {
   search?: string
   tags?: string[]
   creator?: string
+  status?: MapStatus | string
   isPublic?: boolean
   isFeatured?: boolean
   minRating?: number

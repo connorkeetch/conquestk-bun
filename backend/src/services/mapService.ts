@@ -375,6 +375,11 @@ export class MapService {
       whereConditions.push('is_featured = TRUE')
     }
 
+    if (filters.status) {
+      whereConditions.push('status = ?')
+      queryParams.push(filters.status)
+    }
+
     if (filters.minRating) {
       whereConditions.push('rating_average >= ?')
       queryParams.push(filters.minRating)

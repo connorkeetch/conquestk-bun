@@ -633,6 +633,48 @@ router.delete(
   },
 )
 
+// Get all public approved maps
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      isPublic: req.query.isPublic !== 'false', // Default to public maps
+      status: req.query.status as string || 'approved', // Default to approved maps
+      search: req.query.search as string,
+      tags: req.query.tag ? [req.query.tag as string] : undefined,
+      sortBy: req.query.sortBy as string || 'popularity',
+      sortOrder: req.query.sortOrder as 'asc' | 'desc' || 'desc',
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+    }
+
+    const result = await mapService.searchMaps(filters)
+    
+    // Add creator names to the maps
+    const pool = await getPool()
+    const mapIds = result.maps.map(m => m.id)
+    if (mapIds.length > 0) {
+      const creatorQuery = `
+        SELECT m.id, u.username as creator_name 
+        FROM maps m 
+        JOIN users u ON m.creator_id = u.id 
+        WHERE m.id = ANY($1)
+      `
+      const creatorResult = await pool.query(creatorQuery, [mapIds])
+      const creatorMap = new Map(creatorResult.rows.map(r => [r.id, r.creator_name]))
+      
+      result.maps = result.maps.map(map => ({
+        ...map,
+        creatorName: creatorMap.get(map.id) || 'Unknown'
+      }))
+    }
+    
+    return res.json(result)
+  } catch (error) {
+    logger.error('Error fetching maps:', error)
+    return res.status(500).json({ error: 'Failed to fetch maps' })
+  }
+})
+
 // Get user's maps
 router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
   try {
