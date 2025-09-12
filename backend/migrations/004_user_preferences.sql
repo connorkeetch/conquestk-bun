@@ -1,6 +1,7 @@
 -- Migration: Add user preferences table for theme persistence and other settings
 -- Author: System
 -- Date: 2025-01-10
+-- Updated: 2025-09-12 - Force redeployment to run migration on production
 
 -- Create user_preferences table if it doesn't exist
 CREATE TABLE IF NOT EXISTS user_preferences (
