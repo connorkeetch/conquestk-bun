@@ -751,6 +751,7 @@ router.get(
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `
       queryParams.push(limit, offset)
+      paramIndex += 2  // Increment for both LIMIT and OFFSET
 
       const mapsResult = await query(mapsQuery, queryParams)
 
