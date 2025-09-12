@@ -112,6 +112,16 @@ export const AdminMaps: React.FC = () => {
     }
   }
 
+  const handleCloneMap = async (mapId: string) => {
+    try {
+      const response = await api.post(`/admin/maps/${mapId}/clone`)
+      await loadMaps()
+      alert(`Map cloned successfully! New map: ${response.data.name}`)
+    } catch (err: any) {
+      alert(`Failed to clone map: ${err.response?.data?.message || err.message}`)
+    }
+  }
+
   const openEditModal = (map: Map) => {
     setSelectedMap(map)
     setEditForm({
@@ -120,6 +130,7 @@ export const AdminMaps: React.FC = () => {
       minPlayers: map.minPlayers,
       maxPlayers: map.maxPlayers,
       tags: map.tags,
+      status: map.status || 'draft',
       isFeatured: map.isFeatured,
       isPublic: map.isPublic,
     })
@@ -362,12 +373,27 @@ export const AdminMaps: React.FC = () => {
                         )}
                         
                         {/* Standard Actions */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => window.location.href = `/create-map?edit=${map.id}`}
+                            className="text-violet hover:text-violet-soft text-sm font-medium"
+                            title="Open in Map Editor"
+                          >
+                            🗺️ Edit Map
+                          </button>
                           <button
                             onClick={() => openEditModal(map)}
-                            className="text-violet hover:text-violet-soft text-sm font-medium"
+                            className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                            title="Edit map details"
                           >
-                            ✏️ Edit
+                            ✏️ Edit Details
+                          </button>
+                          <button
+                            onClick={() => handleCloneMap(map.id)}
+                            className="text-green-400 hover:text-green-300 text-sm font-medium"
+                            title="Clone this map"
+                          >
+                            📋 Clone
                           </button>
                           <button
                             onClick={() => {
@@ -405,7 +431,7 @@ export const AdminMaps: React.FC = () => {
       {showEditModal && selectedMap && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold text-white mb-4">Edit Map</h2>
+            <h2 className="text-xl font-bold text-white mb-4">Edit Map Details</h2>
             
             <div className="space-y-4">
               <div>
@@ -416,6 +442,21 @@ export const AdminMaps: React.FC = () => {
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-muted mb-1">Status</label>
+                <select
+                  value={editForm.status || 'draft'}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="pending_review">Pending Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="archived">Archived</option>
+                </select>
               </div>
               
               <div>

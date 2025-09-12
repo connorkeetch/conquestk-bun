@@ -360,12 +360,12 @@ const MapManagementSection: React.FC = () => {
             </div>
           </button>
           <button
-            onClick={() => navigate('/admin/map-reviews')}
+            onClick={() => navigate('/admin/maps')}
             className="p-4 border border-border rounded-lg hover:bg-surface-2/80 text-left transition-colors"
           >
-            <div className="font-medium text-white">Review Queue</div>
+            <div className="font-medium text-white">Map Management</div>
             <div className="text-sm text-muted mt-1">
-              Process maps pending approval
+              Manage maps and review submissions
             </div>
           </button>
         </div>
