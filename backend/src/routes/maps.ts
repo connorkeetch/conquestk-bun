@@ -340,13 +340,24 @@ router.post(
         hasImage: !!req.body.image,
         hasMetadata: !!req.body.metadata,
         userId: (req as any).userId,
+        bodyType: typeof req.body,
+        headers: req.headers['content-type'],
       })
+
+      // Emergency fix: Handle tags in multiple formats
+      let tags: string[] = []
+      if (Array.isArray(req.body.tags)) {
+        tags = req.body.tags
+      } else if (typeof req.body.tags === 'string') {
+        // Handle comma-separated string
+        tags = req.body.tags.split(',').map((t: string) => t.trim())
+      }
 
       const mapData: CreateMapRequest = {
         name: req.body.name,
         description: req.body.description,
-        isPublic: req.body.isPublic === true,
-        tags: req.body.tags || [],
+        isPublic: req.body.isPublic === true || req.body.isPublic === 'true',
+        tags: tags,
       }
 
       // Handle base64 image if provided
@@ -408,11 +419,28 @@ router.post(
 
       return res.status(201).json(map)
     } catch (error) {
-      logger.error('Error creating map:', error)
+      logger.error('Error creating map via JSON endpoint:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      
+      // More detailed error for debugging
+      if (errorMessage.includes('duplicate key')) {
+        return res.status(400).json({
+          error: 'Map name already exists',
+          message: 'Please choose a different name for your map',
+          suggestion: `${req.body.name} (${new Date().getTime()})`,
+        })
+      }
+      
       return res.status(500).json({
         error: 'Failed to create map',
         message: errorMessage,
+        endpoint: '/api/maps/json',
+        receivedData: {
+          hasName: !!req.body.name,
+          hasTags: !!req.body.tags,
+          tagsType: typeof req.body.tags,
+          hasImage: !!req.body.image,
+        },
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       })
     }
