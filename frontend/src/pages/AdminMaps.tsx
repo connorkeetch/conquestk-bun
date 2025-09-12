@@ -330,9 +330,9 @@ export const AdminMaps: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs space-y-1">
-                        <div className="text-muted">🎮 {map.playCount} plays</div>
+                        <div className="text-muted">🎮 {map.playCount || 0} plays</div>
                         <div className="text-muted">
-                          ⭐ {map.ratingAverage.toFixed(1)} ({map.ratingCount})
+                          ⭐ {(map.ratingAverage || 0).toFixed(1)} ({map.ratingCount || 0})
                         </div>
                       </div>
                     </td>
