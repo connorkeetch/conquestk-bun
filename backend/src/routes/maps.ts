@@ -346,11 +346,42 @@ router.post(
 
       // Emergency fix: Handle tags in multiple formats
       let tags: string[] = []
+      logger.info('Tags received:', { 
+        tags: req.body.tags, 
+        type: typeof req.body.tags,
+        isArray: Array.isArray(req.body.tags),
+        stringified: JSON.stringify(req.body.tags)
+      })
+      
       if (Array.isArray(req.body.tags)) {
         tags = req.body.tags
       } else if (typeof req.body.tags === 'string') {
-        // Handle comma-separated string
-        tags = req.body.tags.split(',').map((t: string) => t.trim())
+        // Try to parse as JSON first
+        try {
+          const parsed = JSON.parse(req.body.tags)
+          if (Array.isArray(parsed)) {
+            tags = parsed
+          } else {
+            // Handle comma-separated string
+            tags = req.body.tags.split(',').map((t: string) => t.trim())
+          }
+        } catch {
+          // Handle comma-separated string
+          tags = req.body.tags.split(',').map((t: string) => t.trim())
+        }
+      } else if (typeof req.body.tags === 'object' && req.body.tags !== null) {
+        // Handle weird object format (might be from proxy/middleware)
+        // Try to extract values if it's an object
+        if (req.body.tags[0] !== undefined) {
+          // Looks like an array-like object
+          tags = Object.values(req.body.tags)
+        } else {
+          // Fallback to default tags
+          tags = ['custom', 'user-created']
+        }
+      } else {
+        // Default tags if nothing else works
+        tags = ['custom', 'user-created']
       }
 
       const mapData: CreateMapRequest = {
