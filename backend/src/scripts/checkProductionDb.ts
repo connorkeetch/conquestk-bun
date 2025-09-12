@@ -44,6 +44,19 @@ async function checkDatabase() {
       console.log(`  - ${col.column_name} (${col.data_type})`)
     }
     
+    // Check columns in user_preferences table
+    const prefColumns = await pool.query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'user_preferences' 
+      ORDER BY ordinal_position
+    `)
+    
+    console.log('\n📊 Columns in user_preferences table:')
+    for (const col of prefColumns.rows) {
+      console.log(`  - ${col.column_name} (${col.data_type})`)
+    }
+    
     // Check if maps table has status column
     const mapColumns = await pool.query(`
       SELECT column_name, data_type 
