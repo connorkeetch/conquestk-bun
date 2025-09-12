@@ -329,7 +329,97 @@ router.get('/abilities/list', async (_req: Request, res: Response) => {
 
 // ============= AUTHENTICATED ROUTES =============
 
-// Create new map
+// Create new map (JSON with base64 image)
+router.post(
+  '/json',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      logger.info('Creating map with JSON data:', {
+        name: req.body.name,
+        hasImage: !!req.body.image,
+        hasMetadata: !!req.body.metadata,
+        userId: (req as any).userId,
+      })
+
+      const mapData: CreateMapRequest = {
+        name: req.body.name,
+        description: req.body.description,
+        isPublic: req.body.isPublic === true,
+        tags: req.body.tags || [],
+      }
+
+      // Handle base64 image if provided
+      if (req.body.image && req.body.image.data) {
+        try {
+          const imageData = req.body.image.data
+          const mimeType = req.body.image.mimeType || 'image/png'
+          const filename = req.body.image.filename || `map-${Date.now()}.png`
+          
+          // Decode base64 to buffer
+          const buffer = Buffer.from(imageData, 'base64')
+          
+          // Generate unique filename
+          const ext = path.extname(filename) || '.png'
+          const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+          const filepath = path.join(process.cwd(), 'uploads', 'maps', uniqueFilename)
+          
+          // Ensure directory exists
+          const dir = path.dirname(filepath)
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+          }
+          
+          // Write file
+          await fsPromises.writeFile(filepath, buffer)
+          
+          mapData.imageUrl = `/uploads/maps/${uniqueFilename}`
+          
+          // Get image dimensions
+          try {
+            const dimensions = sizeOf(buffer)
+            mapData.imageWidth = dimensions.width || 800
+            mapData.imageHeight = dimensions.height || 600
+          } catch (dimensionError) {
+            logger.warn('Failed to get image dimensions:', dimensionError)
+            mapData.imageWidth = 800
+            mapData.imageHeight = 600
+          }
+        } catch (imageError) {
+          logger.error('Failed to process base64 image:', imageError)
+          return res.status(400).json({
+            error: 'Failed to process image',
+            message: 'The image data could not be processed',
+          })
+        }
+      }
+
+      // Store metadata if provided
+      if (req.body.metadata) {
+        ;(mapData as any).metadata = req.body.metadata
+      }
+
+      const map = await mapService.createMap((req as any).userId, mapData)
+
+      logger.info('Map created successfully:', {
+        mapId: map.id,
+        name: map.name,
+      })
+
+      return res.status(201).json(map)
+    } catch (error) {
+      logger.error('Error creating map:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      return res.status(500).json({
+        error: 'Failed to create map',
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error : undefined,
+      })
+    }
+  },
+)
+
+// Create new map (FormData - backward compatibility)
 router.post(
   '/',
   authenticateToken,

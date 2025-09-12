@@ -487,59 +487,60 @@ export default function MapEditorTokens() {
       }
       // Continents are optional - removed requirement
 
-      // Prepare map data for API
-      const formData = new FormData()
-      formData.append('name', state.name)
-      formData.append(
-        'description',
-        `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
-      )
-      formData.append('isPublic', 'true')
-      // Send tags as JSON string - backend expects this format
-      const tags = ['custom', 'user-created']
-      formData.append('tags', JSON.stringify(tags))
-
-      // Store territories and continents as metadata
-      const metadata = {
-        territories: state.territories,
-        continents: state.continents,
-        width: state.mapWidth,
-        height: state.mapHeight,
-      }
-      formData.append('metadata', JSON.stringify(metadata))
-
-      // If there's an image, convert data URL to blob and append without using fetch (CSP compliance)
+      // Prepare map data as JSON with base64 image
+      let imageBase64: string | null = null
+      let imageMimeType: string | null = null
+      
+      // Convert image to base64 if present
       if (state.imageUrl) {
         try {
-          let blob: Blob
-          
-          // Check if it's a data URL or a regular URL
           if (state.imageUrl.startsWith('data:')) {
-            // Extract the base64 data from the data URL
+            // Already a data URL, just extract the parts
             const parts = state.imageUrl.split(',')
-            const base64Data = parts[1]
-            const mimeType = parts[0].match(/data:([^;]+)/)?.[1] || 'image/png'
-            
-            // Convert base64 to binary
-            const binaryString = atob(base64Data)
-            const bytes = new Uint8Array(binaryString.length)
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i)
-            }
-            
-            // Create blob
-            blob = new Blob([bytes], { type: mimeType })
+            imageBase64 = parts[1]
+            imageMimeType = parts[0].match(/data:([^;]+)/)?.[1] || 'image/png'
           } else {
-            // For regular URLs, we can still use fetch (not a CSP violation)
+            // For regular URLs, fetch and convert to base64
             const response = await fetch(state.imageUrl)
-            blob = await response.blob()
+            const blob = await response.blob()
+            
+            // Convert blob to base64
+            const reader = new FileReader()
+            const base64Promise = new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => {
+                const dataUrl = reader.result as string
+                const base64 = dataUrl.split(',')[1]
+                resolve(base64)
+              }
+              reader.onerror = reject
+            })
+            reader.readAsDataURL(blob)
+            imageBase64 = await base64Promise
+            imageMimeType = blob.type || 'image/png'
           }
-          
-          formData.append('image', blob, 'map-background.png')
         } catch (error) {
           console.error('Failed to process image:', error)
           throw new Error('Failed to process map background image')
         }
+      }
+      
+      // Create JSON payload
+      const mapData = {
+        name: state.name,
+        description: `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
+        isPublic: true,
+        tags: ['custom', 'user-created'],
+        metadata: {
+          territories: state.territories,
+          continents: state.continents,
+          width: state.mapWidth,
+          height: state.mapHeight,
+        },
+        image: imageBase64 ? {
+          data: imageBase64,
+          mimeType: imageMimeType,
+          filename: 'map-background.png'
+        } : null
       }
 
       // Save to backend
@@ -550,14 +551,14 @@ export default function MapEditorTokens() {
         hasImage: !!state.imageUrl,
       })
 
-      // Use correct backend URL for API calls
+      // Use correct backend URL for API calls - use JSON endpoint
       const apiUrl = import.meta.env.MODE === 'production' 
-        ? '/api/maps' 
-        : 'http://localhost:5001/api/maps'
+        ? '/api/maps/json' 
+        : 'http://localhost:5001/api/maps/json'
       
-      const result = await axios.post(apiUrl, formData, {
+      const result = await axios.post(apiUrl, mapData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       })
