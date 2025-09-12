@@ -39,6 +39,9 @@ const TutorialPage = lazy(() => import('./pages/TutorialPage'))
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AdminMaps = lazy(() => import('./pages/AdminMaps'))
+const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
+const AdminMapReviews = lazy(() => import('./pages/AdminMapReviews'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 import { checkAuth } from './store/authSlice'
@@ -418,6 +421,36 @@ function App() {
             <AuthGuard requireAdmin={true}>
               <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
                 <AdminPage />
+              </Suspense>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/admin/maps"
+          element={
+            <AuthGuard requireAdmin={true}>
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <AdminMaps />
+              </Suspense>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/admin/map-reviews"
+          element={
+            <AuthGuard requireAdmin={true}>
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <AdminMapReviews />
+              </Suspense>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/admin/map-review/:reviewId"
+          element={
+            <AuthGuard requireAdmin={true}>
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <AdminMapReview />
               </Suspense>
             </AuthGuard>
           }

@@ -52,9 +52,9 @@ const AdminPage: React.FC = () => {
     },
     {
       id: 'maps',
-      label: 'Map Approval',
+      label: 'Maps',
       icon: <Map className="w-4 h-4" />,
-      component: <MapApproval />,
+      component: <MapManagementSection />,
     },
     {
       id: 'games',
@@ -290,90 +290,100 @@ const UserManagement: React.FC = () => {
   )
 }
 
-// Map Approval Component
-const MapApproval: React.FC = () => {
-  const [pendingMaps, setPendingMaps] = useState<any[]>([])
+// Map Management Section Component
+const MapManagementSection: React.FC = () => {
+  const navigate = useNavigate()
+  const [stats, setStats] = useState<any>({ pending: 0, approved: 0, total: 0 })
 
   useEffect(() => {
-    fetchPendingMaps()
+    fetchMapStats()
   }, [])
 
-  const fetchPendingMaps = async () => {
+  const fetchMapStats = async () => {
     try {
-      const response = await api.get('/admin/content/queue')
-      setPendingMaps(response.data.items.filter((item: any) => item.contentType === 'map'))
+      // Fetch map statistics
+      const response = await api.get('/admin/maps', {
+        params: { limit: 1, includeAll: true }
+      })
+      
+      // Count maps by status from the first page (we'll get a better count from the backend)
+      const pending = response.data.maps.filter((m: any) => m.status === 'pending_review').length
+      const approved = response.data.maps.filter((m: any) => m.status === 'approved').length
+      
+      setStats({
+        pending,
+        approved,
+        total: response.data.total
+      })
     } catch (error) {
-      console.error('Failed to fetch pending maps:', error)
-    }
-  }
-
-  const handleApproveMap = async (queueId: string) => {
-    try {
-      await api.post(`/admin/content/${queueId}/approve`)
-      fetchPendingMaps()
-    } catch (error) {
-      console.error('Failed to approve map:', error)
-    }
-  }
-
-  const handleRejectMap = async (queueId: string, reason: string) => {
-    try {
-      await api.post(`/admin/content/${queueId}/reject`, { reason })
-      fetchPendingMaps()
-    } catch (error) {
-      console.error('Failed to reject map:', error)
+      console.error('Failed to fetch map stats:', error)
     }
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">Map Approval Queue</h2>
-
-      <div className="grid gap-4">
-        {pendingMaps.length === 0 ? (
-          <div className="bg-surface-2 rounded-lg p-6 text-center text-muted">
-            No maps pending approval
-          </div>
-        ) : (
-          pendingMaps.map((map) => (
-            <div key={map.id} className="bg-surface-2 rounded-lg p-6">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white">{map.contentName}</h3>
-                  <p className="text-muted text-sm">
-                    Submitted by: {map.submitterUsername}
-                  </p>
-                  <p className="text-muted text-sm">
-                    Date: {new Date(map.submittedAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleApproveMap(map.id)}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      const reason = prompt('Rejection reason:')
-                      if (reason) handleRejectMap(map.id, reason)
-                    }}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-primary text-white rounded hover:brightness-110"
-                  >
-                    View Map
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white">Map Management</h2>
+        <button
+          onClick={() => navigate('/admin/maps')}
+          className="px-4 py-2 bg-violet text-white rounded-lg hover:brightness-110 transition-all"
+        >
+          Open Map Manager →
+        </button>
       </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-surface-2 rounded-lg p-6">
+          <h3 className="text-sm font-medium text-muted mb-2">Pending Review</h3>
+          <p className="text-3xl font-bold text-yellow-500">{stats.pending}</p>
+        </div>
+        <div className="bg-surface-2 rounded-lg p-6">
+          <h3 className="text-sm font-medium text-muted mb-2">Approved Maps</h3>
+          <p className="text-3xl font-bold text-green-500">{stats.approved}</p>
+        </div>
+        <div className="bg-surface-2 rounded-lg p-6">
+          <h3 className="text-sm font-medium text-muted mb-2">Total Maps</h3>
+          <p className="text-3xl font-bold text-blue-500">{stats.total}</p>
+        </div>
+      </div>
+
+      <div className="bg-surface-2 rounded-lg p-6">
+        <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => navigate('/admin/maps')}
+            className="p-4 border border-border rounded-lg hover:bg-surface-2/80 text-left transition-colors"
+          >
+            <div className="font-medium text-white">View All Maps</div>
+            <div className="text-sm text-muted mt-1">
+              Browse, edit, and manage all maps in the system
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/admin/map-reviews')}
+            className="p-4 border border-border rounded-lg hover:bg-surface-2/80 text-left transition-colors"
+          >
+            <div className="font-medium text-white">Review Queue</div>
+            <div className="text-sm text-muted mt-1">
+              Process maps pending approval
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      {stats.pending > 0 && (
+        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4">
+          <p className="text-yellow-400">
+            ⚠️ There are {stats.pending} maps waiting for review.{' '}
+            <button
+              onClick={() => navigate('/admin/maps')}
+              className="underline hover:no-underline"
+            >
+              Review them now
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   )
 }

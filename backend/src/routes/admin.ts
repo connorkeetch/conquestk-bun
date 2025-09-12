@@ -690,6 +690,326 @@ router.get(
   },
 )
 
+// ============= MAP MANAGEMENT =============
+
+// Get all maps with admin info
+router.get(
+  '/maps',
+  requirePermission('content.view'),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('offset').optional().isInt({ min: 0 }),
+  query('status').optional().isString(),
+  query('search').optional().isString(),
+  query('includeAll').optional().isBoolean(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string, 10) || 50
+      const offset = parseInt(req.query.offset as string, 10) || 0
+      const status = req.query.status as string
+      const search = req.query.search as string
+      const includeAll = req.query.includeAll === 'true'
+
+      const { query } = require('../config/database')
+
+      let mapsQuery = `
+        SELECT 
+          m.*,
+          u.username as creator_username,
+          COUNT(DISTINCT g.id) as play_count,
+          AVG(mr.rating) as avg_rating
+        FROM maps m
+        LEFT JOIN users u ON m.created_by = u.id
+        LEFT JOIN games g ON g.map_id = m.id
+        LEFT JOIN map_reviews mr ON mr.map_id = m.id
+        WHERE 1=1
+      `
+      const queryParams: any[] = []
+      let paramIndex = 1
+
+      // Only filter by status if specified and not includeAll
+      if (!includeAll && status && status !== 'all') {
+        mapsQuery += ` AND m.status = $${paramIndex}`
+        queryParams.push(status)
+        paramIndex++
+      } else if (!includeAll) {
+        // Default to showing only approved maps if not includeAll
+        mapsQuery += ` AND m.status = 'approved'`
+      }
+
+      if (search) {
+        mapsQuery += ` AND (m.name ILIKE $${paramIndex} OR m.description ILIKE $${paramIndex} OR u.username ILIKE $${paramIndex})`
+        queryParams.push(`%${search}%`)
+        paramIndex++
+      }
+
+      mapsQuery += `
+        GROUP BY m.id, u.username
+        ORDER BY 
+          CASE WHEN m.status = 'pending_review' THEN 0 ELSE 1 END,
+          m.created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `
+      queryParams.push(limit, offset)
+
+      const mapsResult = await query(mapsQuery, queryParams)
+
+      // Get total count
+      let countQuery = `
+        SELECT COUNT(*) as total
+        FROM maps m
+        WHERE 1=1
+      `
+      const countParams: any[] = []
+      let countParamIndex = 1
+
+      if (!includeAll && status && status !== 'all') {
+        countQuery += ` AND m.status = $${countParamIndex}`
+        countParams.push(status)
+        countParamIndex++
+      } else if (!includeAll) {
+        countQuery += ` AND m.status = 'approved'`
+      }
+
+      if (search) {
+        countQuery += ` AND (m.name ILIKE $${countParamIndex} OR m.description ILIKE $${countParamIndex})`
+        countParams.push(`%${search}%`)
+      }
+
+      const countResult = await query(countQuery, countParams)
+
+      res.json({
+        maps: mapsResult.rows,
+        total: parseInt(countResult.rows[0]?.total || '0', 10),
+      })
+    } catch (error) {
+      logger.error('Error getting maps:', error)
+      res.status(500).json({ error: 'Failed to get maps' })
+    }
+  },
+)
+
+// Update map properties
+router.patch(
+  '/maps/:mapId',
+  requirePermission('content.edit'),
+  logAdminActivity('map_update'),
+  param('mapId').isUUID(),
+  body('name').optional().isString().isLength({ min: 1, max: 100 }),
+  body('description').optional().isString().isLength({ max: 1000 }),
+  body('minPlayers').optional().isInt({ min: 2, max: 20 }),
+  body('maxPlayers').optional().isInt({ min: 2, max: 20 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const { name, description, minPlayers, maxPlayers } = req.body
+      const adminUserId = (req as any).userId
+
+      const { query } = require('../config/database')
+
+      // Build update query
+      const updates: string[] = []
+      const params: any[] = []
+      let paramIndex = 1
+
+      if (name !== undefined) {
+        updates.push(`name = $${paramIndex}`)
+        params.push(name)
+        paramIndex++
+      }
+
+      if (description !== undefined) {
+        updates.push(`description = $${paramIndex}`)
+        params.push(description)
+        paramIndex++
+      }
+
+      if (minPlayers !== undefined) {
+        updates.push(`min_players = $${paramIndex}`)
+        params.push(minPlayers)
+        paramIndex++
+      }
+
+      if (maxPlayers !== undefined) {
+        updates.push(`max_players = $${paramIndex}`)
+        params.push(maxPlayers)
+        paramIndex++
+      }
+
+      if (updates.length === 0) {
+        res.status(400).json({ error: 'No fields to update' })
+        return
+      }
+
+      updates.push('updated_at = CURRENT_TIMESTAMP')
+      params.push(mapId)
+
+      const updateQuery = `
+        UPDATE maps 
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `
+
+      const result = await query(updateQuery, params)
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      // Log the action
+      await query(
+        `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          adminUserId,
+          'map_update',
+          JSON.stringify({ mapId, changes: req.body }),
+          'map',
+          mapId,
+          req.ip,
+          req.get('User-Agent'),
+        ],
+      )
+
+      res.json({ message: 'Map updated successfully', map: result.rows[0] })
+    } catch (error) {
+      logger.error('Error updating map:', error)
+      res.status(500).json({ error: 'Failed to update map' })
+    }
+  },
+)
+
+// Update map status (approve/reject)
+router.patch(
+  '/maps/:mapId/status',
+  requirePermission('content.moderate'),
+  logAdminActivity('map_status_update'),
+  param('mapId').isUUID(),
+  body('status').isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']),
+  body('notes').optional().isString().isLength({ max: 1000 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const { status, notes } = req.body
+      const adminUserId = (req as any).userId
+
+      const { query } = require('../config/database')
+
+      // Update map status
+      const mapResult = await query(
+        `UPDATE maps 
+         SET status = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2
+         RETURNING *`,
+        [status, mapId],
+      )
+
+      if (mapResult.rows.length === 0) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      // If approved or rejected, create a review record
+      if (status === 'approved' || status === 'rejected') {
+        await query(
+          `INSERT INTO map_reviews (map_id, reviewer_id, status, notes, reviewed_at)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+           ON CONFLICT (map_id, reviewer_id) 
+           DO UPDATE SET status = $3, notes = $4, reviewed_at = CURRENT_TIMESTAMP`,
+          [mapId, adminUserId, status, notes],
+        )
+      }
+
+      // Log the action
+      await query(
+        `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          adminUserId,
+          'map_status_update',
+          JSON.stringify({ mapId, status, notes }),
+          'map',
+          mapId,
+          req.ip,
+          req.get('User-Agent'),
+        ],
+      )
+
+      res.json({ message: 'Map status updated successfully', map: mapResult.rows[0] })
+    } catch (error) {
+      logger.error('Error updating map status:', error)
+      res.status(500).json({ error: 'Failed to update map status' })
+    }
+  },
+)
+
+// Delete map
+router.delete(
+  '/maps/:mapId',
+  requirePermission('content.delete'),
+  logAdminActivity('map_delete'),
+  param('mapId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const adminUserId = (req as any).userId
+
+      const { query } = require('../config/database')
+
+      // Check if map is being used in active games
+      const gamesCheck = await query(
+        `SELECT COUNT(*) as count 
+         FROM games 
+         WHERE map_id = $1 AND status IN ('active', 'in_progress')`,
+        [mapId],
+      )
+
+      if (parseInt(gamesCheck.rows[0].count, 10) > 0) {
+        res.status(400).json({ 
+          error: 'Cannot delete map that is being used in active games' 
+        })
+        return
+      }
+
+      // Get map info before deletion for logging
+      const mapInfo = await query('SELECT * FROM maps WHERE id = $1', [mapId])
+      
+      if (mapInfo.rows.length === 0) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      // Delete map and cascade to related tables
+      await query('DELETE FROM maps WHERE id = $1', [mapId])
+
+      // Log the action
+      await query(
+        `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          adminUserId,
+          'map_delete',
+          JSON.stringify({ mapId, mapName: mapInfo.rows[0].name }),
+          'map',
+          mapId,
+          req.ip,
+          req.get('User-Agent'),
+        ],
+      )
+
+      res.json({ message: 'Map deleted successfully' })
+    } catch (error) {
+      logger.error('Error deleting map:', error)
+      res.status(500).json({ error: 'Failed to delete map' })
+    }
+  },
+)
+
 // ============= CACHE MANAGEMENT =============
 
 // Refresh server caches (available to all admins)
