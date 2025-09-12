@@ -85,6 +85,82 @@
 - JWT + session-based authentication
 - Enterprise-grade caching and monitoring
 
+## 🎮 Current Game Features (December 2025)
+
+### Game Creation Options
+**Game Modes:**
+- Classic - Traditional conquest gameplay
+- Capitals - Strategic capital territories (fair distribution by player count)
+- Random - Let the game randomly select settings
+
+**Player Configuration:**
+- 2-12 players supported
+- Teams: Free-for-all or balanced teams (2v2, 3v3, 4v4, etc.)
+- Game visibility: Public, Private (invite code), Tournament
+- Game type: Casual or Ranked (affects ELO)
+
+**Game Settings:**
+- **Fortification:** Adjacent, Adjacent Multi, Chained, Unlimited
+- **Spoils Cards:** Escalating, Fixed (10), Static (custom 5-50), Random
+- **Fog of War:** Off, Adjacent visibility, Persistent memory
+- **Turn Time:** Async (24hr default, 30min-72hr range) or Real-time
+- **Territory Modifiers:** Sparse, Balanced, Abundant distribution
+- **Color Selection:** 12 standard colors + 6 premium colors
+
+### Map System
+**Map Gallery:**
+- Simplified unified view (removed complex category tabs)
+- Search by name, description, or tags
+- Filter by tags and sort options
+- Shows only approved, public maps by default
+- Creator names displayed with play counts and ratings
+
+**Map Editor (Token-Based System):**
+- Upload background images (400×300 minimum, 10MB max)
+- Place hexagonal territory tokens with click placement
+- Create continents with army bonuses
+- Define territory connections (adjacencies)
+- Capital assignment system (auto-generate or manual)
+- Fair distribution algorithm for 2-12 players
+- Save drafts and submit for approval
+
+**Map Approval Workflow:**
+1. User creates map in editor
+2. Saves to database as draft
+3. Submits for review (status: pending_review)
+4. Admin reviews in dashboard
+5. Approved maps appear in public gallery
+
+## 🔄 Recent Major Changes (December 2025)
+
+### Map Gallery Overhaul
+- **Removed:** Complex category tabs (official, featured, trending, recent, my maps)
+- **Added:** Single unified view with search and filters
+- **Backend:** New GET /maps endpoint with status filtering
+- **Database:** Maps table supports approval workflow
+
+### Game Creation Improvements
+- Smart auto-naming based on game settings
+- Random option for all major settings
+- Team configurations automatically balanced
+- Premium color options for customization
+- Territory modifiers for advanced gameplay
+
+### Map Editor Enhancements
+- Token-based system (replaced polygon drawing)
+- Hexagonal tokens with better visual clarity
+- Capital assignment system for fair starts
+- Maximin distance algorithm for spacing
+- Grid snap and scaling controls
+- Import/Export JSON functionality
+
+### Tutorial & Documentation
+- Updated game types to reflect actual options
+- Corrected fortification descriptions
+- Accurate player count (2-12 not 2-8)
+- Current spoils card options documented
+- Map editor guide with new features
+
 ## 🎨 Map Editor Usage
 
 ### Creating a New Map

@@ -144,7 +144,7 @@ const TutorialPage: React.FC = () => {
             
             <div className="grid gap-6">
               <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-green-400 mb-2">Classic Conquest</h3>
+                <h3 className="text-xl font-semibold text-green-400 mb-2">Classic</h3>
                 <p className="text-muted">
                   The traditional game mode. Eliminate all opponents to win. Start with territories distributed evenly 
                   among players and fight for world domination.
@@ -152,34 +152,18 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-primary-soft mb-2">Capital Cities</h3>
+                <h3 className="text-xl font-semibold text-primary-soft mb-2">Capitals</h3>
                 <p className="text-muted">
-                  Each player has a capital city. Protect your capital while capturing enemy capitals. Lose your capital 
-                  and you're eliminated immediately!
+                  Each player starts with a designated capital territory. While you still win by eliminating all opponents,
+                  capitals provide strategic importance and are assigned fairly based on player count.
                 </p>
               </div>
 
               <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-purple-400 mb-2">Mission Mode</h3>
+                <h3 className="text-xl font-semibold text-purple-400 mb-2">Random Mode</h3>
                 <p className="text-muted">
-                  Complete secret objectives to win. Missions might include controlling specific continents, eliminating 
-                  certain players, or capturing a number of territories.
-                </p>
-              </div>
-
-              <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-yellow-400 mb-2">Blitz</h3>
-                <p className="text-muted">
-                  Fast-paced gameplay with turn timers. Make quick decisions or lose your turn. Perfect for players who 
-                  want intense, rapid games.
-                </p>
-              </div>
-
-              <div className="bg-surface-2 p-5 rounded-lg">
-                <h3 className="text-xl font-semibold text-red-400 mb-2">Fog of War</h3>
-                <p className="text-muted">
-                  Limited visibility of the map. You can only see territories adjacent to your own. Adds an element of 
-                  uncertainty and strategic planning.
+                  Let the game randomly select game settings for an unpredictable experience. Great for players who
+                  want variety and surprise in their matches.
                 </p>
               </div>
             </div>
@@ -542,30 +526,47 @@ const TutorialPage: React.FC = () => {
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Game Settings</h3>
                 <div className="space-y-4">
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-semibold text-yellow-400">Turn Timer</h4>
+                    <h4 className="font-semibold text-yellow-400">Turn Time Limit</h4>
                     <p className="text-muted text-sm mt-1">
-                      Set time limits for turns (30s, 60s, 90s, or unlimited). Keeps games moving quickly.
+                      Async games: 24 hours default (customizable from 30 minutes to 72 hours).
+                      Real-time games: Shorter limits for fast-paced action.
                     </p>
                   </div>
                   
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-400">Starting Troops</h4>
+                    <h4 className="font-semibold text-green-400">Players</h4>
                     <p className="text-muted text-sm mt-1">
-                      Choose how many troops each player starts with. More troops = longer games.
+                      2-12 players supported. Games can start with 2 players minimum.
+                      Use "Random" option to let anyone join up to the max player count.
                     </p>
                   </div>
                   
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-semibold text-primary-soft">Card Trade-In</h4>
+                    <h4 className="font-semibold text-primary-soft">Spoils Cards</h4>
                     <p className="text-muted text-sm mt-1">
-                      Fixed bonuses (4, 6, 8, 10...) or progressive (4, 7, 10, 15, 20...). Progressive makes late game explosive.
+                      • <strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... (exponential growth)<br/>
+                      • <strong>Fixed:</strong> Always 10 armies per set<br/>
+                      • <strong>Static:</strong> Custom value you choose (5-50 armies)<br/>
+                      • <strong>Random:</strong> Let the game decide
+                    </p>
+                  </div>
+                  
+                  <div className="bg-surface-2 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-400">Fortification</h4>
+                    <p className="text-muted text-sm mt-1">
+                      • <strong>Adjacent:</strong> Move once to connected territory<br/>
+                      • <strong>Adjacent Multi:</strong> Multiple moves to connected territories<br/>
+                      • <strong>Chained:</strong> Move once through your territory chain<br/>
+                      • <strong>Unlimited:</strong> Move multiple times through chains
                     </p>
                   </div>
                   
                   <div className="bg-surface-2 p-4 rounded-lg">
                     <h4 className="font-semibold text-purple-400">Fog of War</h4>
                     <p className="text-muted text-sm mt-1">
-                      Limited visibility adds mystery. You can only see territories adjacent to your own.
+                      • <strong>Off:</strong> See entire map<br/>
+                      • <strong>Adjacent:</strong> Only see neighboring territories<br/>
+                      • <strong>Persistent:</strong> Remember previously seen territories
                     </p>
                   </div>
                 </div>
@@ -576,19 +577,19 @@ const TutorialPage: React.FC = () => {
                 <ul className="text-muted space-y-2">
                   <li className="flex items-start gap-2">
                     <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span><strong>Player Count:</strong> 2-8 players per game</span>
+                    <span><strong>Player Count:</strong> 2-12 players per game</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span><strong>Private Games:</strong> Create password-protected rooms</span>
+                    <span><strong>Game Visibility:</strong> Public (anyone can join), Private (invite code), or Tournament</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span><strong>AI Players:</strong> Fill empty slots with computer opponents</span>
+                    <span><strong>Teams:</strong> Create balanced teams (2v2, 3v3, 4v4, etc.) or free-for-all</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span><strong>Spectators:</strong> Allow others to watch your game</span>
+                    <span><strong>Game Type:</strong> Casual (for fun) or Ranked (affects ELO rating)</span>
                   </li>
                 </ul>
               </div>
@@ -597,10 +598,11 @@ const TutorialPage: React.FC = () => {
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Options</h3>
                 <div className="bg-surface-2 p-4 rounded-lg">
                   <ul className="text-muted space-y-2">
-                    <li>• <strong>Alliance Mode:</strong> Team up for 2v2 or 3v3 battles</li>
-                    <li>• <strong>Zombie Mode:</strong> Eliminated players respawn as neutrals</li>
-                    <li>• <strong>Capitals:</strong> Each player has a capital to defend</li>
-                    <li>• <strong>Missions:</strong> Secret objectives for alternative victory</li>
+                    <li>• <strong>Territory Modifiers:</strong> Special territories with unique bonuses (Sparse/Balanced/Abundant)</li>
+                    <li>• <strong>Game Speed:</strong> Real-time (synchronous) or Async (play at your own pace)</li>
+                    <li>• <strong>Auto-naming:</strong> Smart game names based on settings (e.g., "6p Teams Fog Classic")</li>
+                    <li>• <strong>Color Selection:</strong> Choose from 12 standard colors or unlock premium colors</li>
+                    <li>• <strong>Map Selection:</strong> Classic World, custom community maps, or random selection</li>
                   </ul>
                 </div>
               </div>
