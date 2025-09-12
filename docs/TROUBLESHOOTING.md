@@ -37,6 +37,46 @@ taskkill /PID <process-id> /F
 # Both URLs provided by Railway platform
 ```
 
+### ❌ Admin Panel 500 Errors
+**Problem**: Admin endpoints returning 500 errors
+```bash
+# Common causes:
+1. Database migrations not run
+2. Missing database columns/tables
+3. Invalid JWT token cached in browser
+
+# Fixes:
+1. Clear browser cache/cookies for the site
+2. Run migrations: cd backend && npm run migrate
+3. Check production database directly:
+   npx ts-node src/scripts/checkProductionDb.ts
+```
+
+### ❌ "column 'theme' does not exist"
+**Problem**: Missing database columns after deployment
+```bash
+# This means migrations haven't run on production
+# As of Sept 2025, migrations auto-run on deployment via:
+# backend/package.json start script
+
+# Manual fix if needed:
+cd backend && npm run migrate
+
+# Or connect to production DB and run:
+ALTER TABLE user_preferences 
+ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default'
+```
+
+### ❌ "Unexpected token '*'" JWT Error
+**Problem**: Invalid JWT token being sent as "*"
+```bash
+# Browser is caching a null token as string "*"
+# Fix:
+1. Clear browser localStorage
+2. Clear cookies for the site
+3. Log out and log back in
+```
+
 ### ❌ Map Editor Canvas Issues
 **Problem**: Canvas not drawing or territories not saving
 1. Check browser console for JavaScript errors

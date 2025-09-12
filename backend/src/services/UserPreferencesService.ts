@@ -18,18 +18,70 @@ export class UserPreferencesService {
 
   async getPreferences(userId: number): Promise<UserPreferences | null> {
     try {
+      // First check what columns exist
+      const columnsResult = await this.pool.query(
+        `SELECT column_name FROM information_schema.columns 
+         WHERE table_name = 'user_preferences' AND table_schema = 'public'`
+      );
+      const existingColumns = columnsResult.rows.map(r => r.column_name);
+      
+      // Build dynamic SELECT based on what exists
+      const selectFields = [];
+      selectFields.push('user_id as "userId"');
+      selectFields.push('theme');
+      
+      // Add audio columns if they exist
+      if (existingColumns.includes('sound_enabled')) {
+        selectFields.push('sound_enabled as "soundEnabled"');
+      } else {
+        selectFields.push('true as "soundEnabled"'); // Default value
+      }
+      
+      if (existingColumns.includes('music_enabled')) {
+        selectFields.push('music_enabled as "musicEnabled"');
+      } else {
+        selectFields.push('true as "musicEnabled"'); // Default value
+      }
+      
+      // Add other columns with defaults if missing
+      if (existingColumns.includes('notification_enabled')) {
+        selectFields.push('notification_enabled as "notificationEnabled"');
+      } else {
+        selectFields.push('true as "notificationEnabled"');
+      }
+      
+      if (existingColumns.includes('auto_ready')) {
+        selectFields.push('auto_ready as "autoReady"');
+      } else {
+        selectFields.push('false as "autoReady"');
+      }
+      
+      if (existingColumns.includes('show_timer')) {
+        selectFields.push('show_timer as "showTimer"');
+      } else {
+        selectFields.push('true as "showTimer"');
+      }
+      
+      if (existingColumns.includes('show_army_numbers')) {
+        selectFields.push('show_army_numbers as "showArmyNumbers"');
+      } else {
+        selectFields.push('true as "showArmyNumbers"');
+      }
+      
+      if (existingColumns.includes('animation_speed')) {
+        selectFields.push('animation_speed as "animationSpeed"');
+      } else {
+        selectFields.push('\'normal\' as "animationSpeed"');
+      }
+      
+      if (existingColumns.includes('language')) {
+        selectFields.push('language');
+      } else {
+        selectFields.push('\'en\' as "language"');
+      }
+      
       const result = await this.pool.query(
-        `SELECT 
-          user_id as "userId",
-          theme,
-          sound_enabled as "soundEnabled",
-          music_enabled as "musicEnabled",
-          notification_enabled as "notificationEnabled",
-          auto_ready as "autoReady",
-          show_timer as "showTimer",
-          show_army_numbers as "showArmyNumbers",
-          animation_speed as "animationSpeed",
-          language
+        `SELECT ${selectFields.join(', ')}
         FROM user_preferences
         WHERE user_id = $1`,
         [userId]

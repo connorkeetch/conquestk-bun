@@ -1045,11 +1045,15 @@ router.post(
       const redisUrl = process.env.REDIS_URL
       if (redisUrl) {
         try {
-          const Redis = require('ioredis')
-          const redis = new Redis(redisUrl)
-          await redis.flushdb()
-          await redis.quit()
-          logger.info('Redis cache cleared')
+          // Use the existing Redis client if available
+          const { getRedisClient } = require('../config/redis')
+          const redis = getRedisClient()
+          if (redis) {
+            await redis.flushdb()
+            logger.info('Redis cache cleared')
+          } else {
+            logger.info('Redis not connected, skipping cache clear')
+          }
         } catch (redisError) {
           logger.warn('Redis cache clear failed (non-critical):', redisError)
         }

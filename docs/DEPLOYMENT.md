@@ -203,6 +203,43 @@ Before production deploy:
 - [ ] Sentry configured
 - [ ] Health checks passing
 
+## 🗄️ Database Migrations
+
+### Automatic Migrations (Sept 2025+)
+Migrations now run automatically on deployment via the backend start script:
+```json
+// backend/package.json
+"start": "node dist/scripts/runMigration.js && node dist/index.js"
+```
+
+### Manual Migration Commands
+```bash
+# Run migrations locally
+cd backend && npm run migrate
+
+# Check migration status
+cd backend && npm run migrate:status
+
+# Check database schema
+cd backend && npm run check:schema
+
+# Direct database inspection (requires ts-node)
+npx ts-node src/scripts/checkProductionDb.ts
+```
+
+### Migration Files
+- Location: `backend/migrations/`
+- Format: `XXX_description.sql` (e.g., `014_add_map_status_column.sql`)
+- Migrations run in numeric order
+- Use `IF NOT EXISTS` clauses for safety
+- Always test locally before production
+
+### Common Migration Issues
+1. **"column does not exist"** - Migration hasn't run
+2. **"relation does not exist"** - Table hasn't been created
+3. **Duplicate migrations** - Check migration_history table
+4. **Failed migrations** - Check logs, may need manual intervention
+
 ## 🔍 Verification Steps
 
 After deployment:

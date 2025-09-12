@@ -186,22 +186,52 @@ socket.on('game:state', (state) => {
 
 ## 💾 Database Management
 
+### Direct Database Access (Production)
+```bash
+# Connection string (Railway PostgreSQL)
+postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway
+
+# Quick database inspection scripts
+npx ts-node src/scripts/checkProductionDb.ts   # Check all tables/columns
+npx ts-node src/scripts/checkUserPrefs.ts      # Check user_preferences specifically
+
+# Using pgAdmin or other tools
+Host: yamanote.proxy.rlwy.net
+Port: 46553
+Database: railway
+Username: postgres
+Password: QZCDzahSSRUZLYUERywzrSMJvUWmgbor
+SSL: Required
+```
+
 ### Migration Best Practices
 1. **Before ANY database changes**:
    - Check existing migrations in `backend/migrations/`
-   - Create new migration file with next number (e.g., `004_your_change.sql`)
+   - Create new migration file with next number (e.g., `015_your_change.sql`)
    - Use `CREATE TABLE IF NOT EXISTS` for safety
    - Include indexes and triggers in the same migration
 
 2. **Testing migrations**:
    ```bash
    cd backend && npm run migrate  # Test locally first
+   cd backend && npm run migrate:status  # Check what's been applied
    ```
 
 3. **Production deployment**:
-   - Migrations auto-run on Railway deployment
+   - Migrations auto-run on Railway deployment (Sept 2025+)
    - Monitor logs for migration success
    - Verify schema with `npm run check:schema`
+
+4. **Emergency fixes**:
+   ```sql
+   -- If column is missing in production, add directly:
+   ALTER TABLE table_name 
+   ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
+   
+   -- Example: Theme column fix
+   ALTER TABLE user_preferences 
+   ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default';
+   ```
 
 ### Current Database Tables (as of migration 003)
 - **Core**: users, game_rooms, room_players, game_states, game_moves
