@@ -190,6 +190,65 @@ export const AdminMaps: React.FC = () => {
         </div>
       </div>
 
+      {/* Status Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-surface-2 rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted">Draft</p>
+              <p className="text-2xl font-bold text-white">
+                {maps.filter(m => m.status === 'draft').length}
+              </p>
+            </div>
+            <span className="text-2xl">📝</span>
+          </div>
+        </div>
+        <div className="bg-surface-2 rounded-lg border border-orange-500/20 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-400">Pending Review</p>
+              <p className="text-2xl font-bold text-white">
+                {maps.filter(m => m.status === 'pending_review').length}
+              </p>
+            </div>
+            <span className="text-2xl">⏳</span>
+          </div>
+        </div>
+        <div className="bg-surface-2 rounded-lg border border-green-500/20 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-400">Approved</p>
+              <p className="text-2xl font-bold text-white">
+                {maps.filter(m => m.status === 'approved').length}
+              </p>
+            </div>
+            <span className="text-2xl">✅</span>
+          </div>
+        </div>
+        <div className="bg-surface-2 rounded-lg border border-red-500/20 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-red-400">Rejected</p>
+              <p className="text-2xl font-bold text-white">
+                {maps.filter(m => m.status === 'rejected').length}
+              </p>
+            </div>
+            <span className="text-2xl">❌</span>
+          </div>
+        </div>
+        <div className="bg-surface-2 rounded-lg border border-gray-500/20 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Archived</p>
+              <p className="text-2xl font-bold text-white">
+                {maps.filter(m => m.status === 'archived').length}
+              </p>
+            </div>
+            <span className="text-2xl">📦</span>
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="bg-surface-2 rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-wrap gap-4">
