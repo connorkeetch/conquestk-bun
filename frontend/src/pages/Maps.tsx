@@ -9,26 +9,34 @@ interface Map {
   name: string
   description?: string
   creatorName?: string
+  creatorId?: string
   imageUrl?: string
   playCount: number
   ratingAverage: number
   ratingCount: number
   tags: string[]
   createdAt: string
+  status?: string
   isFeatured?: boolean
 }
 
 const Maps: React.FC = () => {
   const [maps, setMaps] = useState<Map[]>([])
+  const [myMaps, setMyMaps] = useState<Map[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('popularity')
   const [filterTag, setFilterTag] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [showMyMaps, setShowMyMaps] = useState(false)
   const { user } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
     fetchMaps()
-  }, [sortBy, filterTag])
+    if (user) {
+      fetchMyMaps()
+    }
+  }, [sortBy, filterTag, user])
 
   const fetchMaps = async () => {
     try {
@@ -52,11 +60,46 @@ const Maps: React.FC = () => {
     }
   }
 
-  const filteredMaps = maps.filter(map => 
+  const fetchMyMaps = async () => {
+    try {
+      // Fetch user's own maps (all statuses)
+      const response = await api.get('/maps/my-maps')
+      setMyMaps(response.data || [])
+    } catch (error) {
+      console.error('Failed to fetch my maps:', error)
+      setMyMaps([])
+    }
+  }
+
+  const mapsToShow = showMyMaps ? myMaps : maps
+  let filteredMaps = mapsToShow.filter(map => 
     map.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     map.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     map.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   )
+  
+  // Apply status filter for My Maps
+  if (showMyMaps && filterStatus) {
+    filteredMaps = filteredMaps.filter(map => map.status === filterStatus)
+  }
+
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null
+    const badges = {
+      draft: { text: 'Draft', className: 'bg-gray-600' },
+      pending_review: { text: 'Under Review', className: 'bg-orange-600' },
+      approved: { text: 'Approved', className: 'bg-green-600' },
+      rejected: { text: 'Rejected', className: 'bg-red-600' },
+      archived: { text: 'Archived', className: 'bg-gray-700' }
+    }
+    const badge = badges[status as keyof typeof badges]
+    if (!badge) return null
+    return (
+      <span className={`${badge.className} text-white text-xs px-2 py-1 rounded`}>
+        {badge.text}
+      </span>
+    )
+  }
 
   const getRatingStars = (rating: number) => {
     const stars = []
@@ -83,15 +126,38 @@ const Maps: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2 text-primary-soft">Maps Gallery</h1>
-          <p className="text-muted text-lg">Explore community-created battlefields</p>
+          <h1 className="text-3xl font-bold mb-2 text-primary-soft">
+            {showMyMaps ? 'My Maps' : 'Maps Gallery'}
+          </h1>
+          <p className="text-muted text-lg">
+            {showMyMaps ? 'Manage your created maps' : 'Explore community-created battlefields'}
+          </p>
         </div>
-        <Link
-          to="/map-editor"
-          className="btn-primary hover-lift hover-glow"
-        >
-          ✏️ Create Map
-        </Link>
+        <div className="flex gap-3">
+          {user && (
+            <button
+              onClick={() => setShowMyMaps(!showMyMaps)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                showMyMaps 
+                  ? 'bg-primary text-white' 
+                  : 'bg-surface-2 text-muted hover:text-white border border-border'
+              }`}
+            >
+              {showMyMaps ? '🌍 All Maps' : '📁 My Maps'}
+              {myMaps.length > 0 && !showMyMaps && (
+                <span className="ml-2 bg-primary/20 text-primary px-2 py-0.5 rounded text-sm">
+                  {myMaps.length}
+                </span>
+              )}
+            </button>
+          )}
+          <Link
+            to="/map-editor"
+            className="btn-primary hover-lift hover-glow"
+          >
+            ✏️ Create Map
+          </Link>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -107,7 +173,22 @@ const Maps: React.FC = () => {
           <div className="absolute right-3 top-3 text-muted">🔍</div>
         </div>
         
-        {allTags.length > 0 && (
+        {showMyMaps && (
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">All Statuses</option>
+            <option value="draft">Draft</option>
+            <option value="pending_review">Under Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="archived">Archived</option>
+          </select>
+        )}
+        
+        {!showMyMaps && allTags.length > 0 && (
           <select 
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
@@ -172,9 +253,12 @@ const Maps: React.FC = () => {
 
               {/* Map Info */}
               <div className="p-4">
-                <h3 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">
-                  {map.name}
-                </h3>
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-bold text-white group-hover:text-primary transition-colors">
+                    {map.name}
+                  </h3>
+                  {showMyMaps && getStatusBadge(map.status)}
+                </div>
                 {map.description && (
                   <p className="text-muted text-sm mb-2 line-clamp-2">
                     {map.description}
@@ -208,6 +292,34 @@ const Maps: React.FC = () => {
                     by {map.creatorName || 'Unknown'}
                   </span>
                 </div>
+                
+                {/* Action Buttons for My Maps */}
+                {showMyMaps && user && map.creatorId === user.id && (
+                  <div className="mt-3 pt-3 border-t border-border flex gap-2">
+                    <Link
+                      to={`/map-editor?edit=${map.id}`}
+                      className="flex-1 bg-primary hover:brightness-110 text-white text-xs px-2 py-1.5 rounded text-center transition-all"
+                    >
+                      ✏️ Edit
+                    </Link>
+                    {map.status === 'draft' && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            await api.put(`/maps/${map.id}/submit`)
+                            fetchMyMaps()
+                          } catch (error) {
+                            console.error('Failed to submit map:', error)
+                          }
+                        }}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1.5 rounded text-center transition-all"
+                      >
+                        📤 Submit
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
