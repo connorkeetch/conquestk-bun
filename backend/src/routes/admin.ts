@@ -670,10 +670,10 @@ router.get(
       res.json({
         timestamp: new Date().toISOString(),
         database: {
-          userCount: dbStats.rows[0].user_count,
-          mapCount: dbStats.rows[0].map_count,
-          activeGames: dbStats.rows[0].active_games,
-          pendingApprovals: dbStats.rows[0].pending_approvals,
+          userCount: parseInt(dbStats.rows[0].user_count || '0', 10),
+          mapCount: parseInt(dbStats.rows[0].map_count || '0', 10),
+          activeGames: parseInt(dbStats.rows[0].active_games || '0', 10),
+          pendingApprovals: parseInt(dbStats.rows[0].pending_approvals || '0', 10),
         },
         featureFlags: featureFlags.reduce(
           (acc, flag) => {
@@ -780,8 +780,16 @@ router.get(
 
       const countResult = await query(countQuery, countParams)
 
+      // Convert numeric strings to numbers for proper frontend handling
+      const maps = mapsResult.rows.map((map: any) => ({
+        ...map,
+        playCount: parseInt(map.playCount || '0', 10),
+        ratingAverage: parseFloat(map.ratingAverage || '0'),
+        ratingCount: parseInt(map.ratingCount || '0', 10),
+      }))
+
       res.json({
-        maps: mapsResult.rows,
+        maps,
         total: parseInt(countResult.rows[0]?.total || '0', 10),
       })
     } catch (error) {
