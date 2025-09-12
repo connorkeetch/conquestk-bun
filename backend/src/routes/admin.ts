@@ -692,15 +692,24 @@ router.get(
 
 // ============= CACHE MANAGEMENT =============
 
-// Refresh server caches
+// Refresh server caches (available to all admins)
 router.post(
   '/cache/refresh',
-  requirePermission('system.manage'),
-  logAdminActivity('cache.refresh'),
+  // No specific permission required - any admin can refresh cache
   async (req: Request, res: Response) => {
     try {
       const userId = (req as any).userId
       logger.info('Admin cache refresh requested', { adminId: userId })
+      
+      // Log the admin activity
+      try {
+        await adminService.logAdminAction(userId, 'cache.refresh', {
+          timestamp: new Date().toISOString()
+        })
+      } catch (logError) {
+        logger.warn('Failed to log cache refresh activity:', logError)
+        // Don't fail the request if logging fails
+      }
 
       // Clear any in-memory caches (if you have any)
       // For example, if you have a map cache or user cache:

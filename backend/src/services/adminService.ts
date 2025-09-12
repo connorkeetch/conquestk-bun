@@ -84,13 +84,35 @@ export class AdminService {
     for (const row of result.rows) {
       if (row.is_super_admin) return true
 
-      const permissions = JSON.parse(row.permissions)
+      // Handle PostgreSQL TEXT[] array - it comes back as an array already
+      let permissions: string[] = []
+      if (Array.isArray(row.permissions)) {
+        permissions = row.permissions
+      } else if (typeof row.permissions === 'string') {
+        // Try to parse if it's JSON string
+        try {
+          permissions = JSON.parse(row.permissions)
+        } catch {
+          // If not JSON, treat as comma-separated or PostgreSQL array format
+          if (row.permissions.startsWith('{') && row.permissions.endsWith('}')) {
+            // PostgreSQL array format: {value1,value2}
+            permissions = row.permissions.slice(1, -1).split(',').map((p: string) => p.trim())
+          } else {
+            permissions = row.permissions.split(',').map((p: string) => p.trim())
+          }
+        }
+      }
+
       if (permissions.includes('*') || permissions.includes(permission)) {
         return true
       }
 
       // Check wildcard permissions (e.g., "users.*" covers "users.edit")
+      // Also check broader permissions (e.g., "system_admin" covers "system.manage")
       for (const perm of permissions) {
+        if (perm === 'system_admin' && permission.startsWith('system.')) {
+          return true
+        }
         if (perm.endsWith('.*') && permission.startsWith(perm.slice(0, -1))) {
           return true
         }
