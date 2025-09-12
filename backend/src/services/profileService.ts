@@ -19,7 +19,8 @@ export class ProfileService {
 
     try {
       // Get profile data
-      const profileResult = await client.query('SELECT * FROM user_profiles WHERE user_id = $1', [
+      // user_profiles table removed - profile data is now in users table
+      const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [
         userId,
       ])
 
@@ -104,7 +105,7 @@ export class ProfileService {
       values.push(userId)
 
       const query = `
-        UPDATE user_profiles 
+        UPDATE users 
         SET ${updateFields.join(', ')} 
         WHERE user_id = $${++paramCount}
       `
@@ -112,7 +113,7 @@ export class ProfileService {
       await client.query(query, values)
 
       // Return updated profile
-      const result = await client.query('SELECT * FROM user_profiles WHERE user_id = $1', [userId])
+      const result = await client.query('SELECT * FROM users WHERE id = $1', [userId])
 
       return result.rows[0]
     } finally {
@@ -290,7 +291,7 @@ export class ProfileService {
       if (achievement.rows.length > 0) {
         await client.query(
           `
-          UPDATE user_profiles 
+          UPDATE users 
           SET experience_points = experience_points + $1
           WHERE user_id = $2
         `,
@@ -397,7 +398,7 @@ export class ProfileService {
           CASE WHEN us.games_played > 0 THEN (us.games_won * 100.0 / us.games_played) ELSE 0 END as win_rate,
           (us.games_won * 10 + up.level * 5) as rating
         FROM users u
-        JOIN user_profiles up ON u.id = up.user_id
+        -- JOIN user_profiles up ON u.id = up.user_id  -- Table removed
         JOIN player_stats us ON u.id = us.user_id
         WHERE us.games_played >= 5
         ORDER BY rating DESC

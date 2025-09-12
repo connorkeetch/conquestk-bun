@@ -257,7 +257,7 @@ export class AuthController {
       let settings = null
       try {
         const { query } = await import('../config/database')
-        const settingsResult = await query('SELECT * FROM user_settings WHERE user_id = $1', [
+        const settingsResult = await query('SELECT * FROM user_preferences WHERE user_id = $1', [
           userId,
         ])
         settings = settingsResult.rows[0] || null
