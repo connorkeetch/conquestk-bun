@@ -25,8 +25,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Main Content - theme-specific gradient background */}
-      <main className="flex-1 relative" style={{ background: 'var(--ck-bg-gradient)' }}>
+      {/* Main Content with theme-aware background */}
+      <main className="flex-1 relative bg-bg-deep" style={{ background: 'var(--ck-bg-gradient)' }}>
         {/* Grid pattern overlay - consistent across all pages */}
         <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
           <svg
