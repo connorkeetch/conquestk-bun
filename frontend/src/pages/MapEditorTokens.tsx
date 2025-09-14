@@ -296,19 +296,49 @@ export default function MapEditorTokens() {
   // Load user's draft maps from database
   const loadDraftMaps = async () => {
     try {
+      // Check if user is logged in
+      const token = localStorage.getItem('token')
       const user = JSON.parse(localStorage.getItem('user') || '{}')
+      
+      if (!token || token === 'null' || token === 'undefined') {
+        alert('Please log in to load your draft maps')
+        return
+      }
+      
+      if (!user.id) {
+        alert('User session expired. Please log in again.')
+        return
+      }
       
       // Get user's maps including drafts
       const response = await api.get('/maps/my-maps')
       
       // Filter for draft maps only
-      setAvailableDrafts(response.data.filter((map: any) => 
+      const drafts = response.data.filter((map: any) => 
         map.status === 'draft'
-      ))
+      )
+      
+      if (drafts.length === 0) {
+        alert('No draft maps found. Create and save a map first.')
+        return
+      }
+      
+      setAvailableDrafts(drafts)
       setShowDraftsList(true)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load draft maps:', error)
-      alert('Failed to load draft maps')
+      
+      if (error.response?.status === 400) {
+        alert('Authentication required. Please log in to load your maps.')
+      } else if (error.response?.status === 401) {
+        alert('Session expired. Please log in again.')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      } else if (error.response?.status === 404) {
+        alert('Maps endpoint not found. This might be a server issue.')
+      } else {
+        alert(`Failed to load draft maps: ${error.response?.data?.message || error.message || 'Unknown error'}`)
+      }
     }
   }
 
@@ -666,6 +696,15 @@ export default function MapEditorTokens() {
   // Save map as draft to database
   const handleSaveMap = async () => {
     try {
+      // Check authentication first
+      const token = localStorage.getItem('token')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      
+      if (!token || token === 'null' || token === 'undefined' || !user.id) {
+        alert('Please log in to save maps to the server. Your map is auto-saved locally.')
+        return
+      }
+      
       if (state.territories.length < 2) {
         alert('Please add at least 2 territories before saving')
         return
