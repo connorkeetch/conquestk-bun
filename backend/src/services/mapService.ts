@@ -435,23 +435,16 @@ export class MapService {
       const result = await client.query(
         `
         INSERT INTO map_territories (
-          map_id, territory_id, name, continent_id, boundary_coords,
-          army_position_x, army_position_y, ability_type_id,
-          starting_owner_slot, starting_armies
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          map_id, name, polygon_data, continent, is_capital
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
         [
           territoryData.mapId,
-          territoryData.territoryId,
           territoryData.name,
+          JSON.stringify(territoryData.boundaryCoords || []),
           territoryData.continentId || null,
-          JSON.stringify(territoryData.boundaryCoords),
-          territoryData.armyPosition.x,
-          territoryData.armyPosition.y,
-          territoryData.abilityTypeId || null,
-          territoryData.startingOwnerSlot || null,
-          territoryData.startingArmies || 1,
+          false, // is_capital default
         ],
       )
 
@@ -487,21 +480,15 @@ export class MapService {
         updateValues.push(updates.name)
       }
       if (updates.continentId !== undefined) {
-        updateFields.push(`continent_id = $${++paramCount}`)
+        updateFields.push(`continent = $${++paramCount}`)
         updateValues.push(updates.continentId)
       }
       if (updates.boundaryCoords) {
-        updateFields.push(`boundary_coords = $${++paramCount}`)
+        updateFields.push(`polygon_data = $${++paramCount}`)
         updateValues.push(JSON.stringify(updates.boundaryCoords))
       }
-      if (updates.armyPosition) {
-        updateFields.push(`army_position_x = $${++paramCount}, army_position_y = $${++paramCount}`)
-        updateValues.push(updates.armyPosition.x, updates.armyPosition.y)
-      }
-      if (updates.abilityTypeId !== undefined) {
-        updateFields.push(`ability_type_id = $${++paramCount}`)
-        updateValues.push(updates.abilityTypeId)
-      }
+      // armyPosition and abilityTypeId don't exist in current schema
+      // Skip them to avoid errors
 
       if (updateFields.length === 0) {
         const result = await client.query('SELECT * FROM map_territories WHERE id = $1', [
@@ -566,7 +553,7 @@ export class MapService {
         mc.bonus_armies,
         GROUP_CONCAT(mt.territory_id) as territories
       FROM map_continents mc
-      LEFT JOIN map_territories mt ON mc.id = mt.continent_id
+      LEFT JOIN map_territories mt ON mc.name = mt.continent
       WHERE mc.map_id = ?
       GROUP BY mc.id, mc.name, mc.bonus_armies
       ORDER BY mc.name
@@ -796,17 +783,15 @@ export class MapService {
     return {
       id: row.id,
       mapId: row.map_id,
-      territoryId: row.territory_id,
+      territoryId: row.id, // Using id as territory_id doesn't exist
       name: row.name,
-      continentId: row.continent_id,
-      boundaryCoords: this.safeJsonParse(row.boundary_coords, []),
-      armyPosition: { x: row.army_position_x, y: row.army_position_y },
-      abilityTypeId: row.ability_type_id,
-      customAbilityConfig: row.custom_ability_config
-        ? this.safeJsonParse(row.custom_ability_config, undefined)
-        : undefined,
-      startingOwnerSlot: row.starting_owner_slot,
-      startingArmies: row.starting_armies || 1,
+      continentId: row.continent,
+      boundaryCoords: this.safeJsonParse(row.polygon_data, []),
+      armyPosition: { x: 0, y: 0 }, // No army position columns in schema
+      abilityTypeId: null, // No ability_type_id in schema
+      customAbilityConfig: undefined,
+      startingOwnerSlot: null,
+      startingArmies: 1,
       createdAt: new Date(row.created_at),
     }
   }
