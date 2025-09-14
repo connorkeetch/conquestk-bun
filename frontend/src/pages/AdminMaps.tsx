@@ -177,19 +177,6 @@ export const AdminMaps: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-surface-2 rounded-lg shadow-sm border border-border p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Maps Management</h1>
-            <p className="text-muted mt-1">Manage all maps in the system</p>
-          </div>
-          <Link to="/admin" className="text-muted hover:text-white font-medium">
-            ← Back to Admin Dashboard
-          </Link>
-        </div>
-      </div>
-
       {/* Status Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-surface-2 rounded-lg border border-border p-4">
@@ -285,24 +272,6 @@ export const AdminMaps: React.FC = () => {
             <option value="rating">Highest Rated</option>
           </select>
         </div>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {['pending_review', 'approved', 'rejected', 'draft', 'archived'].map((status) => {
-          const count = maps.filter(m => m.status === status).length
-          return (
-            <div key={status} className="bg-surface-2 p-4 rounded-lg border border-border">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{getStatusIcon(status)}</span>
-                <span className="text-2xl font-bold text-white">{count}</span>
-              </div>
-              <div className="text-sm text-muted mt-1 capitalize">
-                {status.replace('_', ' ')}
-              </div>
-            </div>
-          )
-        })}
       </div>
 
       {error && (
