@@ -51,16 +51,16 @@
 // These will be dynamically overridden per theme
 export const THEME_COLORS = {
   // Current default theme uses these values
-  primary: '#7C3AED',         // Main brand color (violet in default theme)
-  primarySoft: '#8B5CF6',     // Softer version for hover states
-  secondary: '#FFD700',       // Supporting color (gold in default theme)
-  accent: '#B22222',          // Attention color (crimson in default theme)
+  primary: '#1f2937',         // Main brand color (dark gray in default theme)
+  primarySoft: '#374151',     // Softer version for hover states
+  secondary: '#9ca3af',       // Supporting color (medium gray in default theme)
+  accent: '#f3f4f6',          // Attention color (light gray in default theme)
   
   // Surface colors that adapt to theme
-  backgroundDeep: '#0B0B12',  // Deepest background
-  backgroundAlt: '#170B1D',   // Alternative deep background
-  surface1: '#0F172A',        // Card backgrounds
-  surface2: '#111827',        // Elevated surfaces
+  backgroundDeep: '#000000',  // Deepest background (pure black)
+  backgroundAlt: '#050505',   // Alternative deep background
+  surface1: '#0a0a0a',        // Card backgrounds
+  surface2: '#111111',        // Elevated surfaces
 } as const;
 
 // ===== SEMANTIC STATE COLORS =====
@@ -184,13 +184,13 @@ export const THEME_PALETTE = {
   
   // BACKGROUND VARIATIONS (for different theme depths)
   backgrounds: {
-    ink: '#0B0B12',
-    imperial: '#170B1D',
-    abyss: '#080A14',
-    gradientDark1: '#050508',
-    gradientDark2: '#030308',
-    gradientDark3: '#060612',
-    gradientDark4: '#040509',
+    ink: '#000000',
+    imperial: '#050505',
+    abyss: '#030303',
+    gradientDark1: '#050505',
+    gradientDark2: '#000000',
+    gradientDark3: '#030303',
+    gradientDark4: '#050505',
   },
 } as const;
 
@@ -325,15 +325,17 @@ export const CORE_COLORS = {
 // This architecture enables both color themes and style themes
 
 export const AVAILABLE_THEMES = {
-  // Default theme - dark blue-purple to match screenshot
+  // Default theme - black/dark gray to match error page
   'default': {
     ...THEME_COLORS,
-    primary: '#4338CA',           // Dark blue-purple primary
-    primarySoft: '#5B21B6',       // Purple accent
-    secondary: '#ffd700',         // Gold accent
-    accent: '#dc2626',            // Red accent
-    backgroundDeep: '#1a1a1a',    // Dark background
-    backgroundAlt: '#0f172a',     // Slightly different dark
+    primary: '#1f2937',           // Dark gray primary
+    primarySoft: '#374151',       // Lighter gray for hover states
+    secondary: '#9ca3af',         // Medium gray secondary
+    accent: '#f3f4f6',            // Light gray accent
+    backgroundDeep: '#000000',    // Pure black background
+    backgroundAlt: '#050505',     // Near black alternative
+    surface1: '#0a0a0a',          // Very dark surface
+    surface2: '#111111',          // Dark elevated surface
   },
   
   // Light theme
@@ -389,7 +391,9 @@ export const AVAILABLE_THEMES = {
     secondary: '#9ca3af',         // Medium gray
     accent: '#f3f4f6',            // Light gray accent
     backgroundDeep: '#000000',    // Pure black
-    backgroundAlt: '#111827',     // Very dark gray
+    backgroundAlt: '#050505',     // Near black
+    surface1: '#0a0a0a',          // Very dark surface
+    surface2: '#111111',          // Dark elevated surface
   },
 } as const;
 
@@ -418,8 +422,8 @@ export const AVAILABLE_THEMES = {
 // ===== GRADIENTS =====
 // All gradients now reference CORE_COLORS for consistency
 export const GRADIENTS = {
-  // Main background gradient - used for body background
-  background: `linear-gradient(135deg, ${CORE_COLORS.gradientDark1} 0%, ${CORE_COLORS.gradientDark2} 30%, ${CORE_COLORS.gradientDark3} 60%, ${CORE_COLORS.gradientDark4} 100%)`,
+  // Main background gradient - used for body background (matches black theme)
+  background: `linear-gradient(135deg, #050505 0%, #000000 30%, #030303 60%, #050505 100%)`,
   
   // Text gradients for headings and special effects
   redToGold: `linear-gradient(to right, ${CORE_COLORS.red600}, ${CORE_COLORS.amber500}, ${CORE_COLORS.gold})`,

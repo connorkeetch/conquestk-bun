@@ -68,17 +68,17 @@ To switch themes: Use Redux setTheme() action
 @theme {
   /* ===== SEMANTIC THEME VARIABLES ===== */
   /* 🎨 These change per theme - enabling Red Theme, Blue Theme, Cowboy Theme, etc. */
-  --color-primary: #7C3AED;         /* Main brand color (violet in default theme) */
-  --color-primary-soft: #8B5CF6;    /* Primary hover states (softer violet) */
-  --color-secondary: #FFD700;       /* Supporting brand color (gold) */
-  --color-accent: #B22222;          /* Attention/danger color (crimson) */
+  --color-primary: #1f2937;         /* Main brand color (dark gray in default theme) */
+  --color-primary-soft: #374151;    /* Primary hover states (lighter gray) */
+  --color-secondary: #9ca3af;       /* Supporting brand color (medium gray) */
+  --color-accent: #f3f4f6;          /* Attention/danger color (light gray) */
   
   /* Theme-aware background colors */
-  --color-bg-deep: #0B0B12;         /* Deepest background */
-  --color-bg-alt: #170B1D;          /* Alternative deep background */
-  --color-bg-void: #080A14;         /* Void background */
-  --color-surface-1: #0F172A;       /* Card backgrounds */
-  --color-surface-2: #111827;       /* Elevated surfaces */
+  --color-bg-deep: #000000;         /* Deepest background (pure black) */
+  --color-bg-alt: #050505;          /* Alternative deep background */
+  --color-bg-void: #030303;         /* Void background */
+  --color-surface-1: #0a0a0a;       /* Card backgrounds */
+  --color-surface-2: #111111;       /* Elevated surfaces */
   
   /* ===== SEMANTIC STATE COLORS ===== */
   /* 🎯 These stay consistent across themes for UX clarity */
@@ -159,14 +159,14 @@ To switch themes: Use Redux setTheme() action
   /* These are fallback values if JS fails */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0a0814 0%,    /* Nearly black with blue tint */
-    #050308 30%,   /* Inky black center */
-    #0d0615 60%,   /* Very dark purple */
-    #0a0814 100%   /* Nearly black with blue tint */
+    #050505 0%,    /* Near black */
+    #000000 30%,   /* Pure black center */
+    #030303 60%,   /* Very dark gray */
+    #050505 100%   /* Near black */
   );
   
   /* Atmospheric glow color */
-  --ck-glow: var(--color-violet-soft);
+  --ck-glow: var(--color-primary-soft);
   
   /* Surface glass effects */
   --surface-glass: rgba(15, 23, 42, 0.6);  /* --color-surface-1 with opacity */
