@@ -583,6 +583,61 @@ router.post(
   },
 )
 
+// Get active games
+router.get(
+  '/games/active',
+  requirePermission('games.view'),
+  async (_req: Request, res: Response) => {
+    try {
+      const { query } = require('../config/database')
+      
+      const gamesQuery = `
+        SELECT 
+          g.id,
+          g.name,
+          g.status,
+          g.phase,
+          g.turn_count,
+          g.max_players,
+          g.created_at,
+          g.updated_at,
+          m.name as map_name,
+          u.username as created_by_username,
+          COUNT(DISTINCT gp.user_id) as player_count,
+          EXTRACT(EPOCH FROM (NOW() - g.created_at)) / 60 as duration_minutes
+        FROM games g
+        LEFT JOIN maps m ON g.map_id = m.id
+        LEFT JOIN users u ON g.created_by = u.id
+        LEFT JOIN game_players gp ON g.id = gp.game_id AND gp.status = 'active'
+        WHERE g.status IN ('waiting', 'in_progress')
+        GROUP BY g.id, m.name, u.username
+        ORDER BY g.created_at DESC
+        LIMIT 50
+      `
+      
+      const result = await query(gamesQuery)
+      
+      const games = result.rows.map((game: any) => ({
+        id: game.id,
+        name: game.name || `Game ${game.id.slice(0, 8)}`,
+        status: game.status,
+        phase: game.phase,
+        playerCount: parseInt(game.player_count || '0', 10),
+        maxPlayers: game.max_players,
+        mapName: game.map_name,
+        createdBy: game.created_by_username,
+        duration: Math.floor(parseFloat(game.duration_minutes || '0')) + ' min',
+        turnCount: game.turn_count || 0,
+      }))
+      
+      res.json(games)
+    } catch (error) {
+      logger.error('Error getting active games:', error)
+      res.status(500).json({ error: 'Failed to get active games' })
+    }
+  },
+)
+
 // ============= FEATURE FLAGS =============
 
 // Get all feature flags
