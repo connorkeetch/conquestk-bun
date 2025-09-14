@@ -209,29 +209,6 @@ To switch themes: Use Redux setTheme() action
   --ck-glow: var(--color-primary-soft);
 }
 
-/* Dark theme - Alias for default for backwards compatibility */
-[data-theme="dark"] {
-  /* Inherit all from default */
-  --color-primary: #2563EB;
-  --color-primary-soft: #3B82F6;
-  --color-secondary: #FFD700;
-  --color-accent: #DC2626;
-  --color-bg-deep: #000000;
-  --color-bg-alt: #050505;
-  --color-surface-1: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
-  --color-border: #334155;
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #111827 0%,
-    rgba(88, 28, 135, 0.2) 50%,
-    #000000 100%
-  );
-  --ck-glow: var(--color-primary-soft);
-}
-
 /* Red Theme */
 [data-theme="red"] {
   --color-primary: #DC2626;         /* Red primary */
