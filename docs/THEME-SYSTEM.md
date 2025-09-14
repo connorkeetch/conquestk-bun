@@ -2,12 +2,17 @@
 
 ## Overview
 
-ConquestK uses a comprehensive theme system that provides instant theme switching with no flash of unstyled content. The system supports multiple color themes with semantic variables, ensuring consistent styling across the entire application.
+ConquestK uses a **pure CSS-based theme system** that provides instant theme switching with zero JavaScript overhead. All theme styling is handled through CSS custom properties and data attributes, ensuring no flash of unstyled content and optimal performance.
 
 ## Architecture
 
-### Single Source of Truth
-All theme definitions are maintained in `/frontend/src/config/themes.config.ts`. This follows the DRY (Don't Repeat Yourself) principle and ensures consistency.
+### CSS-First Approach
+All theme definitions are maintained as CSS rules in `/frontend/src/app.css` using `[data-theme="name"]` selectors. JavaScript only changes the data-theme attribute - CSS handles all the styling automatically.
+
+### Theme Files
+- **`app.css`**: Contains all CSS theme definitions (source of truth for styling)
+- **`themes.config.ts`**: Theme metadata for UI display (names, descriptions, colors)
+- **`themeLoader.ts`**: Minimal script to prevent flash on page load
 
 ### Theme Structure
 Each theme defines:
@@ -19,25 +24,32 @@ Each theme defines:
 - **Gradient**: Complex background gradients with multiple stops
 
 ### CSS Variable System
-Themes are applied using CSS custom properties (variables):
+Themes are defined in CSS and automatically apply when data-theme changes:
 ```css
---color-primary: #4338CA;
---color-bg-deep: #0a0a0f;
---color-surface-1: #0f172a;
-/* etc... */
+[data-theme="default"] {
+  --color-primary: #2563EB;      /* Blue buttons */
+  --color-bg-deep: #000000;      /* Pure black */
+  --color-surface-1: #0f172a;    /* Dark cards */
+  --ck-bg-gradient: linear-gradient(135deg, 
+    #111827 0%,                   /* gray-900 */
+    rgba(88, 28, 135, 0.2) 50%,  /* purple-900/20 */
+    #000000 100%);                /* black */
+}
 ```
 
 ## Available Themes
 
 | Theme | Primary Color | Description |
 |-------|--------------|-------------|
-| default | Indigo (#4338CA) | Deep space theme with indigo accents |
-| violet | Purple (#7C3AED) | Rich purple with dark backgrounds |
-| red | Red (#DC2626) | Intense red with warm dark tones |
-| blue | Blue (#2563EB) | Classic blue with navy depths |
-| green | Emerald (#059669) | Natural green with forest darkness |
-| black | Neutral (#1f2937) | Pure black minimalist theme |
-| light | Blue (#3B82F6) | Light mode with white backgrounds |
+| default | Blue (#2563EB) | Blue buttons with dark purple gradient background |
+| dark | Blue (#2563EB) | Alias for default (backwards compatibility) |
+| violet | Purple (#7C3AED) | Purple theme with violet accents |
+| red | Red (#DC2626) | Crimson theme with red accents |
+| blue | Blue (#2563EB) | Ocean blue theme |
+| green | Emerald (#059669) | Emerald green theme |
+| black | Gray (#1f2937) | Pure black with gray accents |
+| highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
+| halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
 
 ## Usage
 
@@ -106,28 +118,46 @@ The theme system uses a specialized loader to prevent flash of unstyled content:
 
 ## Adding a New Theme
 
-1. Add theme definition to `/frontend/src/config/themes.config.ts`:
+### 1. Define CSS Theme in app.css
+Add your theme definition after existing themes:
+```css
+[data-theme="mytheme"] {
+  --color-primary: #yourcolor;
+  --color-primary-soft: #yourhovercolor;
+  --color-secondary: #FFD700;
+  --color-accent: #accentcolor;
+  --color-bg-deep: #000000;
+  --color-bg-alt: #050505;
+  --color-surface-1: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  --ck-bg-gradient: linear-gradient(135deg, ...);
+}
+```
+
+### 2. Add Theme Metadata to themes.config.ts
+For UI display purposes only:
 ```typescript
 {
   id: 'mytheme',
   name: 'My Theme',
-  category: 'dark',
+  displayColor: '#yourcolor',  // Color shown in UI picker
+  description: 'Description of your theme',
   colors: {
+    // These should match your CSS values
     primary: '#yourcolor',
-    primarySoft: '#softerversion',
-    // ... all required colors
-  },
-  gradient: {
-    stops: [
-      { position: '0%', color: '#color1' },
-      { position: '30%', color: '#color2' },
-      // ... gradient stops
-    ]
+    // ... other colors
   }
 }
 ```
 
-2. The theme will automatically appear in Settings and work throughout the app.
+### 3. Update Valid Themes in themeLoader.ts
+Add to the validThemes array:
+```javascript
+const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'green', 'black', 'highcontrast', 'halloween', 'mytheme'];
+```
 
 ## Best Practices
 

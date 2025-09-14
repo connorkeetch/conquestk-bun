@@ -32,31 +32,32 @@ export interface ThemeConfig {
   defaultTheme: string
 }
 
-// Theme definitions - single source of truth
+// Theme definitions - Used for UI display and documentation
+// Actual styling is done via CSS in app.css
 export const THEMES: ThemeDefinition[] = [
   {
     id: 'default',
     name: 'Default',
-    displayColor: '#4a5fff',
-    description: '',
+    displayColor: '#2563EB',  // Blue - matches CSS primary
+    description: 'Blue theme with purple gradient background',
     colors: {
-      primary: '#4a5fff',       // Blue-purple primary
-      primarySoft: '#6366f1',   // Softer blue-purple
-      secondary: '#38bdf8',     // Cyan-blue for interactive
-      accent: '#dc2626',        // Keep red accent
-      bgDeep: '#0a0a12',        // Very dark blue-black
-      bgAlt: '#14141f',         // Slightly lighter dark blue
-      surface1: '#1a1a2e',      // Card background
-      surface2: '#252538',      // Slightly lighter for nested
-      text: '#e0e0e6',          // Primary text
-      textMuted: '#9ca3af',     // Secondary text
-      border: 'rgba(255, 255, 255, 0.08)',  // Subtle white border
+      primary: '#2563EB',       // Blue primary for buttons
+      primarySoft: '#3B82F6',   // Lighter blue for hover
+      secondary: '#FFD700',     // Gold secondary
+      accent: '#DC2626',        // Red accent
+      bgDeep: '#000000',        // Pure black base
+      bgAlt: '#050505',         // Near black alternative
+      surface1: '#0f172a',      // Dark blue-gray cards
+      surface2: '#1e293b',      // Slightly lighter surface
+      text: '#F9FAFB',          // White text
+      textMuted: '#94A3B8',     // Muted blue-gray text
+      border: '#334155',        // Blue-gray borders
     },
     gradient: {
       stops: [
-        { position: '0%', color: '#0a0a12' },
-        { position: '50%', color: 'rgba(88, 28, 135, 0.15)' },
-        { position: '100%', color: '#0a0a12' },
+        { position: '0%', color: '#111827' },                    // gray-900
+        { position: '50%', color: 'rgba(88, 28, 135, 0.2)' },   // purple-900/20
+        { position: '100%', color: '#000000' },                  // black
       ],
     },
   },
@@ -92,7 +93,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'violet',
     name: 'Violet',
     displayColor: '#7C3AED',
-    description: '',
+    description: 'Purple theme with violet accents',
     colors: {
       primary: '#7C3AED',
       primarySoft: '#8B5CF6',
@@ -119,7 +120,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'red',
     name: 'Red',
     displayColor: '#DC2626',
-    description: '',
+    description: 'Crimson theme with red accents',
     colors: {
       primary: '#DC2626',
       primarySoft: '#EF4444',
@@ -146,7 +147,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'blue',
     name: 'Blue',
     displayColor: '#2563EB',
-    description: '',
+    description: 'Ocean blue theme',
     colors: {
       primary: '#2563EB',
       primarySoft: '#3B82F6',
@@ -173,7 +174,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'green',
     name: 'Green',
     displayColor: '#059669',
-    description: '',
+    description: 'Emerald green theme',
     colors: {
       primary: '#059669',
       primarySoft: '#10B981',
@@ -200,7 +201,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'black',
     name: 'Black',
     displayColor: '#1f2937',
-    description: '',
+    description: 'Pure black with gray accents',
     colors: {
       primary: '#1f2937',
       primarySoft: '#374151',
@@ -225,21 +226,21 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'highcontrast',
-    name: 'Blue High Contrast',
-    displayColor: '#000000',
-    description: '',
+    name: 'High Contrast',
+    displayColor: '#00B4FF',
+    description: 'Accessibility-focused high contrast (WCAG AAA)',
     colors: {
-      primary: '#0066FF',      // Bright blue for WCAG AAA
-      primarySoft: '#3385FF',   // Lighter bright blue
-      secondary: '#FFD700',     // Gold remains high contrast
-      accent: '#FF0000',        // Pure red for maximum visibility
-      bgDeep: '#000000',        // Pure black background
-      bgAlt: '#000000',         // Pure black alt
-      surface1: '#1A1A1A',      // Very dark gray for cards
-      surface2: '#262626',      // Slightly lighter for nested
-      text: '#FFFFFF',          // Pure white text
-      textMuted: '#B3B3B3',     // Light gray for WCAG AA
-      border: '#666666',        // Medium gray for clear borders
+      primary: '#00B4FF',      // Bright cyan-blue - 8.6:1 contrast
+      primarySoft: '#66D4FF',   // Lighter cyan - 12.8:1 contrast
+      secondary: '#FFD700',     // Gold - 14.5:1 contrast
+      accent: '#FF3366',        // Bright red-pink - 7.5:1 contrast
+      bgDeep: '#000000',        // Pure black for maximum contrast
+      bgAlt: '#000000',         // Pure black
+      surface1: '#1A1A1A',      // Dark gray for cards
+      surface2: '#2D2D2D',      // Lighter gray - more distinguishable
+      text: '#FFFFFF',          // Pure white - 21:1 contrast
+      textMuted: '#E0E0E0',     // Light gray - 13.5:1 contrast (WCAG AAA)
+      border: '#808080',        // Medium gray - clearly visible
     },
     gradient: {
       stops: [
@@ -247,6 +248,34 @@ export const THEMES: ThemeDefinition[] = [
         { position: '30%', color: '#000000' },   // Pure black
         { position: '60%', color: '#0A0A0A' },   // Tiny variation
         { position: '100%', color: '#000000' },  // Pure black
+      ],
+    },
+  },
+  {
+    id: 'halloween',
+    name: '🎃 Halloween',
+    displayColor: '#FF6B35',
+    description: 'Spooky seasonal theme with pumpkin orange and midnight purple',
+    colors: {
+      primary: '#FF6B35',       // Pumpkin orange
+      primarySoft: '#FF8C5A',   // Lighter pumpkin
+      secondary: '#FFD23F',     // Candy corn yellow
+      accent: '#8B1538',        // Blood red
+      bgDeep: '#0A0108',        // Midnight black
+      bgAlt: '#110A0F',         // Purple-tinted black
+      surface1: '#1A0F17',      // Dark purple surface
+      surface2: '#2B1624',      // Lighter purple surface
+      text: '#F5E6E8',          // Ghostly white
+      textMuted: '#B68FA5',     // Muted purple-gray
+      border: '#4A2040',        // Purple border
+    },
+    gradient: {
+      stops: [
+        { position: '0%', color: '#0A0108' },                    // Midnight black
+        { position: '25%', color: 'rgba(139, 21, 56, 0.3)' },   // Blood red glow
+        { position: '50%', color: 'rgba(255, 107, 53, 0.15)' }, // Pumpkin orange glow
+        { position: '75%', color: 'rgba(75, 0, 130, 0.25)' },   // Deep purple
+        { position: '100%', color: '#0A0108' },                  // Back to midnight
       ],
     },
   },
@@ -289,21 +318,18 @@ export function generateCSSVariables(theme: ThemeDefinition): Record<string, str
 }
 
 export function applyTheme(themeId: string): void {
-  const theme = getThemeById(themeId)
-  if (!theme) {
-    // Theme not found, use default
-    return
-  }
-  
-  const cssVars = generateCSSVariables(theme)
-  
-  // Apply CSS variables to root element
-  Object.entries(cssVars).forEach(([key, value]) => {
-    document.documentElement.style.setProperty(key, value)
-  })
-  
-  // Set data-theme attribute for CSS-based styling
+  // Pure CSS-based theming - just set the data-theme attribute
+  // All styling is handled by CSS rules in app.css
   document.documentElement.setAttribute('data-theme', themeId)
+  
+  // Remove any inline styles that might have been set by the old system
+  const root = document.documentElement
+  const stylesToRemove = [
+    '--color-primary', '--color-primary-soft', '--color-secondary', '--color-accent',
+    '--color-bg-deep', '--color-bg-alt', '--color-surface-1', '--color-surface-2',
+    '--color-text', '--color-text-muted', '--color-border', '--ck-bg-gradient'
+  ]
+  stylesToRemove.forEach(prop => root.style.removeProperty(prop))
 }
 
 export function getStoredTheme(): string {
