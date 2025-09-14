@@ -3,22 +3,24 @@ import { Router } from 'express'
 import { query } from '../config/database'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
+import { featureFlagService } from '../services/featureFlagService'
 
 const router = Router()
 
-// Get all feature flags (public endpoint)
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+// Get all feature flags evaluated for current user
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await query(
-      'SELECT flag_name, is_enabled FROM feature_flags WHERE is_enabled = true',
-    )
+    // Get user from request if authenticated
+    const user = (req as any).user ? {
+      id: (req as any).user.id,
+      role: (req as any).user.role,
+      is_admin: (req as any).user.is_admin,
+      is_beta_user: (req as any).user.is_beta_user,
+      is_vip: (req as any).user.is_vip,
+      has_premium: (req as any).user.has_premium
+    } : undefined
 
-    // Convert to object format for easier frontend consumption
-    const flags: Record<string, boolean> = {}
-    result.rows.forEach((row: any) => {
-      flags[row.flag_name] = row.is_enabled
-    })
-
+    const flags = await featureFlagService.evaluateForUser(user)
     res.json({ flags })
   } catch (error) {
     console.error('Error fetching feature flags:', error)
@@ -43,30 +45,73 @@ router.get(
   },
 )
 
-// Admin: Toggle a feature flag
+// Admin: Update a feature flag
 router.put(
   '/:flagName',
   authenticateToken,
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     const { flagName } = req.params
-    const { enabled } = req.body
+    const { enabled, access_level, rollout_percentage, target_criteria, reason } = req.body
+    const userId = (req as any).user?.id
 
     try {
-      const result = await query(
-        'UPDATE feature_flags SET is_enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE flag_name = $2 RETURNING *',
-        [enabled, flagName],
-      )
+      const updates: any = {}
+      if (enabled !== undefined) updates.is_enabled = enabled
+      if (access_level !== undefined) updates.access_level = access_level
+      if (rollout_percentage !== undefined) updates.rollout_percentage = rollout_percentage
+      if (target_criteria !== undefined) updates.target_criteria = target_criteria
 
-      if (result.rows.length === 0) {
+      const flag = await featureFlagService.updateFlag(flagName, updates, userId, reason)
+
+      if (!flag) {
         res.status(404).json({ error: 'Feature flag not found' })
         return
       }
 
-      res.json({ flag: result.rows[0] })
+      res.json({ flag })
     } catch (error) {
       console.error('Error updating feature flag:', error)
       res.status(500).json({ error: 'Failed to update feature flag' })
+    }
+  },
+)
+
+// Admin: Get audit log
+router.get(
+  '/audit',
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { flag_name, limit = 50 } = req.query
+
+    try {
+      const auditLog = await featureFlagService.getAuditLog(
+        flag_name as string,
+        Number(limit)
+      )
+      res.json({ audit: auditLog })
+    } catch (error) {
+      console.error('Error fetching audit log:', error)
+      res.status(500).json({ error: 'Failed to fetch audit log' })
+    }
+  },
+)
+
+// Admin: Set user override
+router.post(
+  '/user-override',
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    const { user_id, flag_name, enabled } = req.body
+
+    try {
+      await featureFlagService.setUserOverride(user_id, flag_name, enabled)
+      res.json({ success: true })
+    } catch (error) {
+      console.error('Error setting user override:', error)
+      res.status(500).json({ error: 'Failed to set user override' })
     }
   },
 )

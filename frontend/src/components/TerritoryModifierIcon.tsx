@@ -1,4 +1,6 @@
 import type React from 'react'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 
 export interface TerritoryModifier {
   name: string
@@ -24,6 +26,13 @@ export const TerritoryModifierIcon: React.FC<TerritoryModifierIconProps> = ({
   showTooltip = true,
   className = '',
 }) => {
+  // Check if territory modifiers feature is enabled
+  const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
+  
+  // Don't render if feature is disabled
+  if (!territoryModifiersEnabled) {
+    return null
+  }
   const sizeClasses = {
     small: 'w-5 h-5 text-xs',
     medium: 'w-7 h-7 text-sm',

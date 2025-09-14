@@ -9,10 +9,34 @@ ConquestK uses a **pure CSS-based theme system** that provides instant theme swi
 ### CSS-First Approach
 All theme definitions are maintained as CSS rules in `/frontend/src/app.css` using `[data-theme="name"]` selectors. JavaScript only changes the data-theme attribute - CSS handles all the styling automatically.
 
-### Theme Files
-- **`app.css`**: Contains all CSS theme definitions (source of truth for styling)
-- **`themes.config.ts`**: Theme metadata for UI display (names, descriptions, colors)
-- **`themeLoader.ts`**: Minimal script to prevent flash on page load
+### 📁 File Locations & Responsibilities
+
+1. **`/frontend/src/app.css`** 
+   - Theme definitions using `[data-theme="themename"]` selectors
+   - CSS variables for each theme (colors, gradients, effects)
+   - Source of truth for all theme styling
+
+2. **`/frontend/src/config/themes.config.ts`**
+   - Theme metadata (names, descriptions, display colors)
+   - `applyTheme()` function - Sets data-theme attribute
+   - `getStoredTheme()` - Retrieves saved theme preference
+   - No longer applies inline styles (pure CSS now)
+
+3. **`/frontend/src/utils/themeLoader.ts`**
+   - Script injected into index.html before React loads
+   - Sets initial theme from localStorage
+   - Prevents flash of unstyled content (FOUC)
+
+4. **`/frontend/src/constants/colors.ts`**
+   - Game-specific color constants (NOT themes)
+   - `PLAYER_COLORS` - 13 player colors for game pieces
+   - `PREMIUM_PLAYER_COLORS` - VIP/premium player colors
+   - `RANK_COLORS` - ELO rank display colors
+   - **Note**: Theme objects here are DEPRECATED and unused
+
+5. **`/backend/migrations/009_user_preferences.sql`**
+   - Database persistence for theme preferences
+   - Syncs across devices/sessions
 
 ### Theme Structure
 Each theme defines:
@@ -50,6 +74,23 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | black | Gray (#1f2937) | Pure black with gray accents |
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
 | halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
+
+## How Theme Switching Works
+
+1. **User selects theme** → Settings page calls `applyTheme(themeId)`
+2. **Apply theme** → Sets `document.documentElement.setAttribute('data-theme', themeId)`
+3. **CSS takes over** → Browser applies matching `[data-theme="themename"]` styles
+4. **Save preference** → Stored in localStorage and database
+5. **Next visit** → themeLoader.ts applies saved theme before React loads
+
+## Migration Status
+
+- ✅ Moved from JavaScript objects to pure CSS
+- ✅ Removed inline style application
+- ✅ Database persistence implemented
+- ✅ Zero-flash loading implemented
+- ⚠️ Some components still use CORE_COLORS (gradual migration)
+- 🔄 Theme objects in colors.ts marked deprecated
 
 ## Usage
 
@@ -161,17 +202,27 @@ const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'green', 'black
 
 ## Best Practices
 
-### DO:
+### ✅ DO:
 - Use semantic color classes (`bg-primary`, `text-muted`)
 - Test all themes when adding new components
 - Use `hover:brightness-110` for consistent hover effects
 - Keep backgrounds very dark for dark themes (#0a0a0f or darker)
+- Define themes in app.css using data-theme selectors
+- Ensure adequate contrast ratios (WCAG AA minimum)
 
-### DON'T:
-- Hardcode colors (`bg-blue-600`, `text-gray-400`)
-- Use inline styles for colors
-- Create theme-specific components
-- Mix semantic and hardcoded colors
+### ❌ DON'T:
+- Don't add theme colors to `colors.ts` (use CSS)
+- Don't apply inline styles for theming (use CSS variables)
+- Don't import theme objects from colors.ts (they're deprecated)
+- Don't modify theme colors in JavaScript (CSS-only)
+
+## Performance Benefits
+
+- **Instant switching** - No JavaScript processing
+- **Zero flash** - Theme applied before React
+- **Smaller bundle** - No theme objects in JS
+- **Browser optimized** - Native CSS handling
+- **Cache friendly** - CSS can be cached separately
 
 ## Component Examples
 
