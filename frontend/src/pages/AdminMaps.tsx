@@ -412,7 +412,7 @@ export const AdminMaps: React.FC = () => {
                         {/* Standard Actions */}
                         <div className="flex gap-2 flex-wrap">
                           <button
-                            onClick={() => window.location.href = `/create-map?edit=${map.id}`}
+                            onClick={() => window.open(`/map-editor?edit=${map.id}`, '_blank')}
                             className="text-violet hover:text-violet-soft text-sm font-medium"
                             title="Open in Map Editor"
                           >

@@ -84,7 +84,7 @@ export default function MapEditorTokens() {
     name: generateMapName(),
     description: '',
     minPlayers: 2,
-    maxPlayers: 6,
+    maxPlayers: 12,
     imageUrl: undefined,
     territories: [],
     continents: [],
@@ -198,7 +198,7 @@ export default function MapEditorTokens() {
         name: map.name,
         description: map.description || '',
         minPlayers: map.min_players || 2,
-        maxPlayers: map.max_players || 6,
+        maxPlayers: map.max_players || 12,
         imageUrl: map.image_url,
         territories: map.metadata?.territories || [],
         continents: map.metadata?.continents || [],
@@ -215,18 +215,13 @@ export default function MapEditorTokens() {
   const loadDraftMaps = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const isAdmin = user.isAdmin || false
       
-      // Get maps with draft status
-      const response = await api.get('/maps', {
-        params: {
-          status: 'draft',
-          creator: isAdmin ? undefined : user.id
-        }
-      })
+      // Get user's maps including drafts
+      const response = await api.get('/maps/my-maps')
       
+      // Filter for draft maps only
       setAvailableDrafts(response.data.filter((map: any) => 
-        map.status === 'draft' && (isAdmin || map.creator_id === user.id)
+        map.status === 'draft'
       ))
       setShowDraftsList(true)
     } catch (error) {
@@ -561,10 +556,6 @@ export default function MapEditorTokens() {
         return
       }
 
-      if (state.continents.length < 2) {
-        alert('Maps must have at least 2 continents to be submitted for approval')
-        return
-      }
 
       const confirmed = confirm(
         'Submit this map for approval?\n\n' +
@@ -1123,7 +1114,7 @@ export default function MapEditorTokens() {
                       name: generateMapName(),
                       description: '',
                       minPlayers: 2,
-                      maxPlayers: 6,
+                      maxPlayers: 12,
                       imageUrl: undefined,
                       territories: [],
                       continents: [],
@@ -1214,13 +1205,6 @@ export default function MapEditorTokens() {
                 title="Import map data from JSON file"
               >
                 📂 Import JSON
-              </button>
-              <button
-                onClick={loadFromLocalStorage}
-                className="px-3 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
-                title="Load auto-saved draft"
-              >
-                🔄 Load Draft
               </button>
             </div>
           </div>
@@ -1739,7 +1723,7 @@ export default function MapEditorTokens() {
                     value={state.maxPlayers}
                     onChange={(e) => setState((prev) => ({ 
                       ...prev, 
-                      maxPlayers: Math.max(Math.min(12, parseInt(e.target.value) || 6), prev.minPlayers) 
+                      maxPlayers: Math.max(Math.min(12, parseInt(e.target.value) || 12), prev.minPlayers) 
                     }))}
                     className="w-full px-3 py-1 bg-surface-2 rounded text-white"
                   />
