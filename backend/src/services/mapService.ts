@@ -788,9 +788,9 @@ export class MapService {
       continentId: row.continent,
       boundaryCoords: this.safeJsonParse(row.polygon_data, []),
       armyPosition: { x: 0, y: 0 }, // No army position columns in schema
-      abilityTypeId: null, // No ability_type_id in schema
+      abilityTypeId: undefined, // No ability_type_id in schema
       customAbilityConfig: undefined,
-      startingOwnerSlot: null,
+      startingOwnerSlot: undefined,
       startingArmies: 1,
       createdAt: new Date(row.created_at),
     }
