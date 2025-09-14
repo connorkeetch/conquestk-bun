@@ -27,6 +27,17 @@ interface Continent {
   bonus: number
 }
 
+interface LabelSettings {
+  showLabels: boolean
+  preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom'
+  fontSize?: number        // 10-24
+  fontFamily?: string      // 'Arial', 'Georgia', etc.
+  textColor?: string       // hex color
+  showBackground?: boolean
+  backgroundColor?: string // hex color  
+  backgroundOpacity?: number // 0-1
+}
+
 interface MapState {
   name: string
   description?: string
@@ -42,6 +53,7 @@ interface MapState {
   imageWidth: number  // Actual image dimensions
   imageHeight: number
   imageScale: number  // Scale factor for resizing image
+  labelSettings?: LabelSettings  // Label customization settings
 }
 
 type EditorMode = 'territories' | 'continents' | 'connections' | 'capitals'
@@ -95,16 +107,86 @@ export default function MapEditorTokens() {
     imageWidth: 800,  // Default image dimensions
     imageHeight: 600,
     imageScale: 1,  // Default scale
+    labelSettings: {
+      showLabels: true,
+      preset: 'classic',
+      fontSize: 14,
+      fontFamily: 'Arial',
+      textColor: '#000000',
+      showBackground: true,
+      backgroundColor: '#ffffff',
+      backgroundOpacity: 0.8
+    }
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
   const [showCropper, setShowCropper] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [showLabelSettings, setShowLabelSettings] = useState(false)
+  
+  // Label preset definitions
+  const LABEL_PRESETS = {
+    classic: { 
+      fontSize: 14, 
+      fontFamily: 'Arial',
+      textColor: '#000000', 
+      showBackground: true, 
+      backgroundColor: '#ffffff', 
+      backgroundOpacity: 0.8 
+    },
+    modern: { 
+      fontSize: 12, 
+      fontFamily: 'system-ui',
+      textColor: '#ffffff', 
+      showBackground: true, 
+      backgroundColor: '#000000', 
+      backgroundOpacity: 0.6 
+    },
+    minimal: { 
+      fontSize: 12, 
+      fontFamily: 'Arial',
+      textColor: '#333333', 
+      showBackground: false,
+      backgroundColor: '#ffffff',
+      backgroundOpacity: 0
+    },
+    highContrast: { 
+      fontSize: 16, 
+      fontFamily: 'Arial',
+      textColor: '#ffffff', 
+      showBackground: true, 
+      backgroundColor: '#000000', 
+      backgroundOpacity: 1 
+    }
+  }
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('territories')
+  
+  // Apply label preset
+  const applyLabelPreset = (preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom') => {
+    if (preset === 'custom') {
+      setState(prev => ({
+        ...prev,
+        labelSettings: {
+          ...prev.labelSettings!,
+          preset: 'custom'
+        }
+      }))
+    } else {
+      const presetSettings = LABEL_PRESETS[preset]
+      setState(prev => ({
+        ...prev,
+        labelSettings: {
+          showLabels: prev.labelSettings?.showLabels ?? true,
+          preset,
+          ...presetSettings
+        }
+      }))
+    }
+  }
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
@@ -566,11 +648,7 @@ export default function MapEditorTokens() {
       if (!confirmed) return
 
       // Update map status to pending_review
-      const apiUrl = import.meta.env.MODE === 'production' 
-        ? `/api/maps/${editingMapId}` 
-        : `http://localhost:5001/api/maps/${editingMapId}`
-
-      const result = await api.patch(apiUrl, {
+      const result = await api.patch(`/maps/${editingMapId}`, {
         status: 'pending_review'
       })
 
@@ -961,6 +1039,171 @@ export default function MapEditorTokens() {
         </div>
       )}
 
+      {/* Label Settings Modal */}
+      {showLabelSettings && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-white mb-4">🏷️ Territory Label Settings</h2>
+            
+            <div className="space-y-4">
+              {/* Preset Themes */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Style Preset</label>
+                <select
+                  value={state.labelSettings?.preset || 'classic'}
+                  onChange={(e) => applyLabelPreset(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
+                >
+                  <option value="classic">Classic (Black on White)</option>
+                  <option value="modern">Modern (White on Black)</option>
+                  <option value="minimal">Minimal (No Background)</option>
+                  <option value="highContrast">High Contrast</option>
+                  <option value="custom">Custom...</option>
+                </select>
+              </div>
+
+              {/* Custom Settings (only show when Custom is selected) */}
+              {state.labelSettings?.preset === 'custom' && (
+                <>
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-sm font-medium text-white mb-3">Custom Settings</h3>
+                    
+                    {/* Font Size */}
+                    <div className="mb-3">
+                      <label className="block text-sm text-muted mb-1">
+                        Font Size: {state.labelSettings?.fontSize || 14}px
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="24"
+                        value={state.labelSettings?.fontSize || 14}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          labelSettings: {
+                            ...prev.labelSettings!,
+                            fontSize: Number(e.target.value)
+                          }
+                        }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Text Color */}
+                    <div className="mb-3">
+                      <label className="block text-sm text-muted mb-1">Text Color</label>
+                      <input
+                        type="color"
+                        value={state.labelSettings?.textColor || '#000000'}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          labelSettings: {
+                            ...prev.labelSettings!,
+                            textColor: e.target.value
+                          }
+                        }))}
+                        className="w-full h-8 rounded cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Background Toggle */}
+                    <div className="mb-3">
+                      <label className="flex items-center text-sm text-white">
+                        <input
+                          type="checkbox"
+                          checked={state.labelSettings?.showBackground || false}
+                          onChange={(e) => setState(prev => ({
+                            ...prev,
+                            labelSettings: {
+                              ...prev.labelSettings!,
+                              showBackground: e.target.checked
+                            }
+                          }))}
+                          className="mr-2"
+                        />
+                        Show Background
+                      </label>
+                    </div>
+
+                    {/* Background Settings */}
+                    {state.labelSettings?.showBackground && (
+                      <>
+                        <div className="mb-3">
+                          <label className="block text-sm text-muted mb-1">Background Color</label>
+                          <input
+                            type="color"
+                            value={state.labelSettings?.backgroundColor || '#ffffff'}
+                            onChange={(e) => setState(prev => ({
+                              ...prev,
+                              labelSettings: {
+                                ...prev.labelSettings!,
+                                backgroundColor: e.target.value
+                              }
+                            }))}
+                            className="w-full h-8 rounded cursor-pointer"
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="block text-sm text-muted mb-1">
+                            Background Opacity: {Math.round((state.labelSettings?.backgroundOpacity || 0.8) * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={(state.labelSettings?.backgroundOpacity || 0.8) * 100}
+                            onChange={(e) => setState(prev => ({
+                              ...prev,
+                              labelSettings: {
+                                ...prev.labelSettings!,
+                                backgroundOpacity: Number(e.target.value) / 100
+                              }
+                            }))}
+                            className="w-full"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Font Family */}
+                    <div className="mb-3">
+                      <label className="block text-sm text-muted mb-1">Font Family</label>
+                      <select
+                        value={state.labelSettings?.fontFamily || 'Arial'}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          labelSettings: {
+                            ...prev.labelSettings!,
+                            fontFamily: e.target.value
+                          }
+                        }))}
+                        className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="system-ui">System UI</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Monaco">Monaco</option>
+                        <option value="Courier New">Courier New</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => setShowLabelSettings(false)}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded hover:brightness-110"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -1186,6 +1429,29 @@ export default function MapEditorTokens() {
                 title="Show/hide alignment grid"
               >
                 📏 Grid
+              </button>
+              
+              {/* Label Controls */}
+              <button
+                onClick={() => setState(prev => ({
+                  ...prev,
+                  labelSettings: {
+                    ...prev.labelSettings!,
+                    showLabels: !prev.labelSettings?.showLabels
+                  }
+                }))}
+                className={`px-3 py-1 rounded text-sm ${state.labelSettings?.showLabels ? 'bg-primary' : 'bg-surface-2'}`}
+                title="Show/hide territory labels"
+              >
+                🏷️ Labels
+              </button>
+              
+              <button
+                onClick={() => setShowLabelSettings(true)}
+                className="px-3 py-1 bg-surface-2 rounded text-sm hover:bg-gray-600"
+                title="Customize label appearance"
+              >
+                ⚙️ Label Style
               </button>
             </div>
 
@@ -1612,12 +1878,25 @@ export default function MapEditorTokens() {
                     )}
                     </div>
                     {/* Territory name label */}
-                    {state.selectedTerritoryId === territory.id && (
+                    {territory.name && state.labelSettings?.showLabels && (
                       <div 
-                        className="absolute left-1/2 transform -translate-x-1/2 text-xs bg-black/60 px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none"
+                        className="absolute left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10 pointer-events-none"
                         style={{ 
                           top: '100%',
-                          marginTop: '4px' 
+                          marginTop: '4px',
+                          fontSize: `${state.labelSettings?.fontSize || 14}px`,
+                          fontFamily: state.labelSettings?.fontFamily || 'Arial',
+                          color: state.labelSettings?.textColor || '#000000',
+                          ...(state.labelSettings?.showBackground && {
+                            backgroundColor: state.labelSettings?.backgroundColor || '#ffffff',
+                            opacity: state.labelSettings?.backgroundOpacity || 0.8,
+                            padding: '2px 6px',
+                            borderRadius: '3px'
+                          }),
+                          ...(state.selectedTerritoryId === territory.id && {
+                            fontWeight: 'bold',
+                            textDecoration: 'underline'
+                          })
                         }}
                       >
                         {territory.name}

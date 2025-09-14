@@ -325,7 +325,20 @@ export const CORE_COLORS = {
 // This architecture enables both color themes and style themes
 
 export const AVAILABLE_THEMES = {
-  // Default theme - black/dark gray to match error page
+  // Dark theme - black/dark gray (default theme)
+  'dark': {
+    ...THEME_COLORS,
+    primary: '#1f2937',           // Dark gray primary
+    primarySoft: '#374151',       // Lighter gray for hover states
+    secondary: '#9ca3af',         // Medium gray secondary
+    accent: '#f3f4f6',            // Light gray accent
+    backgroundDeep: '#000000',    // Pure black background
+    backgroundAlt: '#050505',     // Near black alternative
+    surface1: '#0a0a0a',          // Very dark surface
+    surface2: '#111111',          // Dark elevated surface
+  },
+  
+  // Default theme - alias for dark theme for backwards compatibility
   'default': {
     ...THEME_COLORS,
     primary: '#1f2937',           // Dark gray primary
