@@ -15,7 +15,7 @@ export const themeLoaderScript = `
     storedTheme = localStorage.getItem('colorTheme') || DEFAULT_THEME;
     
     // Validate theme exists (available themes)
-    const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'green', 'black', 'highcontrast', 'halloween'];
+    const validThemes = ['default', 'red', 'violet', 'blue', 'green', 'black', 'highcontrast', 'halloween'];
     if (!validThemes.includes(storedTheme)) {
       storedTheme = DEFAULT_THEME;
     }
