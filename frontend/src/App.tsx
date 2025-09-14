@@ -38,7 +38,12 @@ const Statistics = lazy(() => import('./pages/Statistics'))
 const TutorialPage = lazy(() => import('./pages/TutorialPage'))
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
+const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const AdminMaps = lazy(() => import('./pages/AdminMaps'))
+const AdminGames = lazy(() => import('./pages/AdminGames'))
+const AdminSettings = lazy(() => import('./pages/AdminSettings'))
 const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -418,21 +423,60 @@ function App() {
           element={
             <AuthGuard requireAdmin={true}>
               <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+                <AdminLayout />
+              </Suspense>
+            </AuthGuard>
+          }
+        >
+          <Route
+            index
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
                 <AdminPage />
               </Suspense>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/admin/map-review/:reviewId"
-          element={
-            <AuthGuard requireAdmin={true}>
-              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
+            }
+          />
+          <Route
+            path="users"
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
+                <AdminUsers />
+              </Suspense>
+            }
+          />
+          <Route
+            path="maps"
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
+                <AdminMaps />
+              </Suspense>
+            }
+          />
+          <Route
+            path="games"
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
+                <AdminGames />
+              </Suspense>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
+                <AdminSettings />
+              </Suspense>
+            }
+          />
+          <Route
+            path="map-review/:reviewId"
+            element={
+              <Suspense fallback={<div className="p-6"><div className="text-white">Loading...</div></div>}>
                 <AdminMapReview />
               </Suspense>
-            </AuthGuard>
-          }
-        />
+            }
+          />
+        </Route>
 
         {/* Legacy Routes - Backward Compatibility */}
         <Route
