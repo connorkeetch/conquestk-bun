@@ -179,3 +179,104 @@
 - **Adjacency Editor**: Connect territories that can attack each other
 - **Ability Selector**: Assign special powers to territories
 - **Validation**: Check map connectivity and territory overlaps
+
+## 🚩 Feature Flag System
+
+### Overview
+ConquestK uses a comprehensive feature flag system for controlled feature rollouts, A/B testing, and safe production experimentation. This enables gradual feature releases and quick rollbacks without code deployments.
+
+### Database Schema
+```sql
+feature_flags
+├── flag_name (unique identifier)
+├── description
+├── access_level ('disabled', 'internal', 'beta', 'public')
+├── rollout_percentage (0-100)
+├── target_criteria (JSONB for advanced targeting)
+├── category (gameplay, ui, experimental, premium, vip)
+└── dependencies (array of required flags)
+
+user_feature_flags (user-specific overrides)
+├── user_id
+├── flag_name
+└── is_enabled
+
+feature_flag_audit (change tracking)
+├── flag_name
+├── changed_by
+├── change_type
+├── old_value
+└── new_value
+```
+
+### Access Levels
+1. **disabled** - Feature completely off
+2. **internal** - Admin/tester accounts only
+3. **beta** - Beta users and above
+4. **public** - All users (respects rollout_percentage)
+
+### Implementation Pattern
+```typescript
+// Frontend
+const spoilsEnabled = useFeatureFlag('gameplay_spoils_of_war');
+
+// Backend
+const flags = await featureFlagService.evaluateForUser(req.user);
+if (flags['gameplay_territory_modifiers']) {
+  // Apply feature logic
+}
+```
+
+### Current Feature Flags
+
+| Flag | Description | Status | Category |
+|------|-------------|--------|----------|
+| `gameplay_spoils_of_war` | Card trading system | Partial | gameplay |
+| `gameplay_territory_modifiers` | Special territory abilities | Ready | gameplay |
+| `ui_holiday_themes` | Seasonal UI themes | Planned | ui |
+| `experimental_ai_players` | Computer opponents | Development | experimental |
+| `vip_exclusive_maps` | VIP-only map access | Ready | vip |
+| `premium_advanced_stats` | Detailed analytics | Planned | premium |
+
+### Rollout Strategy
+1. **Internal Testing** (1-2 days) - `access_level: 'internal'`
+2. **Beta Testing** (3-7 days) - `access_level: 'beta'`
+3. **Gradual Rollout** (1-2 weeks) - Start at 10%, increase by 20% every 2-3 days
+4. **Full Release** - 100% rollout, remove flag after 30 days stable
+
+### Admin Management
+Feature flags are managed at `/admin/settings` with:
+- Search and filter by category/status
+- Bulk enable/disable operations
+- Audit log viewing
+- Rollout percentage controls
+- Target criteria editor
+
+### Developer Guidelines
+
+#### Naming Convention
+```javascript
+'category_feature_name' // e.g., 'gameplay_spoils_of_war'
+```
+
+#### Categories
+- **gameplay** - Core game mechanics
+- **ui** - Interface changes
+- **experimental** - New/untested features
+- **premium** - Premium user features
+- **vip** - VIP-only features
+
+#### Adding a New Feature Flag
+1. Define in `frontend/src/constants/featureFlags.ts`
+2. Add database migration
+3. Implement feature checks in code
+4. Test both enabled/disabled states
+5. Document in admin panel
+
+#### Best Practices
+- Start with `internal` access level
+- Monitor metrics during rollout
+- Remove fully-deployed flags after 30 days
+- Test with flag both on and off
+- Use consistent naming conventions
+- Track changes in audit log

@@ -59,19 +59,19 @@ cd backend && npm run make-admin   # Make user admin (interactive)
 - **Testing**: Jest (backend) + Vitest (frontend)
 - **Code Style**: Biome (2 spaces, single quotes JS, double quotes JSX)
 
-### 🎨 Theme Architecture (NEW)
-**Semantic CSS Variable System** - Complete single-source-of-truth theming:
+### 🎨 Theme Architecture
+**Pure CSS Variable System** - Zero-flash theme switching with no JavaScript overhead:
+- **CSS-First**: All themes defined in `app.css` using `[data-theme="name"]` selectors
 - **Semantic Variables**: `--color-primary`, `--color-secondary`, `--color-accent` (not color-specific)
-- **3D Theming**: Base (dark/light) × Color (violet/red/blue/green/gold) × Style (modern/cowboy/myspace)
-- **Component Classes**: `btn-primary`, `form-input`, `box1` - all adapt automatically to themes
-- **Theme Switching**: `document.setAttribute('data-theme', 'red')` changes entire app
+- **Available Themes**: default, red, violet, blue, green, black, highcontrast, halloween
+- **Theme Switching**: `document.setAttribute('data-theme', 'red')` changes entire app instantly
 
 **Key Files:**
-- `src/constants/colors.ts` - Color definitions & theme palettes (THEME_COLORS, SEMANTIC_COLORS)
-- `src/app.css` - Semantic CSS variables + component classes + theme definitions
-- `src/store/settingsSlice.ts` - Theme state management (ColorTheme, StyleTheme types)
+- `src/app.css` - Theme definitions (CSS variables for each theme)
+- `src/config/themes.config.ts` - Theme metadata and switching logic
+- `src/constants/colors.ts` - Player/rank colors only (theme objects deprecated)
 
-**Usage:** Change colors globally by modifying CORE_COLORS. Switch themes via Redux setTheme().
+**Full Documentation**: See `/docs/THEME-SYSTEM.md` for complete theme architecture, migration guide, and best practices.
 
 ### Key Files & Components
 ```
@@ -119,6 +119,7 @@ frontend/
 8. **Migration naming**: Use format `XXX_description.sql` (e.g., `004_add_user_preferences.sql`)
 9. **Test migrations locally** before pushing to production
 10. **Follow docs/CODING-STANDARDS.md** - Apply all 10 core principles
+11. **Feature Flags**: All new features MUST use feature flags (see docs/ARCHITECTURE.md#feature-flag-system)
 
 ## 📊 Monitoring & Error Tracking
 - **Sentry**: Integrated for error tracking (configured via SENTRY_DSN env var)
@@ -337,10 +338,11 @@ Frontend proxies `/api` requests to backend (configured in `vite.config.ts`).
 - **TODO.md** - Development task list
 
 ### /docs (Technical Documentation)
-- **ARCHITECTURE.md** - System design and architecture
+- **ARCHITECTURE.md** - System design, architecture, and **Feature Flag System**
 - **DEVELOPMENT.md** - Development environment setup
 - **DEPLOYMENT.md** - Deployment instructions (canonical version)
 - **PROJECT-STATUS.md** - Feature completion status
+- **THEME-SYSTEM.md** - Complete theme architecture, file locations, migration guide
 - **TROUBLESHOOTING.md** - Common issues and solutions
 - **UPGRADE-LOG.md** - Version upgrade history
 - **MAP-FORMAT.md** - Map file format specification

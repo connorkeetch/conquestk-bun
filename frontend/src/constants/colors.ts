@@ -1,6 +1,16 @@
 // Conquest K Color System Constants
-// 🎯 SINGLE SOURCE OF TRUTH FOR ALL COLORS IN THE APP
-// Restructured for Multi-Theme Support (Red Theme, Blue Theme, Cowboy Theme, etc.)
+// 🎯 COLOR CONSTANTS FOR GAME ELEMENTS (Player colors, ranks, etc.)
+// 
+// ⚠️ IMPORTANT: THEMES ARE NOW IN CSS, NOT HERE!
+// - Theme definitions: /frontend/src/app.css (search for [data-theme=)
+// - Theme metadata: /frontend/src/config/themes.config.ts
+// - Theme switching: Pure CSS via data-theme attribute
+// 
+// This file now contains:
+// - Player colors (PLAYER_COLORS, PREMIUM_PLAYER_COLORS)
+// - Rank colors (RANK_COLORS)
+// - Core UI colors (CORE_COLORS - still used by some components)
+// - Helper functions for color management
 
 /* ===========================================================================
  * PLAYER COLOR SYSTEM DOCUMENTATION
@@ -43,13 +53,14 @@
  * ===========================================================================
  */
 
-// ===== SEMANTIC COLOR CATEGORIES =====
-// 🎨 Organized by PURPOSE not HUE - enables theme switching
-// Each category serves different themes while maintaining consistency
+// ===== LEGACY THEME DEFINITIONS (DEPRECATED) =====
+// ⚠️ IMPORTANT: Themes are now defined in CSS, not JavaScript!
+// See /frontend/src/app.css for theme definitions (search for [data-theme=)
+// See /frontend/src/config/themes.config.ts for theme metadata
+// These objects below are kept temporarily for reference during migration
 
-// ===== THEME ROLE COLORS =====
-// These will be dynamically overridden per theme
-export const THEME_COLORS = {
+// DEPRECATED - Use CSS variables instead
+const THEME_COLORS = {
   // Current default theme uses these values
   primary: '#1f2937',         // Main brand color (dark gray in default theme)
   primarySoft: '#374151',     // Softer version for hover states
@@ -65,7 +76,8 @@ export const THEME_COLORS = {
 
 // ===== SEMANTIC STATE COLORS =====
 // These stay consistent across themes for UX clarity
-export const SEMANTIC_COLORS = {
+// DEPRECATED - Use CSS variables instead
+const SEMANTIC_COLORS = {
   success: '#10B981',         // Success states (always green spectrum)
   warning: '#F59E0B',         // Warning states (always yellow/orange spectrum)
   danger: '#B22222',          // Error states (always red spectrum)
@@ -74,7 +86,8 @@ export const SEMANTIC_COLORS = {
 
 // ===== NEUTRAL COLORS =====
 // Foundation colors that work across all themes
-export const NEUTRAL_COLORS = {
+// DEPRECATED - Use CSS variables instead  
+const NEUTRAL_COLORS = {
   black: '#000000',           // Pure black
   white: '#FFFFFF',           // Pure white
   text: '#F9FAFB',            // Primary text
@@ -95,7 +108,8 @@ export const NEUTRAL_COLORS = {
 
 // ===== THEME PALETTE LIBRARY =====
 // All colors available for different themes (organized by hue)
-export const THEME_PALETTE = {
+// DEPRECATED - Use CSS variables instead
+const THEME_PALETTE = {
   // VIOLET FAMILY (current default)
   violets: {
     violet: '#7C3AED',
@@ -324,7 +338,8 @@ export const CORE_COLORS = {
 // 🎨 Different themes that override THEME_COLORS
 // This architecture enables both color themes and style themes
 
-export const AVAILABLE_THEMES = {
+// DEPRECATED - Themes now defined in app.css
+const AVAILABLE_THEMES = {
   // Dark theme - black/dark gray (default theme)
   'dark': {
     ...THEME_COLORS,
