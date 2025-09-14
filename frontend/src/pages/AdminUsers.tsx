@@ -13,7 +13,7 @@ interface User {
   elo: number
   isVip?: boolean
   isAdmin?: boolean
-  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise'
+  premiumTier?: 'free' | 'premium'
   vipReason?: string
   vipGrantedAt?: string
   premiumExpiresAt?: string
@@ -75,44 +75,37 @@ const AdminUsers: React.FC = () => {
     }
   }
 
-  const handleToggleVIP = async (userId: string, currentVipStatus: boolean) => {
-    const reason = !currentVipStatus 
-      ? prompt('Reason for granting VIP status (e.g., friend, tester, contributor):')
-      : null;
+  const handleChangeVIPStatus = async (userId: string, newStatus: boolean) => {
+    if (newStatus && !confirm('Grant VIP status to this user?')) return
+    if (!newStatus && !confirm('Revoke VIP status from this user?')) return
     
-    if (!currentVipStatus && !reason) return;
+    const reason = newStatus ? prompt('Enter reason for VIP status (optional):') : null
     
     try {
-      await api.post(`/admin/users/${userId}/vip`, { 
-        isVip: !currentVipStatus,
-        reason 
-      })
+      await api.post(`/admin/users/${userId}/vip`, { isVip: newStatus, reason })
       loadUsers()
       if (selectedUser?.id === userId) {
-        setSelectedUser({ ...selectedUser, isVip: !currentVipStatus, vipReason: reason || undefined })
+        setSelectedUser({ ...selectedUser, isVip: newStatus, vipReason: reason || undefined })
       }
     } catch (error) {
-      console.error('Failed to toggle VIP status:', error)
-      alert('Failed to toggle VIP status')
+      console.error('Failed to change VIP status:', error)
+      alert('Failed to change VIP status')
     }
   }
 
-  const handleToggleAdmin = async (userId: string, currentAdminStatus: boolean) => {
-    const message = currentAdminStatus 
-      ? 'Are you sure you want to remove admin privileges?' 
-      : 'Are you sure you want to grant admin privileges?'
-    
-    if (!confirm(message)) return
+  const handleChangeAdminStatus = async (userId: string, newStatus: boolean) => {
+    if (newStatus && !confirm('Grant admin privileges to this user?')) return
+    if (!newStatus && !confirm('Remove admin privileges from this user?')) return
     
     try {
-      await api.post(`/admin/users/${userId}/admin`, { isAdmin: !currentAdminStatus })
+      await api.post(`/admin/users/${userId}/admin`, { isAdmin: newStatus })
       loadUsers()
       if (selectedUser?.id === userId) {
-        setSelectedUser({ ...selectedUser, isAdmin: !currentAdminStatus })
+        setSelectedUser({ ...selectedUser, isAdmin: newStatus })
       }
     } catch (error) {
-      console.error('Failed to toggle admin status:', error)
-      alert('Failed to toggle admin status')
+      console.error('Failed to change admin status:', error)
+      alert('Failed to change admin status')
     }
   }
 
@@ -392,7 +385,7 @@ const AdminUsers: React.FC = () => {
                 <div className="space-y-3">
                   {/* VIP Status */}
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-white">VIP Status</div>
                       <div className="text-xs text-muted">
                         {selectedUser.isVip && selectedUser.vipReason 
@@ -400,52 +393,73 @@ const AdminUsers: React.FC = () => {
                           : 'Grants access to VIP-only maps and features'}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleToggleVIP(selectedUser.id, selectedUser.isVip || false)}
-                      className={`px-4 py-2 rounded transition-colors ${
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded text-sm font-medium ${
                         selectedUser.isVip 
-                          ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                          : 'bg-gray-600 hover:bg-gray-500 text-white'
-                      }`}
-                    >
-                      {selectedUser.isVip ? '👑 VIP Active' : 'Grant VIP'}
-                    </button>
+                          ? 'bg-purple-600/20 text-purple-400 border border-purple-600' 
+                          : 'bg-gray-600/20 text-gray-400 border border-gray-600'
+                      }`}>
+                        {selectedUser.isVip ? '👑 VIP' : 'Standard'}
+                      </span>
+                      <select
+                        value={selectedUser.isVip ? 'vip' : 'standard'}
+                        onChange={(e) => handleChangeVIPStatus(selectedUser.id, e.target.value === 'vip')}
+                        className="px-3 py-1 bg-surface-1 text-white rounded border border-border focus:outline-none focus:border-purple-500"
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="vip">VIP</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Admin Status */}
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-white">Admin Status</div>
                       <div className="text-xs text-muted">Full administrative privileges</div>
                     </div>
-                    <button
-                      onClick={() => handleToggleAdmin(selectedUser.id, selectedUser.isAdmin || false)}
-                      className={`px-4 py-2 rounded transition-colors ${
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded text-sm font-medium ${
                         selectedUser.isAdmin 
-                          ? 'bg-red-600 hover:bg-red-700 text-white' 
-                          : 'bg-gray-600 hover:bg-gray-500 text-white'
-                      }`}
-                    >
-                      {selectedUser.isAdmin ? '🛡️ Admin Active' : 'Make Admin'}
-                    </button>
+                          ? 'bg-red-600/20 text-red-400 border border-red-600' 
+                          : 'bg-gray-600/20 text-gray-400 border border-gray-600'
+                      }`}>
+                        {selectedUser.isAdmin ? '🛡️ Admin' : 'User'}
+                      </span>
+                      <select
+                        value={selectedUser.isAdmin ? 'admin' : 'user'}
+                        onChange={(e) => handleChangeAdminStatus(selectedUser.id, e.target.value === 'admin')}
+                        className="px-3 py-1 bg-surface-1 text-white rounded border border-border focus:outline-none focus:border-red-500"
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Premium Tier */}
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-white">Premium Tier</div>
                       <div className="text-xs text-muted">Subscription level and features</div>
                     </div>
-                    <select
-                      value={selectedUser.premiumTier || 'free'}
-                      onChange={(e) => handleChangePremiumTier(selectedUser.id, e.target.value)}
-                      className="px-4 py-2 bg-surface-1 text-white rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="free">Free</option>
-                      <option value="premium">Premium</option>
-                      <option value="pro">Pro</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded text-sm font-medium ${
+                        selectedUser.premiumTier === 'premium' 
+                          ? 'bg-green-600/20 text-green-400 border border-green-600' 
+                          : 'bg-gray-600/20 text-gray-400 border border-gray-600'
+                      }`}>
+                        {selectedUser.premiumTier === 'premium' ? '💎 Premium' : 'Free'}
+                      </span>
+                      <select
+                        value={selectedUser.premiumTier || 'free'}
+                        onChange={(e) => handleChangePremiumTier(selectedUser.id, e.target.value)}
+                        className="px-3 py-1 bg-surface-1 text-white rounded border border-border focus:outline-none focus:border-green-500"
+                      >
+                        <option value="free">Free</option>
+                        <option value="premium">Premium</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
