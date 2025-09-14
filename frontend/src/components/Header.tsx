@@ -179,7 +179,7 @@ export default function Header() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className={`transition-colors ${
-                      isMuted ? 'text-accent' : 'text-success'
+                      isMuted ? 'text-danger' : 'text-success'
                     }`}
                   >
                     {isMuted ? (

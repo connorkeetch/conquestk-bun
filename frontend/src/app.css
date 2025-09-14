@@ -173,9 +173,559 @@ To switch themes: Use Redux setTheme() action
   --surface-glass-light: rgba(17, 24, 39, 0.4); /* --color-surface-2 with opacity */
 }
 
+/* ========================================================================== 
+ * THEME DEFINITIONS 
+ * Pure CSS-based theme system - no JavaScript required for styling
+ * ========================================================================== */
+
+/* Default Theme - Blue buttons with dark purple gradient background */
+[data-theme="default"] {
+  /* Primary colors - Blue for buttons and interactive elements */
+  --color-primary: #2563EB;         /* Blue primary for buttons */
+  --color-primary-soft: #3B82F6;    /* Lighter blue for hover */
+  --color-secondary: #FFD700;       /* Gold secondary */
+  --color-accent: #DC2626;          /* Red accent for alerts */
+  
+  /* Backgrounds - Dark with purple tint gradient */
+  --color-bg-deep: #000000;         /* Pure black base */
+  --color-bg-alt: #050505;          /* Near black alternative */
+  --color-surface-1: #0f172a;       /* Dark blue-gray cards */
+  --color-surface-2: #1e293b;       /* Slightly lighter surface */
+  
+  /* Text */
+  --color-text: #F9FAFB;            /* White text */
+  --color-text-muted: #94A3B8;      /* Muted blue-gray text */
+  --color-border: #334155;          /* Blue-gray borders */
+  
+  /* Special gradient - gray-900 to purple-900/20 to black */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #111827 0%,                     /* gray-900 */
+    rgba(88, 28, 135, 0.2) 50%,     /* purple-900 at 20% opacity */
+    #000000 100%                    /* black */
+  );
+  
+  /* Glow effect */
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Dark theme - Alias for default for backwards compatibility */
+[data-theme="dark"] {
+  /* Inherit all from default */
+  --color-primary: #2563EB;
+  --color-primary-soft: #3B82F6;
+  --color-secondary: #FFD700;
+  --color-accent: #DC2626;
+  --color-bg-deep: #000000;
+  --color-bg-alt: #050505;
+  --color-surface-1: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #111827 0%,
+    rgba(88, 28, 135, 0.2) 50%,
+    #000000 100%
+  );
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Red Theme */
+[data-theme="red"] {
+  --color-primary: #DC2626;         /* Red primary */
+  --color-primary-soft: #EF4444;    /* Lighter red for hover */
+  --color-secondary: #FFD700;       /* Gold secondary */
+  --color-accent: #F59E0B;          /* Amber accent */
+  
+  --color-bg-deep: #0d0505;         /* Black with red tint */
+  --color-bg-alt: #0a0303;          /* Near black with red */
+  --color-surface-1: #0f172a;       /* Dark surface */
+  --color-surface-2: #111827;       /* Elevated surface */
+  
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #110303 0%,                     /* Dark red */
+    #050101 30%,                    /* Nearly black */
+    #0f0202 60%,                    /* Very dark red */
+    #110303 100%                   /* Dark red */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Violet Theme */
+[data-theme="violet"] {
+  --color-primary: #7C3AED;         /* Violet primary */
+  --color-primary-soft: #8B5CF6;    /* Lighter violet for hover */
+  --color-secondary: #FFD700;       /* Gold secondary */
+  --color-accent: #B22222;          /* Crimson accent */
+  
+  --color-bg-deep: #0b0812;         /* Black with violet tint */
+  --color-bg-alt: #090510;          /* Near black with violet */
+  --color-surface-1: #0f172a;
+  --color-surface-2: #111827;
+  
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #0d0814 0%,                     /* Dark violet */
+    #040207 30%,                    /* Nearly black */
+    #0a0610 60%,                    /* Very dark violet */
+    #0d0814 100%                   /* Dark violet */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Blue Theme */
+[data-theme="blue"] {
+  --color-primary: #2563EB;         /* Blue primary */
+  --color-primary-soft: #3B82F6;    /* Lighter blue for hover */
+  --color-secondary: #FFD700;       /* Gold secondary */
+  --color-accent: #06B6D4;          /* Cyan accent */
+  
+  --color-bg-deep: #05080f;         /* Black with blue tint */
+  --color-bg-alt: #03050a;          /* Near black with blue */
+  --color-surface-1: #0f172a;
+  --color-surface-2: #111827;
+  
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #06090f 0%,                     /* Dark blue */
+    #020305 30%,                    /* Nearly black */
+    #05070c 60%,                    /* Very dark blue */
+    #06090f 100%                   /* Dark blue */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Green Theme */
+[data-theme="green"] {
+  --color-primary: #059669;         /* Green primary */
+  --color-primary-soft: #10B981;    /* Lighter green for hover */
+  --color-secondary: #FFD700;       /* Gold secondary */
+  --color-accent: #14B8A6;          /* Teal accent */
+  
+  --color-bg-deep: #050a08;         /* Black with green tint */
+  --color-bg-alt: #030605;          /* Near black with green */
+  --color-surface-1: #0f172a;
+  --color-surface-2: #111827;
+  
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #060c0a 0%,                     /* Dark green */
+    #020403 30%,                    /* Nearly black */
+    #050907 60%,                    /* Very dark green */
+    #060c0a 100%                   /* Dark green */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* Black Theme - Pure black with gray accents */
+[data-theme="black"] {
+  --color-primary: #1f2937;         /* Dark gray primary */
+  --color-primary-soft: #374151;    /* Lighter gray for hover */
+  --color-secondary: #9ca3af;       /* Medium gray secondary */
+  --color-accent: #f3f4f6;          /* Light gray accent */
+  
+  --color-bg-deep: #000000;         /* Pure black */
+  --color-bg-alt: #050505;          /* Nearly black */
+  --color-surface-1: #0a0a0a;       /* Very dark gray */
+  --color-surface-2: #111111;       /* Dark gray */
+  
+  --color-text: #F9FAFB;
+  --color-text-muted: #9CA3AF;
+  --color-border: #374151;
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #050505 0%,                     /* Nearly black */
+    #000000 30%,                    /* Pure black */
+    #030303 60%,                    /* Very dark gray */
+    #050505 100%                   /* Nearly black */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
+
+/* High Contrast Theme (for accessibility) */
+[data-theme="highcontrast"] {
+  --color-primary: #00B4FF;         /* Bright cyan-blue - 8.6:1 contrast on black */
+  --color-primary-soft: #66D4FF;    /* Lighter cyan - 12.8:1 contrast */
+  --color-secondary: #FFD700;       /* Gold - 14.5:1 contrast on black */
+  --color-accent: #FF3366;          /* Bright red-pink - 7.5:1 contrast */
+  
+  --color-bg-deep: #000000;         /* Pure black for maximum contrast */
+  --color-bg-alt: #000000;          /* Pure black */
+  --color-surface-1: #1A1A1A;       /* Dark gray for cards - still high contrast */
+  --color-surface-2: #2D2D2D;       /* Lighter gray - more distinguishable */
+  
+  --color-text: #FFFFFF;             /* Pure white text - 21:1 contrast */
+  --color-text-muted: #E0E0E0;      /* Light gray - 13.5:1 contrast (WCAG AAA) */
+  --color-border: #808080;          /* Medium gray - clearly visible borders */
+  
+  /* Additional high contrast specific variables */
+  --color-success: #00FF88;         /* Bright green - 15.3:1 contrast */
+  --color-warning: #FFAA00;         /* Bright orange - 11.9:1 contrast */
+  --color-danger: #FF3366;          /* Matches accent */
+  --color-info: #00B4FF;            /* Matches primary */
+  
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #000000 0%,                     /* Pure black */
+    #000000 100%                   /* Pure black - no gradient for clarity */
+  );
+  
+  --ck-glow: var(--color-primary);
+}
+
+/* Halloween theme - Spooky seasonal theme */
+[data-theme="halloween"] {
+  /* Halloween color palette */
+  --color-primary: #FF6B35;         /* Pumpkin orange for primary actions */
+  --color-primary-soft: #FF8C5A;    /* Lighter pumpkin for hover states */
+  --color-secondary: #FFD23F;       /* Candy corn yellow */
+  --color-accent: #8B1538;          /* Blood red for danger/alerts */
+  --color-bg-deep: #0A0108;         /* Midnight black */
+  --color-bg-alt: #110A0F;          /* Slightly purple-tinted black */
+  --color-surface-1: #1A0F17;       /* Dark purple surface */
+  --color-surface-2: #2B1624;       /* Lighter purple surface */
+  --color-text: #F5E6E8;            /* Ghostly white */
+  --color-text-muted: #B68FA5;      /* Muted purple-gray */
+  --color-border: #4A2040;          /* Purple border */
+  
+  /* Spooky gradient with orange glow effect */
+  --ck-bg-gradient: linear-gradient(135deg,
+    #0A0108 0%,                      /* Midnight black */
+    rgba(139, 21, 56, 0.3) 25%,     /* Blood red glow */
+    rgba(255, 107, 53, 0.15) 50%,   /* Pumpkin orange glow */
+    rgba(75, 0, 130, 0.25) 75%,     /* Deep purple */
+    #0A0108 100%                    /* Back to midnight */
+  );
+  
+  /* Halloween-specific effects */
+  --ck-glow: #FF6B35;                /* Orange glow */
+  --halloween-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+  --spooky-text-shadow: 0 0 10px rgba(139, 21, 56, 0.5);
+  
+  /* Halloween SVG patterns */
+  --halloween-bat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath fill='%23FF6B35' opacity='0.1' d='M20 10c1 0 2 1 2 2s-1 2-2 2-2-1-2-2 1-2 2-2zm-4 5c1.5 0 3 1 5 1s3.5-1 5-1c3 0 6 2 6 4 0 1-1 2-3 2-2 0-3-1-5-1s-3 1-5 1-3-1-5-1-3 1-5 1c-2 0-3-1-3-2 0-2 3-4 6-4z'/%3E%3C/svg%3E");
+  --halloween-ghost: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath fill='%23F5E6E8' opacity='0.05' d='M30 15c-5 0-9 4-9 9v12c0 1 0 2 1 3l2-2 2 2 2-2 2 2 2-2 2 2 2-2 2 2c1-1 1-2 1-3V24c0-5-4-9-9-9zm-3 9c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2zm6 0c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z'/%3E%3C/svg%3E");
+  --halloween-pumpkin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath fill='%23FF6B35' opacity='0.08' d='M25 15c-7 0-12 4-12 10s5 10 12 10 12-4 12-10-5-10-12-10zm-5 8l3 5h-6l3-5zm5 5h-2l1-3 1 3zm5 0l3-5 3 5h-6z'/%3E%3Cpath fill='%23059669' opacity='0.1' d='M25 13c0-2 1-3 2-3s2 1 2 3v2h-4v-2z'/%3E%3C/svg%3E");
+  --halloween-spider-web: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath stroke='%234A2040' stroke-width='0.5' fill='none' opacity='0.3' d='M50 0v100M0 50h100M15 15l70 70M85 15l-70 70M50 20a30 30 0 0 1 0 60 30 30 0 0 1 0-60M50 35a15 15 0 0 1 0 30 15 15 0 0 1 0-30'/%3E%3C/svg%3E");
+}
+
 /* Victory state - The golden moment */
 [data-theme="victory"] {
   --ck-glow: var(--color-gold);
+}
+
+/* Halloween theme special effects */
+[data-theme="halloween"] {
+  /* Flying bats background pattern */
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--halloween-bat);
+    background-repeat: repeat;
+    animation: flying-bats 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+  
+  /* Spider web in corners */
+  &::after {
+    content: '';
+    position: fixed;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background-image: var(--halloween-spider-web);
+    background-size: contain;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.5;
+  }
+  
+  /* Ensure content is above background effects */
+  & #root,
+  & main,
+  & .relative {
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Spooky animation for buttons with pumpkin icon */
+  & .bg-primary,
+  & .btn-primary {
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '🎃';
+      position: absolute;
+      top: 50%;
+      left: -30px;
+      transform: translateY(-50%);
+      font-size: 20px;
+      animation: pumpkin-roll 3s ease-in-out infinite;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    &:hover::before {
+      opacity: 0.7;
+    }
+  }
+  
+  /* Floating ghost effect for cards */
+  & .bg-surface-1 {
+    position: relative;
+    animation: halloween-float 6s ease-in-out infinite;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 40px;
+      height: 40px;
+      background-image: var(--halloween-ghost);
+      background-size: contain;
+      animation: ghost-float 4s ease-in-out infinite;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+  }
+  
+  /* Pulsing glow for important elements */
+  & .text-primary {
+    animation: halloween-pulse 2s ease-in-out infinite;
+  }
+  
+  /* Halloween loading skeleton */
+  & .animate-pulse {
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '💀';
+      position: absolute;
+      left: -40px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 30px;
+      animation: skeleton-run 2s linear infinite;
+    }
+  }
+  
+  /* Candy corn bullets for lists */
+  & ul li::before {
+    content: '🍬';
+    margin-right: 8px;
+  }
+  
+  /* Spooky tooltips */
+  & [title]:hover::after {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-primary);
+    box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+  }
+}
+
+/* Halloween animations */
+@keyframes flying-bats {
+  0% { 
+    background-position: 0 0;
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    background-position: 100px 50px;
+    transform: scale(1.1) rotate(2deg);
+  }
+  50% {
+    background-position: -50px 100px;
+    transform: scale(0.9) rotate(-2deg);
+  }
+  75% {
+    background-position: 50px -50px;
+    transform: scale(1.05) rotate(1deg);
+  }
+  100% { 
+    background-position: 0 0;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes pumpkin-roll {
+  0% { 
+    left: -30px;
+    transform: translateY(-50%) rotate(0deg);
+  }
+  50% {
+    left: 50%;
+    transform: translateY(-50%) rotate(360deg);
+  }
+  100% { 
+    left: calc(100% + 30px);
+    transform: translateY(-50%) rotate(720deg);
+  }
+}
+
+@keyframes ghost-float {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+  25% {
+    transform: translate(10px, -10px) scale(1.1);
+    opacity: 0.6;
+  }
+  50% { 
+    transform: translate(-5px, -20px) scale(0.9);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translate(5px, -5px) scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+@keyframes skeleton-run {
+  0% { 
+    left: -40px;
+    transform: translateY(-50%) scaleX(1);
+  }
+  25% {
+    transform: translateY(-60%) scaleX(1);
+  }
+  50% {
+    transform: translateY(-40%) scaleX(-1);
+  }
+  75% {
+    transform: translateY(-55%) scaleX(-1);
+  }
+  100% { 
+    left: calc(100% + 40px);
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+@keyframes halloween-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes halloween-pulse {
+  0%, 100% { 
+    text-shadow: 0 0 5px rgba(255, 107, 53, 0.5);
+  }
+  50% { 
+    text-shadow: 0 0 20px rgba(255, 107, 53, 0.8),
+                 0 0 30px rgba(139, 21, 56, 0.6);
+  }
+}
+
+/* Halloween cursors for different elements */
+[data-theme="halloween"] {
+  /* Bat cursor for buttons and links */
+  & button:hover,
+  & a:hover {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23FF6B35" d="M12 2c1 0 2 1 2 2s-1 2-2 2-2-1-2-2 1-2 2-2zm-2 6c1 0 2 1 3 1s2-1 3-1c2 0 4 2 4 4 0 1-1 2-2 2-1 0-2-1-3-1s-2 1-3 1c-1 0-2-1-3-1s-2 1-3 1c-1 0-2-1-2-2 0-2 2-4 4-4z"/></svg>'), pointer;
+  }
+  
+  /* Pumpkin cursor for game board */
+  & .game-board:hover {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="18" r="12" fill="%23FF6B35"/><rect x="15" y="6" width="2" height="4" fill="%23059669"/><path fill="%230A0108" d="M11 16l2 4v-4zm8 0v4l2-4zm-3 2h2v2h-2z"/></svg>'), pointer;
+  }
+  
+  /* Ghost cursor for drag operations */
+  & [draggable="true"]:active {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23F5E6E8" d="M16 8c-4 0-7 3-7 7v8c0 1 0 2 1 2l1-1 2 1 2-1 2 1 2-1 2 1 2-1c1 0 1-1 1-2v-8c0-4-3-7-7-7zm-2 6c-1 0-1-1-1-1s0-1 1-1 1 1 1 1 0 1-1 1zm4 0c-1 0-1-1-1-1s0-1 1-1 1 1 1 1 0 1-1 1z"/></svg>'), move;
+  }
+}
+
+/* Halloween special elements for game components */
+[data-theme="halloween"] {
+  /* Turn territory borders orange on hover */
+  & .territory:hover {
+    stroke: var(--color-primary) !important;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 5px rgba(255, 107, 53, 0.6));
+  }
+  
+  /* Make dice spooky */
+  & .dice {
+    background: linear-gradient(135deg, var(--color-surface-2), var(--color-accent));
+    box-shadow: 0 0 15px rgba(139, 21, 56, 0.4);
+    
+    &::after {
+      content: '👻';
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      font-size: 16px;
+      animation: ghost-float 2s ease-in-out infinite;
+    }
+  }
+  
+  /* Halloween badges */
+  & .badge {
+    position: relative;
+    
+    &::before {
+      content: '🦇';
+      position: absolute;
+      left: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      animation: flying-bats 10s linear infinite;
+    }
+  }
+  
+  /* Spooky victory screen */
+  & .victory-screen {
+    background-image: 
+      var(--halloween-bat),
+      var(--halloween-ghost),
+      var(--halloween-pumpkin);
+    background-position: 
+      10% 20%,
+      90% 80%,
+      50% 50%;
+    background-size: 
+      40px 40px,
+      60px 60px,
+      100px 100px;
+    background-repeat: no-repeat;
+  }
 }
 
 /* Utilities that use our color system */
@@ -572,6 +1122,10 @@ To switch themes: Use Redux setTheme() action
 
 @utility text-danger {
   color: var(--color-danger);
+}
+
+@utility text-accent {
+  color: var(--color-accent);
 }
 
 @utility bg-success {
