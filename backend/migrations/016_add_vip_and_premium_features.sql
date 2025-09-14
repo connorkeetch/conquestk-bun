@@ -1,6 +1,11 @@
 -- Migration 016: Add VIP and Premium Features
 -- Adds VIP flags, premium tiers, and admin status to users and maps
 
+-- Add missing columns to user_admin_roles table
+ALTER TABLE user_admin_roles
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
+
 -- Add VIP and premium columns to users table
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS is_vip BOOLEAN DEFAULT false,
@@ -30,7 +35,7 @@ WHERE EXISTS (
     SELECT 1 FROM user_admin_roles uar
     JOIN admin_roles ar ON uar.role_id = ar.id
     WHERE uar.user_id = u.id
-    AND ar.role_name IN ('super_admin', 'admin', 'moderator')
+    AND ar.name IN ('super_admin', 'admin', 'moderator')
 );
 
 -- Add some helpful comments
@@ -57,20 +62,21 @@ SELECT
     u.created_at,
     u.last_login,
     u.email_verified,
-    u.status,
+    COALESCE(uas.status, 'active') as status,
     COALESCE(ps.games_played, 0) as games_played,
     COALESCE(ps.games_won, 0) as games_won,
-    COALESCE(ps.elo_rating, 1000) as elo_rating,
+    COALESCE(u.skill_rating, 1000) as elo_rating,
     COUNT(DISTINCT m.id) as maps_created,
     COUNT(DISTINCT g.id) as active_games
 FROM users u
+LEFT JOIN user_account_status uas ON u.id = uas.user_id
 LEFT JOIN player_stats ps ON u.id = ps.user_id
 LEFT JOIN maps m ON u.id = m.creator_id
 LEFT JOIN game_players gp ON u.id = gp.user_id
 LEFT JOIN games g ON gp.game_id = g.id AND g.status IN ('waiting', 'in_progress')
 GROUP BY u.id, u.username, u.email, u.is_vip, u.is_admin, u.premium_tier, 
-         u.vip_reason, u.created_at, u.last_login, u.email_verified, u.status,
-         ps.games_played, ps.games_won, ps.elo_rating;
+         u.vip_reason, u.created_at, u.last_login, u.email_verified, u.skill_rating, uas.status,
+         ps.games_played, ps.games_won;
 
 -- Function to grant VIP status
 CREATE OR REPLACE FUNCTION grant_vip_status(

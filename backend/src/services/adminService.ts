@@ -57,11 +57,23 @@ export class AdminService {
   // ============= PERMISSION CHECKING =============
 
   async isAdmin(userId: string): Promise<boolean> {
+    // First check the is_admin flag on the users table (faster)
+    const userResult = await query(
+      `SELECT is_admin FROM users WHERE id = $1`,
+      [userId],
+    )
+    
+    if (userResult.rows[0]?.is_admin) {
+      return true
+    }
+    
+    // Fallback to checking user_admin_roles (for compatibility)
     const result = await query(
       `
       SELECT 1 FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
-      WHERE uar.user_id = $1 AND uar.is_active = TRUE
+      WHERE uar.user_id = $1 
+      AND (uar.is_active IS NULL OR uar.is_active = TRUE)
       AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
     `,
       [userId],
@@ -75,7 +87,8 @@ export class AdminService {
       `
       SELECT ar.permissions, ar.is_super_admin FROM user_admin_roles uar
       JOIN admin_roles ar ON uar.role_id = ar.id
-      WHERE uar.user_id = $1 AND uar.is_active = TRUE
+      WHERE uar.user_id = $1 
+      AND (uar.is_active IS NULL OR uar.is_active = TRUE)
       AND (uar.expires_at IS NULL OR uar.expires_at > CURRENT_TIMESTAMP)
     `,
       [userId],
