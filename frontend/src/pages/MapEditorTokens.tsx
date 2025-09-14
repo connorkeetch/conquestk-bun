@@ -1010,7 +1010,27 @@ export default function MapEditorTokens() {
                 className="w-full"
               />
             </div>
-            <div className="mt-6 p-3 bg-surface-2 rounded">
+            {/* Import/Export Section */}
+            <div className="mt-6 p-3 bg-surface-1 rounded border border-border">
+              <h3 className="text-sm font-bold mb-3">📦 Import/Export</h3>
+              <div className="space-y-2">
+                <button
+                  onClick={handleExport}
+                  className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-medium"
+                >
+                  💾 Export to JSON
+                </button>
+                <button
+                  onClick={() => document.getElementById('json-import')?.click()}
+                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
+                >
+                  📂 Import from JSON
+                </button>
+              </div>
+            </div>
+            
+            {/* Validation Checklist */}
+            <div className="mt-4 p-3 bg-surface-1 rounded border border-border">
               <h3 className="text-sm font-bold mb-2">✅ Validation Checklist</h3>
               <div className="space-y-1 text-xs">
                 <div className={state.imageUrl ? 'text-green-400' : 'text-muted'}>
@@ -1040,27 +1060,76 @@ export default function MapEditorTokens() {
             >
               📤 Upload Image
             </button>
+            
+            {/* Canvas Size Settings */}
+            <div className="mb-6 p-3 bg-surface-1 rounded border border-border">
+              <h3 className="text-sm font-bold mb-3">📐 Canvas Size</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-muted mb-1">Width: {state.mapWidth}px</label>
+                  <input
+                    type="range"
+                    min="800"
+                    max="3000"
+                    step="100"
+                    value={state.mapWidth}
+                    onChange={(e) => setState(prev => ({ ...prev, mapWidth: Number(e.target.value) }))}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-muted mb-1">Height: {state.mapHeight}px</label>
+                  <input
+                    type="range"
+                    min="600"
+                    max="2000"
+                    step="100"
+                    value={state.mapHeight}
+                    onChange={(e) => setState(prev => ({ ...prev, mapHeight: Number(e.target.value) }))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+            
             {state.imageUrl && (
               <>
-                <div className="mb-4 p-3 bg-surface-2 rounded">
+                <div className="mb-4 p-3 bg-surface-1 rounded border border-border">
                   <h3 className="text-sm font-bold mb-2">Current Image</h3>
                   <div className="text-xs text-muted space-y-1">
                     <div>Width: {state.imageWidth}px</div>
                     <div>Height: {state.imageHeight}px</div>
                     <div>Scale: {(state.imageScale * 100).toFixed(0)}%</div>
                   </div>
+                  
+                  {/* Image Scale Control */}
+                  <div className="mt-3">
+                    <label className="block text-sm text-muted mb-1">Image Scale: {(state.imageScale * 100).toFixed(0)}%</label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      step="10"
+                      value={state.imageScale * 100}
+                      onChange={(e) => setState(prev => ({ ...prev, imageScale: Number(e.target.value) / 100 }))}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
+                
                 <button
                   onClick={() => setShowCropper(true)}
                   className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded mb-2"
+                  title="Crop the image to specific dimensions"
                 >
                   ✂️ Crop Image
                 </button>
                 <button
                   onClick={() => setShowProcessor(true)}
                   className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded mb-2"
+                  title="Compress and optimize image for web use (reduces file size)"
                 >
-                  🎨 Process Image
+                  🎨 Process Image (Compress)
                 </button>
                 <button
                   onClick={() => {
@@ -1184,7 +1253,15 @@ export default function MapEditorTokens() {
                       className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
                     />
                     <button
-                      onClick={() => handleDeleteTerritory(state.selectedTerritoryId!)}
+                      onClick={() => {
+                        setState((prev) => ({
+                          ...prev,
+                          territories: prev.territories.filter(
+                            (t) => t.id !== state.selectedTerritoryId,
+                          ),
+                          selectedTerritoryId: null,
+                        }))
+                      }}
                       className="w-full px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
                     >
                       🗑️ Delete Territory
@@ -1803,82 +1880,7 @@ export default function MapEditorTokens() {
               </button>
             </div>
           </div>
-
-            {/* Visual Options */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-muted">Display:</span>
-              
-              {/* Token Shape */}
-              <select
-                value={tokenShape}
-                onChange={(e) => setTokenShape(e.target.value as TokenShape)}
-                className="px-2 py-1 bg-surface-2 rounded text-sm"
-                title="Change the shape of territory markers"
-              >
-                <option value="hexagon">⬡ Hexagon</option>
-                <option value="square">◼ Square</option>
-                <option value="circle">● Circle</option>
-              </select>
-              
-              {/* Token Size Controls */}
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-muted">Size:</span>
-                <button
-                  onClick={() => setTokenSize(Math.max(10, tokenSize - 2))}
-                  className="px-2 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
-                  title="Decrease token size"
-                >
-                  ➖
-                </button>
-                <span className="text-sm px-2">{tokenSize}</span>
-                <button
-                  onClick={() => setTokenSize(Math.min(40, tokenSize + 2))}
-                  className="px-2 py-1 bg-surface-2 hover:bg-gray-600 rounded text-sm"
-                  title="Increase token size"
-                >
-                  ➕
-                </button>
-                <div className="ml-2 text-xs text-muted" title="Tokens have a 25% padding for easier clicking">
-                  🎯
-                </div>
-              </div>
-
-              {/* Grid Toggle */}
-              <button
-                onClick={() => setShowGrid(!showGrid)}
-                className={`px-3 py-1 rounded text-sm ${showGrid ? 'bg-primary' : 'bg-surface-2'}`}
-                title="Show/hide alignment grid"
-              >
-                📏 Grid
-              </button>
-              
-              {/* Label Controls */}
-              <button
-                onClick={() => setState(prev => ({
-                  ...prev,
-                  labelSettings: {
-                    ...prev.labelSettings!,
-                    showLabels: !prev.labelSettings?.showLabels
-                  }
-                }))}
-                className={`px-3 py-1 rounded text-sm ${state.labelSettings?.showLabels ? 'bg-primary' : 'bg-surface-2'}`}
-                title="Show/hide territory labels"
-              >
-                🏷️ Labels
-              </button>
-              
-              <button
-                onClick={() => setShowLabelSettings(true)}
-                className="px-3 py-1 bg-surface-2 rounded text-sm hover:bg-gray-600"
-                title="Customize label appearance"
-              >
-                ⚙️ Label Style
-              </button>
-            </div>
-
-
-            {/* Import/Export moved to tab bar */}
-          </div>
+        </div>
 
           {/* Help Text for Current Mode */}
           <div className="mt-3 pt-3 border-t border-border">
@@ -2158,7 +2160,7 @@ export default function MapEditorTokens() {
           )}
         </div>
         {/* Main Editor Area - Full width with right sidebar */}
-        <div className="flex gap-3 px-3">
+        <div className="flex gap-4 px-3">
           {/* Map Canvas - Main area taking most space, centered content */}
           <div
             ref={mapContainerRef}
@@ -2350,9 +2352,9 @@ export default function MapEditorTokens() {
             </div>
           </div>
 
-          {/* Dynamic Sidebar Panel */}
+          {/* Dynamic Sidebar Panel - Now on the right */}
           <div
-            className="w-80 bg-surface-1 rounded-lg p-4 flex-shrink-0 overflow-y-auto"
+            className="w-80 bg-surface-2 border border-border rounded-lg p-4 flex-shrink-0 overflow-y-auto shadow-lg"
             style={{ height: 'calc(100vh - 240px)' }}
           >
             {renderSidebarContent()}
