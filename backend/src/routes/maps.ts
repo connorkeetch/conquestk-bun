@@ -276,7 +276,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         m.tags,
         m.created_at,
         (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
-        (SELECT COUNT(DISTINCT continent_id) FROM map_territories WHERE map_id = m.id) as continent_count
+        (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as continent_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
       WHERE m.status = 'approved' 
@@ -369,7 +369,7 @@ router.get('/', async (req: Request, res: Response) => {
         m.created_at,
         m.status,
         (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
-        (SELECT COUNT(DISTINCT continent_id) FROM map_territories WHERE map_id = m.id) as continent_count
+        (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as continent_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
       WHERE 1=1
