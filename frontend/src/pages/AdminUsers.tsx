@@ -1,381 +1,498 @@
 import { useEffect, useState } from 'react'
-import { adminService, type User } from '../services/adminService'
+import api from '../services/api'
 
-interface UserEditModal {
-  user: User
-  isOpen: boolean
+interface User {
+  id: string
+  username: string
+  email: string
+  status: string
+  role: string
+  createdAt: string
+  lastLogin: string
+  gamesPlayed: number
+  elo: number
+  isVip?: boolean
+  isAdmin?: boolean
+  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise'
+  vipReason?: string
+  vipGrantedAt?: string
+  premiumExpiresAt?: string
 }
 
-interface UserStatusUpdate {
-  status: 'active' | 'suspended' | 'banned'
-  reason?: string
-  expiresAt?: string
-}
-
-export default function AdminUsers() {
+const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
-  const [totalUsers, setTotalUsers] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1)
-  const [limit] = useState(25)
-
-  // Search and filters
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-
-  // Modal states
-  const [editModal, setEditModal] = useState<UserEditModal | null>(null)
-  const [resetPasswordModal, setResetPasswordModal] = useState<User | null>(null)
-  const [newPassword, setNewPassword] = useState('')
-
-  useEffect(() => {
-    loadUsers()
-  }, [loadUsers])
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [filterType, setFilterType] = useState<'all' | 'vip' | 'admin' | 'premium'>('all')
 
   const loadUsers = async () => {
     try {
       setLoading(true)
-      setError(null)
-
-      const offset = (currentPage - 1) * limit
-      const result = await adminService.getUsers({
-        limit,
-        offset,
-        search: searchTerm || undefined,
+      const response = await api.get('/admin/users', {
+        params: { search: searchTerm }
       })
-
-      setUsers(result.users)
-      setTotalUsers(result.total)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load users')
+      setUsers(response.data.users || [])
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+      setUsers([])
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    loadUsers()
+  }, [searchTerm])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setSearchTerm(searchInput)
-    setCurrentPage(1)
+    loadUsers()
   }
 
-  const updateUserStatus = async (userId: string, update: UserStatusUpdate) => {
+  const handleBanUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to ban this user?')) return
+    
     try {
-      await adminService.updateUserStatus(userId, update.status, update.reason, update.expiresAt)
-      await loadUsers()
-      setEditModal(null)
-    } catch (err: any) {
-      alert(`Failed to update user status: ${err.message}`)
+      await api.post(`/admin/users/${userId}/ban`)
+      loadUsers()
+      setShowUserModal(false)
+    } catch (error) {
+      console.error('Failed to ban user:', error)
+      alert('Failed to ban user')
     }
   }
 
-  const resetPassword = async () => {
-    if (!resetPasswordModal || !newPassword) return
-
+  const handleUnbanUser = async (userId: string) => {
     try {
-      await adminService.resetUserPassword(resetPasswordModal.id, newPassword)
-      alert('Password reset successfully')
-      setResetPasswordModal(null)
-      setNewPassword('')
-    } catch (err: any) {
-      alert(`Failed to reset password: ${err.message}`)
+      await api.post(`/admin/users/${userId}/unban`)
+      loadUsers()
+      setShowUserModal(false)
+    } catch (error) {
+      console.error('Failed to unban user:', error)
+      alert('Failed to unban user')
     }
   }
 
-  const totalPages = Math.ceil(totalUsers / limit)
+  const handleToggleVIP = async (userId: string, currentVipStatus: boolean) => {
+    const reason = !currentVipStatus 
+      ? prompt('Reason for granting VIP status (e.g., friend, tester, contributor):')
+      : null;
+    
+    if (!currentVipStatus && !reason) return;
+    
+    try {
+      await api.post(`/admin/users/${userId}/vip`, { 
+        isVip: !currentVipStatus,
+        reason 
+      })
+      loadUsers()
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, isVip: !currentVipStatus, vipReason: reason || undefined })
+      }
+    } catch (error) {
+      console.error('Failed to toggle VIP status:', error)
+      alert('Failed to toggle VIP status')
+    }
+  }
+
+  const handleToggleAdmin = async (userId: string, currentAdminStatus: boolean) => {
+    const message = currentAdminStatus 
+      ? 'Are you sure you want to remove admin privileges?' 
+      : 'Are you sure you want to grant admin privileges?'
+    
+    if (!confirm(message)) return
+    
+    try {
+      await api.post(`/admin/users/${userId}/admin`, { isAdmin: !currentAdminStatus })
+      loadUsers()
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, isAdmin: !currentAdminStatus })
+      }
+    } catch (error) {
+      console.error('Failed to toggle admin status:', error)
+      alert('Failed to toggle admin status')
+    }
+  }
+
+  const handleChangePremiumTier = async (userId: string, tier: string) => {
+    try {
+      await api.post(`/admin/users/${userId}/premium`, { tier })
+      loadUsers()
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, premiumTier: tier as any })
+      }
+    } catch (error) {
+      console.error('Failed to change premium tier:', error)
+      alert('Failed to change premium tier')
+    }
+  }
+
+  const openUserModal = (user: User) => {
+    setSelectedUser(user)
+    setShowUserModal(true)
+  }
+
+  const closeUserModal = () => {
+    setSelectedUser(null)
+    setShowUserModal(false)
+  }
+
+  const filteredUsers = users.filter(user => {
+    if (filterType === 'vip') return user.isVip
+    if (filterType === 'admin') return user.isAdmin
+    if (filterType === 'premium') return user.premiumTier && user.premiumTier !== 'free'
+    return true
+  })
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-white">Loading users...</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">👥 User Management</h1>
-            <div className="text-muted">Manage user accounts, roles, and permissions</div>
-          </div>
-          <a href="/admin" className="bg-surface-2 hover:brightness-110 px-4 py-2 rounded">
-            ← Back to Dashboard
-          </a>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-white">User Management</h2>
+          <p className="text-muted">Manage user accounts, VIP status, and permissions</p>
         </div>
+        <button
+          onClick={loadUsers}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-110 transition-all"
+        >
+          🔄 Refresh
+        </button>
+      </div>
 
-        {/* Search and Filters */}
-        <div className="bg-surface-2 rounded-lg p-6 mb-6">
-          <form onSubmit={handleSearch} className="flex space-x-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search users by username or email..."
-                className="w-full px-4 py-2 bg-surface-2 border border-border rounded-lg"
-              />
-            </div>
-            <button type="submit" className="bg-primary hover:brightness-110 px-6 py-2 rounded-lg">
-              🔍 Search
-            </button>
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('')
-                  setSearchInput('')
-                  setCurrentPage(1)
-                }}
-                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg"
-              >
-                Clear
-              </button>
-            )}
-          </form>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-surface-2 rounded-lg p-4">
+          <div className="text-2xl font-bold text-white">{users.length}</div>
+          <div className="text-sm text-muted">Total Users</div>
         </div>
-
-        {/* Users Table */}
-        <div className="bg-surface-2 rounded-lg overflow-hidden">
-          <div className="p-6 border-b border-border">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Users ({totalUsers.toLocaleString()})</h2>
-              {searchTerm && (
-                <div className="text-sm text-muted">Showing results for "{searchTerm}"</div>
-              )}
-            </div>
+        <div className="bg-surface-2 rounded-lg p-4">
+          <div className="text-2xl font-bold text-purple-400">{users.filter(u => u.isVip).length}</div>
+          <div className="text-sm text-muted">VIP Users</div>
+        </div>
+        <div className="bg-surface-2 rounded-lg p-4">
+          <div className="text-2xl font-bold text-yellow-400">{users.filter(u => u.isAdmin).length}</div>
+          <div className="text-sm text-muted">Admins</div>
+        </div>
+        <div className="bg-surface-2 rounded-lg p-4">
+          <div className="text-2xl font-bold text-green-400">
+            {users.filter(u => u.premiumTier && u.premiumTier !== 'free').length}
           </div>
-
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4">⏳</div>
-              <div>Loading users...</div>
-            </div>
-          ) : error ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4 text-red-400">❌</div>
-              <div className="text-red-400 mb-4">{error}</div>
-              <button
-                onClick={loadUsers}
-                className="bg-primary hover:brightness-110 px-4 py-2 rounded"
-              >
-                Retry
-              </button>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4">👤</div>
-              <div>No users found</div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-surface-2">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Admin Roles
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Joined
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Last Login
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {users.map((user) => {
-                    const statusInfo = adminService.formatUserStatus(user.status)
-                    return (
-                      <tr key={user.id} className="hover:bg-surface-2">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="font-medium">{user.username}</div>
-                            <div className="text-sm text-muted">{user.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <span className={`font-medium ${statusInfo.color}`}>
-                              {statusInfo.text}
-                            </span>
-                            {user.statusReason && (
-                              <div className="text-xs text-muted mt-1">{user.statusReason}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {user.adminRoles.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {user.adminRoles.map((role, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-block bg-primary text-xs px-2 py-1 rounded"
-                                >
-                                  {role}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted">None</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => setEditModal({ user, isOpen: true })}
-                              className="bg-primary hover:brightness-110 px-3 py-1 rounded text-xs"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setResetPasswordModal(user)}
-                              className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-xs"
-                            >
-                              Reset PW
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-border">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-muted">
-                  Showing {(currentPage - 1) * limit + 1} to{' '}
-                  {Math.min(currentPage * limit, totalUsers)} of {totalUsers} users
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="bg-surface-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-3 py-1">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="bg-surface-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="text-sm text-muted">Premium Users</div>
         </div>
       </div>
 
-      {/* Edit User Modal */}
-      {editModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Edit User: {editModal.user.username}</h3>
+      {/* Search and Filter Bar */}
+      <div className="bg-surface-2 rounded-lg p-4">
+        <div className="flex gap-4">
+          <form onSubmit={handleSearch} className="flex-1 flex gap-2">
+            <input
+              type="text"
+              placeholder="Search users by username or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 px-4 py-2 bg-surface-1 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <button
+              type="submit"
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Search
+            </button>
+          </form>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'all' ? 'bg-purple-600 text-white' : 'bg-surface-1 text-muted hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterType('vip')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'vip' ? 'bg-purple-600 text-white' : 'bg-surface-1 text-muted hover:text-white'
+              }`}
+            >
+              VIP Only
+            </button>
+            <button
+              onClick={() => setFilterType('admin')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'admin' ? 'bg-purple-600 text-white' : 'bg-surface-1 text-muted hover:text-white'
+              }`}
+            >
+              Admins
+            </button>
+            <button
+              onClick={() => setFilterType('premium')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'premium' ? 'bg-purple-600 text-white' : 'bg-surface-1 text-muted hover:text-white'
+              }`}
+            >
+              Premium
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      {filteredUsers.length === 0 ? (
+        <div className="bg-surface-2 rounded-lg p-8 text-center">
+          <div className="text-6xl mb-4">👥</div>
+          <h3 className="text-xl font-bold text-white mb-2">No Users Found</h3>
+          <p className="text-muted">No users match your search criteria.</p>
+        </div>
+      ) : (
+        <div className="bg-surface-2 rounded-lg overflow-hidden">
+          <table className="w-full text-white">
+            <thead className="bg-surface-1">
+              <tr>
+                <th className="px-4 py-3 text-left">Username</th>
+                <th className="px-4 py-3 text-left">Email</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Badges</th>
+                <th className="px-4 py-3 text-left">Premium</th>
+                <th className="px-4 py-3 text-left">Games</th>
+                <th className="px-4 py-3 text-left">ELO</th>
+                <th className="px-4 py-3 text-left">Joined</th>
+                <th className="px-4 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="border-t border-border hover:bg-surface-2/50">
+                  <td className="px-4 py-3 font-medium">{user.username}</td>
+                  <td className="px-4 py-3">{user.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      user.status === 'banned' 
+                        ? 'bg-red-600 text-white' 
+                        : user.status === 'suspended'
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-green-600 text-white'
+                    }`}>
+                      {user.status || 'active'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      {user.isVip && (
+                        <span className="px-2 py-1 rounded text-xs bg-purple-600 text-white" title={user.vipReason}>
+                          👑 VIP
+                        </span>
+                      )}
+                      {user.isAdmin && (
+                        <span className="px-2 py-1 rounded text-xs bg-red-600 text-white">
+                          🛡️ Admin
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      user.premiumTier === 'enterprise' ? 'bg-gold-600 text-white' :
+                      user.premiumTier === 'pro' ? 'bg-purple-600 text-white' :
+                      user.premiumTier === 'premium' ? 'bg-blue-600 text-white' :
+                      'bg-gray-600 text-white'
+                    }`}>
+                      {user.premiumTier || 'free'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{user.gamesPlayed || 0}</td>
+                  <td className="px-4 py-3">{user.elo || 1000}</td>
+                  <td className="px-4 py-3">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => openUserModal(user)}
+                      className="px-3 py-1 bg-primary text-white rounded hover:brightness-110 text-sm"
+                    >
+                      Manage
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* User Details Modal */}
+      {showUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-1 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-white">User Details: {selectedUser.username}</h3>
+              <button
+                onClick={closeUserModal}
+                className="text-muted hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Status</label>
-                <div className="space-y-2">
-                  {['active', 'suspended', 'banned'].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        const reason =
-                          status !== 'active' ? prompt(`Reason for ${status}:`) : undefined
+              {/* Account Info */}
+              <div className="bg-surface-2 rounded-lg p-4">
+                <h4 className="font-medium text-white mb-3">Account Information</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted">User ID:</span>
+                    <span className="text-white ml-2 font-mono text-xs">{selectedUser.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Email:</span>
+                    <span className="text-white ml-2">{selectedUser.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Status:</span>
+                    <span className="text-white ml-2">{selectedUser.status || 'active'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Joined:</span>
+                    <span className="text-white ml-2">
+                      {new Date(selectedUser.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Last Login:</span>
+                    <span className="text-white ml-2">
+                      {selectedUser.lastLogin 
+                        ? new Date(selectedUser.lastLogin).toLocaleString()
+                        : 'Never'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Games Played:</span>
+                    <span className="text-white ml-2">{selectedUser.gamesPlayed || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">ELO Rating:</span>
+                    <span className="text-white ml-2">{selectedUser.elo || 1000}</span>
+                  </div>
+                </div>
+              </div>
 
-                        if (status === 'active' || reason) {
-                          updateUserStatus(editModal.user.id, {
-                            status: status as any,
-                            reason,
-                          })
-                        }
-                      }}
-                      className={`w-full text-left px-4 py-2 rounded ${
-                        editModal.user.status === status
-                          ? 'bg-primary'
-                          : 'bg-surface-2 hover:brightness-110'
+              {/* Special Status */}
+              <div className="bg-surface-2 rounded-lg p-4">
+                <h4 className="font-medium text-white mb-3">Special Status & Permissions</h4>
+                <div className="space-y-3">
+                  {/* VIP Status */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-white">VIP Status</div>
+                      <div className="text-xs text-muted">
+                        {selectedUser.isVip && selectedUser.vipReason 
+                          ? `Reason: ${selectedUser.vipReason}`
+                          : 'Grants access to VIP-only maps and features'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleVIP(selectedUser.id, selectedUser.isVip || false)}
+                      className={`px-4 py-2 rounded transition-colors ${
+                        selectedUser.isVip 
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                          : 'bg-gray-600 hover:bg-gray-500 text-white'
                       }`}
                     >
-                      {adminService.formatUserStatus(status).text}
+                      {selectedUser.isVip ? '👑 VIP Active' : 'Grant VIP'}
                     </button>
-                  ))}
+                  </div>
+
+                  {/* Admin Status */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-white">Admin Status</div>
+                      <div className="text-xs text-muted">Full administrative privileges</div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleAdmin(selectedUser.id, selectedUser.isAdmin || false)}
+                      className={`px-4 py-2 rounded transition-colors ${
+                        selectedUser.isAdmin 
+                          ? 'bg-red-600 hover:bg-red-700 text-white' 
+                          : 'bg-gray-600 hover:bg-gray-500 text-white'
+                      }`}
+                    >
+                      {selectedUser.isAdmin ? '🛡️ Admin Active' : 'Make Admin'}
+                    </button>
+                  </div>
+
+                  {/* Premium Tier */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-white">Premium Tier</div>
+                      <div className="text-xs text-muted">Subscription level and features</div>
+                    </div>
+                    <select
+                      value={selectedUser.premiumTier || 'free'}
+                      onChange={(e) => handleChangePremiumTier(selectedUser.id, e.target.value)}
+                      className="px-4 py-2 bg-surface-1 text-white rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="free">Free</option>
+                      <option value="premium">Premium</option>
+                      <option value="pro">Pro</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="bg-surface-2 rounded-lg p-4">
+                <h4 className="font-medium text-white mb-3">Account Actions</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedUser.status === 'banned' ? (
+                    <button
+                      onClick={() => handleUnbanUser(selectedUser.id)}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      Unban User
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleBanUser(selectedUser.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Ban User
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => window.open(`/profile/${selectedUser.username}`, '_blank')}
+                    className="px-4 py-2 bg-primary text-white rounded hover:brightness-110"
+                  >
+                    View Profile
+                  </button>
+                  
+                  <button
+                    onClick={() => alert('Password reset functionality coming soon')}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                  >
+                    Reset Password
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2 mt-6">
+            <div className="flex justify-end mt-6">
               <button
-                onClick={() => setEditModal(null)}
-                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded"
+                onClick={closeUserModal}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
               >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reset Password Modal */}
-      {resetPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
-              Reset Password: {resetPasswordModal.username}
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
-                  placeholder="Enter new password..."
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 mt-6">
-              <button
-                onClick={() => {
-                  setResetPasswordModal(null)
-                  setNewPassword('')
-                }}
-                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={resetPassword}
-                disabled={!newPassword || newPassword.length < 6}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded"
-              >
-                Reset Password
+                Close
               </button>
             </div>
           </div>
@@ -384,3 +501,5 @@ export default function AdminUsers() {
     </div>
   )
 }
+
+export default AdminUsers
