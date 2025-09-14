@@ -97,23 +97,48 @@ This document defines the map data structure for the Risk game system, both for 
 - Territory special abilities framework
 - Map selection in game creation
 
-### 🚧 **Map Editor (Coming Soon)**
-- Visual territory boundary drawing
-- Interactive adjacency management
-- Background image upload and positioning
-- Real-time validation
-- Map testing and preview
+### ✅ **Map Editor (Implemented)**
+The Map Editor is now fully functional with a modern tabbed interface located at `/map-editor-tokens`.
 
-## 📋 Map Creation Workflow (Future)
+#### Interface Organization
+The editor uses a **tabbed navigation system** with contextual sidebar panels:
 
-### For Map Creators
-1. **Upload Background**: JPG/PNG image (max 10MB)
-2. **Draw Territories**: Click to create polygon boundaries
-3. **Define Continents**: Group territories and set bonuses
-4. **Set Adjacencies**: Connect territories that can attack each other
-5. **Add Special Abilities**: Assign fortress, naval base, etc.
-6. **Test & Validate**: Ensure all territories are reachable
-7. **Publish**: Make available to community
+**Main Tabs:**
+1. **📋 Properties** - Map metadata, validation checklist
+2. **🖼️ Image** - Background upload, processing, cropping
+3. **🎯 Territories** - Token placement, display settings, labels
+4. **🌍 Continents** - Continent management, bonus configuration
+5. **🔗 Connections** - Territory adjacency linking
+6. **👑 Capitals** - Player starting positions, auto-generation
+
+**Key Features:**
+- **Dynamic Sidebar**: Context-specific controls for each tab
+- **Visual Token Editor**: Drag-and-drop territory placement
+- **Token Customization**: Shape (hexagon/circle), size, grid overlay
+- **Label System**: Customizable territory labels with font/color options
+- **Connection Visualization**: Visual lines showing territory adjacencies
+- **Capital Assignment**: Auto-generate or manually assign starting positions
+- **Real-time Validation**: Instant feedback on map completeness
+- **Local & Server Storage**: Auto-save drafts, server persistence
+
+**Technical Details:**
+- Fixed token clickable area alignment (direct positioning, no transform)
+- Progressive disclosure UI pattern for better UX
+- Supports 2-12 player configurations
+- Image processing with compression and cropping
+- JSON import/export for map data
+
+## 📋 Map Creation Workflow
+
+### Using the Visual Map Editor
+1. **Navigate to `/map-editor-tokens`** - Access the editor interface
+2. **Properties Tab**: Set map name, description, player counts
+3. **Image Tab**: Upload background image (JPG/PNG, max 10MB)
+4. **Territories Tab**: Click to place tokens, drag to position
+5. **Continents Tab**: Create continents, assign territories, set bonuses
+6. **Connections Tab**: Click territories to link adjacencies
+7. **Capitals Tab**: Auto-generate or manually set starting positions
+8. **Save & Validate**: Check validation panel, save as draft or publish
 
 ### For Developers Adding Maps
 1. **Prepare Data**: Create map object with territories, continents, adjacencies
@@ -185,7 +210,8 @@ This document defines the map data structure for the Risk game system, both for 
 
 ```
 project/
-├── MAP-FORMAT.md           # This documentation
+├── docs/
+│   └── MAP-FORMAT.md       # This documentation
 ├── add-test-maps.js        # Script to add test maps
 ├── backend/
 │   ├── migrations/
@@ -193,11 +219,12 @@ project/
 │   └── uploads/maps/       # Map background images
 └── frontend/
     └── src/pages/
-        ├── ComingSoon.tsx  # Map editor placeholder
-        └── Maps.tsx        # Map browser
+        ├── MapEditorTokens.tsx  # Visual map editor with tabbed interface
+        ├── MapEditor.tsx        # Alternative editor (grid-based)
+        └── Maps.tsx             # Map browser
 ```
 
 ---
 
-*Last updated: August 2025*
-*Status: Core functionality complete, Map Editor in development*
+*Last updated: September 2025*
+*Status: Map Editor fully implemented with tabbed interface*

@@ -19,6 +19,7 @@ Frontend: http://localhost:5173 | Backend: http://localhost:5001
 - **CLAUDE.md** - This file (AI assistant guide)
 - **TODO.md** - Feature & task tracking
 - **docs/DEPLOYMENT.md** - Complete deployment, monitoring, emergency procedures
+- **docs/MAP-FORMAT.md** - Map Editor documentation with tabbed interface guide
 - **docs/** - Additional technical documentation
 
 ## ⚡ Essential Commands
@@ -83,11 +84,23 @@ backend/
 └── migrations/                    # Database migrations
 
 frontend/
+├── src/pages/MapEditorTokens.tsx   # Map Editor with tabbed interface
 ├── src/components/game/            # GameBoard, PhaseControls, DiceModal
 ├── src/store/gameSlice.ts          # Redux game state
 ├── src/services/socket.ts          # Socket.io client
 └── src/types/game.ts               # TypeScript game types
 ```
+
+### 🗺️ Map Editor
+The Map Editor (`/map-editor-tokens`) features a modern tabbed interface:
+- **Properties Tab**: Map metadata and validation
+- **Image Tab**: Background upload and processing
+- **Territories Tab**: Token placement with drag-and-drop
+- **Continents Tab**: Continent configuration
+- **Connections Tab**: Territory adjacency linking
+- **Capitals Tab**: Starting position setup
+
+See `docs/MAP-FORMAT.md` for complete Map Editor documentation.
 
 ### Real-time Game Flow
 1. Client action → Socket.io event → `gameHandlers.ts`
