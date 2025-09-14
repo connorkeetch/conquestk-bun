@@ -7,6 +7,7 @@ import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import MapImageControls from '../components/MapImageControls'
 import TerritoryToken from '../components/TerritoryToken'
 import api from '../services/api'
+import { PLAYER_COLORS } from '../constants/colors'
 
 interface Territory {
   id: string
@@ -1476,7 +1477,7 @@ export default function MapEditorTokens() {
                   {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
                     const territory = state.territories.find(t => t.id === territoryId)
                     if (!territory) return null
-                    const playerColors = ['#FF4444', '#4444FF', '#44FF44', '#FFFF44', '#FF44FF', '#44FFFF', '#FFA500', '#800080', '#00CED1', '#DC143C', '#32CD32', '#FFD700']
+                    const playerColors = PLAYER_COLORS
                     return (
                       <div
                         key={territoryId}

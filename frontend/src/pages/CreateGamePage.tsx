@@ -12,6 +12,26 @@ import {
 } from '../constants/colors'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
+import api from '../services/api'
+
+// Map interface
+interface GameMap {
+  id: string
+  name: string
+  description: string
+  territory_count: number
+  continent_count: number
+  min_players: number
+  max_players: number
+  is_featured?: boolean
+  is_vip_only?: boolean
+  creator_name?: string
+  play_count?: number
+  rating_average?: number
+  rating_count?: number
+  tags?: string[]
+  image_url?: string
+}
 
 // Helper function to get valid team configurations based on player count
 function getValidTeamOptions(playerCount: number): number[] {
@@ -80,17 +100,17 @@ const getColorName = (color: string | PlayerColor): string => {
   // Map player colors to names (matching exact order in PLAYER_COLORS)
   const playerColorNames: string[] = [
     'Red',           // #DC2626
-    'Maroon',        // #881337
+    'Crimson',       // #851D2D
     'Pink',          // #EC4899
     'Orange',        // #EA580C
     'Amber',         // #F59E0B
     'Forest Green',  // #014421
-    'Lime Green',    // #32CD32
+    'Emerald',       // #059669
     'Blue',          // #2563EB
     'Cyan',          // #06B6D4
+    'Violet',        // #7C3AED
     'Tan',           // #918151
-    'Crimson',       // #851D2D
-    'Sienna',        // #8B4513
+    'Brown',         // #7C2D12
   ]
   
   // For standard player colors, get the index and return the name
@@ -176,14 +196,57 @@ const CreateGamePage: React.FC = () => {
   const [useAutoName, setUseAutoName] = useState(true)
   const [playersOption, setPlayersOption] = useState<number | 'random'>(6)
   const [createAndStay, setCreateAndStay] = useState(false)
+  const [mapSearch, setMapSearch] = useState('')
 
-  // Mock maps data (moved here so it's available for generateSmartName)
-  const maps = [
-    { id: 'classic', name: 'Classic World', territories: 42, players: '2-6', size: 'Large' },
-    { id: 'europe', name: 'Europe', territories: 24, players: '2-4', size: 'Medium' },
-    { id: 'asia', name: 'Asia', territories: 30, players: '2-5', size: 'Large' },
-    { id: 'random', name: 'Random Map', territories: 0, players: 'Any', size: 'Random' },
-  ]
+  // Maps state
+  const [maps, setMaps] = useState<GameMap[]>([])
+  const [mapsLoading, setMapsLoading] = useState(true)
+  
+  // Add random map option
+  const randomMapOption: GameMap = {
+    id: 'random',
+    name: 'Random Map',
+    description: 'Randomly selected when game starts',
+    territory_count: 0,
+    continent_count: 0,
+    min_players: 2,
+    max_players: 12,
+    tags: ['random'],
+  }
+  
+  // Fetch available maps on component mount
+  useEffect(() => {
+    const fetchMaps = async () => {
+      try {
+        setMapsLoading(true)
+        const response = await api.get('/maps/available-for-game')
+        const availableMaps = response.data.maps || []
+        // Add random option at the end
+        setMaps([...availableMaps, randomMapOption])
+      } catch (error) {
+        console.error('Failed to fetch maps:', error)
+        // Fallback to just classic and random if API fails
+        setMaps([
+          {
+            id: 'classic',
+            name: 'Classic World',
+            description: 'The original Risk world map',
+            territory_count: 42,
+            continent_count: 6,
+            min_players: 2,
+            max_players: 6,
+            is_featured: true,
+            creator_name: 'ConquestK',
+          },
+          randomMapOption,
+        ])
+      } finally {
+        setMapsLoading(false)
+      }
+    }
+    
+    fetchMaps()
+  }, [])
 
   // Generate smart game name (with placeholder for random options)
   const generateSmartName = (resolveRandom = false) => {
@@ -199,7 +262,8 @@ const CreateGamePage: React.FC = () => {
       return '(autoname)'
     }
     
-    const mapName = maps.find((m) => m.id === selectedMap)?.name || 'Classic'
+    const selectedMapData = maps.find((m) => m.id === selectedMap)
+    const mapName = selectedMapData?.name || 'Classic World'
     const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
 
     // Build descriptive elements
@@ -337,8 +401,10 @@ const CreateGamePage: React.FC = () => {
         
       let finalModifiers = useTerritoryModifiers
         
+      // Filter out random option and select a random map
+      const availableMaps = maps.filter(m => m.id !== 'random')
       let finalMap = selectedMap === 'random'
-        ? maps.filter(m => m.id !== 'random')[Math.floor(Math.random() * (maps.length - 1))].id
+        ? availableMaps[Math.floor(Math.random() * availableMaps.length)]?.id || 'classic'
         : selectedMap
 
       const gameData: CreateGameData = {
@@ -1118,64 +1184,148 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-1">
               <input
                 placeholder="Search maps..."
+                value={mapSearch}
+                onChange={(e) => setMapSearch(e.target.value)}
                 className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface-2">
-                {maps.map((map) => (
-                  <div
-                    key={map.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                      selectedMap === map.id
-                        ? map.id === 'random'
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg'
-                          : 'bg-primary shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
-                    }`}
-                    onClick={() => setSelectedMap(map.id)}
-                  >
-                    <div className="font-bold text-white">
-                      {map.id === 'random' && '🎲 '}
-                      {map.name}
-                    </div>
-                    <div className="text-sm text-muted">
-                      {map.territories > 0 
-                        ? `${map.territories} territories • ${map.players} players`
-                        : 'Randomly selected when game starts'
-                      }
-                    </div>
+                {mapsLoading ? (
+                  <div className="text-center py-4 text-muted">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    Loading maps...
                   </div>
-                ))}
+                ) : (
+                  maps
+                    .filter(map => 
+                      mapSearch === '' || 
+                      map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                      map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                      map.tags?.some(tag => tag.toLowerCase().includes(mapSearch.toLowerCase()))
+                    )
+                    .map((map) => (
+                      <div
+                        key={map.id}
+                        className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                          selectedMap === map.id
+                            ? map.id === 'random'
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg'
+                              : 'bg-primary shadow-lg'
+                            : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                        }`}
+                        onClick={() => setSelectedMap(map.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-white">
+                            {map.id === 'random' && '🎲 '}
+                            {map.is_featured && '⭐ '}
+                            {map.is_vip_only && '👑 '}
+                            {map.name}
+                          </div>
+                          {map.rating_average && map.rating_average > 0 && (
+                            <div className="text-xs text-yellow-400">
+                              {'⭐'.repeat(Math.floor(map.rating_average))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted">
+                          {map.territory_count > 0 
+                            ? `${map.territory_count} territories • ${map.min_players}-${map.max_players} players`
+                            : 'Randomly selected when game starts'
+                          }
+                        </div>
+                        {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
+                          <div className="text-xs text-muted mt-1">
+                            by {map.creator_name}
+                            {map.play_count && map.play_count > 0 && ` • ${map.play_count} plays`}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                )}
               </div>
             </div>
 
             {/* Map Preview */}
             <div className="lg:col-span-2">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10">
-                  <span className="text-muted">
-                    {selectedMap === 'random' ? '🎲 Random Map Selection' : 'Map Preview (Coming Soon)'}
-                  </span>
-                </div>
-                {selectedMap !== 'random' && (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted">Map Size:</span>
-                      <span className="ml-2 text-white">Large</span>
+                {(() => {
+                  const selectedMapData = maps.find(m => m.id === selectedMap)
+                  return selectedMapData ? (
+                    <>
+                      <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden">
+                        {selectedMapData.image_url ? (
+                          <img 
+                            src={selectedMapData.image_url} 
+                            alt={selectedMapData.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                              const parent = (e.target as HTMLImageElement).parentElement
+                              if (parent) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'text-muted text-center'
+                                fallback.innerHTML = selectedMap === 'random' 
+                                  ? '🎲 Random Map Selection' 
+                                  : '🗺️ Map Preview'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="text-muted">
+                            {selectedMap === 'random' ? '🎲 Random Map Selection' : '🗺️ Map Preview'}
+                          </span>
+                        )}
+                      </div>
+                      {selectedMap !== 'random' && (
+                        <div>
+                          {selectedMapData.description && (
+                            <p className="text-sm text-muted mb-3">{selectedMapData.description}</p>
+                          )}
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted">Territories:</span>
+                              <span className="ml-2 text-white">{selectedMapData.territory_count || 'Unknown'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted">Continents:</span>
+                              <span className="ml-2 text-white">{selectedMapData.continent_count || 'Unknown'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted">Players:</span>
+                              <span className="ml-2 text-white">{selectedMapData.min_players}-{selectedMapData.max_players}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted">Games Played:</span>
+                              <span className="ml-2 text-white">{selectedMapData.play_count || 0}</span>
+                            </div>
+                            {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
+                              <div className="col-span-2">
+                                <span className="text-muted">Created by:</span>
+                                <span className="ml-2 text-white">{selectedMapData.creator_name}</span>
+                              </div>
+                            )}
+                            {selectedMapData.rating_average && selectedMapData.rating_average > 0 && (
+                              <div className="col-span-2">
+                                <span className="text-muted">Rating:</span>
+                                <span className="ml-2 text-yellow-400">
+                                  {'⭐'.repeat(Math.floor(selectedMapData.rating_average))}
+                                  <span className="text-white ml-1">
+                                    ({selectedMapData.rating_average.toFixed(1)}/5 from {selectedMapData.rating_count} reviews)
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center text-muted py-8">
+                      Select a map to see details
                     </div>
-                    <div>
-                      <span className="text-muted">Territories:</span>
-                      <span className="ml-2 text-white">42</span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Regions:</span>
-                      <span className="ml-2 text-white">6</span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Games Played:</span>
-                      <span className="ml-2 text-white">12,847</span>
-                    </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             </div>
           </div>

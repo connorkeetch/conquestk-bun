@@ -40,6 +40,8 @@ npx ts-node src/scripts/checkProductionDb.ts
 - `012_remove_unused_is_verified_field.sql` - Cleanup migration
 - `013_add_creator_id_to_maps.sql` - Map creator tracking
 - `014_add_map_status_column.sql` - Map status system
+- `015_consolidate_user_tables.sql` - User table consolidation
+- `016_add_vip_and_premium_features.sql` - VIP flags, premium tiers, admin status
 
 ## 🔧 Common Issues & Solutions
 
@@ -83,6 +85,8 @@ npx ts-node src/scripts/checkProductionDb.ts
    - `user_account_status` (from migration 011)
    - `user_preferences.theme` (from migration 004)
    - `maps.status` (from migration 014)
+   - `users.is_vip`, `users.premium_tier` (from migration 016)
+   - `maps.is_vip_only` (from migration 016)
 
 ### Issue: "Unexpected token '*'" in JWT
 **Cause**: Browser caching null token as string "*"
@@ -193,7 +197,11 @@ async function checkMigrationHealth() {
   const columns = [
     { table: 'user_preferences', column: 'theme' },
     { table: 'maps', column: 'status' },
-    { table: 'maps', column: 'creator_id' }
+    { table: 'maps', column: 'creator_id' },
+    { table: 'users', column: 'is_vip' },
+    { table: 'users', column: 'premium_tier' },
+    { table: 'users', column: 'is_admin' },
+    { table: 'maps', column: 'is_vip_only' }
   ]
   
   for (const { table, column } of columns) {

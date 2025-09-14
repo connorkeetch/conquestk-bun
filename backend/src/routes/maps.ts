@@ -252,27 +252,211 @@ const handleMulterError = (error: any, _req: Request, res: Response, next: any) 
 
 // ============= PUBLIC ROUTES =============
 
+// Get maps specifically for game creation (only approved, public maps)
+router.get('/available-for-game', async (req: Request, res: Response) => {
+  try {
+    const pool = await getPool()
+    
+    // Fetch only approved, public maps for game creation
+    const query = `
+      SELECT 
+        m.id,
+        m.name,
+        m.description,
+        m.image_url,
+        m.creator_id,
+        u.username as creator_name,
+        m.min_players,
+        m.max_players,
+        m.is_featured,
+        m.is_vip_only,
+        m.rating_average,
+        m.rating_count,
+        m.play_count,
+        m.tags,
+        m.created_at,
+        (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
+        (SELECT COUNT(DISTINCT continent_id) FROM map_territories WHERE map_id = m.id) as continent_count
+      FROM maps m
+      LEFT JOIN users u ON m.creator_id = u.id
+      WHERE m.status = 'approved' 
+        AND m.is_public = true
+      ORDER BY 
+        CASE WHEN m.is_featured THEN 0 ELSE 1 END,
+        m.play_count DESC,
+        m.rating_average DESC,
+        m.created_at DESC
+      LIMIT 100
+    `
+    
+    const result = await pool.query(query)
+    
+    // Add the classic map as a default option
+    const classicMap = {
+      id: 'classic',
+      name: 'Classic World',
+      description: 'The original Risk world map with 42 territories and 6 continents',
+      territory_count: 42,
+      continent_count: 6,
+      min_players: 2,
+      max_players: 6,
+      is_featured: true,
+      creator_name: 'ConquestK',
+      play_count: 0,
+      rating_average: 5,
+      rating_count: 0,
+      tags: ['classic', 'official'],
+      image_url: '/assets/maps/classic-preview.png'
+    }
+    
+    const maps = [classicMap, ...result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description || '',
+      territory_count: parseInt(row.territory_count) || 0,
+      continent_count: parseInt(row.continent_count) || 0,
+      min_players: row.min_players || 2,
+      max_players: row.max_players || 6,
+      is_featured: row.is_featured || false,
+      is_vip_only: row.is_vip_only || false,
+      creator_name: row.creator_name || 'Unknown',
+      play_count: row.play_count || 0,
+      rating_average: row.rating_average || 0,
+      rating_count: row.rating_count || 0,
+      tags: row.tags || [],
+      image_url: row.image_url || null
+    }))]
+    
+    return res.json({
+      maps,
+      total: maps.length
+    })
+  } catch (error) {
+    logger.error('Error fetching maps for game creation:', error)
+    return res.status(500).json({ error: 'Failed to fetch available maps' })
+  }
+})
+
 // Get all public maps with filtering and pagination
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const filters = {
-      search: req.query.search as string,
-      tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
-      creator: req.query.creator as string,
-      isFeatured: req.query.featured === 'true',
-      minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
-      sortBy: req.query.sortBy as string,
-      sortOrder: req.query.sortOrder as 'asc' | 'desc',
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
-      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
-      isPublic: true, // Force public maps only for this endpoint
+    const pool = await getPool()
+    
+    // Build filters
+    const isPublic = req.query.isPublic !== 'false'
+    const status = (req.query.status as string) || 'approved'
+    const sortBy = (req.query.sortBy as string) || 'popularity'
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0
+    const tag = req.query.tag as string
+    
+    // Build query based on filters
+    let query = `
+      SELECT 
+        m.id,
+        m.name,
+        m.description,
+        m.image_url,
+        m.creator_id,
+        u.username as creator_name,
+        m.min_players,
+        m.max_players,
+        m.is_featured,
+        m.rating_average,
+        m.rating_count,
+        m.play_count,
+        m.tags,
+        m.created_at,
+        m.status,
+        (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
+        (SELECT COUNT(DISTINCT continent_id) FROM map_territories WHERE map_id = m.id) as continent_count
+      FROM maps m
+      LEFT JOIN users u ON m.creator_id = u.id
+      WHERE 1=1
+    `
+    
+    const params: any[] = []
+    let paramCount = 0
+    
+    // Add filters
+    if (isPublic) {
+      query += ` AND m.is_public = true`
     }
-
-    const result = await mapService.searchMaps(filters)
-    return res.json(result)
+    
+    if (status) {
+      query += ` AND m.status = $${++paramCount}`
+      params.push(status)
+    }
+    
+    if (tag) {
+      query += ` AND $${++paramCount} = ANY(m.tags)`
+      params.push(tag)
+    }
+    
+    // Add sorting
+    switch (sortBy) {
+      case 'rating':
+        query += ` ORDER BY m.rating_average DESC NULLS LAST, m.play_count DESC`
+        break
+      case 'newest':
+        query += ` ORDER BY m.created_at DESC`
+        break
+      case 'name':
+        query += ` ORDER BY m.name ASC`
+        break
+      case 'popularity':
+      default:
+        query += ` ORDER BY m.is_featured DESC, m.play_count DESC, m.rating_average DESC NULLS LAST`
+        break
+    }
+    
+    // Add pagination
+    query += ` LIMIT $${++paramCount} OFFSET $${++paramCount}`
+    params.push(limit, offset)
+    
+    const result = await pool.query(query, params)
+    
+    const maps = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description || '',
+      imageUrl: row.image_url,
+      creatorId: row.creator_id,
+      creatorName: row.creator_name || 'Unknown',
+      minPlayers: row.min_players || 2,
+      maxPlayers: row.max_players || 6,
+      isFeatured: row.is_featured || false,
+      ratingAverage: parseFloat(row.rating_average) || 0,
+      ratingCount: parseInt(row.rating_count) || 0,
+      playCount: parseInt(row.play_count) || 0,
+      tags: row.tags || [],
+      createdAt: row.created_at,
+      status: row.status,
+      territoryCount: parseInt(row.territory_count) || 0,
+      continentCount: parseInt(row.continent_count) || 0
+    }))
+    
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM maps m
+      WHERE 1=1
+      ${isPublic ? ' AND m.is_public = true' : ''}
+      ${status ? ` AND m.status = '${status}'` : ''}
+      ${tag ? ` AND '${tag}' = ANY(m.tags)` : ''}
+    `
+    const countResult = await pool.query(countQuery)
+    const total = parseInt(countResult.rows[0]?.total || '0')
+    
+    return res.json({
+      maps,
+      total,
+      limit,
+      offset
+    })
   } catch (error) {
-    logger.error('Error searching maps:', error)
-    return res.status(500).json({ error: 'Failed to search maps' })
+    logger.error('Error fetching maps:', error)
+    return res.status(500).json({ error: 'Failed to fetch maps' })
   }
 })
 
@@ -635,49 +819,47 @@ router.delete(
   },
 )
 
-// Get all public approved maps
-router.get('/', async (req: Request, res: Response) => {
+
+// Get user's maps (both routes for compatibility)
+router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
-      isPublic: req.query.isPublic !== 'false', // Default to public maps
-      status: req.query.status as string || 'approved', // Default to approved maps
-      search: req.query.search as string,
-      tags: req.query.tag ? [req.query.tag as string] : undefined,
-      sortBy: req.query.sortBy as string || 'popularity',
-      sortOrder: req.query.sortOrder as 'asc' | 'desc' || 'desc',
+      creator: (req as any).userId,
+      isPublic: undefined, // Show both public and private
+      sortBy: req.query.sortBy as string,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc',
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
       offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
     }
 
     const result = await mapService.searchMaps(filters)
     
-    // Add creator names to the maps
+    // Add status information to user's own maps
     const pool = await getPool()
     const mapIds = result.maps.map(m => m.id)
     if (mapIds.length > 0) {
-      const creatorQuery = `
-        SELECT m.id, u.username as creator_name 
-        FROM maps m 
-        JOIN users u ON m.creator_id = u.id 
-        WHERE m.id = ANY($1)
+      const statusQuery = `
+        SELECT id, status 
+        FROM maps 
+        WHERE id = ANY($1)
       `
-      const creatorResult = await pool.query(creatorQuery, [mapIds])
-      const creatorMap = new Map(creatorResult.rows.map(r => [r.id, r.creator_name]))
+      const statusResult = await pool.query(statusQuery, [mapIds])
+      const statusMap = new Map(statusResult.rows.map(r => [r.id, r.status]))
       
       result.maps = result.maps.map(map => ({
         ...map,
-        creatorName: creatorMap.get(map.id) || 'Unknown'
+        status: statusMap.get(map.id) || 'draft'
       }))
     }
     
-    return res.json(result)
+    return res.json(result.maps)
   } catch (error) {
-    logger.error('Error fetching maps:', error)
-    return res.status(500).json({ error: 'Failed to fetch maps' })
+    logger.error('Error fetching user maps:', error)
+    return res.status(500).json({ error: 'Failed to fetch user maps' })
   }
 })
 
-// Get user's maps
+// Legacy route for compatibility
 router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
