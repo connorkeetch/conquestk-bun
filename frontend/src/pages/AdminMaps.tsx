@@ -13,6 +13,7 @@ interface Map {
   imageUrl?: string
   isPublic: boolean
   isFeatured: boolean
+  isVipOnly?: boolean
   minPlayers: number
   maxPlayers: number
   playCount: number
@@ -50,6 +51,7 @@ export const AdminMaps: React.FC = () => {
     tags: [] as string[],
     isFeatured: false,
     isPublic: true,
+    isVipOnly: false,
   })
 
   useEffect(() => {
@@ -133,6 +135,7 @@ export const AdminMaps: React.FC = () => {
       status: map.status || 'draft',
       isFeatured: map.isFeatured,
       isPublic: map.isPublic,
+      isVipOnly: map.isVipOnly || false,
     })
     setShowEditModal(true)
   }
@@ -343,7 +346,13 @@ export const AdminMaps: React.FC = () => {
                           <div className="text-sm font-medium text-white">
                             {map.name}
                             {map.isFeatured && (
-                              <span className="ml-2 text-yellow-400">⭐</span>
+                              <span className="ml-2 text-yellow-400" title="Featured">⭐</span>
+                            )}
+                            {map.isVipOnly && (
+                              <span className="ml-2 text-purple-400" title="VIP Only">👑</span>
+                            )}
+                            {!map.isPublic && (
+                              <span className="ml-2 text-gray-400" title="Private">🔒</span>
                             )}
                           </div>
                           {map.description && (
@@ -521,25 +530,39 @@ export const AdminMaps: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isFeatured}
-                    onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-white">Featured</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isPublic}
-                    onChange={(e) => setEditForm({ ...editForm, isPublic: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-white">Public</span>
-                </label>
+              <div className="space-y-2">
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isFeatured}
+                      onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-white">⭐ Featured</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isPublic}
+                      onChange={(e) => setEditForm({ ...editForm, isPublic: e.target.checked })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-white">🌍 Public</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isVipOnly || false}
+                      onChange={(e) => setEditForm({ ...editForm, isVipOnly: e.target.checked })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-white">👑 VIP Only</span>
+                    <span className="text-xs text-purple-400 ml-2">(Requires VIP status to play)</span>
+                  </label>
+                </div>
               </div>
             </div>
             

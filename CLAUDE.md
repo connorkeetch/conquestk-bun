@@ -171,8 +171,9 @@ socket.on('game:state', (state) => {
 1. **Node.js 24 Migration** - Error handling, regex security, resource cleanup
 2. **React 19.1 + Vite 7.1** - Latest stable with performance improvements  
 3. **PostgreSQL-Only** - Removed SQLite complexity, Railway-hosted everywhere
-4. **Enterprise Performance** - Phase 4 scaling with Redis cluster, CDN, auto-scaling
-5. **31 Backend Services** - Comprehensive service architecture built out
+4. **VIP & Premium System** - Complete user tier system with VIP flags and premium subscriptions
+5. **Admin Panel Restructure** - Enhanced admin UI with inline editing, filtering, and streamlined navigation
+6. **31 Backend Services** - Comprehensive service architecture built out
 
 ### 🔄 Ready for Integration
 - **Bull.js Worker System** - BattleWorker, GameActionWorker, CleanupWorker (.disabled)
@@ -180,9 +181,10 @@ socket.on('game:state', (state) => {
 - **Advanced Audio Features** - Spatial audio, dynamic music, voice announcements
 
 ### 🎯 Current Development Focus
-- **Audio System Enhancement** - Advanced features and performance optimization
+- **VIP Maps Implementation** - Enable VIP-only maps using new database flags
+- **Premium Tier Features** - Implement premium-gated content and features
 - **Worker Integration** - Enable Bull.js background processing
-- **Status Verification** - Confirm completion status of capital system, performance features
+- **Audio System Enhancement** - Advanced features and performance optimization
 
 ## 💾 Database Management
 
@@ -233,15 +235,16 @@ SSL: Required
    ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default';
    ```
 
-### Current Database Tables (as of migration 003)
-- **Core**: users, game_rooms, room_players, game_states, game_moves
-- **Maps**: maps, map_territories, custom_maps, map_submissions, map_reviews
+### Current Database Tables (as of migration 016)
+- **Core**: users (with VIP/premium fields), game_rooms, room_players, game_states, game_moves
+- **Maps**: maps (with VIP-only flags), map_territories, custom_maps, map_submissions, map_reviews
 - **Stats**: player_stats, player_game_stats, game_history, game_analytics
 - **Social**: friendships, user_blocks, user_profiles, chat_messages
 - **Achievements**: achievements, user_achievements, achievement_progress
 - **Tournaments**: tournaments, tournament_participants, tournament_matches
 - **Admin**: admin_roles, user_admin_roles, admin_activity_logs, user_bans
 - **Support**: notifications, user_reports, territory_modifiers, territory_events
+- **Views**: admin_user_overview (aggregated user data with stats)
 
 ## 📁 Environment Configuration
 
@@ -331,10 +334,7 @@ Frontend proxies `/api` requests to backend (configured in `vite.config.ts`).
 - **CLAUDE.md** - This file (AI assistant instructions)
 - **README.md** - Project overview and quick start
 - **CODING-STANDARDS.md** - 10 core coding principles
-- **CODEBASE-MAP.md** - Complete project structure reference
-- **TODO.md** - Development task list  
-- **CODEBASE-HEALTH-CHECK.md** - Project health status
-- **DEPLOYMENT.md** - Deployment guide (duplicate - should be removed)
+- **TODO.md** - Development task list
 
 ### /docs (Technical Documentation)
 - **ARCHITECTURE.md** - System design and architecture

@@ -18,6 +18,8 @@ interface Map {
   createdAt: string
   status?: string
   isFeatured?: boolean
+  isVipOnly?: boolean
+  isPublic?: boolean
 }
 
 const Maps: React.FC = () => {
@@ -244,11 +246,18 @@ const Maps: React.FC = () => {
                     🗺️
                   </div>
                 )}
-                {map.isFeatured && (
-                  <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                    ⭐ Featured
-                  </div>
-                )}
+                <div className="absolute top-2 right-2 flex gap-2">
+                  {map.isFeatured && (
+                    <div className="bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                      ⭐ Featured
+                    </div>
+                  )}
+                  {map.isVipOnly && (
+                    <div className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">
+                      👑 VIP
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Map Info */}
@@ -256,6 +265,9 @@ const Maps: React.FC = () => {
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-white group-hover:text-primary transition-colors">
                     {map.name}
+                    {!map.isPublic && (
+                      <span className="ml-1 text-gray-400 text-xs" title="Private">🔒</span>
+                    )}
                   </h3>
                   {showMyMaps && getStatusBadge(map.status)}
                 </div>

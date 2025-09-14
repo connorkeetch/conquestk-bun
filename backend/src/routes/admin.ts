@@ -847,6 +847,9 @@ router.get(
         creatorId: map.creator_id,
         minPlayers: map.min_players,
         maxPlayers: map.max_players,
+        isPublic: map.is_public,
+        isFeatured: map.is_featured,
+        isVipOnly: map.is_vip_only || false,
       }))
 
       res.json({
@@ -871,11 +874,14 @@ router.patch(
   body('minPlayers').optional().isInt({ min: 2, max: 20 }),
   body('maxPlayers').optional().isInt({ min: 2, max: 20 }),
   body('status').optional().isIn(['draft', 'pending_review', 'approved', 'rejected', 'archived']),
+  body('isFeatured').optional().isBoolean(),
+  body('isPublic').optional().isBoolean(),
+  body('isVipOnly').optional().isBoolean(),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const { name, description, minPlayers, maxPlayers, status } = req.body
+      const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } = req.body
       const adminUserId = (req as any).userId
 
       const { query } = require('../config/database')
@@ -912,6 +918,24 @@ router.patch(
       if (status !== undefined) {
         updates.push(`status = $${paramIndex}`)
         params.push(status)
+        paramIndex++
+      }
+
+      if (isFeatured !== undefined) {
+        updates.push(`is_featured = $${paramIndex}`)
+        params.push(isFeatured)
+        paramIndex++
+      }
+
+      if (isPublic !== undefined) {
+        updates.push(`is_public = $${paramIndex}`)
+        params.push(isPublic)
+        paramIndex++
+      }
+
+      if (isVipOnly !== undefined) {
+        updates.push(`is_vip_only = $${paramIndex}`)
+        params.push(isVipOnly)
         paramIndex++
       }
 

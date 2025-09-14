@@ -32,7 +32,7 @@
  * - Always use exactly 12 standard colors for player selection
  * - Colors must be distinguishable on dark backgrounds
  * - Order colors by hue for better visual organization
- * - Premium colors (6 total) are separate and require special handling
+ * - Premium colors (5 total) are separate and require special handling
  * - Default color is PLAYER_COLORS[0] (currently Red #DC2626)
  * 
  * 🎯 COLOR REQUIREMENTS:
@@ -441,7 +441,7 @@ export const GRADIENTS = {
 export const PLAYER_COLORS = [
   // Reds & Pinks
   '#DC2626', // Red - Classic aggressive (bright red)
-  '#881337', // Maroon - Deep wine red (very different from bright red)
+  '#851D2D', // Crimson - Dark crimson
   '#EC4899', // Pink - Vibrant magenta-pink (distinct from reds)
   
   // Oranges & Yellows  
@@ -450,16 +450,18 @@ export const PLAYER_COLORS = [
   
   // Greens
   '#014421', // Forest Green - Deep forest green
-  '#32CD32', // Lime Green - Bright lime green (replaced teal)
+  '#059669', // Emerald - Rich, distinct from neon
   
-  // Blues & Cyans
+  // Blues
   '#2563EB', // Blue - Pure blue (traditional)
   '#06B6D4', // Cyan - Light blue (clearly lighter than pure blue)
   
+  // Purples
+  '#7C3AED', // Violet - Deep purple, very distinct
+  
   // Earth Tones
-  '#918151', // Tan - Light brown/tan (replaced purple)
-  '#851D2D', // Crimson - Dark crimson (replaced violet/magenta)
-  '#8B4513', // Sienna - More brown (moved to end)
+  '#918151', // Tan - Light brown/tan
+  '#7C2D12', // Brown - Richer, earthier brown
 ] as const;
 
 // ===== PREMIUM PLAYER COLORS =====
@@ -638,19 +640,19 @@ export const getColorValue = (color: PlayerColor): string => {
 
 export const getColorDisplayName = (color: string): string => {
   const colorMap: Record<string, string> = {
-    // Standard colors (12) - organized by hue
+    // Standard colors (13) - organized by hue
     '#DC2626': 'Red',
-    '#881337': 'Maroon',
+    '#851D2D': 'Crimson',
     '#EC4899': 'Pink',
     '#EA580C': 'Orange',
     '#F59E0B': 'Amber',
     '#014421': 'Forest Green',
-    '#32CD32': 'Lime Green',
+    '#059669': 'Emerald',
     '#2563EB': 'Blue',
     '#06B6D4': 'Cyan',
+    '#7C3AED': 'Violet',
     '#918151': 'Tan',
-    '#851D2D': 'Crimson',
-    '#8B4513': 'Sienna',
+    '#7C2D12': 'Brown',
     // Premium colors (6)
     '#000000': 'Midnight Black',
     '#FFFFFF': 'Pure White',

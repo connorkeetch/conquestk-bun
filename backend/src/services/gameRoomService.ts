@@ -58,6 +58,26 @@ export class GameRoomService {
   }
 
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
+    // Check if map is VIP-only
+    if (roomData.mapId) {
+      const mapResult = await query(
+        'SELECT is_vip_only FROM maps WHERE id = $1',
+        [roomData.mapId]
+      )
+      
+      if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only) {
+        // Check if user is VIP
+        const userResult = await query(
+          'SELECT is_vip FROM users WHERE id = $1',
+          [roomData.hostId]
+        )
+        
+        if (!userResult.rows[0]?.is_vip) {
+          throw new Error('This map is VIP-only. Upgrade to VIP to play on this map.')
+        }
+      }
+    }
+    
     // Validate ranked game requirements
     if (roomData.isRanked) {
       if (roomData.maxPlayers < 3) {
@@ -178,6 +198,22 @@ export class GameRoomService {
 
       if (room.status !== 'waiting') {
         throw new Error('Room is not accepting new players')
+      }
+      
+      // Check if the map is VIP-only
+      if (room.map_id) {
+        const mapQuery = 'SELECT is_vip_only FROM maps WHERE id = $1'
+        const mapResult = await client.query(mapQuery, [room.map_id])
+        
+        if (mapResult.rows.length > 0 && mapResult.rows[0].is_vip_only) {
+          // Check if user is VIP
+          const userVipQuery = 'SELECT is_vip FROM users WHERE id = $1'
+          const userVipResult = await client.query(userVipQuery, [userId])
+          
+          if (!userVipResult.rows[0]?.is_vip) {
+            throw new Error('This map is VIP-only. Upgrade to VIP to join this game.')
+          }
+        }
       }
 
       const playerCountQuery = `SELECT COUNT(*) as count FROM room_players WHERE room_id = $1`
