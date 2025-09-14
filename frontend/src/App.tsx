@@ -39,7 +39,6 @@ const TutorialPage = lazy(() => import('./pages/TutorialPage'))
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
 const AdminPage = lazy(() => import('./pages/AdminPage'))
-const AdminMaps = lazy(() => import('./pages/AdminMaps'))
 const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -420,16 +419,6 @@ function App() {
             <AuthGuard requireAdmin={true}>
               <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
                 <AdminPage />
-              </Suspense>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/admin/maps"
-          element={
-            <AuthGuard requireAdmin={true}>
-              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner"></div></div>}>
-                <AdminMaps />
               </Suspense>
             </AuthGuard>
           }
