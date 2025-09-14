@@ -52,10 +52,6 @@ export default function AdminGames() {
   const [actionModal, setActionModal] = useState<GameActionModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
 
-  useEffect(() => {
-    loadGames()
-  }, [loadGames])
-
   const loadGames = async () => {
     try {
       setLoading(true)
@@ -77,6 +73,10 @@ export default function AdminGames() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadGames()
+  }, [currentPage, searchTerm, statusFilter])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
