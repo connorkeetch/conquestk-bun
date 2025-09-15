@@ -10,7 +10,6 @@ import { GamePhaseControls } from './GamePhaseControls'
 import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
-import { CORE_COLORS } from '../constants/colors'
 import CustomMapDisplay from './CustomMapDisplay'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
 
@@ -102,11 +101,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
     (territoryId: string): string => {
       const territory = territories[territoryId]
       if (!territory || !territory.owner) {
-        return CORE_COLORS.gray300 // Neutral color from unified system
+        return '#D1D5DB' // Neutral gray
       }
 
       const player = players.find((p) => p.id === territory.owner)
-      return player?.color || CORE_COLORS.gray300
+      return player?.color || '#D1D5DB'
     },
     [territories, players],
   )

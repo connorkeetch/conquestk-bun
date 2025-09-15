@@ -1,6 +1,6 @@
 import type React from 'react'
 import UserStats from '../components/profile/UserStats'
-import '../components/profile/UserStats.css'
+// TODO: Migrate UserStats.css to use CSS variables
 
 const Statistics: React.FC = () => {
   return (

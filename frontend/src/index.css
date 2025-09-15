@@ -5,7 +5,7 @@
 @import "./app.css";
 
 /* Import our global design system - comes after Tailwind base */
-@import "./styles/global.css";
+/*@import "./styles/global.css";
 
 /* Root container */
 #root {
@@ -92,11 +92,11 @@
 /* Victory celebration animation */
 @keyframes victory-pulse {
   0%, 100% {
-    box-shadow: 0 0 20px var(--color-gold);
+    box-shadow: 0 0 20px var(--color-secondary);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 40px var(--color-gold), 0 0 60px var(--color-violet);
+    box-shadow: 0 0 40px var(--color-secondary), 0 0 60px var(--color-primary);
     transform: scale(1.02);
   }
 }
@@ -136,9 +136,9 @@
 }
 
 .glow-rank-high {
-  filter: drop-shadow(0 0 6px var(--color-gold));
+  filter: drop-shadow(0 0 6px var(--color-secondary));
 }
 
 .glow-rank-divine {
-  filter: drop-shadow(0 0 8px var(--color-gold)) drop-shadow(0 0 16px var(--color-violet));
+  filter: drop-shadow(0 0 8px var(--color-secondary)) drop-shadow(0 0 16px var(--color-primary));
 }

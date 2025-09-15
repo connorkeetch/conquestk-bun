@@ -2,7 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
-import { CORE_COLORS, getPlayerColor } from '../constants/colors'
+import { getPlayerColor } from '../constants/colors'
 
 const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>()

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 import api from '../../services/api'
 import { authService } from '../../services/authService'
-import { CORE_COLORS, RANK_COLORS } from '../../constants/colors'
+import { RANK_COLORS } from '../../constants/colors'
 
 interface UserProfile {
   id: string

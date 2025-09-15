@@ -9,7 +9,7 @@ import { GameOverModal } from './GameOverModal'
 import { GamePhaseControls } from './GamePhaseControls'
 import { SimpleMapSVG } from './SimpleMapSVG'
 import { TestMapSVG } from './TestMapSVG'
-import { CORE_COLORS, PLAYER_COLORS, getPlayerColor } from '../constants/colors'
+import { PLAYER_COLORS, getPlayerColor } from '../constants/colors'
 
 interface TerritoryDisplay {
   id: string
@@ -92,11 +92,11 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     (territoryId: string): string => {
       const territory = territories[territoryId]
       if (!territory || !territory.owner) {
-        return CORE_COLORS.gray200 // Neutral color from unified system
+        return '#E5E7EB' // Neutral gray
       }
 
       const player = players.find((p) => p.id === territory.owner)
-      return player?.color || CORE_COLORS.gray200
+      return player?.color || '#E5E7EB'
     },
     [territories, players],
   )

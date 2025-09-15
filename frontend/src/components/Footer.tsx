@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { CORE_COLORS } from '../constants/colors'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()

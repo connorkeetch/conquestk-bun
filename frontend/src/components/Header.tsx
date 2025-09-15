@@ -7,7 +7,6 @@ import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import audioService from '../services/audioService'
 import MountainLogo from './MountainLogo'
-import { GRADIENTS, CORE_COLORS } from '../constants/colors'
 
 interface MenuItem {
   path: string
@@ -81,7 +80,7 @@ export default function Header() {
               <MountainLogo width={24} height={24} />
               <span className="hidden sm:inline">
                 CONQUEST <span className="font-bold" style={{ 
-                  background: GRADIENTS.goldK, 
+                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',
@@ -90,7 +89,7 @@ export default function Header() {
               </span>
               <span className="sm:hidden">
                 C<span className="font-bold" style={{ 
-                  background: GRADIENTS.goldK, 
+                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',
@@ -293,7 +292,7 @@ export default function Header() {
             <MountainLogo width={28} height={28} />
             <span className="text-xl font-bold text-white">
               CONQUEST <span className="font-bold" style={{ 
-                background: GRADIENTS.goldK, 
+                background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
                 backgroundClip: 'text', 
                 textFillColor: 'transparent',
                 WebkitBackgroundClip: 'text',
