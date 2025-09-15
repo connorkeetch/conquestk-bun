@@ -140,30 +140,42 @@ const UserStats: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="user-stats loading">
-        <div className="loading-spinner">🎲 Loading statistics...</div>
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="text-2xl text-center p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+          <div className="text-4xl mb-4 animate-pulse">🎲</div>
+          <div className="text-white">Loading statistics...</div>
+        </div>
       </div>
     )
   }
 
   if (!stats) {
     return (
-      <div className="user-stats error">
-        <div className="error-message">❌ Unable to load statistics</div>
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="text-2xl text-center p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+          <div className="text-4xl mb-4">❌</div>
+          <div className="text-white">Unable to load statistics</div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="user-stats">
+    <div className="p-8 max-w-7xl mx-auto text-white">
       {/* Header with Period Selection */}
-      <div className="stats-header">
-        <h1>📊 Statistics & Analytics</h1>
-        <div className="period-selector">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+        <h1 className="text-4xl font-bold mb-4 sm:mb-0 bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent flex items-center gap-3">
+          <span className="text-white">📊</span> Statistics & Analytics
+        </h1>
+        <div className="flex gap-2 bg-surface-2/50 p-2 rounded-xl">
           {periods.map((period) => (
             <button
               key={period.period}
-              className={`period-btn ${selectedPeriod === period.period ? 'active' : ''}`}
+              className={`px-4 py-2 rounded-lg transition-all font-medium ${
+                selectedPeriod === period.period
+                  ? 'bg-primary text-white shadow-lg'
+                  : 'bg-transparent text-muted hover:bg-surface-2 hover:text-primary'
+              }`}
               onClick={() => setSelectedPeriod(period.period)}
             >
               {period.label}
@@ -173,85 +185,89 @@ const UserStats: React.FC = () => {
       </div>
 
       {/* General Stats Grid */}
-      <div className="stats-section">
-        <h2>🎮 General Statistics</h2>
-        <div className="stats-grid">
-          <div className="stat-card large">
-            <div className="stat-icon">🏆</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.general.gamesWon}</div>
-              <div className="stat-label">Games Won</div>
-              <div className="stat-sublabel">
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
+          <span>🎮</span> General Statistics
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="col-span-1 sm:col-span-2 bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-5xl">🏆</div>
+            <div className="flex-1">
+              <div className="text-3xl font-bold text-primary">{stats.general.gamesWon}</div>
+              <div className="text-lg text-white font-medium">Games Won</div>
+              <div className="text-sm text-muted">
                 {stats.general.gamesLost} lost • {stats.general.winRate}% win rate
               </div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">🎲</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.general.gamesPlayed}</div>
-              <div className="stat-label">Total Games</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">🎲</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.general.gamesPlayed}</div>
+              <div className="text-white font-medium">Total Games</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">⏱️</div>
-            <div className="stat-content">
-              <div className="stat-value">{formatDuration(stats.general.averageGameDuration)}</div>
-              <div className="stat-label">Avg Game Time</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">⏱️</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{formatDuration(stats.general.averageGameDuration)}</div>
+              <div className="text-white font-medium">Avg Game Time</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">📊</div>
-            <div className="stat-content">
-              <div className="stat-value">#{stats.general.ranking}</div>
-              <div className="stat-label">Global Rank</div>
-              <div className="stat-trend">
-                {getTrendIcon(stats.general.rankingChange)} {Math.abs(stats.general.rankingChange)}
-              </div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all relative">
+            <div className="text-4xl">📊</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">#{stats.general.ranking}</div>
+              <div className="text-white font-medium">Global Rank</div>
+            </div>
+            <div className="absolute top-4 right-4 text-sm bg-green-500/20 text-green-400 px-2 py-1 rounded-md">
+              {getTrendIcon(stats.general.rankingChange)} {Math.abs(stats.general.rankingChange)}
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">🔥</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.general.currentWinStreak}</div>
-              <div className="stat-label">Current Streak</div>
-              <div className="stat-sublabel">Best: {stats.general.longestWinStreak}</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">🔥</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.general.currentWinStreak}</div>
+              <div className="text-white font-medium">Current Streak</div>
+              <div className="text-sm text-muted">Best: {stats.general.longestWinStreak}</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">⏰</div>
-            <div className="stat-content">
-              <div className="stat-value">{formatPlayTime(stats.general.totalPlayTime)}</div>
-              <div className="stat-label">Total Play Time</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">⏰</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{formatPlayTime(stats.general.totalPlayTime)}</div>
+              <div className="text-white font-medium">Total Play Time</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Performance Metrics */}
-      <div className="stats-section">
-        <h2>⚔️ Battle Performance</h2>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">🏰</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.performance.territoriesConquered}</div>
-              <div className="stat-label">Territories Conquered</div>
-              <div className="stat-sublabel">{stats.performance.territoriesLost} lost</div>
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
+          <span>⚔️</span> Battle Performance
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">🏰</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.performance.territoriesConquered}</div>
+              <div className="text-white font-medium">Territories Conquered</div>
+              <div className="text-sm text-muted">{stats.performance.territoriesLost} lost</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">⚔️</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.performance.battlesWon}</div>
-              <div className="stat-label">Battles Won</div>
-              <div className="stat-sublabel">
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">⚔️</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.performance.battlesWon}</div>
+              <div className="text-white font-medium">Battles Won</div>
+              <div className="text-sm text-muted">
                 {Math.round(
                   (stats.performance.battlesWon /
                     (stats.performance.battlesWon + stats.performance.battlesLost)) *
@@ -262,50 +278,54 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">🪖</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.performance.armiesDeployed.toLocaleString()}</div>
-              <div className="stat-label">Armies Deployed</div>
-              <div className="stat-sublabel">{stats.performance.averageArmiesPerGame} avg/game</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">🪖</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.performance.armiesDeployed.toLocaleString()}</div>
+              <div className="text-white font-medium">Armies Deployed</div>
+              <div className="text-sm text-muted">{stats.performance.averageArmiesPerGame} avg/game</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">⚡</div>
-            <div className="stat-content">
-              <div className="stat-value">{formatDuration(stats.performance.quickestVictory)}</div>
-              <div className="stat-label">Fastest Victory</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">⚡</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{formatDuration(stats.performance.quickestVictory)}</div>
+              <div className="text-white font-medium">Fastest Victory</div>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon">💪</div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.performance.comebackWins}</div>
-              <div className="stat-label">Comeback Wins</div>
-              <div className="stat-sublabel">From behind</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl">💪</div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-primary">{stats.performance.comebackWins}</div>
+              <div className="text-white font-medium">Comeback Wins</div>
+              <div className="text-sm text-muted">From behind</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Map Performance */}
-      <div className="stats-section">
-        <h2>🗺️ Map Performance</h2>
-        <div className="map-stats">
-          <div className="favorite-map">
-            <h3>🌟 Favorite Map: {stats.maps.favoriteMap}</h3>
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
+          <span>🗺️</span> Map Performance
+        </h2>
+        <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-8">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-semibold text-yellow-400 flex items-center justify-center gap-2">
+              <span>🌟</span> Favorite Map: {stats.maps.favoriteMap}
+            </h3>
           </div>
-          <div className="map-list">
+          <div className="flex flex-col gap-4">
             {stats.maps.mapStats.map((mapStat, index) => (
-              <div key={mapStat.mapName} className="map-stat-item">
-                <div className="map-rank">#{index + 1}</div>
-                <div className="map-info">
-                  <div className="map-name">{mapStat.mapName}</div>
-                  <div className="map-games">{mapStat.gamesPlayed} games</div>
+              <div key={mapStat.mapName} className="flex items-center gap-4 p-4 bg-surface-1/50 rounded-lg hover:bg-surface-1/70 transition-colors">
+                <div className="text-xl font-bold text-primary w-12">#{index + 1}</div>
+                <div className="flex-1">
+                  <div className="text-white font-medium">{mapStat.mapName}</div>
+                  <div className="text-sm text-muted">{mapStat.gamesPlayed} games</div>
                 </div>
-                <div className="map-winrate" style={{ color: getWinRateColor(mapStat.winRate) }}>
+                <div className="text-xl font-bold" style={{ color: getWinRateColor(mapStat.winRate) }}>
                   {mapStat.winRate}%
                 </div>
               </div>
@@ -315,70 +335,74 @@ const UserStats: React.FC = () => {
       </div>
 
       {/* Game Mode Performance */}
-      <div className="stats-section">
-        <h2>🎯 Game Mode Wins</h2>
-        <div className="gamemode-stats">
-          <div className="gamemode-item">
-            <div className="gamemode-icon">🌍</div>
-            <div className="gamemode-name">Classic</div>
-            <div className="gamemode-wins">{stats.gameModes.classicWins} wins</div>
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
+          <span>🎯</span> Game Mode Wins
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl mb-2">🌍</div>
+            <div className="text-white font-medium mb-1">Classic</div>
+            <div className="text-xl font-bold text-primary">{stats.gameModes.classicWins} wins</div>
           </div>
-          <div className="gamemode-item">
-            <div className="gamemode-icon">👑</div>
-            <div className="gamemode-name">Capital Conquest</div>
-            <div className="gamemode-wins">{stats.gameModes.capitalConquestWins} wins</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl mb-2">👑</div>
+            <div className="text-white font-medium mb-1">Capital Conquest</div>
+            <div className="text-xl font-bold text-primary">{stats.gameModes.capitalConquestWins} wins</div>
           </div>
-          <div className="gamemode-item">
-            <div className="gamemode-icon">⚓</div>
-            <div className="gamemode-name">Naval Supremacy</div>
-            <div className="gamemode-wins">{stats.gameModes.navalSupremacyWins} wins</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl mb-2">⚓</div>
+            <div className="text-white font-medium mb-1">Naval Supremacy</div>
+            <div className="text-xl font-bold text-primary">{stats.gameModes.navalSupremacyWins} wins</div>
           </div>
-          <div className="gamemode-item">
-            <div className="gamemode-icon">💰</div>
-            <div className="gamemode-name">Resource War</div>
-            <div className="gamemode-wins">{stats.gameModes.resourceWarWins} wins</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl mb-2">💰</div>
+            <div className="text-white font-medium mb-1">Resource War</div>
+            <div className="text-xl font-bold text-primary">{stats.gameModes.resourceWarWins} wins</div>
           </div>
-          <div className="gamemode-item">
-            <div className="gamemode-icon">⚖️</div>
-            <div className="gamemode-name">Asymmetric</div>
-            <div className="gamemode-wins">{stats.gameModes.asymmetricWins} wins</div>
+          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+            <div className="text-4xl mb-2">⚖️</div>
+            <div className="text-white font-medium mb-1">Asymmetric</div>
+            <div className="text-xl font-bold text-primary">{stats.gameModes.asymmetricWins} wins</div>
           </div>
         </div>
       </div>
 
       {/* Monthly Trends */}
-      <div className="stats-section">
-        <h2>📈 Monthly Trends</h2>
-        <div className="trends-chart">
-          <div className="chart-legend">
-            <div className="legend-item">
-              <div className="legend-color games"></div>
-              <span>Games Played</span>
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
+          <span>📈</span> Monthly Trends
+        </h2>
+        <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-8">
+          <div className="flex gap-6 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-primary rounded"></div>
+              <span className="text-white">Games Played</span>
             </div>
-            <div className="legend-item">
-              <div className="legend-color winrate"></div>
-              <span>Win Rate %</span>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-400 rounded"></div>
+              <span className="text-white">Win Rate %</span>
             </div>
           </div>
-          <div className="chart-container">
+          <div className="flex items-end gap-4 h-64">
             {stats.monthly.labels.map((month, index) => (
-              <div key={month} className="chart-bar">
-                <div className="bar-container">
+              <div key={month} className="flex-1 flex flex-col items-center">
+                <div className="relative h-full w-full flex items-end justify-center gap-2">
                   <div
-                    className="bar games"
+                    className="w-1/3 bg-primary rounded-t transition-all hover:brightness-110"
                     style={{
                       height: `${(stats.monthly.gamesPlayed[index] / Math.max(...stats.monthly.gamesPlayed)) * 100}%`,
                     }}
                   ></div>
                   <div
-                    className="bar winrate"
+                    className="w-1/3 bg-green-400 rounded-t transition-all hover:brightness-110"
                     style={{ height: `${stats.monthly.winRate[index]}%` }}
                   ></div>
                 </div>
-                <div className="bar-label">{month}</div>
-                <div className="bar-values">
-                  <div className="games-value">{stats.monthly.gamesPlayed[index]}</div>
-                  <div className="winrate-value">{stats.monthly.winRate[index]}%</div>
+                <div className="text-muted text-sm mt-2">{month}</div>
+                <div className="flex gap-2 text-xs">
+                  <div className="text-primary">{stats.monthly.gamesPlayed[index]}</div>
+                  <div className="text-green-400">{stats.monthly.winRate[index]}%</div>
                 </div>
               </div>
             ))}
