@@ -8,7 +8,6 @@ import { THEMES, getStoredTheme, applyTheme, storeTheme } from '../config/themes
 import {
   clearCache,
   resetSettings,
-  setTheme,
   setPreferredColor,
   setShowOnlineStatus,
   setDirectMessages,
@@ -16,17 +15,12 @@ import {
   setColorTheme,
   type DMPermission,
   type NotificationPrefs,
-  type ColorTheme,
-  type StyleTheme,
 } from '../store/settingsSlice'
 import {
-  PLAYER_COLORS,
-  PREMIUM_PLAYER_COLORS,
   STANDARD_COLORS,
   PREMIUM_COLORS,
   COLOR_DISPLAY_NAMES,
   COLOR_HEX_VALUES,
-  COLOR_CLASSES,
   isPremiumColor,
   type PlayerColor,
 } from '../constants/colors'
@@ -283,7 +277,7 @@ export default function Settings() {
   const dispatch = useAppDispatch()
 
   // Get current color theme from centralized config
-  const [currentColorTheme, setCurrentColorTheme] = useState<ColorTheme>(() => getStoredTheme() as ColorTheme)
+  const [currentColorTheme, setCurrentColorTheme] = useState<string>(() => getStoredTheme())
   // State for theme dropdown (moved here to avoid re-declaration)
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
   const themeDropdownRef = useRef<HTMLDivElement>(null)
@@ -774,7 +768,7 @@ export default function Settings() {
                       key={theme.id}
                       onClick={() => {
                         if (setting.isWorking && setting.onChange) {
-                          setting.onChange(theme.id as ColorTheme)
+                          setting.onChange(theme.id)
                         }
                         setIsThemeDropdownOpen(false)
                       }}
@@ -960,15 +954,7 @@ export default function Settings() {
         ]
 
       case 'game':
-        const standardOptions = STANDARD_COLORS.map((color) => ({
-          value: color,
-          label: COLOR_DISPLAY_NAMES[color],
-        }))
-        
-        const premiumOptions = PREMIUM_COLORS.map((color) => ({
-          value: color,
-          label: COLOR_DISPLAY_NAMES[color],
-        }))
+        // Color options are created inline in the UI below
         
         return [
           {
@@ -1066,7 +1052,7 @@ export default function Settings() {
             type: 'color-theme-selector',
             isWorking: true,
             defaultValue: currentColorTheme,
-            onChange: async (value: ColorTheme) => {
+            onChange: async (value: string) => {
               // Update local state for immediate UI feedback
               setCurrentColorTheme(value)
               // Apply theme immediately through centralized system
