@@ -153,7 +153,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0f0505 0%,                      /* Dark red edges */
-    rgba(220, 38, 38, 0.2) 50%,     /* Red glow in center */
+    rgba(220, 38, 38, 0.5) 50%,     /* Red glow in center */
     #0a0202 100%                     /* Darker corner */
   );
   
@@ -179,7 +179,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0d0814 0%,                      /* Dark violet edges */
-    rgba(124, 58, 237, 0.25) 50%,   /* Purple glow in center */
+    rgba(124, 58, 237, 0.5) 50%,   /* Purple glow in center */
     #080510 100%                     /* Darker corner */
   );
   
@@ -205,7 +205,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #05080f 0%,                      /* Dark blue edges */
-    rgba(37, 99, 235, 0.2) 50%,     /* Blue glow in center */
+    rgba(37, 99, 235, 0.5) 50%,     /* Blue glow in center */
     #020305 100%                     /* Darker corner */
   );
   
@@ -231,7 +231,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #051008 0%,                      /* Dark green edges */
-    rgba(5, 150, 105, 0.2) 50%,     /* Green glow in center */
+    rgba(15, 75, 55, 0.5) 50%,     /* Green glow in center */
     #020605 100%                     /* Darker corner */
   );
   
@@ -313,8 +313,8 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0A0108 0%,                      /* Midnight black */
-    rgba(255, 107, 53, 0.2) 40%,    /* Orange glow */
-    rgba(139, 21, 56, 0.15) 60%,    /* Blood red transition */
+    rgba(255, 107, 53, 0.5) 40%,    /* Orange glow */
+    rgba(139, 21, 56, 0.25) 60%,    /* Blood red transition */
     #050105 100%                     /* Dark corner */
   );
   
@@ -434,7 +434,8 @@ This allows themes to work with any color scheme!
 
 /* Main background gradient - applied to body */
 body {
-  background: var(--ck-bg-gradient);
+  background-color: var(--color-bg-deep, #000000);  /* Solid dark base first */
+  background-image: var(--ck-bg-gradient);          /* Gradient on top */
   background-attachment: fixed;
   min-height: 100vh;
   position: relative;
@@ -450,12 +451,12 @@ body::after {
   right: 0;
   bottom: 0;
   background-image: 
-    linear-gradient(color-mix(in srgb, var(--color-white) 1%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--color-white) 1%, transparent) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px, 40px 40px;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.3;
+  opacity: 1;  
 }
 
 /* Ensure content is above overlay */
