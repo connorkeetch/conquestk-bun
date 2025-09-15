@@ -140,11 +140,7 @@ const Maps: React.FC = () => {
           {user && (
             <button
               onClick={() => setShowMyMaps(!showMyMaps)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                showMyMaps
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-muted hover:text-white border border-border'
-              }`}
+              className={showMyMaps ? 'btn-primary' : 'btn-secondary'}
             >
               {showMyMaps ? '🌍 All Maps' : '📁 My Maps'}
               {myMaps.length > 0 && !showMyMaps && (
@@ -154,7 +150,7 @@ const Maps: React.FC = () => {
               )}
             </button>
           )}
-          <Link to="/map-editor" className="btn-primary hover-lift hover-glow">
+          <Link to="/map-editor" className="btn-primary">
             ✏️ Create Map
           </Link>
         </div>

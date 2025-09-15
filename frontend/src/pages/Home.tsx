@@ -62,41 +62,19 @@ const Home: React.FC = () => {
           <div className="mt-7 flex items-center justify-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/lobby"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
-                           bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
-                           shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
-                           hover:shadow-[0_18px_48px_-12px_rgba(99,102,241,.7)]
-                           active:scale-[.98] transition
-                           focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                >
+                <Link to="/lobby" className="btn-primary btn-lg">
                   ⚡ Start Playing →
                 </Link>
-                <Link
-                  to="/map-editor"
-                  className="px-5 py-3 rounded-xl border border-white/15 text-white/80 hover:text-white hover:bg-white/5 transition"
-                >
+                <Link to="/map-editor" className="btn-secondary btn-lg">
                   Map Editor
                 </Link>
               </>
             ) : (
               <>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl
-                           bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold
-                           shadow-[0_10px_30px_-10px_rgba(56,189,248,.6)]
-                           hover:shadow-[0_18px_48px_-12px_rgba(99,102,241,.7)]
-                           active:scale-[.98] transition
-                           focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                >
+                <Link to="/register" className="btn-primary btn-lg">
                   Join the War →
                 </Link>
-                <Link
-                  to="/login"
-                  className="px-5 py-3 rounded-xl border border-white/15 text-white/80 hover:text-white hover:bg-white/5 transition"
-                >
+                <Link to="/login" className="btn-secondary btn-lg">
                   Login
                 </Link>
               </>
