@@ -262,7 +262,7 @@ const LobbyPage: React.FC = () => {
           >
             🎮 Create Game
           </Link>
-          <button onClick={() => setShowFilters(!showFilters)} className="btn-secondary px-4 py-2">
+          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all">
             🔍 Filter Games
           </button>
         </div>
@@ -270,7 +270,7 @@ const LobbyPage: React.FC = () => {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="mb-6 p-4 bg-surface-1 border border-border rounded-lg">
+        <div className="mb-6 glass-box-lg">
           <h3 className="text-lg font-semibold text-white mb-4">Filter Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -407,7 +407,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadPublicGames}
                 disabled={loading}
-                className="btn-secondary px-3 py-1 text-sm"
+                className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -461,7 +461,7 @@ const LobbyPage: React.FC = () => {
                               maxPlayers: 12,
                             })
                           }
-                          className="btn-secondary px-4 py-2"
+                          className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
                         >
                           Reset Filters
                         </button>
@@ -524,7 +524,7 @@ const LobbyPage: React.FC = () => {
               <button
                 onClick={loadMyGames}
                 disabled={loading}
-                className="btn-secondary px-3 py-1 text-sm"
+                className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -534,20 +534,20 @@ const LobbyPage: React.FC = () => {
             <div className="flex gap-2 mb-6">
               <button
                 onClick={() => setMyGamesFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   myGamesFilter === 'all'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-2 text-muted hover:bg-surface-1'
+                    ? 'bg-primary text-white shadow-lg'
+                    : 'glass-box-sm text-muted hover:text-white'
                 }`}
               >
                 All Games
               </button>
               <button
                 onClick={() => setMyGamesFilter('active')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   myGamesFilter === 'active'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-2 text-muted hover:bg-surface-1'
+                    ? 'bg-primary text-white shadow-lg'
+                    : 'glass-box-sm text-muted hover:text-white'
                 }`}
               >
                 <Gamepad2 className="inline w-4 h-4 mr-1" />
@@ -555,10 +555,10 @@ const LobbyPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setMyGamesFilter('waiting')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   myGamesFilter === 'waiting'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-2 text-muted hover:bg-surface-1'
+                    ? 'bg-primary text-white shadow-lg'
+                    : 'glass-box-sm text-muted hover:text-white'
                 }`}
               >
                 <Clock className="inline w-4 h-4 mr-1" />
@@ -566,10 +566,10 @@ const LobbyPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setMyGamesFilter('finished')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   myGamesFilter === 'finished'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-2 text-muted hover:bg-surface-1'
+                    ? 'bg-primary text-white shadow-lg'
+                    : 'glass-box-sm text-muted hover:text-white'
                 }`}
               >
                 <Trophy className="inline w-4 h-4 mr-1" />
@@ -624,7 +624,7 @@ const LobbyPage: React.FC = () => {
                         </p>
                         <button
                           onClick={() => setMyGamesFilter('all')}
-                          className="btn-secondary px-4 py-2"
+                          className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
                         >
                           Show All Games
                         </button>
