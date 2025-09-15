@@ -163,6 +163,7 @@ export default function Header() {
               <>
                 {/* Audio Mute Button */}
                 <button
+                  type="button"
                   onClick={handleToggleMute}
                   className="p-2 rounded-lg hover:bg-white/10 transition-colors relative group"
                   title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
@@ -284,11 +285,11 @@ export default function Header() {
       <div
         className={`fixed top-0 left-0 h-full w-80 bg-surface-1 backdrop-blur-xl z-50 transform transition-transform duration-300 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } border-r border-border`}
+        } border-r border-border-muted`}
         style={{ backgroundColor: 'var(--color-surface-1)' }}
       >
         {/* Menu Header */}
-        <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border">
+        <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border-muted">
           <div className="flex items-center gap-2">
             <MountainLogo width={28} height={28} />
             <span className="text-xl font-bold text-white">
@@ -305,7 +306,7 @@ export default function Header() {
             onClick={() => setIsMenuOpen(false)}
             className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" className="fill-muted">
+            <svg width="20" height="20" viewBox="0 0 24 24" className="fill-white/70 hover:fill-white">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
@@ -334,7 +335,7 @@ export default function Header() {
             </div>
 
             {/* Coming Soon Section */}
-            <div className="mt-8 pt-6 border-t border-border">
+            <div className="mt-8 pt-6 border-t border-border-muted">
               <div className="px-4 mb-3 text-xs font-semibold text-muted uppercase tracking-wider">
                 Coming Soon
               </div>
@@ -356,7 +357,7 @@ export default function Header() {
           </div>
 
           {/* Bottom Auth Section */}
-          <div className="px-4 py-4 border-t border-border">
+          <div className="px-4 py-4 border-t border-border-muted">
             {isAuthenticated ? (
               <div className="space-y-2">
                 <div className="px-3 py-2 text-sm text-muted">

@@ -961,3 +961,30 @@ kbd {
   100% { transform: rotate(360deg); }
 }
 
+/* Surface background utilities */
+@utility bg-surface-1 {
+  background-color: var(--color-surface-1);
+}
+
+@utility bg-surface-2 {
+  background-color: var(--color-surface-2);
+}
+
+/* Text color utilities */
+@utility text-muted {
+  color: var(--color-text-muted);
+}
+
+@utility fill-muted {
+  fill: var(--color-text-muted);
+}
+
+/* Border utilities with muted variants */
+@utility border-border {
+  border-color: var(--color-border);
+}
+
+@utility border-border-muted {
+  border-color: color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
