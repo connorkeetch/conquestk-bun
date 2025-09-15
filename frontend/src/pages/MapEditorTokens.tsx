@@ -1,10 +1,10 @@
 import axios from 'axios'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import ImageProcessor from '../components/ImageProcessor'
-import MapImageControls from '../components/MapImageControls'
 import TerritoryToken from '../components/TerritoryToken'
 import { PLAYER_COLORS } from '../constants/colors'
 import api from '../services/api'
@@ -71,19 +71,162 @@ interface CapitalMetadata {
   }
 }
 
+interface DraftMapSummary {
+  id: string
+  name: string
+  description?: string | null
+  status: string
+  created_at: string
+}
+
+interface MapMetadata {
+  territories?: Territory[]
+  continents?: Continent[]
+  width?: number
+  height?: number
+}
+
+interface DraftMapResponse {
+  id: string
+  name: string
+  description?: string | null
+  min_players?: number
+  max_players?: number
+  image_url?: string
+  metadata?: MapMetadata
+}
+
+interface ApiErrorResponse {
+  error?: string
+  message?: string
+  errors?: Array<{ msg?: string; message?: string }>
+}
+
+interface ImportedTerritoryData {
+  id: string
+  name?: string
+  x?: number
+  y?: number
+  armies?: number
+  connections?: string[]
+  continentId?: string | null
+}
+
+interface ImportedMapFile {
+  name?: string
+  imageUrl?: string
+  width?: number
+  height?: number
+  territories: ImportedTerritoryData[]
+  continents?: Continent[]
+}
+
 // LocalStorage key for auto-save
 const AUTOSAVE_KEY = 'map-editor-draft'
 const AUTOSAVE_INTERVAL = 10000 // Auto-save every 10 seconds
+
+interface CanvasPreset {
+  id: string
+  label: string
+  width: number
+  height: number
+  description?: string
+  recommended?: boolean
+}
+
+const CANVAS_PRESETS: CanvasPreset[] = [
+  {
+    id: 'hd',
+    label: 'HD 16:9',
+    width: 1280,
+    height: 720,
+    description: 'Recommended for online matches',
+    recommended: true,
+  },
+  {
+    id: 'full-hd',
+    label: 'Full HD 16:9',
+    width: 1920,
+    height: 1080,
+    description: 'Highest detail for large displays',
+  },
+  {
+    id: 'classic',
+    label: 'Classic 4:3',
+    width: 1024,
+    height: 768,
+    description: 'Balanced desktop and tablet layout',
+  },
+  {
+    id: 'compact',
+    label: 'Compact 3:2',
+    width: 960,
+    height: 640,
+    description: 'Faster loading and lighter detail',
+  },
+  {
+    id: 'square',
+    label: 'Square 1:1',
+    width: 1200,
+    height: 1200,
+    description: 'Experimental symmetrical layout',
+  },
+]
+
+const CANVAS_LIMITS = {
+  width: { min: 800, max: 3000 },
+  height: { min: 600, max: 2000 },
+}
+
+const findCanvasPresetId = (width: number, height: number) =>
+  CANVAS_PRESETS.find((preset) => preset.width === width && preset.height === height)?.id ?? null
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+const DEFAULT_LABEL_SETTINGS: LabelSettings = {
+  showLabels: true,
+  preset: 'classic',
+  fontSize: 14,
+  fontFamily: 'Arial',
+  textColor: '#000000',
+  showBackground: true,
+  backgroundColor: '#ffffff',
+  backgroundOpacity: 0.8,
+}
+
+const resolveLabelSettings = (settings?: LabelSettings): LabelSettings => ({
+  showLabels: settings?.showLabels ?? DEFAULT_LABEL_SETTINGS.showLabels,
+  preset: settings?.preset ?? DEFAULT_LABEL_SETTINGS.preset,
+  fontSize: settings?.fontSize ?? DEFAULT_LABEL_SETTINGS.fontSize,
+  fontFamily: settings?.fontFamily ?? DEFAULT_LABEL_SETTINGS.fontFamily,
+  textColor: settings?.textColor ?? DEFAULT_LABEL_SETTINGS.textColor,
+  showBackground: settings?.showBackground ?? DEFAULT_LABEL_SETTINGS.showBackground,
+  backgroundColor: settings?.backgroundColor ?? DEFAULT_LABEL_SETTINGS.backgroundColor,
+  backgroundOpacity: settings?.backgroundOpacity ?? DEFAULT_LABEL_SETTINGS.backgroundOpacity,
+})
+
+const reportError = (message: string, error: unknown) => {
+  if (import.meta.env.DEV) {
+    // biome-ignore lint/suspicious/noConsole: Surface debug information during development.
+    console.error(message, error)
+  }
+}
+
+const reportInfo = (message: string, details?: unknown) => {
+  if (import.meta.env.DEV) {
+    // biome-ignore lint/suspicious/noConsole: Surface debug information during development.
+    console.log(message, details)
+  }
+}
 
 export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [searchParams] = useSearchParams()
   const [editingMapId, setEditingMapId] = useState<string | null>(null)
   const [showDraftsList, setShowDraftsList] = useState(false)
-  const [availableDrafts, setAvailableDrafts] = useState<any[]>([])
+  const [availableDrafts, setAvailableDrafts] = useState<DraftMapSummary[]>([])
 
   // Generate unique map name with timestamp
   const generateMapName = () => {
@@ -107,16 +250,7 @@ export default function MapEditorTokens() {
     imageWidth: 800, // Default image dimensions
     imageHeight: 600,
     imageScale: 1, // Default scale
-    labelSettings: {
-      showLabels: true,
-      preset: 'classic',
-      fontSize: 14,
-      fontFamily: 'Arial',
-      textColor: '#000000',
-      showBackground: true,
-      backgroundColor: '#ffffff',
-      backgroundOpacity: 0.8,
-    },
+    labelSettings: { ...DEFAULT_LABEL_SETTINGS },
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
@@ -124,6 +258,40 @@ export default function MapEditorTokens() {
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showLabelSettings, setShowLabelSettings] = useState(false)
+  const [canvasSelection, setCanvasSelection] = useState<string>(
+    () => findCanvasPresetId(state.mapWidth, state.mapHeight) ?? 'custom',
+  )
+  const [customCanvasSize, setCustomCanvasSize] = useState(() => ({
+    width: state.mapWidth,
+    height: state.mapHeight,
+  }))
+
+  const mapNameId = useId()
+  const mapDescriptionId = useId()
+  const minPlayersId = useId()
+  const maxPlayersId = useId()
+  const capitalPlayerCountId = useId()
+  const stylePresetId = useId()
+  const labelFontSizeId = useId()
+  const labelTextColorId = useId()
+  const labelBackgroundColorId = useId()
+  const labelBackgroundOpacityId = useId()
+  const labelFontFamilyId = useId()
+  const tokenShapeId = useId()
+  const tokenSizeId = useId()
+  const customCanvasWidthId = useId()
+  const customCanvasHeightId = useId()
+  const imageScaleId = useId()
+  const jsonImportId = useId()
+  useEffect(() => {
+    const presetId = findCanvasPresetId(state.mapWidth, state.mapHeight)
+    setCanvasSelection(presetId ?? 'custom')
+    setCustomCanvasSize((prev) =>
+      prev.width === state.mapWidth && prev.height === state.mapHeight
+        ? prev
+        : { width: state.mapWidth, height: state.mapHeight },
+    )
+  }, [state.mapWidth, state.mapHeight])
 
   // Label preset definitions
   const LABEL_PRESETS = {
@@ -160,34 +328,88 @@ export default function MapEditorTokens() {
       backgroundOpacity: 1,
     },
   }
+
+  const applyCanvasPreset = (presetId: string) => {
+    const preset = CANVAS_PRESETS.find((item) => item.id === presetId)
+    if (!preset) return
+
+    setCanvasSelection(presetId)
+    setCustomCanvasSize({ width: preset.width, height: preset.height })
+    setState((prev) => ({
+      ...prev,
+      mapWidth: preset.width,
+      mapHeight: preset.height,
+    }))
+  }
+
+  const handleSelectCustomCanvas = () => {
+    setCanvasSelection('custom')
+    setCustomCanvasSize((prev) => ({
+      width: prev.width || state.mapWidth,
+      height: prev.height || state.mapHeight,
+    }))
+  }
+
+  const handleCustomCanvasSizeChange = (dimension: 'width' | 'height', rawValue: string) => {
+    const parsedValue = parseInt(rawValue, 10)
+    if (Number.isNaN(parsedValue)) {
+      return
+    }
+
+    setCanvasSelection('custom')
+    const limits = dimension === 'width' ? CANVAS_LIMITS.width : CANVAS_LIMITS.height
+    const clampedValue = clamp(parsedValue, limits.min, limits.max)
+
+    setCustomCanvasSize((prev) => {
+      if (prev[dimension] === clampedValue) {
+        return prev
+      }
+      return { ...prev, [dimension]: clampedValue }
+    })
+
+    setState((prev) => {
+      const nextWidth = dimension === 'width' ? clampedValue : prev.mapWidth
+      const nextHeight = dimension === 'height' ? clampedValue : prev.mapHeight
+      if (nextWidth === prev.mapWidth && nextHeight === prev.mapHeight) {
+        return prev
+      }
+      return {
+        ...prev,
+        mapWidth: nextWidth,
+        mapHeight: nextHeight,
+      }
+    })
+  }
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('properties')
+
+  const updateLabelSettings = useCallback((updater: (settings: LabelSettings) => LabelSettings) => {
+    setState((prev) => ({
+      ...prev,
+      labelSettings: updater(resolveLabelSettings(prev.labelSettings)),
+    }))
+  }, [])
 
   // Apply label preset
   const applyLabelPreset = (
     preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom',
   ) => {
     if (preset === 'custom') {
-      setState((prev) => ({
-        ...prev,
-        labelSettings: {
-          ...prev.labelSettings!,
-          preset: 'custom',
-        },
+      updateLabelSettings((settings) => ({
+        ...settings,
+        preset: 'custom',
       }))
-    } else {
-      const presetSettings = LABEL_PRESETS[preset]
-      setState((prev) => ({
-        ...prev,
-        labelSettings: {
-          showLabels: prev.labelSettings?.showLabels ?? true,
-          preset,
-          ...presetSettings,
-        },
-      }))
+      return
     }
+
+    const presetSettings = LABEL_PRESETS[preset]
+    updateLabelSettings((settings) => ({
+      ...settings,
+      preset,
+      ...presetSettings,
+    }))
   }
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
@@ -199,7 +421,6 @@ export default function MapEditorTokens() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showLoadDraftDialog, setShowLoadDraftDialog] = useState(false)
   const [showImageOptions, setShowImageOptions] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
 
   // New continent form
   const [newContinentName, setNewContinentName] = useState('')
@@ -225,8 +446,8 @@ export default function MapEditorTokens() {
       }
       localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(dataToSave))
       setLastSaved(new Date())
-    } catch (error) {
-      console.error('Failed to save draft:', error)
+    } catch (error: unknown) {
+      reportError('Failed to save draft:', error)
     }
   }, [state, capitalAssignments, capitalMetadata])
 
@@ -242,10 +463,35 @@ export default function MapEditorTokens() {
         setLastSaved(data.savedAt ? new Date(data.savedAt) : null)
         setShowLoadDraftDialog(false)
       }
-    } catch (error) {
-      console.error('Failed to load draft:', error)
+    } catch (error: unknown) {
+      reportError('Failed to load draft:', error)
     }
   }
+
+  // Load map for editing
+  const loadMapForEditing = useCallback(async (mapId: string) => {
+    try {
+      const response = await api.get<DraftMapResponse>(`/maps/${mapId}`)
+      const map = response.data
+
+      // Load map data into editor state
+      setState((prev) => ({
+        ...prev,
+        name: map.name,
+        description: map.description || '',
+        minPlayers: map.min_players || 2,
+        maxPlayers: map.max_players || 12,
+        imageUrl: map.image_url,
+        territories: map.metadata?.territories || [],
+        continents: map.metadata?.continents || [],
+        mapWidth: map.metadata?.width || 1920,
+        mapHeight: map.metadata?.height || 1080,
+      }))
+    } catch (error: unknown) {
+      reportError('Failed to load map for editing:', error)
+      alert('Failed to load map. Starting with a new map instead.')
+    }
+  }, [])
 
   // Check for saved draft on mount
   // Check URL params for edit mode and load drafts
@@ -263,37 +509,12 @@ export default function MapEditorTokens() {
           if (data.savedAt) {
             setShowLoadDraftDialog(true)
           }
-        } catch (error) {
-          console.error('Error checking for saved draft:', error)
+        } catch (error: unknown) {
+          reportError('Error checking for saved draft:', error)
         }
       }
     }
-  }, [searchParams])
-
-  // Load map for editing
-  const loadMapForEditing = async (mapId: string) => {
-    try {
-      const response = await api.get(`/maps/${mapId}`)
-      const map = response.data
-
-      // Load map data into editor state
-      setState((prev) => ({
-        ...prev,
-        name: map.name,
-        description: map.description || '',
-        minPlayers: map.min_players || 2,
-        maxPlayers: map.max_players || 12,
-        imageUrl: map.image_url,
-        territories: map.metadata?.territories || [],
-        continents: map.metadata?.continents || [],
-        mapWidth: map.metadata?.width || 1920,
-        mapHeight: map.metadata?.height || 1080,
-      }))
-    } catch (error) {
-      console.error('Failed to load map for editing:', error)
-      alert('Failed to load map. Starting with a new map instead.')
-    }
-  }
+  }, [searchParams, loadMapForEditing])
 
   // Load user's draft maps from database
   const loadDraftMaps = async () => {
@@ -313,10 +534,10 @@ export default function MapEditorTokens() {
       }
 
       // Get user's maps including drafts
-      const response = await api.get('/maps/my-maps')
+      const response = await api.get<DraftMapSummary[]>('/maps/my-maps')
 
       // Filter for draft maps only
-      const drafts = response.data.filter((map: any) => map.status === 'draft')
+      const drafts = response.data.filter((map) => map.status === 'draft')
 
       if (drafts.length === 0) {
         alert('No draft maps found. Create and save a map first.')
@@ -325,21 +546,29 @@ export default function MapEditorTokens() {
 
       setAvailableDrafts(drafts)
       setShowDraftsList(true)
-    } catch (error: any) {
-      console.error('Failed to load draft maps:', error)
+    } catch (error: unknown) {
+      reportError('Failed to load draft maps:', error)
 
-      if (error.response?.status === 400) {
-        alert('Authentication required. Please log in to load your maps.')
-      } else if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.')
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-      } else if (error.response?.status === 404) {
-        alert('Maps endpoint not found. This might be a server issue.')
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status
+        const responseData = error.response?.data as ApiErrorResponse | undefined
+        const fallbackMessage = responseData?.message || responseData?.error || error.message
+
+        if (status === 400) {
+          alert('Authentication required. Please log in to load your maps.')
+        } else if (status === 401) {
+          alert('Session expired. Please log in again.')
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        } else if (status === 404) {
+          alert('Maps endpoint not found. This might be a server issue.')
+        } else {
+          alert(`Failed to load draft maps: ${fallbackMessage || 'Unknown error'}`)
+        }
+      } else if (error instanceof Error) {
+        alert(`Failed to load draft maps: ${error.message}`)
       } else {
-        alert(
-          `Failed to load draft maps: ${error.response?.data?.message || error.message || 'Unknown error'}`,
-        )
+        alert('Failed to load draft maps due to an unexpected error.')
       }
     }
   }
@@ -375,8 +604,6 @@ export default function MapEditorTokens() {
       setUploadError(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max size is 10MB`)
       return
     }
-
-    setImageFile(file) // Store for later use
 
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -441,8 +668,8 @@ export default function MapEditorTokens() {
     reader.readAsDataURL(file)
   }
 
-  // Handle map click based on mode
-  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  // Handle map interactions based on mode
+  const handleMapPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (state.draggedTerritoryId) return
 
     const rect = event.currentTarget.getBoundingClientRect()
@@ -485,7 +712,7 @@ export default function MapEditorTokens() {
   }
 
   // Handle token click based on mode
-  const handleTokenClick = (territoryId: string, event: React.MouseEvent) => {
+  const handleTokenClick = (territoryId: string, event: ReactMouseEvent) => {
     event.stopPropagation()
 
     if (editorMode === 'capitals') {
@@ -532,7 +759,7 @@ export default function MapEditorTokens() {
   }
 
   // Handle token drag
-  const handleTokenMouseDown = (territoryId: string, event: React.MouseEvent) => {
+  const handleTokenMouseDown = (territoryId: string, event: ReactMouseEvent) => {
     if (editorMode === 'connections') return
 
     event.stopPropagation()
@@ -681,7 +908,7 @@ export default function MapEditorTokens() {
       if (!confirmed) return
 
       // Update map status to pending_review
-      const result = await api.patch(`/maps/${editingMapId}`, {
+      await api.patch(`/maps/${editingMapId}`, {
         status: 'pending_review',
       })
 
@@ -690,9 +917,17 @@ export default function MapEditorTokens() {
       // Clear editing state and redirect
       setEditingMapId(null)
       window.location.href = '/maps'
-    } catch (error: any) {
-      console.error('Failed to submit map:', error)
-      alert(`Failed to submit map for approval: ${error.response?.data?.error || error.message}`)
+    } catch (error: unknown) {
+      reportError('Failed to submit map:', error)
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data as ApiErrorResponse | undefined
+        const message = responseData?.error || responseData?.message || error.message
+        alert(`Failed to submit map for approval: ${message}`)
+      } else if (error instanceof Error) {
+        alert(`Failed to submit map for approval: ${error.message}`)
+      } else {
+        alert('Failed to submit map for approval due to an unexpected error.')
+      }
     }
   }
 
@@ -745,8 +980,8 @@ export default function MapEditorTokens() {
             imageBase64 = await base64Promise
             imageMimeType = blob.type || 'image/png'
           }
-        } catch (error) {
-          console.error('Failed to process image:', error)
+        } catch (error: unknown) {
+          reportError('Failed to process image:', error)
           throw new Error('Failed to process map background image')
         }
       }
@@ -778,7 +1013,7 @@ export default function MapEditorTokens() {
       }
 
       // Save to backend
-      console.log('Uploading map with data:', {
+      reportInfo('Uploading map with data:', {
         name: state.name,
         territoriesCount: state.territories.length,
         continentsCount: state.continents.length,
@@ -791,56 +1026,65 @@ export default function MapEditorTokens() {
           ? '/api/maps/json'
           : 'http://localhost:5001/api/maps/json'
 
-      let result
       if (editingMapId) {
         // Update existing map
-        result = await axios.patch(`${apiUrl.replace('/json', '')}/${editingMapId}/json`, mapData, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+        const response = await axios.patch<DraftMapResponse>(
+          `${apiUrl.replace('/json', '')}/${editingMapId}/json`,
+          mapData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           },
-        })
-        console.log('Map updated successfully:', result.data)
+        )
+        reportInfo('Map updated successfully:', response.data)
         alert('Draft map updated successfully!')
       } else {
         // Create new map
-        result = await axios.post(apiUrl, mapData, {
+        const response = await axios.post<DraftMapResponse>(apiUrl, mapData, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         })
-        console.log('Map created successfully:', result.data)
-        setEditingMapId(result.data.id) // Now editing this map
+        reportInfo('Map created successfully:', response.data)
+        setEditingMapId(response.data.id) // Now editing this map
         alert('Map saved as draft! You can continue editing or submit for approval.')
       }
-    } catch (error: any) {
-      console.error('Map upload failed:', error)
+    } catch (error: unknown) {
+      reportError('Map upload failed:', error)
 
-      // Provide detailed error message
       let errorMessage = 'Failed to save map.'
 
-      if (error.response) {
-        // Server responded with error
-        console.error('Server error response:', error.response.data)
-        errorMessage += `\n\nServer error: ${error.response.data.error || error.response.data.message || 'Unknown server error'}`
-        errorMessage += `\nStatus: ${error.response.status}`
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data as ApiErrorResponse | undefined
+        if (responseData) {
+          reportError('Server error response:', responseData)
+          errorMessage += `\n\nServer error: ${
+            responseData.error || responseData.message || 'Unknown server error'
+          }`
+        }
 
-        // Check for specific validation errors
-        if (error.response.data.errors) {
+        if (error.response?.status) {
+          errorMessage += `\nStatus: ${error.response.status}`
+        }
+
+        if (responseData?.errors && responseData.errors.length > 0) {
           errorMessage += '\n\nValidation errors:'
-          error.response.data.errors.forEach((err: any) => {
-            errorMessage += `\n- ${err.msg || err.message}`
+          responseData.errors.forEach((err) => {
+            errorMessage += `\n- ${err.msg || err.message || 'Unknown issue'}`
           })
         }
-      } else if (error.request) {
-        // Request was made but no response
-        console.error('No response from server:', error.request)
-        errorMessage += '\n\nNo response from server. Check your connection.'
-      } else {
-        // Error in request setup
-        console.error('Request setup error:', error.message)
+
+        if (!error.response && error.request) {
+          reportError('No response from server:', error.request)
+          errorMessage += '\n\nNo response from server. Check your connection.'
+        }
+      } else if (error instanceof Error) {
         errorMessage += `\n\nError: ${error.message}`
+      } else {
+        errorMessage += '\n\nAn unexpected error occurred.'
       }
 
       alert(errorMessage)
@@ -878,37 +1122,43 @@ export default function MapEditorTokens() {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string
-        const mapData = JSON.parse(content)
+        const mapData = JSON.parse(content) as ImportedMapFile
 
         // Validate the imported data structure
-        if (!mapData.territories || !Array.isArray(mapData.territories)) {
+        if (!Array.isArray(mapData.territories)) {
           throw new Error('Invalid map data: missing territories')
         }
 
+        const normalizedTerritories: Territory[] = mapData.territories.map((territory) => ({
+          id: territory.id,
+          name: territory.name || `Territory ${territory.id}`,
+          x: territory.x ?? 0,
+          y: territory.y ?? 0,
+          armies: territory.armies ?? 1,
+          connections: territory.connections ?? [],
+          continentId: territory.continentId ?? null,
+        }))
+
         // Load the imported map data
-        setState({
+        setState((prev) => ({
+          ...prev,
           name: mapData.name || 'Imported Map',
-          imageUrl: mapData.imageUrl || '',
-          mapWidth: mapData.width || 1920,
-          mapHeight: mapData.height || 1080,
-          territories: mapData.territories.map((t: any) => ({
-            id: t.id,
-            name: t.name || `Territory ${t.id}`,
-            x: t.x || 0,
-            y: t.y || 0,
-            armies: t.armies || 1,
-            connections: t.connections || [],
-            continentId: t.continentId || null,
-          })),
+          imageUrl: mapData.imageUrl || prev.imageUrl,
+          mapWidth: mapData.width ?? prev.mapWidth,
+          mapHeight: mapData.height ?? prev.mapHeight,
+          imageWidth: mapData.width ?? prev.imageWidth,
+          imageHeight: mapData.height ?? prev.imageHeight,
+          territories: normalizedTerritories,
           continents: mapData.continents || [],
           selectedTerritoryId: null,
           draggedTerritoryId: null,
-        })
+        }))
 
         alert('Map imported successfully!')
-      } catch (error) {
-        console.error('Failed to import map:', error)
-        alert('Failed to import map. Please check the file format.')
+      } catch (error: unknown) {
+        reportError('Failed to import map:', error)
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        alert(`Failed to import map. ${message}`)
       }
     }
 
@@ -937,27 +1187,6 @@ export default function MapEditorTokens() {
     setShowCropper(true)
   }
 
-  const handleScaleImage = (scale: number) => {
-    setState((prev) => ({
-      ...prev,
-      imageScale: scale,
-    }))
-  }
-
-  const handleResizeCanvas = (width: number, height: number) => {
-    setState((prev) => ({
-      ...prev,
-      mapWidth: width,
-      mapHeight: height,
-    }))
-  }
-
-  const handleOpenCropTool = () => {
-    if (state.imageUrl) {
-      setShowCropper(true)
-    }
-  }
-
   // Capital management functions
   const handleGenerateCapitals = async () => {
     if (!state.territories.length) {
@@ -965,9 +1194,14 @@ export default function MapEditorTokens() {
       return
     }
 
-    // For now, just alert that we need to save the map first
-    // In a complete implementation, we'd call the API after the map is saved
-    alert('Please save the map to database first, then capitals can be generated')
+    setIsGeneratingCapitals(true)
+    try {
+      // For now, just alert that we need to save the map first
+      // In a complete implementation, we'd call the API after the map is saved
+      alert('Please save the map to database first, then capitals can be generated')
+    } finally {
+      setIsGeneratingCapitals(false)
+    }
   }
 
   const handleCapitalTokenClick = (territoryId: string) => {
@@ -1018,8 +1252,11 @@ export default function MapEditorTokens() {
           <>
             <h2 className="text-xl font-bold mb-4">📋 Map Properties</h2>
             <div className="mb-4">
-              <label className="block text-sm mb-1">Map Name</label>
+              <label htmlFor={mapNameId} className="block text-sm mb-1">
+                Map Name
+              </label>
               <input
+                id={mapNameId}
                 type="text"
                 value={state.name}
                 onChange={(e) => setState((prev) => ({ ...prev, name: e.target.value }))}
@@ -1027,8 +1264,11 @@ export default function MapEditorTokens() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm mb-1">Description</label>
+              <label htmlFor={mapDescriptionId} className="block text-sm mb-1">
+                Description
+              </label>
               <textarea
+                id={mapDescriptionId}
                 value={state.description}
                 onChange={(e) => setState((prev) => ({ ...prev, description: e.target.value }))}
                 className="w-full px-3 py-1 bg-surface-2 rounded text-white"
@@ -1036,8 +1276,11 @@ export default function MapEditorTokens() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm mb-1">Min Players: {state.minPlayers}</label>
+              <label htmlFor={minPlayersId} className="block text-sm mb-1">
+                Min Players: {state.minPlayers}
+              </label>
               <input
+                id={minPlayersId}
                 type="range"
                 min="2"
                 max="8"
@@ -1049,8 +1292,11 @@ export default function MapEditorTokens() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm mb-1">Max Players: {state.maxPlayers}</label>
+              <label htmlFor={maxPlayersId} className="block text-sm mb-1">
+                Max Players: {state.maxPlayers}
+              </label>
               <input
+                id={maxPlayersId}
                 type="range"
                 min="2"
                 max="12"
@@ -1066,13 +1312,15 @@ export default function MapEditorTokens() {
               <h3 className="text-sm font-bold mb-3">📦 Import/Export</h3>
               <div className="space-y-2">
                 <button
+                  type="button"
                   onClick={handleExport}
                   className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-medium"
                 >
                   💾 Export to JSON
                 </button>
                 <button
-                  onClick={() => document.getElementById('json-import')?.click()}
+                  type="button"
+                  onClick={() => document.getElementById(jsonImportId)?.click()}
                   className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
                 >
                   📂 Import from JSON
@@ -1112,47 +1360,107 @@ export default function MapEditorTokens() {
           <>
             <h2 className="text-xl font-bold mb-4">🖼️ Image Settings</h2>
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-3 bg-violet hover:brightness-110 rounded font-medium mb-4"
+              className="w-full btn-primary inline-flex items-center justify-center gap-2 text-base mb-4"
             >
-              📤 Upload Image
+              <span className="text-lg">📤</span>
+              <span>Upload Map Image</span>
             </button>
 
             {/* Canvas Size Settings */}
             <div className="mb-6 p-3 bg-surface-1 rounded border border-border">
               <h3 className="text-sm font-bold mb-3">📐 Canvas Size</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-muted mb-1">Width: {state.mapWidth}px</label>
-                  <input
-                    type="range"
-                    min="800"
-                    max="3000"
-                    step="100"
-                    value={state.mapWidth}
-                    onChange={(e) =>
-                      setState((prev) => ({ ...prev, mapWidth: Number(e.target.value) }))
-                    }
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    Height: {state.mapHeight}px
-                  </label>
-                  <input
-                    type="range"
-                    min="600"
-                    max="2000"
-                    step="100"
-                    value={state.mapHeight}
-                    onChange={(e) =>
-                      setState((prev) => ({ ...prev, mapHeight: Number(e.target.value) }))
-                    }
-                    className="w-full"
-                  />
-                </div>
+              <p className="text-xs text-muted leading-relaxed mb-3">
+                The canvas is the playable surface that tokens and interactions use. Background
+                images scale to fit whatever canvas you choose during matches, so pick a preset that
+                matches how detailed you want the battlefield to feel.
+              </p>
+              <div className="flex items-center justify-between text-xs text-muted mb-3">
+                <span>Current canvas</span>
+                <span className="text-white font-semibold">
+                  {state.mapWidth}×{state.mapHeight}px
+                </span>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {CANVAS_PRESETS.map((preset) => {
+                  const isActive = canvasSelection === preset.id
+                  return (
+                    <button
+                      type="button"
+                      key={preset.id}
+                      onClick={() => applyCanvasPreset(preset.id)}
+                      className={`rounded border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
+                        isActive
+                          ? 'border-primary bg-primary/10 text-white shadow-inner'
+                          : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-sm font-semibold">
+                        <span>{preset.label}</span>
+                        {preset.recommended && (
+                          <span className="text-xs text-primary font-medium">Recommended</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted mt-1">
+                        {preset.width}×{preset.height}px
+                      </div>
+                      {preset.description && (
+                        <div className="text-[11px] text-muted mt-1">{preset.description}</div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={handleSelectCustomCanvas}
+                className={`mt-3 w-full rounded border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
+                  canvasSelection === 'custom'
+                    ? 'border-primary bg-primary/10 text-white shadow-inner'
+                    : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
+                }`}
+              >
+                ✏️ Custom Size
+              </button>
+              {canvasSelection === 'custom' && (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label htmlFor={customCanvasWidthId} className="block text-xs text-muted mb-1">
+                      Width ({CANVAS_LIMITS.width.min}-{CANVAS_LIMITS.width.max}px)
+                    </label>
+                    <input
+                      id={customCanvasWidthId}
+                      type="number"
+                      min={CANVAS_LIMITS.width.min}
+                      max={CANVAS_LIMITS.width.max}
+                      step={50}
+                      value={customCanvasSize.width}
+                      onChange={(e) => handleCustomCanvasSizeChange('width', e.target.value)}
+                      className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={customCanvasHeightId} className="block text-xs text-muted mb-1">
+                      Height ({CANVAS_LIMITS.height.min}-{CANVAS_LIMITS.height.max}px)
+                    </label>
+                    <input
+                      id={customCanvasHeightId}
+                      type="number"
+                      min={CANVAS_LIMITS.height.min}
+                      max={CANVAS_LIMITS.height.max}
+                      step={50}
+                      value={customCanvasSize.height}
+                      onChange={(e) => handleCustomCanvasSizeChange('height', e.target.value)}
+                      className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Tip: 16:9 layouts such as 1280×720 align best with ConquestK's interface, while
+                    smaller sizes load faster on lower-powered devices.
+                  </p>
+                </div>
+              )}
             </div>
 
             {state.imageUrl && (
@@ -1167,10 +1475,11 @@ export default function MapEditorTokens() {
 
                   {/* Image Scale Control */}
                   <div className="mt-3">
-                    <label className="block text-sm text-muted mb-1">
+                    <label htmlFor={imageScaleId} className="block text-sm text-muted mb-1">
                       Image Scale: {(state.imageScale * 100).toFixed(0)}%
                     </label>
                     <input
+                      id={imageScaleId}
                       type="range"
                       min="50"
                       max="200"
@@ -1185,6 +1494,7 @@ export default function MapEditorTokens() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setShowCropper(true)}
                   className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded mb-2"
                   title="Crop the image to specific dimensions"
@@ -1192,6 +1502,7 @@ export default function MapEditorTokens() {
                   ✂️ Crop Image
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowProcessor(true)}
                   className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded mb-2"
                   title="Compress and optimize image for web use (reduces file size)"
@@ -1199,6 +1510,7 @@ export default function MapEditorTokens() {
                   🎨 Process Image (Compress)
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     if (confirm('Remove the background image?')) {
                       setState((prev) => ({ ...prev, imageUrl: undefined }))
@@ -1223,8 +1535,11 @@ export default function MapEditorTokens() {
               <h3 className="text-sm font-bold mb-3">Token Display</h3>
 
               <div className="mb-3">
-                <label className="block text-sm text-muted mb-1">Shape</label>
+                <label htmlFor={tokenShapeId} className="block text-sm text-muted mb-1">
+                  Shape
+                </label>
                 <select
+                  id={tokenShapeId}
                   value={tokenShape}
                   onChange={(e) => setTokenShape(e.target.value as TokenShape)}
                   className="w-full px-3 py-2 bg-surface-2 rounded"
@@ -1236,8 +1551,11 @@ export default function MapEditorTokens() {
               </div>
 
               <div className="mb-3">
-                <label className="block text-sm text-muted mb-1">Size: {tokenSize}px</label>
+                <label htmlFor={tokenSizeId} className="block text-sm text-muted mb-1">
+                  Size: {tokenSize}px
+                </label>
                 <input
+                  id={tokenSizeId}
                   type="range"
                   min="10"
                   max="40"
@@ -1248,6 +1566,7 @@ export default function MapEditorTokens() {
               </div>
 
               <button
+                type="button"
                 onClick={() => setShowGrid(!showGrid)}
                 className={`w-full px-3 py-2 rounded text-sm ${
                   showGrid ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'
@@ -1262,13 +1581,11 @@ export default function MapEditorTokens() {
               <h3 className="text-sm font-bold mb-3">Labels</h3>
 
               <button
+                type="button"
                 onClick={() =>
-                  setState((prev) => ({
-                    ...prev,
-                    labelSettings: {
-                      ...prev.labelSettings!,
-                      showLabels: !prev.labelSettings?.showLabels,
-                    },
+                  updateLabelSettings((settings) => ({
+                    ...settings,
+                    showLabels: !settings.showLabels,
                   }))
                 }
                 className={`w-full px-3 py-2 rounded text-sm mb-2 ${
@@ -1280,6 +1597,7 @@ export default function MapEditorTokens() {
 
               {state.labelSettings?.showLabels && (
                 <button
+                  type="button"
                   onClick={() => setShowLabelSettings(true)}
                   className="w-full px-3 py-2 bg-surface-2 hover:bg-gray-600 rounded text-sm"
                 >
@@ -1290,6 +1608,7 @@ export default function MapEditorTokens() {
 
             {/* Placement Mode */}
             <button
+              type="button"
               onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
               className={`w-full px-4 py-3 rounded font-medium mb-4 ${
                 isPlacingTerritory
@@ -1327,6 +1646,7 @@ export default function MapEditorTokens() {
                         className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
                       />
                       <button
+                        type="button"
                         onClick={() => {
                           setState((prev) => ({
                             ...prev,
@@ -1378,6 +1698,7 @@ export default function MapEditorTokens() {
                 />
               </div>
               <button
+                type="button"
                 onClick={handleCreateContinent}
                 className="w-full px-3 py-2 bg-primary hover:brightness-110 rounded text-sm"
               >
@@ -1405,6 +1726,7 @@ export default function MapEditorTokens() {
                     </div>
                     <div className="text-xs text-muted mb-2">{territoryCount} territories</div>
                     <button
+                      type="button"
                       onClick={() => handleDeleteContinent(continent.id)}
                       className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
                     >
@@ -1423,6 +1745,7 @@ export default function MapEditorTokens() {
             <h2 className="text-xl font-bold mb-4">🔗 Territory Connections</h2>
 
             <button
+              type="button"
               onClick={() => setIsConnecting(!isConnecting)}
               className={`w-full px-4 py-3 rounded font-medium mb-4 ${
                 isConnecting
@@ -1468,8 +1791,11 @@ export default function MapEditorTokens() {
             <h2 className="text-xl font-bold mb-4">👑 Capital Assignment</h2>
 
             <div className="mb-4">
-              <label className="block text-sm mb-2">Player Count</label>
+              <label htmlFor={capitalPlayerCountId} className="block text-sm mb-2">
+                Player Count
+              </label>
               <select
+                id={capitalPlayerCountId}
                 value={selectedPlayerCount}
                 onChange={(e) => setSelectedPlayerCount(Number(e.target.value))}
                 className="w-full px-3 py-2 bg-surface-2 rounded"
@@ -1483,6 +1809,7 @@ export default function MapEditorTokens() {
             </div>
 
             <button
+              type="button"
               onClick={handleGenerateCapitals}
               disabled={isGeneratingCapitals || state.territories.length < selectedPlayerCount}
               className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded mb-2"
@@ -1491,6 +1818,7 @@ export default function MapEditorTokens() {
             </button>
 
             <button
+              type="button"
               onClick={() => setIsAssigningCapital(!isAssigningCapital)}
               className={`w-full px-4 py-2 rounded mb-4 ${
                 isAssigningCapital
@@ -1532,6 +1860,60 @@ export default function MapEditorTokens() {
     }
   }
 
+  const modeHelpMessage = (() => {
+    switch (editorMode) {
+      case 'properties':
+        return (
+          <span>
+            <strong>Properties Mode:</strong> Name your map, describe the gameplay style, and set
+            the supported player counts. Drafts auto-save every few seconds, so you can explore
+            without losing progress.
+          </span>
+        )
+      case 'image':
+        return (
+          <span>
+            <strong>Image Mode:</strong> Upload a background image, then pick a canvas preset that
+            matches your target device. The canvas defines the playable area; the background image
+            scales to fill it.
+          </span>
+        )
+      case 'territories':
+        return (
+          <span>
+            <strong>Territories Mode:</strong> Click on the map to place territory markers. Drag
+            territories to reposition them. Select a continent first to assign territories to it.
+            Right-click or use Delete to remove territories.
+          </span>
+        )
+      case 'continents':
+        return (
+          <span>
+            <strong>Continents Mode:</strong> Create continent groups to organize territories. Each
+            continent provides bonus armies. Click territories to assign them and use the form to
+            add custom colors and bonuses.
+          </span>
+        )
+      case 'connections':
+        return (
+          <span>
+            <strong>Connections Mode:</strong> Click a territory, then another to connect them.
+            Connected territories can attack each other. Click the same pair again to remove the
+            connection.
+          </span>
+        )
+      case 'capitals':
+        return (
+          <span>
+            <strong>Capitals Mode:</strong> Assign starting positions for each player count (2-8).
+            Use auto-generate for balanced spacing or click tokens manually to fine-tune.
+          </span>
+        )
+      default:
+        return null
+    }
+  })()
+
   return (
     <div className="min-h-screen bg-surface-1 text-white p-4">
       {/* Load Draft Dialog - Local Storage */}
@@ -1545,12 +1927,14 @@ export default function MapEditorTokens() {
             </p>
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={loadFromLocalStorage}
                 className="w-full px-4 py-3 bg-primary hover:brightness-110 rounded-lg text-white font-medium"
               >
                 ✅ Load Local Draft
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowLoadDraftDialog(false)
                   localStorage.removeItem(AUTOSAVE_KEY)
@@ -1574,9 +1958,10 @@ export default function MapEditorTokens() {
             ) : (
               <div className="space-y-3">
                 {availableDrafts.map((map) => (
-                  <div
+                  <button
                     key={map.id}
-                    className="bg-surface-2 p-4 rounded-lg hover:bg-gray-700 cursor-pointer"
+                    type="button"
+                    className="w-full bg-surface-2 p-4 rounded-lg hover:bg-gray-700 text-left transition"
                     onClick={() => {
                       setEditingMapId(map.id)
                       loadMapForEditing(map.id)
@@ -1593,13 +1978,14 @@ export default function MapEditorTokens() {
                           Created: {new Date(map.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <button className="text-primary hover:text-primary-dark">Load →</button>
+                      <span className="text-primary hover:text-primary-dark">Load →</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
             <button
+              type="button"
               onClick={() => setShowDraftsList(false)}
               className="mt-4 w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
             >
@@ -1618,10 +2004,16 @@ export default function MapEditorTokens() {
             <div className="space-y-4">
               {/* Preset Themes */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Style Preset</label>
+                <label
+                  htmlFor={stylePresetId}
+                  className="block text-sm font-medium text-white mb-2"
+                >
+                  Style Preset
+                </label>
                 <select
+                  id={stylePresetId}
                   value={state.labelSettings?.preset || 'classic'}
-                  onChange={(e) => applyLabelPreset(e.target.value as any)}
+                  onChange={(e) => applyLabelPreset(e.target.value as LabelSettings['preset'])}
                   className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
                 >
                   <option value="classic">Classic (Black on White)</option>
@@ -1634,149 +2026,147 @@ export default function MapEditorTokens() {
 
               {/* Custom Settings (only show when Custom is selected) */}
               {state.labelSettings?.preset === 'custom' && (
-                <>
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-sm font-medium text-white mb-3">Custom Settings</h3>
+                <div className="border-t border-border pt-4">
+                  <h3 className="text-sm font-medium text-white mb-3">Custom Settings</h3>
 
-                    {/* Font Size */}
-                    <div className="mb-3">
-                      <label className="block text-sm text-muted mb-1">
-                        Font Size: {state.labelSettings?.fontSize || 14}px
-                      </label>
+                  {/* Font Size */}
+                  <div className="mb-3">
+                    <label htmlFor={labelFontSizeId} className="block text-sm text-muted mb-1">
+                      Font Size: {state.labelSettings?.fontSize || 14}px
+                    </label>
+                    <input
+                      id={labelFontSizeId}
+                      type="range"
+                      min="10"
+                      max="24"
+                      value={state.labelSettings?.fontSize || 14}
+                      onChange={(e) =>
+                        updateLabelSettings((settings) => ({
+                          ...settings,
+                          fontSize: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Text Color */}
+                  <div className="mb-3">
+                    <label htmlFor={labelTextColorId} className="block text-sm text-muted mb-1">
+                      Text Color
+                    </label>
+                    <input
+                      id={labelTextColorId}
+                      type="color"
+                      value={state.labelSettings?.textColor || '#000000'}
+                      onChange={(e) =>
+                        updateLabelSettings((settings) => ({
+                          ...settings,
+                          textColor: e.target.value,
+                        }))
+                      }
+                      className="w-full h-8 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Background Toggle */}
+                  <div className="mb-3">
+                    <label className="flex items-center text-sm text-white">
                       <input
-                        type="range"
-                        min="10"
-                        max="24"
-                        value={state.labelSettings?.fontSize || 14}
+                        type="checkbox"
+                        checked={state.labelSettings?.showBackground || false}
                         onChange={(e) =>
-                          setState((prev) => ({
-                            ...prev,
-                            labelSettings: {
-                              ...prev.labelSettings!,
-                              fontSize: Number(e.target.value),
-                            },
+                          updateLabelSettings((settings) => ({
+                            ...settings,
+                            showBackground: e.target.checked,
                           }))
                         }
-                        className="w-full"
+                        className="mr-2"
                       />
-                    </div>
+                      Show Background
+                    </label>
+                  </div>
 
-                    {/* Text Color */}
-                    <div className="mb-3">
-                      <label className="block text-sm text-muted mb-1">Text Color</label>
-                      <input
-                        type="color"
-                        value={state.labelSettings?.textColor || '#000000'}
-                        onChange={(e) =>
-                          setState((prev) => ({
-                            ...prev,
-                            labelSettings: {
-                              ...prev.labelSettings!,
-                              textColor: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full h-8 rounded cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Background Toggle */}
-                    <div className="mb-3">
-                      <label className="flex items-center text-sm text-white">
+                  {/* Background Settings */}
+                  {state.labelSettings?.showBackground && (
+                    <>
+                      <div className="mb-3">
+                        <label
+                          htmlFor={labelBackgroundColorId}
+                          className="block text-sm text-muted mb-1"
+                        >
+                          Background Color
+                        </label>
                         <input
-                          type="checkbox"
-                          checked={state.labelSettings?.showBackground || false}
+                          id={labelBackgroundColorId}
+                          type="color"
+                          value={state.labelSettings?.backgroundColor || '#ffffff'}
                           onChange={(e) =>
-                            setState((prev) => ({
-                              ...prev,
-                              labelSettings: {
-                                ...prev.labelSettings!,
-                                showBackground: e.target.checked,
-                              },
+                            updateLabelSettings((settings) => ({
+                              ...settings,
+                              backgroundColor: e.target.value,
                             }))
                           }
-                          className="mr-2"
+                          className="w-full h-8 rounded cursor-pointer"
                         />
-                        Show Background
-                      </label>
-                    </div>
+                      </div>
 
-                    {/* Background Settings */}
-                    {state.labelSettings?.showBackground && (
-                      <>
-                        <div className="mb-3">
-                          <label className="block text-sm text-muted mb-1">Background Color</label>
-                          <input
-                            type="color"
-                            value={state.labelSettings?.backgroundColor || '#ffffff'}
-                            onChange={(e) =>
-                              setState((prev) => ({
-                                ...prev,
-                                labelSettings: {
-                                  ...prev.labelSettings!,
-                                  backgroundColor: e.target.value,
-                                },
-                              }))
-                            }
-                            className="w-full h-8 rounded cursor-pointer"
-                          />
-                        </div>
+                      <div className="mb-3">
+                        <label
+                          htmlFor={labelBackgroundOpacityId}
+                          className="block text-sm text-muted mb-1"
+                        >
+                          Background Opacity:{' '}
+                          {Math.round((state.labelSettings?.backgroundOpacity || 0.8) * 100)}%
+                        </label>
+                        <input
+                          id={labelBackgroundOpacityId}
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={(state.labelSettings?.backgroundOpacity || 0.8) * 100}
+                          onChange={(e) =>
+                            updateLabelSettings((settings) => ({
+                              ...settings,
+                              backgroundOpacity: Number(e.target.value) / 100,
+                            }))
+                          }
+                          className="w-full"
+                        />
+                      </div>
+                    </>
+                  )}
 
-                        <div className="mb-3">
-                          <label className="block text-sm text-muted mb-1">
-                            Background Opacity:{' '}
-                            {Math.round((state.labelSettings?.backgroundOpacity || 0.8) * 100)}%
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={(state.labelSettings?.backgroundOpacity || 0.8) * 100}
-                            onChange={(e) =>
-                              setState((prev) => ({
-                                ...prev,
-                                labelSettings: {
-                                  ...prev.labelSettings!,
-                                  backgroundOpacity: Number(e.target.value) / 100,
-                                },
-                              }))
-                            }
-                            className="w-full"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Font Family */}
-                    <div className="mb-3">
-                      <label className="block text-sm text-muted mb-1">Font Family</label>
-                      <select
-                        value={state.labelSettings?.fontFamily || 'Arial'}
-                        onChange={(e) =>
-                          setState((prev) => ({
-                            ...prev,
-                            labelSettings: {
-                              ...prev.labelSettings!,
-                              fontFamily: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
-                      >
-                        <option value="Arial">Arial</option>
-                        <option value="system-ui">System UI</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Monaco">Monaco</option>
-                        <option value="Courier New">Courier New</option>
-                      </select>
-                    </div>
+                  {/* Font Family */}
+                  <div className="mb-3">
+                    <label htmlFor={labelFontFamilyId} className="block text-sm text-muted mb-1">
+                      Font Family
+                    </label>
+                    <select
+                      id={labelFontFamilyId}
+                      value={state.labelSettings?.fontFamily || 'Arial'}
+                      onChange={(e) =>
+                        updateLabelSettings((settings) => ({
+                          ...settings,
+                          fontFamily: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
+                    >
+                      <option value="Arial">Arial</option>
+                      <option value="system-ui">System UI</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Monaco">Monaco</option>
+                      <option value="Courier New">Courier New</option>
+                    </select>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
             <div className="flex gap-2 mt-6">
               <button
+                type="button"
                 onClick={() => setShowLabelSettings(false)}
                 className="flex-1 px-4 py-2 bg-primary text-white rounded hover:brightness-110"
               >
@@ -1795,6 +2185,7 @@ export default function MapEditorTokens() {
             <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={handleUseFullImage}
                 className="w-full px-4 py-3 bg-primary hover:bg-primary rounded-lg text-white font-medium flex items-center justify-between"
               >
@@ -1802,6 +2193,7 @@ export default function MapEditorTokens() {
                 <span className="text-sm text-blue-200">No cropping</span>
               </button>
               <button
+                type="button"
                 onClick={handleCropImage}
                 className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium flex items-center justify-between"
               >
@@ -1809,6 +2201,7 @@ export default function MapEditorTokens() {
                 <span className="text-sm text-green-200">Select area</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
@@ -1856,6 +2249,7 @@ export default function MapEditorTokens() {
           {/* Tab Headers */}
           <div className="flex border-b border-border">
             <button
+              type="button"
               onClick={() => setEditorMode('properties')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'properties'
@@ -1866,6 +2260,7 @@ export default function MapEditorTokens() {
               📋 Properties
             </button>
             <button
+              type="button"
               onClick={() => setEditorMode('image')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'image'
@@ -1876,6 +2271,7 @@ export default function MapEditorTokens() {
               🖼️ Image
             </button>
             <button
+              type="button"
               onClick={() => setEditorMode('territories')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'territories'
@@ -1886,6 +2282,7 @@ export default function MapEditorTokens() {
               🗺️ Territories
             </button>
             <button
+              type="button"
               onClick={() => setEditorMode('continents')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'continents'
@@ -1896,6 +2293,7 @@ export default function MapEditorTokens() {
               🌍 Continents
             </button>
             <button
+              type="button"
               onClick={() => setEditorMode('connections')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'connections'
@@ -1906,6 +2304,7 @@ export default function MapEditorTokens() {
               🔗 Connections
             </button>
             <button
+              type="button"
               onClick={() => setEditorMode('capitals')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'capitals'
@@ -1925,6 +2324,7 @@ export default function MapEditorTokens() {
               )}
 
               <button
+                type="button"
                 onClick={handleSaveMap}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
                 title="Save your map as a draft"
@@ -1934,6 +2334,7 @@ export default function MapEditorTokens() {
 
               {editingMapId && (
                 <button
+                  type="button"
                   onClick={handleSubmitForApproval}
                   className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium"
                   title="Submit your map for approval"
@@ -1943,6 +2344,7 @@ export default function MapEditorTokens() {
               )}
 
               <button
+                type="button"
                 onClick={loadDraftMaps}
                 className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-sm font-medium"
                 title="Load a draft map"
@@ -1951,6 +2353,7 @@ export default function MapEditorTokens() {
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   if (confirm('Clear all territories and start over? Your work is auto-saved.')) {
                     setState({
@@ -1982,45 +2385,12 @@ export default function MapEditorTokens() {
           </div>
         </div>
 
-        {/* Help Text for Current Mode */}
-        <div className="mt-3 pt-3 border-t border-border">
-          <div className="flex items-start gap-2">
-            <span className="text-sm font-medium text-primary">💡</span>
-            <div className="text-sm text-muted">
-              {editorMode === 'territories' && (
-                <span>
-                  <strong>Territories Mode:</strong> Click on the map to place territory markers.
-                  Drag territories to reposition them. Select a continent first to assign
-                  territories to it. Right-click or use Delete button to remove territories.
-                </span>
-              )}
-              {editorMode === 'continents' && (
-                <span>
-                  <strong>Continents Mode:</strong> Create continent groups to organize territories.
-                  Each continent provides bonus armies. Click territories to assign them to
-                  continents. Use the form above to create new continents with custom colors and
-                  bonuses.
-                </span>
-              )}
-              {editorMode === 'connections' && (
-                <span>
-                  <strong>Connections Mode:</strong> Click a territory, then click another to create
-                  a connection between them. Connected territories can attack each other. Click the
-                  same pair again to remove the connection. Lines show which territories are
-                  connected.
-                </span>
-              )}
-              {editorMode === 'capitals' && (
-                <span>
-                  <strong>Capitals Mode:</strong> Set starting positions for different player counts
-                  (2-8 players). Click "Generate" to auto-assign capitals using optimal spacing, or
-                  click territories manually to assign them. Each player count can have different
-                  capital positions.
-                </span>
-              )}
-            </div>
+        {modeHelpMessage && (
+          <div className="mt-3 flex items-start gap-2 rounded bg-surface-2/40 px-3 py-3 text-sm text-muted">
+            <span className="text-primary text-base leading-none">💡</span>
+            <div>{modeHelpMessage}</div>
           </div>
-        </div>
+        )}
 
         {/* Mode-specific controls */}
         {editorMode === 'territories' && (
@@ -2041,6 +2411,7 @@ export default function MapEditorTokens() {
               </select>
             </div>
             <button
+              type="button"
               onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
               className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
               title={
@@ -2053,6 +2424,7 @@ export default function MapEditorTokens() {
             </button>
             {state.selectedTerritoryId && (
               <button
+                type="button"
                 onClick={() => {
                   setState((prev) => ({
                     ...prev,
@@ -2094,6 +2466,7 @@ export default function MapEditorTokens() {
                 max="10"
               />
               <button
+                type="button"
                 onClick={() => {
                   if (editingContinentId) {
                     handleUpdateContinent(editingContinentId)
@@ -2108,6 +2481,7 @@ export default function MapEditorTokens() {
               </button>
               {editingContinentId && (
                 <button
+                  type="button"
                   onClick={() => {
                     setEditingContinentId(null)
                     setNewContinentName('')
@@ -2133,6 +2507,7 @@ export default function MapEditorTokens() {
                     {c.name} (+{c.bonus})
                   </span>
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingContinentId(c.id)
                       setNewContinentName(c.name)
@@ -2144,6 +2519,7 @@ export default function MapEditorTokens() {
                     ✏️
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       if (
                         confirm(`Delete continent "${c.name}"? Territories will become unassigned.`)
@@ -2170,6 +2546,7 @@ export default function MapEditorTokens() {
             </p>
             {isConnecting && (
               <button
+                type="button"
                 onClick={() => {
                   setIsConnecting(false)
                   setConnectingFromId(null)
@@ -2186,6 +2563,7 @@ export default function MapEditorTokens() {
           <div className="mt-4 space-y-3">
             <div className="flex gap-4 items-center">
               <button
+                type="button"
                 onClick={handleGenerateCapitals}
                 disabled={isGeneratingCapitals || state.territories.length < 2}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded"
@@ -2201,6 +2579,7 @@ export default function MapEditorTokens() {
               <span className="text-sm">Player Count:</span>
               {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((count) => (
                 <button
+                  type="button"
                   key={count}
                   onClick={() => setSelectedPlayerCount(count)}
                   disabled={state.territories.length < count}
@@ -2219,6 +2598,7 @@ export default function MapEditorTokens() {
 
             <div className="flex gap-4 items-center">
               <button
+                type="button"
                 onClick={() => setIsAssigningCapital(!isAssigningCapital)}
                 className={`px-4 py-2 rounded ${
                   isAssigningCapital ? 'bg-yellow-600' : 'bg-surface-2'
@@ -2286,7 +2666,9 @@ export default function MapEditorTokens() {
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
             }}
-            onClick={handleMapClick}
+            onPointerDown={handleMapPointerDown}
+            role="application"
+            aria-label="Map editing canvas"
             onDragOver={(e) => {
               e.preventDefault()
               setIsDragOver(true)
@@ -2316,7 +2698,10 @@ export default function MapEditorTokens() {
               <svg
                 className="absolute inset-0 pointer-events-none"
                 style={{ width: state.mapWidth, height: state.mapHeight }}
+                role="img"
+                aria-label="Territory connection lines"
               >
+                <title>Territory connection lines</title>
                 {state.territories.map((territory) =>
                   territory.connections.map((targetId) => {
                     const target = state.territories.find((t) => t.id === targetId)
@@ -2345,15 +2730,20 @@ export default function MapEditorTokens() {
               const totalSize = tokenSize + clickPadding * 2
 
               return (
-                <div
+                <button
                   key={territory.id}
-                  className="absolute group"
+                  type="button"
+                  aria-label={`Territory ${territory.name}`}
+                  className="absolute group focus:outline-none"
                   style={{
                     left: territory.x - totalSize / 2,
                     top: territory.y - totalSize / 2,
                     width: totalSize,
                     height: totalSize,
                     cursor: 'pointer',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
                   }}
                   onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
                   onClick={(e) => handleTokenClick(territory.id, e)}
@@ -2415,7 +2805,7 @@ export default function MapEditorTokens() {
                       {territory.name}
                     </div>
                   )}
-                </div>
+                </button>
               )
             })}
 
@@ -2437,10 +2827,12 @@ export default function MapEditorTokens() {
                   <div className="bg-black/40 backdrop-blur-sm p-6 rounded-lg">
                     <p className="text-muted mb-3">Drop an image here or</p>
                     <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-6 py-3 bg-violet hover:brightness-110 rounded-lg font-medium"
+                      className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-base rounded-lg"
                     >
-                      📤 Upload Map Image
+                      <span className="text-lg">📤</span>
+                      <span>Upload Map Image</span>
                     </button>
                     <div className="mt-4 text-xs text-muted space-y-1">
                       <p>
@@ -2481,7 +2873,7 @@ export default function MapEditorTokens() {
       />
       {/* Hidden file input for JSON import */}
       <input
-        id="json-import"
+        id={jsonImportId}
         type="file"
         accept="application/json,.json"
         onChange={handleImport}
