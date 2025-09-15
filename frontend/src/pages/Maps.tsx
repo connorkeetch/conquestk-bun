@@ -168,7 +168,7 @@ const Maps: React.FC = () => {
             placeholder="Search maps by name, description, or tags..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full glass-box-sm text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <div className="absolute right-3 top-3 text-muted">🔍</div>
         </div>
@@ -177,7 +177,7 @@ const Maps: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Statuses</option>
             <option value="draft">Draft</option>
@@ -192,7 +192,7 @@ const Maps: React.FC = () => {
           <select
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
-            className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Tags</option>
             {allTags.map((tag) => (
@@ -206,7 +206,7 @@ const Maps: React.FC = () => {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="popularity">Sort by Popularity</option>
           <option value="rating">Sort by Rating</option>

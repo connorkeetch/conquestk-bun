@@ -197,7 +197,7 @@ const GamePage: React.FC = () => {
             {/* Full-screen overlay content */}
             {isFullScreen && activeTab !== 'board' && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
-                <div className="bg-surface-1 rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="glass-box-lg max-w-md w-full mx-4">
                   {activeTab === 'chat' && (
                     <div>
                       <h3 className="text-xl font-bold mb-4">Game Chat</h3>

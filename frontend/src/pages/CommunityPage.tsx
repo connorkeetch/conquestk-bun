@@ -190,7 +190,7 @@ const CommunityPage: React.FC = () => {
           </div>
 
           {/* Leaderboard Table */}
-          <div className="bg-surface-1 rounded-lg overflow-hidden border border-border">
+          <div className="glass-box-lg overflow-hidden p-0">
             {loading ? (
               <div className="p-16 text-center">
                 <div className="text-muted">Loading leaderboard...</div>
@@ -283,7 +283,7 @@ const CommunityPage: React.FC = () => {
 
       {/* Clans Content */}
       {activeTab === 'clans' && (
-        <div className="bg-surface-2 rounded-lg p-16 text-center">
+        <div className="glass-box-lg text-center">
           <Shield className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Clans Coming Soon</p>
           <p className="text-muted text-sm">Form alliances and compete as a team</p>
@@ -292,7 +292,7 @@ const CommunityPage: React.FC = () => {
 
       {/* Forums Content */}
       {activeTab === 'forums' && (
-        <div className="bg-surface-2 rounded-lg p-16 text-center">
+        <div className="glass-box-lg text-center">
           <MessageSquare className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Forums Coming Soon</p>
           <p className="text-muted text-sm">Discuss strategies and connect with players</p>
@@ -301,7 +301,7 @@ const CommunityPage: React.FC = () => {
 
       {/* Events Content */}
       {activeTab === 'events' && (
-        <div className="bg-surface-2 rounded-lg p-16 text-center">
+        <div className="glass-box-lg text-center">
           <CalendarDays className="w-16 h-16 text-muted mx-auto mb-4" />
           <p className="text-muted text-lg mb-2">Events & Tournaments Coming Soon</p>
           <p className="text-muted text-sm">Compete in special events for exclusive rewards</p>

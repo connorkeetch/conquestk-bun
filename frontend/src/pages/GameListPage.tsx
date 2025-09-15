@@ -76,7 +76,7 @@ const GameListPage: React.FC = () => {
           <button
             onClick={loadUserGames}
             disabled={loading}
-            className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '🔄 Loading...' : '🔄 Refresh'}
           </button>

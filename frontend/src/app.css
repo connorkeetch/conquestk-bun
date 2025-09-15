@@ -97,6 +97,15 @@ This allows themes to work with any color scheme!
   /* Surface glass effects */
   --surface-glass: rgba(15, 23, 42, 0.6);
   --surface-glass-light: rgba(17, 24, 39, 0.4);
+
+  /* Box/Card component variables */
+  --box-bg: rgba(30, 41, 59, 0.5); /* slate-800/50 equivalent */
+  --box-bg-solid: #1e293b; /* Solid version for non-glass boxes */
+  --box-border: rgba(71, 85, 105, 0.5); /* slate-600/50 */
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
 }
 
 /* ========================================================================== 
@@ -127,6 +136,10 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides */
+  --box-bg: rgba(43, 21, 21, 0.5);
+  --box-border: rgba(51, 65, 85, 0.5);
 }
 
 /* Red Theme */
@@ -153,6 +166,10 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+  
+  /* Box/Card overrides - red tinted */
+  --box-bg: rgba(43, 21, 21, 0.5);
+  --box-border: rgba(127, 29, 29, 0.5);
 }
 
 /* Violet Theme */
@@ -179,6 +196,10 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - violet tinted */
+  --box-bg: rgba(46, 16, 101, 0.3);
+  --box-border: rgba(91, 33, 182, 0.4);
 }
 
 /* Blue Theme */
@@ -205,6 +226,10 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - blue tinted */
+  --box-bg: rgba(30, 58, 95, 0.5);
+  --box-border: rgba(2, 132, 199, 0.3);
 }
 
 /* Green Theme */
@@ -231,6 +256,10 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - green tinted */
+  --box-bg: rgba(26, 46, 26, 0.5);
+  --box-border: rgba(21, 128, 61, 0.4);
 }
 
 /* Black Theme - Pure black with gray accents */
@@ -257,6 +286,11 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - pure black */
+  --box-bg: rgba(17, 17, 17, 0.8);
+  --box-border: rgba(55, 65, 81, 0.6);
+  --box-blur: 8px;
 }
 
 /* High Contrast Theme (for accessibility) */
@@ -288,6 +322,11 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary);
+
+  /* Box/Card overrides - high contrast */
+  --box-bg: rgba(51, 51, 51, 0.9);
+  --box-border: rgba(255, 255, 255, 0.8);
+  --box-blur: 0px;
 }
 
 /* Halloween theme - Spooky seasonal theme */
@@ -314,6 +353,11 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: #ff6b35;
+
+  /* Box/Card overrides - spooky dark */
+  --box-bg: rgba(26, 15, 23, 0.7);
+  --box-border: rgba(139, 21, 56, 0.5);
+  --box-shadow: 0 10px 40px rgba(139, 21, 56, 0.3);
 }
 
 /* Floating bat/ghost particles background */
@@ -712,6 +756,55 @@ kbd {
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
+
+/* Glass Box - Settings-style semi-transparent box with theme support */
+.glass-box {
+  background-color: var(--box-bg);
+  backdrop-filter: blur(var(--box-blur));
+  border: 1px solid var(--box-border);
+  border-radius: var(--box-radius);
+  padding: var(--box-padding);
+  box-shadow: var(--box-shadow);
+}
+
+/* Glass Box Small - For compact components */
+.glass-box-sm {
+  background-color: var(--box-bg);
+  backdrop-filter: blur(var(--box-blur));
+  border: 1px solid var(--box-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: var(--box-shadow);
+}
+
+/* Glass Box Large - For main content areas */
+.glass-box-lg {
+  background-color: var(--box-bg);
+  backdrop-filter: blur(var(--box-blur));
+  border: 1px solid var(--box-border);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--box-shadow);
+}
+
+/* Glass Box XL - For page sections */
+.glass-box-xl {
+  background-color: var(--box-bg);
+  backdrop-filter: blur(var(--box-blur));
+  border: 1px solid var(--box-border);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--box-shadow);
+}
+
+/* Solid Box - Non-transparent version */
+.solid-box {
+  background-color: var(--box-bg-solid);
+  border: 1px solid var(--box-border);
+  border-radius: var(--box-radius);
+  padding: var(--box-padding);
+}
+
 /* Primary Button Component */
 .btn-primary {
   padding: 0.5rem 1rem;
