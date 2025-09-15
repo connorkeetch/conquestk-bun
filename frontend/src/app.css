@@ -31,8 +31,8 @@ Themes are applied via data-theme attribute on the root element.
 🔄 TO ADD A NEW THEME:
 1. Add :root[data-theme="yourtheme"] section below
 2. Define ALL CSS variables (copy from another theme)
-3. Add theme name to themeLoader.ts validThemes array
-4. Add to Settings page theme selector
+3. Add theme to theme.config.ts
+4. Add theme to index.html data-theme-options
 
 💡 SEMANTIC VARIABLES:
 Variables are named by PURPOSE, not color:
@@ -40,9 +40,9 @@ Variables are named by PURPOSE, not color:
 - --color-bg-base: Deepest background
 - --color-text-primary: Main text color
 This allows themes to work with any color scheme!
+
 /* ===== ROOT DEFAULT THEME ===== */
 /* These are the base values that ALL themes inherit/override */
-
 
 :root {
   /* ===== SEMANTIC THEME VARIABLES ===== */
@@ -108,8 +108,31 @@ This allows themes to work with any color scheme!
  * THEME DEFINITIONS 
  * Each theme overrides the root variables
  * ========================================================================== */
-/* Default/Dark Theme - Already defined in root, but can be explicit */
-:root[data-theme="default"],
+/* Default theme - needs explicit definition */
+:root[data-theme="default"] {
+  --color-primary: #2563EB;
+  --color-primary-soft: #3B82F6;
+  --color-secondary: #FFD700;
+  --color-accent: #DC2626;
+  --color-bg-deep: #000000;
+  --color-bg-alt: #050505;
+  --color-bg-void: #030303;
+  --color-surface-1: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-text: #F9FAFB;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+
+  /* Purple tinted gradient with center glow */
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #0a0a0f 0%,                      /* Dark edges */
+    rgba(88, 28, 135, 0.2) 50%,    /* Purple glow in center */
+    #000000 100%                     /* Black corner */
+  );
+  
+  --ck-glow: var(--color-primary-soft);
+}
 
 /* Red Theme */
 :root[data-theme="red"] {
@@ -129,10 +152,9 @@ This allows themes to work with any color scheme!
   
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #110303 0%,                     /* Dark red */
-    #050101 30%,                    /* Nearly black */
-    #0f0202 60%,                    /* Very dark red */
-    #110303 100%                   /* Dark red */
+    #0f0505 0%,                      /* Dark red edges */
+    rgba(220, 38, 38, 0.2) 50%,     /* Red glow in center */
+    #0a0202 100%                     /* Darker corner */
   );
   
   --ck-glow: var(--color-primary-soft);
@@ -156,10 +178,9 @@ This allows themes to work with any color scheme!
   
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0d0814 0%,                     /* Dark violet */
-    #040207 30%,                    /* Nearly black */
-    #0a0610 60%,                    /* Very dark violet */
-    #0d0814 100%                   /* Dark violet */
+    #0d0814 0%,                      /* Dark violet edges */
+    rgba(124, 58, 237, 0.25) 50%,   /* Purple glow in center */
+    #080510 100%                     /* Darker corner */
   );
   
   --ck-glow: var(--color-primary-soft);
@@ -183,10 +204,9 @@ This allows themes to work with any color scheme!
   
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #06090f 0%,                     /* Dark blue */
-    #020305 30%,                    /* Nearly black */
-    #05070c 60%,                    /* Very dark blue */
-    #06090f 100%                   /* Dark blue */
+    #05080f 0%,                      /* Dark blue edges */
+    rgba(37, 99, 235, 0.2) 50%,     /* Blue glow in center */
+    #020305 100%                     /* Darker corner */
   );
   
   --ck-glow: var(--color-primary-soft);
@@ -210,10 +230,9 @@ This allows themes to work with any color scheme!
   
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #060c0a 0%,                     /* Dark green */
-    #020403 30%,                    /* Nearly black */
-    #050907 60%,                    /* Very dark green */
-    #060c0a 100%                   /* Dark green */
+    #051008 0%,                      /* Dark green edges */
+    rgba(5, 150, 105, 0.2) 50%,     /* Green glow in center */
+    #020605 100%                     /* Darker corner */
   );
   
   --ck-glow: var(--color-primary-soft);
@@ -237,10 +256,9 @@ This allows themes to work with any color scheme!
   
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #050505 0%,                     /* Nearly black */
-    #000000 30%,                    /* Pure black */
-    #030303 60%,                    /* Very dark gray */
-    #050505 100%                   /* Nearly black */
+    #050505 0%,                      /* Nearly black */
+    rgba(55, 65, 81, 0.15) 50%,     /* Very subtle gray glow */
+    #000000 100%                     /* Pure black */
   );
   
   --ck-glow: var(--color-primary-soft);
@@ -292,11 +310,12 @@ This allows themes to work with any color scheme!
   --color-text-muted: #B68FA5;      /* Muted purple-gray */
   --color-border: #4A2040;          /* Purple border */
   
-  /* Simplified gradient */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0A0108 0%,
-    #110A0F 100%
+    #0A0108 0%,                      /* Midnight black */
+    rgba(255, 107, 53, 0.2) 40%,    /* Orange glow */
+    rgba(139, 21, 56, 0.15) 60%,    /* Blood red transition */
+    #050105 100%                     /* Dark corner */
   );
   
   --ck-glow: #FF6B35;

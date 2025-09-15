@@ -4,8 +4,6 @@
 /* Import custom theme configuration */
 @import "./app.css";
 
-/* Import our global design system - comes after Tailwind base */
-/*@import "./styles/global.css";
 
 /* Root container */
 #root {
