@@ -25,8 +25,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Main Content - background gradient is applied to body in global.css */}
-      <main className="flex-1 relative">
+      {/* Main Content - theme-specific gradient background */}
+      <main className="flex-1 relative" style={{ background: 'var(--ck-bg-gradient)' }}>
         {/* Grid pattern overlay - consistent across all pages */}
         <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
           <svg
@@ -44,8 +44,8 @@ export default function Layout({ children }: LayoutProps) {
                 />
               </pattern>
               <radialGradient id="glow" cx="50%" cy="40%" r="80%">
-                <stop offset="0%" stopColor={CORE_COLORS.cyan} stopOpacity=".12" />
-                <stop offset="100%" stopColor={CORE_COLORS.black} stopOpacity="0" />
+                <stop offset="0%" stopColor={CORE_COLORS.violet} stopOpacity=".12" />
+                <stop offset="100%" stopColor={CORE_COLORS.ink} stopOpacity="0" />
               </radialGradient>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
