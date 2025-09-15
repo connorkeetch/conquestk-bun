@@ -141,7 +141,7 @@ const UserStats: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="text-2xl text-center p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+        <div className="text-2xl text-center glass-box-lg">
           <div className="text-4xl mb-4 animate-pulse">🎲</div>
           <div className="text-white">Loading statistics...</div>
         </div>
@@ -152,7 +152,7 @@ const UserStats: React.FC = () => {
   if (!stats) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="text-2xl text-center p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+        <div className="text-2xl text-center glass-box-lg">
           <div className="text-4xl mb-4">❌</div>
           <div className="text-white">Unable to load statistics</div>
         </div>
@@ -163,11 +163,11 @@ const UserStats: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto text-white">
       {/* Header with Period Selection */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 p-8 bg-surface-1/50 backdrop-blur-sm rounded-2xl border border-border/50">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 glass-box-lg">
         <h1 className="text-4xl font-bold mb-4 sm:mb-0 bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent flex items-center gap-3">
           <span className="text-white">📊</span> Statistics & Analytics
         </h1>
-        <div className="flex gap-2 bg-surface-2/50 p-2 rounded-xl">
+        <div className="flex gap-2 glass-box-sm p-2">
           {periods.map((period) => (
             <button
               key={period.period}
@@ -190,7 +190,7 @@ const UserStats: React.FC = () => {
           <span>🎮</span> General Statistics
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div className="col-span-1 sm:col-span-2 bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="col-span-1 sm:col-span-2 glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-5xl">🏆</div>
             <div className="flex-1">
               <div className="text-3xl font-bold text-primary">{stats.general.gamesWon}</div>
@@ -201,7 +201,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🎲</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">{stats.general.gamesPlayed}</div>
@@ -209,7 +209,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⏱️</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -219,7 +219,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all relative">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all relative">
             <div className="text-4xl">📊</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">#{stats.general.ranking}</div>
@@ -230,7 +230,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🔥</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -241,7 +241,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⏰</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -259,7 +259,7 @@ const UserStats: React.FC = () => {
           <span>⚔️</span> Battle Performance
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🏰</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -270,7 +270,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⚔️</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">{stats.performance.battlesWon}</div>
@@ -286,7 +286,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🪖</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -299,7 +299,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⚡</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -309,7 +309,7 @@ const UserStats: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">💪</div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-primary">
@@ -327,7 +327,7 @@ const UserStats: React.FC = () => {
         <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
           <span>🗺️</span> Map Performance
         </h2>
-        <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-8">
+        <div className="glass-box-lg">
           <div className="text-center mb-8">
             <h3 className="text-2xl font-semibold text-yellow-400 flex items-center justify-center gap-2">
               <span>🌟</span> Favorite Map: {stats.maps.favoriteMap}
@@ -362,33 +362,33 @@ const UserStats: React.FC = () => {
           <span>🎯</span> Game Mode Wins
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">🌍</div>
             <div className="text-white font-medium mb-1">Classic</div>
             <div className="text-xl font-bold text-primary">{stats.gameModes.classicWins} wins</div>
           </div>
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">👑</div>
             <div className="text-white font-medium mb-1">Capital Conquest</div>
             <div className="text-xl font-bold text-primary">
               {stats.gameModes.capitalConquestWins} wins
             </div>
           </div>
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">⚓</div>
             <div className="text-white font-medium mb-1">Naval Supremacy</div>
             <div className="text-xl font-bold text-primary">
               {stats.gameModes.navalSupremacyWins} wins
             </div>
           </div>
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">💰</div>
             <div className="text-white font-medium mb-1">Resource War</div>
             <div className="text-xl font-bold text-primary">
               {stats.gameModes.resourceWarWins} wins
             </div>
           </div>
-          <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
+          <div className="glass-box text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">⚖️</div>
             <div className="text-white font-medium mb-1">Asymmetric</div>
             <div className="text-xl font-bold text-primary">
@@ -403,7 +403,7 @@ const UserStats: React.FC = () => {
         <h2 className="text-2xl font-bold mb-6 text-primary-soft border-b-2 border-primary/30 pb-2 flex items-center gap-2">
           <span>📈</span> Monthly Trends
         </h2>
-        <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-8">
+        <div className="glass-box-lg">
           <div className="flex gap-6 mb-6">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-primary rounded"></div>

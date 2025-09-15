@@ -263,7 +263,7 @@ const ProfilePage: React.FC = () => {
             <div className="space-y-6">
               {/* Stats Grid with enhanced cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-primary/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                <div className="group relative glass-box-sm hover:border-primary/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">🎮</div>
@@ -274,7 +274,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                <div className="group relative glass-box-sm hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">✅</div>
@@ -283,7 +283,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-red-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                <div className="group relative glass-box-sm hover:border-red-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">❌</div>
@@ -292,7 +292,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-yellow-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                <div className="group relative glass-box-sm hover:border-yellow-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">📊</div>
