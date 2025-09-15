@@ -225,14 +225,18 @@ export default function AdminDashboard() {
                   >
                     <div>
                       <div className="font-medium capitalize">
-                        {flagName === 'gunts_prescriptions' 
-                          ? "💊 Gunt's Prescriptions" 
+                        {flagName === 'gunts_prescriptions'
+                          ? "💊 Gunt's Prescriptions"
                           : flagName.replace(/_/g, ' ')}
                       </div>
                       <div className="text-sm text-muted">
                         {flagName === 'gunts_prescriptions'
-                          ? (isEnabled ? 'Doctor is IN' : 'Doctor is OUT')
-                          : (isEnabled ? 'Enabled' : 'Disabled')}
+                          ? isEnabled
+                            ? 'Doctor is IN'
+                            : 'Doctor is OUT'
+                          : isEnabled
+                            ? 'Enabled'
+                            : 'Disabled'}
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">

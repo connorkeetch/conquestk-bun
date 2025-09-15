@@ -27,7 +27,7 @@ interface EditorState {
   imageUrl?: string
   imageWidth: number
   imageHeight: number
-  imageScale: number  // Scale factor for resizing image
+  imageScale: number // Scale factor for resizing image
   adjacencies: Array<{ from: string; to: string }>
   firstSelectedTerritory?: string
 }
@@ -45,7 +45,7 @@ export default function MapEditor() {
     currentPolygon: [],
     imageWidth: 800,
     imageHeight: 600,
-    imageScale: 1,  // Default scale
+    imageScale: 1, // Default scale
     adjacencies: [],
     firstSelectedTerritory: undefined,
   })
@@ -94,7 +94,7 @@ export default function MapEditor() {
   const checkTermsAcceptance = async () => {
     try {
       const response = await termsService.checkTermsAcceptance('map_editor')
-      
+
       if (!response.hasAccepted) {
         setTermsContent(response.termsContent)
         setShowTermsModal(true)
@@ -154,151 +154,174 @@ export default function MapEditor() {
     }
   }, [])
 
-  const redrawTerritories = useCallback((ctx: CanvasRenderingContext2D) => {
-    // Draw territories
-    state.territories.forEach((territory) => {
-      const continent = state.continents.find((c) => c.id === territory.continentId)
-      const isSelected = state.selectedTerritory === territory.id
+  const redrawTerritories = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      // Draw territories
+      state.territories.forEach((territory) => {
+        const continent = state.continents.find((c) => c.id === territory.continentId)
+        const isSelected = state.selectedTerritory === territory.id
 
-      // Use higher opacity for better visibility
-      ctx.fillStyle = continent ? `${continent.color}B3` : '#6B7280B3' // 70% opacity
-      ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF' // White borders for better contrast
-      ctx.lineWidth = isSelected ? 4 : 2
+        // Use higher opacity for better visibility
+        ctx.fillStyle = continent ? `${continent.color}B3` : '#6B7280B3' // 70% opacity
+        ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF' // White borders for better contrast
+        ctx.lineWidth = isSelected ? 4 : 2
 
-      // Draw territory polygon (apply scale)
-      if (territory.boundaryCoords.length > 0) {
+        // Draw territory polygon (apply scale)
+        if (territory.boundaryCoords.length > 0) {
+          ctx.beginPath()
+          ctx.moveTo(
+            territory.boundaryCoords[0].x * state.imageScale,
+            territory.boundaryCoords[0].y * state.imageScale,
+          )
+          territory.boundaryCoords.slice(1).forEach((coord) => {
+            ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
+          })
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+
+          // Draw territory name with shadow for better readability
+          ctx.fillStyle = '#000000'
+          ctx.font = 'bold 14px sans-serif'
+          ctx.textAlign = 'center'
+          // Draw shadow (apply scale)
+          ctx.fillText(
+            territory.name,
+            territory.armyPosition.x * state.imageScale + 1,
+            territory.armyPosition.y * state.imageScale + 1,
+          )
+          // Draw text
+          ctx.fillStyle = '#FFFFFF'
+          ctx.fillText(
+            territory.name,
+            territory.armyPosition.x * state.imageScale,
+            territory.armyPosition.y * state.imageScale,
+          )
+        }
+      })
+
+      // Draw current polygon being drawn
+      if (state.isDrawing && state.currentPolygon.length > 0) {
+        // Draw filled preview with low opacity
+        ctx.fillStyle = '#60A5FA40' // Light blue with 25% opacity
         ctx.beginPath()
         ctx.moveTo(
-          territory.boundaryCoords[0].x * state.imageScale, 
-          territory.boundaryCoords[0].y * state.imageScale
+          state.currentPolygon[0].x * state.imageScale,
+          state.currentPolygon[0].y * state.imageScale,
         )
-        territory.boundaryCoords.slice(1).forEach((coord) => {
+        state.currentPolygon.slice(1).forEach((coord) => {
           ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
         })
         ctx.closePath()
         ctx.fill()
-        ctx.stroke()
 
-        // Draw territory name with shadow for better readability
-        ctx.fillStyle = '#000000'
-        ctx.font = 'bold 14px sans-serif'
-        ctx.textAlign = 'center'
-        // Draw shadow (apply scale)
-        ctx.fillText(
-          territory.name, 
-          territory.armyPosition.x * state.imageScale + 1, 
-          territory.armyPosition.y * state.imageScale + 1
-        )
-        // Draw text
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillText(
-          territory.name, 
-          territory.armyPosition.x * state.imageScale, 
-          territory.armyPosition.y * state.imageScale
-        )
-      }
-    })
-
-    // Draw current polygon being drawn
-    if (state.isDrawing && state.currentPolygon.length > 0) {
-      // Draw filled preview with low opacity
-      ctx.fillStyle = '#60A5FA40' // Light blue with 25% opacity
-      ctx.beginPath()
-      ctx.moveTo(
-        state.currentPolygon[0].x * state.imageScale, 
-        state.currentPolygon[0].y * state.imageScale
-      )
-      state.currentPolygon.slice(1).forEach((coord) => {
-        ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
-      })
-      ctx.closePath()
-      ctx.fill()
-
-      // Draw outline
-      ctx.strokeStyle = '#3B82F6' // Bright blue
-      ctx.lineWidth = 3
-      ctx.setLineDash([8, 4])
-      ctx.beginPath()
-      ctx.moveTo(
-        state.currentPolygon[0].x * state.imageScale, 
-        state.currentPolygon[0].y * state.imageScale
-      )
-      state.currentPolygon.slice(1).forEach((coord) => {
-        ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
-      })
-      ctx.stroke()
-      ctx.setLineDash([])
-
-      // Draw points
-      state.currentPolygon.forEach((point) => {
-        ctx.fillStyle = '#FFFFFF'
-        ctx.strokeStyle = '#3B82F6'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(point.x * state.imageScale, point.y * state.imageScale, 4, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
-      })
-    }
-  }, [state.territories, state.continents, state.selectedTerritory, state.isDrawing, state.currentPolygon, state.imageScale])
-
-  const drawAdjacencies = useCallback((ctx: CanvasRenderingContext2D) => {
-    // Draw adjacency lines
-    state.adjacencies.forEach((adjacency) => {
-      const fromTerritory = state.territories.find((t) => t.id === adjacency.from)
-      const toTerritory = state.territories.find((t) => t.id === adjacency.to)
-
-      if (fromTerritory && toTerritory) {
-        ctx.strokeStyle = '#10B981'
+        // Draw outline
+        ctx.strokeStyle = '#3B82F6' // Bright blue
         ctx.lineWidth = 3
-        ctx.setLineDash([10, 5])
-
+        ctx.setLineDash([8, 4])
         ctx.beginPath()
         ctx.moveTo(
-          fromTerritory.armyPosition.x * state.imageScale, 
-          fromTerritory.armyPosition.y * state.imageScale
+          state.currentPolygon[0].x * state.imageScale,
+          state.currentPolygon[0].y * state.imageScale,
         )
-        ctx.lineTo(
-          toTerritory.armyPosition.x * state.imageScale, 
-          toTerritory.armyPosition.y * state.imageScale
-        )
+        state.currentPolygon.slice(1).forEach((coord) => {
+          ctx.lineTo(coord.x * state.imageScale, coord.y * state.imageScale)
+        })
         ctx.stroke()
         ctx.setLineDash([])
 
-        // Draw connection dots
-        ctx.fillStyle = '#10B981'
-        ctx.beginPath()
-        ctx.arc(
-          fromTerritory.armyPosition.x * state.imageScale, 
-          fromTerritory.armyPosition.y * state.imageScale, 
-          4, 0, 2 * Math.PI
-        )
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(
-          toTerritory.armyPosition.x * state.imageScale, 
-          toTerritory.armyPosition.y * state.imageScale, 
-          4, 0, 2 * Math.PI
-        )
-        ctx.fill()
+        // Draw points
+        state.currentPolygon.forEach((point) => {
+          ctx.fillStyle = '#FFFFFF'
+          ctx.strokeStyle = '#3B82F6'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(point.x * state.imageScale, point.y * state.imageScale, 4, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.stroke()
+        })
       }
-    })
+    },
+    [
+      state.territories,
+      state.continents,
+      state.selectedTerritory,
+      state.isDrawing,
+      state.currentPolygon,
+      state.imageScale,
+    ],
+  )
 
-    // Highlight first selected territory in adjacency mode
-    if (state.selectedTool === 'adjacency' && state.firstSelectedTerritory) {
-      const firstTerritory = state.territories.find((t) => t.id === state.firstSelectedTerritory)
-      if (firstTerritory) {
-        ctx.strokeStyle = '#F59E0B'
-        ctx.lineWidth = 4
-        ctx.setLineDash([8, 4])
+  const drawAdjacencies = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      // Draw adjacency lines
+      state.adjacencies.forEach((adjacency) => {
+        const fromTerritory = state.territories.find((t) => t.id === adjacency.from)
+        const toTerritory = state.territories.find((t) => t.id === adjacency.to)
 
-        ctx.beginPath()
-        ctx.arc(firstTerritory.armyPosition.x, firstTerritory.armyPosition.y, 20, 0, 2 * Math.PI)
-        ctx.stroke()
-        ctx.setLineDash([])
+        if (fromTerritory && toTerritory) {
+          ctx.strokeStyle = '#10B981'
+          ctx.lineWidth = 3
+          ctx.setLineDash([10, 5])
+
+          ctx.beginPath()
+          ctx.moveTo(
+            fromTerritory.armyPosition.x * state.imageScale,
+            fromTerritory.armyPosition.y * state.imageScale,
+          )
+          ctx.lineTo(
+            toTerritory.armyPosition.x * state.imageScale,
+            toTerritory.armyPosition.y * state.imageScale,
+          )
+          ctx.stroke()
+          ctx.setLineDash([])
+
+          // Draw connection dots
+          ctx.fillStyle = '#10B981'
+          ctx.beginPath()
+          ctx.arc(
+            fromTerritory.armyPosition.x * state.imageScale,
+            fromTerritory.armyPosition.y * state.imageScale,
+            4,
+            0,
+            2 * Math.PI,
+          )
+          ctx.fill()
+          ctx.beginPath()
+          ctx.arc(
+            toTerritory.armyPosition.x * state.imageScale,
+            toTerritory.armyPosition.y * state.imageScale,
+            4,
+            0,
+            2 * Math.PI,
+          )
+          ctx.fill()
+        }
+      })
+
+      // Highlight first selected territory in adjacency mode
+      if (state.selectedTool === 'adjacency' && state.firstSelectedTerritory) {
+        const firstTerritory = state.territories.find((t) => t.id === state.firstSelectedTerritory)
+        if (firstTerritory) {
+          ctx.strokeStyle = '#F59E0B'
+          ctx.lineWidth = 4
+          ctx.setLineDash([8, 4])
+
+          ctx.beginPath()
+          ctx.arc(firstTerritory.armyPosition.x, firstTerritory.armyPosition.y, 20, 0, 2 * Math.PI)
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
       }
-    }
-  }, [state.adjacencies, state.territories, state.selectedTool, state.firstSelectedTerritory, state.imageScale])
+    },
+    [
+      state.adjacencies,
+      state.territories,
+      state.selectedTool,
+      state.firstSelectedTerritory,
+      state.imageScale,
+    ],
+  )
 
   // Canvas drawing setup - moved after function definitions to avoid hoisting issues
   useEffect(() => {
@@ -343,7 +366,21 @@ export default function MapEditor() {
       redrawTerritories(ctx)
       drawAdjacencies(ctx)
     }
-  }, [state.imageUrl, state.territories, state.continents, state.selectedTerritory, state.isDrawing, state.currentPolygon, state.adjacencies, state.selectedTool, state.firstSelectedTerritory, state.imageScale, drawGrid, redrawTerritories, drawAdjacencies])
+  }, [
+    state.imageUrl,
+    state.territories,
+    state.continents,
+    state.selectedTerritory,
+    state.isDrawing,
+    state.currentPolygon,
+    state.adjacencies,
+    state.selectedTool,
+    state.firstSelectedTerritory,
+    state.imageScale,
+    drawGrid,
+    redrawTerritories,
+    drawAdjacencies,
+  ])
 
   // Canvas handlers will be defined after all helper functions
 
@@ -395,11 +432,14 @@ export default function MapEditor() {
     return inside
   }, [])
 
-  const findTerritoryAtPoint = useCallback((x: number, y: number): MapTerritory | undefined => {
-    return state.territories.find((territory) => {
-      return isPointInPolygon({ x, y }, territory.boundaryCoords)
-    })
-  }, [state.territories, isPointInPolygon])
+  const findTerritoryAtPoint = useCallback(
+    (x: number, y: number): MapTerritory | undefined => {
+      return state.territories.find((territory) => {
+        return isPointInPolygon({ x, y }, territory.boundaryCoords)
+      })
+    },
+    [state.territories, isPointInPolygon],
+  )
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -431,7 +471,7 @@ export default function MapEditor() {
 
     // Store the actual file for upload
     setSelectedFile(file)
-    setImageFile(file)  // Store for later upload
+    setImageFile(file) // Store for later upload
 
     // Use FileReader API for better compatibility (avoids blob URL security issues)
     const reader = new FileReader()
@@ -445,49 +485,51 @@ export default function MapEditor() {
 
       img.onload = () => {
         const isSvg = file.type === 'image/svg+xml'
-        
+
         // Minimum size requirements
         const MIN_WIDTH = 400
         const MIN_HEIGHT = 300
         const MAX_WIDTH = 1600
         const MAX_HEIGHT = 1200
-        
+
         let finalWidth = img.width
         let finalHeight = img.height
-        
+
         // Auto-expand small images to meet minimum size
         if (img.width < MIN_WIDTH || img.height < MIN_HEIGHT) {
           const scaleX = MIN_WIDTH / img.width
           const scaleY = MIN_HEIGHT / img.height
           const scale = Math.max(scaleX, scaleY)
-          
+
           finalWidth = Math.round(img.width * scale)
           finalHeight = Math.round(img.height * scale)
-          
+
           // Create expanded canvas
           const expandCanvas = document.createElement('canvas')
           expandCanvas.width = finalWidth
           expandCanvas.height = finalHeight
           const ctx = expandCanvas.getContext('2d')
-          
+
           if (ctx) {
             ctx.imageSmoothingEnabled = true
             ctx.imageSmoothingQuality = 'high'
             ctx.drawImage(img, 0, 0, finalWidth, finalHeight)
             const expandedDataUrl = expandCanvas.toDataURL('image/png')
             setTempImageUrl(expandedDataUrl)
-            setUploadInfo(`Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`)
+            setUploadInfo(
+              `Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`,
+            )
           }
         } else {
           setTempImageUrl(dataUrl)
           setUploadInfo(null)
         }
-        
+
         // Show options dialog for all images
         setShowImageOptions(true)
         setIsUploading(false)
         setUploadProgress(0)
-        
+
         // Store dimensions (with limits)
         setState((prev) => ({
           ...prev,
@@ -770,7 +812,7 @@ export default function MapEditor() {
       console.error('Map save error:', error)
       console.error('Error response:', error.response?.data)
       setSaveStatus('error')
-      
+
       let errorMessage = 'Failed to save map. Please try again.'
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error
@@ -779,7 +821,7 @@ export default function MapEditor() {
           errorMessage += ': ' + error.response.data.details.map((d: any) => d.msg).join(', ')
         }
       }
-      
+
       setSaveError(errorMessage)
       setTimeout(() => {
         setSaveStatus('idle')
@@ -830,7 +872,7 @@ export default function MapEditor() {
       console.error('Failed to convert cropped image:', error)
       setUploadError('Failed to process cropped image')
     }
-    
+
     setState((prev) => ({
       ...prev,
       imageUrl: croppedImageUrl,
@@ -852,17 +894,19 @@ export default function MapEditor() {
   const validateMap = () => {
     // Custom validation that only requires 2+ territories
     const errors: string[] = []
-    
+
     if (state.territories.length < 2) {
       errors.push('Map must have at least 2 territories')
     }
-    
+
     // Check if territories have adjacencies (optional warning, not error)
     const hasAdjacencies = state.adjacencies.length > 0
     if (!hasAdjacencies && state.territories.length > 1) {
-      errors.push('Warning: No territory connections defined. Players may not be able to attack between territories.')
+      errors.push(
+        'Warning: No territory connections defined. Players may not be able to attack between territories.',
+      )
     }
-    
+
     if (errors.length === 0) {
       alert('✅ Map validation passed! Your map is ready to use.')
     } else {
@@ -876,7 +920,7 @@ export default function MapEditor() {
       description: mapDescription,
       imageWidth: state.imageWidth,
       imageHeight: state.imageHeight,
-      territories: state.territories.map(t => ({
+      territories: state.territories.map((t) => ({
         ...t,
         // Ensure coordinates are stored relative to base image dimensions
         boundaryCoords: t.boundaryCoords,
@@ -907,11 +951,11 @@ export default function MapEditor() {
     reader.onload = (e) => {
       try {
         const mapData = JSON.parse(e.target?.result as string)
-        
+
         // Load map data
         setMapName(mapData.name || '')
         setMapDescription(mapData.description || '')
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           territories: mapData.territories || [],
           continents: mapData.continents || [],
@@ -919,7 +963,7 @@ export default function MapEditor() {
           imageWidth: mapData.imageWidth || 800,
           imageHeight: mapData.imageHeight || 600,
         }))
-        
+
         alert('Map data imported successfully!')
       } catch (error) {
         alert('Failed to import map data. Please check the file format.')
@@ -932,7 +976,7 @@ export default function MapEditor() {
 
   const handleUseFullImage = () => {
     if (!tempImageUrl) return
-    
+
     setState((prev) => ({
       ...prev,
       imageUrl: tempImageUrl,
@@ -968,7 +1012,7 @@ export default function MapEditor() {
       const scaleY = canvas.height / rect.height
       const x = (event.clientX - rect.left) * scaleX
       const y = (event.clientY - rect.top) * scaleY
-      
+
       // Store coordinates relative to original image dimensions for consistency
       const normalizedX = x / state.imageScale
       const normalizedY = y / state.imageScale
@@ -1081,7 +1125,7 @@ export default function MapEditor() {
             The polygon-based map editor is currently under development
           </p>
           <button
-            onClick={() => window.location.href = '/map-editor'}
+            onClick={() => (window.location.href = '/map-editor')}
             className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
           >
             Return to Current Map Editor
@@ -1094,9 +1138,7 @@ export default function MapEditor() {
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
-            <p className="text-muted mb-6">
-              How would you like to use this image?
-            </p>
+            <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
@@ -1232,11 +1274,12 @@ export default function MapEditor() {
                 </p>
                 <div className="space-y-1 mt-2">
                   <p>
-                    <span className="text-primary-soft">1.</span> Upload a background image (PNG/JPG) of
-                    your map
+                    <span className="text-primary-soft">1.</span> Upload a background image
+                    (PNG/JPG) of your map
                   </p>
                   <p>
-                    <span className="text-primary-soft">2.</span> Create continents with bonus armies
+                    <span className="text-primary-soft">2.</span> Create continents with bonus
+                    armies
                   </p>
                   <p>
                     <span className="text-primary-soft">3.</span> Use Territory Tool to trace
@@ -1287,7 +1330,7 @@ export default function MapEditor() {
                           ❌ {uploadError}
                         </div>
                       )}
-                      
+
                       {/* Upload Info Display */}
                       {uploadInfo && (
                         <div className="mb-3 p-2 bg-blue-900/50 border border-primary rounded text-primary-soft text-xs">

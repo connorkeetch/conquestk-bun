@@ -25,32 +25,35 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
   const [selectedCapitals, setSelectedCapitals] = useState<number[]>(existingCapitals)
   const [validationError, setValidationError] = useState<string>('')
 
-  const validateCapitals = useCallback((capitals: number[]) => {
-    if (capitals.length !== playerCount) {
-      setValidationError(`Select exactly ${playerCount} capitals (currently ${capitals.length})`)
-      return false
-    }
+  const validateCapitals = useCallback(
+    (capitals: number[]) => {
+      if (capitals.length !== playerCount) {
+        setValidationError(`Select exactly ${playerCount} capitals (currently ${capitals.length})`)
+        return false
+      }
 
-    // Check if capitals are too close (adjacent)
-    for (let i = 0; i < capitals.length; i++) {
-      for (let j = i + 1; j < capitals.length; j++) {
-        const territory1 = territories.find((t) => t.id === capitals[i])
-        const territory2 = territories.find((t) => t.id === capitals[j])
+      // Check if capitals are too close (adjacent)
+      for (let i = 0; i < capitals.length; i++) {
+        for (let j = i + 1; j < capitals.length; j++) {
+          const territory1 = territories.find((t) => t.id === capitals[i])
+          const territory2 = territories.find((t) => t.id === capitals[j])
 
-        if (territory1 && territory2) {
-          if (territory1.adjacencies.includes(capitals[j])) {
-            setValidationError(
-              `Capitals ${territory1.name} and ${territory2.name} are too close (adjacent)`,
-            )
-            return false
+          if (territory1 && territory2) {
+            if (territory1.adjacencies.includes(capitals[j])) {
+              setValidationError(
+                `Capitals ${territory1.name} and ${territory2.name} are too close (adjacent)`,
+              )
+              return false
+            }
           }
         }
       }
-    }
 
-    setValidationError('')
-    return true
-  }, [playerCount, territories])
+      setValidationError('')
+      return true
+    },
+    [playerCount, territories],
+  )
 
   useEffect(() => {
     validateCapitals(selectedCapitals)
@@ -94,9 +97,7 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
 
       <div className="mb-4">
         <p className="text-muted text-sm">👑 Capitals must be at least 2 territories apart</p>
-        <p className="text-muted text-sm">
-          ⚔️ Capturing a capital eliminates the player instantly
-        </p>
+        <p className="text-muted text-sm">⚔️ Capturing a capital eliminates the player instantly</p>
       </div>
 
       {validationError && (

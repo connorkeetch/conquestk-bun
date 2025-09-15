@@ -1,4 +1,14 @@
-import { Trophy, Medal, Users, Calendar, TrendingUp, MessageSquare, Shield, CalendarDays, Crown } from 'lucide-react'
+import {
+  Calendar,
+  CalendarDays,
+  Crown,
+  Medal,
+  MessageSquare,
+  Shield,
+  TrendingUp,
+  Trophy,
+  Users,
+} from 'lucide-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import api from '../services/api'
@@ -15,7 +25,9 @@ interface LeaderboardEntry {
 }
 
 const CommunityPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'clans' | 'forums' | 'events'>('leaderboard')
+  const [activeTab, setActiveTab] = useState<'leaderboard' | 'clans' | 'forums' | 'events'>(
+    'leaderboard',
+  )
   const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'monthly' | 'friends'>('global')
   const [globalLeaderboard, setGlobalLeaderboard] = useState<LeaderboardEntry[]>([])
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -31,14 +43,15 @@ const CommunityPage: React.FC = () => {
   const fetchLeaderboardData = async () => {
     setLoading(true)
     try {
-      const endpoint = leaderboardTab === 'monthly' 
-        ? '/leaderboard/monthly'
-        : leaderboardTab === 'friends'
-        ? '/leaderboard/friends'
-        : '/leaderboard/global'
-        
+      const endpoint =
+        leaderboardTab === 'monthly'
+          ? '/leaderboard/monthly'
+          : leaderboardTab === 'friends'
+            ? '/leaderboard/friends'
+            : '/leaderboard/global'
+
       const response = await api.get(endpoint)
-      
+
       if (leaderboardTab === 'global') {
         setGlobalLeaderboard(response.data.leaderboard || [])
       } else if (leaderboardTab === 'monthly') {
@@ -64,17 +77,21 @@ const CommunityPage: React.FC = () => {
     return <span className="text-muted font-medium">#{rank}</span>
   }
 
-  const currentLeaderboard = 
-    leaderboardTab === 'monthly' ? monthlyLeaderboard :
-    leaderboardTab === 'friends' ? friendsLeaderboard :
-    globalLeaderboard
+  const currentLeaderboard =
+    leaderboardTab === 'monthly'
+      ? monthlyLeaderboard
+      : leaderboardTab === 'friends'
+        ? friendsLeaderboard
+        : globalLeaderboard
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-primary-soft mb-2">Community Hub</h1>
-          <p className="text-muted text-lg">Connect, compete, and celebrate with fellow commanders</p>
+          <p className="text-muted text-lg">
+            Connect, compete, and celebrate with fellow commanders
+          </p>
         </div>
       </div>
 
@@ -83,8 +100,8 @@ const CommunityPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('leaderboard')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'leaderboard' 
-              ? 'text-primary-soft border-b-2 border-primary' 
+            activeTab === 'leaderboard'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-white'
           }`}
         >
@@ -94,8 +111,8 @@ const CommunityPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('clans')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'clans' 
-              ? 'text-primary-soft border-b-2 border-primary' 
+            activeTab === 'clans'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
@@ -107,8 +124,8 @@ const CommunityPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('forums')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'forums' 
-              ? 'text-primary-soft border-b-2 border-primary' 
+            activeTab === 'forums'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
@@ -120,8 +137,8 @@ const CommunityPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('events')}
           className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'events' 
-              ? 'text-primary-soft border-b-2 border-primary' 
+            activeTab === 'events'
+              ? 'text-primary-soft border-b-2 border-primary'
               : 'text-muted hover:text-muted cursor-not-allowed'
           }`}
           disabled
@@ -236,11 +253,15 @@ const CommunityPage: React.FC = () => {
                           {player.wins}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className={`font-medium ${
-                            player.winRate > 60 ? 'text-success' :
-                            player.winRate > 50 ? 'text-warning' :
-                            'text-danger'
-                          }`}>
+                          <span
+                            className={`font-medium ${
+                              player.winRate > 60
+                                ? 'text-success'
+                                : player.winRate > 50
+                                  ? 'text-warning'
+                                  : 'text-danger'
+                            }`}
+                          >
                             {player.winRate.toFixed(1)}%
                           </span>
                         </td>

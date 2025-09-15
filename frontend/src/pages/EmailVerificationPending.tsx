@@ -1,6 +1,6 @@
+import { CheckCircle, Mail, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, RefreshCw, CheckCircle } from 'lucide-react'
 import { authService } from '../services/authService'
 
 interface EmailVerificationPendingProps {
@@ -8,7 +8,10 @@ interface EmailVerificationPendingProps {
   username: string
 }
 
-export default function EmailVerificationPending({ email, username }: EmailVerificationPendingProps) {
+export default function EmailVerificationPending({
+  email,
+  username,
+}: EmailVerificationPendingProps) {
   const [resending, setResending] = useState(false)
   const [resent, setResent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,11 +51,11 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
             </div>
 
             <h2 className="text-2xl font-bold text-white mb-4">Verify Your Email</h2>
-            
+
             <p className="text-muted mb-2">
               Welcome, <span className="font-semibold text-white">{username}</span>!
             </p>
-            
+
             <p className="text-muted mb-6">
               We've sent a verification email to:
               <br />
@@ -98,10 +101,7 @@ export default function EmailVerificationPending({ email, username }: EmailVerif
                 )}
               </button>
 
-              <Link
-                to="/login"
-                className="btn-secondary block w-full text-center"
-              >
+              <Link to="/login" className="btn-secondary block w-full text-center">
                 Back to Login
               </Link>
             </div>

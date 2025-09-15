@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ReactionPickerProps {
   onReact: (emoji: string) => void
@@ -47,7 +47,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
       style={position ? { left: position.x, top: position.y } : {}}
     >
       <div className="grid grid-cols-4 gap-1">
-        {QUICK_REACTIONS.map(emoji => (
+        {QUICK_REACTIONS.map((emoji) => (
           <button
             key={emoji}
             onClick={() => handleReaction(emoji)}

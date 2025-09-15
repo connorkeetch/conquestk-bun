@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 interface Territory {
   id: string
@@ -28,10 +28,10 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
   selectedTerritory,
   territories,
   players,
-  territoryModifiers
+  territoryModifiers,
 }) => {
   const territoryId = hoveredTerritory || selectedTerritory
-  
+
   if (!territoryId) {
     return null
   }

@@ -1,36 +1,42 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import audioService from '../services/audioService'
-import authService from '../services/authService'
-import pushNotificationService from '../services/pushNotificationService'
-import { THEMES, getStoredTheme, applyTheme, storeTheme } from '../config/themes.config'
+import { applyTheme, getStoredTheme, storeTheme, THEMES } from '../config/themes.config'
 import {
-  clearCache,
-  resetSettings,
-  setPreferredColor,
-  setShowOnlineStatus,
-  setDirectMessages,
-  setNotificationPref,
-  setColorTheme,
-  type DMPermission,
-  type NotificationPrefs,
-} from '../store/settingsSlice'
-import {
-  STANDARD_COLORS,
-  PREMIUM_COLORS,
   COLOR_DISPLAY_NAMES,
   COLOR_HEX_VALUES,
   isPremiumColor,
   type PlayerColor,
+  PREMIUM_COLORS,
+  STANDARD_COLORS,
 } from '../constants/colors'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import audioService from '../services/audioService'
+import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
+import pushNotificationService from '../services/pushNotificationService'
+import {
+  clearCache,
+  type DMPermission,
+  type NotificationPrefs,
+  resetSettings,
+  setColorTheme,
+  setDirectMessages,
+  setNotificationPref,
+  setPreferredColor,
+  setShowOnlineStatus,
+} from '../store/settingsSlice'
 
 // Color Dropdown Component
-function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (color: PlayerColor) => void }) {
+function ColorDropdown({
+  value,
+  onChange,
+}: {
+  value: PlayerColor
+  onChange: (color: PlayerColor) => void
+}) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,7 +47,7 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-  
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Dropdown Button */}
@@ -55,19 +61,29 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
             <polygon
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
-                fill: (COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient'))
-                  ? 'url(#gradient)' 
-                  : COLOR_HEX_VALUES[value],
+                fill:
+                  COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient')
+                    ? 'url(#gradient)'
+                    : COLOR_HEX_VALUES[value],
                 stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
                 strokeWidth: '1.5',
               }}
             />
-            {(COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient')) && (
+            {COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient') && (
               <defs>
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
-                  <stop offset="50%" style={{ stopColor: value === 'rainbow' ? '#00ff00' : '#00ffff' }} />
-                  <stop offset="100%" style={{ stopColor: value === 'rainbow' ? '#0000ff' : '#ffff00' }} />
+                  <stop
+                    offset="0%"
+                    style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }}
+                  />
+                  <stop
+                    offset="50%"
+                    style={{ stopColor: value === 'rainbow' ? '#00ff00' : '#00ffff' }}
+                  />
+                  <stop
+                    offset="100%"
+                    style={{ stopColor: value === 'rainbow' ? '#0000ff' : '#ffff00' }}
+                  />
                 </linearGradient>
               </defs>
             )}
@@ -86,13 +102,10 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
             </div>
           )}
         </div>
-        
+
         {/* Color Name */}
-        <span className="flex-1 text-left text-white">
-          {COLOR_DISPLAY_NAMES[value]}
-        </span>
-        
-        
+        <span className="flex-1 text-left text-white">{COLOR_DISPLAY_NAMES[value]}</span>
+
         {/* Dropdown Arrow */}
         <svg
           className={`w-4 h-4 text-muted transition-transform ${
@@ -105,13 +118,15 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      
+
       {/* Dropdown Menu */}
       {isDropdownOpen && (
         <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
           {/* Standard Colors Section */}
           <div className="p-2">
-            <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">Standard Colors</div>
+            <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
+              Standard Colors
+            </div>
             {STANDARD_COLORS.map((color) => {
               const isSelected = value === color
               return (
@@ -130,43 +145,63 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                     <polygon
                       points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                       style={{
-                        fill: (COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient'))
-                          ? 'url(#gradient-' + color + ')' 
-                          : COLOR_HEX_VALUES[color],
+                        fill:
+                          COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')
+                            ? 'url(#gradient-' + color + ')'
+                            : COLOR_HEX_VALUES[color],
                         stroke: isSelected ? '#ffffff' : '#ffffff30',
                         strokeWidth: '1.5',
                       }}
                     />
-                    {(COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')) && (
+                    {COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient') && (
                       <defs>
-                        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style={{ stopColor: color === 'rainbow' ? '#ff0000' : '#ff00ff' }} />
-                          <stop offset="50%" style={{ stopColor: color === 'rainbow' ? '#00ff00' : '#00ffff' }} />
-                          <stop offset="100%" style={{ stopColor: color === 'rainbow' ? '#0000ff' : '#ffff00' }} />
+                        <linearGradient
+                          id={`gradient-${color}`}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+                          <stop
+                            offset="0%"
+                            style={{ stopColor: color === 'rainbow' ? '#ff0000' : '#ff00ff' }}
+                          />
+                          <stop
+                            offset="50%"
+                            style={{ stopColor: color === 'rainbow' ? '#00ff00' : '#00ffff' }}
+                          />
+                          <stop
+                            offset="100%"
+                            style={{ stopColor: color === 'rainbow' ? '#0000ff' : '#ffff00' }}
+                          />
                         </linearGradient>
                       </defs>
                     )}
                   </svg>
-                  
+
                   {/* Color Name */}
                   <span className="flex-1 text-left text-gray-200">
                     {COLOR_DISPLAY_NAMES[color]}
                   </span>
-                  
+
                   {/* Selected Check */}
                   {isSelected && (
                     <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   )}
                 </button>
               )
             })}
           </div>
-          
+
           {/* Divider */}
           <div className="border-t border-slate-700 my-1" />
-          
+
           {/* Premium Colors Section */}
           <div className="p-2">
             <div className="text-xs text-yellow-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
@@ -192,17 +227,24 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                       <polygon
                         points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                         style={{
-                          fill: (COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient'))
-                            ? 'url(#gradient-' + color + ')' 
-                            : COLOR_HEX_VALUES[color],
+                          fill:
+                            COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')
+                              ? 'url(#gradient-' + color + ')'
+                              : COLOR_HEX_VALUES[color],
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
                           filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
-                      {(COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')) && (
+                      {COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient') && (
                         <defs>
-                          <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <linearGradient
+                            id={`gradient-${color}`}
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
                             <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
                             <stop offset="50%" style={{ stopColor: '#00ffff' }} />
                             <stop offset="100%" style={{ stopColor: '#ffff00' }} />
@@ -224,17 +266,20 @@ function ColorDropdown({ value, onChange }: { value: PlayerColor; onChange: (col
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Color Name */}
                   <span className="flex-1 text-left text-gray-200">
                     {COLOR_DISPLAY_NAMES[color]}
                   </span>
-                  
-                  
+
                   {/* Selected Check */}
                   {isSelected && (
                     <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   )}
                 </button>
@@ -286,7 +331,7 @@ export default function Settings() {
   useEffect(() => {
     applyTheme(currentColorTheme)
   }, [currentColorTheme])
-  
+
   // Click outside handler for theme dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -294,7 +339,7 @@ export default function Settings() {
         setIsThemeDropdownOpen(false)
       }
     }
-    
+
     if (isThemeDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -335,7 +380,8 @@ export default function Settings() {
     setCheckingUsername(true)
     try {
       const token = localStorage.getItem('token')
-      const apiUrl = import.meta.env.VITE_API_URL || 
+      const apiUrl =
+        import.meta.env.VITE_API_URL ||
         (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
       const response = await fetch(`${apiUrl}/users/check-username`, {
         method: 'POST',
@@ -361,13 +407,14 @@ export default function Settings() {
     setProfileUpdateLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const apiUrl = import.meta.env.VITE_API_URL || 
+      const apiUrl =
+        import.meta.env.VITE_API_URL ||
         (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
-      
+
       const updateData: any = {}
       if (username) updateData.username = username
       if (email) updateData.email = email
-      
+
       const response = await fetch(`${apiUrl}/users/profile`, {
         method: 'PUT',
         headers: {
@@ -378,17 +425,16 @@ export default function Settings() {
       })
 
       const data = await response.json()
-      
+
       if (response.ok) {
         setSaveStatus('Profile updated successfully!')
         setTimeout(() => setSaveStatus(null), 3000)
         // You might want to update the Redux state here too
         return true
-      } else {
-        setSaveStatus(data.error || 'Failed to update profile')
-        setTimeout(() => setSaveStatus(null), 5000)
-        return false
       }
+      setSaveStatus(data.error || 'Failed to update profile')
+      setTimeout(() => setSaveStatus(null), 5000)
+      return false
     } catch (error) {
       console.error('Profile update error:', error)
       setSaveStatus('Failed to update profile')
@@ -410,10 +456,10 @@ export default function Settings() {
         }
         return
       }
-      
+
       // For other settings, continue using the existing method
       const settingsToSave: any = {}
-      
+
       // Map Redux setting keys to server setting keys
       switch (settingKey) {
         case 'preferredColor':
@@ -459,9 +505,7 @@ export default function Settings() {
         : 'bg-slate-800/20 border-slate-700/50 opacity-60'
     }`
 
-    const labelClass = `text-base font-medium ${
-      setting.isWorking ? 'text-gray-200' : 'text-muted'
-    }`
+    const labelClass = `text-base font-medium ${setting.isWorking ? 'text-gray-200' : 'text-muted'}`
 
     const descriptionClass = `text-sm mt-1 ${setting.isWorking ? 'text-muted' : 'text-muted'}`
 
@@ -539,11 +583,12 @@ export default function Settings() {
           )
 
         case 'button': {
-          const buttonClass = setting.buttonVariant === 'danger'
-            ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
-            : setting.buttonVariant === 'primary' 
-            ? `px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
-            : `btn-secondary text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+          const buttonClass =
+            setting.buttonVariant === 'danger'
+              ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+              : setting.buttonVariant === 'primary'
+                ? `px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+                : `btn-secondary text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
             <button
@@ -564,7 +609,7 @@ export default function Settings() {
           const isEditing = editingField === setting.id
           const isUsername = setting.id === 'username'
           const isEmail = setting.id === 'email'
-          
+
           return (
             <div className="flex items-center gap-2">
               {!isEditing ? (
@@ -598,11 +643,11 @@ export default function Settings() {
                       <input
                         type={isEmail ? 'email' : 'text'}
                         className={`px-3 py-2 bg-slate-700 border rounded-lg text-white text-sm w-48 ${
-                          isUsername && usernameAvailable === false 
-                            ? 'border-red-500' 
-                            : isUsername && usernameAvailable === true 
-                            ? 'border-green-500' 
-                            : 'border-slate-600'
+                          isUsername && usernameAvailable === false
+                            ? 'border-red-500'
+                            : isUsername && usernameAvailable === true
+                              ? 'border-green-500'
+                              : 'border-slate-600'
                         }`}
                         value={fieldValues[setting.id] || ''}
                         onChange={(e) => {
@@ -611,7 +656,7 @@ export default function Settings() {
                             ...prev,
                             [setting.id]: newValue,
                           }))
-                          
+
                           // Check username availability with debounce
                           if (isUsername) {
                             const timeoutId = setTimeout(() => {
@@ -621,7 +666,7 @@ export default function Settings() {
                           }
                         }}
                       />
-                      
+
                       {/* Username availability indicator */}
                       {isUsername && (
                         <div className="flex items-center">
@@ -635,45 +680,44 @@ export default function Settings() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Username availability message */}
                     {isUsername && usernameAvailable === false && (
                       <p className="text-red-400 text-xs">
-                        {fieldValues[setting.id]?.length < 3 
+                        {fieldValues[setting.id]?.length < 3
                           ? 'Username must be at least 3 characters'
-                          : 'Username is already taken'
-                        }
+                          : 'Username is already taken'}
                       </p>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={async () => {
                       const value = fieldValues[setting.id]
                       if (!value) return
-                      
+
                       // Validate username
                       if (isUsername && (value.length < 3 || usernameAvailable === false)) {
                         return
                       }
-                      
+
                       // Validate email
                       if (isEmail && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
                         setSaveStatus('Invalid email format')
                         setTimeout(() => setSaveStatus(null), 3000)
                         return
                       }
-                      
+
                       // Update profile
                       const updateData: any = {}
                       if (isUsername) updateData.username = value
                       if (isEmail) updateData.email = value
-                      
+
                       const success = await updateProfile(
                         isUsername ? value : undefined,
-                        isEmail ? value : undefined
+                        isEmail ? value : undefined,
                       )
-                      
+
                       if (success) {
                         setEditingField(null)
                         // Reset availability check
@@ -682,7 +726,10 @@ export default function Settings() {
                         }
                       }
                     }}
-                    disabled={profileUpdateLoading || (isUsername && (checkingUsername || usernameAvailable === false))}
+                    disabled={
+                      profileUpdateLoading ||
+                      (isUsername && (checkingUsername || usernameAvailable === false))
+                    }
                     className="px-3 py-1 bg-success hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
                   >
                     {profileUpdateLoading ? 'Saving...' : 'Save'}
@@ -721,9 +768,9 @@ export default function Settings() {
             )
           }
           return null
-          
-        case 'color-theme-selector':
-          const selectedTheme = THEMES.find(t => t.id === setting.defaultValue) || THEMES[0]
+
+        case 'color-theme-selector': {
+          const selectedTheme = THEMES.find((t) => t.id === setting.defaultValue) || THEMES[0]
           return (
             <div className="relative" ref={themeDropdownRef}>
               {/* Dropdown Button */}
@@ -734,19 +781,18 @@ export default function Settings() {
               >
                 <div className="flex items-center gap-3">
                   {/* Color Circle */}
-                  <div 
+                  <div
                     className="w-6 h-6 rounded-full border-2"
-                    style={{ 
+                    style={{
                       backgroundColor: selectedTheme.displayColor,
-                      borderColor: selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.displayColor
+                      borderColor:
+                        selectedTheme.id === 'light' ? '#e5e7eb' : selectedTheme.displayColor,
                     }}
                   />
                   {/* Theme Name */}
-                  <span className="flex-1 text-left text-white">
-                    {selectedTheme.name}
-                  </span>
+                  <span className="flex-1 text-left text-white">{selectedTheme.name}</span>
                 </div>
-                
+
                 {/* Dropdown Arrow */}
                 <svg
                   className={`w-5 h-5 text-muted transition-transform ${
@@ -756,10 +802,15 @@ export default function Settings() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
-              
+
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
                 <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
@@ -776,24 +827,30 @@ export default function Settings() {
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
                     >
                       {/* Color Circle */}
-                      <div 
+                      <div
                         className="w-6 h-6 rounded-full border-2 flex-shrink-0"
-                        style={{ 
+                        style={{
                           backgroundColor: theme.displayColor,
-                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.displayColor
+                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.displayColor,
                         }}
                       />
                       {/* Theme Info */}
                       <div className="flex items-center flex-grow">
-                        <span className="text-sm font-medium text-white">
-                          {theme.name}
-                        </span>
+                        <span className="text-sm font-medium text-white">{theme.name}</span>
                       </div>
-                      
+
                       {/* Selected Check */}
                       {setting.defaultValue === theme.id && (
-                        <svg className="w-5 h-5 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        <svg
+                          className="w-5 h-5 text-primary flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       )}
                     </button>
@@ -802,7 +859,8 @@ export default function Settings() {
               )}
             </div>
           )
-          
+        }
+
         default:
           return null
       }
@@ -872,16 +930,16 @@ export default function Settings() {
             onClick: async () => {
               const currentPassword = prompt('Enter your current password:')
               if (!currentPassword) return
-              
+
               const newPassword = prompt('Enter your new password:')
               if (!newPassword) return
-              
+
               const confirmPassword = prompt('Confirm your new password:')
               if (newPassword !== confirmPassword) {
                 alert('Passwords do not match!')
                 return
               }
-              
+
               try {
                 const response = await fetch('/api/auth/change-password', {
                   method: 'POST',
@@ -891,7 +949,7 @@ export default function Settings() {
                   },
                   body: JSON.stringify({ currentPassword, newPassword }),
                 })
-                
+
                 const data = await response.json()
                 if (response.ok) {
                   alert('Password changed successfully!')
@@ -921,15 +979,17 @@ export default function Settings() {
             buttonText: '🗑️ Delete Account',
             buttonVariant: 'danger',
             onClick: async () => {
-              const confirmation = prompt('Type "DELETE" to confirm you want to permanently delete your account:')
+              const confirmation = prompt(
+                'Type "DELETE" to confirm you want to permanently delete your account:',
+              )
               if (confirmation !== 'DELETE') {
                 alert('Account deletion cancelled')
                 return
               }
-              
+
               const finalConfirm = confirm('Are you absolutely sure? This action cannot be undone!')
               if (!finalConfirm) return
-              
+
               try {
                 const response = await fetch('/api/auth/delete-account', {
                   method: 'DELETE',
@@ -937,7 +997,7 @@ export default function Settings() {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                   },
                 })
-                
+
                 if (response.ok) {
                   alert('Account deleted successfully')
                   localStorage.removeItem('token')
@@ -955,7 +1015,7 @@ export default function Settings() {
 
       case 'game':
         // Color options are created inline in the UI below
-        
+
         return [
           {
             id: 'preferred-color',
@@ -1175,7 +1235,7 @@ export default function Settings() {
           },
         ]
 
-      case 'advanced':
+      case 'advanced': {
         const advancedSettings: SettingItem[] = [
           {
             id: 'reset-settings',
@@ -1210,10 +1270,10 @@ export default function Settings() {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
                   },
                 })
-                
+
                 if (response.ok) {
                   alert('✅ Cache refreshed successfully!')
                   // Also clear local cache
@@ -1231,6 +1291,7 @@ export default function Settings() {
         }
 
         return advancedSettings
+      }
 
       default:
         return []
@@ -1247,23 +1308,23 @@ export default function Settings() {
       {
         key: 'turnNotifications',
         label: 'Your Turn',
-        description: "When it's your turn to play"
+        description: "When it's your turn to play",
       },
       {
-        key: 'turnTimerWarning', 
+        key: 'turnTimerWarning',
         label: 'Turn Timer Warning',
-        description: '10 minutes before turn timeout'
+        description: '10 minutes before turn timeout',
       },
       {
         key: 'gameInvites',
-        label: 'Game Invitations', 
-        description: 'When someone invites you to play'
+        label: 'Game Invitations',
+        description: 'When someone invites you to play',
       },
       {
         key: 'gameEnded',
         label: 'Game Ended',
-        description: 'When a game you\'re in finishes'
-      }
+        description: "When a game you're in finishes",
+      },
     ]
 
     return (
@@ -1294,10 +1355,10 @@ export default function Settings() {
                         const newPref = {
                           type: notification.key,
                           channel: 'browser' as const,
-                          enabled: e.target.checked
+                          enabled: e.target.checked,
                         }
                         dispatch(setNotificationPref(newPref))
-                        
+
                         // Persist notification preferences
                         const updatedNotifications = { ...settings.notifications }
                         if (!updatedNotifications[notification.key]) {
@@ -1319,10 +1380,10 @@ export default function Settings() {
                         const newPref = {
                           type: notification.key,
                           channel: 'email' as const,
-                          enabled: e.target.checked
+                          enabled: e.target.checked,
                         }
                         dispatch(setNotificationPref(newPref))
-                        
+
                         // Persist notification preferences
                         const updatedNotifications = { ...settings.notifications }
                         if (!updatedNotifications[notification.key]) {
@@ -1351,9 +1412,7 @@ export default function Settings() {
         <div className="space-y-8">
           <div>
             <h3 className="text-xl font-semibold text-white mb-6">Push Notification Setup</h3>
-            <div className="space-y-4">
-              {settingsData.map((setting) => renderSetting(setting))}
-            </div>
+            <div className="space-y-4">{settingsData.map((setting) => renderSetting(setting))}</div>
           </div>
 
           <div>
@@ -1387,10 +1446,7 @@ export default function Settings() {
               </div>
               <div>
                 <div className="relative">
-                  <button
-                    className="btn-secondary opacity-50 cursor-not-allowed mb-3"
-                    disabled
-                  >
+                  <button className="btn-secondary opacity-50 cursor-not-allowed mb-3" disabled>
                     📁 Upload New Avatar
                   </button>
                   <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
@@ -1422,10 +1478,8 @@ export default function Settings() {
     )
   }
 
-
   return (
     <div className="container mx-auto px-6 py-8">
-
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-primary-soft mb-2">Settings</h1>
         <p className="text-muted text-lg mb-8">Customize your game experience</p>

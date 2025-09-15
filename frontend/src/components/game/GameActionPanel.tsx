@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 interface Territory {
   id: string
@@ -18,7 +18,7 @@ export const GameActionPanel: React.FC<GameActionPanelProps> = ({
   selectedTargetTerritory,
   pendingAction,
   validTargets,
-  territories
+  territories,
 }) => {
   if (!selectedTerritory && !pendingAction) {
     return null
@@ -48,9 +48,7 @@ export const GameActionPanel: React.FC<GameActionPanelProps> = ({
         </div>
       )}
       {validTargets.length > 0 && (
-        <div className="text-xs text-gray-600">
-          {validTargets.length} valid target(s) available
-        </div>
+        <div className="text-xs text-gray-600">{validTargets.length} valid target(s) available</div>
       )}
     </div>
   )

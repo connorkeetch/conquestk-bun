@@ -42,10 +42,7 @@ const GamePage: React.FC = () => {
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             {!isFullScreen && (
-              <Link
-                to="/games/active"
-                className="btn-secondary px-3 py-1 text-sm"
-              >
+              <Link to="/games/active" className="btn-secondary px-3 py-1 text-sm">
                 ← My Games
               </Link>
             )}
@@ -93,13 +90,8 @@ const GamePage: React.FC = () => {
             )}
 
             {/* Game Actions */}
-            <button className="btn-secondary px-3 py-1 text-sm">
-              ⚙️
-            </button>
-            <button
-              className="btn-secondary px-3 py-1 text-sm"
-              onClick={toggleFullScreen}
-            >
+            <button className="btn-secondary px-3 py-1 text-sm">⚙️</button>
+            <button className="btn-secondary px-3 py-1 text-sm" onClick={toggleFullScreen}>
               {isFullScreen ? '🗗' : '🗖'}
             </button>
             <button className="px-3 py-1 bg-danger hover:brightness-110 text-white text-sm font-medium rounded-lg transition-colors">
@@ -118,9 +110,7 @@ const GamePage: React.FC = () => {
             <div className="flex border-b border-border">
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'board'
-                    ? 'bg-primary text-white'
-                    : 'text-muted hover:text-white'
+                  activeTab === 'board' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('board')}
               >
@@ -136,9 +126,7 @@ const GamePage: React.FC = () => {
               </button>
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'stats'
-                    ? 'bg-primary text-white'
-                    : 'text-muted hover:text-white'
+                  activeTab === 'stats' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('stats')}
               >
@@ -159,9 +147,7 @@ const GamePage: React.FC = () => {
                     <button className="w-full px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors">
                       End Attack Phase
                     </button>
-                    <button className="btn-secondary w-full px-4 py-2">
-                      View Help
-                    </button>
+                    <button className="btn-secondary w-full px-4 py-2">View Help</button>
                   </div>
                 </div>
               )}
@@ -192,9 +178,7 @@ const GamePage: React.FC = () => {
                           ></div>
                           <span className="font-medium">{player.name}</span>
                         </div>
-                        <div className="text-sm text-muted">
-                          {player.territories} territories
-                        </div>
+                        <div className="text-sm text-muted">{player.territories} territories</div>
                       </div>
                     ))}
                   </div>

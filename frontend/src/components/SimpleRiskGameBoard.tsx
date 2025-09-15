@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { getPlayerColor, PLAYER_COLORS } from '../constants/colors'
 import territoryData from '../data/territories-example.json'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
@@ -9,7 +10,6 @@ import { GameOverModal } from './GameOverModal'
 import { GamePhaseControls } from './GamePhaseControls'
 import { SimpleMapSVG } from './SimpleMapSVG'
 import { TestMapSVG } from './TestMapSVG'
-import { PLAYER_COLORS, getPlayerColor } from '../constants/colors'
 
 interface TerritoryDisplay {
   id: string

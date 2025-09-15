@@ -4,7 +4,6 @@
 /* Import custom theme configuration */
 @import "./app.css";
 
-
 /* Root container */
 #root {
   width: 100%;
@@ -89,12 +88,15 @@
 
 /* Victory celebration animation */
 @keyframes victory-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px var(--color-secondary);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 40px var(--color-secondary), 0 0 60px var(--color-primary);
+    box-shadow:
+      0 0 40px var(--color-secondary),
+      0 0 60px var(--color-primary);
     transform: scale(1.02);
   }
 }
@@ -114,12 +116,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg, 
-    transparent, 
-    rgba(255, 215, 0, 0.3), 
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
   background-size: 200% 100%;
   animation: shimmer 3s infinite linear;
 }

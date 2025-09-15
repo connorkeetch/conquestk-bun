@@ -1,5 +1,5 @@
-import { query } from '../config/database'
 import crypto from 'crypto'
+import { query } from '../config/database'
 
 export type AccessLevel = 'disabled' | 'internal' | 'beta' | 'public'
 export type FeatureCategory = 'gameplay' | 'ui' | 'experimental' | 'premium' | 'vip'
@@ -98,7 +98,11 @@ class FeatureFlagService {
 
     // Apply rollout percentage
     if (flag.rollout_percentage < 100) {
-      return this.isInRolloutPercentage(user?.id || 'anonymous', flag.flag_name, flag.rollout_percentage)
+      return this.isInRolloutPercentage(
+        user?.id || 'anonymous',
+        flag.flag_name,
+        flag.rollout_percentage,
+      )
     }
 
     return true
@@ -114,9 +118,7 @@ class FeatureFlagService {
       case 'internal':
         return user?.is_admin === true || user?.role === 'tester'
       case 'beta':
-        return user?.is_admin === true || 
-               user?.role === 'tester' || 
-               user?.is_beta_user === true
+        return user?.is_admin === true || user?.role === 'tester' || user?.is_beta_user === true
       case 'public':
         return true
       default:
@@ -150,14 +152,11 @@ class FeatureFlagService {
    * Consistent hash-based rollout percentage
    */
   private isInRolloutPercentage(userId: string, flagName: string, percentage: number): boolean {
-    const hash = crypto
-      .createHash('md5')
-      .update(`${userId}:${flagName}`)
-      .digest('hex')
-    
+    const hash = crypto.createHash('md5').update(`${userId}:${flagName}`).digest('hex')
+
     const hashValue = parseInt(hash.substring(0, 8), 16)
     const userPercentage = (hashValue / 0xffffffff) * 100
-    
+
     return userPercentage < percentage
   }
 
@@ -168,16 +167,16 @@ class FeatureFlagService {
     try {
       const result = await query(
         'SELECT is_enabled FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2',
-        [userId, flagName]
+        [userId, flagName],
       )
-      
+
       if (result.rows.length > 0) {
         return result.rows[0].is_enabled
       }
     } catch (error) {
       console.error('Error fetching user override:', error)
     }
-    
+
     return null
   }
 
@@ -186,7 +185,7 @@ class FeatureFlagService {
    */
   private async getAllFlags(): Promise<FeatureFlag[]> {
     const now = Date.now()
-    
+
     if (now - this.lastCacheUpdate < this.cacheExpiry && this.flagCache.size > 0) {
       return Array.from(this.flagCache.values())
     }
@@ -194,11 +193,11 @@ class FeatureFlagService {
     try {
       const result = await query('SELECT * FROM feature_flags')
       const flags = result.rows as FeatureFlag[]
-      
+
       this.flagCache.clear()
-      flags.forEach(flag => this.flagCache.set(flag.flag_name, flag))
+      flags.forEach((flag) => this.flagCache.set(flag.flag_name, flag))
       this.lastCacheUpdate = now
-      
+
       return flags
     } catch (error) {
       console.error('Error fetching feature flags:', error)
@@ -218,10 +217,10 @@ class FeatureFlagService {
    * Update a feature flag (admin only)
    */
   async updateFlag(
-    flagName: string, 
-    updates: Partial<FeatureFlag>, 
+    flagName: string,
+    updates: Partial<FeatureFlag>,
     changedBy: string,
-    reason?: string
+    reason?: string,
   ): Promise<FeatureFlag | null> {
     try {
       const updateFields = []
@@ -251,7 +250,7 @@ class FeatureFlagService {
       const result = await query(
         `UPDATE feature_flags SET ${updateFields.join(', ')} 
          WHERE flag_name = $${paramCount} RETURNING *`,
-        values
+        values,
       )
 
       if (result.rows.length > 0) {
@@ -266,7 +265,7 @@ class FeatureFlagService {
              SET reason = $1 
              WHERE flag_name = $2 AND changed_by = $3
              ORDER BY created_at DESC LIMIT 1`,
-            [reason, flagName, changedBy]
+            [reason, flagName, changedBy],
           )
         }
 
@@ -289,7 +288,7 @@ class FeatureFlagService {
          VALUES ($1, $2, $3) 
          ON CONFLICT (user_id, flag_name) 
          DO UPDATE SET is_enabled = $3, assigned_at = CURRENT_TIMESTAMP`,
-        [userId, flagName, enabled]
+        [userId, flagName, enabled],
       )
     } catch (error) {
       console.error('Error setting user override:', error)
@@ -307,12 +306,12 @@ class FeatureFlagService {
         LEFT JOIN users u ON fa.changed_by = u.id
       `
       const values = []
-      
+
       if (flagName) {
         queryStr += ' WHERE fa.flag_name = $1'
         values.push(flagName)
       }
-      
+
       queryStr += ' ORDER BY fa.created_at DESC LIMIT $' + (values.length + 1)
       values.push(limit)
 

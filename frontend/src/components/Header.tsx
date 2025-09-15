@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
 import { sanitizeText } from '../utils/sanitizer'
-import NotificationDropdown from './NotificationDropdown'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
-import audioService from '../services/audioService'
 import MountainLogo from './MountainLogo'
+import NotificationDropdown from './NotificationDropdown'
 
 interface MenuItem {
   path: string
@@ -21,6 +21,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
+  const menuTitleId = useId()
 
   useEffect(() => {
     // Check initial mute state
@@ -45,9 +46,7 @@ export default function Header() {
   ]
 
   // Future features (keeping track for later)
-  const futureItems: MenuItem[] = [
-    { path: '/tournaments', label: 'Tournaments', icon: '🏅' },
-  ]
+  const futureItems: MenuItem[] = [{ path: '/tournaments', label: 'Tournaments', icon: '🏅' }]
 
   const handleLogout = () => {
     dispatch(logout())
@@ -65,11 +64,20 @@ export default function Header() {
           {/* Left */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
+              type="button"
               aria-label="Menu"
               className="p-2 rounded-lg hover:bg-white/5 transition-colors focus-ring"
               onClick={toggleMenu}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" className="fill-white/70">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                className="fill-white/70"
+                role="img"
+                aria-labelledby={menuTitleId}
+              >
+                <title id={menuTitleId}>Menu</title>
                 <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
               </svg>
             </button>
@@ -79,22 +87,36 @@ export default function Header() {
             >
               <MountainLogo width={24} height={24} />
               <span className="hidden sm:inline">
-                CONQUEST <span className="font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
-                  backgroundClip: 'text', 
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>K</span>
+                CONQUEST{' '}
+                <span
+                  className="font-bold"
+                  style={
+                    {
+                      background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    } as React.CSSProperties
+                  }
+                >
+                  K
+                </span>
               </span>
               <span className="sm:hidden">
-                C<span className="font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
-                  backgroundClip: 'text', 
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>K</span>
+                C
+                <span
+                  className="font-bold"
+                  style={
+                    {
+                      background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    } as React.CSSProperties
+                  }
+                >
+                  K
+                </span>
               </span>
             </Link>
           </div>
@@ -178,9 +200,8 @@ export default function Header() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className={`transition-colors ${
-                      isMuted ? 'text-danger' : 'text-success'
-                    }`}
+                    className={`transition-colors ${isMuted ? 'text-danger' : 'text-success'}`}
+                    aria-hidden="true"
                   >
                     {isMuted ? (
                       <>
@@ -196,25 +217,31 @@ export default function Header() {
                       </>
                     )}
                   </svg>
-                  
                 </button>
-                
+
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
-                
+
                 {/* Notification Dropdown */}
                 <NotificationDropdown />
 
                 {/* User Dropdown */}
                 <div className="relative">
                   <button
+                    type="button"
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
                   >
                     <span className="hidden sm:inline">
                       {user?.username ? sanitizeText(user.username) : ''}
                     </span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" className="fill-current">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      className="fill-current"
+                      aria-hidden="true"
+                    >
                       <path d="M7 10l5 5 5-5z" />
                     </svg>
                   </button>
@@ -222,9 +249,12 @@ export default function Header() {
                   {/* User Dropdown Menu */}
                   {isUserDropdownOpen && (
                     <>
-                      <div
-                        className="fixed inset-0 z-40"
+                      <button
+                        type="button"
+                        className="fixed inset-0 z-40 bg-transparent border-none cursor-default"
                         onClick={() => setIsUserDropdownOpen(false)}
+                        onKeyDown={(e) => e.key === 'Escape' && setIsUserDropdownOpen(false)}
+                        aria-label="Close dropdown"
                       />
                       <div className="dropdown-menu">
                         <Link
@@ -243,6 +273,7 @@ export default function Header() {
                         </Link>
                         <hr className="dropdown-separator" />
                         <button
+                          type="button"
                           onClick={() => {
                             handleLogout()
                             setIsUserDropdownOpen(false)
@@ -278,7 +309,13 @@ export default function Header() {
 
       {/* Side Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setIsMenuOpen(false)} />
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 border-none cursor-default"
+          onClick={() => setIsMenuOpen(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setIsMenuOpen(false)}
+          aria-label="Close menu"
+        />
       )}
 
       {/* Comprehensive Side Menu */}
@@ -286,27 +323,42 @@ export default function Header() {
         className={`fixed top-0 left-0 h-full w-80 bg-surface-1 backdrop-blur-xl z-50 transform transition-transform duration-300 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } border-r border-border-muted`}
-        style={{ backgroundColor: 'var(--color-surface-1)' }}
       >
-        {/* Menu Header */}
-        <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border-muted">
+        {/* Menu Header with Glass Effect */}
+        <div className="relative px-6 py-5 flex items-center justify-between border-b border-border backdrop-blur-xl bg-gradient-to-br from-surface-2/90 via-surface-1/70 to-primary/5">
           <div className="flex items-center gap-2">
             <MountainLogo width={28} height={28} />
             <span className="text-xl font-bold text-white">
-              CONQUEST <span className="font-bold" style={{ 
-                background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
-                backgroundClip: 'text', 
-                textFillColor: 'transparent',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>K</span>
+              CONQUEST{' '}
+              <span
+                className="font-bold"
+                style={
+                  {
+                    background:
+                      'linear-gradient(135deg, var(--color-accent), var(--color-primary), var(--color-secondary))',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  } as React.CSSProperties
+                }
+              >
+                K
+              </span>
             </span>
           </div>
           <button
+            type="button"
             onClick={() => setIsMenuOpen(false)}
-            className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Close menu"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" className="fill-white/70 hover:fill-white">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              className="fill-white/70"
+              aria-hidden="true"
+            >
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
@@ -322,10 +374,12 @@ export default function Header() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     location.pathname === item.path
-                      ? 'bg-primary text-white shadow-lg'
-                      : 'text-muted hover:text-white hover:bg-surface-2'
+                      ? 'bg-gradient-to-r from-primary to-primary-soft text-white shadow-lg shadow-primary/20'
+                      : item.path === '/admin'
+                        ? 'text-muted hover:text-white hover:bg-gradient-to-r hover:from-violet/20 hover:to-violet/10'
+                        : 'text-muted hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
@@ -367,8 +421,9 @@ export default function Header() {
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="w-full px-4 py-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+                  className="w-full px-4 py-3 bg-danger/20 hover:bg-danger/30 text-danger rounded-lg transition-colors font-medium"
                 >
                   Logout
                 </button>

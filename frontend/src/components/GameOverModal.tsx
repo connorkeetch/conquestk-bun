@@ -1,8 +1,8 @@
 import type React from 'react'
 import { useEffect } from 'react'
-import type { GamePlayer } from '../types/game'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import { useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import type { GamePlayer } from '../types/game'
 
 interface GameOverModalProps {
   isOpen: boolean
@@ -24,21 +24,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
   const isCurrentUserLoser = winner && winner.id !== currentUserId
-  
+
   // Victory state effect system
   useEffect(() => {
     if (isOpen && winner) {
       document.documentElement.setAttribute('data-theme', 'victory')
-      
+
       // Remove after 5 seconds
       const timer = setTimeout(() => {
         document.documentElement.removeAttribute('data-theme')
       }, 5000)
-      
+
       return () => clearTimeout(timer)
     }
   }, [isOpen, winner])
-  
+
   if (!isOpen) return null
 
   return (
@@ -114,9 +114,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 <h4 className="text-xl font-bold text-red-400 mb-4">
                   💊 Dr. Gunt's Prescription 💊
                 </h4>
-                <p className="text-red-300 mb-4 text-lg">
-                  "Take these L's and get better!"
-                </p>
+                <p className="text-red-300 mb-4 text-lg">"Take these L's and get better!"</p>
                 <div className="flex justify-center gap-3 mb-4">
                   {/* Pill graphics with L's */}
                   <div className="bg-red-600 text-white rounded-full w-16 h-10 flex items-center justify-center font-bold text-xl shadow-lg transform rotate-12">
@@ -130,8 +128,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                   </div>
                 </div>
                 <p className="text-red-200 text-sm italic">
-                  Side effects may include: improved strategy, better dice rolls, 
-                  and an overwhelming desire to rematch.
+                  Side effects may include: improved strategy, better dice rolls, and an
+                  overwhelming desire to rematch.
                 </p>
               </div>
             </div>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import { useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { socketService } from '../services/socketService'
-import TabbedGameChat from '../components/chat/TabbedGameChat'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -141,7 +141,7 @@ export default function GameRoom() {
                 gameId={roomId}
                 players={currentRoom.players || []}
                 currentUserId={user.id}
-                userTeamId={currentGame?.players?.find(p => p.userId === user.id)?.teamId}
+                userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
                 className="h-full"
               />
             )}

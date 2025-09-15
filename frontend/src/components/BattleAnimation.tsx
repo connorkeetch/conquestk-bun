@@ -246,19 +246,29 @@ export const DiceRollAnimation: React.FC<DiceRollAnimationProps> = ({
     >
       <div className="flex gap-4 bg-black/80 rounded-lg p-3">
         <div className={`flex flex-col items-center ${rolling ? 'animate-bounce' : ''}`}>
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: '#EF4444' }}>
+          <div
+            className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg"
+            style={{ backgroundColor: '#EF4444' }}
+          >
             {displayAttacker}
           </div>
-          <span className="text-xs mt-1" style={{ color: '#F87171' }}>ATK</span>
+          <span className="text-xs mt-1" style={{ color: '#F87171' }}>
+            ATK
+          </span>
         </div>
 
         <div className="flex items-center text-white text-lg font-bold">VS</div>
 
         <div className={`flex flex-col items-center ${rolling ? 'animate-bounce' : ''}`}>
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: 'var(--color-primary)' }}>
+          <div
+            className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
             {displayDefender}
           </div>
-          <span className="text-xs mt-1" style={{ color: 'var(--color-primary-soft)' }}>DEF</span>
+          <span className="text-xs mt-1" style={{ color: 'var(--color-primary-soft)' }}>
+            DEF
+          </span>
         </div>
       </div>
 

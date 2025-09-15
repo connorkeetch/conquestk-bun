@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react'
 import { featureFlagService } from '../services/featureFlagService'
 
 export const useFeatureFlag = (flagName: string): boolean => {
-  const [isEnabled, setIsEnabled] = useState(() => 
-    featureFlagService.isEnabled(flagName as any)
-  )
+  const [isEnabled, setIsEnabled] = useState(() => featureFlagService.isEnabled(flagName as any))
 
   useEffect(() => {
     // Subscribe to flag updates

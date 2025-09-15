@@ -31,14 +31,14 @@ export default function VerifyEmailToken() {
         if (response.ok) {
           setStatus('success')
           setMessage('Email verified successfully! Redirecting to login...')
-          
+
           // Logout to clear old user data with emailVerified: false
           dispatch(logout())
-          
+
           // Redirect to login after 2 seconds
           setTimeout(() => {
-            navigate('/login', { 
-              state: { message: 'Email verified! Please login to continue.' } 
+            navigate('/login', {
+              state: { message: 'Email verified! Please login to continue.' },
             })
           }, 2000)
         } else {

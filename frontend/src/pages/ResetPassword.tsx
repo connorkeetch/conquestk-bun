@@ -149,10 +149,7 @@ const ResetPassword: React.FC = () => {
           </div>
 
           <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-muted text-sm font-medium mb-2"
-            >
+            <label htmlFor="confirmPassword" className="block text-muted text-sm font-medium mb-2">
               Confirm New Password
             </label>
             <input
@@ -167,11 +164,7 @@ const ResetPassword: React.FC = () => {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary w-full"
-          >
+          <button type="submit" disabled={isLoading} className="btn-primary w-full">
             {isLoading ? 'Resetting...' : 'Reset Password'}
           </button>
         </form>

@@ -2,12 +2,12 @@ import axios from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
-import ImageProcessor from '../components/ImageProcessor'
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
+import ImageProcessor from '../components/ImageProcessor'
 import MapImageControls from '../components/MapImageControls'
 import TerritoryToken from '../components/TerritoryToken'
-import api from '../services/api'
 import { PLAYER_COLORS } from '../constants/colors'
+import api from '../services/api'
 
 interface Territory {
   id: string
@@ -30,11 +30,11 @@ interface Continent {
 interface LabelSettings {
   showLabels: boolean
   preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom'
-  fontSize?: number        // 10-24
-  fontFamily?: string      // 'Arial', 'Georgia', etc.
-  textColor?: string       // hex color
+  fontSize?: number // 10-24
+  fontFamily?: string // 'Arial', 'Georgia', etc.
+  textColor?: string // hex color
   showBackground?: boolean
-  backgroundColor?: string // hex color  
+  backgroundColor?: string // hex color
   backgroundOpacity?: number // 0-1
 }
 
@@ -50,17 +50,17 @@ interface MapState {
   draggedTerritoryId: string | null
   mapWidth: number
   mapHeight: number
-  imageWidth: number  // Actual image dimensions
+  imageWidth: number // Actual image dimensions
   imageHeight: number
-  imageScale: number  // Scale factor for resizing image
-  labelSettings?: LabelSettings  // Label customization settings
+  imageScale: number // Scale factor for resizing image
+  labelSettings?: LabelSettings // Label customization settings
 }
 
 type EditorMode = 'properties' | 'image' | 'territories' | 'continents' | 'connections' | 'capitals'
 type TokenShape = 'hexagon' | 'square' | 'circle'
 
 interface CapitalAssignments {
-  [playerCount: string]: string[]  // Territory IDs for each player count
+  [playerCount: string]: string[] // Territory IDs for each player count
 }
 
 interface CapitalMetadata {
@@ -102,11 +102,11 @@ export default function MapEditorTokens() {
     continents: [],
     selectedTerritoryId: null,
     draggedTerritoryId: null,
-    mapWidth: 1920,  // Default to full HD
+    mapWidth: 1920, // Default to full HD
     mapHeight: 1080,
-    imageWidth: 800,  // Default image dimensions
+    imageWidth: 800, // Default image dimensions
     imageHeight: 600,
-    imageScale: 1,  // Default scale
+    imageScale: 1, // Default scale
     labelSettings: {
       showLabels: true,
       preset: 'classic',
@@ -115,8 +115,8 @@ export default function MapEditorTokens() {
       textColor: '#000000',
       showBackground: true,
       backgroundColor: '#ffffff',
-      backgroundOpacity: 0.8
-    }
+      backgroundOpacity: 0.8,
+    },
   })
 
   const [showProcessor, setShowProcessor] = useState(false)
@@ -124,66 +124,68 @@ export default function MapEditorTokens() {
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showLabelSettings, setShowLabelSettings] = useState(false)
-  
+
   // Label preset definitions
   const LABEL_PRESETS = {
-    classic: { 
-      fontSize: 14, 
+    classic: {
+      fontSize: 14,
       fontFamily: 'Arial',
-      textColor: '#000000', 
-      showBackground: true, 
-      backgroundColor: '#ffffff', 
-      backgroundOpacity: 0.8 
+      textColor: '#000000',
+      showBackground: true,
+      backgroundColor: '#ffffff',
+      backgroundOpacity: 0.8,
     },
-    modern: { 
-      fontSize: 12, 
+    modern: {
+      fontSize: 12,
       fontFamily: 'system-ui',
-      textColor: '#ffffff', 
-      showBackground: true, 
-      backgroundColor: '#000000', 
-      backgroundOpacity: 0.6 
+      textColor: '#ffffff',
+      showBackground: true,
+      backgroundColor: '#000000',
+      backgroundOpacity: 0.6,
     },
-    minimal: { 
-      fontSize: 12, 
+    minimal: {
+      fontSize: 12,
       fontFamily: 'Arial',
-      textColor: '#333333', 
+      textColor: '#333333',
       showBackground: false,
       backgroundColor: '#ffffff',
-      backgroundOpacity: 0
+      backgroundOpacity: 0,
     },
-    highContrast: { 
-      fontSize: 16, 
+    highContrast: {
+      fontSize: 16,
       fontFamily: 'Arial',
-      textColor: '#ffffff', 
-      showBackground: true, 
-      backgroundColor: '#000000', 
-      backgroundOpacity: 1 
-    }
+      textColor: '#ffffff',
+      showBackground: true,
+      backgroundColor: '#000000',
+      backgroundOpacity: 1,
+    },
   }
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('properties')
-  
+
   // Apply label preset
-  const applyLabelPreset = (preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom') => {
+  const applyLabelPreset = (
+    preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom',
+  ) => {
     if (preset === 'custom') {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         labelSettings: {
           ...prev.labelSettings!,
-          preset: 'custom'
-        }
+          preset: 'custom',
+        },
       }))
     } else {
       const presetSettings = LABEL_PRESETS[preset]
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         labelSettings: {
           showLabels: prev.labelSettings?.showLabels ?? true,
           preset,
-          ...presetSettings
-        }
+          ...presetSettings,
+        },
       }))
     }
   }
@@ -204,7 +206,7 @@ export default function MapEditorTokens() {
   const [newContinentColor, setNewContinentColor] = useState('#3B82F6')
   const [newContinentBonus, setNewContinentBonus] = useState(3)
   const [editingContinentId, setEditingContinentId] = useState<string | null>(null)
-  
+
   // Capital management state
   const [capitalAssignments, setCapitalAssignments] = useState<CapitalAssignments>({})
   const [capitalMetadata, setCapitalMetadata] = useState<CapitalMetadata>({})
@@ -273,9 +275,9 @@ export default function MapEditorTokens() {
     try {
       const response = await api.get(`/maps/${mapId}`)
       const map = response.data
-      
+
       // Load map data into editor state
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         name: map.name,
         description: map.description || '',
@@ -299,35 +301,33 @@ export default function MapEditorTokens() {
       // Check if user is logged in
       const token = localStorage.getItem('token')
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      
+
       if (!token || token === 'null' || token === 'undefined') {
         alert('Please log in to load your draft maps')
         return
       }
-      
+
       if (!user.id) {
         alert('User session expired. Please log in again.')
         return
       }
-      
+
       // Get user's maps including drafts
       const response = await api.get('/maps/my-maps')
-      
+
       // Filter for draft maps only
-      const drafts = response.data.filter((map: any) => 
-        map.status === 'draft'
-      )
-      
+      const drafts = response.data.filter((map: any) => map.status === 'draft')
+
       if (drafts.length === 0) {
         alert('No draft maps found. Create and save a map first.')
         return
       }
-      
+
       setAvailableDrafts(drafts)
       setShowDraftsList(true)
     } catch (error: any) {
       console.error('Failed to load draft maps:', error)
-      
+
       if (error.response?.status === 400) {
         alert('Authentication required. Please log in to load your maps.')
       } else if (error.response?.status === 401) {
@@ -337,7 +337,9 @@ export default function MapEditorTokens() {
       } else if (error.response?.status === 404) {
         alert('Maps endpoint not found. This might be a server issue.')
       } else {
-        alert(`Failed to load draft maps: ${error.response?.data?.message || error.message || 'Unknown error'}`)
+        alert(
+          `Failed to load draft maps: ${error.response?.data?.message || error.message || 'Unknown error'}`,
+        )
       }
     }
   }
@@ -362,63 +364,65 @@ export default function MapEditorTokens() {
     // Clear previous errors and info
     setUploadError(null)
     setUploadInfo(null)
-    
+
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select an image file (PNG, JPG, GIF, WEBP, SVG)')
       return
     }
-    
+
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setUploadError(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max size is 10MB`)
       return
     }
 
-    setImageFile(file)  // Store for later use
-    
+    setImageFile(file) // Store for later use
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string
-      
+
       // Check image dimensions
       const img = new Image()
       img.onload = () => {
         const MIN_WIDTH = 400
         const MIN_HEIGHT = 300
-        const MAX_WIDTH = 2560  // Allow up to 2560x1440 for modern displays
+        const MAX_WIDTH = 2560 // Allow up to 2560x1440 for modern displays
         const MAX_HEIGHT = 1440
-        
+
         let finalWidth = img.width
         let finalHeight = img.height
-        
+
         // Auto-expand small images to meet minimum size
         if (img.width < MIN_WIDTH || img.height < MIN_HEIGHT) {
           const scaleX = MIN_WIDTH / img.width
           const scaleY = MIN_HEIGHT / img.height
           const scale = Math.max(scaleX, scaleY)
-          
+
           finalWidth = Math.round(img.width * scale)
           finalHeight = Math.round(img.height * scale)
-          
+
           // Create expanded canvas
           const expandCanvas = document.createElement('canvas')
           expandCanvas.width = finalWidth
           expandCanvas.height = finalHeight
           const ctx = expandCanvas.getContext('2d')
-          
+
           if (ctx) {
             ctx.imageSmoothingEnabled = true
             ctx.imageSmoothingQuality = 'high'
             ctx.drawImage(img, 0, 0, finalWidth, finalHeight)
             const expandedDataUrl = expandCanvas.toDataURL('image/png')
             setTempImageUrl(expandedDataUrl)
-            setUploadInfo(`Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`)
+            setUploadInfo(
+              `Image auto-expanded from ${img.width}×${img.height} to ${finalWidth}×${finalHeight}px`,
+            )
           }
         } else {
           setTempImageUrl(dataUrl)
           setUploadInfo(null)
         }
-        
+
         // Update map dimensions
         setState((prev) => ({
           ...prev,
@@ -428,7 +432,7 @@ export default function MapEditorTokens() {
           mapWidth: Math.min(finalWidth, MAX_WIDTH),
           mapHeight: Math.min(finalHeight, MAX_HEIGHT),
         }))
-        
+
         // Show options dialog
         setShowImageOptions(true)
       }
@@ -451,12 +455,12 @@ export default function MapEditorTokens() {
       // Check if click is too close to existing territories
       const clickPadding = tokenSize * 0.25
       const minDistance = tokenSize + clickPadding * 2
-      
-      const tooClose = state.territories.some(t => {
-        const distance = Math.sqrt(Math.pow(t.x - x, 2) + Math.pow(t.y - y, 2))
+
+      const tooClose = state.territories.some((t) => {
+        const distance = Math.sqrt((t.x - x) ** 2 + (t.y - y) ** 2)
         return distance < minDistance
       })
-      
+
       if (tooClose) {
         // Just ignore clicks that are too close to existing tokens
         return
@@ -483,7 +487,7 @@ export default function MapEditorTokens() {
   // Handle token click based on mode
   const handleTokenClick = (territoryId: string, event: React.MouseEvent) => {
     event.stopPropagation()
-    
+
     if (editorMode === 'capitals') {
       handleCapitalTokenClick(territoryId)
       return
@@ -668,22 +672,21 @@ export default function MapEditorTokens() {
         return
       }
 
-
       const confirmed = confirm(
         'Submit this map for approval?\n\n' +
-        'Once submitted, the map will be reviewed by admins.\n' +
-        'You will not be able to edit it until it is approved or rejected.'
+          'Once submitted, the map will be reviewed by admins.\n' +
+          'You will not be able to edit it until it is approved or rejected.',
       )
 
       if (!confirmed) return
 
       // Update map status to pending_review
       const result = await api.patch(`/maps/${editingMapId}`, {
-        status: 'pending_review'
+        status: 'pending_review',
       })
 
       alert('Map submitted for approval! You will be notified when it is reviewed.')
-      
+
       // Clear editing state and redirect
       setEditingMapId(null)
       window.location.href = '/maps'
@@ -699,12 +702,12 @@ export default function MapEditorTokens() {
       // Check authentication first
       const token = localStorage.getItem('token')
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      
+
       if (!token || token === 'null' || token === 'undefined' || !user.id) {
         alert('Please log in to save maps to the server. Your map is auto-saved locally.')
         return
       }
-      
+
       if (state.territories.length < 2) {
         alert('Please add at least 2 territories before saving')
         return
@@ -714,7 +717,7 @@ export default function MapEditorTokens() {
       // Prepare map data as JSON with base64 image
       let imageBase64: string | null = null
       let imageMimeType: string | null = null
-      
+
       // Convert image to base64 if present
       if (state.imageUrl) {
         try {
@@ -727,7 +730,7 @@ export default function MapEditorTokens() {
             // For regular URLs, fetch and convert to base64
             const response = await fetch(state.imageUrl)
             const blob = await response.blob()
-            
+
             // Convert blob to base64
             const reader = new FileReader()
             const base64Promise = new Promise<string>((resolve, reject) => {
@@ -747,11 +750,13 @@ export default function MapEditorTokens() {
           throw new Error('Failed to process map background image')
         }
       }
-      
+
       // Create JSON payload
       const mapData = {
         name: state.name,
-        description: state.description || `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
+        description:
+          state.description ||
+          `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
         isPublic: false, // Drafts are private by default
         status: 'draft', // Always save as draft
         tags: ['custom', 'user-created'],
@@ -763,11 +768,13 @@ export default function MapEditorTokens() {
           width: state.mapWidth,
           height: state.mapHeight,
         },
-        image: imageBase64 ? {
-          data: imageBase64,
-          mimeType: imageMimeType,
-          filename: 'map-background.png'
-        } : null
+        image: imageBase64
+          ? {
+              data: imageBase64,
+              mimeType: imageMimeType,
+              filename: 'map-background.png',
+            }
+          : null,
       }
 
       // Save to backend
@@ -779,10 +786,11 @@ export default function MapEditorTokens() {
       })
 
       // Use correct backend URL for API calls - use JSON endpoint
-      const apiUrl = import.meta.env.MODE === 'production' 
-        ? '/api/maps/json' 
-        : 'http://localhost:5001/api/maps/json'
-      
+      const apiUrl =
+        import.meta.env.MODE === 'production'
+          ? '/api/maps/json'
+          : 'http://localhost:5001/api/maps/json'
+
       let result
       if (editingMapId) {
         // Update existing map
@@ -913,7 +921,7 @@ export default function MapEditorTokens() {
   // Handle image options dialog
   const handleUseFullImage = () => {
     if (!tempImageUrl) return
-    
+
     setState((prev) => ({
       ...prev,
       imageUrl: tempImageUrl,
@@ -949,52 +957,52 @@ export default function MapEditorTokens() {
       setShowCropper(true)
     }
   }
-  
+
   // Capital management functions
   const handleGenerateCapitals = async () => {
     if (!state.territories.length) {
       alert('Please add territories before generating capitals')
       return
     }
-    
+
     // For now, just alert that we need to save the map first
     // In a complete implementation, we'd call the API after the map is saved
     alert('Please save the map to database first, then capitals can be generated')
   }
-  
+
   const handleCapitalTokenClick = (territoryId: string) => {
     if (!isAssigningCapital) return
-    
+
     const playerCountStr = selectedPlayerCount.toString()
     const currentCapitals = capitalAssignments[playerCountStr] || []
-    
+
     // Toggle capital selection
     if (currentCapitals.includes(territoryId)) {
       // Remove from capitals
       setCapitalAssignments((prev) => ({
         ...prev,
-        [playerCountStr]: currentCapitals.filter(id => id !== territoryId)
+        [playerCountStr]: currentCapitals.filter((id) => id !== territoryId),
       }))
     } else if (currentCapitals.length < selectedPlayerCount) {
       // Add to capitals
       setCapitalAssignments((prev) => ({
         ...prev,
-        [playerCountStr]: [...currentCapitals, territoryId]
+        [playerCountStr]: [...currentCapitals, territoryId],
       }))
-      
+
       // Mark as manually adjusted
       setCapitalMetadata((prev) => ({
         ...prev,
         manuallyAdjusted: {
           ...prev.manuallyAdjusted,
-          [playerCountStr]: true
-        }
+          [playerCountStr]: true,
+        },
       }))
     } else {
       alert(`Already selected ${selectedPlayerCount} capitals for ${selectedPlayerCount} players`)
     }
   }
-  
+
   const getCapitalForTerritory = (territoryId: string): number | null => {
     const playerCountStr = selectedPlayerCount.toString()
     const capitals = capitalAssignments[playerCountStr] || []
@@ -1034,7 +1042,9 @@ export default function MapEditorTokens() {
                 min="2"
                 max="8"
                 value={state.minPlayers}
-                onChange={(e) => setState((prev) => ({ ...prev, minPlayers: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setState((prev) => ({ ...prev, minPlayers: Number(e.target.value) }))
+                }
                 className="w-full"
               />
             </div>
@@ -1045,7 +1055,9 @@ export default function MapEditorTokens() {
                 min="2"
                 max="12"
                 value={state.maxPlayers}
-                onChange={(e) => setState((prev) => ({ ...prev, maxPlayers: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setState((prev) => ({ ...prev, maxPlayers: Number(e.target.value) }))
+                }
                 className="w-full"
               />
             </div>
@@ -1067,7 +1079,7 @@ export default function MapEditorTokens() {
                 </button>
               </div>
             </div>
-            
+
             {/* Validation Checklist */}
             <div className="mt-4 p-3 bg-surface-1 rounded border border-border">
               <h3 className="text-sm font-bold mb-2">✅ Validation Checklist</h3>
@@ -1076,19 +1088,25 @@ export default function MapEditorTokens() {
                   {state.imageUrl ? '✓' : '○'} Background image uploaded
                 </div>
                 <div className={state.territories.length > 0 ? 'text-green-400' : 'text-muted'}>
-                  {state.territories.length > 0 ? '✓' : '○'} {state.territories.length} territories placed
+                  {state.territories.length > 0 ? '✓' : '○'} {state.territories.length} territories
+                  placed
                 </div>
                 <div className={state.continents.length > 0 ? 'text-green-400' : 'text-muted'}>
-                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} continents created
+                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} continents
+                  created
                 </div>
-                <div className={Object.keys(capitalAssignments).length > 0 ? 'text-green-400' : 'text-muted'}>
+                <div
+                  className={
+                    Object.keys(capitalAssignments).length > 0 ? 'text-green-400' : 'text-muted'
+                  }
+                >
                   {Object.keys(capitalAssignments).length > 0 ? '✓' : '○'} Capitals assigned
                 </div>
               </div>
             </div>
           </>
         )
-      
+
       case 'image':
         return (
           <>
@@ -1099,7 +1117,7 @@ export default function MapEditorTokens() {
             >
               📤 Upload Image
             </button>
-            
+
             {/* Canvas Size Settings */}
             <div className="mb-6 p-3 bg-surface-1 rounded border border-border">
               <h3 className="text-sm font-bold mb-3">📐 Canvas Size</h3>
@@ -1112,25 +1130,31 @@ export default function MapEditorTokens() {
                     max="3000"
                     step="100"
                     value={state.mapWidth}
-                    onChange={(e) => setState(prev => ({ ...prev, mapWidth: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setState((prev) => ({ ...prev, mapWidth: Number(e.target.value) }))
+                    }
                     className="w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-muted mb-1">Height: {state.mapHeight}px</label>
+                  <label className="block text-sm text-muted mb-1">
+                    Height: {state.mapHeight}px
+                  </label>
                   <input
                     type="range"
                     min="600"
                     max="2000"
                     step="100"
                     value={state.mapHeight}
-                    onChange={(e) => setState(prev => ({ ...prev, mapHeight: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setState((prev) => ({ ...prev, mapHeight: Number(e.target.value) }))
+                    }
                     className="w-full"
                   />
                 </div>
               </div>
             </div>
-            
+
             {state.imageUrl && (
               <>
                 <div className="mb-4 p-3 bg-surface-1 rounded border border-border">
@@ -1140,22 +1164,26 @@ export default function MapEditorTokens() {
                     <div>Height: {state.imageHeight}px</div>
                     <div>Scale: {(state.imageScale * 100).toFixed(0)}%</div>
                   </div>
-                  
+
                   {/* Image Scale Control */}
                   <div className="mt-3">
-                    <label className="block text-sm text-muted mb-1">Image Scale: {(state.imageScale * 100).toFixed(0)}%</label>
+                    <label className="block text-sm text-muted mb-1">
+                      Image Scale: {(state.imageScale * 100).toFixed(0)}%
+                    </label>
                     <input
                       type="range"
                       min="50"
                       max="200"
                       step="10"
                       value={state.imageScale * 100}
-                      onChange={(e) => setState(prev => ({ ...prev, imageScale: Number(e.target.value) / 100 }))}
+                      onChange={(e) =>
+                        setState((prev) => ({ ...prev, imageScale: Number(e.target.value) / 100 }))
+                      }
                       className="w-full"
                     />
                   </div>
                 </div>
-                
+
                 <button
                   onClick={() => setShowCropper(true)}
                   className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded mb-2"
@@ -1173,7 +1201,7 @@ export default function MapEditorTokens() {
                 <button
                   onClick={() => {
                     if (confirm('Remove the background image?')) {
-                      setState(prev => ({ ...prev, imageUrl: undefined }))
+                      setState((prev) => ({ ...prev, imageUrl: undefined }))
                     }
                   }}
                   className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
@@ -1184,16 +1212,16 @@ export default function MapEditorTokens() {
             )}
           </>
         )
-      
+
       case 'territories':
         return (
           <>
             <h2 className="text-xl font-bold mb-4">🗺️ Territory Settings</h2>
-            
+
             {/* Token Display Settings */}
             <div className="mb-6">
               <h3 className="text-sm font-bold mb-3">Token Display</h3>
-              
+
               <div className="mb-3">
                 <label className="block text-sm text-muted mb-1">Shape</label>
                 <select
@@ -1206,7 +1234,7 @@ export default function MapEditorTokens() {
                   <option value="circle">● Circle</option>
                 </select>
               </div>
-              
+
               <div className="mb-3">
                 <label className="block text-sm text-muted mb-1">Size: {tokenSize}px</label>
                 <input
@@ -1218,7 +1246,7 @@ export default function MapEditorTokens() {
                   className="w-full"
                 />
               </div>
-              
+
               <button
                 onClick={() => setShowGrid(!showGrid)}
                 className={`w-full px-3 py-2 rounded text-sm ${
@@ -1228,26 +1256,28 @@ export default function MapEditorTokens() {
                 ⊞ {showGrid ? 'Hide Grid' : 'Show Grid'}
               </button>
             </div>
-            
+
             {/* Label Settings */}
             <div className="mb-6">
               <h3 className="text-sm font-bold mb-3">Labels</h3>
-              
+
               <button
-                onClick={() => setState(prev => ({ 
-                  ...prev, 
-                  labelSettings: { 
-                    ...prev.labelSettings!, 
-                    showLabels: !prev.labelSettings?.showLabels 
-                  } 
-                }))}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    labelSettings: {
+                      ...prev.labelSettings!,
+                      showLabels: !prev.labelSettings?.showLabels,
+                    },
+                  }))
+                }
                 className={`w-full px-3 py-2 rounded text-sm mb-2 ${
                   state.labelSettings?.showLabels ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'
                 }`}
               >
                 🏷️ {state.labelSettings?.showLabels ? 'Hide Labels' : 'Show Labels'}
               </button>
-              
+
               {state.labelSettings?.showLabels && (
                 <button
                   onClick={() => setShowLabelSettings(true)}
@@ -1257,66 +1287,71 @@ export default function MapEditorTokens() {
                 </button>
               )}
             </div>
-            
+
             {/* Placement Mode */}
             <button
               onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
               className={`w-full px-4 py-3 rounded font-medium mb-4 ${
-                isPlacingTerritory ? 'bg-green-600 hover:bg-green-700' : 'bg-violet hover:brightness-110'
+                isPlacingTerritory
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-violet hover:brightness-110'
               }`}
             >
               {isPlacingTerritory ? '📍 Click Map to Place' : '➕ Add Territory'}
             </button>
-            
+
             {/* Territory List */}
             <div className="border-t border-border pt-4">
               <h3 className="text-sm font-bold mb-2">Territories ({state.territories.length})</h3>
-              {state.selectedTerritoryId && (() => {
-                const territory = state.territories.find(t => t.id === state.selectedTerritoryId)
-                if (!territory) return null
-                return (
-                  <div className="p-3 bg-surface-2 rounded mb-3">
-                    <input
-                      type="text"
-                      value={territory.name}
-                      onChange={(e) => {
-                        setState((prev) => ({
-                          ...prev,
-                          territories: prev.territories.map((t) =>
-                            t.id === state.selectedTerritoryId
-                              ? { ...t, name: e.target.value }
-                              : t,
-                          ),
-                        }))
-                      }}
-                      className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
-                    />
-                    <button
-                      onClick={() => {
-                        setState((prev) => ({
-                          ...prev,
-                          territories: prev.territories.filter(
-                            (t) => t.id !== state.selectedTerritoryId,
-                          ),
-                          selectedTerritoryId: null,
-                        }))
-                      }}
-                      className="w-full px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
-                    >
-                      🗑️ Delete Territory
-                    </button>
-                  </div>
-                )
-              })()}
+              {state.selectedTerritoryId &&
+                (() => {
+                  const territory = state.territories.find(
+                    (t) => t.id === state.selectedTerritoryId,
+                  )
+                  if (!territory) return null
+                  return (
+                    <div className="p-3 bg-surface-2 rounded mb-3">
+                      <input
+                        type="text"
+                        value={territory.name}
+                        onChange={(e) => {
+                          setState((prev) => ({
+                            ...prev,
+                            territories: prev.territories.map((t) =>
+                              t.id === state.selectedTerritoryId
+                                ? { ...t, name: e.target.value }
+                                : t,
+                            ),
+                          }))
+                        }}
+                        className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
+                      />
+                      <button
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            territories: prev.territories.filter(
+                              (t) => t.id !== state.selectedTerritoryId,
+                            ),
+                            selectedTerritoryId: null,
+                          }))
+                        }}
+                        className="w-full px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
+                      >
+                        🗑️ Delete Territory
+                      </button>
+                    </div>
+                  )
+                })()}
             </div>
           </>
         )
-      
+
       case 'continents':
         return (
           <>
             <h2 className="text-xl font-bold mb-4">🌍 Continent Management</h2>
-            
+
             {/* Create Continent Form */}
             <div className="mb-6 p-3 bg-surface-2 rounded">
               <h3 className="text-sm font-bold mb-3">Create Continent</h3>
@@ -1349,11 +1384,13 @@ export default function MapEditorTokens() {
                 ➕ Create Continent
               </button>
             </div>
-            
+
             {/* Continent List */}
             <div className="space-y-2">
               {state.continents.map((continent) => {
-                const territoryCount = state.territories.filter(t => t.continentId === continent.id).length
+                const territoryCount = state.territories.filter(
+                  (t) => t.continentId === continent.id,
+                ).length
                 return (
                   <div key={continent.id} className="p-3 bg-surface-2 rounded">
                     <div className="flex items-center justify-between mb-2">
@@ -1366,9 +1403,7 @@ export default function MapEditorTokens() {
                       </div>
                       <span className="text-xs text-muted">+{continent.bonus}</span>
                     </div>
-                    <div className="text-xs text-muted mb-2">
-                      {territoryCount} territories
-                    </div>
+                    <div className="text-xs text-muted mb-2">{territoryCount} territories</div>
                     <button
                       onClick={() => handleDeleteContinent(continent.id)}
                       className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
@@ -1381,21 +1416,23 @@ export default function MapEditorTokens() {
             </div>
           </>
         )
-      
+
       case 'connections':
         return (
           <>
             <h2 className="text-xl font-bold mb-4">🔗 Territory Connections</h2>
-            
+
             <button
               onClick={() => setIsConnecting(!isConnecting)}
               className={`w-full px-4 py-3 rounded font-medium mb-4 ${
-                isConnecting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-violet hover:brightness-110'
+                isConnecting
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-violet hover:brightness-110'
               }`}
             >
               {isConnecting ? '🔗 Click Two Territories' : '🔗 Connect Territories'}
             </button>
-            
+
             {isConnecting && (
               <div className="p-3 bg-orange-900/50 border border-orange-600 rounded mb-4">
                 <p className="text-sm">
@@ -1403,26 +1440,33 @@ export default function MapEditorTokens() {
                 </p>
               </div>
             )}
-            
+
             <div className="text-sm text-muted">
               <h3 className="font-bold mb-2">Connection Statistics</h3>
               <div className="space-y-1">
-                <div>Total Connections: {state.territories.reduce((sum, t) => sum + t.connections.length, 0) / 2}</div>
-                <div>Average per Territory: {
-                  state.territories.length > 0
-                    ? (state.territories.reduce((sum, t) => sum + t.connections.length, 0) / state.territories.length).toFixed(1)
-                    : 0
-                }</div>
+                <div>
+                  Total Connections:{' '}
+                  {state.territories.reduce((sum, t) => sum + t.connections.length, 0) / 2}
+                </div>
+                <div>
+                  Average per Territory:{' '}
+                  {state.territories.length > 0
+                    ? (
+                        state.territories.reduce((sum, t) => sum + t.connections.length, 0) /
+                        state.territories.length
+                      ).toFixed(1)
+                    : 0}
+                </div>
               </div>
             </div>
           </>
         )
-      
+
       case 'capitals':
         return (
           <>
             <h2 className="text-xl font-bold mb-4">👑 Capital Assignment</h2>
-            
+
             <div className="mb-4">
               <label className="block text-sm mb-2">Player Count</label>
               <select
@@ -1430,12 +1474,14 @@ export default function MapEditorTokens() {
                 onChange={(e) => setSelectedPlayerCount(Number(e.target.value))}
                 className="w-full px-3 py-2 bg-surface-2 rounded"
               >
-                {[2, 3, 4, 5, 6, 7, 8].map(num => (
-                  <option key={num} value={num}>{num} Players</option>
+                {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                  <option key={num} value={num}>
+                    {num} Players
+                  </option>
                 ))}
               </select>
             </div>
-            
+
             <button
               onClick={handleGenerateCapitals}
               disabled={isGeneratingCapitals || state.territories.length < selectedPlayerCount}
@@ -1443,22 +1489,24 @@ export default function MapEditorTokens() {
             >
               {isGeneratingCapitals ? '⏳ Generating...' : '🎲 Auto-Generate'}
             </button>
-            
+
             <button
               onClick={() => setIsAssigningCapital(!isAssigningCapital)}
               className={`w-full px-4 py-2 rounded mb-4 ${
-                isAssigningCapital ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-violet hover:brightness-110'
+                isAssigningCapital
+                  ? 'bg-yellow-600 hover:bg-yellow-700'
+                  : 'bg-violet hover:brightness-110'
               }`}
             >
               {isAssigningCapital ? '👑 Click to Assign' : '✏️ Manual Assign'}
             </button>
-            
+
             {/* Current Assignments */}
             {capitalAssignments[selectedPlayerCount.toString()] && (
               <div className="space-y-2">
                 <h3 className="text-sm font-bold">Current Assignments</h3>
                 {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
-                  const territory = state.territories.find(t => t.id === territoryId)
+                  const territory = state.territories.find((t) => t.id === territoryId)
                   if (!territory) return null
                   const playerColors = Object.values(PLAYER_COLORS)
                   return (
@@ -1467,7 +1515,7 @@ export default function MapEditorTokens() {
                       className="px-3 py-2 rounded text-sm"
                       style={{
                         backgroundColor: `${playerColors[index % playerColors.length]}20`,
-                        border: `2px solid ${playerColors[index % playerColors.length]}`
+                        border: `2px solid ${playerColors[index % playerColors.length]}`,
                       }}
                     >
                       Player {index + 1}: {territory.name}
@@ -1478,7 +1526,7 @@ export default function MapEditorTokens() {
             )}
           </>
         )
-      
+
       default:
         return null
     }
@@ -1492,7 +1540,8 @@ export default function MapEditorTokens() {
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">📝 Auto-Saved Draft Found</h2>
             <p className="text-muted mb-6">
-              Would you like to load your previous work? You have an auto-saved draft from your last session.
+              Would you like to load your previous work? You have an auto-saved draft from your last
+              session.
             </p>
             <div className="space-y-3">
               <button
@@ -1525,7 +1574,9 @@ export default function MapEditorTokens() {
             ) : (
               <div className="space-y-3">
                 {availableDrafts.map((map) => (
-                  <div key={map.id} className="bg-surface-2 p-4 rounded-lg hover:bg-gray-700 cursor-pointer"
+                  <div
+                    key={map.id}
+                    className="bg-surface-2 p-4 rounded-lg hover:bg-gray-700 cursor-pointer"
                     onClick={() => {
                       setEditingMapId(map.id)
                       loadMapForEditing(map.id)
@@ -1542,9 +1593,7 @@ export default function MapEditorTokens() {
                           Created: {new Date(map.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <button className="text-primary hover:text-primary-dark">
-                        Load →
-                      </button>
+                      <button className="text-primary hover:text-primary-dark">Load →</button>
                     </div>
                   </div>
                 ))}
@@ -1565,7 +1614,7 @@ export default function MapEditorTokens() {
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">🏷️ Territory Label Settings</h2>
-            
+
             <div className="space-y-4">
               {/* Preset Themes */}
               <div>
@@ -1588,7 +1637,7 @@ export default function MapEditorTokens() {
                 <>
                   <div className="border-t border-border pt-4">
                     <h3 className="text-sm font-medium text-white mb-3">Custom Settings</h3>
-                    
+
                     {/* Font Size */}
                     <div className="mb-3">
                       <label className="block text-sm text-muted mb-1">
@@ -1599,13 +1648,15 @@ export default function MapEditorTokens() {
                         min="10"
                         max="24"
                         value={state.labelSettings?.fontSize || 14}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          labelSettings: {
-                            ...prev.labelSettings!,
-                            fontSize: Number(e.target.value)
-                          }
-                        }))}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            labelSettings: {
+                              ...prev.labelSettings!,
+                              fontSize: Number(e.target.value),
+                            },
+                          }))
+                        }
                         className="w-full"
                       />
                     </div>
@@ -1616,13 +1667,15 @@ export default function MapEditorTokens() {
                       <input
                         type="color"
                         value={state.labelSettings?.textColor || '#000000'}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          labelSettings: {
-                            ...prev.labelSettings!,
-                            textColor: e.target.value
-                          }
-                        }))}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            labelSettings: {
+                              ...prev.labelSettings!,
+                              textColor: e.target.value,
+                            },
+                          }))
+                        }
                         className="w-full h-8 rounded cursor-pointer"
                       />
                     </div>
@@ -1633,13 +1686,15 @@ export default function MapEditorTokens() {
                         <input
                           type="checkbox"
                           checked={state.labelSettings?.showBackground || false}
-                          onChange={(e) => setState(prev => ({
-                            ...prev,
-                            labelSettings: {
-                              ...prev.labelSettings!,
-                              showBackground: e.target.checked
-                            }
-                          }))}
+                          onChange={(e) =>
+                            setState((prev) => ({
+                              ...prev,
+                              labelSettings: {
+                                ...prev.labelSettings!,
+                                showBackground: e.target.checked,
+                              },
+                            }))
+                          }
                           className="mr-2"
                         />
                         Show Background
@@ -1654,33 +1709,38 @@ export default function MapEditorTokens() {
                           <input
                             type="color"
                             value={state.labelSettings?.backgroundColor || '#ffffff'}
-                            onChange={(e) => setState(prev => ({
-                              ...prev,
-                              labelSettings: {
-                                ...prev.labelSettings!,
-                                backgroundColor: e.target.value
-                              }
-                            }))}
+                            onChange={(e) =>
+                              setState((prev) => ({
+                                ...prev,
+                                labelSettings: {
+                                  ...prev.labelSettings!,
+                                  backgroundColor: e.target.value,
+                                },
+                              }))
+                            }
                             className="w-full h-8 rounded cursor-pointer"
                           />
                         </div>
 
                         <div className="mb-3">
                           <label className="block text-sm text-muted mb-1">
-                            Background Opacity: {Math.round((state.labelSettings?.backgroundOpacity || 0.8) * 100)}%
+                            Background Opacity:{' '}
+                            {Math.round((state.labelSettings?.backgroundOpacity || 0.8) * 100)}%
                           </label>
                           <input
                             type="range"
                             min="0"
                             max="100"
                             value={(state.labelSettings?.backgroundOpacity || 0.8) * 100}
-                            onChange={(e) => setState(prev => ({
-                              ...prev,
-                              labelSettings: {
-                                ...prev.labelSettings!,
-                                backgroundOpacity: Number(e.target.value) / 100
-                              }
-                            }))}
+                            onChange={(e) =>
+                              setState((prev) => ({
+                                ...prev,
+                                labelSettings: {
+                                  ...prev.labelSettings!,
+                                  backgroundOpacity: Number(e.target.value) / 100,
+                                },
+                              }))
+                            }
                             className="w-full"
                           />
                         </div>
@@ -1692,13 +1752,15 @@ export default function MapEditorTokens() {
                       <label className="block text-sm text-muted mb-1">Font Family</label>
                       <select
                         value={state.labelSettings?.fontFamily || 'Arial'}
-                        onChange={(e) => setState(prev => ({
-                          ...prev,
-                          labelSettings: {
-                            ...prev.labelSettings!,
-                            fontFamily: e.target.value
-                          }
-                        }))}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            labelSettings: {
+                              ...prev.labelSettings!,
+                              fontFamily: e.target.value,
+                            },
+                          }))
+                        }
                         className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
                       >
                         <option value="Arial">Arial</option>
@@ -1730,9 +1792,7 @@ export default function MapEditorTokens() {
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
-            <p className="text-muted mb-6">
-              How would you like to use this image?
-            </p>
+            <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
                 onClick={handleUseFullImage}
@@ -1766,19 +1826,20 @@ export default function MapEditorTokens() {
           </div>
         </div>
       )}
-      
+
       <div className="w-full">
         {/* Reduced padding, more screen real estate */}
         <div className="flex items-center justify-between mb-4 px-3">
           <div>
             <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
             <p className="text-sm text-muted mt-1">
-              Create custom Risk-style maps in 5 easy steps: Upload image → Place territories → Create continents → Connect territories → Set capitals
+              Create custom Risk-style maps in 5 easy steps: Upload image → Place territories →
+              Create continents → Connect territories → Set capitals
             </p>
           </div>
           <div className="flex gap-4 items-center">
-            <a 
-              href="/map-editor-polygon" 
+            <a
+              href="/map-editor-polygon"
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
               title="Try the polygon-based editor for drawing custom territory shapes"
             >
@@ -1797,8 +1858,8 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('properties')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'properties' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'properties'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
@@ -1807,8 +1868,8 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('image')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'image' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'image'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
@@ -1817,8 +1878,8 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('territories')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'territories' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'territories'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
@@ -1827,8 +1888,8 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('continents')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'continents' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'continents'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
@@ -1837,8 +1898,8 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('connections')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'connections' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'connections'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
@@ -1847,14 +1908,14 @@ export default function MapEditorTokens() {
             <button
               onClick={() => setEditorMode('capitals')}
               className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'capitals' 
-                  ? 'text-primary border-b-2 border-primary' 
+                editorMode === 'capitals'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-muted hover:text-white'
               }`}
             >
               👑 Capitals
             </button>
-            
+
             {/* Save/Load Actions on the right */}
             <div className="flex gap-2 ml-auto p-2">
               {lastSaved && (
@@ -1862,7 +1923,7 @@ export default function MapEditorTokens() {
                   Auto-saved {lastSaved.toLocaleTimeString()}
                 </div>
               )}
-              
+
               <button
                 onClick={handleSaveMap}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
@@ -1888,7 +1949,7 @@ export default function MapEditorTokens() {
               >
                 📂 Load
               </button>
-              
+
               <button
                 onClick={() => {
                   if (confirm('Clear all territories and start over? Your work is auto-saved.')) {
@@ -1921,546 +1982,556 @@ export default function MapEditorTokens() {
           </div>
         </div>
 
-          {/* Help Text for Current Mode */}
-          <div className="mt-3 pt-3 border-t border-border">
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-primary">💡</span>
-              <div className="text-sm text-muted">
-                {editorMode === 'territories' && (
-                  <span>
-                    <strong>Territories Mode:</strong> Click on the map to place territory markers. Drag territories to reposition them. 
-                    Select a continent first to assign territories to it. Right-click or use Delete button to remove territories.
-                  </span>
-                )}
-                {editorMode === 'continents' && (
-                  <span>
-                    <strong>Continents Mode:</strong> Create continent groups to organize territories. Each continent provides bonus armies. 
-                    Click territories to assign them to continents. Use the form above to create new continents with custom colors and bonuses.
-                  </span>
-                )}
-                {editorMode === 'connections' && (
-                  <span>
-                    <strong>Connections Mode:</strong> Click a territory, then click another to create a connection between them. 
-                    Connected territories can attack each other. Click the same pair again to remove the connection. 
-                    Lines show which territories are connected.
-                  </span>
-                )}
-                {editorMode === 'capitals' && (
-                  <span>
-                    <strong>Capitals Mode:</strong> Set starting positions for different player counts (2-8 players). 
-                    Click "Generate" to auto-assign capitals using optimal spacing, or click territories manually to assign them. 
-                    Each player count can have different capital positions.
-                  </span>
-                )}
-              </div>
+        {/* Help Text for Current Mode */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="flex items-start gap-2">
+            <span className="text-sm font-medium text-primary">💡</span>
+            <div className="text-sm text-muted">
+              {editorMode === 'territories' && (
+                <span>
+                  <strong>Territories Mode:</strong> Click on the map to place territory markers.
+                  Drag territories to reposition them. Select a continent first to assign
+                  territories to it. Right-click or use Delete button to remove territories.
+                </span>
+              )}
+              {editorMode === 'continents' && (
+                <span>
+                  <strong>Continents Mode:</strong> Create continent groups to organize territories.
+                  Each continent provides bonus armies. Click territories to assign them to
+                  continents. Use the form above to create new continents with custom colors and
+                  bonuses.
+                </span>
+              )}
+              {editorMode === 'connections' && (
+                <span>
+                  <strong>Connections Mode:</strong> Click a territory, then click another to create
+                  a connection between them. Connected territories can attack each other. Click the
+                  same pair again to remove the connection. Lines show which territories are
+                  connected.
+                </span>
+              )}
+              {editorMode === 'capitals' && (
+                <span>
+                  <strong>Capitals Mode:</strong> Set starting positions for different player counts
+                  (2-8 players). Click "Generate" to auto-assign capitals using optimal spacing, or
+                  click territories manually to assign them. Each player count can have different
+                  capital positions.
+                </span>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Mode-specific controls */}
-          {editorMode === 'territories' && (
-            <div className="mt-4 flex gap-4 items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Continent:</span>
-                <select
-                  value={selectedContinentId || ''}
-                  onChange={(e) => setSelectedContinentId(e.target.value)}
-                  className="px-3 py-1 bg-surface-2 rounded text-white"
-                >
-                  <option value="">No Continent (Unassigned)</option>
-                  {state.continents.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
-                className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
-                title={isPlacingTerritory ? 'Click to stop placing territories' : 'Click to start placing territories on the map'}
+        {/* Mode-specific controls */}
+        {editorMode === 'territories' && (
+          <div className="mt-4 flex gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Continent:</span>
+              <select
+                value={selectedContinentId || ''}
+                onChange={(e) => setSelectedContinentId(e.target.value)}
+                className="px-3 py-1 bg-surface-2 rounded text-white"
               >
-                {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
+                <option value="">No Continent (Unassigned)</option>
+                {state.continents.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
+              className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
+              title={
+                isPlacingTerritory
+                  ? 'Click to stop placing territories'
+                  : 'Click to start placing territories on the map'
+              }
+            >
+              {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
+            </button>
+            {state.selectedTerritoryId && (
+              <button
+                onClick={() => {
+                  setState((prev) => ({
+                    ...prev,
+                    territories: prev.territories.filter((t) => t.id !== state.selectedTerritoryId),
+                  }))
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+                title="Remove the selected territory from the map"
+              >
+                🗑️ Delete Selected
               </button>
-              {state.selectedTerritoryId && (
+            )}
+          </div>
+        )}
+
+        {editorMode === 'continents' && (
+          <div className="mt-4 space-y-2">
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Continent Name"
+                value={newContinentName}
+                onChange={(e) => setNewContinentName(e.target.value)}
+                className="px-3 py-1 bg-surface-2 rounded text-white"
+              />
+              <input
+                type="color"
+                value={newContinentColor}
+                onChange={(e) => setNewContinentColor(e.target.value)}
+                className="w-12 h-8 bg-surface-2 rounded cursor-pointer"
+              />
+              <input
+                type="number"
+                placeholder="Bonus"
+                value={newContinentBonus}
+                onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 0)}
+                className="w-20 px-3 py-1 bg-surface-2 rounded text-white"
+                min="0"
+                max="10"
+              />
+              <button
+                onClick={() => {
+                  if (editingContinentId) {
+                    handleUpdateContinent(editingContinentId)
+                  } else {
+                    handleCreateContinent()
+                  }
+                }}
+                className="px-4 py-1 bg-slate-700 hover:bg-slate-600 rounded"
+                disabled={!newContinentName.trim()}
+              >
+                {editingContinentId ? '💾 Update' : '➕ Add Continent'}
+              </button>
+              {editingContinentId && (
                 <button
                   onClick={() => {
-                    setState((prev) => ({
-                      ...prev,
-                      territories: prev.territories.filter(
-                        (t) => t.id !== state.selectedTerritoryId,
-                      ),
-                    }))
+                    setEditingContinentId(null)
+                    setNewContinentName('')
+                    setNewContinentColor('#3B82F6')
+                    setNewContinentBonus(3)
                   }}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
-                  title="Remove the selected territory from the map"
+                  className="px-3 py-1 bg-gray-600 hover:bg-surface-2 rounded"
                 >
-                  🗑️ Delete Selected
+                  Cancel
                 </button>
               )}
             </div>
-          )}
 
-          {editorMode === 'continents' && (
-            <div className="mt-4 space-y-2">
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder="Continent Name"
-                  value={newContinentName}
-                  onChange={(e) => setNewContinentName(e.target.value)}
-                  className="px-3 py-1 bg-surface-2 rounded text-white"
-                />
-                <input
-                  type="color"
-                  value={newContinentColor}
-                  onChange={(e) => setNewContinentColor(e.target.value)}
-                  className="w-12 h-8 bg-surface-2 rounded cursor-pointer"
-                />
-                <input
-                  type="number"
-                  placeholder="Bonus"
-                  value={newContinentBonus}
-                  onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 0)}
-                  className="w-20 px-3 py-1 bg-surface-2 rounded text-white"
-                  min="0"
-                  max="10"
-                />
-                <button
-                  onClick={() => {
-                    if (editingContinentId) {
-                      handleUpdateContinent(editingContinentId)
-                    } else {
-                      handleCreateContinent()
-                    }
-                  }}
-                  className="px-4 py-1 bg-slate-700 hover:bg-slate-600 rounded"
-                  disabled={!newContinentName.trim()}
+            {/* Continent List */}
+            <div className="flex flex-wrap gap-2">
+              {state.continents.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-2 px-3 py-1 rounded"
+                  style={{ backgroundColor: `${c.color}40`, border: `2px solid ${c.color}` }}
                 >
-                  {editingContinentId ? '💾 Update' : '➕ Add Continent'}
-                </button>
-                {editingContinentId && (
+                  <span>
+                    {c.name} (+{c.bonus})
+                  </span>
                   <button
                     onClick={() => {
-                      setEditingContinentId(null)
-                      setNewContinentName('')
-                      setNewContinentColor('#3B82F6')
-                      setNewContinentBonus(3)
+                      setEditingContinentId(c.id)
+                      setNewContinentName(c.name)
+                      setNewContinentColor(c.color)
+                      setNewContinentBonus(c.bonus)
                     }}
-                    className="px-3 py-1 bg-gray-600 hover:bg-surface-2 rounded"
+                    className="text-primary-soft hover:text-primary-soft text-sm px-1"
                   >
-                    Cancel
+                    ✏️
                   </button>
-                )}
-              </div>
-
-              {/* Continent List */}
-              <div className="flex flex-wrap gap-2">
-                {state.continents.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-2 px-3 py-1 rounded"
-                    style={{ backgroundColor: `${c.color}40`, border: `2px solid ${c.color}` }}
-                  >
-                    <span>
-                      {c.name} (+{c.bonus})
-                    </span>
-                    <button
-                      onClick={() => {
-                        setEditingContinentId(c.id)
-                        setNewContinentName(c.name)
-                        setNewContinentColor(c.color)
-                        setNewContinentBonus(c.bonus)
-                      }}
-                      className="text-primary-soft hover:text-primary-soft text-sm px-1"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Delete continent "${c.name}"? Territories will become unassigned.`,
-                          )
-                        ) {
-                          handleDeleteContinent(c.id)
-                        }
-                      }}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {editorMode === 'connections' && (
-            <div className="mt-4">
-              <p className="text-sm text-muted">
-                {isConnecting && connectingFromId
-                  ? `Click another territory to connect/disconnect from ${state.territories.find((t) => t.id === connectingFromId)?.name}`
-                  : 'Click a territory to start connecting'}
-              </p>
-              {isConnecting && (
-                <button
-                  onClick={() => {
-                    setIsConnecting(false)
-                    setConnectingFromId(null)
-                  }}
-                  className="mt-2 px-4 py-1 bg-surface-2 hover:bg-gray-600 rounded"
-                >
-                  Cancel Connection
-                </button>
-              )}
-            </div>
-          )}
-          
-          {editorMode === 'capitals' && (
-            <div className="mt-4 space-y-3">
-              <div className="flex gap-4 items-center">
-                <button
-                  onClick={handleGenerateCapitals}
-                  disabled={isGeneratingCapitals || state.territories.length < 2}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded"
-                >
-                  {isGeneratingCapitals ? '⏳ Generating...' : '✨ Generate Capitals'}
-                </button>
-                <span className="text-sm text-muted">
-                  Auto-generate optimal starting positions for all player counts
-                </span>
-              </div>
-              
-              <div className="flex gap-2 items-center flex-wrap">
-                <span className="text-sm">Player Count:</span>
-                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((count) => (
                   <button
-                    key={count}
-                    onClick={() => setSelectedPlayerCount(count)}
-                    disabled={state.territories.length < count}
-                    className={`px-3 py-1 rounded text-sm ${
-                      selectedPlayerCount === count
-                        ? 'bg-primary'
-                        : state.territories.length < count
+                    onClick={() => {
+                      if (
+                        confirm(`Delete continent "${c.name}"? Territories will become unassigned.`)
+                      ) {
+                        handleDeleteContinent(c.id)
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {editorMode === 'connections' && (
+          <div className="mt-4">
+            <p className="text-sm text-muted">
+              {isConnecting && connectingFromId
+                ? `Click another territory to connect/disconnect from ${state.territories.find((t) => t.id === connectingFromId)?.name}`
+                : 'Click a territory to start connecting'}
+            </p>
+            {isConnecting && (
+              <button
+                onClick={() => {
+                  setIsConnecting(false)
+                  setConnectingFromId(null)
+                }}
+                className="mt-2 px-4 py-1 bg-surface-2 hover:bg-gray-600 rounded"
+              >
+                Cancel Connection
+              </button>
+            )}
+          </div>
+        )}
+
+        {editorMode === 'capitals' && (
+          <div className="mt-4 space-y-3">
+            <div className="flex gap-4 items-center">
+              <button
+                onClick={handleGenerateCapitals}
+                disabled={isGeneratingCapitals || state.territories.length < 2}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded"
+              >
+                {isGeneratingCapitals ? '⏳ Generating...' : '✨ Generate Capitals'}
+              </button>
+              <span className="text-sm text-muted">
+                Auto-generate optimal starting positions for all player counts
+              </span>
+            </div>
+
+            <div className="flex gap-2 items-center flex-wrap">
+              <span className="text-sm">Player Count:</span>
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((count) => (
+                <button
+                  key={count}
+                  onClick={() => setSelectedPlayerCount(count)}
+                  disabled={state.territories.length < count}
+                  className={`px-3 py-1 rounded text-sm ${
+                    selectedPlayerCount === count
+                      ? 'bg-primary'
+                      : state.territories.length < count
                         ? 'bg-surface-1 text-gray-600 cursor-not-allowed'
                         : 'bg-surface-2 hover:bg-gray-600'
-                    }`}
-                  >
-                    {count}
-                  </button>
-                ))}
-              </div>
-              
-              <div className="flex gap-4 items-center">
-                <button
-                  onClick={() => setIsAssigningCapital(!isAssigningCapital)}
-                  className={`px-4 py-2 rounded ${
-                    isAssigningCapital ? 'bg-yellow-600' : 'bg-surface-2'
                   }`}
                 >
-                  {isAssigningCapital ? '🎯 Click Territories' : '📍 Assign Capitals'}
+                  {count}
                 </button>
-                <div className="text-sm">
-                  <span className="text-muted">Capitals for {selectedPlayerCount} players: </span>
-                  <span className="text-white">
-                    {(capitalAssignments[selectedPlayerCount.toString()] || []).length}/{selectedPlayerCount}
-                  </span>
+              ))}
+            </div>
+
+            <div className="flex gap-4 items-center">
+              <button
+                onClick={() => setIsAssigningCapital(!isAssigningCapital)}
+                className={`px-4 py-2 rounded ${
+                  isAssigningCapital ? 'bg-yellow-600' : 'bg-surface-2'
+                }`}
+              >
+                {isAssigningCapital ? '🎯 Click Territories' : '📍 Assign Capitals'}
+              </button>
+              <div className="text-sm">
+                <span className="text-muted">Capitals for {selectedPlayerCount} players: </span>
+                <span className="text-white">
+                  {(capitalAssignments[selectedPlayerCount.toString()] || []).length}/
+                  {selectedPlayerCount}
+                </span>
+              </div>
+            </div>
+
+            {capitalAssignments[selectedPlayerCount.toString()]?.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
+                  const territory = state.territories.find((t) => t.id === territoryId)
+                  if (!territory) return null
+                  const playerColors = PLAYER_COLORS
+                  return (
+                    <div
+                      key={territoryId}
+                      className="px-3 py-1 rounded text-sm"
+                      style={{
+                        backgroundColor: `${playerColors[index % playerColors.length]}20`,
+                        border: `2px solid ${playerColors[index % playerColors.length]}`,
+                      }}
+                    >
+                      Player {index + 1}: {territory.name}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {capitalMetadata.manuallyAdjusted?.[selectedPlayerCount.toString()] && (
+              <p className="text-xs text-yellow-400">
+                ⚠️ Manually adjusted from algorithm suggestion
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+      {/* Main Editor Area - Full width with right sidebar */}
+      <div className="flex gap-4 px-3">
+        {/* Map Canvas - Main area taking most space, centered content */}
+        <div
+          ref={mapContainerRef}
+          className="flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
+          style={{ height: 'calc(100vh - 240px)' }}
+        >
+          <div
+            ref={containerRef}
+            className="relative flex-shrink-0"
+            style={{
+              width: `${state.mapWidth}px`,
+              height: `${state.mapHeight}px`,
+              backgroundColor: '#2a2a2a', // Charcoal color for canvas
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              backgroundImage: state.imageUrl ? `url(${state.imageUrl})` : undefined,
+              backgroundSize: `${state.imageWidth * state.imageScale}px ${state.imageHeight * state.imageScale}px`,
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+            onClick={handleMapClick}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setIsDragOver(true)
+            }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setIsDragOver(false)
+              const file = e.dataTransfer.files[0]
+              if (file) processImageFile(file)
+            }}
+          >
+            {/* Grid Overlay */}
+            {showGrid && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px)',
+                  backgroundSize: '50px 50px',
+                }}
+              />
+            )}
+
+            {/* Connection Lines */}
+            {editorMode === 'connections' && (
+              <svg
+                className="absolute inset-0 pointer-events-none"
+                style={{ width: state.mapWidth, height: state.mapHeight }}
+              >
+                {state.territories.map((territory) =>
+                  territory.connections.map((targetId) => {
+                    const target = state.territories.find((t) => t.id === targetId)
+                    if (!target) return null
+                    return (
+                      <line
+                        key={`${territory.id}-${targetId}`}
+                        x1={territory.x}
+                        y1={territory.y}
+                        x2={target.x}
+                        y2={target.y}
+                        stroke="rgba(255,255,255,0.3)"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                      />
+                    )
+                  }),
+                )}
+              </svg>
+            )}
+
+            {/* Territory Tokens */}
+            {state.territories.map((territory) => {
+              const continent = getContinentForTerritory(territory.id)
+              const clickPadding = tokenSize * 0.25 // 25% padding
+              const totalSize = tokenSize + clickPadding * 2
+
+              return (
+                <div
+                  key={territory.id}
+                  className="absolute group"
+                  style={{
+                    left: territory.x - totalSize / 2,
+                    top: territory.y - totalSize / 2,
+                    width: totalSize,
+                    height: totalSize,
+                    cursor: 'pointer',
+                  }}
+                  onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
+                  onClick={(e) => handleTokenClick(territory.id, e)}
+                >
+                  {/* Ultra-transparent click area indicator (visible on hover) */}
+                  <div
+                    className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 100%)',
+                      border: '1px solid rgba(124, 58, 237, 0.08)',
+                    }}
+                  />
+
+                  {/* Territory token centered in the click area */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <TerritoryToken
+                      x={0}
+                      y={0}
+                      armies={territory.armies}
+                      color={continent?.color || '#808080'} // Gray for unassigned
+                      outlineColor={continent?.color} // Continent color for outline
+                      shape={tokenShape}
+                      isSelected={state.selectedTerritoryId === territory.id}
+                      isDragging={state.draggedTerritoryId === territory.id}
+                      size={tokenSize}
+                      opacity={0.7}
+                    />
+                  </div>
+                  {editorMode === 'capitals' && getCapitalForTerritory(territory.id) && (
+                    <div className="absolute -top-3 -right-3 text-lg">
+                      <span className="bg-yellow-500 text-black rounded-full px-1.5 py-0.5 text-xs font-bold">
+                        {getCapitalForTerritory(territory.id)}
+                      </span>
+                    </div>
+                  )}
+                  {/* Territory name label */}
+                  {territory.name && state.labelSettings?.showLabels && (
+                    <div
+                      className="absolute left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10 pointer-events-none"
+                      style={{
+                        top: '100%',
+                        marginTop: '4px',
+                        fontSize: `${state.labelSettings?.fontSize || 14}px`,
+                        fontFamily: state.labelSettings?.fontFamily || 'Arial',
+                        color: state.labelSettings?.textColor || '#000000',
+                        ...(state.labelSettings?.showBackground && {
+                          backgroundColor: state.labelSettings?.backgroundColor || '#ffffff',
+                          opacity: state.labelSettings?.backgroundOpacity || 0.8,
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                        }),
+                        ...(state.selectedTerritoryId === territory.id && {
+                          fontWeight: 'bold',
+                          textDecoration: 'underline',
+                        }),
+                      }}
+                    >
+                      {territory.name}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {!state.imageUrl && !isDragOver && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background:
+                    'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px)',
+                }}
+              >
+                <div className="text-center">
+                  {/* Upload Error Display */}
+                  {uploadError && (
+                    <div className="mb-4 p-2 bg-red-900/50 border border-red-600 rounded text-red-300 text-sm max-w-md">
+                      ❌ {uploadError}
+                    </div>
+                  )}
+                  <div className="bg-black/40 backdrop-blur-sm p-6 rounded-lg">
+                    <p className="text-muted mb-3">Drop an image here or</p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-6 py-3 bg-violet hover:brightness-110 rounded-lg font-medium"
+                    >
+                      📤 Upload Map Image
+                    </button>
+                    <div className="mt-4 text-xs text-muted space-y-1">
+                      <p>
+                        💡 Canvas: {state.mapWidth}×{state.mapHeight}px
+                      </p>
+                      <p>📏 Min: 400×300px | Max: 1600×1200px</p>
+                      <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              {capitalAssignments[selectedPlayerCount.toString()]?.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
-                    const territory = state.territories.find(t => t.id === territoryId)
-                    if (!territory) return null
-                    const playerColors = PLAYER_COLORS
-                    return (
-                      <div
-                        key={territoryId}
-                        className="px-3 py-1 rounded text-sm"
-                        style={{
-                          backgroundColor: `${playerColors[index % playerColors.length]}20`,
-                          border: `2px solid ${playerColors[index % playerColors.length]}`
-                        }}
-                      >
-                        Player {index + 1}: {territory.name}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              
-              {capitalMetadata.manuallyAdjusted?.[selectedPlayerCount.toString()] && (
-                <p className="text-xs text-yellow-400">
-                  ⚠️ Manually adjusted from algorithm suggestion
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-        {/* Main Editor Area - Full width with right sidebar */}
-        <div className="flex gap-4 px-3">
-          {/* Map Canvas - Main area taking most space, centered content */}
-          <div
-            ref={mapContainerRef}
-            className="flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
-            style={{ height: 'calc(100vh - 240px)' }}
-          >
-            <div
-              ref={containerRef}
-              className="relative flex-shrink-0"
-              style={{
-                width: `${state.mapWidth}px`,
-                height: `${state.mapHeight}px`,
-                backgroundColor: '#2a2a2a', // Charcoal color for canvas
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                backgroundImage: state.imageUrl ? `url(${state.imageUrl})` : undefined,
-                backgroundSize: `${state.imageWidth * state.imageScale}px ${state.imageHeight * state.imageScale}px`,
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-              onClick={handleMapClick}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setIsDragOver(true)
-              }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setIsDragOver(false)
-                const file = e.dataTransfer.files[0]
-                if (file) processImageFile(file)
-              }}
-            >
-              {/* Grid Overlay */}
-              {showGrid && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px)',
-                    backgroundSize: '50px 50px',
-                  }}
-                />
-              )}
+            )}
 
-              {/* Connection Lines */}
-              {editorMode === 'connections' && (
-                <svg
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ width: state.mapWidth, height: state.mapHeight }}
-                >
-                  {state.territories.map((territory) =>
-                    territory.connections.map((targetId) => {
-                      const target = state.territories.find((t) => t.id === targetId)
-                      if (!target) return null
-                      return (
-                        <line
-                          key={`${territory.id}-${targetId}`}
-                          x1={territory.x}
-                          y1={territory.y}
-                          x2={target.x}
-                          y2={target.y}
-                          stroke="rgba(255,255,255,0.3)"
-                          strokeWidth="2"
-                          strokeDasharray="5,5"
-                        />
-                      )
-                    }),
-                  )}
-                </svg>
-              )}
-
-              {/* Territory Tokens */}
-              {state.territories.map((territory) => {
-                const continent = getContinentForTerritory(territory.id)
-                const clickPadding = tokenSize * 0.25 // 25% padding
-                const totalSize = tokenSize + clickPadding * 2
-
-                return (
-                  <div
-                    key={territory.id}
-                    className="absolute group"
-                    style={{
-                      left: territory.x - totalSize / 2,
-                      top: territory.y - totalSize / 2,
-                      width: totalSize,
-                      height: totalSize,
-                      cursor: 'pointer',
-                    }}
-                    onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
-                    onClick={(e) => handleTokenClick(territory.id, e)}
-                  >
-                    {/* Ultra-transparent click area indicator (visible on hover) */}
-                    <div 
-                      className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                      style={{
-                        background: 'radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 100%)',
-                        border: '1px solid rgba(124, 58, 237, 0.08)',
-                      }}
-                    />
-                    
-                    {/* Territory token centered in the click area */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <TerritoryToken
-                        x={0}
-                        y={0}
-                        armies={territory.armies}
-                        color={continent?.color || '#808080'} // Gray for unassigned
-                        outlineColor={continent?.color} // Continent color for outline
-                        shape={tokenShape}
-                        isSelected={state.selectedTerritoryId === territory.id}
-                        isDragging={state.draggedTerritoryId === territory.id}
-                        size={tokenSize}
-                        opacity={0.7}
-                      />
-                    </div>
-                    {editorMode === 'capitals' && getCapitalForTerritory(territory.id) && (
-                      <div className="absolute -top-3 -right-3 text-lg">
-                        <span className="bg-yellow-500 text-black rounded-full px-1.5 py-0.5 text-xs font-bold">
-                          {getCapitalForTerritory(territory.id)}
-                        </span>
-                      </div>
-                    )}
-                    {/* Territory name label */}
-                    {territory.name && state.labelSettings?.showLabels && (
-                      <div 
-                        className="absolute left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10 pointer-events-none"
-                        style={{ 
-                          top: '100%',
-                          marginTop: '4px',
-                          fontSize: `${state.labelSettings?.fontSize || 14}px`,
-                          fontFamily: state.labelSettings?.fontFamily || 'Arial',
-                          color: state.labelSettings?.textColor || '#000000',
-                          ...(state.labelSettings?.showBackground && {
-                            backgroundColor: state.labelSettings?.backgroundColor || '#ffffff',
-                            opacity: state.labelSettings?.backgroundOpacity || 0.8,
-                            padding: '2px 6px',
-                            borderRadius: '3px'
-                          }),
-                          ...(state.selectedTerritoryId === territory.id && {
-                            fontWeight: 'bold',
-                            textDecoration: 'underline'
-                          })
-                        }}
-                      >
-                        {territory.name}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {!state.imageUrl && !isDragOver && (
-                <div 
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{
-                    background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px)',
-                  }}
-                >
-                  <div className="text-center">
-                    {/* Upload Error Display */}
-                    {uploadError && (
-                      <div className="mb-4 p-2 bg-red-900/50 border border-red-600 rounded text-red-300 text-sm max-w-md">
-                        ❌ {uploadError}
-                      </div>
-                    )}
-                    <div className="bg-black/40 backdrop-blur-sm p-6 rounded-lg">
-                      <p className="text-muted mb-3">Drop an image here or</p>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-6 py-3 bg-violet hover:brightness-110 rounded-lg font-medium"
-                      >
-                        📤 Upload Map Image
-                      </button>
-                      <div className="mt-4 text-xs text-muted space-y-1">
-                        <p>💡 Canvas: {state.mapWidth}×{state.mapHeight}px</p>
-                        <p>📏 Min: 400×300px | Max: 1600×1200px</p>
-                        <p>✨ Supports PNG, JPG, GIF, WEBP, SVG</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {isDragOver && (
-                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                  <p className="text-2xl text-white">Drop image here</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dynamic Sidebar Panel - Now on the right */}
-          <div
-            className="w-80 bg-surface-2 border border-border rounded-lg p-4 flex-shrink-0 overflow-y-auto shadow-lg"
-            style={{ height: 'calc(100vh - 240px)' }}
-          >
-            {renderSidebarContent()}
+            {isDragOver && (
+              <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                <p className="text-2xl text-white">Drop image here</p>
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Hidden file input for images */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          className="hidden"
+
+        {/* Dynamic Sidebar Panel - Now on the right */}
+        <div
+          className="w-80 bg-surface-2 border border-border rounded-lg p-4 flex-shrink-0 overflow-y-auto shadow-lg"
+          style={{ height: 'calc(100vh - 240px)' }}
+        >
+          {renderSidebarContent()}
+        </div>
+      </div>
+
+      {/* Hidden file input for images */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      {/* Hidden file input for JSON import */}
+      <input
+        id="json-import"
+        type="file"
+        accept="application/json,.json"
+        onChange={handleImport}
+        className="hidden"
+      />
+      {/* Image Processor Modal */}
+      {showProcessor && tempImageUrl && (
+        <ImageProcessor
+          imageUrl={tempImageUrl}
+          onComplete={(processedUrl, dimensions) => {
+            setState((prev) => ({
+              ...prev,
+              imageUrl: processedUrl,
+              imageWidth: dimensions.width,
+              imageHeight: dimensions.height,
+              mapWidth: dimensions.width,
+              mapHeight: dimensions.height,
+            }))
+            setShowProcessor(false)
+            setTempImageUrl(null)
+          }}
+          onCancel={() => {
+            setShowProcessor(false)
+            setTempImageUrl(null)
+          }}
+          maxWidth={2000}
+          maxHeight={1500}
+          maxFileSize={10}
         />
-        {/* Hidden file input for JSON import */}
-        <input
-          id="json-import"
-          type="file"
-          accept="application/json,.json"
-          onChange={handleImport}
-          className="hidden"
+      )}
+
+      {/* Enhanced Cropper Modal */}
+      {showCropper && state.imageUrl && (
+        <ImageCropperEnhanced
+          imageUrl={state.imageUrl}
+          targetWidth={state.mapWidth}
+          targetHeight={state.mapHeight}
+          onCrop={(croppedUrl) => {
+            setState((prev) => ({
+              ...prev,
+              imageUrl: croppedUrl,
+              imageWidth: state.mapWidth,
+              imageHeight: state.mapHeight,
+              imageScale: 1,
+            }))
+            setShowCropper(false)
+          }}
+          onCancel={() => setShowCropper(false)}
         />
-        {/* Image Processor Modal */}
-        {showProcessor && tempImageUrl && (
-          <ImageProcessor
-            imageUrl={tempImageUrl}
-            onComplete={(processedUrl, dimensions) => {
-              setState((prev) => ({
-                ...prev,
-                imageUrl: processedUrl,
-                imageWidth: dimensions.width,
-                imageHeight: dimensions.height,
-                mapWidth: dimensions.width,
-                mapHeight: dimensions.height,
-              }))
-              setShowProcessor(false)
-              setTempImageUrl(null)
-            }}
-            onCancel={() => {
-              setShowProcessor(false)
-              setTempImageUrl(null)
-            }}
-            maxWidth={2000}
-            maxHeight={1500}
-            maxFileSize={10}
-          />
-        )}
-        
-        {/* Enhanced Cropper Modal */}
-        {showCropper && state.imageUrl && (
-          <ImageCropperEnhanced
-            imageUrl={state.imageUrl}
-            targetWidth={state.mapWidth}
-            targetHeight={state.mapHeight}
-            onCrop={(croppedUrl) => {
-              setState((prev) => ({
-                ...prev,
-                imageUrl: croppedUrl,
-                imageWidth: state.mapWidth,
-                imageHeight: state.mapHeight,
-                imageScale: 1,
-              }))
-              setShowCropper(false)
-            }}
-            onCancel={() => setShowCropper(false)}
-          />
-        )}
+      )}
     </div>
   )
 }

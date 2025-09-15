@@ -1,5 +1,5 @@
+import { Activity, Gamepad2, Map, Settings, Shield, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Shield, Users, Map, Gamepad2, Settings, Activity } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
@@ -34,31 +34,31 @@ const AdminLayout: React.FC = () => {
       path: '/admin',
       label: 'Dashboard',
       icon: <Activity className="w-4 h-4" />,
-      exact: true
+      exact: true,
     },
     {
       path: '/admin/users',
       label: 'Users',
       icon: <Users className="w-4 h-4" />,
-      exact: false
+      exact: false,
     },
     {
       path: '/admin/maps',
       label: 'Maps',
       icon: <Map className="w-4 h-4" />,
-      exact: false
+      exact: false,
     },
     {
       path: '/admin/games',
       label: 'Games',
       icon: <Gamepad2 className="w-4 h-4" />,
-      exact: false
+      exact: false,
     },
     {
       path: '/admin/settings',
       label: 'Settings',
       icon: <Settings className="w-4 h-4" />,
-      exact: false
+      exact: false,
     },
   ]
 
@@ -83,9 +83,7 @@ const AdminLayout: React.FC = () => {
             <Shield className="w-8 h-8" />
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           </div>
-          <div className="text-sm">
-            Logged in as: {user?.username}
-          </div>
+          <div className="text-sm">Logged in as: {user?.username}</div>
         </div>
       </div>
 

@@ -282,7 +282,10 @@ app.use('/api/feature-flags', require('./routes/featureFlags').default)
 app.use('/api/queues', require('./routes/queueRoutes').default)
 app.use('/api/performance', require('./routes/performanceRoutes').default)
 app.use('/api/benchmark', require('./routes/benchmarkRoutes').default)
-app.use('/api/preferences', require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()))
+app.use(
+  '/api/preferences',
+  require('./routes/preferences').createPreferencesRouter(require('./config/database').getPool()),
+)
 
 // Simple test endpoint that doesn't require database
 app.get('/test', (_req: Request, res: Response) => {
@@ -471,14 +474,14 @@ const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NO
 if (isProductionLike) {
   const fs = require('node:fs')
   const frontendPath = path.join(__dirname, '../public')
-  
+
   logger.info(`📁 Setting up static file serving from: ${frontendPath}`)
   logger.info(`📁 Frontend path exists: ${fs.existsSync(frontendPath)}`)
-  
+
   if (fs.existsSync(frontendPath)) {
     const files = fs.readdirSync(frontendPath)
     logger.info(`📁 Files in frontend directory: ${files.join(', ')}`)
-    
+
     const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'))
     logger.info(`📁 index.html exists: ${indexExists}`)
   }
@@ -510,7 +513,7 @@ if (isProductionLike) {
     const indexPath = path.join(frontendPath, 'index.html')
     logger.info(`📄 Serving index.html from: ${indexPath}`)
     logger.info(`📄 index.html exists: ${fs.existsSync(indexPath)}`)
-    
+
     return res.sendFile(indexPath, (err) => {
       if (err) {
         logger.error(`❌ Error serving index.html:`, err)
@@ -520,17 +523,21 @@ if (isProductionLike) {
       }
     })
   })
-  
+
   // Handle all other routes for React Router
   app.use((req: Request, res: Response, next: Function) => {
     // Don't interfere with API routes or static assets
-    if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/uploads')) {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/assets') ||
+      req.path.startsWith('/uploads')
+    ) {
       return next()
     }
-    
+
     logger.info(`🌐 Request to: ${req.path}`)
     const indexPath = path.join(frontendPath, 'index.html')
-    
+
     return res.sendFile(indexPath, (err) => {
       if (err) {
         logger.error(`❌ Error serving index.html:`, err)

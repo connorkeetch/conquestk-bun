@@ -117,12 +117,12 @@ const Home: React.FC = () => {
               backgroundImage: `url('/world-map-hero.jpg')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
+              backgroundRepeat: 'no-repeat',
             }}
           >
             {/* Dark overlay for better text contrast */}
             <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/80 rounded-2xl"></div>
-            
+
             {/* Subtle gradient overlay for depth */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-2xl"></div>
 

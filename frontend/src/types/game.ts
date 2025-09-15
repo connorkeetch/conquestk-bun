@@ -4,22 +4,22 @@
  */
 
 import type {
-  GameState as SharedGameState,
-  Player as SharedPlayer,
-  Territory as SharedTerritory,
-  Card as SharedCard,
-  GameAction as SharedGameAction,
-  BattleResult as SharedBattleResult,
-  GameSettings as SharedGameSettings,
+  AttackAction,
+  DeployAction,
+  EndTurnAction,
+  FortifyAction,
   GamePhase,
   GameStatus,
   PlayerColor,
+  BattleResult as SharedBattleResult,
+  Card as SharedCard,
+  GameAction as SharedGameAction,
+  GameSettings as SharedGameSettings,
+  GameState as SharedGameState,
+  Player as SharedPlayer,
+  Territory as SharedTerritory,
   TerritoryAbility,
-  DeployAction,
-  AttackAction,
-  FortifyAction,
-  EndTurnAction,
-  TradeCardsAction
+  TradeCardsAction,
 } from '../../../shared/types'
 
 // Re-export shared types
@@ -33,7 +33,7 @@ export type {
   FortifyAction,
   EndTurnAction,
   TradeCardsAction,
-  SharedBattleResult as BattleResult
+  SharedBattleResult as BattleResult,
 }
 
 // Extend shared types with frontend-specific properties

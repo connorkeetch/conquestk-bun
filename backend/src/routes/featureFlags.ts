@@ -11,14 +11,16 @@ const router = Router()
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     // Get user from request if authenticated
-    const user = (req as any).user ? {
-      id: (req as any).user.id,
-      role: (req as any).user.role,
-      is_admin: (req as any).user.is_admin,
-      is_beta_user: (req as any).user.is_beta_user,
-      is_vip: (req as any).user.is_vip,
-      has_premium: (req as any).user.has_premium
-    } : undefined
+    const user = (req as any).user
+      ? {
+          id: (req as any).user.id,
+          role: (req as any).user.role,
+          is_admin: (req as any).user.is_admin,
+          is_beta_user: (req as any).user.is_beta_user,
+          is_vip: (req as any).user.is_vip,
+          has_premium: (req as any).user.has_premium,
+        }
+      : undefined
 
     const flags = await featureFlagService.evaluateForUser(user)
     res.json({ flags })
@@ -86,10 +88,7 @@ router.get(
     const { flag_name, limit = 50 } = req.query
 
     try {
-      const auditLog = await featureFlagService.getAuditLog(
-        flag_name as string,
-        Number(limit)
-      )
+      const auditLog = await featureFlagService.getAuditLog(flag_name as string, Number(limit))
       res.json({ audit: auditLog })
     } catch (error) {
       console.error('Error fetching audit log:', error)

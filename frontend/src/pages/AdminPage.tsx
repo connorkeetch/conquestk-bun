@@ -32,15 +32,14 @@ const AdminPage: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      
+
       // Fetch stats
       const statsResponse = await api.get('/admin/stats')
       setStats(statsResponse.data)
-      
+
       // TODO: Fetch recent activity when endpoint is available
       // const activityResponse = await api.get('/admin/activity')
       // setRecentActivity(activityResponse.data)
-      
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
     } finally {
@@ -62,34 +61,24 @@ const AdminPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-white">Overview</h2>
         <p className="text-muted">Welcome to the admin dashboard</p>
       </div>
-      
+
       {/* Stats Grid */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            title="Total Users" 
-            value={stats.totalUsers} 
-            icon="👥"
-            color="text-blue-400"
-          />
-          <StatCard 
-            title="Active Games" 
-            value={stats.activeGames} 
+          <StatCard title="Total Users" value={stats.totalUsers} icon="👥" color="text-blue-400" />
+          <StatCard
+            title="Active Games"
+            value={stats.activeGames}
             icon="🎮"
             color="text-green-400"
           />
-          <StatCard 
-            title="Maps Pending" 
-            value={stats.mapsPending} 
+          <StatCard
+            title="Maps Pending"
+            value={stats.mapsPending}
             icon="🗺️"
             color="text-yellow-400"
           />
-          <StatCard 
-            title="Reports" 
-            value={stats.reports} 
-            icon="📋"
-            color="text-red-400"
-          />
+          <StatCard title="Reports" value={stats.reports} icon="📋" color="text-red-400" />
         </div>
       )}
 
@@ -97,43 +86,37 @@ const AdminPage: React.FC = () => {
       <div className="bg-surface-2 rounded-lg p-6">
         <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <a 
-            href="/admin/maps" 
+          <a
+            href="/admin/maps"
             className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors"
           >
             <div className="flex items-center gap-3 mb-2">
               <span className="text-2xl">🗺️</span>
               <span className="font-medium text-white">Review Maps</span>
             </div>
-            <p className="text-sm text-muted">
-              {stats?.mapsPending || 0} maps awaiting review
-            </p>
+            <p className="text-sm text-muted">{stats?.mapsPending || 0} maps awaiting review</p>
           </a>
-          
-          <a 
-            href="/admin/games" 
+
+          <a
+            href="/admin/games"
             className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors"
           >
             <div className="flex items-center gap-3 mb-2">
               <span className="text-2xl">🎮</span>
               <span className="font-medium text-white">Manage Games</span>
             </div>
-            <p className="text-sm text-muted">
-              {stats?.activeGames || 0} games currently active
-            </p>
+            <p className="text-sm text-muted">{stats?.activeGames || 0} games currently active</p>
           </a>
-          
-          <a 
-            href="/admin/users" 
+
+          <a
+            href="/admin/users"
             className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors"
           >
             <div className="flex items-center gap-3 mb-2">
               <span className="text-2xl">👥</span>
               <span className="font-medium text-white">User Management</span>
             </div>
-            <p className="text-sm text-muted">
-              {stats?.totalUsers || 0} registered users
-            </p>
+            <p className="text-sm text-muted">{stats?.totalUsers || 0} registered users</p>
           </a>
         </div>
       </div>
@@ -144,7 +127,10 @@ const AdminPage: React.FC = () => {
         {recentActivity.length > 0 ? (
           <div className="space-y-2">
             {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <div
+                key={index}
+                className="flex items-center justify-between py-2 border-b border-border last:border-0"
+              >
                 <div>
                   <div className="text-white">{activity.description}</div>
                   <div className="text-xs text-muted">{activity.timestamp}</div>

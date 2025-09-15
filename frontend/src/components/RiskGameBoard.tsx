@@ -6,12 +6,12 @@ import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
 import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses'
+import CustomMapDisplay from './CustomMapDisplay'
 import { GamePhaseControls } from './GamePhaseControls'
+import ResponsiveMapContainer from './ResponsiveMapContainer'
 import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
-import CustomMapDisplay from './CustomMapDisplay'
-import ResponsiveMapContainer from './ResponsiveMapContainer'
 
 interface TerritoryDisplay {
   id: string
@@ -61,10 +61,10 @@ interface RiskGameBoardPropsExtended extends RiskGameBoardProps {
   }
 }
 
-export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({ 
+export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
   onTerritoryClick,
   mapId = 'classic',
-  customMapMetadata
+  customMapMetadata,
 }) => {
   const dispatch = useDispatch<AppDispatch>()
   const gameState = useSelector((state: RootState) => state.game.currentGame)
@@ -181,7 +181,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
             ) : (
               <CustomMapDisplay
                 mapId={mapId}
-                territories={Object.values(territories).map(t => ({
+                territories={Object.values(territories).map((t) => ({
                   id: t.id,
                   name: t.name,
                   x: t.armyPosition.x,
@@ -192,38 +192,41 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
                 }))}
                 onTerritoryClick={handleTerritoryClick}
                 selectedTerritoryId={selectedTerritory}
-                playerColors={Object.fromEntries(
-                  players.map(p => [p.id, p.color])
-                )}
+                playerColors={Object.fromEntries(players.map((p) => [p.id, p.color]))}
               />
             )}
 
             {/* Army Count Overlays - only for classic map, custom maps handle their own */}
-            {mapId === 'classic' && Object.entries(territories).map(([territoryId, territory]) => {
-              if (!territory.armies) return null
-              const modifier = gameState.territoryModifiers?.[territoryId]
+            {mapId === 'classic' &&
+              Object.entries(territories).map(([territoryId, territory]) => {
+                if (!territory.armies) return null
+                const modifier = gameState.territoryModifiers?.[territoryId]
 
-              return (
-                <div
-                  key={`army-${territoryId}`}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${(territory.armyPosition.x / 800) * 100}%`,
-                    top: `${(territory.armyPosition.y / 500) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="bg-white border-2 border-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
-                      {territory.armies}
+                return (
+                  <div
+                    key={`army-${territoryId}`}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `${(territory.armyPosition.x / 800) * 100}%`,
+                      top: `${(territory.armyPosition.y / 500) * 100}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="bg-white border-2 border-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">
+                        {territory.armies}
+                      </div>
+                      {modifier && (
+                        <TerritoryModifierIcon
+                          modifier={modifier}
+                          size="small"
+                          showTooltip={true}
+                        />
+                      )}
                     </div>
-                    {modifier && (
-                      <TerritoryModifierIcon modifier={modifier} size="small" showTooltip={true} />
-                    )}
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
           </div>
 
           {/* Territory Modifiers Legend */}

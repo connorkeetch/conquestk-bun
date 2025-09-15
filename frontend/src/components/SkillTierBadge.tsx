@@ -1,7 +1,17 @@
 import type React from 'react'
 
 export interface SkillTier {
-  name: 'Chieftain' | 'Warlord' | 'Raider King' | 'Sultan' | 'Caesar' | 'Khan' | 'Emperor' | 'The Great King' | 'Overlord' | 'Worldbreaker'
+  name:
+    | 'Chieftain'
+    | 'Warlord'
+    | 'Raider King'
+    | 'Sultan'
+    | 'Caesar'
+    | 'Khan'
+    | 'Emperor'
+    | 'The Great King'
+    | 'Overlord'
+    | 'Worldbreaker'
   minRating: number
   maxRating: number
   icon: string
@@ -19,85 +29,85 @@ interface SkillTierBadgeProps {
 
 // The Conqueror's Path - Historical conquest-themed ranking system
 const SKILL_TIERS: SkillTier[] = [
-  { 
-    name: 'Chieftain', 
-    minRating: 0, 
-    maxRating: 599, 
-    icon: '🛡️', 
+  {
+    name: 'Chieftain',
+    minRating: 0,
+    maxRating: 599,
+    icon: '🛡️',
     color: 'text-amber-700',
-    description: 'Leads a tribe or small clan, fighting for survival and territory'
+    description: 'Leads a tribe or small clan, fighting for survival and territory',
   },
-  { 
-    name: 'Warlord', 
-    minRating: 600, 
-    maxRating: 799, 
-    icon: '⚔️', 
+  {
+    name: 'Warlord',
+    minRating: 600,
+    maxRating: 799,
+    icon: '⚔️',
     color: 'text-red-600',
-    description: 'Rules by might, feared by neighboring villages and rival tribes'
+    description: 'Rules by might, feared by neighboring villages and rival tribes',
   },
-  { 
-    name: 'Raider King', 
-    minRating: 800, 
-    maxRating: 999, 
-    icon: '⚓', 
+  {
+    name: 'Raider King',
+    minRating: 800,
+    maxRating: 999,
+    icon: '⚓',
     color: 'text-primary',
-    description: 'Expands by plunder and coastal terror campaigns'
+    description: 'Expands by plunder and coastal terror campaigns',
   },
-  { 
-    name: 'Sultan', 
-    minRating: 1000, 
-    maxRating: 1199, 
-    icon: '☪️', 
+  {
+    name: 'Sultan',
+    minRating: 1000,
+    maxRating: 1199,
+    icon: '☪️',
     color: 'text-green-600',
-    description: 'A ruler who wields faith and politics alongside armies'
+    description: 'A ruler who wields faith and politics alongside armies',
   },
-  { 
-    name: 'Caesar', 
-    minRating: 1200, 
-    maxRating: 1399, 
-    icon: '🦅', 
+  {
+    name: 'Caesar',
+    minRating: 1200,
+    maxRating: 1399,
+    icon: '🦅',
     color: 'text-yellow-500',
-    description: 'Transforms a republic into empire, master of politics and war'
+    description: 'Transforms a republic into empire, master of politics and war',
   },
-  { 
-    name: 'Khan', 
-    minRating: 1400, 
-    maxRating: 1599, 
-    icon: '🏹', 
+  {
+    name: 'Khan',
+    minRating: 1400,
+    maxRating: 1599,
+    icon: '🏹',
     color: 'text-orange-500',
-    description: 'Unstoppable steppe warlord, masters of cavalry and mobility'
+    description: 'Unstoppable steppe warlord, masters of cavalry and mobility',
   },
-  { 
-    name: 'Emperor', 
-    minRating: 1600, 
-    maxRating: 1799, 
-    icon: '👑', 
+  {
+    name: 'Emperor',
+    minRating: 1600,
+    maxRating: 1799,
+    icon: '👑',
     color: 'text-purple-500',
-    description: 'Commands massive armies, reshapes Europe through ambition'
+    description: 'Commands massive armies, reshapes Europe through ambition',
   },
-  { 
-    name: 'The Great King', 
-    minRating: 1800, 
-    maxRating: 1999, 
-    icon: '☀️', 
+  {
+    name: 'The Great King',
+    minRating: 1800,
+    maxRating: 1999,
+    icon: '☀️',
     color: 'text-orange-400',
-    description: 'Ruler of kings, empire spanning continents'
+    description: 'Ruler of kings, empire spanning continents',
   },
-  { 
-    name: 'Overlord', 
-    minRating: 2000, 
-    maxRating: 2199, 
-    icon: '💀', 
+  {
+    name: 'Overlord',
+    minRating: 2000,
+    maxRating: 2199,
+    icon: '💀',
     color: 'text-gray-600',
-    description: 'Ruler of rulers, tyrant who demands tribute and burns resistance'
+    description: 'Ruler of rulers, tyrant who demands tribute and burns resistance',
   },
-  { 
-    name: 'Worldbreaker', 
-    minRating: 2200, 
-    maxRating: 9999, 
-    icon: '☄️', 
+  {
+    name: 'Worldbreaker',
+    minRating: 2200,
+    maxRating: 9999,
+    icon: '☄️',
     color: 'text-red-800',
-    description: 'The apocalyptic conqueror, remembered for brutality and empire-wide destruction'
+    description: 'The apocalyptic conqueror, remembered for brutality and empire-wide destruction',
   },
 ]
 

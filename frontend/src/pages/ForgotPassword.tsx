@@ -65,11 +65,7 @@ const ForgotPassword: React.FC = () => {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full"
-            >
+            <button type="submit" disabled={isLoading} className="btn-primary w-full">
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </button>
           </form>

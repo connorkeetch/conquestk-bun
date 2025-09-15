@@ -149,12 +149,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-muted">
-                      Show Attack Animations
-                    </label>
-                    <p className="text-xs text-muted">
-                      Display dice rolling and battle animations
-                    </p>
+                    <label className="text-sm font-medium text-muted">Show Attack Animations</label>
+                    <p className="text-xs text-muted">Display dice rolling and battle animations</p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -224,16 +220,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <h3 className="text-lg font-semibold mb-4">Volume Controls</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-muted mb-2">
-                    Master Volume
-                  </label>
+                  <label className="block text-sm font-medium text-muted mb-2">Master Volume</label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="75" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted mb-2">
-                    Sound Effects
-                  </label>
+                  <label className="block text-sm font-medium text-muted mb-2">Sound Effects</label>
                   <input type="range" className="w-full" min="0" max="100" defaultValue="60" />
                 </div>
 
@@ -269,9 +261,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-muted">
-                      Battle Sound Effects
-                    </label>
+                    <label className="text-sm font-medium text-muted">Battle Sound Effects</label>
                     <p className="text-xs text-muted">Play sounds during dice battles</p>
                   </div>
                   <label className="toggle">
@@ -361,9 +351,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-muted">
-                      Show Territory Names
-                    </label>
+                    <label className="text-sm font-medium text-muted">Show Territory Names</label>
                     <p className="text-xs text-muted">Display territory names on map</p>
                   </div>
                   <label className="toggle">
@@ -494,12 +482,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-muted">
-                      Show Game Statistics
-                    </label>
-                    <p className="text-xs text-muted">
-                      Allow others to see your win/loss record
-                    </p>
+                    <label className="text-sm font-medium text-muted">Show Game Statistics</label>
+                    <p className="text-xs text-muted">Allow others to see your win/loss record</p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />
@@ -604,12 +588,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <label className="text-sm font-medium text-muted">
-                      Hardware Acceleration
-                    </label>
-                    <p className="text-xs text-muted">
-                      Use GPU for rendering (requires restart)
-                    </p>
+                    <label className="text-sm font-medium text-muted">Hardware Acceleration</label>
+                    <p className="text-xs text-muted">Use GPU for rendering (requires restart)</p>
                   </div>
                   <label className="toggle">
                     <input type="checkbox" defaultChecked />

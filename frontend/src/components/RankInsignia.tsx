@@ -43,14 +43,14 @@ const sizeClasses = {
   sm: 'text-sm',
   md: 'text-base',
   lg: 'text-lg',
-  xl: 'text-xl'
+  xl: 'text-xl',
 }
 
 const labelSizeClasses = {
   sm: 'text-xs',
   md: 'text-sm',
   lg: 'text-base',
-  xl: 'text-lg'
+  xl: 'text-lg',
 }
 
 const RankInsignia: React.FC<RankInsigniaProps> = ({
@@ -58,7 +58,7 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
   size = 'md',
   showLabel = true,
   showRating = false,
-  className = ''
+  className = '',
 }) => {
   const rank = getConquestRank(rating)
 
@@ -72,23 +72,16 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
       >
         {rank.insignia}
       </span>
-      
+
       {/* Rank Name */}
       {showLabel && (
-        <span
-          className={`font-semibold ${labelSizeClasses[size]}`}
-          style={{ color: rank.color }}
-        >
+        <span className={`font-semibold ${labelSizeClasses[size]}`} style={{ color: rank.color }}>
           {rank.name}
         </span>
       )}
-      
+
       {/* Rating */}
-      {showRating && (
-        <span className={`text-muted ${labelSizeClasses[size]}`}>
-          ({rating})
-        </span>
-      )}
+      {showRating && <span className={`text-muted ${labelSizeClasses[size]}`}>({rating})</span>}
     </div>
   )
 }

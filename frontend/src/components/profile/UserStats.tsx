@@ -212,7 +212,9 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⏱️</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{formatDuration(stats.general.averageGameDuration)}</div>
+              <div className="text-2xl font-bold text-primary">
+                {formatDuration(stats.general.averageGameDuration)}
+              </div>
               <div className="text-white font-medium">Avg Game Time</div>
             </div>
           </div>
@@ -231,7 +233,9 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🔥</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{stats.general.currentWinStreak}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.general.currentWinStreak}
+              </div>
               <div className="text-white font-medium">Current Streak</div>
               <div className="text-sm text-muted">Best: {stats.general.longestWinStreak}</div>
             </div>
@@ -240,7 +244,9 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⏰</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{formatPlayTime(stats.general.totalPlayTime)}</div>
+              <div className="text-2xl font-bold text-primary">
+                {formatPlayTime(stats.general.totalPlayTime)}
+              </div>
               <div className="text-white font-medium">Total Play Time</div>
             </div>
           </div>
@@ -256,7 +262,9 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🏰</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{stats.performance.territoriesConquered}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.performance.territoriesConquered}
+              </div>
               <div className="text-white font-medium">Territories Conquered</div>
               <div className="text-sm text-muted">{stats.performance.territoriesLost} lost</div>
             </div>
@@ -281,16 +289,22 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">🪖</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{stats.performance.armiesDeployed.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.performance.armiesDeployed.toLocaleString()}
+              </div>
               <div className="text-white font-medium">Armies Deployed</div>
-              <div className="text-sm text-muted">{stats.performance.averageArmiesPerGame} avg/game</div>
+              <div className="text-sm text-muted">
+                {stats.performance.averageArmiesPerGame} avg/game
+              </div>
             </div>
           </div>
 
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">⚡</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{formatDuration(stats.performance.quickestVictory)}</div>
+              <div className="text-2xl font-bold text-primary">
+                {formatDuration(stats.performance.quickestVictory)}
+              </div>
               <div className="text-white font-medium">Fastest Victory</div>
             </div>
           </div>
@@ -298,7 +312,9 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 flex items-center gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl">💪</div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-primary">{stats.performance.comebackWins}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.performance.comebackWins}
+              </div>
               <div className="text-white font-medium">Comeback Wins</div>
               <div className="text-sm text-muted">From behind</div>
             </div>
@@ -319,13 +335,19 @@ const UserStats: React.FC = () => {
           </div>
           <div className="flex flex-col gap-4">
             {stats.maps.mapStats.map((mapStat, index) => (
-              <div key={mapStat.mapName} className="flex items-center gap-4 p-4 bg-surface-1/50 rounded-lg hover:bg-surface-1/70 transition-colors">
+              <div
+                key={mapStat.mapName}
+                className="flex items-center gap-4 p-4 bg-surface-1/50 rounded-lg hover:bg-surface-1/70 transition-colors"
+              >
                 <div className="text-xl font-bold text-primary w-12">#{index + 1}</div>
                 <div className="flex-1">
                   <div className="text-white font-medium">{mapStat.mapName}</div>
                   <div className="text-sm text-muted">{mapStat.gamesPlayed} games</div>
                 </div>
-                <div className="text-xl font-bold" style={{ color: getWinRateColor(mapStat.winRate) }}>
+                <div
+                  className="text-xl font-bold"
+                  style={{ color: getWinRateColor(mapStat.winRate) }}
+                >
                   {mapStat.winRate}%
                 </div>
               </div>
@@ -348,22 +370,30 @@ const UserStats: React.FC = () => {
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">👑</div>
             <div className="text-white font-medium mb-1">Capital Conquest</div>
-            <div className="text-xl font-bold text-primary">{stats.gameModes.capitalConquestWins} wins</div>
+            <div className="text-xl font-bold text-primary">
+              {stats.gameModes.capitalConquestWins} wins
+            </div>
           </div>
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">⚓</div>
             <div className="text-white font-medium mb-1">Naval Supremacy</div>
-            <div className="text-xl font-bold text-primary">{stats.gameModes.navalSupremacyWins} wins</div>
+            <div className="text-xl font-bold text-primary">
+              {stats.gameModes.navalSupremacyWins} wins
+            </div>
           </div>
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">💰</div>
             <div className="text-white font-medium mb-1">Resource War</div>
-            <div className="text-xl font-bold text-primary">{stats.gameModes.resourceWarWins} wins</div>
+            <div className="text-xl font-bold text-primary">
+              {stats.gameModes.resourceWarWins} wins
+            </div>
           </div>
           <div className="bg-surface-2/50 backdrop-blur-sm border border-border/50 rounded-xl p-6 text-center hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 transition-all">
             <div className="text-4xl mb-2">⚖️</div>
             <div className="text-white font-medium mb-1">Asymmetric</div>
-            <div className="text-xl font-bold text-primary">{stats.gameModes.asymmetricWins} wins</div>
+            <div className="text-xl font-bold text-primary">
+              {stats.gameModes.asymmetricWins} wins
+            </div>
           </div>
         </div>
       </div>

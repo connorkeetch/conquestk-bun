@@ -64,9 +64,9 @@ export interface GameEndDelta extends BaseDelta {
   eliminatedPlayers: string[]
 }
 
-export type GameDelta = 
-  | TerritoryUpdateDelta 
-  | PlayerUpdateDelta 
-  | PhaseChangeDelta 
+export type GameDelta =
+  | TerritoryUpdateDelta
+  | PlayerUpdateDelta
+  | PhaseChangeDelta
   | BattleResultDelta
   | GameEndDelta
