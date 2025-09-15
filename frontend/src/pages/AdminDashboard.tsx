@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-primary-soft">
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
@@ -152,12 +152,12 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Admin Tools */}
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box-lg">
             <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
             <div className="space-y-3">
               <a
                 href="/admin/users"
-                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block glass-box-sm hover:brightness-110 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/content"
-                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block glass-box-sm hover:brightness-110 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/games"
-                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block glass-box-sm hover:brightness-110 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
 
               <a
                 href="/admin/logs"
-                className="block bg-surface-2 hover:bg-gray-600 rounded-lg p-4 transition-colors"
+                className="block glass-box-sm hover:brightness-110 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Feature Flags */}
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box-lg">
             <h2 className="text-xl font-bold mb-4">🚩 Feature Flags</h2>
             <div className="space-y-3">
               {systemStatus &&
