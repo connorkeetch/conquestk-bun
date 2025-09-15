@@ -169,7 +169,15 @@ This allows themes to work with any color scheme!
   
   /* Box/Card overrides - red tinted */
   --box-bg: rgba(43, 21, 21, 0.5);
+  --box-bg-solid: #2b1515;
   --box-border: rgba(127, 29, 29, 0.5);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Violet Theme */
@@ -199,7 +207,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - violet tinted */
   --box-bg: rgba(46, 16, 101, 0.3);
+  --box-bg-solid: #2e1065;
   --box-border: rgba(91, 33, 182, 0.4);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Blue Theme */
@@ -229,7 +245,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - blue tinted */
   --box-bg: rgba(30, 58, 95, 0.5);
+  --box-bg-solid: #1e3a5f;
   --box-border: rgba(2, 132, 199, 0.3);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Green Theme */
@@ -259,7 +283,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - green tinted */
   --box-bg: rgba(26, 46, 26, 0.5);
+  --box-bg-solid: #1a2e1a;
   --box-border: rgba(21, 128, 61, 0.4);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Black Theme - Pure black with gray accents */
@@ -289,8 +321,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - pure black */
   --box-bg: rgba(17, 17, 17, 0.8);
+  --box-bg-solid: #111111;
   --box-border: rgba(55, 65, 81, 0.6);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
   --box-blur: 8px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* High Contrast Theme (for accessibility) */
@@ -325,8 +364,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - high contrast */
   --box-bg: rgba(51, 51, 51, 0.9);
+  --box-bg-solid: #333333;
   --box-border: rgba(255, 255, 255, 0.8);
+  --box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
   --box-blur: 0px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Halloween theme - Spooky seasonal theme */
@@ -356,8 +402,15 @@ This allows themes to work with any color scheme!
 
   /* Box/Card overrides - spooky dark */
   --box-bg: rgba(26, 15, 23, 0.7);
+  --box-bg-solid: #1a0f17;
   --box-border: rgba(139, 21, 56, 0.5);
   --box-shadow: 0 10px 40px rgba(139, 21, 56, 0.3);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
 }
 
 /* Floating bat/ghost particles background */
