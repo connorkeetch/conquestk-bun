@@ -96,25 +96,17 @@ const CommunityPage: React.FC = () => {
       </div>
 
       {/* Main Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
+      <div className="tabs">
         <button
           onClick={() => setActiveTab('leaderboard')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'leaderboard'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'leaderboard' ? 'tab-active' : ''}`}
         >
           <Trophy className="w-4 h-4" />
           Leaderboard
         </button>
         <button
           onClick={() => setActiveTab('clans')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'clans'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-muted cursor-not-allowed'
-          }`}
+          className={`tab ${activeTab === 'clans' ? 'tab-active' : ''}`}
           disabled
         >
           <Shield className="w-4 h-4" />
@@ -123,11 +115,7 @@ const CommunityPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('forums')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'forums'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-muted cursor-not-allowed'
-          }`}
+          className={`tab ${activeTab === 'forums' ? 'tab-active' : ''}`}
           disabled
         >
           <MessageSquare className="w-4 h-4" />
@@ -136,11 +124,7 @@ const CommunityPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('events')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'events'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-muted cursor-not-allowed'
-          }`}
+          className={`tab ${activeTab === 'events' ? 'tab-active' : ''}`}
           disabled
         >
           <CalendarDays className="w-4 h-4" />
@@ -153,38 +137,26 @@ const CommunityPage: React.FC = () => {
       {activeTab === 'leaderboard' && (
         <>
           {/* Leaderboard Sub-tabs */}
-          <div className="flex gap-4 mb-6">
+          <div className="tabs-pills mb-6">
             <button
               onClick={() => setLeaderboardTab('global')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                leaderboardTab === 'global'
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
-              }`}
+              className={`tab-pill ${leaderboardTab === 'global' ? 'tab-pill-active' : ''}`}
             >
-              <Trophy className="inline w-4 h-4 mr-2" />
+              <Trophy className="w-4 h-4" />
               Global Rankings
             </button>
             <button
               onClick={() => setLeaderboardTab('monthly')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                leaderboardTab === 'monthly'
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
-              }`}
+              className={`tab-pill ${leaderboardTab === 'monthly' ? 'tab-pill-active' : ''}`}
             >
-              <Calendar className="inline w-4 h-4 mr-2" />
+              <Calendar className="w-4 h-4" />
               This Month
             </button>
             <button
               onClick={() => setLeaderboardTab('friends')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                leaderboardTab === 'friends'
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-2 text-white hover:bg-surface-1 hover:text-primary-soft'
-              }`}
+              className={`tab-pill ${leaderboardTab === 'friends' ? 'tab-pill-active' : ''}`}
             >
-              <Users className="inline w-4 h-4 mr-2" />
+              <Users className="w-4 h-4" />
               Friends
             </button>
           </div>

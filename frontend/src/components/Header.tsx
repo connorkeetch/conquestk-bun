@@ -320,12 +320,12 @@ export default function Header() {
 
       {/* Comprehensive Side Menu */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-surface-1 backdrop-blur-xl z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-80 sidebar-menu z-50 transform transition-transform duration-300 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } border-r border-border-muted`}
+        }`}
       >
         {/* Menu Header with Glass Effect */}
-        <div className="relative px-6 py-5 flex items-center justify-between border-b border-border backdrop-blur-xl bg-gradient-to-br from-surface-2/90 via-surface-1/70 to-primary/5">
+        <div className="sidebar-header px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MountainLogo width={28} height={28} />
             <span className="text-xl font-bold text-white">
@@ -374,12 +374,8 @@ export default function Header() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    location.pathname === item.path
-                      ? 'bg-gradient-to-r from-primary to-primary-soft text-white shadow-lg shadow-primary/20'
-                      : item.path === '/admin'
-                        ? 'text-muted hover:text-white hover:bg-gradient-to-r hover:from-violet/20 hover:to-violet/10'
-                        : 'text-muted hover:text-white hover:bg-white/5'
+                  className={`sidebar-item ${
+                    location.pathname === item.path ? 'sidebar-item-active' : ''
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
@@ -423,9 +419,9 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full px-4 py-3 bg-danger/20 hover:bg-danger/30 text-danger rounded-lg transition-colors font-medium"
+                  className="w-full btn-danger"
                 >
-                  Logout
+                  🚪 Logout
                 </button>
               </div>
             ) : (
