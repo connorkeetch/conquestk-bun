@@ -2,7 +2,6 @@ import { Trophy, Medal, Users, Calendar, TrendingUp, MessageSquare, Shield, Cale
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import api from '../services/api'
-import { CORE_COLORS } from '../constants/colors'
 
 interface LeaderboardEntry {
   id: string

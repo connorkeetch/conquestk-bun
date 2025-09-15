@@ -1,6 +1,5 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { CORE_COLORS } from '../../constants/colors'
 
 interface StatsPeriod {
   period: 'week' | 'month' | 'year' | 'all'
@@ -127,10 +126,10 @@ const UserStats: React.FC = () => {
   }
 
   const getWinRateColor = (winRate: number): string => {
-    if (winRate >= 70) return CORE_COLORS.green400
-    if (winRate >= 60) return CORE_COLORS.blue400
-    if (winRate >= 50) return CORE_COLORS.gold
-    return CORE_COLORS.red400
+    if (winRate >= 70) return '#4ADE80'
+    if (winRate >= 60) return '#60A5FA'
+    if (winRate >= 50) return 'var(--color-secondary)'
+    return '#F87171'
   }
 
   const getTrendIcon = (change: number): string => {

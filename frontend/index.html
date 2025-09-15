@@ -5,19 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/conquest-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#dc2626" />
+    <meta name="theme-color" content="#2563EB" />
     <title>Conquest K</title>
     <script>
       // Load theme immediately to prevent flash
       (function() {
         try {
-          const theme = localStorage.getItem('colorTheme') || 'default';
-          // Apply CSS variables immediately
-          const root = document.documentElement;
-          root.setAttribute('data-theme', theme);
-          // This will be properly initialized when the app loads
+          const validThemes = ['default', 'red', 'violet', 'blue', 'green', 'black', 'highcontrast', 'halloween'];
+          const storedTheme = localStorage.getItem('colorTheme') || 'default';
+          
+          // Validate and apply theme
+          const theme = validThemes.includes(storedTheme) ? storedTheme : 'default';
+          document.documentElement.setAttribute('data-theme', theme);
         } catch (e) {
           // Silently fail if localStorage is not available
+          document.documentElement.setAttribute('data-theme', 'default');
         }
       })();
     </script>

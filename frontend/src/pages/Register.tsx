@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, register } from '../store/authSlice'
 import EmailVerificationPending from './EmailVerificationPending'
 import MountainLogo from '../components/MountainLogo'
-import { GRADIENTS } from '../constants/colors'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -53,7 +52,7 @@ export default function Register() {
               <MountainLogo width={48} height={48} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
                 CONQUEST <span className="font-bold" style={{ 
-                  background: GRADIENTS.goldK, 
+                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
                   backgroundClip: 'text', 
                   textFillColor: 'transparent',
                   WebkitBackgroundClip: 'text',

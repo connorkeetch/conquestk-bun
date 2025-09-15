@@ -84,7 +84,7 @@
   }
 
   input:checked + .slider {
-    background-color: var(--color-violet);
+    background-color: var(--color-primary);
   }
 
   input:checked + .slider:before {
@@ -98,7 +98,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1;
-    color: var(--color-muted);
+    color: var(--color-text-muted);
     background-color: var(--color-surface-1);
     border: 1px solid var(--color-border);
     border-radius: 0.375rem;
@@ -113,7 +113,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid var(--color-surface-2);
-    border-top-color: var(--color-violet);
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -122,7 +122,7 @@
 @layer utilities {
   /* Gradient text utility - Updated with new colors */
   .gradient-text {
-    background: linear-gradient(135deg, var(--color-text), var(--color-gold));
+    background: linear-gradient(135deg, var(--color-text), var(--color-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -176,8 +176,8 @@
 
   input[type="radio"]:checked,
   input[type="checkbox"]:checked {
-    background-color: var(--color-violet);
-    border-color: var(--color-violet);
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   input[type="radio"]:checked::before {
