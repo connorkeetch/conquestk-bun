@@ -32,10 +32,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     console.error('[ERROR_BOUNDARY] React Error Boundary caught an error:', error)
     console.error('[ERROR_BOUNDARY] Error info:', errorInfo)
     console.error('[ERROR_BOUNDARY] Component stack:', errorInfo.componentStack)
-    
-    this.setState(prevState => ({ 
+
+    this.setState((prevState) => ({
       errorInfo,
-      errorCount: prevState.errorCount + 1 
+      errorCount: prevState.errorCount + 1,
     }))
 
     // Call custom error handler if provided
@@ -53,9 +53,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
     // Reset on props change if configured
-    if (this.props.resetOnPropsChange && 
-        this.state.hasError && 
-        prevProps.children !== this.props.children) {
+    if (
+      this.props.resetOnPropsChange &&
+      this.state.hasError &&
+      prevProps.children !== this.props.children
+    ) {
       this.resetErrorBoundary()
     }
   }
@@ -72,11 +74,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       this.resetTimeoutId = null
     }
 
-    this.setState(prevState => ({
+    this.setState((prevState) => ({
       hasError: false,
       error: undefined,
       errorInfo: undefined,
-      errorCount: prevState.errorCount
+      errorCount: prevState.errorCount,
     }))
   }
 
@@ -89,26 +91,26 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
       const level = this.props.level || 'app'
       const isFullPage = level === 'app' || level === 'page'
-      
+
       return (
-        <div className={`${
-          isFullPage ? 'min-h-screen' : level === 'section' ? 'min-h-[400px]' : 'min-h-[200px]'
-        } flex items-center justify-center ${
-          isFullPage ? 'bg-gradient-to-br from-gray-900 via-purple-900/20 to-black' : ''
-        }`}>
+        <div
+          className={`${
+            isFullPage ? 'min-h-screen' : level === 'section' ? 'min-h-[400px]' : 'min-h-[200px]'
+          } flex items-center justify-center ${
+            isFullPage ? 'bg-gradient-to-br from-gray-900 via-purple-900/20 to-black' : ''
+          }`}
+        >
           <div className="text-center p-8 bg-danger-soft border border-red-500/30 rounded-lg max-w-lg">
-            <div className="text-5xl mb-4">
-              {isFullPage ? '💥' : '⚠️'}
-            </div>
+            <div className="text-5xl mb-4">{isFullPage ? '💥' : '⚠️'}</div>
             <h2 className="text-2xl font-bold text-red-400 mb-4">
               {isFullPage ? 'Something went wrong' : 'Component Error'}
             </h2>
             <p className="text-white/80 mb-4">
-              {isFullPage 
+              {isFullPage
                 ? 'The application encountered an unexpected error. Please refresh the page to try again.'
                 : 'This component encountered an error. The rest of the app should continue working.'}
             </p>
-            
+
             {/* Show error details in development */}
             {process.env.NODE_ENV === 'development' && (
               <details className="text-left text-sm text-muted mb-4">
@@ -121,7 +123,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 </pre>
               </details>
             )}
-            
+
             <div className="space-x-3">
               <button
                 onClick={this.resetErrorBoundary}
@@ -129,10 +131,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               >
                 Try Again
               </button>
-              
+
               {isFullPage && (
                 <button
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => (window.location.href = '/')}
                   className="px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
                 >
                   Go Home

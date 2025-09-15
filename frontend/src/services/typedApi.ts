@@ -2,29 +2,29 @@
  * Type-safe API client with proper error handling
  */
 
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios'
-import { API_URL } from '../config'
+import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import type {
+  AdminDashboardStats,
   ApiResponse,
-  PaginatedResponse,
-  User,
   AuthUser,
   GameRoom,
   GameState,
+  LoginResponse,
   Map,
   Notification,
+  PaginatedResponse,
+  RegisterResponse,
+  User,
   UserStats,
-  AdminDashboardStats,
-  LoginResponse,
-  RegisterResponse
 } from '../../../shared/types'
+import { API_URL } from '../config'
 
 // Custom error class for API errors
 export class ApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
-    public data?: unknown
+    public data?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -39,9 +39,9 @@ class TypedApiClient {
     this.client = axios.create({
       baseURL: API_URL,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      timeout: 30000 // 30 seconds
+      timeout: 30000, // 30 seconds
     })
 
     this.setupInterceptors()
@@ -68,13 +68,14 @@ class TypedApiClient {
           window.location.href = '/login'
         }
 
-        const message = error.response?.data?.error || 
-                       error.response?.data?.message || 
-                       error.message || 
-                       'An unexpected error occurred'
+        const message =
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
+          'An unexpected error occurred'
 
         throw new ApiError(message, error.response?.status, error.response?.data)
-      }
+      },
     )
   }
 
@@ -83,14 +84,14 @@ class TypedApiClient {
     method: 'get' | 'post' | 'put' | 'patch' | 'delete',
     url: string,
     data?: unknown,
-    config?: AxiosRequestConfig
+    config?: AxiosRequestConfig,
   ): Promise<T> {
     try {
       const response = await this.client.request<ApiResponse<T>>({
         method,
         url,
         data,
-        ...config
+        ...config,
       })
 
       if (response.data.success === false) {
@@ -112,10 +113,10 @@ class TypedApiClient {
   }
 
   async register(username: string, email: string, password: string): Promise<RegisterResponse> {
-    return this.request<RegisterResponse>('post', '/auth/register', { 
-      username, 
-      email, 
-      password 
+    return this.request<RegisterResponse>('post', '/auth/register', {
+      username,
+      email,
+      password,
     })
   }
 
@@ -132,9 +133,9 @@ class TypedApiClient {
   }
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>('post', '/auth/reset-password', { 
-      token, 
-      password 
+    return this.request<{ message: string }>('post', '/auth/reset-password', {
+      token,
+      password,
     })
   }
 
@@ -153,7 +154,7 @@ class TypedApiClient {
 
   async getLeaderboard(page = 1, limit = 50): Promise<PaginatedResponse<User>> {
     return this.request<PaginatedResponse<User>>('get', '/users/leaderboard', undefined, {
-      params: { page, limit }
+      params: { page, limit },
     })
   }
 
@@ -176,13 +177,13 @@ class TypedApiClient {
 
   async getActiveGames(page = 1, limit = 20): Promise<PaginatedResponse<GameRoom>> {
     return this.request<PaginatedResponse<GameRoom>>('get', '/games', undefined, {
-      params: { status: 'waiting', page, limit }
+      params: { status: 'waiting', page, limit },
     })
   }
 
   async getUserGames(userId: string, status?: string): Promise<GameRoom[]> {
     return this.request<GameRoom[]>('get', `/users/${userId}/games`, undefined, {
-      params: { status }
+      params: { status },
     })
   }
 
@@ -195,7 +196,7 @@ class TypedApiClient {
     limit?: number
   }): Promise<PaginatedResponse<Map>> {
     return this.request<PaginatedResponse<Map>>('get', '/maps', undefined, {
-      params
+      params,
     })
   }
 
@@ -218,9 +219,9 @@ class TypedApiClient {
   async uploadMapImage(mapId: string, file: File): Promise<{ imageUrl: string }> {
     const formData = new FormData()
     formData.append('image', file)
-    
+
     return this.request<{ imageUrl: string }>('post', `/maps/${mapId}/image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
     })
   }
 
@@ -249,7 +250,7 @@ class TypedApiClient {
     limit?: number
   }): Promise<PaginatedResponse<User>> {
     return this.request<PaginatedResponse<User>>('get', '/admin/users', undefined, {
-      params
+      params,
     })
   }
 

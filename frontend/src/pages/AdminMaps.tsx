@@ -187,7 +187,7 @@ export const AdminMaps: React.FC = () => {
             <div>
               <p className="text-sm text-muted">Draft</p>
               <p className="text-2xl font-bold text-white">
-                {maps.filter(m => m.status === 'draft').length}
+                {maps.filter((m) => m.status === 'draft').length}
               </p>
             </div>
             <span className="text-2xl">📝</span>
@@ -198,7 +198,7 @@ export const AdminMaps: React.FC = () => {
             <div>
               <p className="text-sm text-orange-400">Pending Review</p>
               <p className="text-2xl font-bold text-white">
-                {maps.filter(m => m.status === 'pending_review').length}
+                {maps.filter((m) => m.status === 'pending_review').length}
               </p>
             </div>
             <span className="text-2xl">⏳</span>
@@ -209,7 +209,7 @@ export const AdminMaps: React.FC = () => {
             <div>
               <p className="text-sm text-green-400">Approved</p>
               <p className="text-2xl font-bold text-white">
-                {maps.filter(m => m.status === 'approved').length}
+                {maps.filter((m) => m.status === 'approved').length}
               </p>
             </div>
             <span className="text-2xl">✅</span>
@@ -220,7 +220,7 @@ export const AdminMaps: React.FC = () => {
             <div>
               <p className="text-sm text-red-400">Rejected</p>
               <p className="text-2xl font-bold text-white">
-                {maps.filter(m => m.status === 'rejected').length}
+                {maps.filter((m) => m.status === 'rejected').length}
               </p>
             </div>
             <span className="text-2xl">❌</span>
@@ -231,7 +231,7 @@ export const AdminMaps: React.FC = () => {
             <div>
               <p className="text-sm text-gray-400">Archived</p>
               <p className="text-2xl font-bold text-white">
-                {maps.filter(m => m.status === 'archived').length}
+                {maps.filter((m) => m.status === 'archived').length}
               </p>
             </div>
             <span className="text-2xl">📦</span>
@@ -249,7 +249,7 @@ export const AdminMaps: React.FC = () => {
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             className="px-4 py-2 bg-surface-1 border border-border rounded-lg text-white flex-1 min-w-[200px]"
           />
-          
+
           <select
             value={filters.status || ''}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -262,7 +262,7 @@ export const AdminMaps: React.FC = () => {
             <option value="rejected">Rejected</option>
             <option value="archived">Archived</option>
           </select>
-          
+
           <select
             value={filters.sortBy}
             onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
@@ -327,8 +327,8 @@ export const AdminMaps: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {maps.map((map) => (
-                  <tr 
-                    key={map.id} 
+                  <tr
+                    key={map.id}
                     className={`hover:bg-surface-1 ${
                       map.status === 'pending_review' ? 'bg-yellow-900/10' : ''
                     }`}
@@ -336,8 +336,8 @@ export const AdminMaps: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         {map.imageUrl && (
-                          <img 
-                            src={map.imageUrl} 
+                          <img
+                            src={map.imageUrl}
                             alt={map.name}
                             className="w-10 h-10 rounded mr-3 object-cover"
                           />
@@ -346,13 +346,19 @@ export const AdminMaps: React.FC = () => {
                           <div className="text-sm font-medium text-white">
                             {map.name}
                             {map.isFeatured && (
-                              <span className="ml-2 text-yellow-400" title="Featured">⭐</span>
+                              <span className="ml-2 text-yellow-400" title="Featured">
+                                ⭐
+                              </span>
                             )}
                             {map.isVipOnly && (
-                              <span className="ml-2 text-purple-400" title="VIP Only">👑</span>
+                              <span className="ml-2 text-purple-400" title="VIP Only">
+                                👑
+                              </span>
                             )}
                             {!map.isPublic && (
-                              <span className="ml-2 text-gray-400" title="Private">🔒</span>
+                              <span className="ml-2 text-gray-400" title="Private">
+                                🔒
+                              </span>
                             )}
                           </div>
                           {map.description && (
@@ -364,7 +370,7 @@ export const AdminMaps: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span 
+                      <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(map.status)}`}
                       >
                         {getStatusIcon(map.status)} {map.status.replace('_', ' ')}
@@ -374,7 +380,9 @@ export const AdminMaps: React.FC = () => {
                       <div className="text-sm text-white">{map.creatorName || 'Unknown'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-muted">{map.minPlayers}-{map.maxPlayers}</div>
+                      <div className="text-sm text-muted">
+                        {map.minPlayers}-{map.maxPlayers}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs space-y-1">
@@ -408,7 +416,7 @@ export const AdminMaps: React.FC = () => {
                             </button>
                           </div>
                         )}
-                        
+
                         {/* Standard Actions */}
                         <div className="flex gap-2 flex-wrap">
                           <button
@@ -469,7 +477,7 @@ export const AdminMaps: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-bold text-white mb-4">Edit Map Details</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-muted mb-1">Name</label>
@@ -480,7 +488,7 @@ export const AdminMaps: React.FC = () => {
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm text-muted mb-1">Status</label>
                 <select
@@ -495,7 +503,7 @@ export const AdminMaps: React.FC = () => {
                   <option value="archived">Archived</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm text-muted mb-1">Description</label>
                 <textarea
@@ -504,7 +512,7 @@ export const AdminMaps: React.FC = () => {
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white h-20"
                 />
               </div>
-              
+
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm text-muted mb-1">Min Players</label>
@@ -513,7 +521,9 @@ export const AdminMaps: React.FC = () => {
                     min="2"
                     max="12"
                     value={editForm.minPlayers}
-                    onChange={(e) => setEditForm({ ...editForm, minPlayers: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, minPlayers: parseInt(e.target.value) })
+                    }
                     className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                   />
                 </div>
@@ -524,12 +534,14 @@ export const AdminMaps: React.FC = () => {
                     min="2"
                     max="12"
                     value={editForm.maxPlayers}
-                    onChange={(e) => setEditForm({ ...editForm, maxPlayers: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, maxPlayers: parseInt(e.target.value) })
+                    }
                     className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex gap-4">
                   <label className="flex items-center">
@@ -560,12 +572,14 @@ export const AdminMaps: React.FC = () => {
                       className="mr-2"
                     />
                     <span className="text-sm text-white">👑 VIP Only</span>
-                    <span className="text-xs text-purple-400 ml-2">(Requires VIP status to play)</span>
+                    <span className="text-xs text-purple-400 ml-2">
+                      (Requires VIP status to play)
+                    </span>
                   </label>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowEditModal(false)}
@@ -615,9 +629,7 @@ export const AdminMaps: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-bold text-white mb-4">Reject Map</h2>
-            <p className="text-muted mb-4">
-              Provide a reason for rejecting "{selectedMap.name}":
-            </p>
+            <p className="text-muted mb-4">Provide a reason for rejecting "{selectedMap.name}":</p>
             <textarea
               value={approvalNotes}
               onChange={(e) => setApprovalNotes(e.target.value)}

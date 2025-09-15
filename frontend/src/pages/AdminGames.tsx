@@ -306,10 +306,7 @@ export default function AdminGames() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4 text-red-400">❌</div>
               <div className="text-red-400 mb-4">{error}</div>
-              <button
-                onClick={loadGames}
-                className="bg-primary hover:bg-primary px-4 py-2 rounded"
-              >
+              <button onClick={loadGames} className="bg-primary hover:bg-primary px-4 py-2 rounded">
                 Retry
               </button>
             </div>

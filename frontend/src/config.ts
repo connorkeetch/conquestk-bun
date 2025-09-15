@@ -1,8 +1,10 @@
 // Application configuration
 // Use relative URLs in production, absolute URLs in development
-export const API_URL = import.meta.env.VITE_API_URL || 
+export const API_URL =
+  import.meta.env.VITE_API_URL ||
   (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+export const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
   (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
 // Environment

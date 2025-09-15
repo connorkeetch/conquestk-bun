@@ -90,7 +90,7 @@ export class MapService {
             content_type, content_id, submitter_id, status, submitted_at
           ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
           `,
-          ['map', map.id, userId, 'pending']
+          ['map', map.id, userId, 'pending'],
         )
         logger.info(`Added map ${map.id} to approval queue`)
       } catch (queueError) {
@@ -124,7 +124,7 @@ export class MapService {
         )
         const map = mapResult.rows[0]
         logger.info(`Created new map without metadata: ${map.name} (${map.id})`)
-        
+
         // Add to content approval queue for admin review
         try {
           await client.query(
@@ -133,13 +133,13 @@ export class MapService {
               content_type, content_id, submitter_id, status, submitted_at
             ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
             `,
-            ['map', map.id, userId, 'pending']
+            ['map', map.id, userId, 'pending'],
           )
           logger.info(`Added map ${map.id} to approval queue`)
         } catch (queueError) {
           logger.warn('Failed to add map to approval queue (non-critical):', queueError)
         }
-        
+
         return this.formatMapFromDb(map)
       }
       throw error
@@ -621,7 +621,7 @@ export class MapService {
       id: row.id,
       name: row.name,
       description: row.description,
-      config: this.safeJsonParse(row.config, { type: 'classic' as const }), 
+      config: this.safeJsonParse(row.config, { type: 'classic' as const }),
       isDefault: row.is_default,
       createdAt: new Date(row.created_at),
     }))
@@ -694,10 +694,10 @@ export class MapService {
    */
   private parseTags(tags: any): string[] {
     if (!tags) return []
-    
+
     // Already an array
     if (Array.isArray(tags)) return tags
-    
+
     // String handling
     if (typeof tags === 'string') {
       // PostgreSQL array format: {tag1,tag2,"tag with spaces"}
@@ -707,7 +707,7 @@ export class MapService {
         const result: string[] = []
         let current = ''
         let inQuotes = false
-        
+
         for (let i = 0; i < content.length; i++) {
           const char = content[i]
           if (char === '"' && (i === 0 || content[i - 1] !== '\\')) {
@@ -722,17 +722,20 @@ export class MapService {
         if (current) result.push(current)
         return result
       }
-      
+
       // Try JSON parse
       try {
         const parsed = JSON.parse(tags)
         return Array.isArray(parsed) ? parsed : []
       } catch {
         // Fallback to comma-separated
-        return tags.split(',').map(t => t.trim()).filter(Boolean)
+        return tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
       }
     }
-    
+
     return []
   }
 
@@ -768,7 +771,9 @@ export class MapService {
       ratingAverage: parseFloat(row.rating_average) || 0,
       ratingCount: row.rating_count || 0,
       tags: this.parseTags(row.tags),
-      capitalTerritories: row.capital_territories ? this.safeJsonParse(row.capital_territories, undefined) : undefined,
+      capitalTerritories: row.capital_territories
+        ? this.safeJsonParse(row.capital_territories, undefined)
+        : undefined,
       submittedAt: row.submitted_at ? new Date(row.submitted_at) : undefined,
       reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : undefined,
       reviewedBy: row.reviewed_by,
@@ -803,7 +808,9 @@ export class MapService {
       name: row.name,
       bonusArmies: row.bonus_armies,
       color: row.color,
-      specialRules: row.special_rules ? this.safeJsonParse(row.special_rules, undefined) : undefined,
+      specialRules: row.special_rules
+        ? this.safeJsonParse(row.special_rules, undefined)
+        : undefined,
       createdAt: new Date(row.created_at),
     }
   }

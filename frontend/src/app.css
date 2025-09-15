@@ -47,58 +47,53 @@ This allows themes to work with any color scheme!
 :root {
   /* ===== SEMANTIC THEME VARIABLES ===== */
   /* Main theme colors - overridden by each theme */
-  --color-primary: #2563EB;         /* Default blue primary */
-  --color-primary-soft: #3B82F6;    /* Default blue hover */
-  --color-secondary: #FFD700;       /* Gold secondary */
-  --color-accent: #DC2626;          /* Red accent */
-  
+  --color-primary: #2563eb; /* Default blue primary */
+  --color-primary-soft: #3b82f6; /* Default blue hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #dc2626; /* Red accent */
+
   /* Theme-aware backgrounds */
-  --color-bg-deep: #000000;         /* Deepest background */
-  --color-bg-alt: #050505;          /* Alternative deep background */
-  --color-bg-void: #030303;         /* Void background */
-  --color-surface-1: #0f172a;       /* Card backgrounds */
-  --color-surface-2: #1e293b;       /* Elevated surfaces */
-  
+  --color-bg-deep: #000000; /* Deepest background */
+  --color-bg-alt: #050505; /* Alternative deep background */
+  --color-bg-void: #030303; /* Void background */
+  --color-surface-1: #0f172a; /* Card backgrounds */
+  --color-surface-2: #1e293b; /* Elevated surfaces */
+
   /* ===== SEMANTIC STATE COLORS ===== */
   /* These stay consistent across themes for UX clarity */
-  --color-success: #10B981;         /* Success states */
-  --color-warning: #F59E0B;         /* Warning states */
-  --color-danger: #B22222;          /* Error states */
-  --color-info: #06B6D4;            /* Info states */
-  
+  --color-success: #10b981; /* Success states */
+  --color-warning: #f59e0b; /* Warning states */
+  --color-danger: #b22222; /* Error states */
+  --color-info: #06b6d4; /* Info states */
+
   /* ===== NEUTRAL FOUNDATION COLORS ===== */
-  --color-text: #F9FAFB;            /* Primary text */
-  --color-text-muted: #94A3B8;      /* Secondary text */
-  --color-border: #334155;          /* Borders, dividers */
-  
+  --color-text: #f9fafb; /* Primary text */
+  --color-text-muted: #94a3b8; /* Secondary text */
+  --color-border: #334155; /* Borders, dividers */
+
   /* ===== NEUTRAL GRAYS ===== */
   --color-black: #000000;
-  --color-white: #FFFFFF;
-  --color-gray-100: #F3F4F6;
-  --color-gray-200: #E5E7EB;
-  --color-gray-300: #D1D5DB;
-  --color-gray-400: #9CA3AF;
-  --color-gray-500: #6B7280;
-  --color-gray-600: #4B5563;
+  --color-white: #ffffff;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
   --color-gray-700: #374151;
-  --color-gray-800: #1F2937;
+  --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-  
+
   /* Section spacing */
   --section-spacing: 3rem;
   --section-spacing-sm: 2rem;
-  
+
   /* Default gradient - purple tinted */
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #111827 0%,
-    rgba(88, 28, 135, 0.2) 50%,
-    #000000 100%
-  );
-  
+  --ck-bg-gradient: linear-gradient(135deg, #111827 0%, rgba(88, 28, 135, 0.2) 50%, #000000 100%);
+
   /* Atmospheric glow */
   --ck-glow: var(--color-primary-soft);
-  
+
   /* Surface glass effects */
   --surface-glass: rgba(15, 23, 42, 0.6);
   --surface-glass-light: rgba(17, 24, 39, 0.4);
@@ -110,236 +105,252 @@ This allows themes to work with any color scheme!
  * ========================================================================== */
 /* Default theme - needs explicit definition */
 :root[data-theme="default"] {
-  --color-primary: #2563EB;
-  --color-primary-soft: #3B82F6;
-  --color-secondary: #FFD700;
-  --color-accent: #DC2626;
+  --color-primary: #2563eb;
+  --color-primary-soft: #3b82f6;
+  --color-secondary: #ffd700;
+  --color-accent: #dc2626;
   --color-bg-deep: #000000;
   --color-bg-alt: #050505;
   --color-bg-void: #030303;
   --color-surface-1: #0f172a;
   --color-surface-2: #1e293b;
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
   --color-border: #334155;
 
   /* Purple tinted gradient with center glow */
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0a0a0f 0%,                      /* Dark edges */
-    rgba(88, 28, 135, 0.2) 50%,    /* Purple glow in center */
-    #000000 100%                     /* Black corner */
+    #0a0a0f 0% /* Dark edges */,
+    rgba(88, 28, 135, 0.2) 50% /* Purple glow in center */,
+    #000000 100% /* Black corner */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* Red Theme */
 :root[data-theme="red"] {
-  --color-primary: #DC2626;         /* Red primary */
-  --color-primary-soft: #EF4444;    /* Lighter red for hover */
-  --color-secondary: #FFD700;       /* Gold secondary */
-  --color-accent: #F59E0B;          /* Amber accent */
-  
-  --color-bg-deep: #0d0505;         /* Black with red tint */
-  --color-bg-alt: #0a0303;          /* Near black with red */
-  --color-surface-1: #0f172a;       /* Dark surface */
-  --color-surface-2: #111827;       /* Elevated surface */
-  
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
+  --color-primary: #dc2626; /* Red primary */
+  --color-primary-soft: #ef4444; /* Lighter red for hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #f59e0b; /* Amber accent */
+
+  --color-bg-deep: #0d0505; /* Black with red tint */
+  --color-bg-alt: #0a0303; /* Near black with red */
+  --color-surface-1: #0f172a; /* Dark surface */
+  --color-surface-2: #111827; /* Elevated surface */
+
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
   --color-border: #334155;
-  
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0f0505 0%,                      /* Dark red edges */
-    rgba(220, 38, 38, 0.4) 50%,     /* Red glow in center */
-    #0a0202 100%                     /* Darker corner */
+    #0f0505 0% /* Dark red edges */,
+    rgba(220, 38, 38, 0.4) 50% /* Red glow in center */,
+    #0a0202 100% /* Darker corner */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* Violet Theme */
 :root[data-theme="violet"] {
-  --color-primary: #7C3AED;         /* Violet primary */
-  --color-primary-soft: #8B5CF6;    /* Lighter violet for hover */
-  --color-secondary: #FFD700;       /* Gold secondary */
-  --color-accent: #B22222;          /* Crimson accent */
-  
-  --color-bg-deep: #0b0812;         /* Black with violet tint */
-  --color-bg-alt: #090510;          /* Near black with violet */
+  --color-primary: #7c3aed; /* Violet primary */
+  --color-primary-soft: #8b5cf6; /* Lighter violet for hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #b22222; /* Crimson accent */
+
+  --color-bg-deep: #0b0812; /* Black with violet tint */
+  --color-bg-alt: #090510; /* Near black with violet */
   --color-surface-1: #0f172a;
   --color-surface-2: #111827;
-  
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
+
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
   --color-border: #334155;
-  
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0d0814 0%,                      /* Dark violet edges */
-    rgba(124, 58, 237, 0.4) 50%,   /* Purple glow in center */
-    #080510 100%                     /* Darker corner */
+    #0d0814 0% /* Dark violet edges */,
+    rgba(124, 58, 237, 0.4) 50% /* Purple glow in center */,
+    #080510 100% /* Darker corner */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* Blue Theme */
 :root[data-theme="blue"] {
-  --color-primary: #2563EB;         /* Blue primary */
-  --color-primary-soft: #3B82F6;    /* Lighter blue for hover */
-  --color-secondary: #FFD700;       /* Gold secondary */
-  --color-accent: #06B6D4;          /* Cyan accent */
-  
-  --color-bg-deep: #05080f;         /* Black with blue tint */
-  --color-bg-alt: #03050a;          /* Near black with blue */
+  --color-primary: #2563eb; /* Blue primary */
+  --color-primary-soft: #3b82f6; /* Lighter blue for hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #06b6d4; /* Cyan accent */
+
+  --color-bg-deep: #05080f; /* Black with blue tint */
+  --color-bg-alt: #03050a; /* Near black with blue */
   --color-surface-1: #0f172a;
   --color-surface-2: #111827;
-  
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
+
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
   --color-border: #334155;
-  
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #05080f 0%,                      /* Dark blue edges */
-    rgba(37, 99, 235, 0.4) 50%,     /* Blue glow in center */
-    #020305 100%                     /* Darker corner */
+    #05080f 0% /* Dark blue edges */,
+    rgba(37, 99, 235, 0.4) 50% /* Blue glow in center */,
+    #020305 100% /* Darker corner */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* Green Theme */
 :root[data-theme="green"] {
-  --color-primary: #059669;         /* Green primary */
-  --color-primary-soft: #10B981;    /* Lighter green for hover */
-  --color-secondary: #FFD700;       /* Gold secondary */
-  --color-accent: #14B8A6;          /* Teal accent */
-  
-  --color-bg-deep: #050a08;         /* Black with green tint */
-  --color-bg-alt: #030605;          /* Near black with green */
+  --color-primary: #059669; /* Green primary */
+  --color-primary-soft: #10b981; /* Lighter green for hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #14b8a6; /* Teal accent */
+
+  --color-bg-deep: #050a08; /* Black with green tint */
+  --color-bg-alt: #030605; /* Near black with green */
   --color-surface-1: #0f172a;
   --color-surface-2: #111827;
-  
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
+
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
   --color-border: #334155;
-  
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #051008 0%,                      /* Dark green edges */
-    rgba(15, 75, 55, 0.4) 50%,     /* Green glow in center */
-    #020605 100%                     /* Darker corner */
+    #051008 0% /* Dark green edges */,
+    rgba(15, 75, 55, 0.4) 50% /* Green glow in center */,
+    #020605 100% /* Darker corner */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* Black Theme - Pure black with gray accents */
 :root[data-theme="black"] {
-  --color-primary: #1f2937;         /* Dark gray primary */
-  --color-primary-soft: #374151;    /* Lighter gray for hover */
-  --color-secondary: #9ca3af;       /* Medium gray secondary */
-  --color-accent: #f3f4f6;          /* Light gray accent */
-  
-  --color-bg-deep: #000000;         /* Pure black */
-  --color-bg-alt: #050505;          /* Nearly black */
-  --color-surface-1: #0a0a0a;       /* Very dark gray */
-  --color-surface-2: #111111;       /* Dark gray */
-  
-  --color-text: #F9FAFB;
-  --color-text-muted: #9CA3AF;
+  --color-primary: #1f2937; /* Dark gray primary */
+  --color-primary-soft: #374151; /* Lighter gray for hover */
+  --color-secondary: #9ca3af; /* Medium gray secondary */
+  --color-accent: #f3f4f6; /* Light gray accent */
+
+  --color-bg-deep: #000000; /* Pure black */
+  --color-bg-alt: #050505; /* Nearly black */
+  --color-surface-1: #0a0a0a; /* Very dark gray */
+  --color-surface-2: #111111; /* Dark gray */
+
+  --color-text: #f9fafb;
+  --color-text-muted: #9ca3af;
   --color-border: #374151;
-  
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #050505 0%,                      /* Nearly black */
-    rgba(41, 46, 55, 0.35) 50%,     /* Very subtle gray glow */
-    #000000 100%                     /* Pure black */
+    #050505 0% /* Nearly black */,
+    rgba(41, 46, 55, 0.35) 50% /* Very subtle gray glow */,
+    #000000 100% /* Pure black */
   );
-  
+
   --ck-glow: var(--color-primary-soft);
 }
 
 /* High Contrast Theme (for accessibility) */
 :root[data-theme="highcontrast"] {
-  --color-primary: #00B4FF;         /* Bright cyan-blue - 8.6:1 contrast on black */
-  --color-primary-soft: #66D4FF;    /* Lighter cyan - 12.8:1 contrast */
-  --color-secondary: #FFD700;       /* Gold - 14.5:1 contrast on black */
-  --color-accent: #FF3366;          /* Bright red-pink - 7.5:1 contrast */
-  
-  --color-bg-deep: #000000;         /* Pure black for maximum contrast */
-  --color-bg-alt: #000000;          /* Pure black */
-  --color-surface-1: #1A1A1A;       /* Dark gray for cards - still high contrast */
-  --color-surface-2: #2D2D2D;       /* Lighter gray - more distinguishable */
-  
-  --color-text: #FFFFFF;             /* Pure white text - 21:1 contrast */
-  --color-text-muted: #E0E0E0;      /* Light gray - 13.5:1 contrast (WCAG AAA) */
-  --color-border: #808080;          /* Medium gray - clearly visible borders */
-  
+  --color-primary: #00b4ff; /* Bright cyan-blue - 8.6:1 contrast on black */
+  --color-primary-soft: #66d4ff; /* Lighter cyan - 12.8:1 contrast */
+  --color-secondary: #ffd700; /* Gold - 14.5:1 contrast on black */
+  --color-accent: #ff3366; /* Bright red-pink - 7.5:1 contrast */
+
+  --color-bg-deep: #000000; /* Pure black for maximum contrast */
+  --color-bg-alt: #000000; /* Pure black */
+  --color-surface-1: #1a1a1a; /* Dark gray for cards - still high contrast */
+  --color-surface-2: #2d2d2d; /* Lighter gray - more distinguishable */
+
+  --color-text: #ffffff; /* Pure white text - 21:1 contrast */
+  --color-text-muted: #e0e0e0; /* Light gray - 13.5:1 contrast (WCAG AAA) */
+  --color-border: #808080; /* Medium gray - clearly visible borders */
+
   /* Additional high contrast specific variables */
-  --color-success: #00FF88;         /* Bright green - 15.3:1 contrast */
-  --color-warning: #FFAA00;         /* Bright orange - 11.9:1 contrast */
-  --color-danger: #FF3366;          /* Matches accent */
-  --color-info: #00B4FF;            /* Matches primary */
-  
+  --color-success: #00ff88; /* Bright green - 15.3:1 contrast */
+  --color-warning: #ffaa00; /* Bright orange - 11.9:1 contrast */
+  --color-danger: #ff3366; /* Matches accent */
+  --color-info: #00b4ff; /* Matches primary */
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #000000 0%,                     /* Pure black */
-    #000000 100%                   /* Pure black - no gradient for clarity */
+    #000000 0% /* Pure black */,
+    #000000 100% /* Pure black - no gradient for clarity */
   );
-  
+
   --ck-glow: var(--color-primary);
 }
 
 /* Halloween theme - Spooky seasonal theme */
 :root[data-theme="halloween"] {
   /* Halloween color palette */
-  --color-primary: #FF6B35;         /* Pumpkin orange */
-  --color-primary-soft: #FF8C5A;    /* Lighter pumpkin */
-  --color-secondary: #FFD23F;       /* Candy corn yellow */
-  --color-accent: #8B1538;          /* Blood red */
-  --color-bg-deep: #0A0108;         /* Midnight black */
-  --color-bg-alt: #110A0F;          /* Purple-tinted black */
-  --color-surface-1: #1A0F17;       /* Dark purple surface */
-  --color-surface-2: #2B1624;       /* Lighter purple surface */
-  --color-text: #F5E6E8;            /* Ghostly white */
-  --color-text-muted: #B68FA5;      /* Muted purple-gray */
-  --color-border: #4A2040;          /* Purple border */
-  
+  --color-primary: #ff6b35; /* Pumpkin orange */
+  --color-primary-soft: #ff8c5a; /* Lighter pumpkin */
+  --color-secondary: #ffd23f; /* Candy corn yellow */
+  --color-accent: #8b1538; /* Blood red */
+  --color-bg-deep: #0a0108; /* Midnight black */
+  --color-bg-alt: #110a0f; /* Purple-tinted black */
+  --color-surface-1: #1a0f17; /* Dark purple surface */
+  --color-surface-2: #2b1624; /* Lighter purple surface */
+  --color-text: #f5e6e8; /* Ghostly white */
+  --color-text-muted: #b68fa5; /* Muted purple-gray */
+  --color-border: #4a2040; /* Purple border */
+
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #0A0108 0%,                      /* Midnight black */
-    rgba(255, 107, 53, 0.4) 40%,    /* Orange glow */
-    rgba(139, 21, 37, 0.4) 70%,    /* Blood red transition */
-    #050105 100%                     /* Dark corner */
+    #0a0108 0% /* Midnight black */,
+    rgba(255, 107, 53, 0.4) 40% /* Orange glow */,
+    rgba(139, 21, 37, 0.4) 70% /* Blood red transition */,
+    #050105 100% /* Dark corner */
   );
-  
-  --ck-glow: #FF6B35;
+
+  --ck-glow: #ff6b35;
 }
 
 /* Floating bat/ghost particles background */
 [data-theme="halloween"] body::after {
-  background-image: 
+  background-image:
     radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent),
     radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent),
     radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent),
     radial-gradient(2px 2px at 60% 10%, rgba(255, 107, 53, 0.3), transparent),
     radial-gradient(1px 1px at 90% 90%, rgba(139, 21, 56, 0.2), transparent);
-  background-size: 300px 300px, 400px 400px, 250px 250px, 350px 350px, 200px 200px;
+  background-size:
+    300px 300px,
+    400px 400px,
+    250px 250px,
+    350px 350px,
+    200px 200px;
   animation: halloween-float 20s ease-in-out infinite;
 }
 
 /* Animate the particles */
 @keyframes halloween-float {
-  0%, 100% { 
-    background-position: 0 0, 100px 50px, 50px 150px, 200px 20px, 150px 180px;
+  0%,
+  100% {
+    background-position:
+      0 0,
+      100px 50px,
+      50px 150px,
+      200px 20px,
+      150px 180px;
   }
-  50% { 
-    background-position: 50px 30px, 150px 100px, 100px 200px, 250px 70px, 200px 230px;
+  50% {
+    background-position:
+      50px 30px,
+      150px 100px,
+      100px 200px,
+      250px 70px,
+      200px 230px;
   }
 }
 
@@ -373,17 +384,21 @@ This allows themes to work with any color scheme!
 }
 
 @keyframes halloween-pulse {
-  0%, 100% { 
+  0%,
+  100% {
     box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
   }
-  50% { 
+  50% {
     box-shadow: 0 4px 25px rgba(255, 107, 53, 0.5);
   }
 }
 
 /* Special Halloween-only easter egg - subtle bat cursor on hover */
 [data-theme="halloween"] .game-board {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23FF6B35" d="M16 8c-2 0-3 2-3 2s-2-1-4-1c-3 0-4 2-4 2s2 2 2 4c0 1 0 2 1 3l6 6l6-6c1-1 1-2 1-3c0-2 2-4 2-4s-1-2-4-2c-2 0-4 1-4 1s-1-2-3-2z"/></svg>') 16 16, auto;
+  cursor:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23FF6B35" d="M16 8c-2 0-3 2-3 2s-2-1-4-1c-3 0-4 2-4 2s2 2 2 4c0 1 0 2 1 3l6 6l6-6c1-1 1-2 1-3c0-2 2-4 2-4s-1-2-4-2c-2 0-4 1-4 1s-1-2-3-2z"/></svg>')
+    16 16,
+    auto;
 }
 
 /* Utilities that use our color system */
@@ -409,7 +424,7 @@ This allows themes to work with any color scheme!
     backdrop-filter: blur(10px);
     background-color: var(--surface-glass-light);
   }
-  
+
   /* Conquest-specific utilities */
   .text-gradient {
     background: linear-gradient(135deg, var(--color-text) 0%, var(--color-secondary) 100%);
@@ -417,7 +432,7 @@ This allows themes to work with any color scheme!
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
   .glow-primary {
     box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 30%, transparent);
   }
@@ -439,8 +454,8 @@ This allows themes to work with any color scheme!
 
 /* Main background gradient - applied to body */
 body {
-  background-color: var(--color-bg-deep, #000000);  /* Solid dark base first */
-  background-image: var(--ck-bg-gradient);          /* Gradient on top */
+  background-color: var(--color-bg-deep, #000000); /* Solid dark base first */
+  background-image: var(--ck-bg-gradient); /* Gradient on top */
   background-attachment: fixed;
   min-height: 100vh;
   position: relative;
@@ -455,21 +470,41 @@ body::after {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px, 40px 40px;
+  background-size:
+    40px 40px,
+    40px 40px;
   pointer-events: none;
   z-index: 1;
 }
 
 /* Halloween theme - spider web pattern instead of grid */
 [data-theme="halloween"] body::after {
-  background-image: 
-    radial-gradient(circle at 20% 80%, transparent 40%, rgba(255, 107, 53, 0.02) 40.5%, transparent 41%),
-    radial-gradient(circle at 80% 20%, transparent 40%, rgba(139, 21, 56, 0.02) 40.5%, transparent 41%),
-    radial-gradient(circle at 50% 50%, transparent 30%, rgba(255, 107, 53, 0.01) 30.5%, transparent 31%);
-  background-size: 200px 200px, 200px 200px, 300px 300px;
+  background-image:
+    radial-gradient(
+      circle at 20% 80%,
+      transparent 40%,
+      rgba(255, 107, 53, 0.02) 40.5%,
+      transparent 41%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      transparent 40%,
+      rgba(139, 21, 56, 0.02) 40.5%,
+      transparent 41%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 30%,
+      rgba(255, 107, 53, 0.01) 30.5%,
+      transparent 31%
+    );
+  background-size:
+    200px 200px,
+    200px 200px,
+    300px 300px;
 }
 
 /* High contrast theme - no grid for clarity */
@@ -479,7 +514,7 @@ body::after {
 
 /* Black theme - very subtle grid */
 [data-theme="black"] body::after {
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
 }
@@ -598,7 +633,9 @@ kbd {
   border: 1px solid var(--color-border);
   border-radius: 0.375rem;
   box-shadow: inset 0 -1px 0 var(--color-border);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
 /* Spinner component */
@@ -640,7 +677,7 @@ kbd {
   border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
   border-radius: 1.5rem;
   padding: 2rem;
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.4),
     0 8px 16px -4px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 0 color-mix(in srgb, var(--color-white) 8%, transparent);
@@ -671,7 +708,9 @@ kbd {
   border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
   border-radius: 0.75rem;
   padding: 1.25rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 /* Primary Button Component */
 .btn-primary {
@@ -682,14 +721,16 @@ kbd {
   border-radius: 0.5rem;
   transition: all 0.2s ease-out;
   transform: scale(1);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-soft);
   transform: scale(1.02);
-  box-shadow: 
-    0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05),
     0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
@@ -723,7 +764,9 @@ kbd {
   font-weight: 600;
   border-radius: 0.5rem;
   transition: all 0.2s ease-out;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-danger:hover {
@@ -738,7 +781,9 @@ kbd {
   font-weight: 600;
   border-radius: 0.5rem;
   transition: all 0.2s ease-out;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-success:hover {
@@ -812,7 +857,6 @@ kbd {
   margin-bottom: 1.5rem;
 }
 
-
 /* ===== NAVIGATION COMPONENTS ===== */
 /* Theme-aware navigation links with semantic colors */
 
@@ -871,7 +915,9 @@ kbd {
   background-color: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 50;
   padding: 0.5rem 0;
 }
@@ -911,7 +957,6 @@ kbd {
   border: 0;
   clip: rect(0, 0, 0, 0);
 }
-
 
 /* ===== POLISH & REFINEMENT UTILITIES ===== */
 
@@ -957,8 +1002,12 @@ kbd {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Surface background utilities */
@@ -987,4 +1036,3 @@ kbd {
 @utility border-border-muted {
   border-color: color-mix(in srgb, var(--color-border) 50%, transparent);
 }
-

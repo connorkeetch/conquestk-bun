@@ -121,7 +121,12 @@ export default function ImageProcessor({
     handles.forEach((handle) => {
       // White border for visibility
       ctx.fillStyle = '#fff'
-      ctx.fillRect(handle.x - handleSize / 2 - 1, handle.y - handleSize / 2 - 1, handleSize + 2, handleSize + 2)
+      ctx.fillRect(
+        handle.x - handleSize / 2 - 1,
+        handle.y - handleSize / 2 - 1,
+        handleSize + 2,
+        handleSize + 2,
+      )
       // Blue handle
       ctx.fillStyle = '#3B82F6'
       ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize)
@@ -145,10 +150,7 @@ export default function ImageProcessor({
     ]
 
     for (const handle of handles) {
-      if (
-        Math.abs(x - handle.x) < handleSize &&
-        Math.abs(y - handle.y) < handleSize
-      ) {
+      if (Math.abs(x - handle.x) < handleSize && Math.abs(y - handle.y) < handleSize) {
         setIsResizing(true)
         setResizeHandle(handle.id)
         setDragStart({ x, y })
@@ -170,16 +172,16 @@ export default function ImageProcessor({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !image) return
-    
+
     const rect = canvasRef.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) / scale
     const y = (e.clientY - rect.top) / scale
 
     if (isResizing && resizeHandle) {
       // Handle resizing based on which corner is being dragged
-      let newCrop = { ...cropArea }
+      const newCrop = { ...cropArea }
       const minSize = 100 // Minimum crop size
-      
+
       switch (resizeHandle) {
         case 'tl': // Top-left
           newCrop.width = Math.max(minSize, cropArea.x + cropArea.width - x)
@@ -202,15 +204,15 @@ export default function ImageProcessor({
           newCrop.height = Math.max(minSize, y - cropArea.y)
           break
       }
-      
+
       // Keep within image bounds
       newCrop.x = Math.max(0, newCrop.x)
       newCrop.y = Math.max(0, newCrop.y)
       newCrop.width = Math.min(image.width - newCrop.x, newCrop.width)
       newCrop.height = Math.min(image.height - newCrop.y, newCrop.height)
-      
+
       setCropArea(newCrop)
-      
+
       // Update target dimensions to match aspect ratio
       const aspectRatio = newCrop.width / newCrop.height
       if (aspectRatio > 1) {
@@ -277,7 +279,9 @@ export default function ImageProcessor({
             <input
               type="number"
               value={targetWidth}
-              onChange={(e) => setTargetWidth(Math.min(maxWidth, Math.max(400, parseInt(e.target.value) || 400)))}
+              onChange={(e) =>
+                setTargetWidth(Math.min(maxWidth, Math.max(400, parseInt(e.target.value) || 400)))
+              }
               className="w-24 px-2 py-1 bg-gray-600 text-white rounded"
               min="400"
               max={maxWidth}
@@ -286,7 +290,9 @@ export default function ImageProcessor({
             <input
               type="number"
               value={targetHeight}
-              onChange={(e) => setTargetHeight(Math.min(maxHeight, Math.max(300, parseInt(e.target.value) || 300)))}
+              onChange={(e) =>
+                setTargetHeight(Math.min(maxHeight, Math.max(300, parseInt(e.target.value) || 300)))
+              }
               className="w-24 px-2 py-1 bg-gray-600 text-white rounded"
               min="300"
               max={maxHeight}
@@ -303,12 +309,16 @@ export default function ImageProcessor({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               className="border border-border"
-              style={{ 
-                maxWidth: '100%', 
+              style={{
+                maxWidth: '100%',
                 height: 'auto',
-                cursor: isResizing ? 
-                  (resizeHandle === 'tl' || resizeHandle === 'br' ? 'nwse-resize' : 'nesw-resize') : 
-                  isDragging ? 'move' : 'default'
+                cursor: isResizing
+                  ? resizeHandle === 'tl' || resizeHandle === 'br'
+                    ? 'nwse-resize'
+                    : 'nesw-resize'
+                  : isDragging
+                    ? 'move'
+                    : 'default',
               }}
             />
           </div>

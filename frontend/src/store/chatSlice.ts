@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 export interface LinkPreview {
   url: string
@@ -58,7 +58,7 @@ const chatSlice = createSlice({
     setConnected(state, action: PayloadAction<boolean>) {
       state.isConnected = action.payload
     },
-    
+
     // Set active conversation
     setActiveConversation(state, action: PayloadAction<string | null>) {
       state.activeConversation = action.payload
@@ -67,12 +67,12 @@ const chatSlice = createSlice({
         state.conversations[action.payload].unreadCount = 0
       }
     },
-    
+
     // Add a new message
     addMessage(state, action: PayloadAction<ChatMessage>) {
       const message = action.payload
       let conversationId: string
-      
+
       // Determine conversation ID based on message type
       if (message.message_type === 'game' && message.game_id) {
         conversationId = `game:${message.game_id}`
@@ -85,7 +85,7 @@ const chatSlice = createSlice({
       } else {
         return // Invalid message type
       }
-      
+
       // Initialize conversation if it doesn't exist
       if (!state.conversations[conversationId]) {
         let conversationType: 'game' | 'team' | 'dm'
@@ -96,7 +96,7 @@ const chatSlice = createSlice({
         } else {
           conversationType = 'dm'
         }
-        
+
         state.conversations[conversationId] = {
           id: conversationId,
           type: conversationType,
@@ -107,27 +107,30 @@ const chatSlice = createSlice({
           typingUsers: [],
         }
       }
-      
+
       // Add message if it doesn't already exist
-      const exists = state.conversations[conversationId].messages.some(m => m.id === message.id)
+      const exists = state.conversations[conversationId].messages.some((m) => m.id === message.id)
       if (!exists) {
         state.conversations[conversationId].messages.push(message)
-        
+
         // Increment unread if not the active conversation
         if (state.activeConversation !== conversationId && !message.is_read) {
           state.conversations[conversationId].unreadCount++
         }
       }
     },
-    
+
     // Load chat history
-    loadChatHistory(state, action: PayloadAction<{
-      conversationId: string
-      messages: ChatMessage[]
-      hasMore: boolean
-    }>) {
+    loadChatHistory(
+      state,
+      action: PayloadAction<{
+        conversationId: string
+        messages: ChatMessage[]
+        hasMore: boolean
+      }>,
+    ) {
       const { conversationId, messages, hasMore } = action.payload
-      
+
       if (!state.conversations[conversationId]) {
         const type = conversationId.startsWith('game:') ? 'game' : 'dm'
         state.conversations[conversationId] = {
@@ -140,7 +143,7 @@ const chatSlice = createSlice({
           typingUsers: [],
         }
       }
-      
+
       // Prepend older messages (history comes in reverse chronological)
       state.conversations[conversationId].messages = [
         ...messages,
@@ -149,77 +152,88 @@ const chatSlice = createSlice({
       state.conversations[conversationId].hasMore = hasMore
       state.conversations[conversationId].isLoading = false
     },
-    
+
     // Set loading state for conversation
-    setConversationLoading(state, action: PayloadAction<{
-      conversationId: string
-      isLoading: boolean
-    }>) {
+    setConversationLoading(
+      state,
+      action: PayloadAction<{
+        conversationId: string
+        isLoading: boolean
+      }>,
+    ) {
       const { conversationId, isLoading } = action.payload
       if (state.conversations[conversationId]) {
         state.conversations[conversationId].isLoading = isLoading
       }
     },
-    
+
     // Update typing users
-    setTypingUser(state, action: PayloadAction<{
-      conversationId: string
-      userId: string
-      username: string
-      isTyping: boolean
-    }>) {
+    setTypingUser(
+      state,
+      action: PayloadAction<{
+        conversationId: string
+        userId: string
+        username: string
+        isTyping: boolean
+      }>,
+    ) {
       const { conversationId, userId, username, isTyping } = action.payload
-      
+
       if (!state.conversations[conversationId]) {
         return
       }
-      
+
       const typingUsers = state.conversations[conversationId].typingUsers
-      const existingIndex = typingUsers.findIndex(u => u.userId === userId)
-      
+      const existingIndex = typingUsers.findIndex((u) => u.userId === userId)
+
       if (isTyping && existingIndex === -1) {
         typingUsers.push({ userId, username })
       } else if (!isTyping && existingIndex !== -1) {
         typingUsers.splice(existingIndex, 1)
       }
     },
-    
+
     // Update unread counts
-    setUnreadCounts(state, action: PayloadAction<{
-      conversationType: 'game' | 'dm'
-      conversationId: string
-      unreadCount: number
-    }[]>) {
+    setUnreadCounts(
+      state,
+      action: PayloadAction<
+        {
+          conversationType: 'game' | 'dm'
+          conversationId: string
+          unreadCount: number
+        }[]
+      >,
+    ) {
       let totalDMs = 0
       let totalGames = 0
-      
+
       action.payload.forEach(({ conversationType, conversationId, unreadCount }) => {
         const convId = `${conversationType}:${conversationId}`
-        
+
         if (state.conversations[convId]) {
           state.conversations[convId].unreadCount = unreadCount
         }
-        
+
         if (conversationType === 'dm') {
           totalDMs += unreadCount
         } else if (conversationType === 'game') {
           totalGames += unreadCount
         }
       })
-      
+
       state.totalUnreadDMs = totalDMs
       state.totalUnreadGames = totalGames
     },
-    
+
     // Mark messages as read
     markMessagesAsRead(state, action: PayloadAction<string>) {
       const conversationId = action.payload
       if (state.conversations[conversationId]) {
-        state.conversations[conversationId].messages.forEach(msg => {
+        state.conversations[conversationId].messages.forEach((msg) => {
           msg.is_read = true
         })
         state.conversations[conversationId].unreadCount = 0
-        
+
         // Update total counts
         if (conversationId.startsWith('dm:')) {
           state.totalUnreadDMs = Math.max(0, state.totalUnreadDMs - 1)
@@ -228,38 +242,41 @@ const chatSlice = createSlice({
         }
       }
     },
-    
+
     // Edit a message
-    editMessage(state, action: PayloadAction<{
-      messageId: string
-      newMessage: string
-      editedAt: string
-    }>) {
+    editMessage(
+      state,
+      action: PayloadAction<{
+        messageId: string
+        newMessage: string
+        editedAt: string
+      }>,
+    ) {
       const { messageId, newMessage, editedAt } = action.payload
-      
+
       // Find and update the message in all conversations
-      Object.values(state.conversations).forEach(conv => {
-        const message = conv.messages.find(m => m.id === messageId)
+      Object.values(state.conversations).forEach((conv) => {
+        const message = conv.messages.find((m) => m.id === messageId)
         if (message) {
           message.message = newMessage
           message.edited_at = editedAt
         }
       })
     },
-    
+
     // Delete a message
     deleteMessage(state, action: PayloadAction<string>) {
       const messageId = action.payload
-      
+
       // Mark as deleted in all conversations
-      Object.values(state.conversations).forEach(conv => {
-        const message = conv.messages.find(m => m.id === messageId)
+      Object.values(state.conversations).forEach((conv) => {
+        const message = conv.messages.find((m) => m.id === messageId)
         if (message) {
           message.deleted_at = new Date().toISOString()
         }
       })
     },
-    
+
     // Clear conversation
     clearConversation(state, action: PayloadAction<string>) {
       const conversationId = action.payload

@@ -209,7 +209,7 @@ export class AuthController {
         const { query } = await import('../config/database')
         const preferencesResult = await query(
           `SELECT theme FROM user_preferences WHERE user_id = $1`,
-          [user.id]
+          [user.id],
         )
         if (preferencesResult.rows[0]) {
           preferences = {
@@ -274,7 +274,7 @@ export class AuthController {
           `SELECT theme, sound_enabled, music_enabled, notification_enabled, 
            auto_ready, show_timer, show_army_numbers, animation_speed, language 
            FROM user_preferences WHERE user_id = $1`,
-          [userId]
+          [userId],
         )
         if (preferencesResult.rows[0]) {
           preferences = {
@@ -631,7 +631,7 @@ export class AuthController {
       // Prepare the data for storage - use defaults if null
       const result = await query(updateQuery, [
         userId,
-        settings.theme || 'dark',  // Default theme
+        settings.theme || 'dark', // Default theme
         settings.notifications?.enabled !== undefined ? settings.notifications.enabled : true,
         settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : true,
         settings.directMessages || 'friends',

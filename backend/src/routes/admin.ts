@@ -426,20 +426,20 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const { query } = require('../config/database')
-      
+
       const result = await query(`
         SELECT COUNT(*) as count 
         FROM games 
         WHERE status = 'active' OR status = 'in_progress'
       `)
-      
-      res.json({ 
-        activeGames: parseInt(result.rows[0]?.count || '0', 10)
+
+      res.json({
+        activeGames: parseInt(result.rows[0]?.count || '0', 10),
       })
     } catch (error) {
       logger.error('Error getting active games:', error)
-      res.status(500).json({ 
-        error: 'Failed to get active games count'
+      res.status(500).json({
+        error: 'Failed to get active games count',
       })
     }
   },
@@ -590,7 +590,7 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const { query } = require('../config/database')
-      
+
       const gamesQuery = `
         SELECT 
           g.id,
@@ -614,9 +614,9 @@ router.get(
         ORDER BY g.created_at DESC
         LIMIT 50
       `
-      
+
       const result = await query(gamesQuery)
-      
+
       const games = result.rows.map((game: any) => ({
         id: game.id,
         name: game.name || `Game ${game.id.slice(0, 8)}`,
@@ -629,7 +629,7 @@ router.get(
         duration: Math.floor(parseFloat(game.duration_minutes || '0')) + ' min',
         turnCount: game.turn_count || 0,
       }))
-      
+
       res.json(games)
     } catch (error) {
       logger.error('Error getting active games:', error)
@@ -807,7 +807,7 @@ router.get(
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `
       queryParams.push(limit, offset)
-      paramIndex += 2  // Increment for both LIMIT and OFFSET
+      paramIndex += 2 // Increment for both LIMIT and OFFSET
 
       const mapsResult = await query(mapsQuery, queryParams)
 
@@ -881,7 +881,8 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } = req.body
+      const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } =
+        req.body
       const adminUserId = (req as any).userId
 
       const { query } = require('../config/database')
@@ -999,7 +1000,7 @@ router.post(
 
       // Get the original map
       const originalMapResult = await query('SELECT * FROM maps WHERE id = $1', [mapId])
-      
+
       if (originalMapResult.rows.length === 0) {
         res.status(404).json({ error: 'Map not found' })
         return
@@ -1023,14 +1024,16 @@ router.post(
           'draft', // Always start clones as draft
           originalMap.capital_assignments,
           originalMap.capital_metadata,
-        ]
+        ],
       )
 
       const clonedMap = cloneResult.rows[0]
 
       // Clone territories if they exist
-      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [mapId])
-      
+      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [
+        mapId,
+      ])
+
       if (territoriesResult.rows.length > 0) {
         for (const territory of territoriesResult.rows) {
           await query(
@@ -1045,20 +1048,23 @@ router.post(
               territory.continent,
               territory.army_position,
               territory.metadata,
-            ]
+            ],
           )
         }
       }
 
       // Clone adjacencies if they exist
-      const adjacenciesResult = await query('SELECT * FROM territory_adjacencies WHERE map_id = $1', [mapId])
-      
+      const adjacenciesResult = await query(
+        'SELECT * FROM territory_adjacencies WHERE map_id = $1',
+        [mapId],
+      )
+
       if (adjacenciesResult.rows.length > 0) {
         for (const adjacency of adjacenciesResult.rows) {
           await query(
             `INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
              VALUES ($1, $2, $3)`,
-            [clonedMap.id, adjacency.territory_from, adjacency.territory_to]
+            [clonedMap.id, adjacency.territory_from, adjacency.territory_to],
           )
         }
       }
@@ -1075,7 +1081,7 @@ router.post(
           clonedMap.id,
           req.ip,
           req.get('User-Agent'),
-        ]
+        ],
       )
 
       res.json({ message: 'Map cloned successfully', map: clonedMap, name: clonedName })
@@ -1174,15 +1180,15 @@ router.delete(
       )
 
       if (parseInt(gamesCheck.rows[0].count, 10) > 0) {
-        res.status(400).json({ 
-          error: 'Cannot delete map that is being used in active games' 
+        res.status(400).json({
+          error: 'Cannot delete map that is being used in active games',
         })
         return
       }
 
       // Get map info before deletion for logging
       const mapInfo = await query('SELECT * FROM maps WHERE id = $1', [mapId])
-      
+
       if (mapInfo.rows.length === 0) {
         res.status(404).json({ error: 'Map not found' })
         return
@@ -1224,11 +1230,11 @@ router.post(
     try {
       const userId = (req as any).userId
       logger.info('Admin cache refresh requested', { adminId: userId })
-      
+
       // Log the admin activity
       try {
         await adminService.logAdminAction(userId, 'cache.refresh', {
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         })
       } catch (logError) {
         logger.warn('Failed to log cache refresh activity:', logError)
@@ -1237,7 +1243,7 @@ router.post(
 
       // Clear any in-memory caches (if you have any)
       // For example, if you have a map cache or user cache:
-      
+
       // Clear map service cache if it exists
       const { mapService } = require('../services/mapService')
       if (mapService && typeof mapService.clearCache === 'function') {
@@ -1264,7 +1270,7 @@ router.post(
 
       // Clear any Node.js module cache for hot-reloading (development only)
       if (process.env.NODE_ENV === 'development') {
-        Object.keys(require.cache).forEach(key => {
+        Object.keys(require.cache).forEach((key) => {
           if (key.includes('/services/') || key.includes('/config/')) {
             delete require.cache[key]
           }
@@ -1272,10 +1278,10 @@ router.post(
       }
 
       logger.info('Cache refresh completed successfully', { adminId: userId })
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'Cache refreshed successfully',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       })
     } catch (error) {
       logger.error('Error refreshing cache:', error)

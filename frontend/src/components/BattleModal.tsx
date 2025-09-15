@@ -39,15 +39,15 @@ export const BattleModal: React.FC<BattleModalProps> = ({
   useEffect(() => {
     if (isOpen && battleResult) {
       setShowAnimation(true)
-      
+
       // Play battle sounds
       audioService.playEffect('dice')
-      
+
       // Play battle/attack sound after dice
       setTimeout(() => {
         audioService.playEffect('battle')
       }, 500)
-      
+
       // Play outcome sound
       setTimeout(() => {
         if (battleResult.conquered) {
@@ -57,7 +57,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
           audioService.playEffect('attack')
         }
       }, 1000)
-      
+
       // Auto-close after 3 seconds if no continue attack option
       if (!onContinueAttack) {
         const timer = setTimeout(onClose, 3000)

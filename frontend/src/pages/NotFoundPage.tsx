@@ -13,16 +13,10 @@ const NotFoundPage: React.FC = () => {
           safer territory.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to="/"
-            className="btn-primary"
-          >
+          <Link to="/" className="btn-primary">
             🏠 Return Home
           </Link>
-          <Link
-            to="/lobby"
-            className="btn-secondary"
-          >
+          <Link to="/lobby" className="btn-secondary">
             🎮 Find a Game
           </Link>
         </div>

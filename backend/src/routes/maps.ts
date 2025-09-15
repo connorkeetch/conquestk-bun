@@ -121,14 +121,14 @@ const validateCreateMap = [
     .withMessage('Description must be under 500 characters'),
   body('isPublic')
     .optional()
-    .custom(value => {
+    .custom((value) => {
       // Handle both boolean and string values from multipart form data
       return value === true || value === false || value === 'true' || value === 'false'
     })
     .withMessage('isPublic must be boolean or "true"/"false" string'),
   body('tags')
     .optional()
-    .custom(value => {
+    .custom((value) => {
       // Handle both array and JSON string from multipart form data
       if (Array.isArray(value)) return true
       if (typeof value === 'string') {
@@ -144,7 +144,7 @@ const validateCreateMap = [
     .withMessage('Tags must be an array or valid JSON array string'),
   body('metadata')
     .optional()
-    .custom(value => {
+    .custom((value) => {
       // Handle JSON string from multipart form data
       if (typeof value === 'object' && value !== null) return true
       if (typeof value === 'string') {
@@ -256,7 +256,7 @@ const handleMulterError = (error: any, _req: Request, res: Response, next: any) 
 router.get('/available-for-game', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
-    
+
     // Fetch only approved, public maps for game creation
     const query = `
       SELECT 
@@ -288,9 +288,9 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         m.created_at DESC
       LIMIT 100
     `
-    
+
     const result = await pool.query(query)
-    
+
     // Add the classic map as a default option
     const classicMap = {
       id: 'classic',
@@ -306,30 +306,33 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
       rating_average: 5,
       rating_count: 0,
       tags: ['classic', 'official'],
-      image_url: '/assets/maps/classic-preview.png'
+      image_url: '/assets/maps/classic-preview.png',
     }
-    
-    const maps = [classicMap, ...result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description || '',
-      territory_count: parseInt(row.territory_count) || 0,
-      continent_count: parseInt(row.continent_count) || 0,
-      min_players: row.min_players || 2,
-      max_players: row.max_players || 6,
-      is_featured: row.is_featured || false,
-      is_vip_only: row.is_vip_only || false,
-      creator_name: row.creator_name || 'Unknown',
-      play_count: row.play_count || 0,
-      rating_average: row.rating_average || 0,
-      rating_count: row.rating_count || 0,
-      tags: row.tags || [],
-      image_url: row.image_url || null
-    }))]
-    
+
+    const maps = [
+      classicMap,
+      ...result.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
+        territory_count: parseInt(row.territory_count) || 0,
+        continent_count: parseInt(row.continent_count) || 0,
+        min_players: row.min_players || 2,
+        max_players: row.max_players || 6,
+        is_featured: row.is_featured || false,
+        is_vip_only: row.is_vip_only || false,
+        creator_name: row.creator_name || 'Unknown',
+        play_count: row.play_count || 0,
+        rating_average: row.rating_average || 0,
+        rating_count: row.rating_count || 0,
+        tags: row.tags || [],
+        image_url: row.image_url || null,
+      })),
+    ]
+
     return res.json({
       maps,
-      total: maps.length
+      total: maps.length,
     })
   } catch (error) {
     logger.error('Error fetching maps for game creation:', error)
@@ -341,7 +344,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
-    
+
     // Build filters
     const isPublic = req.query.isPublic !== 'false'
     const status = (req.query.status as string) || 'approved'
@@ -349,7 +352,7 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
     const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0
     const tag = req.query.tag as string
-    
+
     // Build query based on filters
     let query = `
       SELECT 
@@ -374,25 +377,25 @@ router.get('/', async (req: Request, res: Response) => {
       LEFT JOIN users u ON m.creator_id = u.id
       WHERE 1=1
     `
-    
+
     const params: any[] = []
     let paramCount = 0
-    
+
     // Add filters
     if (isPublic) {
       query += ` AND m.is_public = true`
     }
-    
+
     if (status) {
       query += ` AND m.status = $${++paramCount}`
       params.push(status)
     }
-    
+
     if (tag) {
       query += ` AND $${++paramCount} = ANY(m.tags)`
       params.push(tag)
     }
-    
+
     // Add sorting
     switch (sortBy) {
       case 'rating':
@@ -409,14 +412,14 @@ router.get('/', async (req: Request, res: Response) => {
         query += ` ORDER BY m.is_featured DESC, m.play_count DESC, m.rating_average DESC NULLS LAST`
         break
     }
-    
+
     // Add pagination
     query += ` LIMIT $${++paramCount} OFFSET $${++paramCount}`
     params.push(limit, offset)
-    
+
     const result = await pool.query(query, params)
-    
-    const maps = result.rows.map(row => ({
+
+    const maps = result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description || '',
@@ -433,9 +436,9 @@ router.get('/', async (req: Request, res: Response) => {
       createdAt: row.created_at,
       status: row.status,
       territoryCount: parseInt(row.territory_count) || 0,
-      continentCount: parseInt(row.continent_count) || 0
+      continentCount: parseInt(row.continent_count) || 0,
     }))
-    
+
     // Get total count for pagination
     const countQuery = `
       SELECT COUNT(*) as total
@@ -447,12 +450,12 @@ router.get('/', async (req: Request, res: Response) => {
     `
     const countResult = await pool.query(countQuery)
     const total = parseInt(countResult.rows[0]?.total || '0')
-    
+
     return res.json({
       maps,
       total,
       limit,
-      offset
+      offset,
     })
   } catch (error) {
     logger.error('Error fetching maps:', error)
@@ -514,155 +517,151 @@ router.get('/abilities/list', async (_req: Request, res: Response) => {
 // ============= AUTHENTICATED ROUTES =============
 
 // Create new map (JSON with base64 image)
-router.post(
-  '/json',
-  authenticateToken,
-  async (req: Request, res: Response) => {
-    try {
-      logger.info('Creating map with JSON data:', {
-        name: req.body.name,
-        hasImage: !!req.body.image,
-        hasMetadata: !!req.body.metadata,
-        userId: (req as any).userId,
-        bodyType: typeof req.body,
-        headers: req.headers['content-type'],
-      })
+router.post('/json', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    logger.info('Creating map with JSON data:', {
+      name: req.body.name,
+      hasImage: !!req.body.image,
+      hasMetadata: !!req.body.metadata,
+      userId: (req as any).userId,
+      bodyType: typeof req.body,
+      headers: req.headers['content-type'],
+    })
 
-      // Emergency fix: Handle tags in multiple formats
-      let tags: string[] = []
-      logger.info('Tags received:', { 
-        tags: req.body.tags, 
-        type: typeof req.body.tags,
-        isArray: Array.isArray(req.body.tags),
-        stringified: JSON.stringify(req.body.tags)
-      })
-      
-      if (Array.isArray(req.body.tags)) {
-        tags = req.body.tags
-      } else if (typeof req.body.tags === 'string') {
-        // Try to parse as JSON first
-        try {
-          const parsed = JSON.parse(req.body.tags)
-          if (Array.isArray(parsed)) {
-            tags = parsed
-          } else {
-            // Handle comma-separated string
-            tags = req.body.tags.split(',').map((t: string) => t.trim())
-          }
-        } catch {
+    // Emergency fix: Handle tags in multiple formats
+    let tags: string[] = []
+    logger.info('Tags received:', {
+      tags: req.body.tags,
+      type: typeof req.body.tags,
+      isArray: Array.isArray(req.body.tags),
+      stringified: JSON.stringify(req.body.tags),
+    })
+
+    if (Array.isArray(req.body.tags)) {
+      tags = req.body.tags
+    } else if (typeof req.body.tags === 'string') {
+      // Try to parse as JSON first
+      try {
+        const parsed = JSON.parse(req.body.tags)
+        if (Array.isArray(parsed)) {
+          tags = parsed
+        } else {
           // Handle comma-separated string
           tags = req.body.tags.split(',').map((t: string) => t.trim())
         }
-      } else if (typeof req.body.tags === 'object' && req.body.tags !== null) {
-        // Handle weird object format (might be from proxy/middleware)
-        // Try to extract values if it's an object
-        if (req.body.tags[0] !== undefined) {
-          // Looks like an array-like object
-          tags = Object.values(req.body.tags)
-        } else {
-          // Fallback to default tags
-          tags = ['custom', 'user-created']
-        }
+      } catch {
+        // Handle comma-separated string
+        tags = req.body.tags.split(',').map((t: string) => t.trim())
+      }
+    } else if (typeof req.body.tags === 'object' && req.body.tags !== null) {
+      // Handle weird object format (might be from proxy/middleware)
+      // Try to extract values if it's an object
+      if (req.body.tags[0] !== undefined) {
+        // Looks like an array-like object
+        tags = Object.values(req.body.tags)
       } else {
-        // Default tags if nothing else works
+        // Fallback to default tags
         tags = ['custom', 'user-created']
       }
+    } else {
+      // Default tags if nothing else works
+      tags = ['custom', 'user-created']
+    }
 
-      const mapData: CreateMapRequest = {
-        name: req.body.name,
-        description: req.body.description,
-        isPublic: req.body.isPublic === true || req.body.isPublic === 'true',
-        tags: tags,
-        minPlayers: req.body.minPlayers || 2,
-        maxPlayers: req.body.maxPlayers || 6,
-      }
+    const mapData: CreateMapRequest = {
+      name: req.body.name,
+      description: req.body.description,
+      isPublic: req.body.isPublic === true || req.body.isPublic === 'true',
+      tags: tags,
+      minPlayers: req.body.minPlayers || 2,
+      maxPlayers: req.body.maxPlayers || 6,
+    }
 
-      // Handle base64 image if provided
-      if (req.body.image && req.body.image.data) {
-        try {
-          const imageData = req.body.image.data
-          const mimeType = req.body.image.mimeType || 'image/png'
-          const filename = req.body.image.filename || `map-${Date.now()}.png`
-          
-          // Decode base64 to buffer
-          const buffer = Buffer.from(imageData, 'base64')
-          
-          // Generate unique filename
-          const ext = path.extname(filename) || '.png'
-          const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-          const filepath = path.join(process.cwd(), 'uploads', 'maps', uniqueFilename)
-          
-          // Ensure directory exists
-          const dir = path.dirname(filepath)
-          if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true })
-          }
-          
-          // Write file
-          await fsPromises.writeFile(filepath, buffer)
-          
-          mapData.imageUrl = `/uploads/maps/${uniqueFilename}`
-          
-          // Get image dimensions
-          try {
-            const dimensions = sizeOf(buffer)
-            mapData.imageWidth = dimensions.width || 800
-            mapData.imageHeight = dimensions.height || 600
-          } catch (dimensionError) {
-            logger.warn('Failed to get image dimensions:', dimensionError)
-            mapData.imageWidth = 800
-            mapData.imageHeight = 600
-          }
-        } catch (imageError) {
-          logger.error('Failed to process base64 image:', imageError)
-          return res.status(400).json({
-            error: 'Failed to process image',
-            message: 'The image data could not be processed',
-          })
+    // Handle base64 image if provided
+    if (req.body.image && req.body.image.data) {
+      try {
+        const imageData = req.body.image.data
+        const mimeType = req.body.image.mimeType || 'image/png'
+        const filename = req.body.image.filename || `map-${Date.now()}.png`
+
+        // Decode base64 to buffer
+        const buffer = Buffer.from(imageData, 'base64')
+
+        // Generate unique filename
+        const ext = path.extname(filename) || '.png'
+        const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+        const filepath = path.join(process.cwd(), 'uploads', 'maps', uniqueFilename)
+
+        // Ensure directory exists
+        const dir = path.dirname(filepath)
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true })
         }
-      }
 
-      // Store metadata if provided
-      if (req.body.metadata) {
-        ;(mapData as any).metadata = req.body.metadata
-      }
+        // Write file
+        await fsPromises.writeFile(filepath, buffer)
 
-      const map = await mapService.createMap((req as any).userId, mapData)
+        mapData.imageUrl = `/uploads/maps/${uniqueFilename}`
 
-      logger.info('Map created successfully:', {
-        mapId: map.id,
-        name: map.name,
-      })
-
-      return res.status(201).json(map)
-    } catch (error) {
-      logger.error('Error creating map via JSON endpoint:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      
-      // More detailed error for debugging
-      if (errorMessage.includes('duplicate key')) {
+        // Get image dimensions
+        try {
+          const dimensions = sizeOf(buffer)
+          mapData.imageWidth = dimensions.width || 800
+          mapData.imageHeight = dimensions.height || 600
+        } catch (dimensionError) {
+          logger.warn('Failed to get image dimensions:', dimensionError)
+          mapData.imageWidth = 800
+          mapData.imageHeight = 600
+        }
+      } catch (imageError) {
+        logger.error('Failed to process base64 image:', imageError)
         return res.status(400).json({
-          error: 'Map name already exists',
-          message: 'Please choose a different name for your map',
-          suggestion: `${req.body.name} (${new Date().getTime()})`,
+          error: 'Failed to process image',
+          message: 'The image data could not be processed',
         })
       }
-      
-      return res.status(500).json({
-        error: 'Failed to create map',
-        message: errorMessage,
-        endpoint: '/api/maps/json',
-        receivedData: {
-          hasName: !!req.body.name,
-          hasTags: !!req.body.tags,
-          tagsType: typeof req.body.tags,
-          hasImage: !!req.body.image,
-        },
-        details: process.env.NODE_ENV === 'development' ? error : undefined,
+    }
+
+    // Store metadata if provided
+    if (req.body.metadata) {
+      ;(mapData as any).metadata = req.body.metadata
+    }
+
+    const map = await mapService.createMap((req as any).userId, mapData)
+
+    logger.info('Map created successfully:', {
+      mapId: map.id,
+      name: map.name,
+    })
+
+    return res.status(201).json(map)
+  } catch (error) {
+    logger.error('Error creating map via JSON endpoint:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+
+    // More detailed error for debugging
+    if (errorMessage.includes('duplicate key')) {
+      return res.status(400).json({
+        error: 'Map name already exists',
+        message: 'Please choose a different name for your map',
+        suggestion: `${req.body.name} (${new Date().getTime()})`,
       })
     }
-  },
-)
+
+    return res.status(500).json({
+      error: 'Failed to create map',
+      message: errorMessage,
+      endpoint: '/api/maps/json',
+      receivedData: {
+        hasName: !!req.body.name,
+        hasTags: !!req.body.tags,
+        tagsType: typeof req.body.tags,
+        hasImage: !!req.body.image,
+      },
+      details: process.env.NODE_ENV === 'development' ? error : undefined,
+    })
+  }
+})
 
 // Create new map (FormData - backward compatibility)
 router.post(
@@ -819,7 +818,6 @@ router.delete(
   },
 )
 
-
 // Get user's maps (both routes for compatibility)
 router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -833,10 +831,10 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
     }
 
     const result = await mapService.searchMaps(filters)
-    
+
     // Add status information to user's own maps
     const pool = await getPool()
-    const mapIds = result.maps.map(m => m.id)
+    const mapIds = result.maps.map((m) => m.id)
     if (mapIds.length > 0) {
       const statusQuery = `
         SELECT id, status 
@@ -844,14 +842,14 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
         WHERE id = ANY($1)
       `
       const statusResult = await pool.query(statusQuery, [mapIds])
-      const statusMap = new Map(statusResult.rows.map(r => [r.id, r.status]))
-      
-      result.maps = result.maps.map(map => ({
+      const statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]))
+
+      result.maps = result.maps.map((map) => ({
         ...map,
-        status: statusMap.get(map.id) || 'draft'
+        status: statusMap.get(map.id) || 'draft',
       }))
     }
-    
+
     return res.json(result.maps)
   } catch (error) {
     logger.error('Error fetching user maps:', error)

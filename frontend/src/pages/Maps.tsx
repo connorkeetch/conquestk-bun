@@ -1,8 +1,8 @@
 import type React from 'react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import api from '../services/api'
 import { useAppSelector } from '../hooks/redux'
+import api from '../services/api'
 
 interface Map {
   id: string
@@ -50,8 +50,8 @@ const Maps: React.FC = () => {
           isPublic: true,
           sortBy: sortBy,
           tag: filterTag || undefined,
-          limit: 50
-        }
+          limit: 50,
+        },
       })
       setMaps(response.data.maps || [])
     } catch (error) {
@@ -74,15 +74,16 @@ const Maps: React.FC = () => {
   }
 
   const mapsToShow = showMyMaps ? myMaps : maps
-  let filteredMaps = mapsToShow.filter(map => 
-    map.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    map.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    map.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  let filteredMaps = mapsToShow.filter(
+    (map) =>
+      map.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      map.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      map.tags?.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
   )
-  
+
   // Apply status filter for My Maps
   if (showMyMaps && filterStatus) {
-    filteredMaps = filteredMaps.filter(map => map.status === filterStatus)
+    filteredMaps = filteredMaps.filter((map) => map.status === filterStatus)
   }
 
   const getStatusBadge = (status?: string) => {
@@ -92,7 +93,7 @@ const Maps: React.FC = () => {
       pending_review: { text: 'Under Review', className: 'bg-orange-600' },
       approved: { text: 'Approved', className: 'bg-green-600' },
       rejected: { text: 'Rejected', className: 'bg-red-600' },
-      archived: { text: 'Archived', className: 'bg-gray-700' }
+      archived: { text: 'Archived', className: 'bg-gray-700' },
     }
     const badge = badges[status as keyof typeof badges]
     if (!badge) return null
@@ -107,7 +108,7 @@ const Maps: React.FC = () => {
     const stars = []
     const fullStars = Math.floor(rating)
     const hasHalfStar = rating % 1 >= 0.5
-    
+
     for (let i = 0; i < fullStars; i++) {
       stars.push('⭐')
     }
@@ -121,7 +122,7 @@ const Maps: React.FC = () => {
   }
 
   // Get unique tags from all maps for filter dropdown
-  const allTags = Array.from(new Set(maps.flatMap(map => map.tags || []))).sort()
+  const allTags = Array.from(new Set(maps.flatMap((map) => map.tags || []))).sort()
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -140,8 +141,8 @@ const Maps: React.FC = () => {
             <button
               onClick={() => setShowMyMaps(!showMyMaps)}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                showMyMaps 
-                  ? 'bg-primary text-white' 
+                showMyMaps
+                  ? 'bg-primary text-white'
                   : 'bg-surface-2 text-muted hover:text-white border border-border'
               }`}
             >
@@ -153,10 +154,7 @@ const Maps: React.FC = () => {
               )}
             </button>
           )}
-          <Link
-            to="/map-editor"
-            className="btn-primary hover-lift hover-glow"
-          >
+          <Link to="/map-editor" className="btn-primary hover-lift hover-glow">
             ✏️ Create Map
           </Link>
         </div>
@@ -174,9 +172,9 @@ const Maps: React.FC = () => {
           />
           <div className="absolute right-3 top-3 text-muted">🔍</div>
         </div>
-        
+
         {showMyMaps && (
-          <select 
+          <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
@@ -189,21 +187,23 @@ const Maps: React.FC = () => {
             <option value="archived">Archived</option>
           </select>
         )}
-        
+
         {!showMyMaps && allTags.length > 0 && (
-          <select 
+          <select
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
             className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Tags</option>
-            {allTags.map(tag => (
-              <option key={tag} value={tag}>{tag}</option>
+            {allTags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
             ))}
           </select>
         )}
-        
-        <select 
+
+        <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
           className="bg-surface-2 border border-border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary"
@@ -236,15 +236,13 @@ const Maps: React.FC = () => {
               {/* Map Thumbnail */}
               <div className="relative h-48 bg-surface-2 rounded-t-lg overflow-hidden">
                 {map.imageUrl ? (
-                  <img 
-                    src={map.imageUrl} 
+                  <img
+                    src={map.imageUrl}
                     alt={map.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-6xl">
-                    🗺️
-                  </div>
+                  <div className="w-full h-full flex items-center justify-center text-6xl">🗺️</div>
                 )}
                 <div className="absolute top-2 right-2 flex gap-2">
                   {map.isFeatured && (
@@ -266,22 +264,25 @@ const Maps: React.FC = () => {
                   <h3 className="font-bold text-white group-hover:text-primary transition-colors">
                     {map.name}
                     {!map.isPublic && (
-                      <span className="ml-1 text-gray-400 text-xs" title="Private">🔒</span>
+                      <span className="ml-1 text-gray-400 text-xs" title="Private">
+                        🔒
+                      </span>
                     )}
                   </h3>
                   {showMyMaps && getStatusBadge(map.status)}
                 </div>
                 {map.description && (
-                  <p className="text-muted text-sm mb-2 line-clamp-2">
-                    {map.description}
-                  </p>
+                  <p className="text-muted text-sm mb-2 line-clamp-2">{map.description}</p>
                 )}
-                
+
                 {/* Tags */}
                 {map.tags && map.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
                     {map.tags.slice(0, 3).map((tag, index) => (
-                      <span key={index} className="bg-surface-2 text-xs px-2 py-1 rounded text-muted">
+                      <span
+                        key={index}
+                        className="bg-surface-2 text-xs px-2 py-1 rounded text-muted"
+                      >
                         {tag}
                       </span>
                     ))}
@@ -291,20 +292,16 @@ const Maps: React.FC = () => {
                 {/* Stats */}
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-3">
-                    <span className="text-muted">
-                      🎮 {map.playCount || 0}
-                    </span>
+                    <span className="text-muted">🎮 {map.playCount || 0}</span>
                     {map.ratingCount > 0 && (
                       <span className="text-muted" title={`${map.ratingAverage.toFixed(1)}/5`}>
                         {getRatingStars(map.ratingAverage)}
                       </span>
                     )}
                   </div>
-                  <span className="text-muted text-xs">
-                    by {map.creatorName || 'Unknown'}
-                  </span>
+                  <span className="text-muted text-xs">by {map.creatorName || 'Unknown'}</span>
                 </div>
-                
+
                 {/* Action Buttons for My Maps */}
                 {showMyMaps && user && map.creatorId === user.id && (
                   <div className="mt-3 pt-3 border-t border-border flex gap-2">
@@ -347,14 +344,11 @@ const Maps: React.FC = () => {
               {searchTerm || filterTag ? 'No Maps Found' : 'No Maps Available'}
             </h2>
             <p className="text-muted text-lg mb-8 leading-relaxed">
-              {searchTerm || filterTag 
-                ? "Try adjusting your search or filter criteria."
-                : "Be the first to create and share a map with the community!"}
+              {searchTerm || filterTag
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Be the first to create and share a map with the community!'}
             </p>
-            <Link
-              to="/map-editor"
-              className="btn-primary inline-block"
-            >
+            <Link to="/map-editor" className="btn-primary inline-block">
               ✏️ Create the First Map
             </Link>
           </div>

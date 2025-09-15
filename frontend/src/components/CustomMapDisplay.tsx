@@ -41,10 +41,11 @@ export default function CustomMapDisplay({
         setError(null)
 
         // Load map metadata
-        const apiUrl = import.meta.env.MODE === 'production' 
-          ? `/api/maps/${mapId}` 
-          : `http://localhost:5001/api/maps/${mapId}`
-        
+        const apiUrl =
+          import.meta.env.MODE === 'production'
+            ? `/api/maps/${mapId}`
+            : `http://localhost:5001/api/maps/${mapId}`
+
         const response = await fetch(apiUrl, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -56,11 +57,9 @@ export default function CustomMapDisplay({
         }
 
         const map = await response.json()
-        
+
         // Extract dimensions from metadata
-        const metadata = typeof map.metadata === 'string' 
-          ? JSON.parse(map.metadata) 
-          : map.metadata
+        const metadata = typeof map.metadata === 'string' ? JSON.parse(map.metadata) : map.metadata
 
         setMapData({
           imageUrl: map.imageUrl || map.image_url,
@@ -121,13 +120,11 @@ export default function CustomMapDisplay({
       {territories.map((territory) => {
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
-        
+
         return (
           <div
             key={territory.id}
-            className={`absolute cursor-pointer transition-all ${
-              isSelected ? 'z-20' : 'z-10'
-            }`}
+            className={`absolute cursor-pointer transition-all ${isSelected ? 'z-20' : 'z-10'}`}
             style={{
               left: `${(territory.x / mapData.width) * 100}%`,
               top: `${(territory.y / mapData.height) * 100}%`,
@@ -142,19 +139,19 @@ export default function CustomMapDisplay({
               }`}
               style={{
                 backgroundColor: ownerColor || '#666',
-                boxShadow: isSelected ? '0 0 10px rgba(250, 204, 21, 0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
+                boxShadow: isSelected
+                  ? '0 0 10px rgba(250, 204, 21, 0.5)'
+                  : '0 2px 4px rgba(0,0,0,0.3)',
               }}
             >
               {/* Army count */}
               {territory.armies && territory.armies > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
-                    {territory.armies}
-                  </span>
+                  <span className="text-white font-bold text-sm">{territory.armies}</span>
                 </div>
               )}
             </div>
-            
+
             {/* Territory name tooltip */}
             <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
               {territory.name}

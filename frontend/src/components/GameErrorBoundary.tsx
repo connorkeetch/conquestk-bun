@@ -7,9 +7,9 @@ interface GameErrorBoundaryProps {
   gameId?: string
 }
 
-const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> = ({ 
-  gameId, 
-  resetError 
+const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> = ({
+  gameId,
+  resetError,
 }) => {
   const navigate = useNavigate()
 
@@ -25,13 +25,11 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/20 to-black">
       <div className="text-center p-8 bg-danger-soft border border-red-500/30 rounded-lg max-w-lg">
         <div className="text-6xl mb-4">🎮💥</div>
-        <h2 className="text-2xl font-bold text-red-400 mb-4">
-          Game Error
-        </h2>
+        <h2 className="text-2xl font-bold text-red-400 mb-4">Game Error</h2>
         <p className="text-white/80 mb-6">
           The game encountered an unexpected error. You can try to rejoin or return to the lobby.
         </p>
-        
+
         <div className="space-y-3">
           <button
             onClick={resetError}
@@ -39,7 +37,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
           >
             Try to Rejoin Game
           </button>
-          
+
           <button
             onClick={handleLeaveGame}
             className="w-full px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
@@ -48,11 +46,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
           </button>
         </div>
 
-        {gameId && (
-          <p className="text-sm text-muted mt-4">
-            Game ID: {gameId}
-          </p>
-        )}
+        {gameId && <p className="text-sm text-muted mt-4">Game ID: {gameId}</p>}
       </div>
     </div>
   )
@@ -75,7 +69,7 @@ export const GameErrorBoundary: React.FC<GameErrorBoundaryProps> = ({ children, 
   }
 
   const resetError = () => {
-    setResetKey(prev => prev + 1)
+    setResetKey((prev) => prev + 1)
   }
 
   return (

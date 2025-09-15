@@ -19,43 +19,43 @@ export default function TeamAssignment({
   players,
   numberOfTeams,
   isHost,
-  onTeamChange
+  onTeamChange,
 }: TeamAssignmentProps) {
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null)
-  
+
   // Group players by team
   const teams = Array.from({ length: numberOfTeams }, (_, i) => ({
     ...TEAM_COLORS[i],
-    players: players.filter(p => p.teamId === i + 1)
+    players: players.filter((p) => p.teamId === i + 1),
   }))
-  
+
   // Unassigned players
-  const unassignedPlayers = players.filter(p => !p.teamId || p.teamId === 0)
-  
+  const unassignedPlayers = players.filter((p) => !p.teamId || p.teamId === 0)
+
   const handleDragStart = (playerId: string) => {
     if (!isHost) return
     setDraggedPlayer(playerId)
   }
-  
+
   const handleDragEnd = () => {
     setDraggedPlayer(null)
   }
-  
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
   }
-  
+
   const handleDrop = (e: React.DragEvent, teamId: number) => {
     e.preventDefault()
     if (!isHost || !draggedPlayer) return
-    
+
     onTeamChange?.(draggedPlayer, teamId)
     setDraggedPlayer(null)
   }
-  
+
   const handleAutoBalance = () => {
     if (!isHost) return
-    
+
     // Distribute players evenly across teams
     const shuffled = [...players].sort(() => Math.random() - 0.5)
     shuffled.forEach((player, index) => {
@@ -63,7 +63,7 @@ export default function TeamAssignment({
       onTeamChange?.(player.id, teamId)
     })
   }
-  
+
   return (
     <div className="space-y-4">
       {/* Header with controls */}
@@ -78,10 +78,10 @@ export default function TeamAssignment({
           </button>
         )}
       </div>
-      
+
       {/* Team containers */}
       <div className="grid grid-cols-2 gap-4">
-        {teams.map(team => (
+        {teams.map((team) => (
           <div
             key={team.id}
             className={`p-4 rounded-lg border-2 ${team.border} bg-surface-1 ${
@@ -93,13 +93,11 @@ export default function TeamAssignment({
             <div className="flex items-center gap-2 mb-3">
               <div className={`w-4 h-4 rounded-full ${team.color}`} />
               <h4 className="font-semibold text-white">{team.name}</h4>
-              <span className="text-sm text-muted">
-                ({team.players.length} players)
-              </span>
+              <span className="text-sm text-muted">({team.players.length} players)</span>
             </div>
-            
+
             <div className="space-y-2 min-h-[60px]">
-              {team.players.map(player => (
+              {team.players.map((player) => (
                 <div
                   key={player.id}
                   draggable={isHost}
@@ -116,7 +114,7 @@ export default function TeamAssignment({
                   )}
                 </div>
               ))}
-              
+
               {team.players.length === 0 && (
                 <div className="text-center text-muted text-sm py-2">
                   {isHost ? 'Drag players here' : 'No players yet'}
@@ -126,13 +124,13 @@ export default function TeamAssignment({
           </div>
         ))}
       </div>
-      
+
       {/* Unassigned players */}
       {unassignedPlayers.length > 0 && (
         <div className="mt-4 p-4 bg-surface-1 rounded-lg border-2 border-border">
           <h4 className="font-semibold text-white mb-3">Unassigned Players</h4>
           <div className="flex flex-wrap gap-2">
-            {unassignedPlayers.map(player => (
+            {unassignedPlayers.map((player) => (
               <div
                 key={player.id}
                 draggable={isHost}
@@ -144,13 +142,11 @@ export default function TeamAssignment({
               >
                 <div className="w-2 h-2 bg-yellow-400 rounded-full" />
                 <span className="text-sm text-white">{player.username}</span>
-                {player.isAI && (
-                  <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">AI</span>
-                )}
+                {player.isAI && <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">AI</span>}
               </div>
             ))}
           </div>
-          
+
           {isHost && (
             <p className="text-xs text-muted mt-2">
               Drag players to teams or click "Auto Balance" to distribute evenly
@@ -158,12 +154,10 @@ export default function TeamAssignment({
           )}
         </div>
       )}
-      
+
       {/* Instructions */}
       {!isHost && (
-        <p className="text-sm text-muted text-center">
-          Waiting for host to assign teams...
-        </p>
+        <p className="text-sm text-muted text-center">Waiting for host to assign teams...</p>
       )}
     </div>
   )

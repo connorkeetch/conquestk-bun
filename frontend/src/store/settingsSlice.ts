@@ -9,9 +9,9 @@ export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy co
 
 // New theme system for future theme switching
 export interface ThemeSettings {
-  baseTheme: 'dark' | 'light' | 'high-contrast'  // Core theme (dark/light)
-  colorTheme: ColorTheme                          // Color palette 
-  styleTheme: StyleTheme                          // UI style/components
+  baseTheme: 'dark' | 'light' | 'high-contrast' // Core theme (dark/light)
+  colorTheme: ColorTheme // Color palette
+  styleTheme: StyleTheme // UI style/components
 }
 
 export type DMPermission = 'everyone' | 'friends' | 'nobody'
@@ -49,7 +49,7 @@ interface SettingsState {
     directMessages: DMPermission
   }
 
-  // Notification Settings  
+  // Notification Settings
   notifications: NotificationPrefs
 }
 
@@ -94,13 +94,13 @@ const loadSettings = (): SettingsState => {
         privacy: { ...defaultSettings.privacy, ...parsed.privacy },
         notifications: { ...defaultSettings.notifications, ...parsed.notifications },
       }
-      
+
       // Apply stored color theme from localStorage on load to fix persistence
       const storedColorTheme = localStorage.getItem('colorTheme') as ColorTheme
       if (storedColorTheme) {
         document.documentElement.setAttribute('data-theme', storedColorTheme)
       }
-      
+
       return mergedSettings
     }
   } catch (_error) {
@@ -165,11 +165,14 @@ const settingsSlice = createSlice({
     },
 
     // Notification settings
-    setNotificationPref: (state, action: PayloadAction<{ 
-      type: keyof NotificationPrefs; 
-      channel: 'browser' | 'email'; 
-      enabled: boolean 
-    }>) => {
+    setNotificationPref: (
+      state,
+      action: PayloadAction<{
+        type: keyof NotificationPrefs
+        channel: 'browser' | 'email'
+        enabled: boolean
+      }>,
+    ) => {
       const { type, channel, enabled } = action.payload
       state.notifications[type][channel] = enabled
       saveSettings(state)
@@ -185,7 +188,6 @@ const settingsSlice = createSlice({
       if (settingsData) localStorage.setItem('userSettings', settingsData)
     },
 
-
     resetSettings: (state) => {
       Object.assign(state, defaultSettings)
       saveSettings(state)
@@ -197,37 +199,38 @@ const settingsSlice = createSlice({
     loadServerSettings: (state, action: PayloadAction<any>) => {
       const serverSettings = action.payload
       if (!serverSettings) return
-      
+
       // Map server settings to Redux state (only if they exist)
       if (serverSettings.theme) {
         state.display.theme = serverSettings.theme
         document.documentElement.setAttribute('data-theme', serverSettings.theme)
       }
-      
+
       if (serverSettings.preferred_color) {
         state.game.preferredColor = serverSettings.preferred_color
       }
-      
+
       if (serverSettings.show_online_status !== undefined) {
         state.privacy.showOnlineStatus = serverSettings.show_online_status
       }
-      
+
       if (serverSettings.direct_messages) {
         state.privacy.directMessages = serverSettings.direct_messages as DMPermission
       }
-      
+
       if (serverSettings.notifications && typeof serverSettings.notifications === 'object') {
         try {
-          const notifications = typeof serverSettings.notifications === 'string' 
-            ? JSON.parse(serverSettings.notifications) 
-            : serverSettings.notifications
-          
+          const notifications =
+            typeof serverSettings.notifications === 'string'
+              ? JSON.parse(serverSettings.notifications)
+              : serverSettings.notifications
+
           // Merge notification settings carefully
           Object.keys(notifications).forEach((key) => {
             if (key in state.notifications) {
               state.notifications[key as keyof NotificationPrefs] = {
                 ...state.notifications[key as keyof NotificationPrefs],
-                ...notifications[key]
+                ...notifications[key],
               }
             }
           })
@@ -235,7 +238,7 @@ const settingsSlice = createSlice({
           console.warn('Failed to parse server notifications:', error)
         }
       }
-      
+
       // Don't call saveSettings here - we don't want to overwrite localStorage with server data
       console.log('✅ Server settings loaded into Redux')
     },

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import MountainLogo from '../components/MountainLogo'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, register } from '../store/authSlice'
 import EmailVerificationPending from './EmailVerificationPending'
-import MountainLogo from '../components/MountainLogo'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -51,13 +51,19 @@ export default function Register() {
             <div className="flex items-center justify-center gap-3 mb-2">
               <MountainLogo width={48} height={48} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
-                CONQUEST <span className="font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
-                  backgroundClip: 'text', 
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>K</span>
+                CONQUEST{' '}
+                <span
+                  className="font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)',
+                    backgroundClip: 'text',
+                    textFillColor: 'transparent',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  K
+                </span>
               </h1>
             </div>
           </Link>

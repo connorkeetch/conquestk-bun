@@ -1,18 +1,18 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAppSelector } from '../hooks/redux'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import {
-  PLAYER_COLORS,
-  PREMIUM_PLAYER_COLORS,
   getPlayerColor,
   getPremiumPlayerColor,
+  PLAYER_COLORS,
   type PlayerColor,
+  PREMIUM_PLAYER_COLORS,
 } from '../constants/colors'
+import { useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import api from '../services/api'
 import { type CreateGameData, gameService } from '../services/gameService'
 import type { MovementType } from '../types/game'
-import api from '../services/api'
 
 // Map interface
 interface GameMap {
@@ -36,17 +36,17 @@ interface GameMap {
 // Helper function to get valid team configurations based on player count
 function getValidTeamOptions(playerCount: number): number[] {
   const validOptions: number[] = []
-  
+
   // Always can have free for all (represented as 0)
   validOptions.push(0)
-  
+
   // Check which team sizes divide evenly into player count
   for (let teams = 2; teams <= 6; teams++) {
     if (playerCount % teams === 0 && playerCount / teams >= 2) {
       validOptions.push(teams)
     }
   }
-  
+
   return validOptions
 }
 
@@ -96,29 +96,29 @@ const getColorName = (color: string | PlayerColor): string => {
     }
     return premiumNames[color] || color
   }
-  
+
   // Map player colors to names (matching exact order in PLAYER_COLORS)
   const playerColorNames: string[] = [
-    'Red',           // #DC2626
-    'Crimson',       // #851D2D
-    'Pink',          // #EC4899
-    'Orange',        // #EA580C
-    'Amber',         // #F59E0B
-    'Forest Green',  // #014421
-    'Emerald',       // #059669
-    'Blue',          // #2563EB
-    'Cyan',          // #06B6D4
-    'Violet',        // #7C3AED
-    'Tan',           // #918151
-    'Brown',         // #7C2D12
+    'Red', // #DC2626
+    'Crimson', // #851D2D
+    'Pink', // #EC4899
+    'Orange', // #EA580C
+    'Amber', // #F59E0B
+    'Forest Green', // #014421
+    'Emerald', // #059669
+    'Blue', // #2563EB
+    'Cyan', // #06B6D4
+    'Violet', // #7C3AED
+    'Tan', // #918151
+    'Brown', // #7C2D12
   ]
-  
+
   // For standard player colors, get the index and return the name
   const colorIndex = PLAYER_COLORS.indexOf(color as any)
   if (colorIndex !== -1) {
     return playerColorNames[colorIndex]
   }
-  
+
   return 'Custom'
 }
 
@@ -162,7 +162,7 @@ const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
-  
+
   // Get preferred color from settings, default to first player color
   const preferredColor = settings.game?.preferredColor || PLAYER_COLORS[0]
 
@@ -178,13 +178,17 @@ const CreateGamePage: React.FC = () => {
   const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent'>('off')
   const [teams, setTeams] = useState<number | 'random'>(0)
   const [teamAssignment, setTeamAssignment] = useState('random')
-  const [fortification, setFortification] = useState<'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited' | 'random'>('adjacent')
+  const [fortification, setFortification] = useState<
+    'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited' | 'random'
+  >('adjacent')
   const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState(24 * 60) // in minutes
   const [gameSpeed, setGameSpeed] = useState<'realtime' | 'async'>('async')
   const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
   const [staticBonusValue, setStaticBonusValue] = useState(10)
-  const [spoilsType, setSpoilsType] = useState<'escalating' | 'fixed' | 'static' | 'random'>('escalating')
+  const [spoilsType, setSpoilsType] = useState<'escalating' | 'fixed' | 'static' | 'random'>(
+    'escalating',
+  )
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean>(false)
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
@@ -201,7 +205,7 @@ const CreateGamePage: React.FC = () => {
   // Maps state
   const [maps, setMaps] = useState<GameMap[]>([])
   const [mapsLoading, setMapsLoading] = useState(true)
-  
+
   // Add random map option
   const randomMapOption: GameMap = {
     id: 'random',
@@ -213,7 +217,7 @@ const CreateGamePage: React.FC = () => {
     max_players: 12,
     tags: ['random'],
   }
-  
+
   // Fetch available maps on component mount
   useEffect(() => {
     const fetchMaps = async () => {
@@ -244,24 +248,25 @@ const CreateGamePage: React.FC = () => {
         setMapsLoading(false)
       }
     }
-    
+
     fetchMaps()
   }, [])
 
   // Generate smart game name (with placeholder for random options)
   const generateSmartName = (resolveRandom = false) => {
     // If we have random options and not resolving, return placeholder
-    if (!resolveRandom && (
-      gameMode === 'random' || 
-      playersOption === 'random' || 
-      teams === 'random' || 
-      fortification === 'random' || 
-      spoilsType === 'random' || 
-      selectedMap === 'random'
-    )) {
+    if (
+      !resolveRandom &&
+      (gameMode === 'random' ||
+        playersOption === 'random' ||
+        teams === 'random' ||
+        fortification === 'random' ||
+        spoilsType === 'random' ||
+        selectedMap === 'random')
+    ) {
       return '(autoname)'
     }
-    
+
     const selectedMapData = maps.find((m) => m.id === selectedMap)
     const mapName = selectedMapData?.name || 'Classic World'
     const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
@@ -377,38 +382,51 @@ const CreateGamePage: React.FC = () => {
       setError(null)
 
       // Resolve random options
-      let finalGameMode = gameMode === 'random' 
-        ? ['classic', 'capitals'][Math.floor(Math.random() * 2)] as 'classic' | 'capitals'
-        : gameMode as 'classic' | 'capitals'
-      
-      let finalPlayers = playersOption === 'random'
-        ? Math.floor(Math.random() * 11) + 2  // 2-12 players
-        : maxPlayers
-        
-      let finalTeams = teams === 'random'
-        ? getValidTeamOptions(finalPlayers)[Math.floor(Math.random() * getValidTeamOptions(finalPlayers).length)]
-        : teams
-        
-      let finalFortification = fortification === 'random'
-        ? ['adjacent', 'adjacent_multi', 'chained', 'unlimited'][Math.floor(Math.random() * 4)] as 'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited'
-        : fortification
-        
-      let finalSpoils = spoilsType === 'random'
-        ? ['escalating', 'fixed', 'static'][Math.floor(Math.random() * 3)] as 'escalating' | 'fixed' | 'static'
-        : spoilsType
-        
-      let finalFog = fogOfWar
-        
-      let finalModifiers = useTerritoryModifiers
-        
+      const finalGameMode =
+        gameMode === 'random'
+          ? (['classic', 'capitals'][Math.floor(Math.random() * 2)] as 'classic' | 'capitals')
+          : (gameMode as 'classic' | 'capitals')
+
+      const finalPlayers =
+        playersOption === 'random'
+          ? Math.floor(Math.random() * 11) + 2 // 2-12 players
+          : maxPlayers
+
+      const finalTeams =
+        teams === 'random'
+          ? getValidTeamOptions(finalPlayers)[
+              Math.floor(Math.random() * getValidTeamOptions(finalPlayers).length)
+            ]
+          : teams
+
+      const finalFortification =
+        fortification === 'random'
+          ? (['adjacent', 'adjacent_multi', 'chained', 'unlimited'][
+              Math.floor(Math.random() * 4)
+            ] as 'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited')
+          : fortification
+
+      const finalSpoils =
+        spoilsType === 'random'
+          ? (['escalating', 'fixed', 'static'][Math.floor(Math.random() * 3)] as
+              | 'escalating'
+              | 'fixed'
+              | 'static')
+          : spoilsType
+
+      const finalFog = fogOfWar
+
+      const finalModifiers = useTerritoryModifiers
+
       // Filter out random option and select a random map
-      const availableMaps = maps.filter(m => m.id !== 'random')
-      let finalMap = selectedMap === 'random'
-        ? availableMaps[Math.floor(Math.random() * availableMaps.length)]?.id || 'classic'
-        : selectedMap
+      const availableMaps = maps.filter((m) => m.id !== 'random')
+      const finalMap =
+        selectedMap === 'random'
+          ? availableMaps[Math.floor(Math.random() * availableMaps.length)]?.id || 'classic'
+          : selectedMap
 
       const gameData: CreateGameData = {
-        name: gameName || generateSmartName(true),  // Resolve random options when creating
+        name: gameName || generateSmartName(true), // Resolve random options when creating
         maxPlayers: finalPlayers,
         isPrivate: gameVisibility === 'private',
         isRanked,
@@ -446,8 +464,6 @@ const CreateGamePage: React.FC = () => {
     }
   }
 
-
-
   return (
     <div className="min-h-screen text-white p-6">
       {/* Header with integrated game name */}
@@ -460,7 +476,7 @@ const CreateGamePage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder={useAutoName ? generateSmartName() : "Game name"}
+                  placeholder={useAutoName ? generateSmartName() : 'Game name'}
                   className={`px-3 py-1.5 bg-surface-2 border border-border rounded-lg text-white placeholder-gray-400 focus:border-primary focus:outline-none transition-all duration-200 text-sm w-64 ${
                     useAutoName ? 'bg-surface-2/50 cursor-not-allowed' : ''
                   }`}
@@ -510,12 +526,16 @@ const CreateGamePage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className={`max-w-7xl mx-auto mb-6 p-4 ${error.startsWith('✅') ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'} border rounded-lg`}>
+        <div
+          className={`max-w-7xl mx-auto mb-6 p-4 ${error.startsWith('✅') ? 'bg-green-900/50 border-green-500' : 'bg-red-900/50 border-red-500'} border rounded-lg`}
+        >
           <div className="flex items-center space-x-2">
             <span className={error.startsWith('✅') ? 'text-green-400' : 'text-red-400'}>
               {error.startsWith('✅') ? '' : '❌'}
             </span>
-            <span className={error.startsWith('✅') ? 'text-green-400' : 'text-red-400'}>{error}</span>
+            <span className={error.startsWith('✅') ? 'text-green-400' : 'text-red-400'}>
+              {error}
+            </span>
           </div>
         </div>
       )}
@@ -608,10 +628,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 2. Game Mode Card */}
-        <OptionCard 
-          number="2" 
-          title="Game Mode"
-        >
+        <OptionCard number="2" title="Game Mode">
           <div className="space-y-2">
             <button
               type="button"
@@ -635,7 +652,9 @@ const CreateGamePage: React.FC = () => {
               }`}
             >
               <div className="font-medium">🏰 Capitals</div>
-              <p className="text-xs opacity-70 mt-1">Protect your capital territory to stay alive</p>
+              <p className="text-xs opacity-70 mt-1">
+                Protect your capital territory to stay alive
+              </p>
             </button>
             {!isRanked && (
               <button
@@ -655,10 +674,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 3. Turn Time Limits Card */}
-        <OptionCard
-          number="3"
-          title="Turn Time Limits"
-        >
+        <OptionCard number="3" title="Turn Time Limits">
           <div className="space-y-3">
             <div>
               <p className="text-xs text-muted mb-2">⚡ Real-Time Games</p>
@@ -689,7 +705,7 @@ const CreateGamePage: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div>
               <p className="text-xs text-muted mb-2">📅 Long-Term Games</p>
               <div className="grid grid-cols-3 gap-2">
@@ -733,17 +749,15 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 4. Number of Players Card */}
-        <OptionCard
-          number="4"
-          title="Number of Players"
-        >
+        <OptionCard number="4" title="Number of Players">
           <div className="space-y-3">
             <div className="grid grid-cols-4 gap-2">
               {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((playerCount) => {
                 const validTeamOptions = getValidTeamOptions(playerCount)
-                const isTeamCompatible = teams === 0 || teams === 'random' || validTeamOptions.includes(teams as number)
+                const isTeamCompatible =
+                  teams === 0 || teams === 'random' || validTeamOptions.includes(teams as number)
                 const isDisabled = teams !== 0 && teams !== 'random' && !isTeamCompatible
-                
+
                 return (
                   <button
                     key={playerCount}
@@ -775,54 +789,51 @@ const CreateGamePage: React.FC = () => {
               )}
             </div>
             <p className="text-xs text-muted">
-              {playersOption === 'random' 
+              {playersOption === 'random'
                 ? 'Random player count (2-12) chosen when game starts'
-                : `Game will start with ${playersOption} players`
-              }
+                : `Game will start with ${playersOption} players`}
             </p>
           </div>
         </OptionCard>
 
         {/* 5. Teams Card */}
-        <OptionCard
-          number="5"
-          title="Teams"
-        >
+        <OptionCard number="5" title="Teams">
           <div className="space-y-2">
             <button
               type="button"
               onClick={() => setTeams(0)}
               className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                teams === 0
-                  ? 'bg-primary text-white'
-                  : 'bg-white/10 text-white hover:bg-white/20'
+                teams === 0 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
               <div className="font-medium text-sm">Free for All</div>
               <p className="text-xs opacity-70">Every player for themselves</p>
             </button>
-            
-            {playersOption !== 'random' && [2, 3, 4, 5, 6].map((teamOption) => {
-              const validTeamOptions = getValidTeamOptions(maxPlayers)
-              const isValid = validTeamOptions.includes(teamOption)
-              
-              return isValid ? (
-                <button
-                  key={teamOption}
-                  type="button"
-                  onClick={() => setTeams(teamOption)}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    teams === teamOption
-                      ? 'bg-primary text-white'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <div className="font-medium text-sm">{teamOption} Teams</div>
-                  <p className="text-xs opacity-70">{Math.floor(maxPlayers / teamOption)} players per team</p>
-                </button>
-              ) : null
-            })}
-            
+
+            {playersOption !== 'random' &&
+              [2, 3, 4, 5, 6].map((teamOption) => {
+                const validTeamOptions = getValidTeamOptions(maxPlayers)
+                const isValid = validTeamOptions.includes(teamOption)
+
+                return isValid ? (
+                  <button
+                    key={teamOption}
+                    type="button"
+                    onClick={() => setTeams(teamOption)}
+                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                      teams === teamOption
+                        ? 'bg-primary text-white'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">{teamOption} Teams</div>
+                    <p className="text-xs opacity-70">
+                      {Math.floor(maxPlayers / teamOption)} players per team
+                    </p>
+                  </button>
+                ) : null
+              })}
+
             {!isRanked && (
               <button
                 type="button"
@@ -841,10 +852,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 6. Fortification Card */}
-        <OptionCard
-          number="6"
-          title="Fortification"
-        >
+        <OptionCard number="6" title="Fortification">
           <div className="space-y-2">
             <button
               type="button"
@@ -858,7 +866,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">🔗 Adjacent Only</div>
               <p className="text-xs opacity-70">Move troops only between connected territories</p>
             </button>
-            
+
             <button
               type="button"
               onClick={() => setFortification('adjacent_multi')}
@@ -871,7 +879,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">🔄 Adjacent Multiple</div>
               <p className="text-xs opacity-70">Multiple moves between adjacent territories</p>
             </button>
-            
+
             <button
               type="button"
               onClick={() => setFortification('chained')}
@@ -884,7 +892,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">⛓️ Chained</div>
               <p className="text-xs opacity-70">Move along a path of connected territories</p>
             </button>
-            
+
             <button
               type="button"
               onClick={() => setFortification('unlimited')}
@@ -897,7 +905,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">🌍 Unlimited</div>
               <p className="text-xs opacity-70">Move between any owned territories</p>
             </button>
-            
+
             {!isRanked && (
               <button
                 type="button"
@@ -916,10 +924,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 7. Spoils of War Card */}
-        <OptionCard
-          number="7"
-          title="Spoils of War"
-        >
+        <OptionCard number="7" title="Spoils of War">
           <div className="space-y-2">
             <button
               type="button"
@@ -933,7 +938,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">📈 Escalating</div>
               <p className="text-xs opacity-70">Card values increase each turn (2,4,6,8...)</p>
             </button>
-            
+
             <button
               type="button"
               onClick={() => setSpoilsType('fixed')}
@@ -946,7 +951,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">⚖️ Fixed Value</div>
               <p className="text-xs opacity-70">Cards always worth the same amount</p>
             </button>
-            
+
             <button
               type="button"
               onClick={() => setSpoilsType('static')}
@@ -959,7 +964,7 @@ const CreateGamePage: React.FC = () => {
               <div className="font-medium text-sm">🔒 Static</div>
               <p className="text-xs opacity-70">No card bonuses, pure strategy</p>
             </button>
-            
+
             {!isRanked && (
               <button
                 type="button"
@@ -978,10 +983,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 8. Advanced Options Card */}
-        <OptionCard
-          number="8"
-          title="Advanced Options"
-        >
+        <OptionCard number="8" title="Advanced Options">
           <div className="space-y-4">
             {/* Fog of War Section */}
             <div>
@@ -1055,7 +1057,7 @@ const CreateGamePage: React.FC = () => {
                   <p className="text-xs opacity-70">Territories have special properties</p>
                 </button>
               </div>
-              
+
               {useTerritoryModifiers && (
                 <div className="mt-3 pt-3 border-t border-gray-500">
                   <p className="text-sm text-muted mb-2">Distribution:</p>
@@ -1125,7 +1127,9 @@ const CreateGamePage: React.FC = () => {
                       title={colorName}
                     >
                       {selectedColor === hexColor && (
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">
+                          ✓
+                        </span>
                       )}
                     </button>
                   )
@@ -1141,7 +1145,7 @@ const CreateGamePage: React.FC = () => {
                   const hasGradient = 'gradient' in colorData
                   const colorValue = hasGradient ? colorData.gradient : colorData.solid
                   const colorName = getColorName(key)
-                  
+
                   return (
                     <button
                       key={key}
@@ -1158,7 +1162,9 @@ const CreateGamePage: React.FC = () => {
                       title={colorName}
                     >
                       {selectedColor === key && (
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">✓</span>
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">
+                          ✓
+                        </span>
                       )}
                     </button>
                   )
@@ -1196,11 +1202,14 @@ const CreateGamePage: React.FC = () => {
                   </div>
                 ) : (
                   maps
-                    .filter(map => 
-                      mapSearch === '' || 
-                      map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
-                      map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
-                      map.tags?.some(tag => tag.toLowerCase().includes(mapSearch.toLowerCase()))
+                    .filter(
+                      (map) =>
+                        mapSearch === '' ||
+                        map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                        map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
+                        map.tags?.some((tag) =>
+                          tag.toLowerCase().includes(mapSearch.toLowerCase()),
+                        ),
                     )
                     .map((map) => (
                       <div
@@ -1228,10 +1237,9 @@ const CreateGamePage: React.FC = () => {
                           )}
                         </div>
                         <div className="text-sm text-muted">
-                          {map.territory_count > 0 
+                          {map.territory_count > 0
                             ? `${map.territory_count} territories • ${map.min_players}-${map.max_players} players`
-                            : 'Randomly selected when game starts'
-                          }
+                            : 'Randomly selected when game starts'}
                         </div>
                         {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
                           <div className="text-xs text-muted mt-1">
@@ -1249,24 +1257,25 @@ const CreateGamePage: React.FC = () => {
             <div className="lg:col-span-2">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 {(() => {
-                  const selectedMapData = maps.find(m => m.id === selectedMap)
+                  const selectedMapData = maps.find((m) => m.id === selectedMap)
                   return selectedMapData ? (
                     <>
                       <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden">
                         {selectedMapData.image_url ? (
-                          <img 
-                            src={selectedMapData.image_url} 
+                          <img
+                            src={selectedMapData.image_url}
                             alt={selectedMapData.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none'
+                              ;(e.target as HTMLImageElement).style.display = 'none'
                               const parent = (e.target as HTMLImageElement).parentElement
                               if (parent) {
                                 const fallback = document.createElement('div')
                                 fallback.className = 'text-muted text-center'
-                                fallback.innerHTML = selectedMap === 'random' 
-                                  ? '🎲 Random Map Selection' 
-                                  : '🗺️ Map Preview'
+                                fallback.innerHTML =
+                                  selectedMap === 'random'
+                                    ? '🎲 Random Map Selection'
+                                    : '🗺️ Map Preview'
                                 parent.appendChild(fallback)
                               }
                             }}
@@ -1285,45 +1294,55 @@ const CreateGamePage: React.FC = () => {
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <span className="text-muted">Territories:</span>
-                              <span className="ml-2 text-white">{selectedMapData.territory_count || 'Unknown'}</span>
+                              <span className="ml-2 text-white">
+                                {selectedMapData.territory_count || 'Unknown'}
+                              </span>
                             </div>
                             <div>
                               <span className="text-muted">Continents:</span>
-                              <span className="ml-2 text-white">{selectedMapData.continent_count || 'Unknown'}</span>
+                              <span className="ml-2 text-white">
+                                {selectedMapData.continent_count || 'Unknown'}
+                              </span>
                             </div>
                             <div>
                               <span className="text-muted">Players:</span>
-                              <span className="ml-2 text-white">{selectedMapData.min_players}-{selectedMapData.max_players}</span>
+                              <span className="ml-2 text-white">
+                                {selectedMapData.min_players}-{selectedMapData.max_players}
+                              </span>
                             </div>
                             <div>
                               <span className="text-muted">Games Played:</span>
-                              <span className="ml-2 text-white">{selectedMapData.play_count || 0}</span>
+                              <span className="ml-2 text-white">
+                                {selectedMapData.play_count || 0}
+                              </span>
                             </div>
                             {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
                               <div className="col-span-2">
                                 <span className="text-muted">Created by:</span>
-                                <span className="ml-2 text-white">{selectedMapData.creator_name}</span>
-                              </div>
-                            )}
-                            {selectedMapData.rating_average && selectedMapData.rating_average > 0 && (
-                              <div className="col-span-2">
-                                <span className="text-muted">Rating:</span>
-                                <span className="ml-2 text-yellow-400">
-                                  {'⭐'.repeat(Math.floor(selectedMapData.rating_average))}
-                                  <span className="text-white ml-1">
-                                    ({selectedMapData.rating_average.toFixed(1)}/5 from {selectedMapData.rating_count} reviews)
-                                  </span>
+                                <span className="ml-2 text-white">
+                                  {selectedMapData.creator_name}
                                 </span>
                               </div>
                             )}
+                            {selectedMapData.rating_average &&
+                              selectedMapData.rating_average > 0 && (
+                                <div className="col-span-2">
+                                  <span className="text-muted">Rating:</span>
+                                  <span className="ml-2 text-yellow-400">
+                                    {'⭐'.repeat(Math.floor(selectedMapData.rating_average))}
+                                    <span className="text-white ml-1">
+                                      ({selectedMapData.rating_average.toFixed(1)}/5 from{' '}
+                                      {selectedMapData.rating_count} reviews)
+                                    </span>
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="text-center text-muted py-8">
-                      Select a map to see details
-                    </div>
+                    <div className="text-center text-muted py-8">Select a map to see details</div>
                   )
                 })()}
               </div>
@@ -1336,7 +1355,9 @@ const CreateGamePage: React.FC = () => {
       {isRanked && (
         <div className="max-w-7xl mx-auto mb-6">
           <div className="p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
-            <p className="text-sm font-semibold text-yellow-400 mb-2">⚔️ Ranked Game Requirements:</p>
+            <p className="text-sm font-semibold text-yellow-400 mb-2">
+              ⚔️ Ranked Game Requirements:
+            </p>
             <ul className="text-xs text-muted space-y-1">
               <li>• Minimum 3 players required</li>
               <li>• No AI players allowed</li>

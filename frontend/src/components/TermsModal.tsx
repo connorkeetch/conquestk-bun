@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { X } from 'lucide-react'
+import { useState } from 'react'
 
 interface TermsSection {
   title: string
@@ -20,12 +20,12 @@ interface TermsModalProps {
   featureType: string
 }
 
-export default function TermsModal({ 
-  isOpen, 
-  onAccept, 
-  onDecline, 
+export default function TermsModal({
+  isOpen,
+  onAccept,
+  onDecline,
   termsContent,
-  featureType 
+  featureType,
 }: TermsModalProps) {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false)
   const [isAcceptChecked, setIsAcceptChecked] = useState(false)
@@ -74,10 +74,7 @@ export default function TermsModal({
         </div>
 
         {/* Content */}
-        <div 
-          className="max-h-[60vh] overflow-y-auto px-6 py-4"
-          onScroll={handleScroll}
-        >
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-4" onScroll={handleScroll}>
           <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4">
             <p className="text-sm font-medium text-yellow-800">
               Please read these terms carefully before using the {featureType.replace('_', ' ')}.
@@ -86,9 +83,7 @@ export default function TermsModal({
 
           {termsContent.sections.map((section, index) => (
             <div key={index} className="mb-6">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">
-                {section.title}
-              </h3>
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">{section.title}</h3>
               <ul className="space-y-2">
                 {section.items.map((item, itemIndex) => (
                   <li key={itemIndex} className="flex items-start">

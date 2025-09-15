@@ -5,8 +5,8 @@ import { API_URL } from '../config'
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
 
 // Add auth token to requests
@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
       window.location.href = '/login'
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export default apiClient

@@ -1,6 +1,7 @@
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
 import {
+  applyDelta,
   selectTargetTerritory,
   selectTerritory,
   setBattleResult,
@@ -10,7 +11,6 @@ import {
   setReinforcementArmies,
   updateGameState,
   updateTerritory,
-  applyDelta,
 } from '../store/gameSlice'
 import { addPlayerToRoom, removePlayerFromRoom, updateRoom } from '../store/roomSlice'
 import audioService from './audioService'
@@ -24,9 +24,10 @@ class SocketService {
     if (!token) return
 
     // Use relative URL in production, absolute URL in development
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+    const socketUrl =
+      import.meta.env.VITE_SOCKET_URL ||
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
-    
+
     this.socket = io(socketUrl, {
       auth: {
         token,
@@ -55,7 +56,6 @@ class SocketService {
     this.socket?.emit('game-action', action)
   }
 
-
   // Game-specific emit methods
   emit(event: string, data: any) {
     this.socket?.emit(event, data)
@@ -80,37 +80,37 @@ class SocketService {
   endTurn(roomId: string) {
     this.socket?.emit('endTurn', { roomId })
   }
-  
+
   // Chat methods
   sendChatMessage(data: any) {
     this.socket?.emit('chat:send', data)
   }
-  
+
   loadChatHistory(data: any) {
     this.socket?.emit('chat:load-history', data)
   }
-  
+
   markChatAsRead(data: any) {
     this.socket?.emit('chat:mark-read', data)
   }
-  
+
   getChatUnreadCounts() {
     this.socket?.emit('chat:get-unread')
   }
-  
+
   sendTypingIndicator(data: any) {
     this.socket?.emit('chat:typing', data)
   }
-  
+
   // Generic on/off for chat events
   on(event: string, handler: any) {
     this.socket?.on(event, handler)
   }
-  
+
   off(event: string, handler: any) {
     this.socket?.off(event, handler)
   }
-  
+
   getSocket() {
     return this.socket
   }
@@ -143,7 +143,7 @@ class SocketService {
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
       const currentUserId = store.getState().auth.user?.id
-      
+
       // Handle turn notifications for phase changes
       if (delta.type === 'PHASE_CHANGE' && delta.currentPlayer === currentUserId) {
         notificationService.addNotification({
@@ -159,7 +159,7 @@ class SocketService {
         })
         audioService.playEffect('turn')
       }
-      
+
       // Handle battle result audio
       if (delta.type === 'BATTLE_RESULT') {
         if (delta.battleResult.conquered) {
@@ -168,7 +168,7 @@ class SocketService {
           audioService.playEffect('defeat')
         }
       }
-      
+
       // Apply delta to Redux store
       store.dispatch(applyDelta(delta))
     })
@@ -177,7 +177,7 @@ class SocketService {
     this.socket.on('game-update', (gameState) => {
       const previousState = store.getState().game.currentGame
       const currentUserId = store.getState().auth.user?.id
-      
+
       // Check if it's now the current user's turn
       if (
         currentUserId &&
@@ -197,11 +197,11 @@ class SocketService {
             gameId: gameState.roomId,
           },
         })
-        
+
         // Play turn notification sound
         audioService.playEffect('turn')
       }
-      
+
       store.dispatch(setGameState(gameState))
     })
 
@@ -232,10 +232,10 @@ class SocketService {
     this.socket.on('gamePhaseChanged', (data) => {
       const previousState = store.getState().game.currentGame
       const currentUserId = store.getState().auth.user?.id
-      
+
       // Play phase transition sound
       audioService.playEffect('swoosh')
-      
+
       // Check if it's now the current user's turn (player changed)
       if (
         currentUserId &&
@@ -257,11 +257,11 @@ class SocketService {
             gameId: roomId,
           },
         })
-        
+
         // Play turn notification sound
         audioService.playEffect('turn')
       }
-      
+
       store.dispatch(
         updateGameState({
           phase: data.phase,
@@ -299,7 +299,7 @@ class SocketService {
     this.socket.on('armiesDeployed', (data) => {
       // Play troop placement sound
       audioService.playEffect('placetroop')
-      
+
       store.dispatch(
         updateTerritory({
           territoryId: data.territoryId,
@@ -409,7 +409,7 @@ class SocketService {
       // Play dramatic fanfare for capital elimination
       audioService.playEffect('fanfare')
       audioService.playEffect('victory')
-      
+
       // Show capital elimination notification
       store.dispatch(
         updateGameState({

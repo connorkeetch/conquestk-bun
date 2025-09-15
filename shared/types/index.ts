@@ -44,7 +44,19 @@ export interface AdminRole {
 
 export type GamePhase = 'setup' | 'deployment' | 'attack' | 'fortification' | 'ended'
 export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned'
-export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange' | 'cyan' | 'pink' | 'brown' | 'lime' | 'indigo' | 'teal'
+export type PlayerColor =
+  | 'red'
+  | 'blue'
+  | 'green'
+  | 'yellow'
+  | 'purple'
+  | 'orange'
+  | 'cyan'
+  | 'pink'
+  | 'brown'
+  | 'lime'
+  | 'indigo'
+  | 'teal'
 
 export interface Territory {
   id: string
@@ -62,7 +74,14 @@ export interface Territory {
 }
 
 export interface TerritoryAbility {
-  type: 'fortress' | 'naval_base' | 'trade_hub' | 'capital' | 'artillery' | 'mountain_pass' | 'magical_nexus'
+  type:
+    | 'fortress'
+    | 'naval_base'
+    | 'trade_hub'
+    | 'capital'
+    | 'artillery'
+    | 'mountain_pass'
+    | 'magical_nexus'
   name: string
   description: string
   effectType: 'defense' | 'attack' | 'economy' | 'movement' | 'special'
@@ -265,7 +284,16 @@ export interface RoomPlayer {
 export interface Notification {
   id: string
   userId: string
-  type: 'game_invite' | 'turn_reminder' | 'game_started' | 'game_ended' | 'friend_request' | 'achievement' | 'system' | 'map_approved' | 'map_rejected'
+  type:
+    | 'game_invite'
+    | 'turn_reminder'
+    | 'game_started'
+    | 'game_ended'
+    | 'friend_request'
+    | 'achievement'
+    | 'system'
+    | 'map_approved'
+    | 'map_rejected'
   title: string
   message: string
   data?: Record<string, unknown>
@@ -283,27 +311,45 @@ export interface ServerToClientEvents {
   'player-left': (data: { userId: string; socketId: string }) => void
   'player-disconnected': (data: { userId: string; socketId: string }) => void
   'game-update': (gameState: GameState) => void
-  'armiesDeployed': (result: { gameState: GameState }) => void
-  'attackResult': (result: BattleResult) => void
-  'territoriesFortified': (result: { gameState: GameState }) => void
-  'phaseChanged': (data: { phase: GamePhase; currentPlayer: string; turn: number; reinforcementArmies?: number }) => void
-  'capitalElimination': (data: { conqueror: string; eliminated: string; capitalTerritory: string; territoriesGained: number; troopsGained: number }) => void
-  'capitalAttackCheck': (data: { territoryId: string; isCapital: boolean }) => void
-  'ratingUpdate': (data: { changes: Array<{ userId: string; oldRating: number; newRating: number; change: number }> }) => void
+  armiesDeployed: (result: { gameState: GameState }) => void
+  attackResult: (result: BattleResult) => void
+  territoriesFortified: (result: { gameState: GameState }) => void
+  phaseChanged: (data: {
+    phase: GamePhase
+    currentPlayer: string
+    turn: number
+    reinforcementArmies?: number
+  }) => void
+  capitalElimination: (data: {
+    conqueror: string
+    eliminated: string
+    capitalTerritory: string
+    territoriesGained: number
+    troopsGained: number
+  }) => void
+  capitalAttackCheck: (data: { territoryId: string; isCapital: boolean }) => void
+  ratingUpdate: (data: {
+    changes: Array<{ userId: string; oldRating: number; newRating: number; change: number }>
+  }) => void
   'chat-message': (data: { userId: string; message: string; timestamp: string }) => void
-  'error': (data: { event: string; message: string; timestamp: string }) => void
-  'gameError': (data: { message: string }) => void
+  error: (data: { event: string; message: string; timestamp: string }) => void
+  gameError: (data: { message: string }) => void
 }
 
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
   'game-action': (data: { roomId: string; action: GameAction }) => void
-  'deployArmies': (data: { roomId: string; territoryId: string; armies: number }) => void
-  'attack': (data: { roomId: string; fromTerritoryId: string; toTerritoryId: string }) => void
-  'checkCapitalAttack': (data: { roomId: string; targetTerritoryId: string }) => void
-  'fortify': (data: { roomId: string; fromTerritoryId: string; toTerritoryId: string; armies: number }) => void
-  'endTurn': (data: { roomId: string }) => void
+  deployArmies: (data: { roomId: string; territoryId: string; armies: number }) => void
+  attack: (data: { roomId: string; fromTerritoryId: string; toTerritoryId: string }) => void
+  checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
+  fortify: (data: {
+    roomId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }) => void
+  endTurn: (data: { roomId: string }) => void
   'chat-message': (data: { roomId: string; message: string }) => void
 }
 

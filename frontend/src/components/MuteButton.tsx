@@ -34,9 +34,7 @@ export default function MuteButton() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`transition-colors ${
-          isMuted ? 'text-red-400' : 'text-green-400'
-        }`}
+        className={`transition-colors ${isMuted ? 'text-red-400' : 'text-green-400'}`}
       >
         {isMuted ? (
           <>
@@ -64,12 +62,8 @@ export default function MuteButton() {
       {/* Tooltip */}
       {isHovered && (
         <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-slate-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          <div className="font-semibold">
-            {isMuted ? 'Audio Muted' : 'Audio Enabled'}
-          </div>
-          <div className="text-xs text-muted mt-1">
-            Click to {isMuted ? 'unmute' : 'mute'}
-          </div>
+          <div className="font-semibold">{isMuted ? 'Audio Muted' : 'Audio Enabled'}</div>
+          <div className="text-xs text-muted mt-1">Click to {isMuted ? 'unmute' : 'mute'}</div>
           {/* Arrow pointing up */}
           <div className="absolute -top-1 right-4 w-2 h-2 bg-slate-900 transform rotate-45" />
         </div>

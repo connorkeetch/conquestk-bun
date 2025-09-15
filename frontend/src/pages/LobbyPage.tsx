@@ -1,12 +1,12 @@
+import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
+import api from '../services/api'
 import authService from '../services/authService'
 import { type GameRoom, gameService } from '../services/gameService'
-import api from '../services/api'
-import { Clock, Trophy, Gamepad2 } from 'lucide-react'
 
 interface GameInfo {
   id: string
@@ -22,10 +22,14 @@ interface GameInfo {
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private' | 'tournaments'>('browse')
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private' | 'tournaments'>(
+    'browse',
+  )
   const [publicGames, setPublicGames] = useState<GameRoom[]>([])
   const [myGames, setMyGames] = useState<GameInfo[]>([])
-  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'waiting' | 'finished'>('all')
+  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'waiting' | 'finished'>(
+    'all',
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [privateGameCode, setPrivateGameCode] = useState('')
@@ -48,7 +52,7 @@ const LobbyPage: React.FC = () => {
       setPublicGames(response.rooms || [])
     } catch (err: any) {
       console.error('Failed to load public games:', err)
-      
+
       // Provide helpful error messages based on error type
       if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
         setError('Cannot connect to server. Make sure the backend is running.')
@@ -57,7 +61,9 @@ const LobbyPage: React.FC = () => {
       } else if (err.response?.status >= 500) {
         setError('Server error. Please try again later.')
       } else {
-        setError(`Failed to load games: ${err.response?.data?.message || err.message || 'Unknown error'}`)
+        setError(
+          `Failed to load games: ${err.response?.data?.message || err.message || 'Unknown error'}`,
+        )
       }
       setPublicGames([])
     } finally {
@@ -68,7 +74,7 @@ const LobbyPage: React.FC = () => {
   // Load user's games
   const loadMyGames = useCallback(async () => {
     if (!user) return
-    
+
     try {
       setLoading(true)
       setError(null)
@@ -76,7 +82,7 @@ const LobbyPage: React.FC = () => {
       setMyGames(response.data.games || [])
     } catch (err: any) {
       console.error('Failed to load user games:', err)
-      
+
       // Provide helpful error messages based on error type
       if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
         setError('Cannot connect to server. Make sure the backend is running.')
@@ -85,7 +91,9 @@ const LobbyPage: React.FC = () => {
       } else if (err.response?.status >= 500) {
         setError('Server error. Please try again later.')
       } else {
-        setError(`Failed to load your games: ${err.response?.data?.message || err.message || 'Unknown error'}`)
+        setError(
+          `Failed to load your games: ${err.response?.data?.message || err.message || 'Unknown error'}`,
+        )
       }
       setMyGames([])
     } finally {
@@ -254,10 +262,7 @@ const LobbyPage: React.FC = () => {
           >
             🎮 Create Game
           </Link>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary px-4 py-2"
-          >
+          <button onClick={() => setShowFilters(!showFilters)} className="btn-secondary px-4 py-2">
             🔍 Filter Games
           </button>
         </div>
@@ -608,7 +613,11 @@ const LobbyPage: React.FC = () => {
                     return (
                       <div className="text-center text-muted py-16">
                         <div className="text-6xl mb-4">
-                          {myGamesFilter === 'active' ? '🎮' : myGamesFilter === 'waiting' ? '⏰' : '🏆'}
+                          {myGamesFilter === 'active'
+                            ? '🎮'
+                            : myGamesFilter === 'waiting'
+                              ? '⏰'
+                              : '🏆'}
                         </div>
                         <p className="text-lg mb-2 text-muted">
                           No {myGamesFilter === 'all' ? '' : myGamesFilter} games

@@ -1,6 +1,6 @@
 import Favico from 'favico.js'
-import { notificationService } from './notificationService'
 import type { Notification } from '../types/notification'
+import { notificationService } from './notificationService'
 
 class FaviconBadgeService {
   private static instance: FaviconBadgeService
@@ -40,10 +40,8 @@ class FaviconBadgeService {
 
   private updateBadgeFromNotifications(notifications: Notification[]): void {
     // Count only unread turn_reminder notifications (your turn notifications)
-    const turnNotifications = notifications.filter(
-      (n) => n.type === 'turn_reminder' && !n.read
-    )
-    
+    const turnNotifications = notifications.filter((n) => n.type === 'turn_reminder' && !n.read)
+
     this.setBadge(turnNotifications.length)
   }
 

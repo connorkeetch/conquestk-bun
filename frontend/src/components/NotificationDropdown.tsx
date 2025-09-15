@@ -134,9 +134,7 @@ export default function NotificationDropdown() {
               <div className="px-3 sm:px-4 py-6 sm:py-8 text-center">
                 <div className="text-4xl mb-2">🔔</div>
                 <p className="text-muted">No notifications yet</p>
-                <p className="text-xs text-muted mt-1">
-                  We'll notify you when something happens
-                </p>
+                <p className="text-xs text-muted mt-1">We'll notify you when something happens</p>
               </div>
             ) : (
               <div className="py-2">
@@ -172,9 +170,7 @@ export default function NotificationDropdown() {
                                 >
                                   {notification.title}
                                 </p>
-                                <p className="text-xs text-muted mt-0.5">
-                                  {notification.message}
-                                </p>
+                                <p className="text-xs text-muted mt-0.5">{notification.message}</p>
 
                                 {/* Action Button */}
                                 {notification.actionUrl && (

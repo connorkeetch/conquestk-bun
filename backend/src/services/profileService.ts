@@ -20,9 +20,7 @@ export class ProfileService {
     try {
       // Get profile data
       // user_profiles table removed - profile data is now in users table
-      const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [
-        userId,
-      ])
+      const profileResult = await client.query('SELECT * FROM users WHERE id = $1', [userId])
 
       // Get statistics
       const statsResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [

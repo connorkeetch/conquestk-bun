@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -11,10 +11,10 @@ interface GameHeaderProps {
   }
 }
 
-export const GameHeader: React.FC<GameHeaderProps> = ({ 
-  currentPhase, 
-  turn, 
-  currentPlayerInfo 
+export const GameHeader: React.FC<GameHeaderProps> = ({
+  currentPhase,
+  turn,
+  currentPlayerInfo,
 }) => {
   return (
     <div className="bg-blue-900 text-white p-4">
@@ -33,7 +33,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               style={{ backgroundColor: currentPlayerInfo.color }}
             ></div>
             <span className="font-semibold">{currentPlayerInfo.username}</span>
-            <span className="text-sm opacity-75">({currentPlayerInfo.troops} troops to deploy)</span>
+            <span className="text-sm opacity-75">
+              ({currentPlayerInfo.troops} troops to deploy)
+            </span>
           </div>
         )}
       </div>

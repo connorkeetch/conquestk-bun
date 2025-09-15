@@ -4,7 +4,7 @@
 export interface ThemeDefinition {
   id: string
   name: string
-  displayColor: string  // Color for UI picker/preview
+  displayColor: string // Color for UI picker/preview
   description: string
 }
 
@@ -20,61 +20,61 @@ export const THEMES: ThemeDefinition[] = [
     id: 'default',
     name: 'Default',
     displayColor: '#2563EB',
-    description: 'Blue theme with purple gradient background'
+    description: 'Blue theme with purple gradient background',
   },
   {
     id: 'violet',
     name: 'Violet',
     displayColor: '#7C3AED',
-    description: 'Purple theme with violet accents'
+    description: 'Purple theme with violet accents',
   },
   {
     id: 'red',
     name: 'Red',
     displayColor: '#DC2626',
-    description: 'Crimson theme with red accents'
+    description: 'Crimson theme with red accents',
   },
   {
     id: 'blue',
     name: 'Blue',
     displayColor: '#2563EB',
-    description: 'Ocean blue theme'
+    description: 'Ocean blue theme',
   },
   {
     id: 'green',
     name: 'Green',
     displayColor: '#059669',
-    description: 'Emerald green theme'
+    description: 'Emerald green theme',
   },
   {
     id: 'black',
     name: 'Black',
     displayColor: '#1f2937',
-    description: 'Pure black with gray accents'
+    description: 'Pure black with gray accents',
   },
   {
     id: 'highcontrast',
     name: 'High Contrast',
     displayColor: '#00B4FF',
-    description: 'Accessibility-focused high contrast (WCAG AAA)'
+    description: 'Accessibility-focused high contrast (WCAG AAA)',
   },
   {
     id: 'halloween',
     name: '🎃 Halloween',
     displayColor: '#FF6B35',
-    description: 'Spooky seasonal theme with pumpkin orange and midnight purple'
-  }
+    description: 'Spooky seasonal theme with pumpkin orange and midnight purple',
+  },
 ]
 
 // Export configuration
 export const THEME_CONFIG: ThemeConfig = {
   themes: THEMES,
-  defaultTheme: 'default'
+  defaultTheme: 'default',
 }
 
 // Helper functions
 export function getThemeById(id: string): ThemeDefinition | undefined {
-  return THEMES.find(theme => theme.id === id)
+  return THEMES.find((theme) => theme.id === id)
 }
 
 export function applyTheme(themeId: string): void {

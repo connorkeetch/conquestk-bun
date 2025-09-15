@@ -1,6 +1,6 @@
 /**
  * Feature Flag Constants
- * 
+ *
  * IMPORTANT: All new features MUST use feature flags!
  * See docs/ARCHITECTURE.md#feature-flag-system for details
  */
@@ -9,21 +9,21 @@ export const FEATURE_FLAGS = {
   // Gameplay Features
   SPOILS_OF_WAR: 'gameplay_spoils_of_war',
   TERRITORY_MODIFIERS: 'gameplay_territory_modifiers',
-  
+
   // UI Features
   HOLIDAY_THEMES: 'ui_holiday_themes',
-  
+
   // Experimental Features
   AI_PLAYERS: 'experimental_ai_players',
-  
+
   // VIP Features
   VIP_EXCLUSIVE_MAPS: 'vip_exclusive_maps',
-  
+
   // Premium Features
   PREMIUM_ADVANCED_STATS: 'premium_advanced_stats',
 } as const
 
-export type FeatureFlagName = typeof FEATURE_FLAGS[keyof typeof FEATURE_FLAGS]
+export type FeatureFlagName = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
 
 /**
  * Feature flag categories for organization
@@ -36,7 +36,7 @@ export const FEATURE_CATEGORIES = {
   VIP: 'vip',
 } as const
 
-export type FeatureCategory = typeof FEATURE_CATEGORIES[keyof typeof FEATURE_CATEGORIES]
+export type FeatureCategory = (typeof FEATURE_CATEGORIES)[keyof typeof FEATURE_CATEGORIES]
 
 /**
  * Access levels for feature flags
@@ -48,4 +48,4 @@ export const ACCESS_LEVELS = {
   PUBLIC: 'public',
 } as const
 
-export type AccessLevel = typeof ACCESS_LEVELS[keyof typeof ACCESS_LEVELS]
+export type AccessLevel = (typeof ACCESS_LEVELS)[keyof typeof ACCESS_LEVELS]

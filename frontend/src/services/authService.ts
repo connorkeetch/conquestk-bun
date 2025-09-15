@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // Use relative URL in production, absolute URL in development
-const API_URL = import.meta.env.VITE_API_URL || 
+const API_URL =
+  import.meta.env.VITE_API_URL ||
   (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
 
 const api = axios.create({
@@ -24,9 +25,9 @@ api.interceptors.response.use(
     // If we get a 401 or 403, clear the token and redirect to login
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Don't clear token for login/register endpoints
-      const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
-                             error.config?.url?.includes('/auth/register')
-      
+      const isAuthEndpoint =
+        error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register')
+
       if (!isAuthEndpoint) {
         localStorage.removeItem('token')
         // Dispatch logout action if store is available
@@ -36,7 +37,7 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export const authService = {

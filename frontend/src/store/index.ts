@@ -1,9 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authSlice from './authSlice'
+import chatSlice from './chatSlice'
 import gameSlice from './gameSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
-import chatSlice from './chatSlice'
 
 export const store = configureStore({
   reducer: {

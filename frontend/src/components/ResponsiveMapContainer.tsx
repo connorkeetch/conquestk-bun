@@ -66,7 +66,7 @@ export default function ResponsiveMapContainer({
       >
         {children}
       </div>
-      
+
       {/* Scale indicator */}
       {scale < 1 && (
         <div className="absolute top-2 right-2 bg-surface-2/90 px-2 py-1 rounded text-xs text-muted">

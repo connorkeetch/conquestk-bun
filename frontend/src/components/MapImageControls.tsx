@@ -64,14 +64,14 @@ export default function MapImageControls({
   return (
     <div className="bg-surface-2 rounded-lg p-4">
       <h3 className="text-lg font-bold mb-3">🖼️ Image Controls</h3>
-      
+
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-4 bg-surface-1 rounded-lg p-1">
         <button
           onClick={() => setActiveTab('scale')}
           className={`flex-1 px-3 py-2 rounded ${
-            activeTab === 'scale' 
-              ? 'bg-violet text-white' 
+            activeTab === 'scale'
+              ? 'bg-violet text-white'
               : 'bg-transparent text-muted hover:text-white'
           }`}
         >
@@ -80,8 +80,8 @@ export default function MapImageControls({
         <button
           onClick={() => setActiveTab('canvas')}
           className={`flex-1 px-3 py-2 rounded ${
-            activeTab === 'canvas' 
-              ? 'bg-violet text-white' 
+            activeTab === 'canvas'
+              ? 'bg-violet text-white'
               : 'bg-transparent text-muted hover:text-white'
           }`}
         >
@@ -90,8 +90,8 @@ export default function MapImageControls({
         <button
           onClick={() => setActiveTab('crop')}
           className={`flex-1 px-3 py-2 rounded ${
-            activeTab === 'crop' 
-              ? 'bg-violet text-white' 
+            activeTab === 'crop'
+              ? 'bg-violet text-white'
               : 'bg-transparent text-muted hover:text-white'
           }`}
         >
@@ -105,13 +105,16 @@ export default function MapImageControls({
           <div className="text-sm text-muted mb-2">
             Scale the image while maintaining aspect ratio
           </div>
-          
+
           {/* Current size display */}
           <div className="flex justify-between text-sm">
             <span className="text-muted">Current:</span>
-            <span>{Math.round(imageWidth * scalePercent / 100)}×{Math.round(imageHeight * scalePercent / 100)}px</span>
+            <span>
+              {Math.round((imageWidth * scalePercent) / 100)}×
+              {Math.round((imageHeight * scalePercent) / 100)}px
+            </span>
           </div>
-          
+
           {/* Scale slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -127,7 +130,7 @@ export default function MapImageControls({
               className="w-full"
             />
           </div>
-          
+
           {/* Quick scale buttons */}
           <div className="grid grid-cols-4 gap-2">
             <button
@@ -155,7 +158,7 @@ export default function MapImageControls({
               150%
             </button>
           </div>
-          
+
           {/* Percentage adjustment buttons */}
           <div className="flex gap-2">
             <button
@@ -171,7 +174,7 @@ export default function MapImageControls({
               ➕ +10%
             </button>
           </div>
-          
+
           {/* Fit options */}
           <div className="flex gap-2">
             <button
@@ -196,22 +199,31 @@ export default function MapImageControls({
           <div className="bg-surface-1 p-3 rounded-lg mb-3">
             <h4 className="font-semibold text-sm mb-1">📖 What is Canvas?</h4>
             <p className="text-xs text-muted leading-relaxed">
-              The <span className="text-violet-soft">canvas</span> is your playable map area where players will interact.
-              The <span className="text-violet-soft">image</span> is your background map graphic.
+              The <span className="text-violet-soft">canvas</span> is your playable map area where
+              players will interact. The <span className="text-violet-soft">image</span> is your
+              background map graphic.
             </p>
             <ul className="text-xs text-muted mt-2 space-y-1">
-              <li>• <strong>Canvas</strong> = Game play area (what players see)</li>
-              <li>• <strong>Image</strong> = Your map picture (can be larger/smaller)</li>
-              <li>• Recommended: <strong>1280×720</strong> for best compatibility</li>
+              <li>
+                • <strong>Canvas</strong> = Game play area (what players see)
+              </li>
+              <li>
+                • <strong>Image</strong> = Your map picture (can be larger/smaller)
+              </li>
+              <li>
+                • Recommended: <strong>1280×720</strong> for best compatibility
+              </li>
             </ul>
           </div>
-          
+
           {/* Current canvas size */}
           <div className="flex justify-between text-sm">
             <span className="text-muted">Current Canvas:</span>
-            <span>{mapWidth}×{mapHeight}px</span>
+            <span>
+              {mapWidth}×{mapHeight}px
+            </span>
           </div>
-          
+
           {/* Preset sizes */}
           <div className="grid grid-cols-2 gap-2">
             {canvasPresets.map((preset) => (
@@ -223,8 +235,8 @@ export default function MapImageControls({
                   onResizeCanvas(preset.width, preset.height)
                 }}
                 className={`px-3 py-2 rounded text-sm ${
-                  preset.recommended 
-                    ? 'bg-violet text-white hover:brightness-110' 
+                  preset.recommended
+                    ? 'bg-violet text-white hover:brightness-110'
                     : 'bg-surface-1 hover:bg-violet'
                 }`}
               >
@@ -236,7 +248,7 @@ export default function MapImageControls({
               </button>
             ))}
           </div>
-          
+
           {/* Custom size inputs */}
           <div className="space-y-2">
             <div className="text-sm font-medium">Custom Size:</div>
@@ -268,11 +280,11 @@ export default function MapImageControls({
               Apply Custom Size
             </button>
           </div>
-          
+
           {/* Tips */}
           <div className="bg-amber-900/20 border border-amber-600/30 p-2 rounded text-xs">
-            💡 <strong>Tip:</strong> During gameplay, all maps auto-scale to fit the screen.
-            Larger canvases give more detail but may run slower on some devices.
+            💡 <strong>Tip:</strong> During gameplay, all maps auto-scale to fit the screen. Larger
+            canvases give more detail but may run slower on some devices.
           </div>
         </div>
       )}
@@ -280,22 +292,24 @@ export default function MapImageControls({
       {/* Crop Tab */}
       {activeTab === 'crop' && (
         <div className="space-y-3">
-          <div className="text-sm text-muted mb-2">
-            Crop the image to remove unwanted areas
-          </div>
-          
+          <div className="text-sm text-muted mb-2">Crop the image to remove unwanted areas</div>
+
           {/* Current image info */}
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Image Size:</span>
-              <span>{imageWidth}×{imageHeight}px</span>
+              <span>
+                {imageWidth}×{imageHeight}px
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Canvas Size:</span>
-              <span>{mapWidth}×{mapHeight}px</span>
+              <span>
+                {mapWidth}×{mapHeight}px
+              </span>
             </div>
           </div>
-          
+
           <button
             onClick={onCropImage}
             className="w-full px-4 py-3 bg-violet hover:brightness-110 rounded flex items-center justify-center gap-2"
@@ -303,7 +317,7 @@ export default function MapImageControls({
             <span className="text-lg">✂️</span>
             <span>Open Crop Tool</span>
           </button>
-          
+
           <div className="text-xs text-muted space-y-1">
             <p>🎯 Drag corner and side handles to adjust</p>
             <p>📐 Grid lines help with alignment</p>

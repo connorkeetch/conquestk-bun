@@ -168,9 +168,7 @@ const LeaderboardsPage: React.FC = () => {
                           className="text-primary-soft hover:text-primary-soft font-medium"
                         >
                           {entry.username}
-                          {isCurrentUser && (
-                            <span className="ml-2 text-xs text-muted">(You)</span>
-                          )}
+                          {isCurrentUser && <span className="ml-2 text-xs text-muted">(You)</span>}
                         </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -194,9 +192,7 @@ const LeaderboardsPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-muted">
-                        {entry.totalGames}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-muted">{entry.totalGames}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`font-medium ${

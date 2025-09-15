@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import { applyTheme } from '../config/themes.config'
 import { authService } from '../services/authService'
 import type { User } from '../types/user'
-import { applyTheme } from '../config/themes.config'
 
 interface AuthState {
   user: User | null
@@ -32,13 +32,13 @@ export const login = createAsyncThunk(
     try {
       const response = await authService.login(credentials)
       localStorage.setItem('token', response.token)
-      
+
       // Apply theme from user preferences if available
       if (response.user?.preferences?.theme) {
         applyTheme(response.user.preferences.theme)
         localStorage.setItem('colorTheme', response.user.preferences.theme)
       }
-      
+
       return response
     } catch (error: any) {
       // authService throws the error.response.data directly for API errors
@@ -62,39 +62,42 @@ export const register = createAsyncThunk(
   },
 )
 
-export const checkAuth = createAsyncThunk('auth/checkAuth', async (_, { rejectWithValue, dispatch }) => {
-  try {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      return rejectWithValue('No token found')
-    }
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        return rejectWithValue('No token found')
+      }
 
-    const response = await authService.getProfile()
-    
-    // Load server settings into Redux if they exist
-    if (response.user.settings) {
-      const { loadServerSettings } = await import('./settingsSlice')
-      dispatch(loadServerSettings(response.user.settings))
-    }
-    
-    // Apply theme from user preferences if available
-    if (response.user?.preferences?.theme) {
-      applyTheme(response.user.preferences.theme)
-      localStorage.setItem('colorTheme', response.user.preferences.theme)
-    }
-    
-    return { user: response.user, token }
-  } catch (error: any) {
-    // If it's a 401 or 403, the token is invalid
-    if (error.response?.status === 401 || error.response?.status === 403) {
+      const response = await authService.getProfile()
+
+      // Load server settings into Redux if they exist
+      if (response.user.settings) {
+        const { loadServerSettings } = await import('./settingsSlice')
+        dispatch(loadServerSettings(response.user.settings))
+      }
+
+      // Apply theme from user preferences if available
+      if (response.user?.preferences?.theme) {
+        applyTheme(response.user.preferences.theme)
+        localStorage.setItem('colorTheme', response.user.preferences.theme)
+      }
+
+      return { user: response.user, token }
+    } catch (error: any) {
+      // If it's a 401 or 403, the token is invalid
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token')
+        return rejectWithValue('Invalid token')
+      }
+      // For other errors (network, server down), also clear auth to avoid confusion
       localStorage.removeItem('token')
-      return rejectWithValue('Invalid token')
+      return rejectWithValue(error.message || 'Auth check failed')
     }
-    // For other errors (network, server down), also clear auth to avoid confusion
-    localStorage.removeItem('token')
-    return rejectWithValue(error.message || 'Auth check failed')
-  }
-})
+  },
+)
 
 const authSlice = createSlice({
   name: 'auth',

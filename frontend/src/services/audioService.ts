@@ -163,7 +163,7 @@ class AudioService {
     // Preload sound effects
     Object.entries(this.SOUND_EFFECTS).forEach(([name, pathOrPaths]) => {
       const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths]
-      
+
       // For arrays of sounds, preload all of them
       if (Array.isArray(pathOrPaths)) {
         paths.forEach((path, index) => {
@@ -242,14 +242,14 @@ class AudioService {
       const currentIndex = this.soundIndices.get(effectName) || 0
       const soundKey = `${effectName}_${currentIndex}`
       const sound = this.sounds.get(soundKey)
-      
+
       if (sound?.howl) {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()
       } else {
         console.warn(`Sound effect '${soundKey}' not found or failed to load`)
       }
-      
+
       // Update index for next time (rotate through available sounds)
       this.soundIndices.set(effectName, (currentIndex + 1) % effectConfig.length)
     } else {
@@ -286,20 +286,20 @@ class AudioService {
   // Get list of unused audio files (for debugging)
   public getUnusedAudioFiles(): string[] {
     const allSoundNames = new Set<string>()
-    
+
     // Add all defined sound effect names
-    Object.keys(this.SOUND_EFFECTS).forEach(name => {
+    Object.keys(this.SOUND_EFFECTS).forEach((name) => {
       allSoundNames.add(name)
     })
-    
+
     // Find which ones haven't been used
     const unused: string[] = []
-    allSoundNames.forEach(name => {
+    allSoundNames.forEach((name) => {
       if (!this.audioUsageTracker.has(name)) {
         unused.push(name)
       }
     })
-    
+
     return unused
   }
 

@@ -1,6 +1,6 @@
+import { ChevronRight, Clock, Gamepad2, Trophy, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Gamepad2, Trophy, Clock, Users, ChevronRight } from 'lucide-react'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 
@@ -42,12 +42,12 @@ const ActiveGamesDropdown: React.FC = () => {
 
   if (!user) return null
 
-  const activeGames = games.filter(g => g.status === 'active')
-  const waitingGames = games.filter(g => g.status === 'waiting')
-  const finishedGames = games.filter(g => g.status === 'finished').slice(0, 3)
-  
+  const activeGames = games.filter((g) => g.status === 'active')
+  const waitingGames = games.filter((g) => g.status === 'waiting')
+  const finishedGames = games.filter((g) => g.status === 'finished').slice(0, 3)
+
   const totalActive = activeGames.length + waitingGames.length
-  const yourTurnCount = activeGames.filter(g => g.isYourTurn).length
+  const yourTurnCount = activeGames.filter((g) => g.isYourTurn).length
 
   return (
     <div className="relative">
@@ -69,10 +69,7 @@ const ActiveGamesDropdown: React.FC = () => {
 
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 mt-2 w-80 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
             {/* Header */}
             <div className="p-4 border-b border-border">
@@ -83,9 +80,7 @@ const ActiveGamesDropdown: React.FC = () => {
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-muted">
-                Loading games...
-              </div>
+              <div className="p-8 text-center text-muted">Loading games...</div>
             ) : games.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-muted mb-4">No games yet</p>
@@ -175,14 +170,9 @@ const ActiveGamesDropdown: React.FC = () => {
                     </h4>
                     <div className="space-y-2">
                       {finishedGames.map((game) => (
-                        <div
-                          key={game.id}
-                          className="p-3 bg-surface-2 rounded-lg opacity-75"
-                        >
+                        <div key={game.id} className="p-3 bg-surface-2 rounded-lg opacity-75">
                           <p className="text-white font-medium">{game.name}</p>
-                          <p className="text-sm text-muted">
-                            Winner: {game.winner || 'Unknown'}
-                          </p>
+                          <p className="text-sm text-muted">Winner: {game.winner || 'Unknown'}</p>
                         </div>
                       ))}
                     </div>

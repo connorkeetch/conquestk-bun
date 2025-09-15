@@ -43,7 +43,7 @@ const AdminSettings: React.FC = () => {
 
   const handleClearCache = async () => {
     if (!confirm('Are you sure you want to clear the server cache?')) return
-    
+
     try {
       setCacheClearing(true)
       await api.post('/admin/cache/refresh')
@@ -97,9 +97,7 @@ const AdminSettings: React.FC = () => {
               <span className="text-2xl">💾</span>
               <span className="font-medium text-white">Backup Database</span>
             </div>
-            <p className="text-sm text-muted">
-              Create a backup of the database
-            </p>
+            <p className="text-sm text-muted">Create a backup of the database</p>
           </button>
 
           <button
@@ -110,9 +108,7 @@ const AdminSettings: React.FC = () => {
               <span className="text-2xl">📋</span>
               <span className="font-medium text-white">View System Logs</span>
             </div>
-            <p className="text-sm text-muted">
-              View server and application logs
-            </p>
+            <p className="text-sm text-muted">View server and application logs</p>
           </button>
         </div>
       </div>
@@ -128,7 +124,7 @@ const AdminSettings: React.FC = () => {
             🔄 Refresh
           </button>
         </div>
-        
+
         {featureFlags.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-2">🚩</div>
@@ -137,7 +133,10 @@ const AdminSettings: React.FC = () => {
         ) : (
           <div className="space-y-3">
             {featureFlags.map((flag) => (
-              <div key={flag.id} className="flex items-center justify-between p-4 bg-surface-1 rounded-lg">
+              <div
+                key={flag.id}
+                className="flex items-center justify-between p-4 bg-surface-1 rounded-lg"
+              >
                 <div className="flex-1">
                   <div className="text-white font-medium">{flag.flagName}</div>
                   <div className="text-muted text-sm">{flag.description}</div>
@@ -150,8 +149,8 @@ const AdminSettings: React.FC = () => {
                 <button
                   onClick={() => handleToggleFlag(flag.flagName, !flag.isEnabled)}
                   className={`px-4 py-2 rounded-lg transition-colors ${
-                    flag.isEnabled 
-                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    flag.isEnabled
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
                       : 'bg-gray-600 hover:bg-gray-500 text-white'
                   }`}
                 >

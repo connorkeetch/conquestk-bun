@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import MountainLogo from '../components/MountainLogo'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { clearError, login } from '../store/authSlice'
-import MountainLogo from '../components/MountainLogo'
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('')
@@ -29,12 +29,11 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     dispatch(clearError())
-    
+
     // Simply dispatch login - if they're unverified, backend will let them login
     // but with email_verified=false, and we'll redirect them to /verify-email
     await dispatch(login({ identifier, password }))
   }
-
 
   return (
     <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
@@ -45,13 +44,19 @@ export default function Login() {
             <div className="flex items-center justify-center gap-3 mb-2">
               <MountainLogo width={48} height={48} />
               <h1 className="text-4xl font-bold text-white hover:opacity-80 transition-opacity">
-                CONQUEST <span className="font-bold" style={{ 
-                  background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)', 
-                  backgroundClip: 'text', 
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>K</span>
+                CONQUEST{' '}
+                <span
+                  className="font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)',
+                    backgroundClip: 'text',
+                    textFillColor: 'transparent',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  K
+                </span>
               </h1>
             </div>
           </Link>
@@ -189,11 +194,7 @@ export default function Login() {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full mt-6"
-            >
+            <button type="submit" disabled={isLoading} className="btn-primary w-full mt-6">
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg

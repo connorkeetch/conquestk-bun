@@ -219,9 +219,7 @@ const PrimaryNav: React.FC = () => {
                         </span>
                       </div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-muted mt-0.5">
-                          {dropdownItem.description}
-                        </div>
+                        <div className="text-xs text-muted mt-0.5">{dropdownItem.description}</div>
                       )}
                     </div>
                   </div>
@@ -236,9 +234,7 @@ const PrimaryNav: React.FC = () => {
                     <div className="flex-1">
                       <div className="font-medium text-white">{dropdownItem.label}</div>
                       {dropdownItem.description && (
-                        <div className="text-xs text-muted mt-0.5">
-                          {dropdownItem.description}
-                        </div>
+                        <div className="text-xs text-muted mt-0.5">{dropdownItem.description}</div>
                       )}
                     </div>
                   </Link>

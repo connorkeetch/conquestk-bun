@@ -1,4 +1,4 @@
-import React from 'react'
+import type React from 'react'
 
 interface Player {
   id: string
@@ -18,10 +18,10 @@ interface PlayersPanelProps {
   currentPlayer: string
 }
 
-export const PlayersPanel: React.FC<PlayersPanelProps> = ({ 
-  players, 
-  territories, 
-  currentPlayer 
+export const PlayersPanel: React.FC<PlayersPanelProps> = ({
+  players,
+  territories,
+  currentPlayer,
 }) => {
   return (
     <div className="p-4 border-b border-gray-200">

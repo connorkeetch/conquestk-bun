@@ -58,15 +58,12 @@ export class AdminService {
 
   async isAdmin(userId: string): Promise<boolean> {
     // First check the is_admin flag on the users table (faster)
-    const userResult = await query(
-      `SELECT is_admin FROM users WHERE id = $1`,
-      [userId],
-    )
-    
+    const userResult = await query(`SELECT is_admin FROM users WHERE id = $1`, [userId])
+
     if (userResult.rows[0]?.is_admin) {
       return true
     }
-    
+
     // Fallback to checking user_admin_roles (for compatibility)
     const result = await query(
       `
@@ -109,7 +106,10 @@ export class AdminService {
           // If not JSON, treat as comma-separated or PostgreSQL array format
           if (row.permissions.startsWith('{') && row.permissions.endsWith('}')) {
             // PostgreSQL array format: {value1,value2}
-            permissions = row.permissions.slice(1, -1).split(',').map((p: string) => p.trim())
+            permissions = row.permissions
+              .slice(1, -1)
+              .split(',')
+              .map((p: string) => p.trim())
           } else {
             permissions = row.permissions.split(',').map((p: string) => p.trim())
           }
@@ -423,7 +423,7 @@ export class AdminService {
                  reviewed_by = $1,
                  review_notes = $2
              WHERE id = $3`,
-            [adminUserId, notes, content_id]
+            [adminUserId, notes, content_id],
           )
         }
 
@@ -454,7 +454,7 @@ export class AdminService {
     const client = await getClient()
     try {
       await client.query('BEGIN')
-      
+
       // Update approval queue
       await client.query(
         `
@@ -483,7 +483,7 @@ export class AdminService {
                  reviewed_by = $1,
                  rejection_reason = $2
              WHERE id = $3`,
-            [adminUserId, reason, content_id]
+            [adminUserId, reason, content_id],
           )
         }
 
