@@ -153,7 +153,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0f0505 0%,                      /* Dark red edges */
-    rgba(220, 38, 38, 0.5) 50%,     /* Red glow in center */
+    rgba(220, 38, 38, 0.4) 50%,     /* Red glow in center */
     #0a0202 100%                     /* Darker corner */
   );
   
@@ -179,7 +179,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0d0814 0%,                      /* Dark violet edges */
-    rgba(124, 58, 237, 0.5) 50%,   /* Purple glow in center */
+    rgba(124, 58, 237, 0.4) 50%,   /* Purple glow in center */
     #080510 100%                     /* Darker corner */
   );
   
@@ -205,7 +205,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #05080f 0%,                      /* Dark blue edges */
-    rgba(37, 99, 235, 0.5) 50%,     /* Blue glow in center */
+    rgba(37, 99, 235, 0.4) 50%,     /* Blue glow in center */
     #020305 100%                     /* Darker corner */
   );
   
@@ -231,7 +231,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #051008 0%,                      /* Dark green edges */
-    rgba(15, 75, 55, 0.5) 50%,     /* Green glow in center */
+    rgba(15, 75, 55, 0.4) 50%,     /* Green glow in center */
     #020605 100%                     /* Darker corner */
   );
   
@@ -257,7 +257,7 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #050505 0%,                      /* Nearly black */
-    rgba(55, 65, 81, 0.15) 50%,     /* Very subtle gray glow */
+    rgba(41, 46, 55, 0.35) 50%,     /* Very subtle gray glow */
     #000000 100%                     /* Pure black */
   );
   
@@ -313,72 +313,77 @@ This allows themes to work with any color scheme!
   --ck-bg-gradient: linear-gradient(
     135deg,
     #0A0108 0%,                      /* Midnight black */
-    rgba(255, 107, 53, 0.5) 40%,    /* Orange glow */
-    rgba(139, 21, 56, 0.25) 60%,    /* Blood red transition */
+    rgba(255, 107, 53, 0.4) 40%,    /* Orange glow */
+    rgba(139, 21, 37, 0.4) 70%,    /* Blood red transition */
     #050105 100%                     /* Dark corner */
   );
   
   --ck-glow: #FF6B35;
 }
 
-/* Halloween button enhancement */
-[data-theme="halloween"] .btn-primary {
-  position: relative;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
-  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-  transition: all 0.3s ease;
+/* Floating bat/ghost particles background */
+[data-theme="halloween"] body::after {
+  background-image: 
+    radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent),
+    radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent),
+    radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent),
+    radial-gradient(2px 2px at 60% 10%, rgba(255, 107, 53, 0.3), transparent),
+    radial-gradient(1px 1px at 90% 90%, rgba(139, 21, 56, 0.2), transparent);
+  background-size: 300px 300px, 400px 400px, 250px 250px, 350px 350px, 200px 200px;
+  animation: halloween-float 20s ease-in-out infinite;
 }
 
-[data-theme="halloween"] .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
-  transform: translateY(-2px);
-}
-
-/* Halloween card glow */
-[data-theme="halloween"] .box1,
-[data-theme="halloween"] .box2 {
-  box-shadow: 
-    0 0 20px rgba(255, 107, 53, 0.1),
-    inset 0 0 20px rgba(139, 21, 56, 0.05);
-}
-
-/* Subtle text glow for headings */
-[data-theme="halloween"] h1,
-[data-theme="halloween"] h2 {
-  text-shadow: 0 0 10px rgba(255, 107, 53, 0.2);
-}
-
-/* Halloween animations - KEEP SIMPLE */
-@keyframes halloween-glow {
+/* Animate the particles */
+@keyframes halloween-float {
   0%, 100% { 
-    opacity: 0.5;
+    background-position: 0 0, 100px 50px, 50px 150px, 200px 20px, 150px 180px;
   }
   50% { 
-    opacity: 1;
+    background-position: 50px 30px, 150px 100px, 100px 200px, 250px 70px, 200px 230px;
   }
 }
 
-@keyframes halloween-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
+/* Halloween links get orange hover */
+[data-theme="halloween"] a:hover {
+  color: var(--color-primary);
+  text-shadow: 0 0 8px rgba(255, 107, 53, 0.4);
 }
 
-/* Apply float to specific elements, not everything */
-[data-theme="halloween"] .game-logo {
-  animation: halloween-float 4s ease-in-out infinite;
+/* Halloween inputs glow on focus */
+[data-theme="halloween"] input:focus,
+[data-theme="halloween"] textarea:focus,
+[data-theme="halloween"] select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
 }
 
-/* Halloween loading state */
-[data-theme="halloween"] .spinner {
-  border-top-color: var(--color-primary);
-  border-right-color: var(--color-secondary);
+/* Halloween scrollbar */
+[data-theme="halloween"]::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
 }
 
-/* Halloween territory styling for game */
-[data-theme="halloween"] .territory:hover {
-  stroke: var(--color-primary);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.4));
+[data-theme="halloween"]::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--color-primary), var(--color-accent));
+}
+
+/* Pulsing glow for important elements */
+[data-theme="halloween"] .btn-primary,
+[data-theme="halloween"] .btn-success {
+  animation: halloween-pulse 3s ease-in-out infinite;
+}
+
+@keyframes halloween-pulse {
+  0%, 100% { 
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  }
+  50% { 
+    box-shadow: 0 4px 25px rgba(255, 107, 53, 0.5);
+  }
+}
+
+/* Special Halloween-only easter egg - subtle bat cursor on hover */
+[data-theme="halloween"] .game-board {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23FF6B35" d="M16 8c-2 0-3 2-3 2s-2-1-4-1c-3 0-4 2-4 2s2 2 2 4c0 1 0 2 1 3l6 6l6-6c1-1 1-2 1-3c0-2 2-4 2-4s-1-2-4-2c-2 0-4 1-4 1s-1-2-3-2z"/></svg>') 16 16, auto;
 }
 
 /* Utilities that use our color system */
@@ -442,7 +447,7 @@ body {
   color: var(--color-text);
 }
 
-/* Strategic grid overlay */
+/* Default grid for most themes */
 body::after {
   content: "";
   position: fixed;
@@ -456,7 +461,27 @@ body::after {
   background-size: 40px 40px, 40px 40px;
   pointer-events: none;
   z-index: 1;
-  opacity: 1;  
+}
+
+/* Halloween theme - spider web pattern instead of grid */
+[data-theme="halloween"] body::after {
+  background-image: 
+    radial-gradient(circle at 20% 80%, transparent 40%, rgba(255, 107, 53, 0.02) 40.5%, transparent 41%),
+    radial-gradient(circle at 80% 20%, transparent 40%, rgba(139, 21, 56, 0.02) 40.5%, transparent 41%),
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(255, 107, 53, 0.01) 30.5%, transparent 31%);
+  background-size: 200px 200px, 200px 200px, 300px 300px;
+}
+
+/* High contrast theme - no grid for clarity */
+[data-theme="highcontrast"] body::after {
+  display: none;
+}
+
+/* Black theme - very subtle grid */
+[data-theme="black"] body::after {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
 }
 
 /* Ensure content is above overlay */

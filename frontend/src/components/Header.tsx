@@ -282,9 +282,10 @@ export default function Header() {
 
       {/* Comprehensive Side Menu */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-surface-1 z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-surface-1 backdrop-blur-xl z-50 transform transition-transform duration-300 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } border-r border-border`}
+        style={{ backgroundColor: 'var(--color-surface-1)' }}
       >
         {/* Menu Header */}
         <div className="bg-ink px-6 py-4 flex items-center justify-between border-b border-border">
