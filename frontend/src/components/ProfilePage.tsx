@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import RankInsignia from './RankInsignia'
+import UserStats from './profile/UserStats'
 import { PLAYER_COLORS, PREMIUM_PLAYER_COLORS, getPlayerColor, COLOR_CLASSES } from '../constants/colors'
 import type { PlayerColor } from '../constants/colors'
 
@@ -30,6 +31,8 @@ interface UserProfile {
   }
 }
 
+type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
+
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
@@ -37,6 +40,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
 
   // Check if this is the current user's profile
   const isOwnProfile = currentUser && currentUser.username === username
@@ -142,9 +146,16 @@ const ProfilePage: React.FC = () => {
   const playerColor = profile.preferredColor || settings.game.preferredColor || '#DC2626'
   const colorClass = getPlayerColor(playerColor as PlayerColor)
   
+  const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
+    { id: 'overview', label: 'Overview', icon: '👤', available: true },
+    { id: 'stats', label: 'Statistics', icon: '📊', available: true },
+    { id: 'matches', label: 'Matches', icon: '🎮', available: false },
+    { id: 'achievements', label: 'Achievements', icon: '🏆', available: false },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Profile Header Card with glass effect */}
         <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-2xl mb-6 overflow-hidden">
           {/* Gradient overlay for visual interest */}
@@ -176,7 +187,6 @@ const ProfilePage: React.FC = () => {
                   style={{ borderColor: colorClass }}
                 />
               </div>
-              
             </div>
 
             {/* Profile Info */}
@@ -184,7 +194,6 @@ const ProfilePage: React.FC = () => {
               <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-2">
                 {profile.username}
               </h1>
-              
               
               {/* Rank Display */}
               <div className="mb-4">
@@ -217,88 +226,141 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Grid with enhanced cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-primary/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative text-center">
-              <div className="text-2xl mb-2">🎮</div>
-              <div className="text-2xl font-bold text-primary-soft">{profile.gamesPlayed}</div>
-              <div className="text-muted text-sm">Games Played</div>
-            </div>
-          </div>
-          
-          <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative text-center">
-              <div className="text-2xl mb-2">✅</div>
-              <div className="text-2xl font-bold text-green-400">{profile.wins}</div>
-              <div className="text-muted text-sm">Wins</div>
-            </div>
-          </div>
-          
-          <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-red-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative text-center">
-              <div className="text-2xl mb-2">❌</div>
-              <div className="text-2xl font-bold text-red-400">{profile.losses}</div>
-              <div className="text-muted text-sm">Losses</div>
-            </div>
-          </div>
-          
-          <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-yellow-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative text-center">
-              <div className="text-2xl mb-2">📊</div>
-              <div className="text-2xl font-bold text-yellow-400">
-                {profile.gamesPlayed > 0 ? `${profile.winRate.toFixed(1)}%` : 'N/A'}
-              </div>
-              <div className="text-muted text-sm">Win Rate</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Stats with enhanced styling */}
-        <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl mb-6 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
-            <span className="text-white">📈</span> Rating History
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <div className="text-muted text-sm mb-1">Current Rating</div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent">{profile.elo}</div>
-            </div>
-            <div>
-              <div className="text-muted text-sm mb-1">Peak Rating</div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">{profile.peakRating}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Games Section with enhanced styling */}
-        <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
-            <span className="text-white">📊</span> Recent Games
-          </h2>
-          <div className="relative text-center py-12">
-            <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
-              <div className="text-4xl">🎲</div>
-            </div>
-            <p className="text-white text-lg mb-2 font-medium">No recent games found</p>
-            <p className="text-muted text-sm">
-              {isOwnProfile 
-                ? "Start playing to see your game history!" 
-                : `${profile.username} hasn't played any games recently.`
-              }
-            </p>
-            {isOwnProfile && (
-              <button className="mt-4 px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105">
-                Start Playing
+        {/* Tab Navigation */}
+        <div className="bg-surface-1/80 backdrop-blur-lg rounded-2xl border border-border shadow-xl mb-6 p-2">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => tab.available && setActiveTab(tab.id)}
+                disabled={!tab.available}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+                  ${activeTab === tab.id
+                    ? 'bg-primary text-white shadow-lg'
+                    : tab.available
+                      ? 'bg-transparent text-muted hover:bg-surface-2 hover:text-primary'
+                      : 'bg-transparent text-muted/50 cursor-not-allowed'
+                  }
+                `}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                {!tab.available && <span className="text-xs">(Soon)</span>}
               </button>
-            )}
+            ))}
           </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="relative">
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Stats Grid with enhanced cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-primary/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative text-center">
+                    <div className="text-2xl mb-2">🎮</div>
+                    <div className="text-2xl font-bold text-primary-soft">{profile.gamesPlayed}</div>
+                    <div className="text-muted text-sm">Games Played</div>
+                  </div>
+                </div>
+                
+                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative text-center">
+                    <div className="text-2xl mb-2">✅</div>
+                    <div className="text-2xl font-bold text-green-400">{profile.wins}</div>
+                    <div className="text-muted text-sm">Wins</div>
+                  </div>
+                </div>
+                
+                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-red-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative text-center">
+                    <div className="text-2xl mb-2">❌</div>
+                    <div className="text-2xl font-bold text-red-400">{profile.losses}</div>
+                    <div className="text-muted text-sm">Losses</div>
+                  </div>
+                </div>
+                
+                <div className="group relative bg-surface-2/60 backdrop-blur-sm rounded-xl p-4 border border-border hover:border-yellow-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative text-center">
+                    <div className="text-2xl mb-2">📊</div>
+                    <div className="text-2xl font-bold text-yellow-400">
+                      {profile.gamesPlayed > 0 ? `${profile.winRate.toFixed(1)}%` : 'N/A'}
+                    </div>
+                    <div className="text-muted text-sm">Win Rate</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Stats with enhanced styling */}
+              <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
+                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
+                  <span className="text-white">📈</span> Rating History
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <div className="text-muted text-sm mb-1">Current Rating</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent">{profile.elo}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted text-sm mb-1">Peak Rating</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">{profile.peakRating}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Games Section with enhanced styling */}
+              <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
+                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
+                  <span className="text-white">📊</span> Recent Games
+                </h2>
+                <div className="relative text-center py-12">
+                  <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
+                    <div className="text-4xl">🎲</div>
+                  </div>
+                  <p className="text-white text-lg mb-2 font-medium">No recent games found</p>
+                  <p className="text-muted text-sm">
+                    {isOwnProfile 
+                      ? "Start playing to see your game history!" 
+                      : `${profile.username} hasn't played any games recently.`
+                    }
+                  </p>
+                  {isOwnProfile && (
+                    <button className="mt-4 px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105">
+                      Start Playing
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'stats' && (
+            <UserStats />
+          )}
+
+          {activeTab === 'matches' && (
+            <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-12 border border-border shadow-xl text-center">
+              <div className="text-5xl mb-4">🎮</div>
+              <h2 className="text-2xl font-bold text-white mb-2">Match History Coming Soon</h2>
+              <p className="text-muted">View detailed match history, replays, and game analytics.</p>
+            </div>
+          )}
+
+          {activeTab === 'achievements' && (
+            <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-12 border border-border shadow-xl text-center">
+              <div className="text-5xl mb-4">🏆</div>
+              <h2 className="text-2xl font-bold text-white mb-2">Achievements Coming Soon</h2>
+              <p className="text-muted">Unlock achievements, earn badges, and showcase your accomplishments.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

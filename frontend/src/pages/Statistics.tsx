@@ -1,13 +1,17 @@
 import type React from 'react'
-import UserStats from '../components/profile/UserStats'
-// TODO: Migrate UserStats.css to use CSS variables
+import { Navigate } from 'react-router-dom'
+import { useAppSelector } from '../hooks/redux'
 
 const Statistics: React.FC = () => {
-  return (
-    <div className="statistics-page">
-      <UserStats />
-    </div>
-  )
+  const { user } = useAppSelector((state) => state.auth)
+  
+  // Redirect to profile page with stats tab
+  // In the future, we could pass state to open the stats tab directly
+  if (user?.username) {
+    return <Navigate to={`/profile/${user.username}`} replace />
+  }
+  
+  return <Navigate to="/login" replace />
 }
 
 export default Statistics

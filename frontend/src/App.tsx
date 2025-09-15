@@ -28,7 +28,6 @@ const MapEditorTokens = lazy(() => import('./pages/MapEditorTokens'))
 const Maps = lazy(() => import('./pages/Maps'))
 import NotFoundPage from './pages/NotFoundPage'
 const Play = lazy(() => import('./pages/Play'))
-const Profile = lazy(() => import('./pages/Profile'))
 const ProfilePage = lazy(() => import('./components/ProfilePage'))
 import ProfileRedirect from './components/ProfileRedirect'
 import Register from './pages/Register'
