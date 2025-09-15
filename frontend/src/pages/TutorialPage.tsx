@@ -88,7 +88,7 @@ const TutorialPage: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="bg-surface-2 rounded-lg p-6 min-h-[500px]">
+      <div className="glass-box-lg min-h-[500px]">
         {activeTab === 'basics' && (
           <div className="prose prose-invert max-w-none">
             <h2 className="text-2xl font-bold text-white mb-4">Getting Started</h2>
@@ -105,7 +105,7 @@ const TutorialPage: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Turn Phases</h3>
                 <div className="space-y-3">
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-yellow-400">1. Reinforce</h4>
                     <p className="text-muted mt-1">
                       Place new troops on your territories. You receive troops based on the number
@@ -113,7 +113,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-red-400">2. Attack</h4>
                     <p className="text-muted mt-1">
                       Attack adjacent enemy territories. Roll dice to determine battle outcomes. The
@@ -122,7 +122,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-green-400">3. Fortify</h4>
                     <p className="text-muted mt-1">
                       Move troops from one of your territories to another connected territory to
@@ -150,7 +150,7 @@ const TutorialPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-white mb-4">Game Types</h2>
 
             <div className="grid gap-6">
-              <div className="bg-surface-2 p-5 rounded-lg">
+              <div className="glass-box">
                 <h3 className="text-xl font-semibold text-green-400 mb-2">Classic</h3>
                 <p className="text-muted">
                   The traditional game mode. Eliminate all opponents to win. Start with territories
@@ -158,7 +158,7 @@ const TutorialPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-surface-2 p-5 rounded-lg">
+              <div className="glass-box">
                 <h3 className="text-xl font-semibold text-primary-soft mb-2">Capitals</h3>
                 <p className="text-muted">
                   Each player starts with a designated capital territory. While you still win by
@@ -167,7 +167,7 @@ const TutorialPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-surface-2 p-5 rounded-lg">
+              <div className="glass-box">
                 <h3 className="text-xl font-semibold text-purple-400 mb-2">Random Mode</h3>
                 <p className="text-muted">
                   Let the game randomly select game settings for an unpredictable experience. Great
@@ -274,7 +274,7 @@ const TutorialPage: React.FC = () => {
                   The Conqueror's Path
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">🛡️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.CHIEFTAIN.base }}>
@@ -286,7 +286,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">⚔️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.WARLORD.base }}>
@@ -298,7 +298,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">⚓</span>
                     <div>
                       <div
@@ -313,7 +313,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">☪️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.SULTAN.base }}>
@@ -325,7 +325,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">🦅</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.CAESAR.base }}>
@@ -337,7 +337,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">🏹</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.KHAN.base }}>
@@ -349,7 +349,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">👑</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.EMPEROR.base }}>
@@ -361,7 +361,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">☀️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.GREAT_KING.base }}>
@@ -373,7 +373,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">💀</span>
                     <div>
                       <div
@@ -391,7 +391,7 @@ const TutorialPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-surface-2 p-3 rounded-lg">
+                  <div className="flex items-center gap-3 glass-box-sm">
                     <span className="text-2xl">☄️</span>
                     <div>
                       <div
@@ -437,7 +437,7 @@ const TutorialPage: React.FC = () => {
                   Create your own custom maps using our intuitive token-based map editor. Share your
                   creations with the community!
                 </p>
-                <div className="bg-surface-2 p-4 rounded-lg">
+                <div className="glass-box-sm">
                   <h4 className="font-semibold text-yellow-400 mb-2">Quick Start Steps:</h4>
                   <ol className="text-muted space-y-1 list-decimal list-inside">
                     <li>Upload a background image (400×300 minimum)</li>
@@ -453,7 +453,7 @@ const TutorialPage: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Editor Modes</h3>
                 <div className="grid gap-3">
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-green-400">🗺️ Territories Mode</h4>
                     <p className="text-muted text-sm mt-1">
                       Click to place territory tokens. Drag to reposition. Select a continent first
@@ -461,7 +461,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-primary-soft">🌍 Continents Mode</h4>
                     <p className="text-muted text-sm mt-1">
                       Create continent groups with bonus army values. Assign colors for visual
@@ -469,7 +469,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-purple-400">🔗 Connections Mode</h4>
                     <p className="text-muted text-sm mt-1">
                       Click a territory, then click adjacent territories to create connections.
@@ -477,7 +477,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-yellow-400">👑 Capitals Mode</h4>
                     <p className="text-muted text-sm mt-1">
                       Auto-generate or manually assign starting positions for 2-12 players using our
@@ -564,7 +564,7 @@ const TutorialPage: React.FC = () => {
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">
                   Getting Maps Approved
                 </h3>
-                <div className="bg-surface-2 p-4 rounded-lg">
+                <div className="glass-box-sm">
                   <h4 className="font-semibold text-green-400 mb-2">Approval Process:</h4>
                   <ol className="text-muted space-y-2 list-decimal list-inside">
                     <li>
@@ -639,7 +639,7 @@ const TutorialPage: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Game Settings</h3>
                 <div className="space-y-4">
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-yellow-400">Turn Time Limit</h4>
                     <p className="text-muted text-sm mt-1">
                       Async games: 24 hours default (customizable from 30 minutes to 72 hours).
@@ -647,7 +647,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-green-400">Players</h4>
                     <p className="text-muted text-sm mt-1">
                       2-12 players supported. Games can start with 2 players minimum. Use "Random"
@@ -655,7 +655,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-primary-soft">Spoils Cards</h4>
                     <p className="text-muted text-sm mt-1">
                       • <strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... (exponential growth)
@@ -665,7 +665,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-blue-400">Fortification</h4>
                     <p className="text-muted text-sm mt-1">
                       • <strong>Adjacent:</strong> Move once to connected territory
@@ -676,7 +676,7 @@ const TutorialPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-surface-2 p-4 rounded-lg">
+                  <div className="glass-box-sm">
                     <h4 className="font-semibold text-purple-400">Fog of War</h4>
                     <p className="text-muted text-sm mt-1">
                       • <strong>Off:</strong> See entire map
@@ -721,7 +721,7 @@ const TutorialPage: React.FC = () => {
 
               <div>
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Options</h3>
-                <div className="bg-surface-2 p-4 rounded-lg">
+                <div className="glass-box-sm">
                   <ul className="text-muted space-y-2">
                     <li>
                       • <strong>Territory Modifiers:</strong> Special territories with unique

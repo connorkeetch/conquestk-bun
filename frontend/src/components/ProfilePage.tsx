@@ -112,7 +112,7 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center p-8 bg-surface-1/80 backdrop-blur-lg rounded-2xl border border-border shadow-2xl">
+        <div className="text-center glass-box-xl shadow-2xl">
           <div className="text-5xl mb-4 animate-pulse">🎲</div>
           <div className="text-white text-lg font-medium">Loading profile...</div>
         </div>
@@ -123,7 +123,7 @@ const ProfilePage: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center p-8 bg-surface-1/80 backdrop-blur-lg rounded-2xl border border-border shadow-2xl">
+        <div className="text-center glass-box-xl shadow-2xl">
           <div className="text-5xl mb-4">❌</div>
           <div className="text-white text-lg mb-4 font-medium">{error}</div>
           <button
@@ -140,7 +140,7 @@ const ProfilePage: React.FC = () => {
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center p-8 bg-surface-1/80 backdrop-blur-lg rounded-2xl border border-border shadow-2xl">
+        <div className="text-center glass-box-xl shadow-2xl">
           <div className="text-5xl mb-4">❌</div>
           <div className="text-white text-lg font-medium">Profile not found</div>
         </div>
@@ -163,7 +163,7 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Profile Header Card with glass effect */}
-        <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-2xl mb-6 overflow-hidden">
+        <div className="relative glass-box-lg shadow-2xl mb-6 overflow-hidden">
           {/* Gradient overlay for visual interest */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
           <div className="flex flex-col sm:flex-row gap-6">
@@ -231,7 +231,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-surface-1/80 backdrop-blur-lg rounded-2xl border border-border shadow-xl mb-6 p-2">
+        <div className="glass-box shadow-xl mb-6 p-2">
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
@@ -305,7 +305,7 @@ const ProfilePage: React.FC = () => {
               </div>
 
               {/* Additional Stats with enhanced styling */}
-              <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl overflow-hidden">
+              <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
                 <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
                   <span className="text-white">📈</span> Rating History
@@ -327,7 +327,7 @@ const ProfilePage: React.FC = () => {
               </div>
 
               {/* Recent Games Section with enhanced styling */}
-              <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-6 border border-border shadow-xl overflow-hidden">
+              <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
                 <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
                   <span className="text-white">📊</span> Recent Games
@@ -355,7 +355,7 @@ const ProfilePage: React.FC = () => {
           {activeTab === 'stats' && <UserStats />}
 
           {activeTab === 'matches' && (
-            <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-12 border border-border shadow-xl text-center">
+            <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🎮</div>
               <h2 className="text-2xl font-bold text-white mb-2">Match History Coming Soon</h2>
               <p className="text-muted">
@@ -365,7 +365,7 @@ const ProfilePage: React.FC = () => {
           )}
 
           {activeTab === 'achievements' && (
-            <div className="relative bg-surface-1/80 backdrop-blur-lg rounded-2xl p-12 border border-border shadow-xl text-center">
+            <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🏆</div>
               <h2 className="text-2xl font-bold text-white mb-2">Achievements Coming Soon</h2>
               <p className="text-muted">

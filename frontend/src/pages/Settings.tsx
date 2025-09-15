@@ -1417,7 +1417,7 @@ export default function Settings() {
 
           <div>
             <h3 className="text-xl font-semibold text-white mb-6">Notification Preferences</h3>
-            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-600">
+            <div className="glass-box">
               {renderNotificationTable()}
             </div>
           </div>
@@ -1487,7 +1487,7 @@ export default function Settings() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Settings Navigation */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+            <div className="glass-box-lg">
               <nav className="space-y-2">
                 {settingsTabs.map((tab) => (
                   <button
@@ -1509,7 +1509,7 @@ export default function Settings() {
 
           {/* Settings Content */}
           <div className="lg:col-span-3">
-            <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-8 border border-slate-700">
+            <div className="glass-box-xl">
               {renderTabContent()}
             </div>
           </div>
