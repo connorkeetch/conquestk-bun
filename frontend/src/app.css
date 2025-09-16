@@ -166,7 +166,7 @@ This allows themes to work with any color scheme!
   );
 
   --ck-glow: var(--color-primary-soft);
-  
+
   /* Box/Card overrides - neutral */
   --box-bg: rgba(30, 41, 59, 0.5);
   --box-bg-solid: #1e293b;
@@ -413,23 +413,6 @@ This allows themes to work with any color scheme!
   --box-padding-xl: 2rem;
 }
 
-/* Floating bat/ghost particles background */
-[data-theme="halloween"] body::after {
-  background-image:
-    radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent),
-    radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent),
-    radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent),
-    radial-gradient(2px 2px at 60% 10%, rgba(255, 107, 53, 0.3), transparent),
-    radial-gradient(1px 1px at 90% 90%, rgba(139, 21, 56, 0.2), transparent);
-  background-size:
-    300px 300px,
-    400px 400px,
-    250px 250px,
-    350px 350px,
-    200px 200px;
-  animation: halloween-float 20s ease-in-out infinite;
-}
-
 /* Animate the particles */
 @keyframes halloween-float {
   0%,
@@ -472,22 +455,6 @@ This allows themes to work with any color scheme!
 
 [data-theme="halloween"]::-webkit-scrollbar-thumb {
   background: linear-gradient(var(--color-primary), var(--color-accent));
-}
-
-/* Pulsing glow for important elements */
-[data-theme="halloween"] .btn-primary,
-[data-theme="halloween"] .btn-success {
-  animation: halloween-pulse 3s ease-in-out infinite;
-}
-
-@keyframes halloween-pulse {
-  0%,
-  100% {
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-  }
-  50% {
-    box-shadow: 0 4px 25px rgba(255, 107, 53, 0.5);
-  }
 }
 
 /* Special Halloween-only easter egg - subtle bat cursor on hover */
@@ -575,6 +542,23 @@ body::after {
     40px 40px;
   pointer-events: none;
   z-index: 1;
+}
+
+/* Floating bat/ghost particles background */
+[data-theme="halloween"] body::after {
+  background-image:
+    radial-gradient(3px 3px at 10% 20%, rgba(255, 107, 53, 0.4), transparent),
+    radial-gradient(2px 2px at 80% 60%, rgba(139, 21, 56, 0.3), transparent),
+    radial-gradient(1px 1px at 30% 70%, rgba(255, 215, 0, 0.3), transparent),
+    radial-gradient(2px 2px at 60% 10%, rgba(255, 107, 53, 0.3), transparent),
+    radial-gradient(1px 1px at 90% 90%, rgba(139, 21, 56, 0.2), transparent);
+  background-size:
+    300px 300px,
+    400px 400px,
+    250px 250px,
+    350px 350px,
+    200px 200px;
+  animation: halloween-float 20s ease-in-out infinite;
 }
 
 /* Halloween theme - spider web pattern instead of grid */
@@ -781,7 +765,7 @@ kbd {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
   border-radius: 0.75rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
+  box-shadow:
     0 4px 14px 0 rgba(0, 0, 0, 0.2),
     0 2px 4px 0 rgba(0, 0, 0, 0.1),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
@@ -792,7 +776,7 @@ kbd {
 }
 
 .btn-primary::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -805,7 +789,7 @@ kbd {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 8px 20px 0 rgba(0, 0, 0, 0.3),
     0 4px 8px 0 rgba(0, 0, 0, 0.15),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
@@ -817,7 +801,7 @@ kbd {
 
 .btn-primary:active {
   transform: translateY(0);
-  box-shadow: 
+  box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.2),
     inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
 }
@@ -900,7 +884,7 @@ kbd {
   background: linear-gradient(135deg, var(--color-danger), #dc2626);
   border-radius: 0.75rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
+  box-shadow:
     0 4px 14px 0 rgba(185, 28, 28, 0.25),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
   text-decoration: none;
@@ -911,14 +895,14 @@ kbd {
 .btn-danger:hover {
   background: linear-gradient(135deg, #dc2626, #ef4444);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 8px 20px 0 rgba(185, 28, 28, 0.35),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .btn-danger:active {
   transform: translateY(0);
-  box-shadow: 
+  box-shadow:
     0 2px 8px 0 rgba(185, 28, 28, 0.25),
     inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
 }
@@ -943,8 +927,8 @@ kbd {
 .btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
+  transform: none;
+  box-shadow: none;
 }
 
 /* ===== TAB SYSTEM ===== */
@@ -1042,7 +1026,7 @@ kbd {
 .tab-pill-active {
   color: white;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
-  box-shadow: 
+  box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.2),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -1057,11 +1041,7 @@ kbd {
 }
 
 .sidebar-header {
-  background: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0.03),
-    transparent
-  );
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.03), transparent);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -1079,7 +1059,7 @@ kbd {
   border-radius: 0.5rem;
   transition: all 0.2s ease;
   text-decoration: none;
-  outline: none !important;
+  outline: none;
 }
 
 .sidebar-item:hover:not(.sidebar-item-active) {
@@ -1090,29 +1070,29 @@ kbd {
 .sidebar-item-active {
   color: white;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
-  box-shadow: 
+  box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.15),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Remove focus outline on sidebar items */
 .sidebar-item:focus {
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
 .sidebar-item-active:focus {
-  box-shadow: 
+  box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.15),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1) !important;
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* ===== TAILWIND v4 COMPONENT CLASSES ===== */
 /* Define reusable component patterns for common UI elements */
-/* Using @utility directive instead of @layer components for Tailwind v4 compatibility */
+/* Component and utility classes for Tailwind-friendly patterns */
 
 /* Box1 - Primary Card Component */
-@utility box1 {
+.box1 {
   background-color: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
   backdrop-filter: blur(16px);
   border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
@@ -1124,21 +1104,21 @@ kbd {
     inset 0 1px 0 0 color-mix(in srgb, var(--color-white) 8%, transparent);
 }
 
-@utility box1-header {
+.box1-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-@utility box1-title {
+.box1-title {
   font-size: 1.125rem;
   line-height: 1.75rem;
   font-weight: 600;
   color: var(--color-white);
 }
 
-@utility box1-content {
+.box1-content {
   display: block;
 }
 
@@ -1279,6 +1259,23 @@ kbd {
 .btn-success:hover {
   background-color: color-mix(in srgb, var(--color-success) 90%, transparent);
 }
+
+/* Pulsing glow for important elements */
+[data-theme="halloween"] .btn-primary,
+[data-theme="halloween"] .btn-success {
+  animation: halloween-pulse 3s ease-in-out infinite;
+}
+
+@keyframes halloween-pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(255, 107, 53, 0.5);
+  }
+}
+
 /* ===== FORM COMPONENT SYSTEM ===== */
 /* Comprehensive form components using semantic variables */
 
@@ -1316,7 +1313,7 @@ kbd {
 }
 
 /* Form Label Component */
-@utility form-label {
+.form-label {
   display: block;
   color: var(--color-white);
   font-size: 0.875rem;
@@ -1326,7 +1323,7 @@ kbd {
 }
 
 /* Form Error Component */
-@utility form-error {
+.form-error {
   display: block;
   font-size: 0.75rem;
   color: var(--color-accent);
@@ -1335,7 +1332,7 @@ kbd {
 }
 
 /* Form Help Text Component */
-@utility form-help {
+.form-help {
   display: block;
   font-size: 0.75rem;
   color: var(--color-text-muted);
@@ -1343,7 +1340,7 @@ kbd {
 }
 
 /* Form Group Component */
-@utility form-group {
+.form-group {
   margin-bottom: 1.5rem;
 }
 
@@ -1351,20 +1348,20 @@ kbd {
 /* Theme-aware navigation links with semantic colors */
 
 /* Base Navigation Link */
-@utility nav-link {
+.nav-link {
   font-weight: 500;
   text-decoration: none;
   transition: color 0.2s ease-out;
 }
 
 /* Active Navigation Link */
-@utility nav-link-active {
+.nav-link-active {
   color: var(--color-white);
   font-weight: 600;
 }
 
 /* Inactive Navigation Link */
-@utility nav-link-inactive {
+.nav-link-inactive {
   color: color-mix(in srgb, var(--color-white) 70%, transparent);
 }
 
@@ -1372,14 +1369,14 @@ kbd {
 /* Theme-aware footer styling */
 
 /* Footer Container */
-@utility footer {
+.footer {
   margin-top: auto;
   border-top: 1px solid color-mix(in srgb, var(--color-border) 20%, transparent);
   background-color: color-mix(in srgb, var(--color-bg-deep) 80%, transparent);
 }
 
 /* Footer Link */
-@utility footer-link {
+.footer-link {
   color: var(--color-text-muted);
   text-decoration: none;
   transition: color 0.2s ease-out;
@@ -1388,7 +1385,7 @@ kbd {
 /* ===== SEMANTIC STATE COLORS ===== */
 /* Theme-aware status and state colors */
 
-@utility bg-primary-soft-bg {
+.bg-primary-soft-bg {
   background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
@@ -1396,7 +1393,7 @@ kbd {
 /* Theme-aware dropdown menus */
 
 /* Dropdown Menu Container */
-@utility dropdown-menu {
+.dropdown-menu {
   position: absolute;
   right: 0;
   top: 100%;
@@ -1413,7 +1410,7 @@ kbd {
 }
 
 /* Dropdown Item */
-@utility dropdown-item {
+.dropdown-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1430,13 +1427,13 @@ kbd {
 }
 
 /* Dropdown Separator */
-@utility dropdown-separator {
+.dropdown-separator {
   margin: 0.5rem 0;
   border: none;
   border-top: 1px solid var(--color-border);
 }
 /* Essential accessibility utilities */
-@utility sr-only {
+.sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1451,30 +1448,30 @@ kbd {
 /* ===== POLISH & REFINEMENT UTILITIES ===== */
 
 /* Enhanced hover effects for better UX */
-@utility hover-lift {
+.hover-lift {
   transition: all 0.2s ease-out;
 }
 
-@utility hover-glow {
+.hover-glow {
   transition: all 0.2s ease-out;
 }
 
 /* Status indicator utilities */
-@utility status-online {
+.status-online {
   background-color: var(--color-success);
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
 }
 
-@utility status-away {
+.status-away {
   background-color: var(--color-warning);
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
 }
 
-@utility status-offline {
+.status-offline {
   background-color: var(--color-text-muted);
   width: 0.5rem;
   height: 0.5rem;
@@ -1482,7 +1479,7 @@ kbd {
 }
 
 /* Loading spinner utility */
-@utility loading-spinner {
+.loading-spinner {
   width: 1rem;
   height: 1rem;
   border: 2px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
@@ -1501,28 +1498,28 @@ kbd {
 }
 
 /* Surface background utilities */
-@utility bg-surface-1 {
+.bg-surface-1 {
   background-color: var(--color-surface-1);
 }
 
-@utility bg-surface-2 {
+.bg-surface-2 {
   background-color: var(--color-surface-2);
 }
 
 /* Text color utilities */
-@utility text-muted {
+.text-muted {
   color: var(--color-text-muted);
 }
 
-@utility fill-muted {
+.fill-muted {
   fill: var(--color-text-muted);
 }
 
 /* Border utilities with muted variants */
-@utility border-border {
+.border-border {
   border-color: var(--color-border);
 }
 
-@utility border-border-muted {
+.border-border-muted {
   border-color: color-mix(in srgb, var(--color-border) 50%, transparent);
 }

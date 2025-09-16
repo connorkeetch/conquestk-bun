@@ -164,8 +164,8 @@ const UserStats: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto text-white">
       {/* Header with Period Selection */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 glass-box-lg">
-        <h1 className="text-4xl font-bold mb-4 sm:mb-0 bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent flex items-center gap-3">
-          <span className="text-white">📊</span> Statistics & Analytics
+        <h1 className="text-4xl font-bold mb-4 sm:mb-0 text-primary-soft flex items-center gap-3">
+          <span>📊</span> Statistics & Analytics
         </h1>
         <div className="flex gap-2 glass-box-sm p-2">
           {periods.map((period) => (
