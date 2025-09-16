@@ -197,7 +197,7 @@ const ProfilePage: React.FC = () => {
 
             {/* Profile Info */}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold text-primary-soft mb-2">
                 {profile.username}
               </h1>
 
@@ -231,30 +231,26 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="glass-box shadow-xl mb-6 p-2">
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => tab.available && setActiveTab(tab.id)}
-                disabled={!tab.available}
-                className={`
-                  flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-                  ${
-                    activeTab === tab.id
-                      ? 'bg-primary text-white shadow-lg'
-                      : tab.available
-                        ? 'bg-transparent text-muted hover:bg-surface-2 hover:text-primary'
-                        : 'bg-transparent text-muted/50 cursor-not-allowed'
-                  }
-                `}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-                {!tab.available && <span className="text-xs">(Soon)</span>}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              type="button"
+              key={tab.id}
+              onClick={() => tab.available && setActiveTab(tab.id)}
+              disabled={!tab.available}
+              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'text-primary-soft border-b-2 border-primary'
+                  : tab.available
+                    ? 'text-muted hover:text-white'
+                    : 'text-muted/50 cursor-not-allowed'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {!tab.available && <span className="text-xs">(Soon)</span>}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
@@ -307,19 +303,19 @@ const ProfilePage: React.FC = () => {
               {/* Additional Stats with enhanced styling */}
               <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
-                  <span className="text-white">📈</span> Rating History
+                <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
+                  <span>📈</span> Rating History
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <div className="text-muted text-sm mb-1">Current Rating</div>
-                    <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent">
+                    <div className="text-3xl font-bold text-primary">
                       {profile.elo}
                     </div>
                   </div>
                   <div>
                     <div className="text-muted text-sm mb-1">Peak Rating</div>
-                    <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
+                    <div className="text-3xl font-bold text-violet-soft">
                       {profile.peakRating}
                     </div>
                   </div>
@@ -329,8 +325,8 @@ const ProfilePage: React.FC = () => {
               {/* Recent Games Section with enhanced styling */}
               <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-soft bg-clip-text text-transparent mb-4 flex items-center gap-2">
-                  <span className="text-white">📊</span> Recent Games
+                <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
+                  <span>📊</span> Recent Games
                 </h2>
                 <div className="relative text-center py-12">
                   <div className="inline-block p-4 bg-surface-2/50 rounded-full mb-4">
@@ -343,7 +339,10 @@ const ProfilePage: React.FC = () => {
                       : `${profile.username} hasn't played any games recently.`}
                   </p>
                   {isOwnProfile && (
-                    <button className="mt-4 px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105">
+                    <button
+                      type="button"
+                      className="mt-4 px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
+                    >
                       Start Playing
                     </button>
                   )}
