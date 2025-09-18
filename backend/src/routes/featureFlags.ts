@@ -11,18 +11,7 @@ const router = Router()
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     // Get user from request if authenticated
-    const user = req.user
-      ? {
-          id: req.user.id,
-          role: req.user.role,
-          is_admin: req.user.isAdmin,
-          is_beta_user: req.user.isBetaUser,
-          is_vip: req.user.isVip,
-          has_premium: req.user.hasPremium,
-        }
-      : undefined
-
-    const flags = await featureFlagService.evaluateForUser(user)
+    const flags = await featureFlagService.evaluateForUser(req.user ? { ...req.user } : undefined)
     res.json({ flags })
   } catch (error) {
     console.error('Error fetching feature flags:', error)

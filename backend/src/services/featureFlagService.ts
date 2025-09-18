@@ -19,13 +19,23 @@ interface FeatureFlag {
 interface User {
   id: string
   role?: string
-  is_admin?: boolean
-  is_beta_user?: boolean
-  is_vip?: boolean
-  has_premium?: boolean
+  isAdmin?: boolean
+  isBetaUser?: boolean
+  isVip?: boolean
+  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise' | string
+  hasPremium?: boolean
 }
 
-class FeatureFlagService {
+const PREMIUM_TIER_RANK: Record<string, number> = {
+  free: 0,
+  premium: 1,
+  pro: 2,
+  enterprise: 3,
+}
+
+const normalizeTier = (tier?: string | null): string => (tier || 'free').toLowerCase()
+
+export class FeatureFlagService {
   private static instance: FeatureFlagService
   private flagCache: Map<string, FeatureFlag> = new Map()
   private cacheExpiry: number = 60000 // 1 minute cache
@@ -116,9 +126,9 @@ class FeatureFlagService {
       case 'disabled':
         return false
       case 'internal':
-        return user?.is_admin === true || user?.role === 'tester'
+        return user?.isAdmin === true || user?.role === 'tester'
       case 'beta':
-        return user?.is_admin === true || user?.role === 'tester' || user?.is_beta_user === true
+        return user?.isAdmin === true || user?.role === 'tester' || user?.isBetaUser === true
       case 'public':
         return true
       default:
@@ -135,12 +145,43 @@ class FeatureFlagService {
     }
 
     // Check VIP requirement
-    if (criteria.require_vip && !user?.is_vip) {
+    if (criteria.require_vip && !user?.isVip) {
       return false
     }
 
     // Check premium requirement
-    if (criteria.require_premium && !user?.has_premium) {
+    const userTier = normalizeTier(user?.premiumTier)
+    const userHasPremium = user?.hasPremium ?? userTier !== 'free'
+
+    if (criteria.require_premium && !userHasPremium) {
+      return false
+    }
+
+    const minimumTierRaw =
+      criteria.minimum_premium_tier || criteria.min_premium_tier || criteria.required_premium_tier
+
+    if (minimumTierRaw) {
+      const requiredTier = normalizeTier(minimumTierRaw)
+      const requiredRank = PREMIUM_TIER_RANK[requiredTier] ?? PREMIUM_TIER_RANK.free
+      const userRank = PREMIUM_TIER_RANK[userTier] ?? PREMIUM_TIER_RANK.free
+      if (userRank < requiredRank) {
+        return false
+      }
+    }
+
+    if (Array.isArray(criteria.allowed_roles) && criteria.allowed_roles.length > 0) {
+      if (!user?.role || !criteria.allowed_roles.includes(user.role)) {
+        return false
+      }
+    }
+
+    if (Array.isArray(criteria.excluded_roles) && criteria.excluded_roles.length > 0) {
+      if (user?.role && criteria.excluded_roles.includes(user.role)) {
+        return false
+      }
+    }
+
+    if (criteria.require_admin && !user?.isAdmin) {
       return false
     }
 

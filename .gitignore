@@ -130,6 +130,7 @@ mcp.json
 test-results/
 tests/
 *.test.ts
+!backend/src/test/*.test.ts
 
 # Playwright
 /playwright-report/
