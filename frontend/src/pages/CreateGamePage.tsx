@@ -31,6 +31,7 @@ interface GameMap {
   rating_count?: number
   tags?: string[]
   imageUrl?: string
+  imageUrl?: string
   image_url?: string
 }
 
@@ -1262,7 +1263,14 @@ const CreateGamePage: React.FC = () => {
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 {(() => {
                   const selectedMapData = maps.find((m) => m.id === selectedMap)
-                  if (!selectedMapData) return null
+
+                  if (!selectedMapData) {
+                    return (
+                      <div className="text-center text-muted py-8">
+                        Select a map to see details
+                      </div>
+                    )
+                  }
 
                   const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
 
@@ -1349,8 +1357,6 @@ const CreateGamePage: React.FC = () => {
                         </div>
                       )}
                     </>
-                  ) : (
-                    <div className="text-center text-muted py-8">Select a map to see details</div>
                   )
                 })()}
               </div>
