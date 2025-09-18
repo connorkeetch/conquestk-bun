@@ -103,12 +103,6 @@ export const PREMIUM_PLAYER_COLORS = {
     outline: '#B8860B',
     description: 'The color of victory',
   },
-  MetallicSilver: {
-    solid: '#C0C0C0',
-    effect: 'chrome-reflection',
-    outline: '#808080',
-    description: 'Polished steel',
-  },
   NeonGreen: {
     solid: '#39FF14',
     effect: 'electric-glow',
@@ -249,11 +243,10 @@ export const getColorDisplayName = (color: string): string => {
     '#7C3AED': 'Violet',
     '#918151': 'Tan',
     '#7C2D12': 'Brown',
-    // Premium colors (6)
+    // Premium colors (5)
     '#000000': 'Midnight Black',
     '#FFFFFF': 'Pure White',
     '#DFAF37': 'Metallic Gold',
-    '#C0C0C0': 'Metallic Silver',
     '#39FF14': 'Neon Green',
     '#FB923C': 'Dragonfire',
   }
