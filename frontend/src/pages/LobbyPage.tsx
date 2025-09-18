@@ -258,11 +258,16 @@ const LobbyPage: React.FC = () => {
         <div className="flex gap-3">
           <Link
             to="/create"
-            className="btn-accent"
+            className="btn-primary"
           >
             🎮 Create Game
           </Link>
-          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`btn-secondary ${showFilters ? 'ring-2 ring-primary/40' : ''}`}
+            aria-pressed={showFilters}
+          >
             🔍 Filter Games
           </button>
         </div>
