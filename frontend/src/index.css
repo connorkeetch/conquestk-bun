@@ -1,8 +1,8 @@
+/* Import custom theme configuration first */
+@import "./app.css";
+
 /* Import Tailwind CSS v4 */
 @import "tailwindcss";
-
-/* Import custom theme configuration */
-@import "./app.css";
 
 /* Root container */
 #root {
