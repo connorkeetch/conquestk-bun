@@ -565,7 +565,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setGameVisibility('private')}
                   className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
                     gameVisibility === 'private'
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-surface-2 text-muted hover:bg-gray-600'
                   }`}
                 >
@@ -635,7 +635,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setGameMode('classic')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 gameMode === 'classic'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -647,7 +647,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setGameMode('capitals')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 gameMode === 'capitals'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -684,7 +684,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(5)}
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     turnTimeLimit === 5
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -696,7 +696,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(10)}
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     turnTimeLimit === 10
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -714,7 +714,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(6 * 60)}
                   className={`px-2 py-2 rounded-lg text-sm transition-colors ${
                     turnTimeLimit === 6 * 60
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -725,7 +725,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(12 * 60)}
                   className={`px-2 py-2 rounded-lg text-sm transition-colors ${
                     turnTimeLimit === 12 * 60
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -736,7 +736,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setTurnTimeLimit(24 * 60)}
                   className={`px-2 py-2 rounded-lg text-sm transition-colors ${
                     turnTimeLimit === 24 * 60
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -765,7 +765,7 @@ const CreateGamePage: React.FC = () => {
                       isDisabled
                         ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
                         : playersOption === playerCount
-                          ? 'bg-primary text-white shadow-lg'
+                          ? 'theme-selected shadow-lg'
                           : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
                     }`}
                     disabled={isDisabled}
@@ -803,7 +803,7 @@ const CreateGamePage: React.FC = () => {
               type="button"
               onClick={() => setTeams(0)}
               className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                teams === 0 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'
+                teams === 0 ? 'theme-selected' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
               <div className="font-medium text-sm">Free for All</div>
@@ -822,7 +822,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTeams(teamOption)}
                     className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                       teams === teamOption
-                        ? 'bg-primary text-white'
+                        ? 'theme-selected'
                         : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
@@ -859,7 +859,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('adjacent')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 fortification === 'adjacent'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -872,7 +872,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('adjacent_multi')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 fortification === 'adjacent_multi'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -885,7 +885,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('chained')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 fortification === 'chained'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -898,7 +898,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('unlimited')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 fortification === 'unlimited'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -931,7 +931,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('escalating')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 spoilsType === 'escalating'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -944,7 +944,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('fixed')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 spoilsType === 'fixed'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -957,7 +957,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('static')}
               className={`w-full p-3 rounded-lg text-left transition-colors ${
                 spoilsType === 'static'
-                  ? 'bg-primary text-white'
+                  ? 'theme-selected'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -994,7 +994,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('off')}
                   className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                     fogOfWar === 'off'
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -1006,7 +1006,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('adjacent')}
                   className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                     fogOfWar === 'adjacent'
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -1018,7 +1018,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('persistent')}
                   className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                     fogOfWar === 'persistent'
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -1037,7 +1037,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setUseTerritoryModifiers(false)}
                   className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                     !useTerritoryModifiers
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -1049,7 +1049,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setUseTerritoryModifiers(true)}
                   className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                     useTerritoryModifiers
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
@@ -1067,7 +1067,7 @@ const CreateGamePage: React.FC = () => {
                       onClick={() => setModifierDistribution('sparse')}
                       className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                         modifierDistribution === 'sparse'
-                          ? 'bg-primary text-white'
+                          ? 'theme-selected'
                           : 'bg-white/10 text-white hover:bg-white/20'
                       }`}
                     >
@@ -1079,7 +1079,7 @@ const CreateGamePage: React.FC = () => {
                       onClick={() => setModifierDistribution('balanced')}
                       className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                         modifierDistribution === 'balanced'
-                          ? 'bg-primary text-white'
+                          ? 'theme-selected'
                           : 'bg-white/10 text-white hover:bg-white/20'
                       }`}
                     >
@@ -1091,7 +1091,7 @@ const CreateGamePage: React.FC = () => {
                       onClick={() => setModifierDistribution('abundant')}
                       className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                         modifierDistribution === 'abundant'
-                          ? 'bg-primary text-white'
+                          ? 'theme-selected'
                           : 'bg-white/10 text-white hover:bg-white/20'
                       }`}
                     >
@@ -1225,7 +1225,7 @@ const CreateGamePage: React.FC = () => {
                           selectedMap === map.id
                             ? map.id === 'random'
                               ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg'
-                              : 'bg-primary shadow-lg'
+                              : 'theme-selected shadow-lg'
                             : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                         }`}
                         onClick={() => setSelectedMap(map.id)}
