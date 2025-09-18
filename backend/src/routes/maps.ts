@@ -5,6 +5,7 @@ import { body, param, validationResult } from 'express-validator'
 import sizeOf from 'image-size'
 import multer from 'multer'
 import { getPool } from '../config/database'
+import jwt, { type JwtPayload } from 'jsonwebtoken'
 import { authenticateToken } from '../middleware/auth'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import { mapService } from '../services/mapService'
@@ -252,12 +253,38 @@ const handleMulterError = (error: any, _req: Request, res: Response, next: any) 
 
 // ============= PUBLIC ROUTES =============
 
-// Get maps specifically for game creation (only approved, public maps)
+// Get maps specifically for game creation (approved maps, plus VIP maps for eligible creators)
 router.get('/available-for-game', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
 
-    // Fetch only approved, public maps for game creation
+    // Determine whether the requester should have access to VIP-only maps
+    let includeVipMaps = false
+    const authHeader = req.headers.authorization
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JwtPayload
+        const userId = typeof decoded === 'object' ? (decoded.userId as string | undefined) : undefined
+
+        if (userId) {
+          const userResult = await pool.query(
+            'SELECT is_admin, is_vip FROM users WHERE id = $1 LIMIT 1',
+            [userId],
+          )
+
+          if (userResult.rows[0]) {
+            includeVipMaps = Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
+          }
+        }
+      } catch (error) {
+        // Ignore token errors – the route should still work for unauthenticated users
+      }
+    }
+
+    // Fetch approved maps for game creation
     const query = `
       SELECT 
         m.id,
@@ -279,8 +306,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as continent_count
       FROM maps m
       LEFT JOIN users u ON m.creator_id = u.id
-      WHERE m.status = 'approved' 
-        AND m.is_public = true
+      WHERE m.status = 'approved'
       ORDER BY 
         CASE WHEN m.is_featured THEN 0 ELSE 1 END,
         m.play_count DESC,
@@ -320,19 +346,21 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         min_players: row.min_players || 2,
         max_players: row.max_players || 6,
         is_featured: row.is_featured || false,
-        is_vip_only: row.is_vip_only || false,
         creator_name: row.creator_name || 'Unknown',
         play_count: row.play_count || 0,
         rating_average: row.rating_average || 0,
         rating_count: row.rating_count || 0,
         tags: row.tags || [],
         image_url: row.image_url || null,
+        is_vip_only: row.is_vip_only || false,
       })),
     ]
 
+    const visibleMaps = includeVipMaps ? maps : maps.filter((map) => !map.is_vip_only)
+
     return res.json({
-      maps,
-      total: maps.length,
+      maps: visibleMaps,
+      total: visibleMaps.length,
     })
   } catch (error) {
     logger.error('Error fetching maps for game creation:', error)

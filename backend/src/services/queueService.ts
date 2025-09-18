@@ -1,5 +1,6 @@
 import Bull from 'bull'
 import type Redis from 'ioredis'
+import type { RedisOptions } from 'ioredis'
 import { getRedisClient } from '../config/redis'
 import { BattleResult, type GameAction, GameState } from '../types/game'
 import { logger } from '../utils/logger'
@@ -70,14 +71,32 @@ export class QueueService {
 
       logger.info('QueueService using centralized Redis client with Railway network support')
 
-      // Initialize all queues using the centralized Redis connection
+      const redisClient = this.redis
+
+      const baseRedisOptions: RedisOptions = {
+        ...(redisClient.options as RedisOptions),
+        // Ensure Bull queue connections inherit the same resilience tuning as our main client
+        enableReadyCheck: false,
+        lazyConnect: false,
+        maxRetriesPerRequest: null,
+      }
+
+      // Initialize all queues using dedicated duplicates of the centralized Redis connection
       for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
         const queue = new Bull(config.name, {
-          redis: {
-            host: this.redis.options.host,
-            port: this.redis.options.port,
-            password: this.redis.options.password,
-            db: this.redis.options.db || 0,
+          createClient: (type) => {
+            const client = redisClient.duplicate({
+              ...baseRedisOptions,
+              connectionName: `bull:${config.name}:${type}`,
+            })
+
+            client.on('error', (err) =>
+              logger.warn(
+                `Redis client error for ${config.name} (${type}): ${err instanceof Error ? err.message : err}`,
+              ),
+            )
+
+            return client
           },
           defaultJobOptions: {
             removeOnComplete: 10,

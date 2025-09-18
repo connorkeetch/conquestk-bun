@@ -223,7 +223,7 @@ useEffect(() => {
 
 ## Troubleshooting Guide
 
-### Current Issues (September 2025)
+### Current Issues (January 2025)
 1. **No UI feedback** - Registration succeeds but user doesn't know email verification is required
 2. **Emails not sending** - Resend API may not be properly configured
 3. **Silent failures** - Email errors are logged but user isn't notified
