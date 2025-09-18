@@ -42,7 +42,7 @@ async function runMigrations() {
         for (const statement of statements) {
           try {
             await query(statement)
-          } catch (err: unknown) {
+          } catch (err: any) {
             // Skip errors about duplicate columns or existing objects
             if (
               err.message?.includes('duplicate column') ||

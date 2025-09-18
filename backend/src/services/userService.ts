@@ -2,7 +2,7 @@ import { query } from '../config/database'
 import type { User } from '../types/user'
 
 export class UserService {
-  async create(userData: unknown): Promise<User> {
+  async create(userData: any): Promise<User> {
     // Try with email verification columns first
     try {
       const insertQuery = `
@@ -29,7 +29,7 @@ export class UserService {
       }
 
       return result.rows[0]
-    } catch (error: unknown) {
+    } catch (error: any) {
       // If email verification columns don't exist, try basic insert
       if (
         error.message?.includes('column') ||

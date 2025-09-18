@@ -7,7 +7,7 @@ async function seedTestMap() {
     // Check if test map already exists
     const existingMap = (await query('SELECT id FROM maps WHERE name = $1', [
       testWorldMap.name,
-    ])) as unknown as unknown[]
+    ])) as any as any[]
 
     if (existingMap && existingMap.length > 0) {
       return existingMap[0].id

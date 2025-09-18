@@ -138,7 +138,7 @@ export class ScalingService {
     this.setupWorkerMonitoring()
   }
 
-  private addWorkerMetrics(worker: unknown): void {
+  private addWorkerMetrics(worker: any): void {
     const metrics: WorkerMetrics = {
       id: worker.id,
       pid: worker.process.pid!,
@@ -346,7 +346,7 @@ export class ScalingService {
 
   private setupWorkerMonitoring(): void {
     // Listen for health check requests from master
-    process.on('message', (message: unknown) => {
+    process.on('message', (message: any) => {
       if (message.type === 'health-check') {
         process.send!({
           type: 'health-response',
@@ -442,7 +442,7 @@ export class ScalingService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: unknown }> {
+  async healthCheck(): Promise<{ status: string; details: any }> {
     const healthyWorkers = Array.from(this.workers.values()).filter(
       (worker) => worker.status === 'active' && Date.now() - worker.lastHealthCheck < 120000,
     )

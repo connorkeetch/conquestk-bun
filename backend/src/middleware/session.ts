@@ -1,26 +1,15 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import session from 'express-session'
 import { getRedisClient } from '../config/redis'
+import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
-// Import connect-redis v9 - try multiple import patterns for compatibility
-let RedisStore: unknown = null
-try {
-  // Method 1: CommonJS with .default (what we were using)
-  RedisStore = require('connect-redis').default
-} catch (e1) {
-  try {
-    // Method 2: Direct CommonJS require
-    RedisStore = require('connect-redis')
-  } catch (e2) {
-    logger.error('Failed to import connect-redis:', e2)
-  }
-}
+const { RedisStore } = require('connect-redis')
 
 /**
  * Session middleware that can reconfigure itself when Redis becomes available
  */
-let currentSessionMiddleware: unknown = null
+let currentSessionMiddleware: RequestHandler | null = null
 let isRedisStoreActive = false
 
 /**
@@ -48,7 +37,7 @@ export function createSessionMiddleware() {
 
   // Always explicitly set MemoryStore if Redis is not configured to suppress warning
   if (!redisConfigured) {
-    const MemoryStore = require('express-session').MemoryStore
+    const MemoryStore = session.MemoryStore
     sessionConfig.store = new MemoryStore()
 
     if (process.env.REDIS_URL) {
@@ -72,7 +61,7 @@ export function createSessionMiddleware() {
 function tryConfigureRedisStore(sessionConfig: session.SessionOptions): boolean {
   const redisClient = getRedisClient()
 
-  if (redisClient && RedisStore && !isRedisStoreActive) {
+  if (redisClient && !isRedisStoreActive) {
     try {
       sessionConfig.store = new RedisStore({
         client: redisClient,
@@ -83,10 +72,7 @@ function tryConfigureRedisStore(sessionConfig: session.SessionOptions): boolean 
       logger.info('✅ Using Redis for session storage')
       return true
     } catch (error) {
-      logger.error(
-        'Failed to create Redis session store:',
-        error instanceof Error ? error.message : error,
-      )
+      logger.error('Failed to create Redis session store:', getErrorMessage(error))
       logger.warn('⚠️ Falling back to in-memory session storage')
       isRedisStoreActive = false
     }
@@ -109,7 +95,7 @@ export function enableRedisSessionStore(): boolean {
 
   const redisClient = getRedisClient()
 
-  if (redisClient && RedisStore) {
+  if (redisClient) {
     try {
       // Create new session configuration with Redis store
       const sessionSecret = process.env.SESSION_SECRET || 'default-dev-secret-change-in-production'
@@ -138,10 +124,7 @@ export function enableRedisSessionStore(): boolean {
       logger.info('✅ Session middleware reconfigured to use Redis store')
       return true
     } catch (error) {
-      logger.error(
-        'Failed to enable Redis session store:',
-        error instanceof Error ? error.message : error,
-      )
+      logger.error('Failed to enable Redis session store:', getErrorMessage(error))
       return false
     }
   }

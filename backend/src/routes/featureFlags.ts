@@ -15,10 +15,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       ? {
           id: req.user.id,
           role: req.user.role,
-          is_admin: req.user.is_admin,
-          is_beta_user: req.user.is_beta_user,
-          is_vip: req.user.is_vip,
-          has_premium: req.user.has_premium,
+          is_admin: req.user.isAdmin,
+          is_beta_user: req.user.isBetaUser,
+          is_vip: req.user.isVip,
+          has_premium: req.user.hasPremium,
         }
       : undefined
 
@@ -55,10 +55,10 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     const { flagName } = req.params
     const { enabled, access_level, rollout_percentage, target_criteria, reason } = req.body
-    const userId = req.user?.id
+    const userId = req.user?.id || 'system'
 
     try {
-      const updates: unknown = {}
+      const updates: any = {}
       if (enabled !== undefined) updates.is_enabled = enabled
       if (access_level !== undefined) updates.access_level = access_level
       if (rollout_percentage !== undefined) updates.rollout_percentage = rollout_percentage

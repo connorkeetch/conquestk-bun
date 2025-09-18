@@ -26,7 +26,7 @@ router.get('/status', async (req: Request, res: Response) => {
 router.use(requireAdmin)
 
 // Validation middleware
-const checkValidation = (req: Request, res: Response, next: unknown) => {
+const checkValidation = (req: Request, res: Response, next: any) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -424,7 +424,7 @@ router.get(
         LEFT JOIN users gp_current ON g.current_turn = gp_current.id
         WHERE 1=1
       `
-      const queryParams: unknown[] = []
+      const queryParams: any[] = []
       let paramIndex = 1
 
       if (status && status !== 'all') {
@@ -455,7 +455,7 @@ router.get(
         LEFT JOIN users u ON g.created_by = u.id
         WHERE 1=1
       `
-      const countParams: unknown[] = []
+      const countParams: any[] = []
       let countParamIndex = 1
 
       if (status && status !== 'all') {
@@ -472,8 +472,8 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Get players for each game
-      const gameIds = gamesResult.rows.map((g: unknown) => g.id)
-      let playersData: unknown[] = []
+      const gameIds = gamesResult.rows.map((g: any) => g.id)
+      let playersData: any[] = []
 
       if (gameIds.length > 0) {
         const playersQuery = `
@@ -496,10 +496,10 @@ router.get(
       }
 
       // Format games data
-      const games = gamesResult.rows.map((game: unknown) => {
-        const gamePlayers = playersData.filter((p: unknown) => p.game_id === game.id)
+      const games = gamesResult.rows.map((game: any) => {
+        const gamePlayers = playersData.filter((p: any) => p.game_id === game.id)
 
-        const players = gamePlayers.map((player: unknown) => ({
+        const players = gamePlayers.map((player: any) => ({
           id: player.user_id,
           username: player.username,
           status: player.status || 'active',
@@ -739,7 +739,7 @@ router.get(
 
       const result = await query(gamesQuery)
 
-      const games = result.rows.map((game: unknown) => ({
+      const games = result.rows.map((game: any) => ({
         id: game.id,
         name: game.name || `Game ${game.id.slice(0, 8)}`,
         status: game.status,
@@ -954,7 +954,7 @@ router.get(
         LEFT JOIN map_ratings mr ON mr.map_id = m.id
         WHERE 1=1
       `
-      const queryParams: unknown[] = []
+      const queryParams: any[] = []
       let paramIndex = 1
 
       // Only filter by status if specified and not includeAll
@@ -991,7 +991,7 @@ router.get(
         FROM maps m
         WHERE 1=1
       `
-      const countParams: unknown[] = []
+      const countParams: any[] = []
       let countParamIndex = 1
 
       if (!includeAll && status && status !== 'all') {
@@ -1010,7 +1010,7 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Convert numeric strings to numbers and map property names for proper frontend handling
-      const maps = mapsResult.rows.map((map: unknown) => ({
+      const maps = mapsResult.rows.map((map: any) => ({
         ...map,
         playCount: parseInt(map.playCount || '0', 10),
         ratingAverage: parseFloat(map.ratingAverage || '0'),
@@ -1063,7 +1063,7 @@ router.patch(
 
       // Build update query
       const updates: string[] = []
-      const params: unknown[] = []
+      const params: any[] = []
       let paramIndex = 1
 
       if (name !== undefined) {

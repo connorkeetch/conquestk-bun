@@ -38,6 +38,7 @@
 - Favor functional, compositional patterns and existing abstractions instead of introducing new ones.
 - Tailwind CSS v4 only for styling; no inline styles or external stylesheets unless they already exist.
 - Shared path alias `@/` resolves to each package's `src/`; keep imports consistent.
+- Legacy areas still contain `any` from earlier iterations. Whenever you are touching one of those files, plan to refactor the surface you modify to use real types instead of leaving new `any`s behind.
 
 ## Database & admin utilities
 - Run migrations: `cd backend && npm run migrate`

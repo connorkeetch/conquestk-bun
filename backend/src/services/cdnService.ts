@@ -395,7 +395,7 @@ export class CDNService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: unknown }> {
+  async healthCheck(): Promise<{ status: string; details: any }> {
     const healthChecks = await Promise.allSettled(
       this.providers.map(async (provider) => {
         try {

@@ -15,10 +15,10 @@ export interface RequestUser {
 
 export type AuthenticatedRequest<
   P extends ParamsDictionary = ParamsDictionary,
-  ResBody = unknown,
-  ReqBody = unknown,
+  ResBody = any,
+  ReqBody = any,
   ReqQuery extends ParsedQs = ParsedQs,
-  Locals extends Record<string, unknown> = Record<string, unknown>,
+  Locals extends Record<string, any> = Record<string, any>,
 > = Request<P, ResBody, ReqBody, ReqQuery, Locals> & {
   userId?: string
   user?: RequestUser

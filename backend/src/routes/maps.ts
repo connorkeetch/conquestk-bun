@@ -61,7 +61,7 @@ async function readFileWithResourceManagement(filePath: string): Promise<Buffer>
   if (typeof Symbol.dispose !== 'undefined') {
     try {
       const fileResource = await new FileResource(filePath).open()
-      await using resource = fileResource as unknown // TypeScript needs to catch up with the spec
+      await using resource = fileResource as any // TypeScript needs to catch up with the spec
       return await fileResource.readBuffer()
     } catch (error) {
       // Fallback to manual resource management
@@ -224,7 +224,7 @@ const validateRating = [
 ]
 
 // Middleware to check validation results
-const checkValidation = (req: Request, res: Response, next: unknown) => {
+const checkValidation = (req: Request, res: Response, next: any) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -233,7 +233,7 @@ const checkValidation = (req: Request, res: Response, next: unknown) => {
 }
 
 // Multer error handling middleware
-const handleMulterError = (error: unknown, _req: Request, res: Response, next: unknown) => {
+const handleMulterError = (error: any, _req: Request, res: Response, next: any) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' })
@@ -386,7 +386,7 @@ router.get('/', async (req: Request, res: Response) => {
       WHERE 1=1
     `
 
-    const params: unknown[] = []
+    const params: any[] = []
     let paramCount = 0
 
     // Add filters
@@ -632,7 +632,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 
     // Store metadata if provided
     if (req.body.metadata) {
-      ;(mapData as unknown).metadata = req.body.metadata
+      ;(mapData as any).metadata = req.body.metadata
     }
 
     const map = await mapService.createMap(req.userId, mapData)
@@ -675,7 +675,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 router.post(
   '/',
   authenticateToken,
-  upload.single('image') as unknown,
+  upload.single('image') as any,
   handleMulterError,
   validateCreateMap,
   checkValidation,
@@ -696,7 +696,7 @@ router.post(
       }
 
       // Parse metadata if provided
-      let metadata: unknown = null
+      let metadata: any = null
       if (req.body.metadata) {
         metadata = parseJsonField(req.body.metadata, null)
         if (metadata) {
@@ -732,7 +732,7 @@ router.post(
 
       // Store metadata in the map data (will be saved as JSONB)
       if (metadata) {
-        ;(mapData as unknown).metadata = metadata
+        ;(mapData as any).metadata = metadata
       }
 
       const map = await mapService.createMap(req.userId, mapData)
@@ -761,7 +761,7 @@ router.post(
 router.put(
   '/:mapId',
   authenticateToken,
-  upload.single('image') as unknown,
+  upload.single('image') as any,
   validateUpdateMap,
   checkValidation,
   async (req: Request, res: Response) => {

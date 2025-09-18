@@ -6,7 +6,7 @@ import { logger } from '../utils/logger'
  */
 export class CacheService {
   private redisClient = getRedisClient()
-  private inMemoryCache = new Map<string, { data: unknown; expires: number }>()
+  private inMemoryCache = new Map<string, { data: any; expires: number }>()
 
   /**
    * Get value from cache
@@ -166,12 +166,12 @@ export class GameStateCache {
     return this.cache.get(`game:state:${gameId}`)
   }
 
-  async setGameState(gameId: string, state: unknown, ttl?: number) {
+  async setGameState(gameId: string, state: any, ttl?: number) {
     const cacheTime = ttl || this.DEFAULT_TTL
     return this.cache.set(`game:state:${gameId}`, state, cacheTime)
   }
 
-  async setInactiveGameState(gameId: string, state: unknown) {
+  async setInactiveGameState(gameId: string, state: any) {
     // Longer TTL for finished or inactive games to prevent immediate cleanup
     return this.cache.set(`game:state:${gameId}`, state, this.INACTIVE_TTL)
   }
@@ -202,7 +202,7 @@ export class UserCache {
     return this.cache.get(`user:${userId}`)
   }
 
-  async setUser(userId: string, userData: unknown) {
+  async setUser(userId: string, userData: any) {
     return this.cache.set(`user:${userId}`, userData, this.TTL)
   }
 
@@ -214,7 +214,7 @@ export class UserCache {
     return this.cache.get(`user:stats:${userId}`)
   }
 
-  async setUserStats(userId: string, stats: unknown) {
+  async setUserStats(userId: string, stats: any) {
     return this.cache.set(`user:stats:${userId}`, stats, this.TTL)
   }
 }
@@ -228,7 +228,7 @@ export class LeaderboardCache {
     return this.cache.get(`leaderboard:page:${page}`)
   }
 
-  async setLeaderboard(page: number, data: unknown) {
+  async setLeaderboard(page: number, data: any) {
     return this.cache.set(`leaderboard:page:${page}`, data, this.TTL)
   }
 
@@ -246,7 +246,7 @@ export class MapCache {
     return this.cache.get(`map:${mapId}`)
   }
 
-  async setMap(mapId: string, mapData: unknown) {
+  async setMap(mapId: string, mapData: any) {
     return this.cache.set(`map:${mapId}`, mapData, this.TTL)
   }
 
@@ -254,7 +254,7 @@ export class MapCache {
     return this.cache.get('maps:list')
   }
 
-  async setMapList(maps: unknown[]) {
+  async setMapList(maps: any[]) {
     return this.cache.set('maps:list', maps, this.TTL)
   }
 }
@@ -277,7 +277,7 @@ export class TerritoryModifierCache extends CacheService {
   /**
    * Cache modifier templates
    */
-  async setTemplates(templates: unknown[]) {
+  async setTemplates(templates: any[]) {
     await this.set(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`, templates, this.DEFAULT_TTL)
   }
 
@@ -306,7 +306,7 @@ export class TerritoryModifierCache extends CacheService {
   /**
    * Cache map modifiers
    */
-  async setMapModifiers(mapId: string, modifiers: unknown[]) {
+  async setMapModifiers(mapId: string, modifiers: any[]) {
     await this.set(`${this.CACHE_PREFIX}:map:${mapId}`, modifiers, this.DEFAULT_TTL * 4) // 2 hours
   }
 

@@ -4,7 +4,7 @@ interface Territory {
   id: string
   name: string
   map_id: string
-  boundary_coords: unknown
+  boundary_coords: any
   army_position: { x: number; y: number }
 }
 

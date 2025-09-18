@@ -107,7 +107,7 @@ async function setupProductionAdmin(email: string) {
       } else {
         logger.info('ℹ️  user_account_status table not found, skipping status setup')
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.warn('⚠️  Could not setup account status:', error.message)
     }
 
@@ -161,7 +161,7 @@ Next steps:
     }
 
     process.exit(0)
-  } catch (error: unknown) {
+  } catch (error: any) {
     logger.error('❌ Failed to setup production admin:', error)
     process.exit(1)
   }

@@ -186,8 +186,8 @@ function scoreToGrade(score: number): PerformanceGrade {
 
 // Performance comparison utilities
 export function comparePerformance(
-  baseline: unknown,
-  current: unknown,
+  baseline: any,
+  current: any,
 ): {
   responseTime: { change: number; improvement: boolean }
   throughput: { change: number; improvement: boolean }
@@ -216,7 +216,7 @@ export function comparePerformance(
 }
 
 // Generate performance report
-export function generatePerformanceReport(testResults: unknown[]): {
+export function generatePerformanceReport(testResults: any[]): {
   summary: {
     totalTests: number
     averageGrade: PerformanceGrade
@@ -384,8 +384,8 @@ export function generatePerformanceReport(testResults: unknown[]): {
 // Automated benchmark runner for CI/CD
 export async function runAutomatedBenchmarks(): Promise<{
   success: boolean
-  results: unknown[]
-  summary: unknown
+  results: any[]
+  summary: any
 }> {
   try {
     logger.info('🤖 Running automated performance benchmarks...')
@@ -467,7 +467,7 @@ export interface SLAThresholds {
 }
 
 export function checkSLACompliance(
-  testResults: unknown[],
+  testResults: any[],
   slaThresholds: SLAThresholds,
 ): {
   compliant: boolean

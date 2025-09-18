@@ -1,17 +1,13 @@
 import type { NextFunction, Request, Response } from 'express'
 import { adminService } from '../services/adminService'
 import { logger } from '../utils/logger'
+import type { RequestUser } from '../types/express'
 
 // Extend Express Request type to include admin info
 declare module 'express-serve-static-core' {
   interface Request {
-    userId?: string
-    user?: {
-      id: string
-      username?: string
-      email?: string
-      isAdmin?: boolean
-    }
+    userId: string
+    user?: RequestUser
     adminUser?: {
       userId: string
       roles: string[]

@@ -246,7 +246,7 @@ export class DatabaseClusterService {
   // Query execution with automatic retry and failover
   async query(
     text: string,
-    params?: unknown[],
+    params?: any[],
     options: { writeQuery?: boolean; retries?: number } = {},
   ): Promise<any> {
     const { writeQuery = false, retries = this.config.maxRetries } = options
@@ -406,7 +406,7 @@ export class DatabaseClusterService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: unknown }> {
+  async healthCheck(): Promise<{ status: string; details: any }> {
     const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
     const hasHealthyPrimary = healthyNodes.some((node) => node.role === 'primary')
 

@@ -121,7 +121,7 @@ router.get('/:userId', async (req, res) => {
 
     // Remove sensitive information for other users
     if (userId !== requesterId) {
-      delete (profile as unknown).preferences
+      delete (profile as any).preferences
       // Only show limited data for non-friends
       profile.recentGames = []
     }

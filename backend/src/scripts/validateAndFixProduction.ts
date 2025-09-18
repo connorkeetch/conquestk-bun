@@ -57,7 +57,7 @@ async function validateAndFixProduction() {
           logger.info('✅ Added preferred_color column')
         }
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Error with user_settings table:', error.message)
     }
 
@@ -87,7 +87,7 @@ async function validateAndFixProduction() {
       } else {
         logger.info('✅ admin_roles table exists')
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Error with admin_roles table:', error.message)
     }
 
@@ -120,7 +120,7 @@ async function validateAndFixProduction() {
       } else {
         logger.info('✅ user_admin_roles table exists')
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Error with user_admin_roles table:', error.message)
     }
 
@@ -215,7 +215,7 @@ async function validateAndFixProduction() {
         LIMIT 1
       `)
       logger.info('✅ user_settings.preferred_color query works')
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('❌ user_settings query still fails:', error.message)
     }
 
@@ -228,7 +228,7 @@ async function validateAndFixProduction() {
         LIMIT 1
       `)
       logger.info('✅ admin roles query works')
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('❌ admin roles query still fails:', error.message)
     }
 

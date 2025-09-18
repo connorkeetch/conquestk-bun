@@ -16,7 +16,7 @@ router.get('/maps/:mapId/versions', async (req, res) => {
     const { mapId } = req.params
     const versions = await MapApprovalService.getVersionHistory(mapId)
     res.json({ versions })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -27,7 +27,7 @@ router.get('/versions/:versionId', async (req, res) => {
     const { versionId } = req.params
     const version = await MapApprovalService.getVersionById(versionId)
     res.json({ version })
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (error.message === 'Version not found') {
       res.status(404).json({ message: error.message })
     } else {
@@ -52,7 +52,7 @@ router.post('/maps/:mapId/versions', async (req, res) => {
 
     const version = await MapApprovalService.createVersion(mapId, userId, versionData)
     res.status(201).json({ version })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -66,7 +66,7 @@ router.put('/versions/:versionId/current', async (req, res) => {
 
     await MapApprovalService.setCurrentVersion(versionId)
     res.json({ message: 'Current version updated' })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -92,7 +92,7 @@ router.post('/versions/:versionId/submit', async (req, res) => {
     )
 
     res.status(201).json({ approvalRequest })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(400).json({ message: error.message })
     return
   }
@@ -106,7 +106,7 @@ router.get('/approval-requests/:requestId', async (req, res) => {
     const reviewResults = await MapApprovalService.getReviewResults(requestId)
 
     res.json({ approvalRequest, reviewResults })
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (error.message === 'Approval request not found') {
       res.status(404).json({ message: error.message })
     } else {
@@ -122,7 +122,7 @@ router.get('/approval-requests', requireAdmin, async (_req, res) => {
   try {
     const requests = await MapApprovalService.getPendingApprovalRequests()
     res.json({ requests })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -139,7 +139,7 @@ router.put('/approval-requests/:requestId/assign', requireAdmin, async (req, res
 
     await MapApprovalService.assignReviewer(requestId, assignedModeratorId)
     res.json({ message: 'Reviewer assigned successfully' })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -149,7 +149,7 @@ router.get('/review-criteria', requireAdmin, async (_req, res) => {
   try {
     const criteria = await MapApprovalService.getReviewCriteria()
     res.json({ criteria })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -180,7 +180,7 @@ router.post('/approval-requests/:requestId/review', requireAdmin, async (req, re
     )
 
     res.json({ message: 'Review submitted successfully' })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -198,7 +198,7 @@ router.post('/versions/:versionId/publish', requireAdmin, async (req, res) => {
 
     await MapApprovalService.publishVersion(versionId, moderatorId)
     res.json({ message: 'Version published successfully' })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(400).json({ message: error.message })
   }
 })
@@ -217,7 +217,7 @@ router.post('/maps/:mapId/archive', requireAdmin, async (req, res) => {
 
     await MapApprovalService.archiveMap(mapId, moderatorId, reason)
     res.json({ message: 'Map archived successfully' })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -228,7 +228,7 @@ router.get('/maps/:mapId/moderation-history', requireAdmin, async (req, res) => 
     const { mapId } = req.params
     const history = await MapApprovalService.getMapModerationHistory(mapId)
     res.json({ history })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -238,7 +238,7 @@ router.get('/stats/approvals', requireAdmin, async (_req, res) => {
   try {
     const stats = await MapApprovalService.getApprovalStats()
     res.json({ stats })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })
@@ -258,7 +258,7 @@ router.get('/my-maps', async (req, res) => {
     // TODO: Implement getting user's maps with permission levels
     // This would query maps table joined with map_permissions
     res.json({ maps: [] })
-  } catch (error: unknown) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
 })

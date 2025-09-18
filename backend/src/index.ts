@@ -45,18 +45,38 @@ try {
 }
 
 // Import types first
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response, RequestHandler, Router } from 'express'
+import type { Logger } from 'winston'
+import type { RedisClients } from './config/redis'
+import type { SuspiciousActivityTracker } from './middleware/rateLimiter'
+import { getErrorMessage, toKnownError } from './utils/errorHelpers'
 
 // Wrap all imports in try-catch to identify which one is failing
-let createServer: unknown, path: unknown, cors: unknown, express: unknown, helmet: unknown, Server: unknown
-let initDatabase: unknown,
-  logStartupDiagnostics: unknown,
-  testDatabaseConnection: unknown,
-  testMigrationFiles: unknown
-let generalApiLimiter: unknown, suspiciousActivityTracker: unknown
-let adminRoutes: unknown, authRoutes: unknown, gameRoutes: unknown, mapRoutes: unknown
-let notificationRoutes: unknown, profileRoutes: unknown, skillsRoutes: unknown, userRoutes: unknown
-let setupSocketHandlers: unknown, ensureTablesExist: unknown, logger: unknown, MigrationRunner: unknown
+let createServer: typeof import('node:http')['createServer']
+let path: typeof import('node:path')
+let cors: typeof import('cors')
+let express: typeof import('express')
+let helmet: typeof import('helmet')['default']
+let Server: typeof import('socket.io').Server
+let initDatabase: typeof import('./config/database').initDatabase
+let logStartupDiagnostics: typeof import('./debugStartup').logStartupDiagnostics
+let testDatabaseConnection: typeof import('./debugStartup').testDatabaseConnection
+let testMigrationFiles: typeof import('./debugStartup').testMigrationFiles
+let generalApiLimiter: RequestHandler
+let suspiciousActivityTracker: SuspiciousActivityTracker
+let adminRoutes: Router
+let authRoutes: Router
+let gameRoutes: Router
+let mapRoutes: Router
+let notificationRoutes: Router
+let profileRoutes: Router
+let skillsRoutes: Router
+let userRoutes: Router
+let initializeRedis: typeof import('./config/redis').initializeRedis
+let setupSocketHandlers: typeof import('./services/socketService').setupSocketHandlers
+let ensureTablesExist: typeof import('./utils/initTables').ensureTablesExist
+let logger: Logger
+let MigrationRunner: typeof import('./utils/migrationRunner').MigrationRunner
 
 try {
   console.log('📦 Loading core modules...')
@@ -72,6 +92,8 @@ try {
   console.log('📦 Loading config modules...')
   const dbModule = require('./config/database')
   initDatabase = dbModule.initDatabase
+  const redisModule = require('./config/redis') as typeof import('./config/redis')
+  initializeRedis = redisModule.initializeRedis
   const debugModule = require('./debugStartup')
   logStartupDiagnostics = debugModule.logStartupDiagnostics
   testDatabaseConnection = debugModule.testDatabaseConnection
@@ -127,9 +149,10 @@ try {
   console.log('✅ Utils loaded')
 } catch (error) {
   console.error('❌ FATAL: Failed to load modules:', error)
-  if (error instanceof Error) {
-    console.error('  Error:', error.message)
-    console.error('  Stack:', error.stack)
+  const normalized = toKnownError(error)
+  console.error('  Error:', normalized.message)
+  if (normalized.stack) {
+    console.error('  Stack:', normalized.stack)
   }
   process.exit(1)
 }
@@ -159,9 +182,6 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }
 
-// Initialize Redis for Socket.io adapter
-const { initializeRedis, getPubSubClients } = require('./config/redis')
-
 // Initialize Socket.io first
 const io = new Server(server, {
   cors: corsOptions,
@@ -169,7 +189,7 @@ const io = new Server(server, {
 
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()
-  .then(async (redisClients: unknown) => {
+  .then(async (redisClients: RedisClients) => {
     const { pubClient, subClient, redisClient } = redisClients
 
     // Set up Socket.io Redis adapter only if clients are valid and connected
@@ -178,8 +198,11 @@ initializeRedis()
         const { createAdapter } = require('@socket.io/redis-adapter')
         io.adapter(createAdapter(pubClient, subClient))
         console.log('✅ Socket.io using Redis adapter for multi-server support')
-      } catch (error: unknown) {
-        console.log('⚠️ Failed to create Redis adapter, using in-memory adapter:', error.message)
+      } catch (error) {
+        console.log(
+          '⚠️ Failed to create Redis adapter, using in-memory adapter:',
+          getErrorMessage(error),
+        )
       }
     } else {
       console.log('⚠️ Socket.io using in-memory adapter (single server only)')
@@ -203,12 +226,18 @@ initializeRedis()
     try {
       await workerManager.initialize()
       console.log('✅ WorkerManager created and initialized after Redis connection')
-    } catch (error: unknown) {
-      console.error('❌ Failed to initialize WorkerManager after Redis:', error.message)
+    } catch (error) {
+      console.error(
+        '❌ Failed to initialize WorkerManager after Redis:',
+        getErrorMessage(error),
+      )
     }
   })
-  .catch((err: unknown) => {
-    console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
+  .catch((err) => {
+    console.log(
+      '⚠️ Redis initialization failed, using in-memory adapters:',
+      getErrorMessage(err),
+    )
 
     // Create and initialize WorkerManager even if Redis failed (graceful degradation)
     const workerManager = createWorkerManager(io)
@@ -218,8 +247,11 @@ initializeRedis()
       .then(() => {
         console.log('✅ WorkerManager initialized without Redis (degraded mode)')
       })
-      .catch((error: unknown) => {
-        console.error('❌ Failed to initialize WorkerManager in degraded mode:', error.message)
+      .catch((error) => {
+        console.error(
+          '❌ Failed to initialize WorkerManager in degraded mode:',
+          getErrorMessage(error),
+        )
       })
   })
 
@@ -261,7 +293,7 @@ app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 app.use(suspiciousActivityTracker.middleware())
 
 // Apply general rate limiting to all API routes
-app.use('/api', generalApiLimiter as unknown)
+app.use('/api', generalApiLimiter)
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
@@ -554,29 +586,36 @@ if (isProductionLike) {
 Sentry.setupExpressErrorHandler(app)
 
 // Custom error handler (comes after Sentry)
-app.use((err: unknown, _req: Request, res: Response, _next: unknown) => {
-  // The error id is attached to `res.sentry` for reference
-  const sentryId = (res as unknown).sentry
-
-  // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
-  const isActualError = err instanceof Error
-  const errorMessage = isActualError ? (err as Error).message : String(err)
-  const errorStack = isActualError ? (err as Error).stack : undefined
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const normalizedError = toKnownError(err)
+  const sentryResponse = res as Response & { sentry?: string }
+  const sentryId = sentryResponse.sentry
 
   logger.error('Application error:', {
-    error: errorMessage,
-    stack: errorStack,
-    isError: isActualError,
+    error: normalizedError.message,
+    stack: normalizedError.stack,
+    isError: true,
     sentryId,
   })
 
-  res.status(err.status || 500).json({
+  const statusCode =
+    typeof normalizedError.status === 'number'
+      ? normalizedError.status
+      : typeof normalizedError.statusCode === 'number'
+        ? normalizedError.statusCode
+        : 500
+
+  res.status(statusCode).json({
     error:
       process.env.NODE_ENV === 'production'
         ? 'An error occurred processing your request'
-        : errorMessage,
+        : normalizedError.message,
     ...(sentryId && { sentryId }),
-    ...(process.env.NODE_ENV !== 'production' && errorStack && { stack: errorStack }),
+    ...(
+      process.env.NODE_ENV !== 'production' && normalizedError.stack
+        ? { stack: normalizedError.stack }
+        : {}
+    ),
   })
 })
 
@@ -659,12 +698,13 @@ async function startServer() {
               '💡 Some features may not work correctly until database is properly configured',
             )
           }
-        } catch (dbError: unknown) {
-          logger.error('❌ Database initialization failed:', dbError)
-          logger.error(`  Error type: ${dbError.constructor.name}`)
-          logger.error(`  Error message: ${dbError.message}`)
-          if (dbError.stack) {
-            logger.error(`  Stack trace: ${dbError.stack}`)
+        } catch (dbError) {
+          const normalizedDbError = toKnownError(dbError)
+          logger.error('❌ Database initialization failed:', normalizedDbError)
+          logger.error(`  Error type: ${normalizedDbError.constructor.name}`)
+          logger.error(`  Error message: ${normalizedDbError.message}`)
+          if (normalizedDbError.stack) {
+            logger.error(`  Stack trace: ${normalizedDbError.stack}`)
           }
           logger.warn('⚠️  Server running without database connection')
           logger.error('💡 Database features unavailable')

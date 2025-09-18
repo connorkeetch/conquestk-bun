@@ -68,11 +68,11 @@ export class GameActionWorker {
           // For attacks, we queue a battle simulation
           const battleJob = {
             gameId,
-            attackingTerritory: action.payload?.fromTerritory || '',
-            defendingTerritory: action.payload?.toTerritory || '',
+            attackingTerritory: action.payload?.fromTerritoryId || '',
+            defendingTerritory: action.payload?.toTerritoryId || '',
             attackingArmies: action.payload?.armies || 1,
             defendingArmies:
-              currentState.board.find((t: unknown) => t.id === action.payload?.toTerritory)?.armies ||
+              currentState.board.find((t: any) => t.id === action.payload?.toTerritoryId)?.armies ||
               1,
             playerId,
           }
@@ -98,8 +98,10 @@ export class GameActionWorker {
           delta = await this.processPhaseChange(gameId, playerId, action)
           break
 
-        default:
-          throw new Error(`Unknown action type: ${action.type}`)
+        default: {
+          const exhaustive: never = action
+          throw new Error('Unknown action type received in game action worker')
+        }
       }
 
       // Broadcast delta update if needed
@@ -128,9 +130,9 @@ export class GameActionWorker {
     }
   }
 
-  private canPlayerPerformAction(gameState: unknown, playerId: string, action: unknown): boolean {
+  private canPlayerPerformAction(gameState: any, playerId: string, action: any): boolean {
     // Basic validation - extend as needed
-    if (!gameState.players.find((p: unknown) => p.id === playerId)) {
+    if (!gameState.players.find((p: any) => p.id === playerId)) {
       return false
     }
 
@@ -146,7 +148,7 @@ export class GameActionWorker {
   private async processPlaceArmies(
     gameId: string,
     playerId: string,
-    action: unknown,
+    action: any,
   ): Promise<GameDelta> {
     // Update territory armies
     const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
@@ -160,11 +162,11 @@ export class GameActionWorker {
     })
   }
 
-  private async processFortify(gameId: string, playerId: string, action: unknown): Promise<GameDelta> {
+  private async processFortify(gameId: string, playerId: string, action: any): Promise<GameDelta> {
     // Process fortification
     const result = await this.gameService.processFortify(gameId, {
-      fromTerritoryId: action.payload?.fromTerritory || '',
-      toTerritoryId: action.payload?.toTerritory || '',
+      fromTerritoryId: action.payload?.fromTerritoryId || '',
+      toTerritoryId: action.payload?.toTerritoryId || '',
       armies: action.payload?.armies || 0,
       playerId,
     })
@@ -175,10 +177,10 @@ export class GameActionWorker {
       roomId: gameId,
       timestamp: Date.now(),
       changes: [
-        DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritory || '', {
+        DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritoryId || '', {
           armies: result.fromArmies,
         }),
-        DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritory || '', {
+        DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritoryId || '', {
           armies: result.toArmies,
         }),
       ],
@@ -195,7 +197,7 @@ export class GameActionWorker {
   private async processPhaseChange(
     gameId: string,
     playerId: string,
-    action: unknown,
+    action: any,
   ): Promise<GameDelta> {
     await this.gameService.processPhaseChange(
       gameId,
