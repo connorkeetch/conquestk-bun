@@ -349,6 +349,7 @@ export const AdminMaps: React.FC = () => {
                                 setShowPreviewModal(true)
                               }}
                               className="relative group mr-3"
+                              type="button"
                             >
                               <img
                                 src={imageSrc}
@@ -391,112 +392,123 @@ export const AdminMaps: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(map.status)}`}
-                      >
-                        {getStatusIcon(map.status)} {map.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-white">{map.creatorName || 'Unknown'}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-muted">
-                        {map.minPlayers}-{map.maxPlayers}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs space-y-1">
-                        <div className="text-muted">🎮 {map.playCount || 0} plays</div>
-                        <div className="text-muted">
-                          ⭐ {(map.ratingAverage || 0).toFixed(1)} ({map.ratingCount || 0})
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(map.status)}`}
+                        >
+                          {getStatusIcon(map.status)} {map.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-white">{map.creatorName || 'Unknown'}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-muted">
+                          {map.minPlayers}-{map.maxPlayers}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-muted">
-                        {new Date(map.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        {/* Approval Actions for Pending Maps */}
-                        {map.status === 'pending_review' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleStatusChange(map.id, 'approved')}
-                              className="text-green-400 hover:text-green-300 text-sm font-medium"
-                            >
-                              ✅ Approve
-                            </button>
-                            <button
-                              onClick={() => openApprovalModal(map)}
-                              className="text-red-400 hover:text-red-300 text-sm font-medium"
-                            >
-                              ❌ Reject
-                            </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-xs space-y-1">
+                          <div className="text-muted">🎮 {map.playCount || 0} plays</div>
+                          <div className="text-muted">
+                            ⭐ {(map.ratingAverage || 0).toFixed(1)} ({map.ratingCount || 0})
                           </div>
-                        )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-muted">
+                          {new Date(map.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          {/* Approval Actions for Pending Maps */}
+                          {map.status === 'pending_review' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleStatusChange(map.id, 'approved')}
+                                className="text-green-400 hover:text-green-300 text-sm font-medium"
+                                type="button"
+                              >
+                                ✅ Approve
+                              </button>
+                              <button
+                                onClick={() => openApprovalModal(map)}
+                                className="text-red-400 hover:text-red-300 text-sm font-medium"
+                                type="button"
+                              >
+                                ❌ Reject
+                              </button>
+                            </div>
+                          )}
 
-                        {/* Standard Actions */}
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => {
-                              setPreviewMap(map)
-                              setShowPreviewModal(true)
-                            }}
-                            className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
-                            title="Preview map"
-                          >
-                            👁️ Preview
-                          </button>
-                          <button
-                            onClick={() => window.open(`/map-editor-tokens?edit=${map.id}`, '_blank')}
-                            className="text-violet hover:text-violet-soft text-sm font-medium"
-                            title="Open in Map Editor"
-                          >
-                            🗺️ Edit Map
-                          </button>
-                          <button
-                            onClick={() => openEditModal(map)}
-                            className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                            title="Edit map details"
-                          >
-                            ✏️ Edit Details
-                          </button>
-                          <button
-                            onClick={() => handleCloneMap(map.id)}
-                            className="text-green-400 hover:text-green-300 text-sm font-medium"
-                            title="Clone this map"
-                          >
-                            📋 Clone
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedMap(map)
-                              setShowDeleteModal(true)
-                            }}
-                            className="text-red-400 hover:text-red-300 text-sm font-medium"
-                          >
-                            🗑️ Delete
-                          </button>
-                          {map.status === 'approved' && !map.isFeatured && (
+                          {/* Standard Actions */}
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={() => {
+                                setPreviewMap(map)
+                                setShowPreviewModal(true)
+                              }}
+                              className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                              title="Preview map"
+                              type="button"
+                            >
+                              👁️ Preview
+                            </button>
+                            <button
+                              onClick={() =>
+                                window.open(`/map-editor-tokens?edit=${map.id}`, '_blank')
+                              }
+                              className="text-violet hover:text-violet-soft text-sm font-medium"
+                              title="Open in Map Editor"
+                              type="button"
+                            >
+                              🗺️ Edit Map
+                            </button>
+                            <button
+                              onClick={() => openEditModal(map)}
+                              className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                              title="Edit map details"
+                              type="button"
+                            >
+                              ✏️ Edit Details
+                            </button>
+                            <button
+                              onClick={() => handleCloneMap(map.id)}
+                              className="text-green-400 hover:text-green-300 text-sm font-medium"
+                              title="Clone this map"
+                              type="button"
+                            >
+                              📋 Clone
+                            </button>
                             <button
                               onClick={() => {
                                 setSelectedMap(map)
-                                setEditForm({ ...editForm, isFeatured: true })
-                                handleEditMap()
+                                setShowDeleteModal(true)
                               }}
-                              className="text-yellow-400 hover:text-yellow-300 text-sm font-medium"
+                              className="text-red-400 hover:text-red-300 text-sm font-medium"
+                              type="button"
                             >
-                              ⭐ Feature
+                              🗑️ Delete
                             </button>
-                          )}
+                            {map.status === 'approved' && !map.isFeatured && (
+                              <button
+                                onClick={() => {
+                                  setSelectedMap(map)
+                                  setEditForm({ ...editForm, isFeatured: true })
+                                  handleEditMap()
+                                }}
+                                className="text-yellow-400 hover:text-yellow-300 text-sm font-medium"
+                                type="button"
+                              >
+                                ⭐ Feature
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  )
                 })}
               </tbody>
             </table>
@@ -691,8 +703,11 @@ export const AdminMaps: React.FC = () => {
 
       {/* Map Preview Modal */}
       {showPreviewModal && previewMap && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowPreviewModal(false)}>
-          <div 
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div
             className="bg-surface-2 rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -704,10 +719,16 @@ export const AdminMaps: React.FC = () => {
                 )}
                 <div className="flex gap-4 mt-3 text-sm">
                   <span className="text-muted">
-                    <span className="text-white font-medium">{previewMap.minPlayers}-{previewMap.maxPlayers}</span> Players
+                    <span className="text-white font-medium">
+                      {previewMap.minPlayers}-{previewMap.maxPlayers}
+                    </span>{' '}
+                    Players
                   </span>
                   <span className="text-muted">
-                    Created by <span className="text-white font-medium">{previewMap.creatorName || 'Unknown'}</span>
+                    Created by{' '}
+                    <span className="text-white font-medium">
+                      {previewMap.creatorName || 'Unknown'}
+                    </span>
                   </span>
                   {previewMap.playCount > 0 && (
                     <span className="text-muted">
@@ -716,7 +737,11 @@ export const AdminMaps: React.FC = () => {
                   )}
                   {previewMap.ratingCount > 0 && (
                     <span className="text-muted">
-                      Rating: <span className="text-white font-medium">{previewMap.ratingAverage.toFixed(1)}/5</span> ({previewMap.ratingCount} reviews)
+                      Rating:{' '}
+                      <span className="text-white font-medium">
+                        {previewMap.ratingAverage.toFixed(1)}/5
+                      </span>{' '}
+                      ({previewMap.ratingCount} reviews)
                     </span>
                   )}
                 </div>
@@ -736,7 +761,9 @@ export const AdminMaps: React.FC = () => {
                       🔒 Private
                     </span>
                   )}
-                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(previewMap.status)}`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${getStatusBadge(previewMap.status)}`}
+                  >
                     {getStatusIcon(previewMap.status)} {previewMap.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -758,7 +785,8 @@ export const AdminMaps: React.FC = () => {
                   className="w-full h-auto max-h-[500px] object-contain rounded"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
-                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzk5OSI+TWFwIEltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+'
+                    target.src =
+                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzk5OSI+TWFwIEltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+'
                   }}
                 />
               </div>
