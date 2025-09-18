@@ -7,10 +7,11 @@ export interface RequestUser {
   username?: string
   email?: string
   isAdmin?: boolean
-  isVip?: boolean
-  hasPremium?: boolean
   role?: string
+  isVip?: boolean
   isBetaUser?: boolean
+  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise' | string
+  hasPremium?: boolean
 }
 
 export type AuthenticatedRequest<

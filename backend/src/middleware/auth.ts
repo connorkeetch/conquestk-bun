@@ -43,23 +43,42 @@ export const authenticateToken = async (
 
     // Optionally fetch user details for req.user
     try {
-      const result = await query('SELECT id, username, email FROM users WHERE id = $1', [
-        payload.userId,
-      ])
+      const result = await query(
+        `SELECT id, username, email, is_admin, is_vip, premium_tier, is_beta_user
+         FROM users WHERE id = $1`,
+        [payload.userId],
+      )
+
       if (result.rows[0]) {
-        // Check if user is admin
+        const userRow = result.rows[0] as {
+          id: string
+          username?: string | null
+          email?: string | null
+          is_admin?: boolean | null
+          is_vip?: boolean | null
+          premium_tier?: string | null
+          is_beta_user?: boolean | null
+        }
+
         const adminResult = await query(
           'SELECT COUNT(*) as count FROM user_admin_roles WHERE user_id = $1',
           [payload.userId],
         )
-        const isAdmin = adminResult.rows[0]?.count > 0
+        const hasAdminRole = Number(adminResult.rows[0]?.count || 0) > 0
 
-        req.user = {
-          id: result.rows[0].id,
-          username: result.rows[0].username,
-          email: result.rows[0].email,
-          isAdmin,
+        const premiumTier = userRow.premium_tier || 'free'
+        const requestUser: RequestUser = {
+          id: userRow.id,
+          username: userRow.username ?? undefined,
+          email: userRow.email ?? undefined,
+          isAdmin: hasAdminRole || Boolean(userRow.is_admin),
+          isVip: Boolean(userRow.is_vip),
+          isBetaUser: Boolean(userRow.is_beta_user),
+          premiumTier,
+          hasPremium: premiumTier !== 'free',
         }
+
+        req.user = requestUser
       }
     } catch (dbError) {
       // Log but don't fail auth if database lookup fails
