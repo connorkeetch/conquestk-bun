@@ -1,16 +1,16 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import type { PlayerColor } from '../constants/colors'
 import {
-  COLOR_CLASSES,
-  getPlayerColor,
   PLAYER_COLORS,
   PREMIUM_PLAYER_COLORS,
+  getColorDisplayName,
+  getColorValue,
 } from '../constants/colors'
 import { useAppSelector } from '../hooks/redux'
 import UserStats from './profile/UserStats'
-import RankInsignia from './RankInsignia'
+import RankInsignia, { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
 
 interface UserProfile {
   id: string
@@ -37,6 +37,23 @@ interface UserProfile {
 }
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
+
+const hexToRgba = (hex: string, alpha = 1): string => {
+  const normalized = hex.replace('#', '')
+  if (normalized.length !== 6) {
+    return `rgba(220, 38, 38, ${alpha})`
+  }
+
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const isGradientValue = (value: string): boolean => {
+  return value.startsWith('linear-gradient') || value.startsWith('radial-gradient')
+}
 
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
@@ -148,9 +165,74 @@ const ProfilePage: React.FC = () => {
     )
   }
 
-  // Get the player color for avatar background
-  const playerColor = profile.preferredColor || settings.game.preferredColor || '#DC2626'
-  const colorClass = getPlayerColor(playerColor as PlayerColor)
+  const fallbackPlayerColor = PLAYER_COLORS[0]
+  const preferredColorSource =
+    (profile.preferredColor as PlayerColor | undefined) ||
+    (settings.game.preferredColor as PlayerColor | undefined) ||
+    fallbackPlayerColor
+
+  const resolvedPreferredColor = getColorValue(preferredColorSource)
+  const gradientPreferred = isGradientValue(resolvedPreferredColor)
+  const accentHex = gradientPreferred ? fallbackPlayerColor : resolvedPreferredColor
+  const accentGlow = gradientPreferred
+    ? resolvedPreferredColor
+    : `radial-gradient(circle at 20% 20%, ${hexToRgba(accentHex, 0.45)} 0%, transparent 70%)`
+  const crestFillStyle: React.CSSProperties = gradientPreferred
+    ? { backgroundImage: resolvedPreferredColor }
+    : {
+        backgroundImage: `linear-gradient(145deg, ${hexToRgba(accentHex, 0.85)} 0%, ${hexToRgba(
+          accentHex,
+          0.55,
+        )} 60%, ${hexToRgba(accentHex, 0.2)} 100%)`,
+      }
+
+  const colorSwatchStyle: React.CSSProperties = gradientPreferred
+    ? { backgroundImage: resolvedPreferredColor }
+    : { backgroundColor: accentHex }
+
+  const accentGlowStyle: React.CSSProperties = { backgroundImage: accentGlow }
+  const callToActionStyle: React.CSSProperties = gradientPreferred
+    ? { backgroundImage: resolvedPreferredColor }
+    : { backgroundImage: `linear-gradient(90deg, ${accentHex}, ${hexToRgba(accentHex, 0.6)})` }
+  const largeColorSwatchStyle: React.CSSProperties = {
+    ...colorSwatchStyle,
+    boxShadow: `0 12px 35px ${hexToRgba(accentHex, 0.35)}`,
+  }
+
+  const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
+
+  const premiumColorEntry = useMemo(() => {
+    if (!preferredColorSource) return null
+
+    if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
+      const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
+      return [preferredColorSource, entry] as const
+    }
+
+    return (
+      Object.entries(PREMIUM_PLAYER_COLORS).find(([_, value]) => {
+        if ('gradient' in value && value.gradient) {
+          return value.gradient === preferredColorSource
+        }
+
+        return value.solid === preferredColorSource
+      }) || null
+    )
+  }, [preferredColorSource])
+
+  const rankDetails = useMemo(() => getConquestRank(profile.elo), [profile.elo])
+  const nextRank = useMemo(() => {
+    return CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
+  }, [rankDetails.minRating])
+
+  const rankAccentColor = rankDetails.color.startsWith('#') ? rankDetails.color : accentHex
+  const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
+  const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
+  const rankProgress = Math.min(
+    100,
+    Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
+  )
+  const ratingToNextRank = Math.max(0, (nextRank?.minRating ?? profile.elo) - profile.elo)
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
@@ -163,70 +245,199 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Profile Header Card with glass effect */}
-        <div className="relative glass-box-lg shadow-2xl mb-6 overflow-hidden">
-          {/* Gradient overlay for visual interest */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-          <div className="flex flex-col sm:flex-row gap-6">
-            {/* Avatar Section */}
-            <div className="flex flex-col items-center sm:items-start">
+        <div className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden">
+          <div className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none" style={accentGlowStyle} />
+          <div
+            className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-40 pointer-events-none"
+            style={{ background: hexToRgba(accentHex, 0.45) }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row gap-6">
+            {/* Avatar & identity section */}
+            <div className="flex flex-col items-center sm:items-start gap-4">
               <div className="relative group">
-                {/* Avatar with player color background */}
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-border shadow-xl transition-transform group-hover:scale-105">
+                <div
+                  className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
+                  style={accentGlowStyle}
+                />
+                <div
+                  className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
+                  style={{ borderColor: accentHex }}
+                >
                   {profile.avatarUrl ? (
-                    <img
-                      src={profile.avatarUrl}
-                      alt={profile.username}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={profile.avatarUrl}
+                        alt={profile.username}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-1/4 px-3 py-1 rounded-full bg-surface-3/90 border border-white/10 shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                        <span className="text-xl" style={{ color: rankAccentColor }}>
+                          {rankDetails.insignia}
+                        </span>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white">
+                          {rankDetails.name}
+                        </span>
+                      </div>
+                    </>
                   ) : (
                     <div
-                      className="w-full h-full flex items-center justify-center text-3xl sm:text-5xl font-bold text-white"
-                      style={{ backgroundColor: colorClass }}
+                      className="w-full h-full flex items-center justify-center text-4xl sm:text-5xl font-bold text-white drop-shadow-lg"
+                      style={crestFillStyle}
                     >
-                      {profile.username?.charAt(0).toUpperCase() || 'U'}
+                      <span style={{ color: rankAccentColor }}>{rankDetails.insignia}</span>
                     </div>
                   )}
                 </div>
-                {/* Color indicator ring */}
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-3/70 backdrop-blur-md border border-white/10 shadow-inner">
                 <div
-                  className="absolute inset-0 rounded-full border-4 opacity-50 animate-pulse"
-                  style={{ borderColor: colorClass }}
+                  className="w-3 h-3 rounded-full"
+                  style={{ ...colorSwatchStyle, boxShadow: `0 0 12px ${hexToRgba(accentHex, 0.6)}` }}
                 />
+                <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
+                  {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : 'Signature Color'}
+                </span>
               </div>
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl sm:text-4xl font-bold text-primary-soft mb-2">
-                {profile.username}
-              </h1>
+            <div className="flex-1 text-center sm:text-left space-y-5">
+              <div>
+                <h1
+                  className="text-3xl sm:text-4xl font-bold mb-1 bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: gradientPreferred
+                      ? resolvedPreferredColor
+                      : `linear-gradient(120deg, ${accentHex}, ${hexToRgba(accentHex, 0.6)})`,
+                  }}
+                >
+                  {profile.username}
+                </h1>
+                <p className="text-xs sm:text-sm uppercase tracking-[0.45em] text-muted">
+                  {premiumColorEntry ? premiumColorEntry[1].description : 'Commander of the Conquest Realms'}
+                </p>
+              </div>
 
               {/* Rank Display */}
-              <div className="mb-4">
-                <RankInsignia
-                  rating={profile.elo}
-                  size="lg"
-                  showLabel={true}
-                  showRating={true}
-                  className="justify-center sm:justify-start"
-                />
+              <RankInsignia
+                rating={profile.elo}
+                size="lg"
+                showLabel={true}
+                showRating={true}
+                className="justify-center sm:justify-start px-4 py-2 rounded-full bg-surface-3/60 border border-white/10 backdrop-blur-sm shadow-inner"
+              />
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
+                <span className="flex items-center gap-1">
+                  <span className="text-lg">🎯</span>
+                  {profile.elo} ELO
+                </span>
+                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-lg">🌠</span>
+                  Peak {profile.peakRating}
+                </span>
+                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-lg">🎨</span>
+                  {preferredColorDisplayName}
+                </span>
               </div>
 
               {/* Bio */}
               {profile.bio && (
-                <p className="text-muted text-lg mb-4 leading-relaxed">{profile.bio}</p>
+                <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
+                  <p className="text-muted text-base leading-relaxed">{profile.bio}</p>
+                </div>
               )}
+            </div>
+          </div>
+        </div>
 
-              {/* Meta Information */}
-              <div className="flex flex-col sm:flex-row gap-4 text-sm text-muted">
-                <span className="flex items-center gap-2">
-                  ⏰ Joined {formatDate(profile.joinDate)}
-                </span>
-                <span className="flex items-center gap-2">
-                  🕒 {formatLastActive(profile.lastActive)}
-                </span>
+        {/* Identity highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="relative glass-box-sm p-5 overflow-hidden">
+            <div className="absolute inset-0 opacity-35 pointer-events-none" style={accentGlowStyle} />
+            <div className="relative flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.45em] text-muted">Signature Color</p>
+                <p className="text-lg font-semibold text-white">{preferredColorDisplayName}</p>
+              </div>
+              <div className="w-14 h-14 rounded-xl border border-white/10" style={largeColorSwatchStyle} />
+            </div>
+            <p className="relative text-xs text-muted mt-4 leading-relaxed">
+              {premiumColorEntry
+                ? premiumColorEntry[1].description
+                : 'This hue personalizes your armies, UI highlights, and profile energy.'}
+            </p>
+          </div>
+
+          <div className="relative glass-box-sm p-5 overflow-hidden">
+            <div
+              className="absolute inset-0 opacity-30 pointer-events-none"
+              style={{ backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentColor, 0.3)} 0%, transparent 80%)` }}
+            />
+            <div className="relative flex items-center gap-3">
+              <div className="text-3xl" style={{ color: rankAccentColor }}>
+                {rankDetails.insignia}
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.45em] text-muted">Current Rank</p>
+                <p className="text-lg font-semibold text-white">{rankDetails.name}</p>
               </div>
             </div>
+            {nextRank ? (
+              <div className="relative mt-4">
+                <div className="flex justify-between text-[11px] text-muted uppercase tracking-[0.3em] mb-1">
+                  <span>{profile.elo} ELO</span>
+                  <span>{nextRank.minRating} ELO</span>
+                </div>
+                <div className="h-2 rounded-full bg-surface-2/60 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${rankProgress}%`,
+                      background: `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(
+                        accentHex,
+                        0.65,
+                      )})`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted mt-2">
+                  {ratingToNextRank > 0
+                    ? `${ratingToNextRank} rating to reach ${nextRank.name}.`
+                    : `Promotion to ${nextRank.name} is imminent.`}
+                </p>
+              </div>
+            ) : (
+              <p className="relative text-xs text-muted mt-4 leading-relaxed">
+                Legendary commander status secured.
+              </p>
+            )}
+          </div>
+
+          <div className="relative glass-box-sm p-5 overflow-hidden">
+            <div
+              className="absolute inset-0 opacity-25 pointer-events-none"
+              style={{ backgroundImage: `linear-gradient(160deg, ${hexToRgba(accentHex, 0.35)} 0%, transparent 85%)` }}
+            />
+            <div className="relative flex items-center gap-3">
+              <div className="text-3xl">🗺️</div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.45em] text-muted">Campaign Status</p>
+                <p className="text-lg font-semibold text-white">{formatLastActive(profile.lastActive)}</p>
+              </div>
+            </div>
+            <p className="relative text-xs text-muted mt-4 leading-relaxed">
+              Joined {formatDate(profile.joinDate)} · Peak rating {profile.peakRating}
+            </p>
+            <p className="relative text-xs text-muted mt-2 leading-relaxed">
+              {isOwnProfile
+                ? 'Set out on your next conquest to keep the momentum going.'
+                : `${profile.username} is preparing their next campaign.`}
+            </p>
           </div>
         </div>
 
@@ -259,8 +470,14 @@ const ProfilePage: React.FC = () => {
             <div className="space-y-6">
               {/* Stats Grid with enhanced cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="group relative glass-box-sm hover:border-primary/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div
+                  className="group relative glass-box-sm transition-all hover:scale-105 hover:shadow-xl overflow-hidden"
+                  style={{ borderColor: hexToRgba(accentHex, 0.35) }}
+                >
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={accentGlowStyle}
+                  />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">🎮</div>
                     <div className="text-2xl font-bold text-primary-soft">
@@ -341,7 +558,8 @@ const ProfilePage: React.FC = () => {
                   {isOwnProfile && (
                     <button
                       type="button"
-                      className="mt-4 px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
+                      className="mt-4 px-6 py-2 text-white rounded-lg font-medium transition-all hover:scale-105 shadow-lg"
+                      style={callToActionStyle}
                     >
                       Start Playing
                     </button>
