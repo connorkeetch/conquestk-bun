@@ -51,11 +51,14 @@ export const requireAdmin = async (
 
     // Get admin info for request context
     const adminInfo = await adminService.getUserAdminInfo(userId)
+    const hasAssignedRoles = adminInfo.length > 0
     req.adminUser = {
       userId,
-      roles: adminInfo.map((info) => info.roleName),
-      permissions: adminInfo.flatMap((info) => info.permissions),
-      isSuperAdmin: adminInfo.some((info) => info.permissions.includes('*')),
+      roles: hasAssignedRoles ? adminInfo.map((info) => info.roleName) : ['direct_admin'],
+      permissions: hasAssignedRoles ? adminInfo.flatMap((info) => info.permissions) : ['*'],
+      isSuperAdmin: hasAssignedRoles
+        ? adminInfo.some((info) => info.permissions.includes('*'))
+        : true,
     }
 
     next()
@@ -73,6 +76,11 @@ export const requirePermission = (permission: string) => {
 
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' })
+        return
+      }
+
+      if (req.adminUser?.isSuperAdmin) {
+        next()
         return
       }
 

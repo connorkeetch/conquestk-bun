@@ -1,6 +1,17 @@
 import { getClient, query } from '../config/database'
 import { logger } from '../utils/logger'
 
+const domainPermissionMap: Record<string, string[]> = {
+  users: ['users.*', 'user_management', 'system_admin'],
+  admin: ['admin.*', 'system_admin'],
+  content: ['content.*', 'content_moderation', 'system_admin'],
+  games: ['games.*', 'game_management', 'system_admin'],
+  system: ['system.*', 'system_admin'],
+  logs: ['logs.*', 'system_admin'],
+  reports: ['reports.*', 'reports', 'system_admin'],
+  maps: ['maps.*', 'map_approval', 'content_moderation', 'system_admin'],
+}
+
 export interface AdminRole {
   id: string
   name: string
@@ -91,6 +102,8 @@ export class AdminService {
       [userId],
     )
 
+    const domain = permission.includes('.') ? permission.split('.')[0] : ''
+
     for (const row of result.rows) {
       if (row.is_super_admin) return true
 
@@ -121,12 +134,12 @@ export class AdminService {
       }
 
       // Check wildcard permissions (e.g., "users.*" covers "users.edit")
-      // Also check broader permissions (e.g., "system_admin" covers "system.manage")
       for (const perm of permissions) {
-        if (perm === 'system_admin' && permission.startsWith('system.')) {
+        if (perm.endsWith('.*') && permission.startsWith(perm.slice(0, -1))) {
           return true
         }
-        if (perm.endsWith('.*') && permission.startsWith(perm.slice(0, -1))) {
+        // Support category permissions like "user_management" that map to scoped domains
+        if (domain && domainPermissionMap[domain]?.includes(perm)) {
           return true
         }
       }
@@ -198,7 +211,7 @@ export class AdminService {
         u.premium_tier as "premiumTier",
         u.premium_expires_at as "premiumExpiresAt",
         COALESCE(ps.games_played, 0) as "gamesPlayed",
-        COALESCE(ps.elo_rating, 1000) as "elo",
+        COALESCE(u.skill_rating, 1000) as "elo",
         COALESCE(uas.status, 'active') as status,
         uas.reason as status_reason,
         STRING_AGG(ar.name, ',') as admin_roles
@@ -211,7 +224,8 @@ export class AdminService {
       GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, 
                u.is_admin, u.is_vip, u.vip_reason, u.vip_granted_at, 
                u.premium_tier, u.premium_expires_at,
-               ps.games_played, ps.elo_rating,
+               ps.games_played,
+               u.skill_rating,
                uas.status, uas.reason
       ORDER BY u.created_at DESC
       LIMIT ${limitOffset}
