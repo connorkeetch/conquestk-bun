@@ -554,7 +554,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setGameVisibility('public')}
                   className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
                     gameVisibility === 'public'
-                      ? 'bg-primary text-white'
+                      ? 'theme-selected'
                       : 'bg-surface-2 text-muted hover:bg-gray-600'
                   }`}
                 >

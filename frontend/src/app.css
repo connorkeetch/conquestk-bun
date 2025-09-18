@@ -1035,6 +1035,13 @@ kbd {
   box-shadow: none;
 }
 
+/* Theme-aware selected state for buttons in CreateGame page */
+.theme-selected {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 /* ===== TAB SYSTEM ===== */
 /* Consistent tab styling across the application */
 
