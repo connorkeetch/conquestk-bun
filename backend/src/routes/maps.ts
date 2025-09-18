@@ -333,6 +333,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
       rating_count: 0,
       tags: ['classic', 'official'],
       image_url: '/assets/maps/classic-preview.png',
+      is_vip_only: false,
     }
 
     const maps = [
