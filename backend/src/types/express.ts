@@ -10,6 +10,7 @@ export interface RequestUser {
   isVip?: boolean
   hasPremium?: boolean
   role?: string
+  isBetaUser?: boolean
 }
 
 export type AuthenticatedRequest<
