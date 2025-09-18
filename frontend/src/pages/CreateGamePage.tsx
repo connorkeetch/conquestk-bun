@@ -1108,13 +1108,6 @@ const CreateGamePage: React.FC = () => {
         {/* 9. Choose Your Color Card */}
         <OptionCard number="9" title="Choose Your Color">
           <div className="space-y-3">
-            {/* Display selected color name */}
-            <div className="text-center p-2 bg-white/10 rounded-lg">
-              <span className="text-sm font-semibold text-white">
-                Selected: {getColorName(selectedColor)}
-              </span>
-            </div>
-            
             {/* Standard Player Colors */}
             <div>
               <p className="text-xs text-muted mb-2">Player Colors</p>
