@@ -22,7 +22,7 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       })
     }
 
-    const userId = (req as any).userId
+    const userId = req.userId
     const { subscription } = req.body
 
     if (!subscription) {
@@ -43,7 +43,7 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
 // Unsubscribe from push notifications
 router.post('/unsubscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     await notificationService.removeSubscription(userId)
 
@@ -66,7 +66,7 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
       })
     }
 
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const success = await notificationService.sendTestNotification(userId)
 

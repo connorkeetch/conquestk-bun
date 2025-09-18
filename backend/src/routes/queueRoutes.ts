@@ -74,19 +74,19 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       queues: stats,
       summary: {
         totalWaiting: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.waiting,
+          (sum: number, queue: unknown) => sum + queue.waiting,
           0,
         ),
         totalActive: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.active,
+          (sum: number, queue: unknown) => sum + queue.active,
           0,
         ),
         totalCompleted: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.completed,
+          (sum: number, queue: unknown) => sum + queue.completed,
           0,
         ),
         totalFailed: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.failed,
+          (sum: number, queue: unknown) => sum + queue.failed,
           0,
         ),
       },

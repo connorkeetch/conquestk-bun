@@ -11,14 +11,14 @@ const router = Router()
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     // Get user from request if authenticated
-    const user = (req as any).user
+    const user = req.user
       ? {
-          id: (req as any).user.id,
-          role: (req as any).user.role,
-          is_admin: (req as any).user.is_admin,
-          is_beta_user: (req as any).user.is_beta_user,
-          is_vip: (req as any).user.is_vip,
-          has_premium: (req as any).user.has_premium,
+          id: req.user.id,
+          role: req.user.role,
+          is_admin: req.user.is_admin,
+          is_beta_user: req.user.is_beta_user,
+          is_vip: req.user.is_vip,
+          has_premium: req.user.has_premium,
         }
       : undefined
 
@@ -55,10 +55,10 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     const { flagName } = req.params
     const { enabled, access_level, rollout_percentage, target_criteria, reason } = req.body
-    const userId = (req as any).user?.id
+    const userId = req.user?.id
 
     try {
-      const updates: any = {}
+      const updates: unknown = {}
       if (enabled !== undefined) updates.is_enabled = enabled
       if (access_level !== undefined) updates.access_level = access_level
       if (rollout_percentage !== undefined) updates.rollout_percentage = rollout_percentage

@@ -106,7 +106,7 @@ export class UserPreferencesService {
     try {
       // Build dynamic update query
       const updates: string[] = []
-      const values: any[] = []
+      const values: unknown[] = []
       let paramIndex = 1
 
       if (preferences.theme !== undefined) {

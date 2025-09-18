@@ -355,7 +355,7 @@ export class MapWorkflowService {
   async getAdminNotifications(adminId?: string, unreadOnly = false): Promise<AdminNotification[]> {
     try {
       let sql = 'SELECT * FROM admin_notifications WHERE 1=1'
-      const params: any[] = []
+      const params: unknown[] = []
 
       if (adminId) {
         sql += ' AND (admin_id = ? OR admin_id IS NULL)'
@@ -472,7 +472,7 @@ export class MapWorkflowService {
     mapId: string,
     action: string,
     performedBy: string,
-    details?: any,
+    details?: unknown,
   ): Promise<void> {
     try {
       await query(

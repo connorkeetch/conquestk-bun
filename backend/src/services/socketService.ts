@@ -215,7 +215,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             payload: {
               fromTerritory: data.fromTerritoryId,
               toTerritory: data.toTerritoryId,
-              armies: (data as any).armies || 1,
+              armies: (data as unknown).armies || 1,
             },
           },
           socketId: socket.id,
@@ -354,7 +354,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   async function handleRankedGameEnd(
     io: Server<ClientToServerEvents, ServerToClientEvents>,
     roomId: string,
-    gameState: any,
+    gameState: unknown,
   ) {
     try {
       // Check if this is a ranked game
@@ -376,8 +376,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (a.isEliminated && !b.isEliminated) return 1
 
         // Among eliminated players, more territories = better position
-        const aTerritories = gameState.board.filter((t: any) => t.ownerId === a.id).length
-        const bTerritories = gameState.board.filter((t: any) => t.ownerId === b.id).length
+        const aTerritories = gameState.board.filter((t: unknown) => t.ownerId === a.id).length
+        const bTerritories = gameState.board.filter((t: unknown) => t.ownerId === b.id).length
         return bTerritories - aTerritories
       })
 
@@ -396,7 +396,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Create a map for quick lookup
         const userDataMap = new Map()
-        userResults.rows.forEach((row: any) => {
+        userResults.rows.forEach((row: unknown) => {
           userDataMap.set(row.id, row)
         })
 

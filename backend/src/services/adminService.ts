@@ -45,7 +45,7 @@ export interface AdminActivityLog {
   id: string
   adminUserId: string
   actionType: string
-  actionDetails: any
+  actionDetails: unknown
   targetType?: string
   targetId?: string
   ipAddress?: string
@@ -58,7 +58,7 @@ export interface FeatureFlag {
   flagName: string
   description?: string
   isEnabled: boolean
-  config: any
+  config: unknown
   createdBy: string
   createdAt: Date
   updatedAt: Date
@@ -180,11 +180,11 @@ export class AdminService {
     offset = 0,
     search?: string,
   ): Promise<{
-    users: any[]
+    users: unknown[]
     total: number
   }> {
     let whereClause = ''
-    const params: any[] = []
+    const params: unknown[] = []
 
     if (search) {
       whereClause = 'WHERE u.username ILIKE $1 OR u.email ILIKE $2'
@@ -454,7 +454,7 @@ export class AdminService {
     limit = 50,
     offset = 0,
   ): Promise<{
-    items: any[]
+    items: unknown[]
     total: number
   }> {
     const countResult = await query(`
@@ -675,7 +675,7 @@ export class AdminService {
   async logAdminAction(
     adminUserId: string,
     actionType: string,
-    actionDetails: any,
+    actionDetails: unknown,
     targetType?: string,
     targetId?: string,
     ipAddress?: string,
@@ -702,7 +702,7 @@ export class AdminService {
   async logUserActivity(
     userId: string,
     actionType: string,
-    actionDetails?: any,
+    actionDetails?: unknown,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {

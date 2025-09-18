@@ -105,7 +105,7 @@ export class RedisClusterService {
       this.metrics.errors++
     })
 
-    this.cluster.on('node error', (error: Error, node: any) => {
+    this.cluster.on('node error', (error: Error, node: unknown) => {
       logger.warn(`⚠️ Redis node error (${node.host}:${node.port}):`, error)
     })
 
@@ -141,7 +141,7 @@ export class RedisClusterService {
   // Advanced caching methods with automatic tier management
   async setWithTier(
     key: string,
-    value: any,
+    value: unknown,
     tier: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' = 'STANDARD',
   ): Promise<boolean> {
     const client = this.getClient()
@@ -235,7 +235,7 @@ export class RedisClusterService {
   async mset(
     keyValuePairs: Array<{
       key: string
-      value: any
+      value: unknown
       tier?: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY'
     }>,
   ): Promise<boolean> {
@@ -338,7 +338,7 @@ export class RedisClusterService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: string; details: unknown }> {
     const client = this.getClient()
     if (!client) {
       return { status: 'unhealthy', details: { error: 'No Redis client available' } }

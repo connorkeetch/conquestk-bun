@@ -8,7 +8,7 @@ export function createPreferencesRouter(pool: Pool): Router {
   const preferencesService = new UserPreferencesService(pool)
 
   // Get user preferences
-  router.get('/', authenticateToken as any, async (req: any, res) => {
+  router.get('/', authenticateToken as unknown, async (req: unknown, res) => {
     try {
       const userId = req.user.id
       const preferences = await preferencesService.getPreferences(userId)
@@ -25,7 +25,7 @@ export function createPreferencesRouter(pool: Pool): Router {
   })
 
   // Update user preferences
-  router.put('/', authenticateToken as any, async (req: any, res) => {
+  router.put('/', authenticateToken as unknown, async (req: unknown, res) => {
     try {
       const userId = req.user.id
       const preferences = await preferencesService.updatePreferences(userId, req.body)
@@ -42,7 +42,7 @@ export function createPreferencesRouter(pool: Pool): Router {
   })
 
   // Update theme specifically
-  router.put('/theme', authenticateToken as any, async (req: any, res) => {
+  router.put('/theme', authenticateToken as unknown, async (req: unknown, res) => {
     try {
       const userId = req.user.id
       const { theme } = req.body

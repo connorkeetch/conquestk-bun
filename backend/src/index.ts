@@ -48,15 +48,15 @@ try {
 import type { Request, Response } from 'express'
 
 // Wrap all imports in try-catch to identify which one is failing
-let createServer: any, path: any, cors: any, express: any, helmet: any, Server: any
-let initDatabase: any,
-  logStartupDiagnostics: any,
-  testDatabaseConnection: any,
-  testMigrationFiles: any
-let generalApiLimiter: any, suspiciousActivityTracker: any
-let adminRoutes: any, authRoutes: any, gameRoutes: any, mapRoutes: any
-let notificationRoutes: any, profileRoutes: any, skillsRoutes: any, userRoutes: any
-let setupSocketHandlers: any, ensureTablesExist: any, logger: any, MigrationRunner: any
+let createServer: unknown, path: unknown, cors: unknown, express: unknown, helmet: unknown, Server: unknown
+let initDatabase: unknown,
+  logStartupDiagnostics: unknown,
+  testDatabaseConnection: unknown,
+  testMigrationFiles: unknown
+let generalApiLimiter: unknown, suspiciousActivityTracker: unknown
+let adminRoutes: unknown, authRoutes: unknown, gameRoutes: unknown, mapRoutes: unknown
+let notificationRoutes: unknown, profileRoutes: unknown, skillsRoutes: unknown, userRoutes: unknown
+let setupSocketHandlers: unknown, ensureTablesExist: unknown, logger: unknown, MigrationRunner: unknown
 
 try {
   console.log('📦 Loading core modules...')
@@ -169,7 +169,7 @@ const io = new Server(server, {
 
 // Initialize Redis asynchronously and set up adapter if successful
 initializeRedis()
-  .then(async (redisClients: any) => {
+  .then(async (redisClients: unknown) => {
     const { pubClient, subClient, redisClient } = redisClients
 
     // Set up Socket.io Redis adapter only if clients are valid and connected
@@ -178,7 +178,7 @@ initializeRedis()
         const { createAdapter } = require('@socket.io/redis-adapter')
         io.adapter(createAdapter(pubClient, subClient))
         console.log('✅ Socket.io using Redis adapter for multi-server support')
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.log('⚠️ Failed to create Redis adapter, using in-memory adapter:', error.message)
       }
     } else {
@@ -203,11 +203,11 @@ initializeRedis()
     try {
       await workerManager.initialize()
       console.log('✅ WorkerManager created and initialized after Redis connection')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to initialize WorkerManager after Redis:', error.message)
     }
   })
-  .catch((err: any) => {
+  .catch((err: unknown) => {
     console.log('⚠️ Redis initialization failed, using in-memory adapters:', err.message)
 
     // Create and initialize WorkerManager even if Redis failed (graceful degradation)
@@ -218,7 +218,7 @@ initializeRedis()
       .then(() => {
         console.log('✅ WorkerManager initialized without Redis (degraded mode)')
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         console.error('❌ Failed to initialize WorkerManager in degraded mode:', error.message)
       })
   })
@@ -261,7 +261,7 @@ app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 app.use(suspiciousActivityTracker.middleware())
 
 // Apply general rate limiting to all API routes
-app.use('/api', generalApiLimiter as any)
+app.use('/api', generalApiLimiter as unknown)
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
@@ -554,9 +554,9 @@ if (isProductionLike) {
 Sentry.setupExpressErrorHandler(app)
 
 // Custom error handler (comes after Sentry)
-app.use((err: any, _req: Request, res: Response, _next: any) => {
+app.use((err: unknown, _req: Request, res: Response, _next: unknown) => {
   // The error id is attached to `res.sentry` for reference
-  const sentryId = (res as any).sentry
+  const sentryId = (res as unknown).sentry
 
   // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
   const isActualError = err instanceof Error
@@ -659,7 +659,7 @@ async function startServer() {
               '💡 Some features may not work correctly until database is properly configured',
             )
           }
-        } catch (dbError: any) {
+        } catch (dbError: unknown) {
           logger.error('❌ Database initialization failed:', dbError)
           logger.error(`  Error type: ${dbError.constructor.name}`)
           logger.error(`  Error message: ${dbError.message}`)

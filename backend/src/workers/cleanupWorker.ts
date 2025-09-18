@@ -83,7 +83,7 @@ export class CleanupWorker {
     }
   }
 
-  private async cleanupFinishedGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupFinishedGame(gameId: string, gameState: unknown): Promise<void> {
     // Archive game results
     await this.gameService.archiveGameResults(gameId, {
       winner: gameState.winner,
@@ -101,7 +101,7 @@ export class CleanupWorker {
     await this.gameService.recordGameHistory(gameId, gameState)
   }
 
-  private async cleanupTimedOutGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupTimedOutGame(gameId: string, gameState: unknown): Promise<void> {
     // Determine winner based on territories controlled
     const territoryCount = this.countTerritoriesByPlayer(gameState.board)
     const winner = Object.entries(territoryCount).sort(
@@ -125,7 +125,7 @@ export class CleanupWorker {
     }
   }
 
-  private async cleanupAbandonedGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupAbandonedGame(gameId: string, gameState: unknown): Promise<void> {
     // Mark as abandoned - no winner
     await this.gameService.archiveGameResults(gameId, {
       winner: null,
@@ -159,12 +159,12 @@ export class CleanupWorker {
     console.log(`Cleaned temp resources for game ${gameId}`)
   }
 
-  private calculatePlayerStats(gameState: any): Record<string, any> {
+  private calculatePlayerStats(gameState: unknown): Record<string, any> {
     const stats: Record<string, any> = {}
 
     for (const player of gameState.players) {
-      const territories = gameState.board.filter((t: any) => t.owner === player.id)
-      const totalArmies = territories.reduce((sum: number, t: any) => sum + t.armies, 0)
+      const territories = gameState.board.filter((t: unknown) => t.owner === player.id)
+      const totalArmies = territories.reduce((sum: number, t: unknown) => sum + t.armies, 0)
 
       stats[player.id] = {
         territoriesControlled: territories.length,
@@ -177,7 +177,7 @@ export class CleanupWorker {
     return stats
   }
 
-  private countTerritoriesByPlayer(board: any[]): Record<string, number> {
+  private countTerritoriesByPlayer(board: unknown[]): Record<string, number> {
     const counts: Record<string, number> = {}
 
     for (const territory of board) {

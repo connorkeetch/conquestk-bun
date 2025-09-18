@@ -4,7 +4,7 @@ import { logger } from '../utils/logger'
 import { type LinkPreview, linkPreviewService } from './linkPreviewService'
 
 // Profanity filter - lazy loaded to handle ESM module
-let profanityFilter: any = null
+let profanityFilter: unknown = null
 
 async function getProfanityFilter() {
   if (!profanityFilter) {
@@ -150,7 +150,7 @@ class ChatService {
   ): Promise<ChatMessage[]> {
     try {
       let queryText: string
-      let queryParams: any[]
+      let queryParams: unknown[]
 
       if (messageType === 'game') {
         queryText = `

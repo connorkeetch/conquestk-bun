@@ -9,7 +9,7 @@ const router = Router()
 // Check if user has accepted terms for a feature
 router.get(
   '/check/:featureType',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { featureType } = req.params
@@ -38,7 +38,7 @@ router.get(
 // Accept terms for a feature
 router.post(
   '/accept/:featureType',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { featureType } = req.params
@@ -67,7 +67,7 @@ router.post(
 // Get user's terms acceptance history
 router.get(
   '/history',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id

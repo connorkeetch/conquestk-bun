@@ -63,7 +63,7 @@ async function checkMapsTable() {
       const testQuery = `SELECT id, name, is_featured FROM maps LIMIT 1`
       await pool.query(testQuery)
       console.log('Query with is_featured: SUCCESS')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log('Query with is_featured: FAILED -', err.message)
     }
   } catch (error) {

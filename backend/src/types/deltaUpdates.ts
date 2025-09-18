@@ -54,14 +54,14 @@ export interface BattleResultDelta extends BaseDelta {
     attackerLosses: number
     defenderLosses: number
     gameEnded?: boolean
-    winner?: any
+    winner?: unknown
     eliminatedPlayers?: string[]
   }
 }
 
 export interface GameEndDelta extends BaseDelta {
   type: 'GAME_END'
-  winner: any
+  winner: unknown
   eliminatedPlayers: string[]
 }
 
@@ -128,7 +128,7 @@ export class DeltaBuilder {
     }
   }
 
-  static battleResult(roomId: string, battleResult: any): BattleResultDelta {
+  static battleResult(roomId: string, battleResult: unknown): BattleResultDelta {
     return {
       type: 'BATTLE_RESULT',
       roomId,
@@ -137,7 +137,7 @@ export class DeltaBuilder {
     }
   }
 
-  static gameEnd(roomId: string, winner: any, eliminatedPlayers: string[]): GameEndDelta {
+  static gameEnd(roomId: string, winner: unknown, eliminatedPlayers: string[]): GameEndDelta {
     return {
       type: 'GAME_END',
       roomId,

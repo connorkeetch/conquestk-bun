@@ -54,7 +54,7 @@ export class TerritoryModifierService {
    */
   async getMapModifiers(mapId: string): Promise<any[]> {
     // Check cache first
-    let modifiers = (await territoryModifierCache.getMapModifiers(mapId)) as any[] | null
+    let modifiers = (await territoryModifierCache.getMapModifiers(mapId)) as unknown[] | null
     if (modifiers) {
       return modifiers
     }
@@ -77,7 +77,7 @@ export class TerritoryModifierService {
       WHERE mtm.map_id = $1
     `
     const result = await query(sql, [mapId])
-    modifiers = result.rows as any[]
+    modifiers = result.rows as unknown[]
 
     // Cache the results
     await territoryModifierCache.setMapModifiers(mapId, modifiers)
@@ -126,11 +126,11 @@ export class TerritoryModifierService {
   /**
    * Apply predefined map modifiers to a game (optimized batch insert)
    */
-  private async applyMapModifiers(gameId: string, mapModifiers: any[]): Promise<void> {
+  private async applyMapModifiers(gameId: string, mapModifiers: unknown[]): Promise<void> {
     if (mapModifiers.length === 0) return
 
     // Build batch insert with PostgreSQL VALUES clause
-    const values: any[] = []
+    const values: unknown[] = []
     const placeholders: string[] = []
 
     mapModifiers.forEach((modifier, index) => {
@@ -192,7 +192,7 @@ export class TerritoryModifierService {
     const selectedTerritories = shuffled.slice(0, numModifiers)
 
     // Prepare batch insert data
-    const modifiersToInsert: any[] = []
+    const modifiersToInsert: unknown[] = []
     for (const territoryId of selectedTerritories) {
       const template = templates[Math.floor(Math.random() * templates.length)]
       modifiersToInsert.push({

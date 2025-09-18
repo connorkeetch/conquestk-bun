@@ -11,7 +11,7 @@ router.use(authenticateToken)
 // GET /api/profile - Get complete user profile
 router.get('/', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const profile = await profileService.getUserProfile(userId)
     res.json(profile)
   } catch (_error) {
@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 // PUT /api/profile - Update user profile
 router.put('/', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const updates: ProfileUpdateRequest = req.body
 
     const updatedProfile = await profileService.updateProfile(userId, updates)
@@ -35,7 +35,7 @@ router.put('/', async (req, res) => {
 // GET /api/profile/stats - Get detailed user statistics
 router.get('/stats', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const stats = await profileService.getUserStats(userId)
     res.json(stats)
   } catch (_error) {
@@ -46,7 +46,7 @@ router.get('/stats', async (req, res) => {
 // GET /api/profile/achievements - Get user achievements
 router.get('/achievements', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const achievements = await profileService.getAchievements(userId)
     res.json(achievements)
   } catch (_error) {
@@ -57,7 +57,7 @@ router.get('/achievements', async (req, res) => {
 // POST /api/profile/achievements/:achievementId - Unlock achievement (admin/testing)
 router.post('/achievements/:achievementId', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { achievementId } = req.params
 
     const achievement = await profileService.unlockAchievement(userId, achievementId)
@@ -70,7 +70,7 @@ router.post('/achievements/:achievementId', async (req, res) => {
 // GET /api/profile/history - Get game history
 router.get('/history', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const limit = parseInt(req.query.limit as string, 10) || 50
     const offset = parseInt(req.query.offset as string, 10) || 0
 
@@ -84,7 +84,7 @@ router.get('/history', async (req, res) => {
 // PUT /api/profile/preferences - Update user preferences
 router.put('/preferences', async (req, res) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const preferences = req.body
 
     const updatedPreferences = await profileService.updatePreferences(userId, preferences)
@@ -109,7 +109,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params
-    const requesterId = (req as any).userId
+    const requesterId = req.userId
 
     // Get basic profile info (respecting privacy settings)
     const profile = await profileService.getUserProfile(userId)
@@ -121,7 +121,7 @@ router.get('/:userId', async (req, res) => {
 
     // Remove sensitive information for other users
     if (userId !== requesterId) {
-      delete (profile as any).preferences
+      delete (profile as unknown).preferences
       // Only show limited data for non-friends
       profile.recentGames = []
     }

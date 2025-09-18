@@ -13,7 +13,7 @@ interface LoadTestConfig {
     path: string
     method: 'GET' | 'POST' | 'PUT' | 'DELETE'
     weight: number // relative frequency
-    payload?: any
+    payload?: unknown
     headers?: Record<string, string>
   }>
 }
@@ -266,7 +266,7 @@ export class PerformanceTestingService {
 
     let currentConcurrency = 10
     let breakingPoint: StressTestResult['breakingPoint'] | null = null
-    let testResults: any = null
+    let testResults: unknown = null
 
     try {
       while (currentConcurrency <= maxConcurrency && !breakingPoint) {

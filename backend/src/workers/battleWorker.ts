@@ -74,8 +74,8 @@ export class BattleWorker {
       }
 
       // Update territories based on battle result
-      const attackingTerr = gameState.board.find((t: any) => t.id === attackingTerritory)
-      const defendingTerr = gameState.board.find((t: any) => t.id === defendingTerritory)
+      const attackingTerr = gameState.board.find((t: unknown) => t.id === attackingTerritory)
+      const defendingTerr = gameState.board.find((t: unknown) => t.id === defendingTerritory)
 
       if (!attackingTerr || !defendingTerr) {
         throw new Error('Territory not found during battle processing')
@@ -107,9 +107,9 @@ export class BattleWorker {
         )
 
         // Check for player elimination
-        const defendingPlayer = gameState.players.find((p: any) => p.id === defendingTerr.ownerId)
+        const defendingPlayer = gameState.players.find((p: unknown) => p.id === defendingTerr.ownerId)
         const remainingTerritories = gameState.board.filter(
-          (t: any) => t.ownerId === defendingTerr.ownerId && t.id !== defendingTerritory,
+          (t: unknown) => t.ownerId === defendingTerr.ownerId && t.id !== defendingTerritory,
         )
 
         if (remainingTerritories.length === 0) {
@@ -123,8 +123,8 @@ export class BattleWorker {
         }
 
         // Check for game victory
-        const remainingPlayers = gameState.players.filter((p: any) => {
-          return gameState.board.some((t: any) => t.owner === p.id)
+        const remainingPlayers = gameState.players.filter((p: unknown) => {
+          return gameState.board.some((t: unknown) => t.owner === p.id)
         })
 
         if (remainingPlayers.length === 1) {
@@ -133,8 +133,8 @@ export class BattleWorker {
             roomId: gameId,
             winner: playerId,
             eliminatedPlayers: gameState.players
-              .filter((p: any) => !gameState.board.some((t: any) => t.owner === p.id))
-              .map((p: any) => p.id),
+              .filter((p: unknown) => !gameState.board.some((t: unknown) => t.owner === p.id))
+              .map((p: unknown) => p.id),
             timestamp: Date.now(),
           } as GameEndDelta)
         }
@@ -154,7 +154,7 @@ export class BattleWorker {
       }
 
       // Create compound delta for all battle results
-      const battleDelta: any = {
+      const battleDelta: unknown = {
         type: 'BATTLE_RESULT',
         roomId: gameId,
         timestamp: Date.now(),

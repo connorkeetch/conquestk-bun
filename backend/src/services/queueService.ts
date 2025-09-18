@@ -239,7 +239,7 @@ export class QueueService {
   }
 
   // Health check
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: string; details: unknown }> {
     try {
       if (!this.redis) {
         return {

@@ -57,7 +57,7 @@ export async function initializeRedis(): Promise<{
       finalRedisUrl = `${redisUrl}${separator}family=0`
     }
 
-    const redisOptions: any = {
+    const redisOptions: unknown = {
       family: 0, // Enable dual-stack IPv4/IPv6 lookups for Railway
       enableReadyCheck: false,
       connectTimeout: 10000, // 10 seconds for Railway startup
@@ -102,7 +102,7 @@ export async function initializeRedis(): Promise<{
 
     redisClient.on('error', (err) => {
       const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as any)?.code
+      const errorCode = (err as unknown)?.code
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         // In production/staging, log Redis errors less verbosely to avoid log spam
@@ -136,7 +136,7 @@ export async function initializeRedis(): Promise<{
 
     pubClient.on('error', (err) => {
       const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as any)?.code
+      const errorCode = (err as unknown)?.code
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         logger.warn(`Redis pub client error (${errorCode || 'unknown'}): ${errorMsg}`)
@@ -155,7 +155,7 @@ export async function initializeRedis(): Promise<{
 
     subClient.on('error', (err) => {
       const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as any)?.code
+      const errorCode = (err as unknown)?.code
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         logger.warn(`Redis sub client error (${errorCode || 'unknown'}): ${errorMsg}`)
@@ -190,15 +190,15 @@ export async function initializeRedis(): Promise<{
 
       return { redisClient, pubClient, subClient }
     } catch (err) {
-      const errorDetails: any =
+      const errorDetails: unknown =
         err instanceof Error
           ? {
               name: err.name,
               message: err.message,
-              code: (err as any).code,
-              errno: (err as any).errno,
-              syscall: (err as any).syscall,
-              hostname: (err as any).hostname,
+              code: (err as unknown).code,
+              errno: (err as unknown).errno,
+              syscall: (err as unknown).syscall,
+              hostname: (err as unknown).hostname,
             }
           : err
 

@@ -81,7 +81,7 @@ export class ProfileService {
 
     try {
       const updateFields: string[] = []
-      const values: any[] = []
+      const values: unknown[] = []
       let paramCount = 0
 
       if (updates.avatarUrl !== undefined) {
@@ -182,7 +182,7 @@ export class ProfileService {
       )
 
       const byMap: Record<string, any> = {}
-      mapStatsResult.rows.forEach((row: any) => {
+      mapStatsResult.rows.forEach((row: unknown) => {
         byMap[row.map_name] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
@@ -192,7 +192,7 @@ export class ProfileService {
       })
 
       const byGameMode: Record<string, any> = {}
-      modeStatsResult.rows.forEach((row: any) => {
+      modeStatsResult.rows.forEach((row: unknown) => {
         byGameMode[row.game_mode] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
@@ -347,7 +347,7 @@ export class ProfileService {
 
     try {
       const updateFields: string[] = []
-      const values: any[] = []
+      const values: unknown[] = []
       let paramCount = 0
 
       Object.keys(preferences).forEach((key) => {
@@ -405,7 +405,7 @@ export class ProfileService {
         [limit],
       )
 
-      return result.rows.map((row: any, index: number) => ({
+      return result.rows.map((row: unknown, index: number) => ({
         userId: row.user_id,
         username: row.username,
         avatarUrl: row.avatar_url,

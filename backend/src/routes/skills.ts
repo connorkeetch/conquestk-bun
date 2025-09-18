@@ -173,7 +173,7 @@ router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
   try {
     // Check if user is admin
     const userQuery = `SELECT is_admin FROM users WHERE id = ?`
-    const userResult = await query(userQuery, [(req as any).userId])
+    const userResult = await query(userQuery, [req.userId])
 
     if (!userResult.rows[0]?.is_admin) {
       return res.status(403).json({ error: 'Admin access required' })

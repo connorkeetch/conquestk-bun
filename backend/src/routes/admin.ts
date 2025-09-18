@@ -13,7 +13,7 @@ router.use(authenticateToken)
 // Status endpoint - check if user is admin (doesn't require admin permission)
 router.get('/status', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const isAdmin = await adminService.isAdmin(userId)
     res.json({ isAdmin })
   } catch (error) {
@@ -26,7 +26,7 @@ router.get('/status', async (req: Request, res: Response) => {
 router.use(requireAdmin)
 
 // Validation middleware
-const checkValidation = (req: Request, res: Response, next: any) => {
+const checkValidation = (req: Request, res: Response, next: unknown) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -58,7 +58,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 // Get current admin user info
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const adminInfo = await adminService.getUserAdminInfo(userId)
 
     res.json({
@@ -111,7 +111,7 @@ router.put(
     try {
       const { userId } = req.params
       const { status, reason, expiresAt } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const expirationDate = expiresAt ? new Date(expiresAt) : undefined
 
@@ -137,7 +137,7 @@ router.post(
     try {
       const { userId } = req.params
       const { newPassword } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.resetUserPassword(userId, adminUserId, newPassword)
 
@@ -162,7 +162,7 @@ router.post(
     try {
       const { userId } = req.params
       const { isVip, reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.updateUserVipStatus(userId, adminUserId, isVip, reason)
 
@@ -186,7 +186,7 @@ router.post(
     try {
       const { userId } = req.params
       const { isAdmin } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.updateUserAdminStatus(userId, adminUserId, isAdmin)
 
@@ -211,7 +211,7 @@ router.post(
     try {
       const { userId } = req.params
       const { tier, expiresAt } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const expirationDate = expiresAt ? new Date(expiresAt) : undefined
 
@@ -237,7 +237,7 @@ router.post(
     try {
       const { userId } = req.params
       const { reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.updateUserStatus(userId, adminUserId, 'banned', reason)
 
@@ -259,7 +259,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.updateUserStatus(userId, adminUserId, 'active')
 
@@ -284,7 +284,7 @@ router.post(
     try {
       const { userId } = req.params
       const { roleId, expiresAt } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const expirationDate = expiresAt ? new Date(expiresAt) : undefined
 
@@ -309,7 +309,7 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const { userId, roleId } = req.params
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.removeAdminRole(userId, roleId, adminUserId)
 
@@ -356,7 +356,7 @@ router.post(
     try {
       const { queueId } = req.params
       const { notes } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.approveContent(queueId, adminUserId, notes)
 
@@ -380,7 +380,7 @@ router.post(
     try {
       const { queueId } = req.params
       const { reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.rejectContent(queueId, adminUserId, reason)
 
@@ -424,7 +424,7 @@ router.get(
         LEFT JOIN users gp_current ON g.current_turn = gp_current.id
         WHERE 1=1
       `
-      const queryParams: any[] = []
+      const queryParams: unknown[] = []
       let paramIndex = 1
 
       if (status && status !== 'all') {
@@ -455,7 +455,7 @@ router.get(
         LEFT JOIN users u ON g.created_by = u.id
         WHERE 1=1
       `
-      const countParams: any[] = []
+      const countParams: unknown[] = []
       let countParamIndex = 1
 
       if (status && status !== 'all') {
@@ -472,8 +472,8 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Get players for each game
-      const gameIds = gamesResult.rows.map((g: any) => g.id)
-      let playersData: any[] = []
+      const gameIds = gamesResult.rows.map((g: unknown) => g.id)
+      let playersData: unknown[] = []
 
       if (gameIds.length > 0) {
         const playersQuery = `
@@ -496,10 +496,10 @@ router.get(
       }
 
       // Format games data
-      const games = gamesResult.rows.map((game: any) => {
-        const gamePlayers = playersData.filter((p: any) => p.game_id === game.id)
+      const games = gamesResult.rows.map((game: unknown) => {
+        const gamePlayers = playersData.filter((p: unknown) => p.game_id === game.id)
 
-        const players = gamePlayers.map((player: any) => ({
+        const players = gamePlayers.map((player: unknown) => ({
           id: player.user_id,
           username: player.username,
           status: player.status || 'active',
@@ -579,7 +579,7 @@ router.post(
     try {
       const { gameId } = req.params
       const { reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
@@ -625,7 +625,7 @@ router.post(
     try {
       const { gameId } = req.params
       const { reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
@@ -671,7 +671,7 @@ router.post(
     try {
       const { gameId } = req.params
       const { reason } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
@@ -739,7 +739,7 @@ router.get(
 
       const result = await query(gamesQuery)
 
-      const games = result.rows.map((game: any) => ({
+      const games = result.rows.map((game: unknown) => ({
         id: game.id,
         name: game.name || `Game ${game.id.slice(0, 8)}`,
         status: game.status,
@@ -789,7 +789,7 @@ router.put(
     try {
       const { flagName } = req.params
       const { enabled } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       await adminService.toggleFeatureFlag(flagName, enabled, adminUserId)
 
@@ -954,7 +954,7 @@ router.get(
         LEFT JOIN map_ratings mr ON mr.map_id = m.id
         WHERE 1=1
       `
-      const queryParams: any[] = []
+      const queryParams: unknown[] = []
       let paramIndex = 1
 
       // Only filter by status if specified and not includeAll
@@ -991,7 +991,7 @@ router.get(
         FROM maps m
         WHERE 1=1
       `
-      const countParams: any[] = []
+      const countParams: unknown[] = []
       let countParamIndex = 1
 
       if (!includeAll && status && status !== 'all') {
@@ -1010,7 +1010,7 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Convert numeric strings to numbers and map property names for proper frontend handling
-      const maps = mapsResult.rows.map((map: any) => ({
+      const maps = mapsResult.rows.map((map: unknown) => ({
         ...map,
         playCount: parseInt(map.playCount || '0', 10),
         ratingAverage: parseFloat(map.ratingAverage || '0'),
@@ -1057,13 +1057,13 @@ router.patch(
       const { mapId } = req.params
       const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } =
         req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
       // Build update query
       const updates: string[] = []
-      const params: any[] = []
+      const params: unknown[] = []
       let paramIndex = 1
 
       if (name !== undefined) {
@@ -1169,7 +1169,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
       const { query } = require('../config/database')
 
       // Get the original map
@@ -1279,7 +1279,7 @@ router.patch(
     try {
       const { mapId } = req.params
       const { status, notes } = req.body
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
@@ -1341,7 +1341,7 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const adminUserId = (req as any).userId
+      const adminUserId = req.userId
 
       const { query } = require('../config/database')
 
@@ -1402,7 +1402,7 @@ router.post(
   // No specific permission required - any admin can refresh cache
   async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
       logger.info('Admin cache refresh requested', { adminId: userId })
 
       // Log the admin activity
