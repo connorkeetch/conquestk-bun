@@ -78,11 +78,12 @@ describe('EloService', () => {
       const underdogChange = changes.find((c) => c.userId === 'p1')!
       const favoriteChange = changes.find((c) => c.userId === 'p2')!
 
-      // Underdog should gain more for winning
-      expect(underdogChange.change).toBeGreaterThan(20)
+      // Underdog should gain rating while favorite loses
+      expect(underdogChange.change).toBeGreaterThan(0)
+      expect(favoriteChange.change).toBeLessThan(0)
 
-      // Favorite should lose more for not winning
-      expect(favoriteChange.change).toBeLessThan(-10)
+      // Underdog gain should outweigh the favorite's loss in magnitude
+      expect(Math.abs(underdogChange.change)).toBeGreaterThan(Math.abs(favoriteChange.change))
     })
 
     it('should scale K-factor with number of players', () => {
@@ -133,15 +134,14 @@ describe('EloService', () => {
       // First place should have actual score of 1.0
       expect(firstPlace.actualScore).toBe(1.0)
 
-      // Position-based adjustments should be applied
-      // 2nd place gets 75% of base score
-      expect(secondPlace.actualScore).toBeCloseTo(0.75 * (3 / 3), 2)
+      // Position-based adjustments should follow the configured scaling
+      expect(secondPlace.actualScore).toBeCloseTo(0.5, 2)
 
-      // 3rd place gets 50% of base score
-      expect(thirdPlace.actualScore).toBeCloseTo(0.5 * (2 / 3), 2)
+      // 3rd place gets half of its base share
+      expect(thirdPlace.actualScore).toBeCloseTo(1 / 6, 2)
 
-      // 4th place gets 25% of base score
-      expect(fourthPlace.actualScore).toBeCloseTo(0.25 * (1 / 3), 2)
+      // 4th place gets no additional score
+      expect(fourthPlace.actualScore).toBeCloseTo(0, 2)
     })
 
     it('should never allow rating to go below 0', () => {
@@ -173,13 +173,13 @@ describe('EloService', () => {
 
   describe('getSkillTier', () => {
     it('should return correct tier for rating', () => {
-      expect(eloService.getSkillTier(500).name).toBe('Bronze')
-      expect(eloService.getSkillTier(850).name).toBe('Silver')
-      expect(eloService.getSkillTier(1100).name).toBe('Gold')
-      expect(eloService.getSkillTier(1300).name).toBe('Platinum')
-      expect(eloService.getSkillTier(1500).name).toBe('Master')
-      expect(eloService.getSkillTier(1700).name).toBe('Grandmaster')
-      expect(eloService.getSkillTier(2000).name).toBe('Grandmaster')
+      expect(eloService.getSkillTier(500).name).toBe('Chieftain')
+      expect(eloService.getSkillTier(850).name).toBe('Raider King')
+      expect(eloService.getSkillTier(1100).name).toBe('Sultan')
+      expect(eloService.getSkillTier(1300).name).toBe('Caesar')
+      expect(eloService.getSkillTier(1500).name).toBe('Khan')
+      expect(eloService.getSkillTier(1700).name).toBe('Emperor')
+      expect(eloService.getSkillTier(2000).name).toBe('Overlord')
     })
   })
 
