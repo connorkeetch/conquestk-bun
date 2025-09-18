@@ -56,7 +56,7 @@ taskkill /PID <process-id> /F
 **Problem**: Missing database columns after deployment
 ```bash
 # This means migrations haven't run on production
-# As of Sept 2025, migrations auto-run on deployment via:
+# As of January 2025, migrations auto-run on deployment via:
 # backend/package.json start script
 
 # Manual fix if needed:

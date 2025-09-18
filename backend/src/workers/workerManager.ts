@@ -39,9 +39,16 @@ export class WorkerManager {
       this.isInitialized = true
       console.log('✅ WorkerManager initialized successfully')
 
-      // Log initial queue stats
-      const stats = await queueService.getQueueStats()
-      console.log('📊 Initial queue stats:', stats)
+      // Log initial queue stats without failing initialization if Redis is still warming up
+      try {
+        const stats = await queueService.getQueueStats()
+        console.log('📊 Initial queue stats:', stats)
+      } catch (statsError) {
+        console.warn(
+          '⚠️ Unable to retrieve initial queue stats:',
+          statsError instanceof Error ? statsError.message : statsError,
+        )
+      }
     } catch (error) {
       console.error('❌ Failed to initialize WorkerManager:', error)
       throw error

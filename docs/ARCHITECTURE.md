@@ -45,7 +45,7 @@
 6. **Mountain Pass** 🏔️: Restricted access from specific directions
 7. **Magical Nexus** 🔮: Special abilities and teleportation
 
-## ⚙️ Current Architecture Status (September 2025)
+## ⚙️ Current Architecture Status (January 2025)
 
 ### Recent Major Upgrades ✅
 - **Node.js 24**: Error.isError(), RegExp.escape, Symbol.dispose patterns
@@ -85,7 +85,7 @@
 - JWT + session-based authentication
 - Enterprise-grade caching and monitoring
 
-## 🎮 Current Game Features (December 2025)
+## 🎮 Current Game Features (January 2025)
 
 ### Game Creation Options
 **Game Modes:**
@@ -280,3 +280,105 @@ Feature flags are managed at `/admin/settings` with:
 - Test with flag both on and off
 - Use consistent naming conventions
 - Track changes in audit log
+
+## 📁 Codebase Structure
+
+### Frontend Directory Map
+```
+frontend/src/
+├── components/          # Reusable UI components
+│   ├── game/           # Game-specific components
+│   ├── navigation/     # Navigation elements
+│   └── profile/        # User profile components
+├── pages/              # Route pages
+│   ├── game/          # Game-related pages
+│   ├── maps/          # Map editor and gallery
+│   └── admin/         # Admin panel pages
+├── store/             # Redux state management
+│   ├── authSlice.ts   # Authentication state
+│   ├── gameSlice.ts   # Game state
+│   └── roomSlice.ts   # Room management
+├── services/          # API and external services
+│   ├── api.ts        # HTTP client
+│   ├── socketService.ts # WebSocket client
+│   └── audioService.ts  # Sound system
+└── types/            # TypeScript definitions
+```
+
+### Backend Directory Map
+```
+backend/src/
+├── config/            # Configuration files
+├── game/              # Core game engine
+│   ├── gameEngine.ts  # Game logic
+│   └── worldMap.ts    # Territory definitions
+├── controllers/       # Route handlers
+├── services/          # Business logic (31 services)
+│   ├── game/         # Game-related services
+│   ├── map/          # Map management
+│   └── user/         # User services
+├── routes/           # API endpoints
+├── middleware/       # Express middleware
+├── socket/           # WebSocket handlers
+└── types/           # TypeScript interfaces
+```
+
+### Key File Locations
+- **Game Engine**: `backend/src/game/gameEngine.ts`
+- **Map Editor**: `frontend/src/pages/MapEditorTokens.tsx`
+- **Redux Store**: `frontend/src/store/`
+- **Socket Handlers**: `backend/src/socket/gameHandlers.ts`
+- **Database Migrations**: `backend/migrations/`
+- **Theme System**: `frontend/src/app.css`
+
+## 🎨 User Preferences System
+
+### Settings Management
+The application maintains user preferences both locally and server-side:
+
+**Local Storage:**
+- Theme preference (dark/light/custom)
+- Sound settings (volume, enabled/disabled)
+- UI animation preferences
+- Temporary session data
+
+**Server-Side Storage:**
+- Preferred game color
+- Game settings (auto-ready, hints)
+- Notification preferences
+- Account settings
+
+### Color System
+Players can choose from 12 colors (6 standard, 6 premium):
+```typescript
+const PLAYER_COLORS = [
+  // Standard colors (available to all)
+  { name: 'Red', value: '#DC2626', premium: false },
+  { name: 'Blue', value: '#2563EB', premium: false },
+  { name: 'Green', value: '#16A34A', premium: false },
+  { name: 'Yellow', value: '#EAB308', premium: false },
+  { name: 'Purple', value: '#9333EA', premium: false },
+  { name: 'Orange', value: '#EA580C', premium: false },
+  
+  // Premium colors (VIP/Premium users)
+  { name: 'Pink', value: '#EC4899', premium: true },
+  { name: 'Cyan', value: '#06B6D4', premium: true },
+  { name: 'Lime', value: '#84CC16', premium: true },
+  { name: 'Indigo', value: '#4F46E5', premium: true },
+  { name: 'Teal', value: '#14B8A6', premium: true },
+  { name: 'Black', value: '#000000', premium: true }
+]
+```
+
+### Theme Architecture
+Zero-flash theme switching using pure CSS variables:
+- All themes defined in `app.css` using `[data-theme="name"]` selectors
+- Semantic variables (`--color-primary`, `--color-secondary`, `--color-accent`)
+- Available themes: default, red, violet, blue, green, black, highcontrast, halloween
+- Instant switching via `document.setAttribute('data-theme', themeName)`
+
+### Settings Synchronization
+1. Local settings take precedence for display preferences
+2. Backend sync occurs on significant changes
+3. Merge strategy resolves conflicts between local and server
+4. Version tracking ensures consistency across devices
