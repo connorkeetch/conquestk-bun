@@ -23,12 +23,9 @@ export class GameController {
         maxPlayers,
         isPrivate,
         mapId,
-        gameType,
-        movementType,
-        allowTeamPlay,
+        gameMode,
         teamMode,
         numberOfTeams,
-        capitalsEnabled,
       } = req.body
       const hostId = req.userId
 
@@ -42,12 +39,9 @@ export class GameController {
         maxPlayers: maxPlayers || 6,
         isPrivate: isPrivate || false,
         mapId: mapId || null,
-        gameType: gameType || 'quick',
-        movementType: movementType || 'classic_adjacent',
-        allowTeamPlay: allowTeamPlay || false,
-        teamMode: teamMode || 'none',
+        gameMode: gameMode || 'classic',
+        teamMode: teamMode || false,
         numberOfTeams: numberOfTeams || undefined,
-        capitalsEnabled: capitalsEnabled || false,
       }
 
       const room = await this.gameRoomService.createRoom(roomData)

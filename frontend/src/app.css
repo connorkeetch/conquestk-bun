@@ -1093,23 +1093,6 @@ kbd {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Accent-colored CTA buttons for better contrast */
-.btn-accent {
-  background: var(--color-accent);
-  color: white;
-  font-weight: 600;
-  padding: 10px 24px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.btn-accent:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-  filter: brightness(1.1);
-}
-
 /* ===== TAB SYSTEM ===== */
 /* Consistent tab styling across the application */
 

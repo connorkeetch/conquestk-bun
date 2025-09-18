@@ -158,7 +158,7 @@ const Maps: React.FC = () => {
               </button>
             </div>
           )}
-          <Link to="/map-editor" className="btn-accent">
+          <Link to="/map-editor" className="btn-primary">
             ✏️ Create Map
           </Link>
         </div>

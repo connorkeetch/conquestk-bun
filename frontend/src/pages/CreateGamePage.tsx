@@ -1379,9 +1379,10 @@ const CreateGamePage: React.FC = () => {
       )}
 
       {/* Action Buttons */}
-      <div className="max-w-7xl mx-auto flex gap-4">
+      <div className="max-w-7xl mx-auto flex flex-col gap-4 sm:flex-row">
         <button
-          className="flex-1 py-3 bg-primary hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+          type="button"
+          className="btn-primary btn-lg flex-1 w-full"
           onClick={() => {
             setCreateAndStay(false)
             handleCreateGame()
@@ -1391,7 +1392,8 @@ const CreateGamePage: React.FC = () => {
           {isCreating ? '🔄 Creating...' : '🎮 Create & Join Game'}
         </button>
         <button
-          className="py-3 px-6 bg-violet/80 hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition-all duration-200"
+          type="button"
+          className="btn-secondary btn-lg w-full sm:w-auto"
           onClick={() => {
             setCreateAndStay(true)
             handleCreateGame()

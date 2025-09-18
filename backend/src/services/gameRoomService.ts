@@ -8,14 +8,10 @@ export interface CreateRoomData {
   maxPlayers: number
   isPrivate: boolean
   mapId?: string
-  gameType?: string
-  movementType?: string
-  allowTeamPlay?: boolean
-  teamMode?: 'none' | 'teams' | 'auto_balance'
+  gameMode?: string
+  teamMode?: boolean
   numberOfTeams?: number
-  capitalsEnabled?: boolean
   isRanked?: boolean
-  gameSettings?: unknown
 }
 
 export class GameRoomService {
@@ -80,27 +76,21 @@ export class GameRoomService {
       if (roomData.isPrivate) {
         throw new Error('Ranked games cannot be private')
       }
-      if (roomData.allowTeamPlay) {
+      if (roomData.teamMode) {
         throw new Error('Ranked games cannot have team play enabled')
       }
     }
 
-    // Include capitalsEnabled and team settings in game settings
-    const gameSettings = {
-      ...(roomData.gameSettings || {}),
-      capitalsEnabled: roomData.capitalsEnabled || false,
-    }
-
-    // Determine team mode
-    const teamMode = roomData.teamMode || (roomData.allowTeamPlay ? 'teams' : 'none')
-    const numberOfTeams = roomData.numberOfTeams || (roomData.allowTeamPlay ? 2 : null)
+    // Determine team mode - convert string team mode to boolean
+    const teamMode = roomData.teamMode || false
+    const numberOfTeams = teamMode ? (roomData.numberOfTeams || 2) : null
 
     // Validate team configuration
-    this.validateTeamConfiguration(roomData.maxPlayers, teamMode, numberOfTeams)
+    this.validateTeamConfiguration(roomData.maxPlayers, teamMode ? 'teams' : 'none', numberOfTeams)
 
     const insertQuery = `
-      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_type, movement_type, allow_team_play, team_mode, number_of_teams, is_ranked, game_settings, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'waiting')
+      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_mode, team_mode, number_of_teams, is_ranked, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'waiting')
       RETURNING *
     `
 
@@ -110,13 +100,10 @@ export class GameRoomService {
       roomData.maxPlayers,
       roomData.isPrivate,
       roomData.mapId || null,
-      roomData.gameType || 'quick',
-      roomData.movementType || 'classic_adjacent',
-      roomData.allowTeamPlay || false,
+      roomData.gameMode || 'classic',
       teamMode,
       numberOfTeams,
       roomData.isRanked || false,
-      JSON.stringify(gameSettings),
     ])
 
     return result.rows[0]
@@ -253,31 +240,10 @@ export class GameRoomService {
             )
           }
 
-          // Update room's average rating
-          const newAvgRating = Math.round(
-            (avgRating * currentPlayers + userRating) / (currentPlayers + 1),
-          )
-          const newMinRating = Math.min(minRating, userRating)
-          const newMaxRating = Math.max(maxRating, userRating)
-
-          const updateRoomQuery = `
-            UPDATE game_rooms
-            SET avg_skill_rating = $1,
-                min_skill_rating = $2,
-                max_skill_rating = $3
-            WHERE id = $4
-          `
-          await client.query(updateRoomQuery, [newAvgRating, newMinRating, newMaxRating, roomId])
+          // Note: Room skill ratings can be tracked separately if needed
+          // For now, we just validate the skill gap without storing in game_rooms
         } else {
-          // First player joining, set initial ratings
-          const updateRoomQuery = `
-            UPDATE game_rooms
-            SET avg_skill_rating = $1,
-                min_skill_rating = $2,
-                max_skill_rating = $3
-            WHERE id = $4
-          `
-          await client.query(updateRoomQuery, [userRating, userRating, userRating, roomId])
+          // First player joining, no skill gap to check
         }
       }
 
