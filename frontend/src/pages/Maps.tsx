@@ -138,19 +138,27 @@ const Maps: React.FC = () => {
         </div>
         <div className="flex gap-3">
           {user && (
-            <button
-              onClick={() => setShowMyMaps(!showMyMaps)}
-              className={showMyMaps ? 'btn-primary' : 'btn-secondary'}
-            >
-              {showMyMaps ? '🌍 All Maps' : '📁 My Maps'}
-              {myMaps.length > 0 && !showMyMaps && (
-                <span className="ml-2 bg-primary/20 text-primary px-2 py-0.5 rounded text-sm">
-                  {myMaps.length}
-                </span>
-              )}
-            </button>
+            <div className="segmented-control">
+              <button
+                onClick={() => setShowMyMaps(false)}
+                className={!showMyMaps ? 'segmented-active' : ''}
+              >
+                🌍 All Maps
+              </button>
+              <button
+                onClick={() => setShowMyMaps(true)}
+                className={showMyMaps ? 'segmented-active' : ''}
+              >
+                📁 My Maps
+                {myMaps.length > 0 && (
+                  <span className="ml-2 bg-primary/20 text-primary px-2 py-0.5 rounded text-sm">
+                    {myMaps.length}
+                  </span>
+                )}
+              </button>
+            </div>
           )}
-          <Link to="/map-editor" className="btn-primary">
+          <Link to="/map-editor" className="btn-accent">
             ✏️ Create Map
           </Link>
         </div>

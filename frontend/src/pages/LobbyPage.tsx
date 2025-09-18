@@ -258,7 +258,7 @@ const LobbyPage: React.FC = () => {
         <div className="flex gap-3">
           <Link
             to="/create"
-            className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors"
+            className="btn-accent"
           >
             🎮 Create Game
           </Link>
@@ -530,47 +530,31 @@ const LobbyPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Filter buttons for My Games */}
-            <div className="flex gap-2 mb-6">
+            {/* Filter buttons for My Games - Using Segmented Control */}
+            <div className="segmented-control mb-6">
               <button
                 onClick={() => setMyGamesFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  myGamesFilter === 'all'
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'glass-box-sm text-muted hover:text-white'
-                }`}
+                className={myGamesFilter === 'all' ? 'segmented-active' : ''}
               >
                 All Games
               </button>
               <button
                 onClick={() => setMyGamesFilter('active')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  myGamesFilter === 'active'
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'glass-box-sm text-muted hover:text-white'
-                }`}
+                className={myGamesFilter === 'active' ? 'segmented-active' : ''}
               >
                 <Gamepad2 className="inline w-4 h-4 mr-1" />
                 Active
               </button>
               <button
                 onClick={() => setMyGamesFilter('waiting')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  myGamesFilter === 'waiting'
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'glass-box-sm text-muted hover:text-white'
-                }`}
+                className={myGamesFilter === 'waiting' ? 'segmented-active' : ''}
               >
                 <Clock className="inline w-4 h-4 mr-1" />
                 Waiting
               </button>
               <button
                 onClick={() => setMyGamesFilter('finished')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  myGamesFilter === 'finished'
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'glass-box-sm text-muted hover:text-white'
-                }`}
+                className={myGamesFilter === 'finished' ? 'segmented-active' : ''}
               >
                 <Trophy className="inline w-4 h-4 mr-1" />
                 Finished
