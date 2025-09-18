@@ -4,6 +4,7 @@ import { logAdminActivity, requireAdmin, requirePermission } from '../middleware
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
 import { logger } from '../utils/logger'
+import { resolveAssetUrl } from '../utils/url'
 
 const router = Router()
 
@@ -1010,21 +1011,27 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Convert numeric strings to numbers and map property names for proper frontend handling
-      const maps = mapsResult.rows.map((map: any) => ({
-        ...map,
-        playCount: parseInt(map.playCount || '0', 10),
-        ratingAverage: parseFloat(map.ratingAverage || '0'),
-        ratingCount: parseInt(map.ratingCount || '0', 10),
-        // Map snake_case to camelCase for dates
-        createdAt: map.created_at,
-        updatedAt: map.updated_at,
-        creatorId: map.creator_id,
-        minPlayers: map.min_players,
-        maxPlayers: map.max_players,
-        isPublic: map.is_public,
-        isFeatured: map.is_featured,
-        isVipOnly: map.is_vip_only || false,
-      }))
+      const maps = mapsResult.rows.map((map: any) => {
+        const imageUrl = resolveAssetUrl(req, map.image_url)
+
+        return {
+          ...map,
+          image_url: imageUrl,
+          imageUrl,
+          playCount: parseInt(map.playCount || '0', 10),
+          ratingAverage: parseFloat(map.ratingAverage || '0'),
+          ratingCount: parseInt(map.ratingCount || '0', 10),
+          // Map snake_case to camelCase for dates
+          createdAt: map.created_at,
+          updatedAt: map.updated_at,
+          creatorId: map.creator_id,
+          minPlayers: map.min_players,
+          maxPlayers: map.max_players,
+          isPublic: map.is_public,
+          isFeatured: map.is_featured,
+          isVipOnly: map.is_vip_only || false,
+        }
+      })
 
       res.json({
         maps,

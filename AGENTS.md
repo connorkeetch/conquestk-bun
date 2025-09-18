@@ -67,6 +67,8 @@
 ## Environment configuration
 - Required variables live in package-specific `.env` files; critical backend keys include `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `PORT`, and email settings when `EMAIL_ENABLED=true`.
 - Email via Resend needs `RESEND_API_KEY`, `EMAIL_FROM`, and `REQUIRE_EMAIL_VERIFICATION=true` in `backend/.env`.
+- Shared Railway Postgres (dev/staging) lives at `postgresql://USER:PASSWORD@HOST:PORT/DATABASE private repo so credential can stay committed, but treat it carefully.
+- When the frontend runs on a different origin, set `PUBLIC_ASSET_BASE_URL` in `backend/.env` (e.g. `https://risk-game-production-9935.up.railway.app`) so map image URLs resolve correctly.
 
 ## Documentation pointers
 - Architectural overview: `docs/ARCHITECTURE.md`

@@ -11,6 +11,7 @@ interface Map {
   creatorId: string
   creatorName?: string
   imageUrl?: string
+  image_url?: string
   isPublic: boolean
   isFeatured: boolean
   isVipOnly?: boolean
@@ -44,6 +45,7 @@ export const AdminMaps: React.FC = () => {
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [previewMap, setPreviewMap] = useState<Map | null>(null)
+  const previewImageSrc = previewMap ? previewMap.imageUrl || previewMap.image_url : undefined
   const [approvalNotes, setApprovalNotes] = useState('')
   const [editForm, setEditForm] = useState({
     name: '',
@@ -328,64 +330,67 @@ export const AdminMaps: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {maps.map((map) => (
-                  <tr
-                    key={map.id}
-                    className={`hover:bg-surface-1 ${
-                      map.status === 'pending_review' ? 'bg-yellow-900/10' : ''
-                    }`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        {map.imageUrl && (
-                          <button
-                            onClick={() => {
-                              setPreviewMap(map)
-                              setShowPreviewModal(true)
-                            }}
-                            className="relative group mr-3"
-                          >
-                            <img
-                              src={map.imageUrl}
-                              alt={map.name}
-                              className="w-10 h-10 rounded object-cover cursor-pointer transition-transform hover:scale-110"
-                            />
-                            <div className="absolute hidden group-hover:block z-10 -top-32 left-0 p-2 bg-surface-1 border border-border rounded-lg shadow-xl">
+                {maps.map((map) => {
+                  const imageSrc = map.imageUrl || map.image_url
+
+                  return (
+                    <tr
+                      key={map.id}
+                      className={`hover:bg-surface-1 ${
+                        map.status === 'pending_review' ? 'bg-yellow-900/10' : ''
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          {imageSrc && (
+                            <button
+                              onClick={() => {
+                                setPreviewMap(map)
+                                setShowPreviewModal(true)
+                              }}
+                              className="relative group mr-3"
+                            >
                               <img
-                                src={map.imageUrl}
+                                src={imageSrc}
                                 alt={map.name}
-                                className="w-32 h-32 object-cover rounded"
+                                className="w-10 h-10 rounded object-cover cursor-pointer transition-transform hover:scale-110"
                               />
+                              <div className="absolute hidden group-hover:block z-10 -top-32 left-0 p-2 bg-surface-1 border border-border rounded-lg shadow-xl">
+                                <img
+                                  src={imageSrc}
+                                  alt={map.name}
+                                  className="w-32 h-32 object-cover rounded"
+                                />
+                              </div>
+                            </button>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-white">
+                              {map.name}
+                              {map.isFeatured && (
+                                <span className="ml-2 text-yellow-400" title="Featured">
+                                  ⭐
+                                </span>
+                              )}
+                              {map.isVipOnly && (
+                                <span className="ml-2 text-purple-400" title="VIP Only">
+                                  👑
+                                </span>
+                              )}
+                              {!map.isPublic && (
+                                <span className="ml-2 text-gray-400" title="Private">
+                                  🔒
+                                </span>
+                              )}
                             </div>
-                          </button>
-                        )}
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {map.name}
-                            {map.isFeatured && (
-                              <span className="ml-2 text-yellow-400" title="Featured">
-                                ⭐
-                              </span>
-                            )}
-                            {map.isVipOnly && (
-                              <span className="ml-2 text-purple-400" title="VIP Only">
-                                👑
-                              </span>
-                            )}
-                            {!map.isPublic && (
-                              <span className="ml-2 text-gray-400" title="Private">
-                                🔒
-                              </span>
+                            {map.description && (
+                              <div className="text-xs text-muted truncate max-w-xs">
+                                {map.description}
+                              </div>
                             )}
                           </div>
-                          {map.description && (
-                            <div className="text-xs text-muted truncate max-w-xs">
-                              {map.description}
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    </td>
+                      </td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(map.status)}`}
@@ -492,7 +497,7 @@ export const AdminMaps: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                })}
               </tbody>
             </table>
           </div>
@@ -745,10 +750,10 @@ export const AdminMaps: React.FC = () => {
             </div>
 
             {/* Map Image Preview */}
-            {previewMap.imageUrl ? (
+            {previewImageSrc ? (
               <div className="bg-surface-1 rounded-lg p-4 mb-4">
                 <img
-                  src={previewMap.imageUrl}
+                  src={previewImageSrc}
                   alt={previewMap.name}
                   className="w-full h-auto max-h-[500px] object-contain rounded"
                   onError={(e) => {
