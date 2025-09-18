@@ -1,18 +1,11 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  getPlayerColor,
-  getPremiumPlayerColor,
-  PLAYER_COLORS,
-  type PlayerColor,
-  PREMIUM_PLAYER_COLORS,
-} from '../constants/colors'
+import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import api from '../services/api'
 import { type CreateGameData, gameService } from '../services/gameService'
-import type { MovementType } from '../types/game'
 
 // Map interface
 interface GameMap {
@@ -30,9 +23,23 @@ interface GameMap {
   rating_average?: number
   rating_count?: number
   tags?: string[]
-  imageUrl?: string
-  imageUrl?: string
-  image_url?: string
+  imageUrl?: string | null
+  image_url?: string | null
+}
+
+type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
+
+const RANDOM_MAP_OPTION: GameMap = {
+  id: 'random',
+  name: 'Random Map',
+  description: 'Randomly selected when game starts',
+  territory_count: 0,
+  continent_count: 0,
+  min_players: 2,
+  max_players: 12,
+  tags: ['random'],
+  imageUrl: null,
+  image_url: null,
 }
 
 // Helper function to get valid team configurations based on player count
@@ -50,22 +57,6 @@ function getValidTeamOptions(playerCount: number): number[] {
   }
 
   return validOptions
-}
-
-// Map MovementType to fortification display names
-const movementTypeToFortification = (movementType: MovementType): string => {
-  switch (movementType) {
-    case 'classic_adjacent':
-      return 'adjacent'
-    case 'adjacent_multi':
-      return 'adjacent_multi'
-    case 'path_single':
-      return 'chained'
-    case 'path_multi':
-      return 'unlimited'
-    default:
-      return 'adjacent'
-  }
 }
 
 const fortificationToMovementType = (fortification: string): MovementType => {
@@ -115,7 +106,7 @@ const getColorName = (color: string | PlayerColor): string => {
   ]
 
   // For standard player colors, get the index and return the name
-  const colorIndex = PLAYER_COLORS.indexOf(color as any)
+  const colorIndex = (PLAYER_COLORS as readonly string[]).indexOf(color)
   if (colorIndex !== -1) {
     return playerColorNames[colorIndex]
   }
@@ -159,6 +150,13 @@ const OptionCard: React.FC<OptionCardProps> = ({
   </div>
 )
 
+const reportError = (message: string, error: unknown) => {
+  if (import.meta.env.DEV) {
+    // biome-ignore lint/suspicious/noConsole: Provide additional context during development.
+    console.error(message, error)
+  }
+}
+
 const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
@@ -178,15 +176,11 @@ const CreateGamePage: React.FC = () => {
   const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'random'>('classic')
   const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent'>('off')
   const [teams, setTeams] = useState<number | 'random'>(0)
-  const [teamAssignment, setTeamAssignment] = useState('random')
   const [fortification, setFortification] = useState<
     'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited' | 'random'
   >('adjacent')
   const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState(24 * 60) // in minutes
-  const [gameSpeed, setGameSpeed] = useState<'realtime' | 'async'>('async')
-  const [cardTradeBonus, setCardTradeBonus] = useState('progressive')
-  const [staticBonusValue, setStaticBonusValue] = useState(10)
   const [spoilsType, setSpoilsType] = useState<'escalating' | 'fixed' | 'static' | 'random'>(
     'escalating',
   )
@@ -207,112 +201,115 @@ const CreateGamePage: React.FC = () => {
   const [maps, setMaps] = useState<GameMap[]>([])
   const [mapsLoading, setMapsLoading] = useState(true)
 
-  // Add random map option
-  const randomMapOption: GameMap = {
-    id: 'random',
-    name: 'Random Map',
-    description: 'Randomly selected when game starts',
-    territory_count: 0,
-    continent_count: 0,
-    min_players: 2,
-    max_players: 12,
-    tags: ['random'],
-  }
-
   // Fetch available maps on component mount
   useEffect(() => {
+    let isActive = true
+
     const fetchMaps = async () => {
       try {
         setMapsLoading(true)
         const response = await api.get('/maps/available-for-game')
-        const availableMaps = response.data.maps || []
-        // Add random option at the end
-        const allMaps = [...availableMaps, randomMapOption]
+        const availableMaps: GameMap[] = response.data.maps || []
+        const allMaps = [...availableMaps, RANDOM_MAP_OPTION]
+
+        if (!isActive) return
+
         setMaps(allMaps)
-        
-        // Auto-select first map if none selected
-        if (!selectedMap && allMaps.length > 0) {
-          setSelectedMap(allMaps[0].id)
-        }
+        setSelectedMap((previous) => previous || allMaps[0]?.id || RANDOM_MAP_OPTION.id)
       } catch (error) {
-        console.error('Failed to fetch maps:', error)
-        // Only show random option if no maps are available
-        setMaps([randomMapOption])
-        // Select random map if nothing else available
-        if (!selectedMap) {
-          setSelectedMap('random')
-        }
+        if (!isActive) return
+
+        reportError('Failed to fetch maps', error)
+        setMaps([RANDOM_MAP_OPTION])
+        setSelectedMap((previous) => previous || RANDOM_MAP_OPTION.id)
+        setError((current) => current ?? 'Unable to load maps right now. Please try again shortly.')
       } finally {
-        setMapsLoading(false)
+        if (isActive) {
+          setMapsLoading(false)
+        }
       }
     }
 
     fetchMaps()
+
+    return () => {
+      isActive = false
+    }
   }, [])
 
-  // Generate smart game name (with placeholder for random options)
-  const generateSmartName = (resolveRandom = false) => {
-    // If we have random options and not resolving, return placeholder
-    if (
-      !resolveRandom &&
-      (gameMode === 'random' ||
-        playersOption === 'random' ||
-        teams === 'random' ||
-        fortification === 'random' ||
-        spoilsType === 'random' ||
-        selectedMap === 'random')
-    ) {
-      return '(autoname)'
-    }
+  const generateSmartName = useCallback(
+    (resolveRandom = false) => {
+      if (
+        !resolveRandom &&
+        (gameMode === 'random' ||
+          playersOption === 'random' ||
+          teams === 'random' ||
+          fortification === 'random' ||
+          spoilsType === 'random' ||
+          selectedMap === 'random')
+      ) {
+        return '(autoname)'
+      }
 
-    const selectedMapData = maps.find((m) => m.id === selectedMap)
-    const mapName = selectedMapData?.name || 'Unknown Map'
-    const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
+      const selectedMapData = maps.find((m) => m.id === selectedMap)
+      const mapName = selectedMapData?.name || 'Unknown Map'
+      const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
 
-    // Build descriptive elements
-    const elements = []
+      const elements: string[] = []
 
-    // Ranked indicator
-    if (isRanked) elements.push('[RANKED]')
+      if (isRanked) {
+        elements.push('[RANKED]')
+      }
 
-    // Player count
-    elements.push(playerText)
+      elements.push(playerText)
 
-    // Team configuration
-    if (teams === 'random') {
-      elements.push('RND-Teams')
-    } else if (teams > 0) {
-      elements.push(`${teams}v${Math.floor(maxPlayers / teams)}`)
-    } else {
-      elements.push('FFA')
-    }
+      if (teams === 'random') {
+        elements.push('RND-Teams')
+      } else if (typeof teams === 'number' && teams > 0) {
+        elements.push(`${teams}v${Math.floor(maxPlayers / teams)}`)
+      } else {
+        elements.push('FFA')
+      }
 
-    // Map name
-    elements.push(selectedMap === 'random' ? 'RND-Map' : mapName)
+      elements.push(selectedMap === 'random' ? 'RND-Map' : mapName)
 
-    // Special rules (only include if not default)
-    const specialRules = []
-    if (gameMode === 'capitals') specialRules.push('Capitals')
-    if (gameMode === 'random') specialRules.push('RND-Mode')
-    if (fogOfWar === 'adjacent') specialRules.push('Fog')
-    if (fogOfWar === 'persistent') specialRules.push('PersistentFog')
-    if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
-    if (fortification === 'chained') specialRules.push('ChainedMove')
-    if (fortification === 'adjacent_multi') specialRules.push('MultiMove')
-    if (fortification === 'random') specialRules.push('RND-Fort')
-    if (turnTimeLimit !== 24 * 60) {
-      if (turnTimeLimit < 60) specialRules.push(`${turnTimeLimit}min`)
-      else specialRules.push(`${Math.floor(turnTimeLimit / 60)}h`)
-    }
-    if (useTerritoryModifiers === true) specialRules.push('Modifiers')
-    if (spoilsType === 'random') specialRules.push('RND-Spoils')
+      const specialRules: string[] = []
+      if (gameMode === 'capitals') specialRules.push('Capitals')
+      if (gameMode === 'random') specialRules.push('RND-Mode')
+      if (fogOfWar === 'adjacent') specialRules.push('Fog')
+      if (fogOfWar === 'persistent') specialRules.push('PersistentFog')
+      if (fortification === 'unlimited') specialRules.push('UnlimitedMove')
+      if (fortification === 'chained') specialRules.push('ChainedMove')
+      if (fortification === 'adjacent_multi') specialRules.push('MultiMove')
+      if (fortification === 'random') specialRules.push('RND-Fort')
+      if (turnTimeLimit !== 24 * 60) {
+        if (turnTimeLimit < 60) specialRules.push(`${turnTimeLimit}min`)
+        else specialRules.push(`${Math.floor(turnTimeLimit / 60)}h`)
+      }
+      if (useTerritoryModifiers) specialRules.push('Modifiers')
+      if (spoilsType === 'random') specialRules.push('RND-Spoils')
 
-    if (specialRules.length > 0) {
-      elements.push(`[${specialRules.join('+')}]`)
-    }
+      if (specialRules.length > 0) {
+        elements.push(`[${specialRules.join('+')}]`)
+      }
 
-    return elements.join(' ')
-  }
+      return elements.join(' ')
+    },
+    [
+      gameMode,
+      playersOption,
+      teams,
+      fortification,
+      spoilsType,
+      selectedMap,
+      maps,
+      isRanked,
+      maxPlayers,
+      fogOfWar,
+      turnTimeLimit,
+      useTerritoryModifiers,
+    ],
+  )
 
   // Update maxPlayers when playersOption changes
   useEffect(() => {
@@ -326,23 +323,7 @@ const CreateGamePage: React.FC = () => {
     if (useAutoName) {
       setGameName(generateSmartName())
     }
-  }, [
-    useAutoName,
-    maxPlayers,
-    playersOption,
-    teams,
-    selectedMap,
-    gameMode,
-    fogOfWar,
-    fortification,
-    useTerritoryModifiers,
-    isRanked,
-    spoilsType,
-    turnTimeLimit,
-  ])
-
-  // Update placeholder to show what auto-name would be
-  const gameNamePlaceholder = generateSmartName()
+  }, [useAutoName, generateSmartName])
 
   // Validate ranked game settings
   useEffect(() => {
@@ -365,7 +346,16 @@ const CreateGamePage: React.FC = () => {
       if (spoilsType === 'random') setSpoilsType('escalating')
       if (playersOption === 'random') setPlayersOption(6)
     }
-  }, [isRanked, maxPlayers, gameVisibility, teams])
+  }, [
+    isRanked,
+    maxPlayers,
+    gameVisibility,
+    teams,
+    gameMode,
+    fortification,
+    spoilsType,
+    playersOption,
+  ])
 
   // Save invite code when it changes
   useEffect(() => {
@@ -403,16 +393,6 @@ const CreateGamePage: React.FC = () => {
               Math.floor(Math.random() * 4)
             ] as 'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited')
           : fortification
-
-      const finalSpoils =
-        spoilsType === 'random'
-          ? (['escalating', 'fixed', 'static'][Math.floor(Math.random() * 3)] as
-              | 'escalating'
-              | 'fixed'
-              | 'static')
-          : spoilsType
-
-      const finalFog = fogOfWar
 
       const finalModifiers = useTerritoryModifiers
 
@@ -455,8 +435,15 @@ const CreateGamePage: React.FC = () => {
       } else {
         throw new Error('Failed to create game room')
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to create game')
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const apiError = error as { response?: { data?: { message?: string } } }
+        setError(apiError.response?.data?.message || 'Failed to create game')
+      } else if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError('Failed to create game')
+      }
     } finally {
       setIsCreating(false)
     }
@@ -758,6 +745,7 @@ const CreateGamePage: React.FC = () => {
 
                 return (
                   <button
+                    type="button"
                     key={playerCount}
                     className={`p-3 rounded-lg font-bold transition-all duration-200 ${
                       isDisabled
@@ -775,6 +763,7 @@ const CreateGamePage: React.FC = () => {
               })}
               {!isRanked && (
                 <button
+                  type="button"
                   className={`p-3 rounded-lg font-bold transition-all duration-200 ${
                     playersOption === 'random'
                       ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
@@ -1112,7 +1101,7 @@ const CreateGamePage: React.FC = () => {
                 Selected: {getColorName(selectedColor)}
               </span>
             </div>
-            
+
             {/* Standard Player Colors */}
             <div>
               <p className="text-xs text-muted mb-2">Player Colors</p>
@@ -1121,6 +1110,7 @@ const CreateGamePage: React.FC = () => {
                   const colorName = getColorName(hexColor)
                   return (
                     <button
+                      type="button"
                       key={hexColor}
                       className={`group relative h-12 w-12 rounded-lg border-2 transition-all ${
                         selectedColor === hexColor
@@ -1153,6 +1143,7 @@ const CreateGamePage: React.FC = () => {
 
                   return (
                     <button
+                      type="button"
                       key={key}
                       className={`group relative h-12 w-12 rounded-lg border-2 transition-all ${
                         selectedColor === key
@@ -1217,9 +1208,10 @@ const CreateGamePage: React.FC = () => {
                         ),
                     )
                     .map((map) => (
-                      <div
+                      <button
                         key={map.id}
-                        className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                        type="button"
+                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
                           selectedMap === map.id
                             ? map.id === 'random'
                               ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg'
@@ -1252,7 +1244,7 @@ const CreateGamePage: React.FC = () => {
                             {map.play_count && map.play_count > 0 && ` • ${map.play_count} plays`}
                           </div>
                         )}
-                      </div>
+                      </button>
                     ))
                 )}
               </div>
@@ -1266,9 +1258,7 @@ const CreateGamePage: React.FC = () => {
 
                   if (!selectedMapData) {
                     return (
-                      <div className="text-center text-muted py-8">
-                        Select a map to see details
-                      </div>
+                      <div className="text-center text-muted py-8">Select a map to see details</div>
                     )
                   }
 
