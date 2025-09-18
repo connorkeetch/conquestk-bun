@@ -12,6 +12,7 @@ import { mapService } from '../services/mapService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
 import { parseJsonField, parseTags } from '../utils/tagParser'
+import { resolveAssetUrl } from '../utils/url'
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
@@ -318,7 +319,10 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
     const result = await pool.query(query)
 
     // Only use approved maps from the database - no hardcoded maps
-    const maps = result.rows.map((row) => ({
+    const maps = result.rows.map((row) => {
+      const imageUrl = resolveAssetUrl(req, row.image_url)
+
+      return {
         id: row.id,
         name: row.name,
         description: row.description || '',
@@ -332,9 +336,11 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         rating_average: row.rating_average || 0,
         rating_count: row.rating_count || 0,
         tags: row.tags || [],
-        image_url: row.image_url || null,
+        image_url: imageUrl,
+        imageUrl,
         is_vip_only: row.is_vip_only || false,
-      }))
+      }
+    })
 
     const visibleMaps = includeVipMaps ? maps : maps.filter((map) => !map.is_vip_only)
 
@@ -431,7 +437,7 @@ router.get('/', async (req: Request, res: Response) => {
       id: row.id,
       name: row.name,
       description: row.description || '',
-      imageUrl: row.image_url,
+      imageUrl: resolveAssetUrl(req, row.image_url),
       creatorId: row.creator_id,
       creatorName: row.creator_name || 'Unknown',
       minPlayers: row.min_players || 2,

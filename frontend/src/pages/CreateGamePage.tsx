@@ -30,6 +30,7 @@ interface GameMap {
   rating_average?: number
   rating_count?: number
   tags?: string[]
+  imageUrl?: string
   image_url?: string
 }
 
@@ -1261,12 +1262,16 @@ const CreateGamePage: React.FC = () => {
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 {(() => {
                   const selectedMapData = maps.find((m) => m.id === selectedMap)
-                  return selectedMapData ? (
+                  if (!selectedMapData) return null
+
+                  const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
+
+                  return (
                     <>
                       <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden">
-                        {selectedMapData.image_url ? (
+                        {imageSrc ? (
                           <img
-                            src={selectedMapData.image_url}
+                            src={imageSrc}
                             alt={selectedMapData.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
