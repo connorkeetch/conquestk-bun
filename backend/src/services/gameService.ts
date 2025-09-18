@@ -11,7 +11,7 @@ export class GameService {
   // Now using Redis-backed gameStateCache for persistence and scalability
 
   // Helper to serialize game state for transmission
-  private serializeGameState(gameState: GameState): unknown {
+  private serializeGameState(gameState: GameState): any {
     const serialized = { ...gameState }
 
     // Convert Map to object for JSON serialization
