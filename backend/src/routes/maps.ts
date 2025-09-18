@@ -317,28 +317,8 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
 
     const result = await pool.query(query)
 
-    // Add the classic map as a default option
-    const classicMap = {
-      id: 'classic',
-      name: 'Classic World',
-      description: 'The original Risk world map with 42 territories and 6 continents',
-      territory_count: 42,
-      continent_count: 6,
-      min_players: 2,
-      max_players: 6,
-      is_featured: true,
-      creator_name: 'ConquestK',
-      play_count: 0,
-      rating_average: 5,
-      rating_count: 0,
-      tags: ['classic', 'official'],
-      image_url: '/assets/maps/classic-preview.png',
-      is_vip_only: false,
-    }
-
-    const maps = [
-      classicMap,
-      ...result.rows.map((row) => ({
+    // Only use approved maps from the database - no hardcoded maps
+    const maps = result.rows.map((row) => ({
         id: row.id,
         name: row.name,
         description: row.description || '',
@@ -354,8 +334,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         tags: row.tags || [],
         image_url: row.image_url || null,
         is_vip_only: row.is_vip_only || false,
-      })),
-    ]
+      }))
 
     const visibleMaps = includeVipMaps ? maps : maps.filter((map) => !map.is_vip_only)
 
