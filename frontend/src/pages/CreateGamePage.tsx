@@ -173,7 +173,7 @@ const CreateGamePage: React.FC = () => {
   const [inviteCode, setInviteCode] = useState(localStorage.getItem('lastInviteCode') || '')
   const [gameName, setGameName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
-  const [selectedMap, setSelectedMap] = useState('classic')
+  const [selectedMap, setSelectedMap] = useState('')
   const [gameMode, setGameMode] = useState<'classic' | 'capitals' | 'random'>('classic')
   const [fogOfWar, setFogOfWar] = useState<'off' | 'adjacent' | 'persistent'>('off')
   const [teams, setTeams] = useState<number | 'random'>(0)
@@ -226,24 +226,21 @@ const CreateGamePage: React.FC = () => {
         const response = await api.get('/maps/available-for-game')
         const availableMaps = response.data.maps || []
         // Add random option at the end
-        setMaps([...availableMaps, randomMapOption])
+        const allMaps = [...availableMaps, randomMapOption]
+        setMaps(allMaps)
+        
+        // Auto-select first map if none selected
+        if (!selectedMap && allMaps.length > 0) {
+          setSelectedMap(allMaps[0].id)
+        }
       } catch (error) {
         console.error('Failed to fetch maps:', error)
-        // Fallback to just classic and random if API fails
-        setMaps([
-          {
-            id: 'classic',
-            name: 'Classic World',
-            description: 'The original Risk world map',
-            territory_count: 42,
-            continent_count: 6,
-            min_players: 2,
-            max_players: 6,
-            is_featured: true,
-            creator_name: 'ConquestK',
-          },
-          randomMapOption,
-        ])
+        // Only show random option if no maps are available
+        setMaps([randomMapOption])
+        // Select random map if nothing else available
+        if (!selectedMap) {
+          setSelectedMap('random')
+        }
       } finally {
         setMapsLoading(false)
       }
@@ -268,7 +265,7 @@ const CreateGamePage: React.FC = () => {
     }
 
     const selectedMapData = maps.find((m) => m.id === selectedMap)
-    const mapName = selectedMapData?.name || 'Classic World'
+    const mapName = selectedMapData?.name || 'Unknown Map'
     const playerText = playersOption === 'random' ? 'RND-P' : `${maxPlayers}P`
 
     // Build descriptive elements
