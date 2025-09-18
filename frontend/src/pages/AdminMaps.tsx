@@ -42,6 +42,8 @@ export const AdminMaps: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [previewMap, setPreviewMap] = useState<Map | null>(null)
   const [approvalNotes, setApprovalNotes] = useState('')
   const [editForm, setEditForm] = useState({
     name: '',
@@ -336,11 +338,26 @@ export const AdminMaps: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         {map.imageUrl && (
-                          <img
-                            src={map.imageUrl}
-                            alt={map.name}
-                            className="w-10 h-10 rounded mr-3 object-cover"
-                          />
+                          <button
+                            onClick={() => {
+                              setPreviewMap(map)
+                              setShowPreviewModal(true)
+                            }}
+                            className="relative group mr-3"
+                          >
+                            <img
+                              src={map.imageUrl}
+                              alt={map.name}
+                              className="w-10 h-10 rounded object-cover cursor-pointer transition-transform hover:scale-110"
+                            />
+                            <div className="absolute hidden group-hover:block z-10 -top-32 left-0 p-2 bg-surface-1 border border-border rounded-lg shadow-xl">
+                              <img
+                                src={map.imageUrl}
+                                alt={map.name}
+                                className="w-32 h-32 object-cover rounded"
+                              />
+                            </div>
+                          </button>
                         )}
                         <div>
                           <div className="text-sm font-medium text-white">
@@ -420,7 +437,17 @@ export const AdminMaps: React.FC = () => {
                         {/* Standard Actions */}
                         <div className="flex gap-2 flex-wrap">
                           <button
-                            onClick={() => window.open(`/map-editor?edit=${map.id}`, '_blank')}
+                            onClick={() => {
+                              setPreviewMap(map)
+                              setShowPreviewModal(true)
+                            }}
+                            className="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+                            title="Preview map"
+                          >
+                            👁️ Preview
+                          </button>
+                          <button
+                            onClick={() => window.open(`/map-editor-tokens?edit=${map.id}`, '_blank')}
                             className="text-violet hover:text-violet-soft text-sm font-medium"
                             title="Open in Map Editor"
                           >
@@ -651,6 +678,114 @@ export const AdminMaps: React.FC = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
                 Reject Map
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Preview Modal */}
+      {showPreviewModal && previewMap && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowPreviewModal(false)}>
+          <div 
+            className="bg-surface-2 rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white">{previewMap.name}</h2>
+                {previewMap.description && (
+                  <p className="text-muted mt-2">{previewMap.description}</p>
+                )}
+                <div className="flex gap-4 mt-3 text-sm">
+                  <span className="text-muted">
+                    <span className="text-white font-medium">{previewMap.minPlayers}-{previewMap.maxPlayers}</span> Players
+                  </span>
+                  <span className="text-muted">
+                    Created by <span className="text-white font-medium">{previewMap.creatorName || 'Unknown'}</span>
+                  </span>
+                  {previewMap.playCount > 0 && (
+                    <span className="text-muted">
+                      <span className="text-white font-medium">{previewMap.playCount}</span> Plays
+                    </span>
+                  )}
+                  {previewMap.ratingCount > 0 && (
+                    <span className="text-muted">
+                      Rating: <span className="text-white font-medium">{previewMap.ratingAverage.toFixed(1)}/5</span> ({previewMap.ratingCount} reviews)
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  {previewMap.isFeatured && (
+                    <span className="px-2 py-1 bg-yellow-600/20 text-yellow-400 rounded text-xs">
+                      ⭐ Featured
+                    </span>
+                  )}
+                  {previewMap.isVipOnly && (
+                    <span className="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-xs">
+                      👑 VIP Only
+                    </span>
+                  )}
+                  {!previewMap.isPublic && (
+                    <span className="px-2 py-1 bg-gray-600/20 text-gray-400 rounded text-xs">
+                      🔒 Private
+                    </span>
+                  )}
+                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(previewMap.status)}`}>
+                    {getStatusIcon(previewMap.status)} {previewMap.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="text-muted hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Map Image Preview */}
+            {previewMap.imageUrl ? (
+              <div className="bg-surface-1 rounded-lg p-4 mb-4">
+                <img
+                  src={previewMap.imageUrl}
+                  alt={previewMap.name}
+                  className="w-full h-auto max-h-[500px] object-contain rounded"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzk5OSI+TWFwIEltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+'
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="bg-surface-1 rounded-lg p-12 mb-4 text-center">
+                <div className="text-6xl mb-4">🗺️</div>
+                <p className="text-muted">No preview image available</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => window.open(`/map-editor-tokens?edit=${previewMap.id}`, '_blank')}
+                className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
+              >
+                🗺️ Open in Map Editor
+              </button>
+              <button
+                onClick={() => {
+                  setShowPreviewModal(false)
+                  openEditModal(previewMap)
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                ✏️ Edit Details
+              </button>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
+              >
+                Close
               </button>
             </div>
           </div>

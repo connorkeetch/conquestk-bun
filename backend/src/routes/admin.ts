@@ -149,6 +149,128 @@ router.post(
   },
 )
 
+// Update user VIP status
+router.post(
+  '/users/:userId/vip',
+  requirePermission('users.edit'),
+  logAdminActivity('vip_status_change'),
+  param('userId').isUUID(),
+  body('isVip').isBoolean(),
+  body('reason').optional().isString().isLength({ max: 500 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { isVip, reason } = req.body
+      const adminUserId = (req as any).userId
+
+      await adminService.updateUserVipStatus(userId, adminUserId, isVip, reason)
+
+      res.json({ message: 'VIP status updated successfully' })
+    } catch (error) {
+      logger.error('Error updating VIP status:', error)
+      res.status(500).json({ error: 'Failed to update VIP status' })
+    }
+  },
+)
+
+// Update user admin status
+router.post(
+  '/users/:userId/admin',
+  requirePermission('admin.manage'),
+  logAdminActivity('admin_status_change'),
+  param('userId').isUUID(),
+  body('isAdmin').isBoolean(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { isAdmin } = req.body
+      const adminUserId = (req as any).userId
+
+      await adminService.updateUserAdminStatus(userId, adminUserId, isAdmin)
+
+      res.json({ message: 'Admin status updated successfully' })
+    } catch (error) {
+      logger.error('Error updating admin status:', error)
+      res.status(500).json({ error: 'Failed to update admin status' })
+    }
+  },
+)
+
+// Update user premium tier
+router.post(
+  '/users/:userId/premium',
+  requirePermission('users.edit'),
+  logAdminActivity('premium_tier_change'),
+  param('userId').isUUID(),
+  body('tier').isIn(['free', 'premium']),
+  body('expiresAt').optional().isISO8601(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { tier, expiresAt } = req.body
+      const adminUserId = (req as any).userId
+
+      const expirationDate = expiresAt ? new Date(expiresAt) : undefined
+
+      await adminService.updateUserPremiumTier(userId, adminUserId, tier, expirationDate)
+
+      res.json({ message: 'Premium tier updated successfully' })
+    } catch (error) {
+      logger.error('Error updating premium tier:', error)
+      res.status(500).json({ error: 'Failed to update premium tier' })
+    }
+  },
+)
+
+// Ban user
+router.post(
+  '/users/:userId/ban',
+  requirePermission('users.moderate'),
+  logAdminActivity('user_ban'),
+  param('userId').isUUID(),
+  body('reason').optional().isString().isLength({ max: 500 }),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { reason } = req.body
+      const adminUserId = (req as any).userId
+
+      await adminService.updateUserStatus(userId, adminUserId, 'banned', reason)
+
+      res.json({ message: 'User banned successfully' })
+    } catch (error) {
+      logger.error('Error banning user:', error)
+      res.status(500).json({ error: 'Failed to ban user' })
+    }
+  },
+)
+
+// Unban user
+router.post(
+  '/users/:userId/unban',
+  requirePermission('users.moderate'),
+  logAdminActivity('user_unban'),
+  param('userId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const adminUserId = (req as any).userId
+
+      await adminService.updateUserStatus(userId, adminUserId, 'active')
+
+      res.json({ message: 'User unbanned successfully' })
+    } catch (error) {
+      logger.error('Error unbanning user:', error)
+      res.status(500).json({ error: 'Failed to unban user' })
+    }
+  },
+)
+
 // Assign admin role to user
 router.post(
   '/users/:userId/admin-roles',
@@ -746,6 +868,58 @@ router.get(
 )
 
 // ============= MAP MANAGEMENT =============
+
+// Get single map details for editing
+router.get(
+  '/maps/:mapId',
+  requirePermission('content.view'),
+  param('mapId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { mapId } = req.params
+      const { query } = require('../config/database')
+
+      const mapResult = await query(
+        `SELECT 
+          m.*,
+          u.username as creator_name
+        FROM maps m
+        LEFT JOIN users u ON m.creator_id = u.id
+        WHERE m.id = $1`,
+        [mapId],
+      )
+
+      if (mapResult.rows.length === 0) {
+        res.status(404).json({ error: 'Map not found' })
+        return
+      }
+
+      const map = mapResult.rows[0]
+
+      // Get territories if they exist
+      const territoriesResult = await query(
+        'SELECT * FROM map_territories WHERE map_id = $1',
+        [mapId],
+      )
+
+      // Get adjacencies if they exist
+      const adjacenciesResult = await query(
+        'SELECT * FROM territory_adjacencies WHERE map_id = $1',
+        [mapId],
+      )
+
+      res.json({
+        ...map,
+        territories: territoriesResult.rows,
+        adjacencies: adjacenciesResult.rows,
+      })
+    } catch (error) {
+      logger.error('Error getting map details:', error)
+      res.status(500).json({ error: 'Failed to get map details' })
+    }
+  },
+)
 
 // Get all maps with admin info
 router.get(

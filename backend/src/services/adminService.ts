@@ -174,7 +174,7 @@ export class AdminService {
     const params: any[] = []
 
     if (search) {
-      whereClause = 'WHERE u.username LIKE $1 OR u.email LIKE $2'
+      whereClause = 'WHERE u.username ILIKE $1 OR u.email ILIKE $2'
       params.push(`%${search}%`, `%${search}%`)
     }
 
@@ -186,15 +186,33 @@ export class AdminService {
     const result = await query(
       `
       SELECT 
-        u.id, u.username, u.email, u.created_at, u.last_login,
-        uas.status, uas.reason as status_reason,
+        u.id, 
+        u.username, 
+        u.email, 
+        u.created_at as "createdAt", 
+        u.last_login as "lastLogin",
+        u.is_admin as "isAdmin",
+        u.is_vip as "isVip", 
+        u.vip_reason as "vipReason",
+        u.vip_granted_at as "vipGrantedAt",
+        u.premium_tier as "premiumTier",
+        u.premium_expires_at as "premiumExpiresAt",
+        COALESCE(ps.games_played, 0) as "gamesPlayed",
+        COALESCE(ps.elo_rating, 1000) as "elo",
+        COALESCE(uas.status, 'active') as status,
+        uas.reason as status_reason,
         STRING_AGG(ar.name, ',') as admin_roles
       FROM users u
+      LEFT JOIN player_stats ps ON u.id = ps.user_id
       LEFT JOIN user_account_status uas ON u.id = uas.user_id
       LEFT JOIN user_admin_roles uar ON u.id = uar.user_id AND uar.is_active = TRUE
       LEFT JOIN admin_roles ar ON uar.role_id = ar.id
       ${whereClause}
-      GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, uas.status, uas.reason
+      GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, 
+               u.is_admin, u.is_vip, u.vip_reason, u.vip_granted_at, 
+               u.premium_tier, u.premium_expires_at,
+               ps.games_played, ps.elo_rating,
+               uas.status, uas.reason
       ORDER BY u.created_at DESC
       LIMIT ${limitOffset}
     `,
@@ -205,11 +223,19 @@ export class AdminService {
       id: row.id,
       username: row.username,
       email: row.email,
-      status: row.status || 'active',
+      status: row.status,
       statusReason: row.status_reason,
       adminRoles: row.admin_roles ? row.admin_roles.split(',') : [],
-      createdAt: new Date(row.created_at),
-      lastLogin: row.last_login ? new Date(row.last_login) : null,
+      createdAt: row.createdAt,
+      lastLogin: row.lastLogin,
+      isAdmin: row.isAdmin || false,
+      isVip: row.isVip || false,
+      vipReason: row.vipReason,
+      vipGrantedAt: row.vipGrantedAt,
+      premiumTier: row.premiumTier || 'free',
+      premiumExpiresAt: row.premiumExpiresAt,
+      gamesPlayed: parseInt(row.gamesPlayed || '0', 10),
+      elo: parseInt(row.elo || '1000', 10),
     }))
 
     return { users, total }
@@ -279,6 +305,76 @@ export class AdminService {
       'password_reset',
       {
         targetUserId,
+      },
+      'user',
+      targetUserId,
+    )
+  }
+
+  async updateUserVipStatus(
+    targetUserId: string,
+    adminUserId: string,
+    isVip: boolean,
+    reason?: string,
+  ): Promise<void> {
+    const updateData = {
+      is_vip: isVip,
+      vip_reason: isVip ? reason : null,
+      vip_granted_at: isVip ? new Date().toISOString() : null,
+    }
+
+    await query(
+      'UPDATE users SET is_vip = $1, vip_reason = $2, vip_granted_at = $3 WHERE id = $4',
+      [updateData.is_vip, updateData.vip_reason, updateData.vip_granted_at, targetUserId],
+    )
+
+    await this.logAdminAction(
+      adminUserId,
+      'vip_status_change',
+      {
+        targetUserId,
+        isVip,
+        reason,
+      },
+      'user',
+      targetUserId,
+    )
+  }
+
+  async updateUserAdminStatus(targetUserId: string, adminUserId: string, isAdmin: boolean): Promise<void> {
+    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [isAdmin, targetUserId])
+
+    await this.logAdminAction(
+      adminUserId,
+      'admin_status_change',
+      {
+        targetUserId,
+        isAdmin,
+      },
+      'user',
+      targetUserId,
+    )
+  }
+
+  async updateUserPremiumTier(
+    targetUserId: string,
+    adminUserId: string,
+    tier: string,
+    expiresAt?: Date,
+  ): Promise<void> {
+    await query('UPDATE users SET premium_tier = $1, premium_expires_at = $2 WHERE id = $3', [
+      tier,
+      expiresAt?.toISOString() || null,
+      targetUserId,
+    ])
+
+    await this.logAdminAction(
+      adminUserId,
+      'premium_tier_change',
+      {
+        targetUserId,
+        tier,
+        expiresAt: expiresAt?.toISOString(),
       },
       'user',
       targetUserId,

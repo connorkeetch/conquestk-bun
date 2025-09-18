@@ -471,8 +471,61 @@ export default function MapEditorTokens() {
   // Load map for editing
   const loadMapForEditing = useCallback(async (mapId: string) => {
     try {
-      const response = await api.get<DraftMapResponse>(`/maps/${mapId}`)
+      // Try admin endpoint first for admin users
+      let response
+      try {
+        response = await api.get(`/admin/maps/${mapId}`)
+      } catch (adminError) {
+        // Fallback to regular maps endpoint
+        response = await api.get(`/maps/${mapId}`)
+      }
+      
       const map = response.data
+
+      // Handle territories from different sources
+      let territories: Territory[] = []
+      let continents: Continent[] = []
+      
+      if (map.territories && Array.isArray(map.territories)) {
+        // From admin endpoint - raw territories from database
+        territories = map.territories.map((t: any) => ({
+          id: t.id || uuidv4(),
+          name: t.name,
+          x: t.center_x || 0,
+          y: t.center_y || 0,
+          continentId: t.continent || null,
+          armies: 1,
+          connections: [],
+        }))
+      } else if (map.metadata?.territories) {
+        // From regular endpoint - metadata format
+        territories = map.metadata.territories
+      }
+      
+      if (map.metadata?.continents) {
+        continents = map.metadata.continents
+      }
+
+      // Handle adjacencies
+      if (map.adjacencies && Array.isArray(map.adjacencies)) {
+        // Build connections from adjacency table
+        const connectionsMap = new Map<string, Set<string>>()
+        map.adjacencies.forEach((adj: any) => {
+          if (!connectionsMap.has(adj.territory_from)) {
+            connectionsMap.set(adj.territory_from, new Set())
+          }
+          if (!connectionsMap.has(adj.territory_to)) {
+            connectionsMap.set(adj.territory_to, new Set())
+          }
+          connectionsMap.get(adj.territory_from)?.add(adj.territory_to)
+          connectionsMap.get(adj.territory_to)?.add(adj.territory_from)
+        })
+        
+        territories = territories.map(t => ({
+          ...t,
+          connections: Array.from(connectionsMap.get(t.name) || [])
+        }))
+      }
 
       // Load map data into editor state
       setState((prev) => ({
@@ -482,11 +535,24 @@ export default function MapEditorTokens() {
         minPlayers: map.min_players || 2,
         maxPlayers: map.max_players || 12,
         imageUrl: map.image_url,
-        territories: map.metadata?.territories || [],
-        continents: map.metadata?.continents || [],
+        territories,
+        continents,
         mapWidth: map.metadata?.width || 1920,
         mapHeight: map.metadata?.height || 1080,
       }))
+
+      // If we have an image URL, set dimensions
+      if (map.image_url) {
+        const img = new Image()
+        img.onload = () => {
+          setState((prev) => ({
+            ...prev,
+            imageWidth: img.width,
+            imageHeight: img.height,
+          }))
+        }
+        img.src = map.image_url
+      }
     } catch (error: unknown) {
       reportError('Failed to load map for editing:', error)
       alert('Failed to load map. Starting with a new map instead.')
