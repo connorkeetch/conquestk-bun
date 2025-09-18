@@ -162,7 +162,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
       {/* Main Game Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Map Area */}
-        <div className="flex-1 relative bg-blue-100 p-4">
+        <div className="game-board flex-1 relative bg-blue-100 p-4">
           <div className="relative w-full h-full">
             {mapId === 'classic' ? (
               <ResponsiveMapContainer mapWidth={800} mapHeight={500}>

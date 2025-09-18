@@ -192,7 +192,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
       {/* Main Game Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Map Area */}
-        <div className="flex-1 relative p-4">
+        <div className="game-board flex-1 relative p-4">
           <div className="relative w-full h-full">
             {isTestMap ? (
               <TestMapSVG

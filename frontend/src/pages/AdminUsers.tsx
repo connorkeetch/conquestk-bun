@@ -267,11 +267,12 @@ const AdminUsers: React.FC = () => {
                 <th className="px-4 py-3 text-left">Username</th>
                 <th className="px-4 py-3 text-left">Email</th>
                 <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Badges</th>
+                <th className="px-4 py-3 text-left">Admin</th>
+                <th className="px-4 py-3 text-left">VIP</th>
                 <th className="px-4 py-3 text-left">Premium</th>
                 <th className="px-4 py-3 text-left">Games</th>
                 <th className="px-4 py-3 text-left">ELO</th>
-                <th className="px-4 py-3 text-left">Joined</th>
+                <th className="px-4 py-3 text-left">Last Login</th>
                 <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
@@ -294,21 +295,29 @@ const AdminUsers: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {user.isVip && (
-                        <span
-                          className="px-2 py-1 rounded text-xs bg-purple-600 text-white"
-                          title={user.vipReason}
-                        >
-                          👑 VIP
-                        </span>
-                      )}
-                      {user.isAdmin && (
-                        <span className="px-2 py-1 rounded text-xs bg-red-600 text-white">
-                          🛡️ Admin
-                        </span>
-                      )}
-                    </div>
+                    {user.isAdmin ? (
+                      <span className="px-2 py-1 rounded text-xs bg-red-600 text-white">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
+                        No
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {user.isVip ? (
+                      <span
+                        className="px-2 py-1 rounded text-xs bg-purple-600 text-white"
+                        title={user.vipReason}
+                      >
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
+                        No
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -327,11 +336,15 @@ const AdminUsers: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">{user.gamesPlayed || 0}</td>
                   <td className="px-4 py-3">{user.elo || 1000}</td>
-                  <td className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    {user.lastLogin
+                      ? new Date(user.lastLogin).toLocaleDateString()
+                      : 'Never'}
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => openUserModal(user)}
-                      className="px-3 py-1 bg-primary text-white rounded hover:brightness-110 text-sm"
+                      className="px-4 py-2 bg-gradient-to-r from-violet to-violet-soft text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
                     >
                       Manage
                     </button>
