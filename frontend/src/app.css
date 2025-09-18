@@ -1035,69 +1035,6 @@ kbd {
   box-shadow: none;
 }
 
-/* ===== TAILWIND UTILITY CLASS OVERRIDES ===== */
-/* Link Tailwind classes to our CSS variables for theme support */
-.bg-primary {
-  background-color: var(--color-primary) !important;
-}
-
-.bg-primary-soft {
-  background-color: var(--color-primary-soft) !important;
-}
-
-.bg-secondary {
-  background-color: var(--color-secondary) !important;
-}
-
-.bg-accent {
-  background-color: var(--color-accent) !important;
-}
-
-.bg-surface-1 {
-  background-color: var(--color-surface-1) !important;
-}
-
-.bg-surface-2 {
-  background-color: var(--color-surface-2) !important;
-}
-
-.text-primary {
-  color: var(--color-primary) !important;
-}
-
-.text-primary-soft {
-  color: var(--color-primary-soft) !important;
-}
-
-.text-muted {
-  color: var(--color-text-muted) !important;
-}
-
-.border-primary {
-  border-color: var(--color-primary) !important;
-}
-
-.border-border {
-  border-color: var(--color-border) !important;
-}
-
-/* Special violet colors */
-.bg-violet {
-  background-color: #7c3aed !important;
-}
-
-.text-violet {
-  color: #7c3aed !important;
-}
-
-.text-violet-soft {
-  color: #8b5cf6 !important;
-}
-
-.border-violet {
-  border-color: #7c3aed !important;
-}
-
 /* ===== TAB SYSTEM ===== */
 /* Consistent tab styling across the application */
 
