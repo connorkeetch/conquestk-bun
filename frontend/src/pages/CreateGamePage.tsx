@@ -90,7 +90,6 @@ const getColorName = (color: string | PlayerColor): string => {
       MidnightBlack: 'Midnight Black',
       PureWhite: 'Pure White',
       MetallicGold: 'Metallic Gold',
-      MetallicSilver: 'Metallic Silver',
       NeonGreen: 'Neon Green',
       Dragonfire: 'Dragonfire',
     }
