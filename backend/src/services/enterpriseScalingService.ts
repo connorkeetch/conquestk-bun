@@ -39,11 +39,11 @@ interface EnterpriseConfig {
 interface SystemStatus {
   overall: 'healthy' | 'degraded' | 'critical' | 'offline'
   components: {
-    cache: { status: string; metrics: unknown }
-    database: { status: string; metrics: unknown }
-    cdn: { status: string; metrics: unknown }
-    scaling: { status: string; metrics: unknown }
-    monitoring: { status: string; metrics: unknown }
+    cache: { status: string; metrics: any }
+    database: { status: string; metrics: any }
+    cdn: { status: string; metrics: any }
+    scaling: { status: string; metrics: any }
+    monitoring: { status: string; metrics: any }
   }
   performance: {
     responseTime: number
@@ -67,7 +67,7 @@ export class EnterpriseScalingService {
 
   constructor() {
     this.config = {
-      environment: (process.env.NODE_ENV as unknown) || 'development',
+      environment: (process.env.NODE_ENV as any) || 'development',
       region: process.env.AWS_REGION || process.env.CLOUD_REGION || 'us-east-1',
       cluster: {
         enabled: process.env.CLUSTER_ENABLED !== 'false',
@@ -353,7 +353,7 @@ export class EnterpriseScalingService {
     return (healthyCount / statuses.length) * 100
   }
 
-  private getScalingRecommendation(metrics: unknown): string {
+  private getScalingRecommendation(metrics: any): string {
     const utilization = (metrics.activeWorkers / this.config.cluster.maxNodes) * 100
 
     if (utilization > 90) return 'Scale up immediately'
@@ -431,7 +431,7 @@ export class EnterpriseScalingService {
     }, 1000)
   }
 
-  async healthCheck(): Promise<{ status: string; details: unknown }> {
+  async healthCheck(): Promise<{ status: string; details: any }> {
     const systemStatus = await this.getSystemStatus()
 
     return {

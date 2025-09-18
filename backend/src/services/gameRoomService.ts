@@ -128,7 +128,7 @@ export class GameRoomService {
     `
 
     const result = await query(getQuery)
-    return result.rows.map((row: unknown) => ({
+    return result.rows.map((row: any) => ({
       ...row,
       currentPlayers: parseInt(row.current_players, 10) || 0,
       hostUsername: row.host_username,

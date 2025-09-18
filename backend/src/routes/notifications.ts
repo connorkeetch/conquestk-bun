@@ -22,7 +22,11 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       })
     }
 
-    const userId = req.userId
+    const userId = Number(req.userId)
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user identifier' })
+    }
     const { subscription } = req.body
 
     if (!subscription) {
@@ -43,7 +47,11 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
 // Unsubscribe from push notifications
 router.post('/unsubscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = req.userId
+    const userId = Number(req.userId)
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user identifier' })
+    }
 
     await notificationService.removeSubscription(userId)
 
@@ -66,7 +74,11 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
       })
     }
 
-    const userId = req.userId
+    const userId = Number(req.userId)
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user identifier' })
+    }
 
     const success = await notificationService.sendTestNotification(userId)
 

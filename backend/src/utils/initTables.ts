@@ -163,7 +163,7 @@ async function createPostgreSQLTables(): Promise<void> {
     try {
       await query(statement)
       logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`)
-    } catch (error: unknown) {
+    } catch (error: any) {
       if (error.message.includes('already exists') || error.message.includes('duplicate')) {
         logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`)
       } else {

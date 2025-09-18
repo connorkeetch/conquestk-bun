@@ -55,7 +55,7 @@ export interface GameModeConfig {
   resourceRequirements?: boolean
   unequalStart?: boolean
   playerBonuses?: boolean
-  customRules?: unknown
+  customRules?: any
 }
 
 export interface MapGameMode {
@@ -80,7 +80,7 @@ export interface ContinentSpecialRules {
   seasonalEffects?: boolean
   resourceGeneration?: string
   movementRestrictions?: string[]
-  [key: string]: unknown
+  [key: string]: any
 }
 
 export interface TerritoryAbilityType {
@@ -102,7 +102,7 @@ export interface TerritoryEffect {
   isCapital?: boolean
   teleport?: boolean
   specialPowers?: boolean
-  [key: string]: unknown
+  [key: string]: any
 }
 
 export interface MapTerritory {
@@ -138,7 +138,7 @@ export interface ConnectionRequirements {
   requiresNavalBase?: boolean
   seasonalBlocked?: string[] // ['winter', 'storm']
   resourceCost?: string
-  [key: string]: unknown
+  [key: string]: any
 }
 
 export interface MapRating {
@@ -221,7 +221,7 @@ export interface GameEvent {
   description: string
   turnsRemaining?: number
   affectedTerritories?: string[]
-  effects: unknown
+  effects: any
 }
 
 // Map Editor Types
@@ -316,18 +316,18 @@ export interface MapDraft {
   parentMapId?: string // If editing/cloning existing map
   name: string
   description?: string
-  data: unknown // JSON map data
-  territories?: unknown
-  continents?: unknown
-  adjacencies?: unknown
-  capitalAssignments?: unknown
+  data: any // JSON map data
+  territories?: any
+  continents?: any
+  adjacencies?: any
+  capitalAssignments?: any
   thumbnailUrl?: string
   imageUrl?: string
   imageWidth?: number
   imageHeight?: number
   draftStatus?: string
   validationStatus?: string
-  validationErrors?: unknown[]
+  validationErrors?: any[]
   isPublic?: boolean
   tags?: string[]
   autoSavedAt?: Date
@@ -344,10 +344,10 @@ export interface MapVersion {
   id: string
   mapId: string
   versionNumber: number
-  data: unknown
-  territories?: unknown
-  continents?: unknown
-  adjacencies?: unknown
+  data: any
+  territories?: any
+  continents?: any
+  adjacencies?: any
   changeSummary?: string
   changedBy: string
   createdAt: Date
@@ -374,7 +374,7 @@ export interface AdminNotification {
   type: 'map_submission' | 'map_update' | 'system_update' | 'user_report'
   title: string
   message: string
-  data?: unknown
+  data?: any
   isRead: boolean
   createdAt: Date
   readAt?: Date
@@ -386,6 +386,6 @@ export interface MapSubmissionLog {
   mapId: string
   action: 'created' | 'submitted' | 'approved' | 'rejected' | 'edited' | 'archived'
   performedBy: string
-  details?: unknown
+  details?: any
   createdAt: Date
 }

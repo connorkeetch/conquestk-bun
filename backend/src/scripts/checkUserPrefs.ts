@@ -37,7 +37,7 @@ async function checkUserPreferences() {
           ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default'
         `)
         console.log('✅ Theme column added successfully!')
-      } catch (err: unknown) {
+      } catch (err: any) {
         console.log('❌ Failed to add theme column:', err.message)
       }
     }

@@ -333,8 +333,8 @@ export class MigrationRunner {
             await query(statement)
           } catch (error) {
             // Check if it's an acceptable error (table exists, etc.)
-            const errorMessage = (error as unknown).message || ''
-            const errorCode = (error as unknown).code || ''
+            const errorMessage = (error as any).message || ''
+            const errorCode = (error as any).code || ''
 
             if (this.isAcceptableError(errorMessage, statement)) {
               logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`)

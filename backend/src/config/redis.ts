@@ -1,18 +1,22 @@
 import Redis from 'ioredis'
+import type { RedisOptions } from 'ioredis'
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 let redisClient: Redis | null = null
 let pubClient: Redis | null = null
 let subClient: Redis | null = null
 
-/**
- * Initialize Redis clients for different purposes
- */
-export async function initializeRedis(): Promise<{
+export interface RedisClients {
   redisClient: Redis | null
   pubClient: Redis | null
   subClient: Redis | null
-}> {
+}
+
+/**
+ * Initialize Redis clients for different purposes
+ */
+export async function initializeRedis(): Promise<RedisClients> {
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL
 
   if (!redisUrl) {
@@ -57,16 +61,13 @@ export async function initializeRedis(): Promise<{
       finalRedisUrl = `${redisUrl}${separator}family=0`
     }
 
-    const redisOptions: unknown = {
+    const redisOptions: RedisOptions = {
       family: 0, // Enable dual-stack IPv4/IPv6 lookups for Railway
       enableReadyCheck: false,
       connectTimeout: 10000, // 10 seconds for Railway startup
       commandTimeout: 5000,
       lazyConnect: true, // Don't connect immediately
       maxRetriesPerRequest: 3, // Allow some retries for Railway networking
-      retryDelayOnFailover: 100,
-      retryDelayOnClusterDown: 300,
-      retryDelayOnClusterFailure: 100,
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000)
         if (times > 3) {
@@ -101,8 +102,14 @@ export async function initializeRedis(): Promise<{
     })
 
     redisClient.on('error', (err) => {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as unknown)?.code
+      const errorDetails = toKnownError(err)
+      const errorMsg = errorDetails.message
+      const errorCode =
+        typeof errorDetails.code === 'string'
+          ? errorDetails.code
+          : errorDetails.code !== undefined
+            ? String(errorDetails.code)
+            : undefined
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         // In production/staging, log Redis errors less verbosely to avoid log spam
@@ -113,12 +120,12 @@ export async function initializeRedis(): Promise<{
           errorCode &&
           !['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET'].includes(errorCode)
         ) {
-          logger.error('Redis client detailed error:', err)
+          logger.error('Redis client detailed error:', errorDetails)
         }
       } else {
         // In development, log all errors with full details
-        logger.error('Redis client error:', err.message)
-        logger.debug('Redis client error details:', err)
+        logger.error('Redis client error:', errorMsg)
+        logger.debug('Redis client error details:', errorDetails)
       }
     })
 
@@ -135,13 +142,19 @@ export async function initializeRedis(): Promise<{
     })
 
     pubClient.on('error', (err) => {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as unknown)?.code
+      const errorDetails = toKnownError(err)
+      const errorMsg = errorDetails.message
+      const errorCode =
+        typeof errorDetails.code === 'string'
+          ? errorDetails.code
+          : errorDetails.code !== undefined
+            ? String(errorDetails.code)
+            : undefined
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         logger.warn(`Redis pub client error (${errorCode || 'unknown'}): ${errorMsg}`)
       } else {
-        logger.error('Redis pub client error:', err.message)
+        logger.error('Redis pub client error:', errorMsg)
       }
     })
 
@@ -154,13 +167,19 @@ export async function initializeRedis(): Promise<{
     })
 
     subClient.on('error', (err) => {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      const errorCode = (err as unknown)?.code
+      const errorDetails = toKnownError(err)
+      const errorMsg = errorDetails.message
+      const errorCode =
+        typeof errorDetails.code === 'string'
+          ? errorDetails.code
+          : errorDetails.code !== undefined
+            ? String(errorDetails.code)
+            : undefined
 
       if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
         logger.warn(`Redis sub client error (${errorCode || 'unknown'}): ${errorMsg}`)
       } else {
-        logger.error('Redis sub client error:', err.message)
+        logger.error('Redis sub client error:', errorMsg)
       }
     })
 
@@ -190,18 +209,7 @@ export async function initializeRedis(): Promise<{
 
       return { redisClient, pubClient, subClient }
     } catch (err) {
-      const errorDetails: unknown =
-        err instanceof Error
-          ? {
-              name: err.name,
-              message: err.message,
-              code: (err as unknown).code,
-              errno: (err as unknown).errno,
-              syscall: (err as unknown).syscall,
-              hostname: (err as unknown).hostname,
-            }
-          : err
-
+      const errorDetails = toKnownError(err)
       logger.error('🔴 Redis connection failed with detailed error:')
       logger.error(`  - Error type: ${errorDetails.name || 'Unknown'}`)
       logger.error(`  - Error message: ${errorDetails.message || 'No message'}`)
@@ -233,7 +241,7 @@ export async function initializeRedis(): Promise<{
           try {
             await client.disconnect()
           } catch (e) {
-            logger.warn(`Failed to disconnect ${name} client:`, e instanceof Error ? e.message : e)
+            logger.warn(`Failed to disconnect ${name} client:`, getErrorMessage(e))
           }
         }
       }
@@ -248,7 +256,7 @@ export async function initializeRedis(): Promise<{
       return { redisClient: null, pubClient: null, subClient: null }
     }
   } catch (error) {
-    logger.error('Failed to initialize Redis:', error)
+    logger.error('Failed to initialize Redis:', toKnownError(error))
     return { redisClient: null, pubClient: null, subClient: null }
   }
 }

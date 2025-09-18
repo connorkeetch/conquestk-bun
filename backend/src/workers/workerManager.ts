@@ -7,9 +7,9 @@ import { createGameActionWorker } from './gameActionWorker'
 
 export class WorkerManager {
   private isInitialized = false
-  private gameActionWorker: unknown
-  private battleWorker: unknown
-  private cleanupWorker: unknown
+  private gameActionWorker: any
+  private battleWorker: any
+  private cleanupWorker: any
   private io: Server<ClientToServerEvents, ServerToClientEvents>
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
@@ -55,7 +55,7 @@ export class WorkerManager {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: unknown }> {
+  async healthCheck(): Promise<{ status: string; details: any }> {
     try {
       const queueHealth = await queueService.healthCheck()
 

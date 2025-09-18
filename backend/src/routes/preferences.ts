@@ -1,16 +1,26 @@
 import { Router } from 'express'
+import type { Request, Response } from 'express'
 import type { Pool } from 'pg'
 import { authenticateToken } from '../middleware/auth'
 import { UserPreferencesService } from '../services/UserPreferencesService'
+import { getErrorMessage } from '../utils/errorHelpers'
 
 export function createPreferencesRouter(pool: Pool): Router {
   const router = Router()
   const preferencesService = new UserPreferencesService(pool)
 
   // Get user preferences
-  router.get('/', authenticateToken as unknown, async (req: unknown, res) => {
+  router.get('/', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.id
+      const rawUserId = req.user?.id || req.userId
+      if (!rawUserId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+      const userId = Number(rawUserId)
+      if (Number.isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user identifier' })
+      }
+
       const preferences = await preferencesService.getPreferences(userId)
 
       if (!preferences) {
@@ -19,15 +29,23 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json(preferences)
     } catch (error) {
-      console.error('Error fetching preferences:', error)
+      console.error('Error fetching preferences:', getErrorMessage(error))
       return res.status(500).json({ error: 'Failed to fetch preferences' })
     }
   })
 
   // Update user preferences
-  router.put('/', authenticateToken as unknown, async (req: unknown, res) => {
+  router.put('/', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.id
+      const rawUserId = req.user?.id || req.userId
+      if (!rawUserId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+      const userId = Number(rawUserId)
+      if (Number.isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user identifier' })
+      }
+
       const preferences = await preferencesService.updatePreferences(userId, req.body)
 
       if (!preferences) {
@@ -36,15 +54,22 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json(preferences)
     } catch (error) {
-      console.error('Error updating preferences:', error)
+      console.error('Error updating preferences:', getErrorMessage(error))
       return res.status(500).json({ error: 'Failed to update preferences' })
     }
   })
 
   // Update theme specifically
-  router.put('/theme', authenticateToken as unknown, async (req: unknown, res) => {
+  router.put('/theme', authenticateToken, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.id
+      const rawUserId = req.user?.id || req.userId
+      if (!rawUserId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+      const userId = Number(rawUserId)
+      if (Number.isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user identifier' })
+      }
       const { theme } = req.body
 
       if (!theme) {
@@ -59,7 +84,7 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json({ success: true, theme })
     } catch (error) {
-      console.error('Error updating theme:', error)
+      console.error('Error updating theme:', getErrorMessage(error))
       return res.status(500).json({ error: 'Failed to update theme' })
     }
   })

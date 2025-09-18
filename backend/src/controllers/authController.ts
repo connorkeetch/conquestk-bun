@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import emailService from '../services/emailService'
 import { UserService } from '../services/userService'
+import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 export class AuthController {
@@ -65,15 +66,16 @@ export class AuthController {
 
         logger.info('User created successfully:', { userId: user.id, username: user.username })
       } catch (createError) {
-        logger.error('Failed to create user in database:', createError)
+        const normalizedError = toKnownError(createError)
+        logger.error('Failed to create user in database:', normalizedError)
         logger.error('Error details:', {
-          message: (createError as unknown).message,
-          code: (createError as unknown).code,
-          detail: (createError as unknown).detail,
+          message: normalizedError.message,
+          code: normalizedError.code,
+          detail: 'detail' in normalizedError ? normalizedError.detail : undefined,
         })
 
         // Provide more specific error message based on the error
-        const errorMessage = (createError as unknown).message || ''
+        const errorMessage = normalizedError.message || ''
         if (
           errorMessage.includes('email_verified') ||
           errorMessage.includes('verification_token')
@@ -112,7 +114,7 @@ export class AuthController {
           })
         } catch (emailError) {
           // Log error but don't fail registration
-          logger.error('Failed to send verification email:', emailError)
+          logger.error('Failed to send verification email:', toKnownError(emailError))
         }
       }
 
@@ -139,17 +141,18 @@ export class AuthController {
         emailSent: emailService.isEnabled() && verificationToken ? true : false,
       })
     } catch (error) {
-      logger.error('Registration error:', error)
+      const normalizedError = toKnownError(error)
+      logger.error('Registration error:', normalizedError)
       logger.error('Full error details:', {
-        message: (error as unknown).message,
-        stack: (error as unknown).stack,
-        code: (error as unknown).code,
+        message: normalizedError.message,
+        stack: normalizedError.stack,
+        code: normalizedError.code,
       })
 
       return res.status(500).json({
         error: 'Registration failed',
         message: 'An unexpected error occurred during registration. Please check server logs.',
-        technicalDetails: (error as unknown).message,
+        technicalDetails: normalizedError.message,
       })
     }
   }
@@ -218,7 +221,7 @@ export class AuthController {
         }
       } catch (preferencesError) {
         // Continue without preferences if error
-        logger.warn('Could not load user preferences on login:', preferencesError)
+        logger.warn('Could not load user preferences on login:', getErrorMessage(preferencesError))
       }
 
       return res.json({
@@ -291,7 +294,7 @@ export class AuthController {
         }
       } catch (preferencesError) {
         // If preferences table doesn't exist yet or other error, continue without preferences
-        logger.warn('Could not load user preferences:', preferencesError)
+        logger.warn('Could not load user preferences:', getErrorMessage(preferencesError))
       }
 
       return res.json({
@@ -414,7 +417,7 @@ export class AuthController {
         message: 'If an account exists with this email, a password reset link has been sent',
       })
     } catch (error) {
-      logger.error('Forgot password error:', error)
+      logger.error('Forgot password error:', toKnownError(error))
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to process password reset request',
@@ -471,7 +474,7 @@ export class AuthController {
         message: 'Password reset successfully',
       })
     } catch (error) {
-      logger.error('Reset password error:', error)
+      logger.error('Reset password error:', toKnownError(error))
       return res.status(500).json({
         error: 'Reset failed',
         message: 'Unable to reset password',
@@ -536,7 +539,7 @@ export class AuthController {
         message: 'Verification email sent successfully',
       })
     } catch (error) {
-      logger.error('Resend verification error:', error)
+      logger.error('Resend verification error:', toKnownError(error))
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to send verification email',
@@ -591,7 +594,7 @@ export class AuthController {
         message: 'Password changed successfully',
       })
     } catch (error) {
-      logger.error('Change password error:', error)
+      logger.error('Change password error:', toKnownError(error))
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to change password',
@@ -645,7 +648,7 @@ export class AuthController {
         settings: result.rows[0],
       })
     } catch (error) {
-      logger.error('Update settings error:', error)
+      logger.error('Update settings error:', toKnownError(error))
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to update settings',
@@ -674,7 +677,7 @@ export class AuthController {
         message: 'Account deleted successfully',
       })
     } catch (error) {
-      logger.error('Delete account error:', error)
+      logger.error('Delete account error:', toKnownError(error))
       return res.status(500).json({
         error: 'Request failed',
         message: 'Unable to delete account',

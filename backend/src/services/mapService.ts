@@ -22,7 +22,7 @@ export class MapService {
 
   async createMap(
     userId: string,
-    mapData: CreateMapRequest & { metadata?: unknown },
+    mapData: CreateMapRequest & { metadata?: any },
   ): Promise<CustomMap> {
     const client = await getClient()
     try {
@@ -99,7 +99,7 @@ export class MapService {
       }
 
       return this.formatMapFromDb(map)
-    } catch (error: unknown) {
+    } catch (error: any) {
       // If metadata column doesn't exist, try without it
       if (error.message && error.message.includes('metadata')) {
         logger.warn('Metadata column not found, creating map without metadata')
@@ -281,7 +281,7 @@ export class MapService {
       }
 
       const updateFields: string[] = []
-      const updateValues: unknown[] = []
+      const updateValues: any[] = []
       let paramCount = 0
 
       if (updates.name !== undefined) {
@@ -356,7 +356,7 @@ export class MapService {
 
   async searchMaps(filters: MapSearchFilters): Promise<MapSearchResult> {
     const whereConditions: string[] = []
-    const queryParams: unknown[] = []
+    const queryParams: any[] = []
 
     if (filters.isPublic !== false) {
       whereConditions.push('is_public = TRUE')
@@ -472,7 +472,7 @@ export class MapService {
     const client = await getClient()
     try {
       const updateFields: string[] = []
-      const updateValues: unknown[] = []
+      const updateValues: any[] = []
       let paramCount = 0
 
       if (updates.name) {
@@ -692,7 +692,7 @@ export class MapService {
    * Safely parse tags from various PostgreSQL array formats
    * Handles: arrays, PostgreSQL array strings, JSON strings, comma-separated strings
    */
-  private parseTags(tags: unknown): string[] {
+  private parseTags(tags: any): string[] {
     if (!tags) return []
 
     // Already an array
@@ -752,7 +752,7 @@ export class MapService {
     }
   }
 
-  private formatMapFromDb(row: unknown): CustomMap {
+  private formatMapFromDb(row: any): CustomMap {
     return {
       id: row.id,
       name: row.name,
@@ -784,7 +784,7 @@ export class MapService {
     }
   }
 
-  private formatTerritoryFromDb(row: unknown): MapTerritory {
+  private formatTerritoryFromDb(row: any): MapTerritory {
     return {
       id: row.id,
       mapId: row.map_id,
@@ -801,7 +801,7 @@ export class MapService {
     }
   }
 
-  private formatContinentFromDb(row: unknown): MapContinent {
+  private formatContinentFromDb(row: any): MapContinent {
     return {
       id: row.id,
       mapId: row.map_id,
@@ -815,7 +815,7 @@ export class MapService {
     }
   }
 
-  private formatAdjacencyFromDb(row: unknown): TerritoryAdjacency {
+  private formatAdjacencyFromDb(row: any): TerritoryAdjacency {
     return {
       id: row.id,
       fromTerritoryId: row.from_territory_id,
@@ -843,7 +843,7 @@ export class MapService {
     }
   }
 
-  private async updateMapRatingStats(client: unknown, mapId: string): Promise<void> {
+  private async updateMapRatingStats(client: any, mapId: string): Promise<void> {
     await client.query(
       `
       UPDATE maps SET

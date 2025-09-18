@@ -18,7 +18,7 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
 function handleSocketError(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   eventName: string,
-  error: unknown,
+  error: any,
 ) {
   // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
   const isActualError = error instanceof Error
@@ -47,7 +47,7 @@ function handleSocketError(
 }
 
 // Wrapper to add error handling to socket event handlers
-function withErrorHandler<T extends unknown[]>(
+function withErrorHandler<T extends any[]>(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   eventName: string,
   handler: (...args: T) => Promise<void>,
@@ -213,9 +213,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             roomId: data.roomId,
             playerId: socket.userId!,
             payload: {
-              fromTerritory: data.fromTerritoryId,
-              toTerritory: data.toTerritoryId,
-              armies: (data as unknown).armies || 1,
+              fromTerritoryId: data.fromTerritoryId,
+              toTerritoryId: data.toTerritoryId,
+              armies: (data as any).armies || 1,
             },
           },
           socketId: socket.id,
@@ -304,7 +304,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Keep legacy event for backward compatibility
         io.to(data.roomId).emit('phaseChanged', {
-          phase: result.gameState.phase,
+          phase: result.gameState.phase as any,
           currentPlayer: result.gameState.currentPlayer,
           turn: result.gameState.turn,
           reinforcementArmies: result.reinforcementArmies,
@@ -354,7 +354,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   async function handleRankedGameEnd(
     io: Server<ClientToServerEvents, ServerToClientEvents>,
     roomId: string,
-    gameState: unknown,
+    gameState: any,
   ) {
     try {
       // Check if this is a ranked game
@@ -376,8 +376,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (a.isEliminated && !b.isEliminated) return 1
 
         // Among eliminated players, more territories = better position
-        const aTerritories = gameState.board.filter((t: unknown) => t.ownerId === a.id).length
-        const bTerritories = gameState.board.filter((t: unknown) => t.ownerId === b.id).length
+        const aTerritories = gameState.board.filter((t: any) => t.ownerId === a.id).length
+        const bTerritories = gameState.board.filter((t: any) => t.ownerId === b.id).length
         return bTerritories - aTerritories
       })
 
@@ -396,7 +396,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Create a map for quick lookup
         const userDataMap = new Map()
-        userResults.rows.forEach((row: unknown) => {
+        userResults.rows.forEach((row: any) => {
           userDataMap.set(row.id, row)
         })
 

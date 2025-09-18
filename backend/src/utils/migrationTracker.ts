@@ -91,7 +91,7 @@ export class MigrationTracker {
           WHERE status = 'completed' 
           ORDER BY executed_at ASC
         `)
-        return result.rows.map((row: unknown) => row.filename)
+        return result.rows.map((row: any) => row.filename)
       }
       if (hasVersion) {
         // Handle older schema_migrations table format
@@ -101,7 +101,7 @@ export class MigrationTracker {
           ORDER BY applied_at ASC
         `)
         // Convert version numbers to expected filename format
-        return result.rows.map((row: unknown) => {
+        return result.rows.map((row: any) => {
           const version = row.version
           // Map version to actual migration filenames
           if (version === '001' || version === '001_complete_schema') {
@@ -275,7 +275,7 @@ export class MigrationTracker {
         ORDER BY executed_at ASC
       `)
 
-      return result.rows.map((row: unknown) => ({
+      return result.rows.map((row: any) => ({
         filename: row.filename,
         status: row.status,
         executed_at: row.executed_at,

@@ -111,7 +111,7 @@ async function checkTable(tableName: string): Promise<TableCheckResult> {
       table: tableName,
       exists: false,
     }
-  } catch (error: unknown) {
+  } catch (error: any) {
     return {
       table: tableName,
       exists: false,

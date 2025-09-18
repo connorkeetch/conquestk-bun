@@ -85,7 +85,7 @@ try {
 }
 
 // Generic query function
-export async function query<T = any>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
+export async function query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
@@ -158,12 +158,12 @@ export async function closeDatabase(): Promise<void> {
 // Helper function for parameterized queries
 export function buildUpdateQuery(
   table: string,
-  updates: Record<string, unknown>,
-  conditions: Record<string, unknown>,
-): { text: string; values: unknown[] } {
+  updates: Record<string, any>,
+  conditions: Record<string, any>,
+): { text: string; values: any[] } {
   const updateParts: string[] = []
   const conditionParts: string[] = []
-  const values: unknown[] = []
+  const values: any[] = []
   let paramCounter = 1
 
   // Build SET clause
@@ -192,12 +192,12 @@ export function buildUpdateQuery(
 // Helper for INSERT queries with RETURNING
 export function buildInsertQuery(
   table: string,
-  data: Record<string, unknown>,
+  data: Record<string, any>,
   returning = '*',
-): { text: string; values: unknown[] } {
+): { text: string; values: any[] } {
   const columns: string[] = []
   const placeholders: string[] = []
-  const values: unknown[] = []
+  const values: any[] = []
   let paramCounter = 1
 
   for (const [key, value] of Object.entries(data)) {

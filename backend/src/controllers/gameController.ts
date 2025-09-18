@@ -47,7 +47,7 @@ export class GameController {
       const room = await this.gameRoomService.createRoom(roomData)
 
       return res.status(201).json({ room })
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Create room error:', error)
 
       // Return validation errors with appropriate status code
@@ -75,7 +75,7 @@ export class GameController {
 
       const result = await this.gameRoomService.joinRoom(roomId, userId)
       return res.json(result)
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Join room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -92,7 +92,7 @@ export class GameController {
 
       await this.gameRoomService.leaveRoom(roomId, userId)
       return res.json({ message: 'Left room successfully' })
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Leave room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -108,7 +108,7 @@ export class GameController {
       }
 
       return res.json({ room })
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Get room details error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -138,7 +138,7 @@ export class GameController {
       }))
 
       return res.json({ games: formattedGames })
-    } catch (error: unknown) {
+    } catch (error: any) {
       logger.error('Get my games error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }

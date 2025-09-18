@@ -29,7 +29,7 @@ export interface NotificationPayload {
   data?: {
     gameId?: number
     url?: string
-    [key: string]: unknown
+    [key: string]: any
   }
   actions?: Array<{
     action: string
@@ -71,7 +71,7 @@ class NotificationService {
       return true
     } catch (error) {
       // If subscription is invalid, remove it
-      if ((error as unknown).statusCode === 410) {
+      if ((error as any).statusCode === 410) {
         await this.removeSubscription(userId)
       }
 

@@ -204,7 +204,7 @@ export class EloService {
     changes: RatingChange[],
     positionMap: Map<string, number>,
   ): Promise<void> {
-    const values: unknown[] = []
+    const values: any[] = []
     const placeholders: string[] = []
 
     changes.forEach((change, index) => {
@@ -257,7 +257,7 @@ export class EloService {
     const ratingCases: string[] = []
     const winCases: string[] = []
     const lossCases: string[] = []
-    const values: unknown[] = []
+    const values: any[] = []
 
     changes.forEach((change, index) => {
       const position = positionMap.get(change.userId) || 0
@@ -348,7 +348,7 @@ export class EloService {
       JOIN users u ON slc.user_id = u.id
     `
 
-    const params: unknown[] = []
+    const params: any[] = []
 
     if (tierFilter) {
       queryStr += ` WHERE slc.tier = ?`

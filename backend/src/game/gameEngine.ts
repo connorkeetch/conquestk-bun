@@ -2,11 +2,16 @@ import territoryModifierService, {
   type GameTerritoryModifier,
 } from '../services/territoryModifierService'
 import type {
+  AttackAction,
   BattleResult,
+  DeployAction,
+  FortifyAction,
   GameAction,
   GameConfiguration,
   GamePlayer,
   GameState,
+  GoBackToReinforcementAction,
+  ProcessActionResult,
   Territory,
 } from '../types/game'
 import { WorldMap } from './worldMap'
@@ -41,29 +46,33 @@ export class GameEngine {
     }
   }
 
-  processAction(gameState: GameState, action: GameAction): any {
+  async processAction(gameState: GameState, action: GameAction): Promise<ProcessActionResult> {
     const newState = { ...gameState }
 
     switch (action.type) {
       case 'begin_turn':
-        return this.beginTurn(newState)
+        return { gameState: this.beginTurn(newState) }
       case 'deploy':
-        return this.handleDeploy(newState, action)
-      case 'attack':
-        return this.handleAttack(newState, action)
+        return { gameState: this.handleDeploy(newState, action) }
+      case 'attack': {
+        const battleResult = await this.handleAttack(newState, action)
+        return { gameState: newState, battleResult }
+      }
       case 'fortify':
-        return this.handleFortify(newState, action)
+        return { gameState: this.handleFortify(newState, action) }
       case 'end_turn':
-        return this.handleEndTurn(newState)
+        return { gameState: this.handleEndTurn(newState) }
+      case 'trade_cards':
       case 'go_back_to_reinforcement':
-        return this.handleGoBackToReinforcement(newState)
-      default:
-        throw new Error(`Unknown action type: ${action.type}`)
+        return { gameState: this.handleGoBackToReinforcement(newState) }
+      default: {
+        const exhaustiveCheck: never = action
+        throw new Error(`Unknown action type received in game engine`)
+      }
     }
   }
 
   validateAction(gameState: GameState, action: GameAction): boolean {
-    // Check if it's the correct player's turn
     if (action.playerId !== gameState.currentPlayer) {
       return false
     }
@@ -78,7 +87,8 @@ export class GameEngine {
       case 'fortify':
         return this.validateFortify(gameState, action)
       case 'end_turn':
-        return true // Can always end turn
+        return true
+      case 'trade_cards':
       case 'go_back_to_reinforcement':
         return gameState.phase === 'attack' && !gameState.hasAttackedThisTurn
       default:
@@ -259,7 +269,7 @@ export class GameEngine {
     return bonusArmies
   }
 
-  private handleDeploy(gameState: GameState, action: GameAction): GameState {
+  private handleDeploy(gameState: GameState, action: DeployAction): GameState {
     const { territoryId, armies } = action.payload
     const territory = gameState.board.find((t) => t.id === territoryId)
 
@@ -274,8 +284,8 @@ export class GameEngine {
     return gameState
   }
 
-  private async handleAttack(gameState: GameState, action: GameAction): Promise<BattleResult> {
-    const { fromTerritoryId, toTerritoryId } = action.payload
+  private async handleAttack(gameState: GameState, action: AttackAction): Promise<BattleResult> {
+    const { fromTerritoryId, toTerritoryId, armies = 1 } = action.payload
 
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
@@ -367,7 +377,7 @@ export class GameEngine {
     return result
   }
 
-  private handleFortify(gameState: GameState, action: GameAction): GameState {
+  private handleFortify(gameState: GameState, action: FortifyAction): GameState {
     const { fromTerritoryId, toTerritoryId, armies } = action.payload
 
     // Validate the fortify action first
@@ -537,7 +547,7 @@ export class GameEngine {
     return gameState
   }
 
-  private validateDeploy(gameState: GameState, action: GameAction): boolean {
+  private validateDeploy(gameState: GameState, action: DeployAction): boolean {
     const { territoryId, armies } = action.payload
     const player = gameState.players.find((p) => p.id === action.playerId)
     const territory = gameState.board.find((t) => t.id === territoryId)
@@ -552,8 +562,8 @@ export class GameEngine {
     )
   }
 
-  private validateAttack(gameState: GameState, action: GameAction): boolean {
-    const { fromTerritoryId, toTerritoryId, armies } = action.payload
+  private validateAttack(gameState: GameState, action: AttackAction): boolean {
+    const { fromTerritoryId, toTerritoryId, armies = 0 } = action.payload
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
 
@@ -567,7 +577,7 @@ export class GameEngine {
     )
   }
 
-  private validateFortify(gameState: GameState, action: GameAction): boolean {
+  private validateFortify(gameState: GameState, action: FortifyAction): boolean {
     const { fromTerritoryId, toTerritoryId, armies } = action.payload
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
