@@ -15,7 +15,7 @@ export interface CreateRoomData {
   numberOfTeams?: number
   capitalsEnabled?: boolean
   isRanked?: boolean
-  gameSettings?: any
+  gameSettings?: unknown
 }
 
 export class GameRoomService {
@@ -141,7 +141,7 @@ export class GameRoomService {
     `
 
     const result = await query(getQuery)
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row: unknown) => ({
       ...row,
       currentPlayers: parseInt(row.current_players, 10) || 0,
       hostUsername: row.host_username,

@@ -2,6 +2,8 @@ import type { Request, Response } from 'express'
 import mapWorkflowService from '../services/mapWorkflowService'
 import { UserService } from '../services/userService'
 import { logger } from '../utils/logger'
+import type { MapStatus } from '../types/maps'
+import type { AuthenticatedRequest } from '../types/express'
 
 const userService = new UserService()
 
@@ -9,9 +11,12 @@ export class MapWorkflowController {
   /**
    * Save a draft
    */
-  async saveDraft(req: Request, res: Response) {
+  async saveDraft(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const draftData = req.body
 
       const draft = await mapWorkflowService.saveDraft(userId, draftData)
@@ -20,7 +25,7 @@ export class MapWorkflowController {
         success: true,
         draft,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error saving draft:', error)
       return res.status(500).json({
         error: 'Failed to save draft',
@@ -32,9 +37,12 @@ export class MapWorkflowController {
   /**
    * Get user's drafts
    */
-  async getUserDrafts(req: Request, res: Response) {
+  async getUserDrafts(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
 
       const drafts = await mapWorkflowService.getUserDrafts(userId)
 
@@ -42,7 +50,7 @@ export class MapWorkflowController {
         success: true,
         drafts,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error fetching drafts:', error)
       return res.status(500).json({
         error: 'Failed to fetch drafts',
@@ -54,9 +62,12 @@ export class MapWorkflowController {
   /**
    * Submit map for review
    */
-  async submitForReview(req: Request, res: Response) {
+  async submitForReview(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
 
       await mapWorkflowService.submitForReview(mapId, userId)
@@ -65,7 +76,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map submitted for review successfully',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error submitting map for review:', error)
       return res.status(500).json({
         error: 'Failed to submit map',
@@ -77,9 +88,12 @@ export class MapWorkflowController {
   /**
    * Get pending reviews (admin only)
    */
-  async getPendingReviews(req: Request, res: Response) {
+  async getPendingReviews(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
 
       // Check if user is admin
       const user = await userService.findById(userId)
@@ -96,7 +110,7 @@ export class MapWorkflowController {
         success: true,
         reviews,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error fetching pending reviews:', error)
       return res.status(500).json({
         error: 'Failed to fetch reviews',
@@ -108,9 +122,12 @@ export class MapWorkflowController {
   /**
    * Approve map (admin only)
    */
-  async approveMap(req: Request, res: Response) {
+  async approveMap(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
       const { notes } = req.body
 
@@ -129,7 +146,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map approved successfully',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error approving map:', error)
       return res.status(500).json({
         error: 'Failed to approve map',
@@ -141,9 +158,12 @@ export class MapWorkflowController {
   /**
    * Reject map (admin only)
    */
-  async rejectMap(req: Request, res: Response) {
+  async rejectMap(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
       const { reason } = req.body
 
@@ -169,7 +189,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map rejected',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error rejecting map:', error)
       return res.status(500).json({
         error: 'Failed to reject map',
@@ -181,9 +201,12 @@ export class MapWorkflowController {
   /**
    * Get admin notifications
    */
-  async getAdminNotifications(req: Request, res: Response) {
+  async getAdminNotifications(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { unreadOnly } = req.query
 
       // Check if user is admin
@@ -204,7 +227,7 @@ export class MapWorkflowController {
         success: true,
         notifications,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error fetching notifications:', error)
       return res.status(500).json({
         error: 'Failed to fetch notifications',
@@ -216,9 +239,12 @@ export class MapWorkflowController {
   /**
    * Mark notification as read
    */
-  async markNotificationRead(req: Request, res: Response) {
+  async markNotificationRead(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { notificationId } = req.params
 
       // Check if user is admin
@@ -236,7 +262,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Notification marked as read',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error marking notification as read:', error)
       return res.status(500).json({
         error: 'Failed to update notification',
@@ -248,9 +274,12 @@ export class MapWorkflowController {
   /**
    * Archive map (admin only)
    */
-  async archiveMap(req: Request, res: Response) {
+  async archiveMap(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
 
       // Check if user is admin
@@ -268,7 +297,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map archived successfully',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error archiving map:', error)
       return res.status(500).json({
         error: 'Failed to archive map',
@@ -280,9 +309,12 @@ export class MapWorkflowController {
   /**
    * Toggle map featured status (admin only)
    */
-  async toggleFeatured(req: Request, res: Response) {
+  async toggleFeatured(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
 
       // Check if user is admin
@@ -300,7 +332,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map featured status updated',
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error toggling featured status:', error)
       return res.status(500).json({
         error: 'Failed to update map',
@@ -312,9 +344,12 @@ export class MapWorkflowController {
   /**
    * Get maps by status (admin only)
    */
-  async getMapsByStatus(req: Request, res: Response) {
+  async getMapsByStatus(req: AuthenticatedRequest, res: Response) {
     try {
-      const adminId = (req as any).userId
+      const adminId = req.userId
+      if (!adminId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { status } = req.params
 
       // Check if user is admin
@@ -334,13 +369,13 @@ export class MapWorkflowController {
         })
       }
 
-      const maps = await mapWorkflowService.getMapsByStatus(status as any)
+      const maps = await mapWorkflowService.getMapsByStatus(status as MapStatus)
 
       return res.json({
         success: true,
         maps,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error fetching maps by status:', error)
       return res.status(500).json({
         error: 'Failed to fetch maps',
@@ -352,9 +387,12 @@ export class MapWorkflowController {
   /**
    * Get map submission history
    */
-  async getMapHistory(req: Request, res: Response) {
+  async getMapHistory(req: AuthenticatedRequest, res: Response) {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const { mapId } = req.params
 
       // Check if user is admin
@@ -370,7 +408,7 @@ export class MapWorkflowController {
         success: true,
         history,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error fetching map history:', error)
       return res.status(500).json({
         error: 'Failed to fetch history',

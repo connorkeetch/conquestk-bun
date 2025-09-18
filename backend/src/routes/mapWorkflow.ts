@@ -8,7 +8,7 @@ const mapWorkflowController = new MapWorkflowController()
 
 // All routes require authentication
 router.use(authenticateToken)
-router.use(standardLimiter as any)
+router.use(standardLimiter as unknown)
 
 // Draft management
 router.post('/drafts', mapWorkflowController.saveDraft)

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { logger } from '../utils/logger'
+import type { AuthenticatedRequest } from '../types/express'
 
 export class GameController {
   private gameRoomService = new GameRoomService()
@@ -15,7 +16,7 @@ export class GameController {
     }
   }
 
-  createRoom = async (req: Request, res: Response) => {
+  createRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         name,
@@ -29,7 +30,11 @@ export class GameController {
         numberOfTeams,
         capitalsEnabled,
       } = req.body
-      const hostId = (req as any).userId
+      const hostId = req.userId
+
+      if (!hostId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
 
       const roomData: CreateRoomData = {
         name,
@@ -48,12 +53,12 @@ export class GameController {
       const room = await this.gameRoomService.createRoom(roomData)
 
       return res.status(201).json({ room })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Create room error:', error)
 
       // Return validation errors with appropriate status code
       if (
-        error.message &&
+        error instanceof Error &&
         (error.message.includes('teams is not valid') ||
           error.message.includes('Invalid number of teams') ||
           error.message.includes('Ranked games'))
@@ -65,27 +70,35 @@ export class GameController {
     }
   }
 
-  joinRoom = async (req: Request, res: Response) => {
+  joinRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId } = req.params
-      const userId = (req as any).userId
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
 
       const result = await this.gameRoomService.joinRoom(roomId, userId)
       return res.json(result)
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Join room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
 
-  leaveRoom = async (req: Request, res: Response) => {
+  leaveRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { roomId } = req.params
-      const userId = (req as any).userId
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
 
       await this.gameRoomService.leaveRoom(roomId, userId)
       return res.json({ message: 'Left room successfully' })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Leave room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -101,15 +114,19 @@ export class GameController {
       }
 
       return res.json({ room })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Get room details error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
 
-  getMyGames = async (req: Request, res: Response) => {
+  getMyGames = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
 
       // Get user's games from the service
       const games = await this.gameRoomService.getUserGames(userId)
@@ -127,7 +144,7 @@ export class GameController {
       }))
 
       return res.json({ games: formattedGames })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Get my games error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }

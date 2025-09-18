@@ -28,7 +28,7 @@ if (process.env.SENTRY_DSN) {
     beforeSend(event, hint) {
       // Filter out non-critical errors in production
       if (process.env.NODE_ENV === 'production') {
-        const error = hint.originalException as any
+        const error = hint.originalException as unknown
         // Don't send validation errors
         if (error?.message?.includes('Validation')) {
           return null

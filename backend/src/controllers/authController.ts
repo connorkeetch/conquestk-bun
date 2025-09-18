@@ -67,13 +67,13 @@ export class AuthController {
       } catch (createError) {
         logger.error('Failed to create user in database:', createError)
         logger.error('Error details:', {
-          message: (createError as any).message,
-          code: (createError as any).code,
-          detail: (createError as any).detail,
+          message: (createError as unknown).message,
+          code: (createError as unknown).code,
+          detail: (createError as unknown).detail,
         })
 
         // Provide more specific error message based on the error
-        const errorMessage = (createError as any).message || ''
+        const errorMessage = (createError as unknown).message || ''
         if (
           errorMessage.includes('email_verified') ||
           errorMessage.includes('verification_token')
@@ -141,15 +141,15 @@ export class AuthController {
     } catch (error) {
       logger.error('Registration error:', error)
       logger.error('Full error details:', {
-        message: (error as any).message,
-        stack: (error as any).stack,
-        code: (error as any).code,
+        message: (error as unknown).message,
+        stack: (error as unknown).stack,
+        code: (error as unknown).code,
       })
 
       return res.status(500).json({
         error: 'Registration failed',
         message: 'An unexpected error occurred during registration. Please check server logs.',
-        technicalDetails: (error as any).message,
+        technicalDetails: (error as unknown).message,
       })
     }
   }
@@ -246,7 +246,7 @@ export class AuthController {
 
   getProfile = async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
       const user = await this.userService.findById(userId)
 
       if (!user) {
@@ -546,7 +546,7 @@ export class AuthController {
 
   changePassword = async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
       const { currentPassword, newPassword } = req.body
 
       if (!currentPassword || !newPassword) {
@@ -601,7 +601,7 @@ export class AuthController {
 
   updateSettings = async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
       const { settings } = req.body
 
       if (!settings || typeof settings !== 'object') {
@@ -655,7 +655,7 @@ export class AuthController {
 
   deleteAccount = async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
 
       const user = await this.userService.findById(userId)
       if (!user) {

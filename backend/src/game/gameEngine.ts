@@ -41,7 +41,7 @@ export class GameEngine {
     }
   }
 
-  processAction(gameState: GameState, action: GameAction): any {
+  processAction(gameState: GameState, action: GameAction): unknown {
     const newState = { ...gameState }
 
     switch (action.type) {

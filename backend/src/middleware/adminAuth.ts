@@ -27,7 +27,7 @@ export const requireAdmin = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     if (!userId) {
       res.status(401).json({ error: 'Authentication required' })
@@ -72,7 +72,7 @@ export const requireAdmin = async (
 export const requirePermission = (permission: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).userId
+      const userId = req.userId
 
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' })
@@ -125,7 +125,7 @@ export const logAdminActivity = (actionType: string) => {
     res.send = function (data) {
       // Log the admin action after successful response
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        const userId = (req as any).userId
+        const userId = req.userId
         if (userId) {
           adminService
             .logAdminAction(

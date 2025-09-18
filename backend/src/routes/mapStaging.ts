@@ -27,7 +27,7 @@ const upload = multer({
 // Check user's quota
 router.get(
   '/quota',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -48,8 +48,8 @@ router.get(
 // Upload an image to staging
 router.post(
   '/upload',
-  authenticateToken as any,
-  upload.single('image') as any,
+  authenticateToken as unknown,
+  upload.single('image') as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -79,7 +79,7 @@ router.post(
 // Get user's staging images
 router.get(
   '/my-images',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -100,7 +100,7 @@ router.get(
 // Delete a staging image
 router.delete(
   '/images/:imageId',
-  authenticateToken as any,
+  authenticateToken as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -126,8 +126,8 @@ router.delete(
 // Admin: Get all staging images
 router.get(
   '/admin/all-images',
-  authenticateToken as any,
-  requireAdmin as any,
+  authenticateToken as unknown,
+  requireAdmin as unknown,
   async (_req: Request, res: Response): Promise<void> => {
     try {
       const images = await mapStagingService.getAllStagingImages()
@@ -142,8 +142,8 @@ router.get(
 // Admin: Delete any staging image
 router.delete(
   '/admin/images/:imageId',
-  authenticateToken as any,
-  requireAdmin as any,
+  authenticateToken as unknown,
+  requireAdmin as unknown,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { imageId } = req.params

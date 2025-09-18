@@ -226,7 +226,7 @@ export class PerformanceMonitorService {
     }
   }
 
-  private calculateQueueMetrics(queueStats: any): SystemMetrics['queues'] {
+  private calculateQueueMetrics(queueStats: unknown): SystemMetrics['queues'] {
     let totalJobs = 0
     let activeJobs = 0
     let waitingJobs = 0
@@ -234,7 +234,7 @@ export class PerformanceMonitorService {
     let processedJobs = 0
 
     if (queueStats.queues) {
-      Object.values(queueStats.queues).forEach((queue: any) => {
+      Object.values(queueStats.queues).forEach((queue: unknown) => {
         activeJobs += queue.active || 0
         waitingJobs += queue.waiting || 0
         failedJobs += queue.failed || 0
@@ -429,7 +429,7 @@ export class PerformanceMonitorService {
     logger.info('⚙️ Performance thresholds updated', newThresholds)
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: string; details: unknown }> {
     const current = this.getCurrentMetrics()
     const activeAlerts = this.getActiveAlerts()
     const criticalAlerts = activeAlerts.filter((a) => a.severity === 'critical')

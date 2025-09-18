@@ -10,13 +10,13 @@ import { scalingService } from './scalingService'
 interface Phase4Status {
   initialized: boolean
   services: {
-    redisCluster: { status: string; details?: any }
-    databaseCluster: { status: string; details?: any }
-    cdn: { status: string; details?: any }
-    performanceMonitor: { status: string; details?: any }
-    scaling: { status: string; details?: any }
-    enterpriseScaling: { status: string; details?: any }
-    performanceTesting: { status: string; details?: any }
+    redisCluster: { status: string; details?: unknown }
+    databaseCluster: { status: string; details?: unknown }
+    cdn: { status: string; details?: unknown }
+    performanceMonitor: { status: string; details?: unknown }
+    scaling: { status: string; details?: unknown }
+    enterpriseScaling: { status: string; details?: unknown }
+    performanceTesting: { status: string; details?: unknown }
   }
   overallHealth: 'healthy' | 'degraded' | 'critical' | 'offline'
   initializedAt?: number
@@ -251,7 +251,7 @@ export class Phase4IntegrationService {
     return { ...this.status }
   }
 
-  async getDetailedStatus(): Promise<Phase4Status & { serviceDetails: any }> {
+  async getDetailedStatus(): Promise<Phase4Status & { serviceDetails: unknown }> {
     const serviceDetails: Record<string, any> = {}
 
     if (this.status.services.redisCluster.status === 'initialized') {
@@ -277,17 +277,17 @@ export class Phase4IntegrationService {
   }
 
   async runDiagnostics(): Promise<{
-    systemHealth: any
-    performanceMetrics: any
-    scalingStatus: any
+    systemHealth: unknown
+    performanceMetrics: unknown
+    scalingStatus: unknown
     recommendations: string[]
   }> {
     logger.info('🔧 Running Phase 4 system diagnostics...')
 
     const diagnostics = {
-      systemHealth: null as any,
-      performanceMetrics: null as any,
-      scalingStatus: null as any,
+      systemHealth: null as unknown,
+      performanceMetrics: null as unknown,
+      scalingStatus: null as unknown,
       recommendations: [] as string[],
     }
 
@@ -323,7 +323,7 @@ export class Phase4IntegrationService {
     return diagnostics
   }
 
-  private generateRecommendations(diagnostics: any): string[] {
+  private generateRecommendations(diagnostics: unknown): string[] {
     const recommendations: string[] = []
 
     // System health recommendations

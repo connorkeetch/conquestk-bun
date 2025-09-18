@@ -53,11 +53,11 @@ export interface ServerToClientEvents {
   'player-joined': (data: { userId: string; socketId: string }) => void
   'player-left': (data: { userId: string; socketId: string }) => void
   'player-disconnected': (data: { userId: string; socketId: string }) => void
-  'game-update': (gameState: any) => void
-  'game-delta': (delta: any) => void // Delta update for efficient real-time broadcasting
-  armiesDeployed: (result: { gameState: any }) => void
-  attackResult: (result: any) => void
-  territoriesFortified: (result: { gameState: any }) => void
+  'game-update': (gameState: unknown) => void
+  'game-delta': (delta: unknown) => void // Delta update for efficient real-time broadcasting
+  armiesDeployed: (result: { gameState: unknown }) => void
+  attackResult: (result: unknown) => void
+  territoriesFortified: (result: { gameState: unknown }) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string
@@ -83,7 +83,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
-  'game-action': (data: { roomId: string; action: any }) => void
+  'game-action': (data: { roomId: string; action: unknown }) => void
   deployArmies: (data: { roomId: string; territoryId: string; armies: number }) => void
   attack: (data: { roomId: string; fromTerritoryId: string; toTerritoryId: string }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void

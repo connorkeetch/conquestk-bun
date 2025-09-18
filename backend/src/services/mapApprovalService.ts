@@ -442,7 +442,7 @@ export class MapApprovalService {
     moderatorId: string,
     actionType: string,
     reason?: string,
-    details?: any,
+    details?: unknown,
     versionId?: string,
   ): Promise<void> {
     await query(

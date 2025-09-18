@@ -48,7 +48,7 @@ export interface GameAction {
     | 'go_back_to_reinforcement'
   roomId: string
   playerId: string
-  payload: any
+  payload: unknown
 }
 
 export interface BattleResult {

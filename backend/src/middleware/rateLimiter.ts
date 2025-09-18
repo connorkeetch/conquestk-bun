@@ -20,9 +20,9 @@ function createRateLimitStore(prefix: string) {
   if (redisClient) {
     try {
       return new RedisStore({
-        client: redisClient as any,
+        client: redisClient as unknown,
         prefix: `rate-limit:${prefix}:`,
-      } as any)
+      } as unknown)
     } catch (error) {
       logger.error(
         `Failed to create Redis store for ${prefix}:`,

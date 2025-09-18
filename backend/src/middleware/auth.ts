@@ -30,7 +30,7 @@ export const authenticateToken = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as unknown
     req.userId = decoded.userId
 
     // Optionally fetch user details for req.user

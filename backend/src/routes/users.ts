@@ -88,7 +88,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
 // Get own user profile (authenticated)
 router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       `
@@ -144,7 +144,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 router.post('/check-username', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { username } = req.body
-    const userId = (req as any).userId
+    const userId = req.userId
 
     if (!username || username.trim().length < 3) {
       return res.status(400).json({
@@ -171,7 +171,7 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
 // Update user profile
 router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { username, email } = req.body
 
     // Validate inputs
@@ -252,7 +252,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 // Change password
 router.put('/change-password', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { currentPassword, newPassword } = req.body
 
     if (!currentPassword || !newPassword) {

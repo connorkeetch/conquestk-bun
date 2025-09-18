@@ -61,7 +61,7 @@ async function readFileWithResourceManagement(filePath: string): Promise<Buffer>
   if (typeof Symbol.dispose !== 'undefined') {
     try {
       const fileResource = await new FileResource(filePath).open()
-      await using resource = fileResource as any // TypeScript needs to catch up with the spec
+      await using resource = fileResource as unknown // TypeScript needs to catch up with the spec
       return await fileResource.readBuffer()
     } catch (error) {
       // Fallback to manual resource management
@@ -224,7 +224,7 @@ const validateRating = [
 ]
 
 // Middleware to check validation results
-const checkValidation = (req: Request, res: Response, next: any) => {
+const checkValidation = (req: Request, res: Response, next: unknown) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -233,7 +233,7 @@ const checkValidation = (req: Request, res: Response, next: any) => {
 }
 
 // Multer error handling middleware
-const handleMulterError = (error: any, _req: Request, res: Response, next: any) => {
+const handleMulterError = (error: unknown, _req: Request, res: Response, next: unknown) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' })
@@ -407,7 +407,7 @@ router.get('/', async (req: Request, res: Response) => {
       WHERE 1=1
     `
 
-    const params: any[] = []
+    const params: unknown[] = []
     let paramCount = 0
 
     // Add filters
@@ -508,7 +508,7 @@ router.get(
       // Check if map is public or user owns it
       if (
         !mapData.map.isPublic &&
-        (!(req as any).userId || (req as any).userId !== mapData.map.creatorId)
+        (!req.userId || req.userId !== mapData.map.creatorId)
       ) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -552,7 +552,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
       name: req.body.name,
       hasImage: !!req.body.image,
       hasMetadata: !!req.body.metadata,
-      userId: (req as any).userId,
+      userId: req.userId,
       bodyType: typeof req.body,
       headers: req.headers['content-type'],
     })
@@ -653,10 +653,10 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 
     // Store metadata if provided
     if (req.body.metadata) {
-      ;(mapData as any).metadata = req.body.metadata
+      ;(mapData as unknown).metadata = req.body.metadata
     }
 
-    const map = await mapService.createMap((req as any).userId, mapData)
+    const map = await mapService.createMap(req.userId, mapData)
 
     logger.info('Map created successfully:', {
       mapId: map.id,
@@ -696,7 +696,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 router.post(
   '/',
   authenticateToken,
-  upload.single('image') as any,
+  upload.single('image') as unknown,
   handleMulterError,
   validateCreateMap,
   checkValidation,
@@ -706,7 +706,7 @@ router.post(
         name: req.body.name,
         hasImage: !!req.file,
         hasMetadata: !!req.body.metadata,
-        userId: (req as any).userId,
+        userId: req.userId,
       })
 
       const mapData: CreateMapRequest = {
@@ -717,7 +717,7 @@ router.post(
       }
 
       // Parse metadata if provided
-      let metadata: any = null
+      let metadata: unknown = null
       if (req.body.metadata) {
         metadata = parseJsonField(req.body.metadata, null)
         if (metadata) {
@@ -753,10 +753,10 @@ router.post(
 
       // Store metadata in the map data (will be saved as JSONB)
       if (metadata) {
-        ;(mapData as any).metadata = metadata
+        ;(mapData as unknown).metadata = metadata
       }
 
-      const map = await mapService.createMap((req as any).userId, mapData)
+      const map = await mapService.createMap(req.userId, mapData)
 
       logger.info('Map created successfully:', {
         mapId: map.id,
@@ -782,7 +782,7 @@ router.post(
 router.put(
   '/:mapId',
   authenticateToken,
-  upload.single('image') as any,
+  upload.single('image') as unknown,
   validateUpdateMap,
   checkValidation,
   async (req: Request, res: Response) => {
@@ -811,7 +811,7 @@ router.put(
         }
       }
 
-      const map = await mapService.updateMap(req.params.mapId, (req as any).userId, updates)
+      const map = await mapService.updateMap(req.params.mapId, req.userId, updates)
 
       if (!map) {
         return res.status(404).json({ error: 'Map not found or access denied' })
@@ -833,7 +833,7 @@ router.delete(
   checkValidation,
   async (req: Request, res: Response) => {
     try {
-      const success = await mapService.deleteMap(req.params.mapId, (req as any).userId)
+      const success = await mapService.deleteMap(req.params.mapId, req.userId)
 
       if (!success) {
         return res.status(404).json({ error: 'Map not found or access denied' })
@@ -851,7 +851,7 @@ router.delete(
 router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
-      creator: (req as any).userId,
+      creator: req.userId,
       isPublic: undefined, // Show both public and private
       sortBy: req.query.sortBy as string,
       sortOrder: req.query.sortOrder as 'asc' | 'desc',
@@ -890,7 +890,7 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
 router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
   try {
     const filters = {
-      creator: (req as any).userId,
+      creator: req.userId,
       isPublic: undefined, // Show both public and private
       sortBy: req.query.sortBy as string,
       sortOrder: req.query.sortOrder as 'asc' | 'desc',
@@ -998,7 +998,7 @@ router.post(
     try {
       const rating = await mapService.rateMap(
         req.params.mapId,
-        (req as any).userId,
+        req.userId,
         req.body.rating,
         req.body.review,
       )
@@ -1022,7 +1022,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const mapId = req.params.mapId
-      const userId = (req as any).userId
+      const userId = req.userId
 
       // Verify user owns the map
       const mapData = await mapService.getMapWithFullData(mapId)
@@ -1077,7 +1077,7 @@ router.patch(
     try {
       const { mapId, playerCount } = req.params
       const { territoryIds } = req.body
-      const userId = (req as any).userId
+      const userId = req.userId
       const playerCountNum = parseInt(playerCount, 10)
 
       // Verify user owns the map
@@ -1131,7 +1131,7 @@ router.get(
       }
 
       // Check access permissions
-      const userId = (req as any).userId
+      const userId = req.userId
       if (!mapData.map.isPublic && (!userId || userId !== mapData.map.creatorId)) {
         return res.status(403).json({ error: 'Access denied' })
       }

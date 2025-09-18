@@ -72,7 +72,7 @@ export class GameActionWorker {
             defendingTerritory: action.payload?.toTerritory || '',
             attackingArmies: action.payload?.armies || 1,
             defendingArmies:
-              currentState.board.find((t: any) => t.id === action.payload?.toTerritory)?.armies ||
+              currentState.board.find((t: unknown) => t.id === action.payload?.toTerritory)?.armies ||
               1,
             playerId,
           }
@@ -128,9 +128,9 @@ export class GameActionWorker {
     }
   }
 
-  private canPlayerPerformAction(gameState: any, playerId: string, action: any): boolean {
+  private canPlayerPerformAction(gameState: unknown, playerId: string, action: unknown): boolean {
     // Basic validation - extend as needed
-    if (!gameState.players.find((p: any) => p.id === playerId)) {
+    if (!gameState.players.find((p: unknown) => p.id === playerId)) {
       return false
     }
 
@@ -146,7 +146,7 @@ export class GameActionWorker {
   private async processPlaceArmies(
     gameId: string,
     playerId: string,
-    action: any,
+    action: unknown,
   ): Promise<GameDelta> {
     // Update territory armies
     const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
@@ -160,7 +160,7 @@ export class GameActionWorker {
     })
   }
 
-  private async processFortify(gameId: string, playerId: string, action: any): Promise<GameDelta> {
+  private async processFortify(gameId: string, playerId: string, action: unknown): Promise<GameDelta> {
     // Process fortification
     const result = await this.gameService.processFortify(gameId, {
       fromTerritoryId: action.payload?.fromTerritory || '',
@@ -195,7 +195,7 @@ export class GameActionWorker {
   private async processPhaseChange(
     gameId: string,
     playerId: string,
-    action: any,
+    action: unknown,
   ): Promise<GameDelta> {
     await this.gameService.processPhaseChange(
       gameId,

@@ -11,16 +11,16 @@ export class GameService {
   // Now using Redis-backed gameStateCache for persistence and scalability
 
   // Helper to serialize game state for transmission
-  private serializeGameState(gameState: GameState): any {
+  private serializeGameState(gameState: GameState): unknown {
     const serialized = { ...gameState }
 
     // Convert Map to object for JSON serialization
-    if ((gameState as any).territoryModifiers instanceof Map) {
-      const modifiersObj: any = {}
-      ;(gameState as any).territoryModifiers.forEach((value: any, key: string) => {
+    if ((gameState as unknown).territoryModifiers instanceof Map) {
+      const modifiersObj: unknown = {}
+      ;(gameState as unknown).territoryModifiers.forEach((value: unknown, key: string) => {
         modifiersObj[key] = value
       })
-      ;(serialized as any).territoryModifiers = modifiersObj
+      ;(serialized as unknown).territoryModifiers = modifiersObj
     }
 
     return serialized
@@ -55,7 +55,7 @@ export class GameService {
     return updatedState
   }
 
-  async initializeGame(roomId: string, players: string[], gameConfig?: any): Promise<GameState> {
+  async initializeGame(roomId: string, players: string[], gameConfig?: unknown): Promise<GameState> {
     // Default game configuration
     const defaultGameConfig = {
       movementType: 'classic_adjacent' as const,
@@ -91,7 +91,7 @@ export class GameService {
 
       // Load modifiers into game state
       const modifiers = await territoryModifierService.getGameModifiers(roomId)
-      ;(gameState as any).territoryModifiers = modifiers
+      ;(gameState as unknown).territoryModifiers = modifiers
     }
 
     // Cache the game state with TTL for automatic cleanup (24 hours)
@@ -106,10 +106,10 @@ export class GameService {
     if (!gameState) return null
 
     // Attach territory modifiers if they exist
-    if (gameState.gameConfig?.useTerritoryModifiers && !(gameState as any).territoryModifiers) {
+    if (gameState.gameConfig?.useTerritoryModifiers && !(gameState as unknown).territoryModifiers) {
       const modifiers = await territoryModifierService.getGameModifiers(roomId)
       if (modifiers.size > 0) {
-        ;(gameState as any).territoryModifiers = modifiers
+        ;(gameState as unknown).territoryModifiers = modifiers
       }
     }
 
@@ -139,7 +139,7 @@ export class GameService {
     return {
       gameState: this.serializeGameState(updatedState),
       territoryId,
-      armies: updatedState.board.find((t: any) => t.id === territoryId)?.armies || 0,
+      armies: updatedState.board.find((t: unknown) => t.id === territoryId)?.armies || 0,
     }
   }
 
@@ -199,8 +199,8 @@ export class GameService {
       gameState: this.serializeGameState(updatedState),
       fromTerritoryId,
       toTerritoryId,
-      fromArmies: updatedState.board.find((t: any) => t.id === fromTerritoryId)?.armies || 0,
-      toArmies: updatedState.board.find((t: any) => t.id === toTerritoryId)?.armies || 0,
+      fromArmies: updatedState.board.find((t: unknown) => t.id === fromTerritoryId)?.armies || 0,
+      toArmies: updatedState.board.find((t: unknown) => t.id === toTerritoryId)?.armies || 0,
     }
   }
 
@@ -286,13 +286,13 @@ export class GameService {
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
 
-    gameState.phase = phase as any
+    gameState.phase = phase as unknown
     await gameStateCache.setGameState(gameId, gameState)
   }
 
   async applyBattleResult(
     gameId: string,
-    battleResult: any,
+    battleResult: unknown,
     attackingTerritory: string,
     defendingTerritory: string,
   ): Promise<void> {
@@ -314,17 +314,17 @@ export class GameService {
     }
   }
 
-  async archiveGameResults(gameId: string, results: any): Promise<void> {
+  async archiveGameResults(gameId: string, results: unknown): Promise<void> {
     // TODO: Store in database
     console.log(`Archiving game ${gameId}:`, results)
   }
 
-  async updateEloRatings(gameId: string, gameState: any): Promise<void> {
+  async updateEloRatings(gameId: string, gameState: unknown): Promise<void> {
     // TODO: Update ELO ratings
     console.log(`Updating ELO for game ${gameId}`)
   }
 
-  async recordGameHistory(gameId: string, gameState: any): Promise<void> {
+  async recordGameHistory(gameId: string, gameState: unknown): Promise<void> {
     // TODO: Record in database
     console.log(`Recording history for game ${gameId}`)
   }

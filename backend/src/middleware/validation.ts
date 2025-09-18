@@ -411,7 +411,7 @@ export const validateMap = (req: Request, res: Response, next: NextFunction) => 
 /**
  * Generic input sanitization middleware for all requests
  */
-export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunction): any => {
+export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunction): unknown => {
   // Sanitize query parameters
   if (req.query) {
     for (const key of Object.keys(req.query)) {

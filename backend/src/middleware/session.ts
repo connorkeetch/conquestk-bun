@@ -4,7 +4,7 @@ import { getRedisClient } from '../config/redis'
 import { logger } from '../utils/logger'
 
 // Import connect-redis v9 - try multiple import patterns for compatibility
-let RedisStore: any = null
+let RedisStore: unknown = null
 try {
   // Method 1: CommonJS with .default (what we were using)
   RedisStore = require('connect-redis').default
@@ -20,7 +20,7 @@ try {
 /**
  * Session middleware that can reconfigure itself when Redis becomes available
  */
-let currentSessionMiddleware: any = null
+let currentSessionMiddleware: unknown = null
 let isRedisStoreActive = false
 
 /**
