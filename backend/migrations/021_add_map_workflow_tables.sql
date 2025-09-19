@@ -181,35 +181,38 @@ CREATE INDEX IF NOT EXISTS idx_content_approval_queue_content
 -- ALIGN MAP_SUBMISSIONS TABLE
 -- =====================================================
 
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_name = 'map_submissions' AND column_name = 'submitted_by'
-  ) AND NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_name = 'map_submissions' AND column_name = 'user_id'
-  ) THEN
-    ALTER TABLE map_submissions
-      RENAME COLUMN submitted_by TO user_id;
-  END IF;
-END $$;
+ALTER TABLE map_submissions
+  ADD COLUMN IF NOT EXISTS submitted_by UUID;
 
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'map_submissions' AND column_name = 'status'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'map_submissions' AND column_name = 'review_status'
-  ) THEN
-    ALTER TABLE map_submissions
-      RENAME COLUMN status TO review_status;
-  END IF;
-END $$;
+ALTER TABLE map_submissions
+  ADD COLUMN IF NOT EXISTS user_id UUID;
+
+UPDATE map_submissions
+SET user_id = submitted_by::UUID
+WHERE user_id IS NULL AND submitted_by IS NOT NULL;
+
+ALTER TABLE map_submissions
+  DROP COLUMN IF EXISTS submitted_by;
+
+ALTER TABLE map_submissions
+  ADD COLUMN IF NOT EXISTS status VARCHAR(32);
+
+ALTER TABLE map_submissions
+  ADD COLUMN IF NOT EXISTS review_status VARCHAR(32);
+
+UPDATE map_submissions
+SET review_status = status
+WHERE review_status IS NULL AND status IS NOT NULL;
+
+ALTER TABLE map_submissions
+  DROP COLUMN IF EXISTS status;
+
+ALTER TABLE map_submissions
+  DROP CONSTRAINT IF EXISTS map_submissions_user_id_fkey;
+
+ALTER TABLE map_submissions
+  ADD CONSTRAINT map_submissions_user_id_fkey
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 ALTER TABLE map_submissions
   ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE,
