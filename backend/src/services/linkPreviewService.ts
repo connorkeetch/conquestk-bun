@@ -1,4 +1,4 @@
-import { getLinkPreview } from 'link-preview-js'
+import ogs from 'open-graph-scraper'
 import { logger } from '../utils/logger'
 
 export interface LinkPreview {
@@ -36,24 +36,42 @@ class LinkPreviewService {
       }
 
       // Fetch preview
-      const preview = await getLinkPreview(url, {
-        timeout: 5000,
-        followRedirects: 'follow',
-        headers: {
-          'user-agent': 'Mozilla/5.0 (compatible; ConquestK/1.0)',
+      const { error, result: preview } = await ogs({
+        url,
+        timeout: 5,
+        fetchOptions: {
+          headers: {
+            'user-agent': 'Mozilla/5.0 (compatible; ConquestK/1.0)',
+          },
         },
       })
 
-      const result: LinkPreview = { url }
+      if (error || !preview) {
+        logger.warn('Open graph metadata not available for url', { url, error })
+        return null
+      }
 
-      if ('title' in preview) {
-        result.title = preview.title
-        result.description = preview.description
-        result.siteName = preview.siteName
+      const result: LinkPreview = {
+        url,
+        title: preview.ogTitle || preview.twitterTitle || preview.dcTitle,
+        description: preview.ogDescription || preview.twitterDescription || preview.dcDescription,
+        siteName: preview.ogSiteName || preview.twitterSite || preview.ogUrl,
+      }
 
-        if (preview.images && preview.images.length > 0) {
-          result.image = preview.images[0]
-        }
+      const ogImageUrl = Array.isArray(preview.ogImage)
+        ? preview.ogImage[0]?.url
+        : undefined
+
+      const twitterImageUrl = Array.isArray(preview.twitterImage)
+        ? preview.twitterImage[0]?.url
+        : undefined
+
+      if (ogImageUrl) {
+        result.image = ogImageUrl
+      } else if (twitterImageUrl) {
+        result.image = twitterImageUrl
+      } else if (preview.favicon) {
+        result.image = preview.favicon
       }
 
       // Cache the result
@@ -61,7 +79,7 @@ class LinkPreviewService {
 
       return result
     } catch (error) {
-      logger.error('Error fetching link preview:', error)
+      logger.error('Error fetching link preview', { url, error })
       return null
     }
   }
