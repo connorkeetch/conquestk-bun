@@ -50,7 +50,7 @@ import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
 
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
-const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminMaps = lazy(() => import('./pages/AdminMaps'))
 const AdminGames = lazy(() => import('./pages/AdminGames'))
@@ -579,7 +579,7 @@ function App() {
                     </div>
                   }
                 >
-                  <AdminPage />
+                  <AdminDashboard />
                 </Suspense>
               }
             />

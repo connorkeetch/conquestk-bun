@@ -112,7 +112,6 @@ erDiagram
 | is_admin | BOOLEAN | false | NO | Admin flag |
 | email_verified | BOOLEAN | false | NO | Email verification status |
 | verification_token | VARCHAR(255) | - | YES | Email verification token |
-| profile_picture | TEXT | - | YES | Avatar URL |
 | bio | TEXT | - | YES | User biography |
 | games_played | INTEGER | 0 | NO | Total games |
 | games_won | INTEGER | 0 | NO | Win count |
@@ -122,7 +121,9 @@ erDiagram
 | updated_at | TIMESTAMP | CURRENT_TIMESTAMP | NO | Last modified |
 | deleted_at | TIMESTAMP | - | YES | Soft delete |
 
-**Indexes**: 
+> **Note**: Profile avatars are no longer stored in the database—the experience now relies on conquest rank insignias instead of user-uploaded images.
+
+**Indexes**:
 - `idx_users_username` (username)
 - `idx_users_email` (email)
 - `idx_users_skill_rating` (skill_rating DESC)

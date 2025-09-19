@@ -39,11 +39,11 @@ export class AuthController {
 
       // Only generate verification token if email service is enabled
       let verificationToken = null
-      let verificationSentAt = null
+      let _verificationSentAt = null
 
       if (emailService.isEnabled()) {
         verificationToken = emailService.generateVerificationToken()
-        verificationSentAt = new Date()
+        _verificationSentAt = new Date()
       }
 
       let user
@@ -140,7 +140,7 @@ export class AuthController {
         },
         requiresEmailVerification,
         requiresVerification: requiresEmailVerification,
-        emailSent: emailService.isEnabled() && verificationToken ? true : false,
+        emailSent: !!(emailService.isEnabled() && verificationToken),
       })
     } catch (error) {
       const normalizedError = toKnownError(error)

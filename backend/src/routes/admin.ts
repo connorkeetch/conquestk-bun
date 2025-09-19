@@ -37,25 +37,6 @@ const checkValidation = (req: Request, res: Response, next: any) => {
 
 // ============= ADMIN INFO =============
 
-// Get admin dashboard stats
-router.get('/stats', async (req: Request, res: Response) => {
-  try {
-    // Get various stats for the dashboard
-    const stats = {
-      totalUsers: 0,
-      activeGames: 0,
-      mapsPending: 0,
-      reports: 0,
-    }
-
-    // You can implement actual queries here
-    res.json(stats)
-  } catch (error) {
-    logger.error('Error getting admin stats:', error)
-    res.status(500).json({ error: 'Failed to get stats' })
-  }
-})
-
 // Get current admin user info
 router.get('/me', async (req: Request, res: Response) => {
   try {
@@ -749,7 +730,7 @@ router.get(
         maxPlayers: game.max_players,
         mapName: game.map_name,
         createdBy: game.created_by_username,
-        duration: Math.floor(parseFloat(game.duration_minutes || '0')) + ' min',
+        duration: `${Math.floor(parseFloat(game.duration_minutes || '0'))} min`,
         turnCount: game.turn_count || 0,
       }))
 
@@ -899,10 +880,9 @@ router.get(
       const map = mapResult.rows[0]
 
       // Get territories if they exist
-      const territoriesResult = await query(
-        'SELECT * FROM map_territories WHERE map_id = $1',
-        [mapId],
-      )
+      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [
+        mapId,
+      ])
 
       // Get adjacencies if they exist
       const adjacenciesResult = await query(

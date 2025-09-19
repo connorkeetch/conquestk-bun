@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import { adminService } from '../services/adminService'
 import type { RequestUser } from '../types/express'
 import { logger } from '../utils/logger'
@@ -17,11 +17,11 @@ declare module 'express-serve-static-core' {
   }
 }
 
-export const requireAdmin = async (
+export const requireAdmin: RequestHandler = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void> => {
+) => {
   try {
     const userId = req.userId
 
@@ -65,8 +65,8 @@ export const requireAdmin = async (
   }
 }
 
-export const requirePermission = (permission: string) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const requirePermission = (permission: string): RequestHandler => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId
 

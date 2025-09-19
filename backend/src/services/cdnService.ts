@@ -1,6 +1,4 @@
-import { createHash } from 'crypto'
-import { readFileSync, statSync } from 'fs'
-import { join } from 'path'
+import { join } from 'node:path'
 import { logger } from '../utils/logger'
 
 interface CDNProvider {
@@ -110,7 +108,7 @@ export class CDNService {
     const regionalCDNs = process.env.CDN_REGIONAL_URLS
     if (regionalCDNs) {
       const urls = regionalCDNs.split(',')
-      urls.forEach((url, index) => {
+      urls.forEach((url, _index) => {
         const [region, cdnUrl] = url.split('=')
         this.providers.push({
           name: `regional-${region}`,
@@ -135,7 +133,7 @@ export class CDNService {
   }
 
   private async configureAssetOptimization(): Promise<void> {
-    const publicPath = join(process.cwd(), 'public')
+    const _publicPath = join(process.cwd(), 'public')
 
     // Configure static assets
     const assetTypes = [
@@ -166,12 +164,12 @@ export class CDNService {
 
   private async generateAssetVersions(): Promise<void> {
     try {
-      const publicPath = join(process.cwd(), 'public')
+      const _publicPath = join(process.cwd(), 'public')
       // Asset versioning logic would go here
       // For now, we'll use a simple timestamp-based approach
       const version = Date.now().toString()
 
-      this.assetConfigs.forEach((config, pattern) => {
+      this.assetConfigs.forEach((config, _pattern) => {
         config.version = version
       })
 

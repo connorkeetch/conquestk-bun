@@ -58,9 +58,7 @@ class LinkPreviewService {
         siteName: preview.ogSiteName || preview.twitterSite || preview.ogUrl,
       }
 
-      const ogImageUrl = Array.isArray(preview.ogImage)
-        ? preview.ogImage[0]?.url
-        : undefined
+      const ogImageUrl = Array.isArray(preview.ogImage) ? preview.ogImage[0]?.url : undefined
 
       const twitterImageUrl = Array.isArray(preview.twitterImage)
         ? preview.twitterImage[0]?.url

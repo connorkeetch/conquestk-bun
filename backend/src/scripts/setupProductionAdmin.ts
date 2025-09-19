@@ -171,28 +171,12 @@ Next steps:
 const email = process.argv[2]
 
 if (!email) {
-  console.log(`
-Usage: npm run setup-production-admin <email>
-
-Example:
-  npm run setup-production-admin connorkeetch@gmail.com
-
-This script will:
-1. Find the user by email
-2. Create/ensure super_admin role exists  
-3. Assign super_admin role to the user
-4. Set account status to active
-5. Test the admin setup
-
-⚠️  PRODUCTION SCRIPT - Use with caution!
-  `)
   process.exit(1)
 }
 
 // Validate email format
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 if (!emailRegex.test(email)) {
-  console.error('❌ Invalid email format')
   process.exit(1)
 }
 

@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 
@@ -267,7 +267,7 @@ export class FeatureFlagService {
    * Get a single feature flag
    */
   private async getFlag(flagName: string): Promise<FeatureFlag | null> {
-    const flags = await this.getAllFlags()
+    const _flags = await this.getAllFlags()
     return this.flagCache.get(flagName) || null
   }
 
@@ -380,7 +380,7 @@ export class FeatureFlagService {
         values.push(flagName)
       }
 
-      queryStr += ' ORDER BY fa.created_at DESC LIMIT $' + (values.length + 1)
+      queryStr += ` ORDER BY fa.created_at DESC LIMIT $${values.length + 1}`
       values.push(limit)
 
       const result = await query<FeatureFlagAuditEntry>(queryStr, values)

@@ -1,8 +1,8 @@
 import { GameEngine } from '../game/gameEngine'
 import type {
   GameAction,
-  GamePhase,
   GameConfiguration,
+  GamePhase,
   GameState,
   GameTerritoryModifier,
   SerializedGameState,
@@ -46,9 +46,7 @@ export class GameService {
     return serialized
   }
 
-  private hydrateGameState(
-    state: GameState | SerializedGameState,
-  ): GameState {
+  private hydrateGameState(state: GameState | SerializedGameState): GameState {
     if (state.territoryModifiers && !(state.territoryModifiers instanceof Map)) {
       const modifierMap = new Map<string, GameTerritoryModifier>(
         Object.entries(state.territoryModifiers),
@@ -68,7 +66,7 @@ export class GameService {
     // or database to see if this territory is marked as a capital
     const rawState = await gameStateCache.getGameState(roomId)
     if (!rawState) return false
-    const gameState = this.hydrateGameState(rawState)
+    const _gameState = this.hydrateGameState(rawState)
 
     // Check if the game has capitals enabled and if this territory is a capital
     // This would need proper implementation based on your game state structure
@@ -380,12 +378,12 @@ export class GameService {
     logger.debug(`Archiving game ${gameId}:`, results)
   }
 
-  async updateEloRatings(gameId: string, gameState: any): Promise<void> {
+  async updateEloRatings(gameId: string, _gameState: any): Promise<void> {
     // TODO: Update ELO ratings
     logger.debug(`Updating ELO for game ${gameId}`)
   }
 
-  async recordGameHistory(gameId: string, gameState: any): Promise<void> {
+  async recordGameHistory(gameId: string, _gameState: any): Promise<void> {
     // TODO: Record in database
     logger.debug(`Recording history for game ${gameId}`)
   }
@@ -394,7 +392,7 @@ export class GameService {
     await gameStateCache.deleteGameState(gameId)
   }
 
-  async getIdleGames(threshold: number): Promise<any[]> {
+  async getIdleGames(_threshold: number): Promise<any[]> {
     // TODO: Query games that have been idle
     return []
   }

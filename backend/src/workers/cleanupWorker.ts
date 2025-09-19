@@ -2,9 +2,37 @@ import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
+import type { GameState } from '../types/game'
 import { logger } from '../utils/logger'
+
 // TODO: Fix import when territoryModifierService is implemented
 // import { TerritoryModifierService } from '../services/territoryModifierService'
+
+interface CleanupMetadata {
+  winner?: string | null
+  isRanked?: boolean
+  startTime?: number | string | Date
+}
+
+type CleanupGameState = Omit<GameState, 'players' | 'board'> &
+  CleanupMetadata & {
+    players: Array<GameState['players'][number] & { turnsPlayed?: number }>
+    board: Array<GameState['board'][number] & { owner?: string | null }>
+  }
+
+interface CleanupResult {
+  success: true
+  alreadyClean?: true
+  reason?: GameCleanupJob['reason']
+  cleanedAt?: string
+}
+
+interface PlayerStatsSnapshot {
+  territoriesControlled: number
+  totalArmies: number
+  turnsPlayed: number
+  eliminated: boolean
+}
 
 export class CleanupWorker {
   private queue: Bull.Queue<GameCleanupJob>
@@ -44,7 +72,7 @@ export class CleanupWorker {
     logger.info('✅ CleanupWorker initialized')
   }
 
-  private async cleanupGame(jobData: GameCleanupJob): Promise<any> {
+  private async cleanupGame(jobData: GameCleanupJob): Promise<CleanupResult> {
     const { gameId, reason } = jobData
 
     try {
@@ -57,18 +85,20 @@ export class CleanupWorker {
         return { success: true, alreadyClean: true }
       }
 
+      const cleanupState: CleanupGameState = gameState
+
       // Perform cleanup based on reason
       switch (reason) {
         case 'finished':
-          await this.cleanupFinishedGame(gameId, gameState)
+          await this.cleanupFinishedGame(gameId, cleanupState)
           break
 
         case 'timeout':
-          await this.cleanupTimedOutGame(gameId, gameState)
+          await this.cleanupTimedOutGame(gameId, cleanupState)
           break
 
         case 'abandoned':
-          await this.cleanupAbandonedGame(gameId, gameState)
+          await this.cleanupAbandonedGame(gameId, cleanupState)
           break
 
         default:
@@ -94,12 +124,12 @@ export class CleanupWorker {
     }
   }
 
-  private async cleanupFinishedGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupFinishedGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Archive game results
     await this.gameService.archiveGameResults(gameId, {
-      winner: gameState.winner,
+      winner: gameState.winner ?? null,
       endReason: 'finished',
-      duration: Date.now() - gameState.startTime,
+      duration: this.getGameDuration(gameState) ?? null,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
@@ -112,22 +142,21 @@ export class CleanupWorker {
     await this.gameService.recordGameHistory(gameId, gameState)
   }
 
-  private async cleanupTimedOutGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupTimedOutGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Determine winner based on territories controlled
     const territoryCount = this.countTerritoriesByPlayer(gameState.board)
-    const winner = Object.entries(territoryCount).sort(
-      ([, a], [, b]) => (b as number) - (a as number),
-    )[0][0]
+    const [leadingEntry] = Object.entries(territoryCount).sort(([, a], [, b]) => b - a)
+    const winner = leadingEntry?.[0] ?? null
 
     await this.gameService.archiveGameResults(gameId, {
       winner,
       endReason: 'timeout',
-      duration: Date.now() - gameState.startTime,
+      duration: this.getGameDuration(gameState) ?? null,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
     // Partial ELO updates for timeout
-    if (gameState.isRanked) {
+    if (gameState.isRanked && winner) {
       await this.gameService.updateEloRatings(gameId, {
         ...gameState,
         winner,
@@ -136,12 +165,12 @@ export class CleanupWorker {
     }
   }
 
-  private async cleanupAbandonedGame(gameId: string, gameState: any): Promise<void> {
+  private async cleanupAbandonedGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Mark as abandoned - no winner
     await this.gameService.archiveGameResults(gameId, {
       winner: null,
       endReason: 'abandoned',
-      duration: Date.now() - gameState.startTime,
+      duration: this.getGameDuration(gameState) ?? null,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
@@ -170,17 +199,23 @@ export class CleanupWorker {
     logger.debug('Cleaned temporary resources for game', { gameId })
   }
 
-  private calculatePlayerStats(gameState: any): Record<string, any> {
-    const stats: Record<string, any> = {}
+  private calculatePlayerStats(gameState: CleanupGameState): Record<string, PlayerStatsSnapshot> {
+    const stats: Record<string, PlayerStatsSnapshot> = {}
 
     for (const player of gameState.players) {
-      const territories = gameState.board.filter((t: any) => t.owner === player.id)
-      const totalArmies = territories.reduce((sum: number, t: any) => sum + t.armies, 0)
+      const territories = gameState.board.filter(
+        (territory) => this.getTerritoryOwnerId(territory) === player.id,
+      )
+      const totalArmies = territories.reduce((sum, territory) => sum + territory.armies, 0)
+      const turnsPlayed =
+        typeof (player as { turnsPlayed?: unknown }).turnsPlayed === 'number'
+          ? (player as { turnsPlayed?: number }).turnsPlayed
+          : 0
 
       stats[player.id] = {
         territoriesControlled: territories.length,
         totalArmies,
-        turnsPlayed: player.turnsPlayed || 0,
+        turnsPlayed,
         eliminated: territories.length === 0,
       }
     }
@@ -188,14 +223,47 @@ export class CleanupWorker {
     return stats
   }
 
-  private countTerritoriesByPlayer(board: any[]): Record<string, number> {
+  private countTerritoriesByPlayer(board: CleanupGameState['board']): Record<string, number> {
     const counts: Record<string, number> = {}
 
     for (const territory of board) {
-      counts[territory.owner] = (counts[territory.owner] || 0) + 1
+      const ownerId = this.getTerritoryOwnerId(territory)
+      if (!ownerId) {
+        continue
+      }
+      counts[ownerId] = (counts[ownerId] || 0) + 1
     }
 
     return counts
+  }
+
+  private getTerritoryOwnerId(territory: CleanupGameState['board'][number]): string | null {
+    if (typeof territory.owner === 'string' && territory.owner.length > 0) {
+      return territory.owner
+    }
+    return territory.ownerId ?? null
+  }
+
+  private getGameDuration(gameState: CleanupGameState): number | undefined {
+    const { startTime } = gameState
+    if (!startTime) {
+      return undefined
+    }
+
+    if (typeof startTime === 'number') {
+      return Date.now() - startTime
+    }
+
+    if (startTime instanceof Date) {
+      return Date.now() - startTime.getTime()
+    }
+
+    const parsed = Date.parse(startTime)
+    if (!Number.isNaN(parsed)) {
+      return Date.now() - parsed
+    }
+
+    return undefined
   }
 
   private async scheduleAbandonedGameCleanup(): Promise<void> {

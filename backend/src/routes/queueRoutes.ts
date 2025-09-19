@@ -6,7 +6,7 @@ import { getWorkerManagerInstance } from '../workers/workerManager'
 const router = express.Router()
 
 // Queue monitoring endpoints (admin only)
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', authenticateToken, async (_req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -29,7 +29,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/health', authenticateToken, async (req, res) => {
+router.get('/health', authenticateToken, async (_req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -55,7 +55,7 @@ router.get('/health', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticateToken, async (_req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -156,7 +156,7 @@ router.delete('/clear/:queueName', authenticateToken, async (req, res) => {
 })
 
 // Public health check (lighter version)
-router.get('/ping', async (req, res) => {
+router.get('/ping', async (_req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {

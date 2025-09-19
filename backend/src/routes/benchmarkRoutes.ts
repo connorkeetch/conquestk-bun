@@ -6,7 +6,7 @@ import { logger } from '../utils/logger'
 const router = express.Router()
 
 // Get available test scenarios
-router.get('/scenarios', authenticateToken, async (req, res) => {
+router.get('/scenarios', authenticateToken, async (_req, res) => {
   try {
     const scenarios = performanceTestingService.getTestScenarios()
 
@@ -186,7 +186,7 @@ router.post('/stress-test', authenticateToken, async (req, res): Promise<void> =
 })
 
 // Get test status
-router.get('/status', authenticateToken, async (req, res) => {
+router.get('/status', authenticateToken, async (_req, res) => {
   try {
     const activeTests = performanceTestingService.getActiveTests()
     const recentHistory = performanceTestingService.getBenchmarkHistory(10)
@@ -281,7 +281,7 @@ router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> 
 // Get benchmark history
 router.get('/history', authenticateToken, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 50
+    const limit = parseInt(req.query.limit as string, 10) || 50
     const history = performanceTestingService.getBenchmarkHistory(limit)
 
     res.json({
@@ -301,7 +301,7 @@ router.get('/history', authenticateToken, async (req, res) => {
 })
 
 // Generate benchmark report
-router.get('/report', authenticateToken, async (req, res) => {
+router.get('/report', authenticateToken, async (_req, res) => {
   try {
     const report = performanceTestingService.generateBenchmarkReport()
 
@@ -374,7 +374,7 @@ router.post('/quick-test', authenticateToken, async (req, res): Promise<void> =>
 })
 
 // System performance baseline
-router.get('/baseline', authenticateToken, async (req, res) => {
+router.get('/baseline', authenticateToken, async (_req, res) => {
   try {
     const baselineTests = ['api_health_check', 'cache_performance']
 

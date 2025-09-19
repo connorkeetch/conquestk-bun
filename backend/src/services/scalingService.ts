@@ -1,5 +1,5 @@
 import cluster from 'node:cluster'
-import os from 'os'
+import os from 'node:os'
 import { logger } from '../utils/logger'
 
 interface ScalingMetrics {
@@ -44,8 +44,8 @@ export class ScalingService {
 
   constructor() {
     this.config = {
-      minWorkers: parseInt(process.env.MIN_WORKERS || '2'),
-      maxWorkers: parseInt(process.env.MAX_WORKERS || String(os.cpus().length)),
+      minWorkers: parseInt(process.env.MIN_WORKERS || '2', 10),
+      maxWorkers: parseInt(process.env.MAX_WORKERS || String(os.cpus().length), 10),
       scaleUpThreshold: 80, // CPU percentage
       scaleDownThreshold: 30,
       scaleUpCooldown: 5 * 60 * 1000, // 5 minutes
@@ -186,7 +186,7 @@ export class ScalingService {
     // Send health check to all workers
     const clusterWorkers = cluster.workers as Record<string, any> | undefined
     Object.values(clusterWorkers || {}).forEach((worker) => {
-      if (worker && worker.send) {
+      if (worker?.send) {
         worker.send({ type: 'health-check' })
       }
     })
@@ -348,7 +348,7 @@ export class ScalingService {
     // Listen for health check requests from master
     process.on('message', (message: any) => {
       if (message.type === 'health-check') {
-        process.send!({
+        process.send?.({
           type: 'health-response',
           metrics: {
             memoryUsage: process.memoryUsage(),

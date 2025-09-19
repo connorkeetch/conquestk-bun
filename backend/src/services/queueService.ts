@@ -2,7 +2,7 @@ import Bull from 'bull'
 import type Redis from 'ioredis'
 import type { RedisOptions } from 'ioredis'
 import { getRedisClient } from '../config/redis'
-import { BattleResult, type GameAction, GameState } from '../types/game'
+import type { GameAction } from '../types/game'
 import { logger } from '../utils/logger'
 
 // Queue job types
@@ -46,15 +46,38 @@ const QUEUE_CONFIGS = {
   },
 } as const
 
+export interface QueueStats {
+  waiting: number
+  active: number
+  completed: number
+  failed: number
+  delayed: number
+  isPaused: boolean
+}
+
+type QueueHealthDisabled = {
+  status: 'disabled'
+  details: {
+    message: string
+    initialized: boolean
+  }
+}
+
+type QueueHealthOperational = {
+  status: 'healthy' | 'unhealthy'
+  details: {
+    redis: string
+    queues: Record<string, QueueStats>
+    initialized: boolean
+  }
+}
+
+export type QueueHealthResult = QueueHealthOperational | QueueHealthDisabled
+
 export class QueueService {
   private redis: Redis | null = null
   private queues: Map<string, Bull.Queue> = new Map()
   private isInitialized = false
-
-  constructor() {
-    // Use centralized Redis client with proper Railway network wait
-    // Don't create connection in constructor - wait for initialize()
-  }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
@@ -177,8 +200,8 @@ export class QueueService {
   }
 
   // Queue monitoring
-  async getQueueStats(): Promise<Record<string, any>> {
-    const stats: Record<string, any> = {}
+  async getQueueStats(): Promise<Record<string, QueueStats>> {
+    const stats: Record<string, QueueStats> = {}
 
     for (const [key, queue] of this.queues) {
       const [waiting, active, completed, failed, delayed] = await Promise.all([
@@ -239,7 +262,7 @@ export class QueueService {
   }
 
   // Health check
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<QueueHealthResult> {
     try {
       if (!this.redis) {
         return {
@@ -263,9 +286,14 @@ export class QueueService {
         },
       }
     } catch (error) {
+      logger.error('❌ QueueService health check failed', error)
       return {
         status: 'unhealthy',
-        details: { error: (error as Error).message },
+        details: {
+          redis: 'ERROR',
+          queues: {},
+          initialized: this.isInitialized,
+        },
       }
     }
   }
@@ -286,8 +314,8 @@ export class QueueService {
     return this.getQueue('gameActions') as Bull.Queue<GameActionJob>
   }
 
-  getCleanupQueue(): Bull.Queue<any> {
-    return this.getQueue('gameCleanup')
+  getCleanupQueue(): Bull.Queue<GameCleanupJob> {
+    return this.getQueue('gameCleanup') as Bull.Queue<GameCleanupJob>
   }
 }
 

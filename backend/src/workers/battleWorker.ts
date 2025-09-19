@@ -2,7 +2,12 @@ import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
 import { type BattleSimulationJob, queueService } from '../services/queueService'
-import { DeltaBuilder, type GameDelta, type GameEndDelta } from '../types/deltaUpdates'
+import {
+  type BattleResultDelta,
+  DeltaBuilder,
+  type GameDelta,
+  type GameEndDelta,
+} from '../types/deltaUpdates'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 
@@ -86,8 +91,8 @@ export class BattleWorker {
       }
 
       // Update territories based on battle result
-      const attackingTerr = gameState.board.find((t: any) => t.id === attackingTerritory)
-      const defendingTerr = gameState.board.find((t: any) => t.id === defendingTerritory)
+      const attackingTerr = gameState.board.find((territory) => territory.id === attackingTerritory)
+      const defendingTerr = gameState.board.find((territory) => territory.id === defendingTerritory)
 
       if (!attackingTerr || !defendingTerr) {
         throw new Error('Territory not found during battle processing')
@@ -98,6 +103,8 @@ export class BattleWorker {
       const newDefendingArmies = defendingTerr.armies - battleResult.defenderLosses
 
       const deltas: GameDelta[] = []
+      const attackerOwnerId = attackingTerr.ownerId ?? playerId
+      const defenderOwnerId = defendingTerr.ownerId ?? null
 
       if (battleResult.territoryConquered) {
         // Territory conquered - transfer ownership
@@ -114,29 +121,33 @@ export class BattleWorker {
         deltas.push(
           DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
             armies: movingArmies,
-            ownerId: attackingTerr.ownerId!,
+            ownerId: attackerOwnerId,
           }),
         )
 
         // Check for player elimination
-        const defendingPlayer = gameState.players.find((p: any) => p.id === defendingTerr.ownerId)
         const remainingTerritories = gameState.board.filter(
-          (t: any) => t.ownerId === defendingTerr.ownerId && t.id !== defendingTerritory,
+          (territory) =>
+            territory.ownerId === defendingTerr.ownerId && territory.id !== defendingTerritory,
         )
 
         if (remainingTerritories.length === 0) {
           // Player eliminated - use player update delta to mark as eliminated
-          deltas.push(
-            DeltaBuilder.playerUpdate(gameId, defendingTerr.ownerId!, {
-              isEliminated: true,
-              territories: [],
-            }),
-          )
+          if (defenderOwnerId) {
+            deltas.push(
+              DeltaBuilder.playerUpdate(gameId, defenderOwnerId, {
+                isEliminated: true,
+                territories: [],
+              }),
+            )
+          }
         }
 
         // Check for game victory
-        const remainingPlayers = gameState.players.filter((p: any) => {
-          return gameState.board.some((t: any) => t.owner === p.id)
+        const remainingPlayers = gameState.players.filter((player) => {
+          return gameState.board.some(
+            (territory) => this.getTerritoryOwnerId(territory) === player.id,
+          )
         })
 
         if (remainingPlayers.length === 1) {
@@ -145,8 +156,13 @@ export class BattleWorker {
             roomId: gameId,
             winner: playerId,
             eliminatedPlayers: gameState.players
-              .filter((p: any) => !gameState.board.some((t: any) => t.owner === p.id))
-              .map((p: any) => p.id),
+              .filter(
+                (player) =>
+                  !gameState.board.some(
+                    (territory) => this.getTerritoryOwnerId(territory) === player.id,
+                  ),
+              )
+              .map((player) => player.id),
             timestamp: Date.now(),
           } as GameEndDelta)
         }
@@ -166,7 +182,7 @@ export class BattleWorker {
       }
 
       // Create compound delta for all battle results
-      const battleDelta: any = {
+      const battleDelta: BattleResultDelta & { changes: GameDelta[] } = {
         type: 'BATTLE_RESULT',
         roomId: gameId,
         timestamp: Date.now(),
@@ -182,8 +198,8 @@ export class BattleWorker {
             name: defendingTerr.name,
             armies: defendingTerr.armies - battleResult.defenderLosses,
             ownerId: battleResult.territoryConquered
-              ? attackingTerr.ownerId!
-              : defendingTerr.ownerId!,
+              ? attackerOwnerId
+              : (defenderOwnerId ?? attackerOwnerId),
           },
           conquered: battleResult.territoryConquered,
           attackerDice: battleResult.dice.attacker,
@@ -263,6 +279,10 @@ export class BattleWorker {
       rolls.push(Math.floor(Math.random() * 6) + 1)
     }
     return rolls
+  }
+
+  private getTerritoryOwnerId(territory: GameState['board'][number]): string | null {
+    return territory.ownerId ?? null
   }
 }
 

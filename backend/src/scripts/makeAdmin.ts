@@ -112,25 +112,12 @@ Admin capabilities include:
 const email = process.argv[2]
 
 if (!email) {
-  console.log(`
-Usage: npm run make-admin <email>
-
-Example:
-  npm run make-admin connorkeetch@gmail.com
-
-This script will:
-1. Find the user by email
-2. Create super_admin role if needed
-3. Assign super_admin role to the user
-4. Ensure account status is active
-  `)
   process.exit(1)
 }
 
 // Validate email format
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 if (!emailRegex.test(email)) {
-  console.error('❌ Invalid email format')
   process.exit(1)
 }
 

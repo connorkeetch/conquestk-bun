@@ -16,7 +16,7 @@ export function parseTags(tags: any): string[] {
       if (Array.isArray(parsed)) {
         return parsed.filter((tag) => typeof tag === 'string').map((tag) => tag.trim())
       }
-    } catch (error) {
+    } catch (_error) {
       // Not valid JSON, continue to other strategies
     }
 
@@ -52,7 +52,7 @@ export function parseJsonField<T>(field: any, defaultValue: T): T {
   if (typeof field === 'string') {
     try {
       return JSON.parse(field) as T
-    } catch (error) {
+    } catch (_error) {
       // If parsing fails, return the default
       return defaultValue
     }

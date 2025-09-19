@@ -512,7 +512,7 @@ export class PerformanceTestingService {
         // Estimate response size
         const responseSize = JSON.stringify(response.data || '').length
         results.throughputBytes += responseSize
-      } catch (error) {
+      } catch (_error) {
         results.totalRequests++
         results.failedRequests++
         results.responseTimes.push(10000) // Timeout value
@@ -541,8 +541,8 @@ export class PerformanceTestingService {
     config: GameScenarioConfig,
   ): Promise<BenchmarkResult['results']> {
     // Simplified game scenario simulation
-    const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5001'
-    const results = {
+    const _baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5001'
+    const _results = {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
@@ -585,7 +585,7 @@ export class PerformanceTestingService {
         const current = performanceMonitorService.getCurrentMetrics()
         const scaling = scalingService.getMetrics()
         const cache = redisClusterService.getMetrics()
-        const db = await databaseClusterService.getMetrics()
+        const _db = await databaseClusterService.getMetrics()
 
         if (current) {
           metrics.cpuUsage.push(0) // Would calculate actual CPU usage

@@ -32,25 +32,24 @@ jest.mock('../socket/chatHandlers', () => ({
 }))
 
 import type { Server } from 'socket.io'
-import { setupSocketHandlers } from '../services/socketService'
 import { queueService } from '../services/queueService'
-import { GameService } from '../services/gameService'
+import { setupSocketHandlers } from '../services/socketService'
 
 describe('socketService event handlers', () => {
-const createIoMock = () => {
-  const roomEmit = jest.fn()
-  const io = {
-    use: jest.fn(),
-    on: jest.fn(),
-    to: jest.fn(() => ({ emit: roomEmit })),
-  } as unknown as Server
-  return { io, roomEmit }
-}
+  const createIoMock = () => {
+    const roomEmit = jest.fn()
+    const io = {
+      use: jest.fn(),
+      on: jest.fn(),
+      to: jest.fn(() => ({ emit: roomEmit })),
+    } as unknown as Server
+    return { io, roomEmit }
+  }
 
-const createFakeSocket = () => {
-  const toEmit = jest.fn()
-  return {
-    id: 'socket-1',
+  const createFakeSocket = () => {
+    const toEmit = jest.fn()
+    return {
+      id: 'socket-1',
       userId: 'user-1',
       handshake: { auth: { token: 'stub' } },
       on: jest.fn(),
@@ -85,7 +84,7 @@ const createFakeSocket = () => {
   const getSocketHandler = (socket: any, eventName: string) => {
     const call = socket.on.mock.calls.find(([name]: [string, any]) => name === eventName)
     expect(call).toBeDefined()
-    return call![1]
+    return call?.[1]
   }
 
   const initialiseHandlers = () => {

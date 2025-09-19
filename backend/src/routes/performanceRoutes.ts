@@ -9,7 +9,7 @@ import { logger } from '../utils/logger'
 const router = express.Router()
 
 // Performance dashboard (admin only)
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', authenticateToken, async (_req, res) => {
   try {
     const dashboard = performanceMonitorService.getDashboardData()
 
@@ -26,7 +26,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 })
 
 // Current system metrics
-router.get('/metrics', authenticateToken, async (req, res) => {
+router.get('/metrics', authenticateToken, async (_req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
 
@@ -45,7 +45,7 @@ router.get('/metrics', authenticateToken, async (req, res) => {
 // Historical metrics
 router.get('/metrics/history', authenticateToken, async (req, res) => {
   try {
-    const hours = parseInt(req.query.hours as string) || 1
+    const hours = parseInt(req.query.hours as string, 10) || 1
     const history = performanceMonitorService.getMetricsHistory(hours)
 
     res.json({
@@ -103,7 +103,7 @@ router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
 })
 
 // Component-specific health checks
-router.get('/health/detailed', authenticateToken, async (req, res) => {
+router.get('/health/detailed', authenticateToken, async (_req, res) => {
   try {
     const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
       performanceMonitorService.healthCheck(),
@@ -145,7 +145,7 @@ router.get('/health/detailed', authenticateToken, async (req, res) => {
 })
 
 // Cache management
-router.get('/cache/stats', authenticateToken, async (req, res) => {
+router.get('/cache/stats', authenticateToken, async (_req, res) => {
   try {
     const stats = redisClusterService.getMetrics()
 
@@ -189,7 +189,7 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
 })
 
 // Database performance
-router.get('/database/stats', authenticateToken, async (req, res) => {
+router.get('/database/stats', authenticateToken, async (_req, res) => {
   try {
     const stats = databaseClusterService.getMetrics()
 
@@ -206,7 +206,7 @@ router.get('/database/stats', authenticateToken, async (req, res) => {
 })
 
 // CDN management
-router.get('/cdn/stats', authenticateToken, async (req, res) => {
+router.get('/cdn/stats', authenticateToken, async (_req, res) => {
   try {
     const stats = cdnService.getMetrics()
 
@@ -279,7 +279,7 @@ router.post('/test/load', authenticateToken, async (req, res) => {
 })
 
 // System optimization recommendations
-router.get('/optimization/recommendations', authenticateToken, async (req, res) => {
+router.get('/optimization/recommendations', authenticateToken, async (_req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
     const recommendations = []
@@ -350,7 +350,7 @@ router.get('/optimization/recommendations', authenticateToken, async (req, res) 
 // Export performance report
 router.get('/report', authenticateToken, async (req, res) => {
   try {
-    const hours = parseInt(req.query.hours as string) || 24
+    const hours = parseInt(req.query.hours as string, 10) || 24
     const format = (req.query.format as string) || 'json'
 
     const dashboard = performanceMonitorService.getDashboardData()

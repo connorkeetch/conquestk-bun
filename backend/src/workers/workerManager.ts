@@ -1,5 +1,5 @@
 import type { Server } from 'socket.io'
-import { queueService } from '../services/queueService'
+import { type QueueStats, queueService } from '../services/queueService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 import { createBattleWorker } from './battleWorker'
@@ -8,9 +8,6 @@ import { createGameActionWorker } from './gameActionWorker'
 
 export class WorkerManager {
   private isInitialized = false
-  private gameActionWorker: any
-  private battleWorker: any
-  private cleanupWorker: any
   private io: Server<ClientToServerEvents, ServerToClientEvents>
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
@@ -27,14 +24,14 @@ export class WorkerManager {
       await queueService.initialize()
 
       // Initialize all workers
-      this.gameActionWorker = createGameActionWorker(this.io)
-      this.battleWorker = createBattleWorker(this.io)
-      this.cleanupWorker = createCleanupWorker()
+      const gameActionWorker = createGameActionWorker(this.io)
+      const battleWorker = createBattleWorker(this.io)
+      const cleanupWorker = createCleanupWorker()
 
       await Promise.all([
-        this.gameActionWorker.initialize(),
-        this.battleWorker.initialize(),
-        this.cleanupWorker.initialize(),
+        gameActionWorker.initialize(),
+        battleWorker.initialize(),
+        cleanupWorker.initialize(),
       ])
 
       this.isInitialized = true
@@ -56,9 +53,24 @@ export class WorkerManager {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy' | 'disabled'
+    details: Record<string, unknown>
+  }> {
     try {
       const queueHealth = await queueService.healthCheck()
+
+      if (queueHealth.status === 'disabled') {
+        return {
+          status: 'disabled',
+          details: {
+            workers: {
+              initialized: this.isInitialized,
+            },
+            queues: {},
+          },
+        }
+      }
 
       return {
         status: queueHealth.status === 'healthy' && this.isInitialized ? 'healthy' : 'unhealthy',
@@ -66,7 +78,7 @@ export class WorkerManager {
           workers: {
             initialized: this.isInitialized,
           },
-          queues: queueHealth.details,
+          queues: queueHealth.details.queues,
         },
       }
     } catch (error) {
@@ -77,7 +89,11 @@ export class WorkerManager {
     }
   }
 
-  async getStats(): Promise<Record<string, any>> {
+  async getStats(): Promise<{
+    initialized: boolean
+    queues: Record<string, QueueStats>
+    timestamp: string
+  }> {
     const queueStats = await queueService.getQueueStats()
 
     return {

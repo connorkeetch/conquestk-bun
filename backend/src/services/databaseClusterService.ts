@@ -63,7 +63,7 @@ export class DatabaseClusterService {
       await this.addDatabaseNode({
         id: 'primary',
         host: this.getEnvValue('DB_HOST', 'localhost'),
-        port: parseInt(this.getEnvValue('DB_PORT', '5432')),
+        port: parseInt(this.getEnvValue('DB_PORT', '5432'), 10),
         database: this.getEnvValue('DB_NAME', 'risk_game'),
         role: 'primary',
         weight: 100,
@@ -78,7 +78,7 @@ export class DatabaseClusterService {
           await this.addDatabaseNode({
             id: `replica-${i + 1}`,
             host: host.trim(),
-            port: parseInt(port) || 5432,
+            port: parseInt(port, 10) || 5432,
             database: this.getEnvValue('DB_NAME', 'risk_game'),
             role: 'replica',
             weight: 80, // Slightly lower weight for replicas
@@ -184,8 +184,6 @@ export class DatabaseClusterService {
 
       case 'weighted_round_robin':
         return this.selectWeightedRoundRobin(healthyNodes)
-
-      case 'health_weighted':
       default:
         return this.selectHealthWeighted(healthyNodes)
     }
@@ -315,7 +313,7 @@ export class DatabaseClusterService {
     }
   }
 
-  private updateNodeMetrics(node: DatabaseNode, responseTime: number, success: boolean): void {
+  private updateNodeMetrics(node: DatabaseNode, responseTime: number, _success: boolean): void {
     node.queryCount++
 
     // Update average response time using exponential moving average

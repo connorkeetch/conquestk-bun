@@ -5,13 +5,9 @@ dotenv.config()
 import emailService from '../services/emailService'
 
 async function testEmail() {
-  console.log('🚀 Testing Resend email service...')
-
   const testEmail = 'connorkeetch@gmail.com' // Your email for testing
   const testUsername = 'TestUser'
   const testToken = 'test-token-123'
-
-  console.log(`📧 Sending test email to: ${testEmail}`)
 
   try {
     // Test verification email
@@ -23,9 +19,7 @@ async function testEmail() {
     })
 
     if (verificationResult) {
-      console.log('✅ Verification email sent successfully!')
     } else {
-      console.log('❌ Failed to send verification email')
     }
 
     // Wait a bit before sending the next email
@@ -40,15 +34,9 @@ async function testEmail() {
     })
 
     if (resetResult) {
-      console.log('✅ Password reset email sent successfully!')
     } else {
-      console.log('❌ Failed to send password reset email')
     }
-
-    console.log('\n📊 Email service status:', emailService.isEnabled() ? 'Enabled' : 'Disabled')
-  } catch (error) {
-    console.error('❌ Error testing email:', error)
-  }
+  } catch (_error) {}
 
   process.exit(0)
 }

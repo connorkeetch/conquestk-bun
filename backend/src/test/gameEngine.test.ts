@@ -4,6 +4,7 @@ jest.mock('../config/database', () => ({
 
 import { describe, expect, it } from '@jest/globals'
 import { GameEngine } from '../game/gameEngine'
+import { GameService } from '../services/gameService'
 import type {
   AttackAction,
   GameAction,
@@ -12,7 +13,6 @@ import type {
   GameTerritoryModifier,
   Territory,
 } from '../types/game'
-import { GameService } from '../services/gameService'
 
 const createBaseGameState = (override?: Partial<GameState>): GameState => {
   const players: GamePlayer[] = [

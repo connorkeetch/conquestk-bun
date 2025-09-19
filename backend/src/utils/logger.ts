@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import winston from 'winston'
 
 // Create transports array based on environment
@@ -31,9 +31,7 @@ if (process.env.NODE_ENV === 'production') {
         format: winston.format.simple(),
       }),
     )
-  } catch (error) {
-    // If file system is not writable, fall back to console only
-    console.warn('Warning: Could not create logs directory, using console output only')
+  } catch (_error) {
     transports.push(
       new winston.transports.Console({
         format: winston.format.simple(),
