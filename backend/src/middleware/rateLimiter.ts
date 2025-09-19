@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
 import slowDown from 'express-slow-down'
 import RedisStore, { type RedisReply, type SendCommandFn } from 'rate-limit-redis'
@@ -68,9 +68,9 @@ if (useInMemoryLogin && loginAttemptsStore) {
     loginAttemptsStore.forEach((attempts, key) => {
       const recentAttempts = attempts.filter((time) => now - time < fifteenMinutes)
       if (recentAttempts.length === 0) {
-        loginAttemptsStore!.delete(key)
+        loginAttemptsStore?.delete(key)
       } else {
-        loginAttemptsStore!.set(key, recentAttempts)
+        loginAttemptsStore?.set(key, recentAttempts)
       }
     })
   }, 60 * 1000) // Clean every minute
@@ -285,17 +285,18 @@ export class SuspiciousActivityTracker {
   }
 
   middleware() {
-    return async (req: Request, res: Response, next: Function): Promise<any> => {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       const ip = req.ip || 'unknown'
 
       if (await this.isBlocked(ip)) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Your IP has been temporarily blocked due to suspicious activity.',
         })
+        return
       }
 
-      return next()
+      next()
     }
   }
 }
