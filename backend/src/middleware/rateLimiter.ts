@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
 import slowDown from 'express-slow-down'
-import RedisStore, { type SendCommandFn, type RedisReply } from 'rate-limit-redis'
+import RedisStore, { type RedisReply, type SendCommandFn } from 'rate-limit-redis'
 import { getRedisClient } from '../config/redis'
 import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
@@ -30,10 +30,7 @@ function createRateLimitStore(prefix: string): RedisStore | undefined {
         sendCommand,
       })
     } catch (error) {
-      logger.error(
-        `Failed to create Redis store for ${prefix}:`,
-        getErrorMessage(error),
-      )
+      logger.error(`Failed to create Redis store for ${prefix}:`, getErrorMessage(error))
       logger.warn(
         `Using in-memory store for rate limiting (${prefix}) - Redis store creation failed`,
       )

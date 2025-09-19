@@ -20,7 +20,10 @@ router.post(
 )
 
 // Map submission
-router.post('/maps/:mapId/submit', mapWorkflowController.submitForReview.bind(mapWorkflowController))
+router.post(
+  '/maps/:mapId/submit',
+  mapWorkflowController.submitForReview.bind(mapWorkflowController),
+)
 router.get('/maps/:mapId/history', mapWorkflowController.getMapHistory.bind(mapWorkflowController))
 
 // Admin routes

@@ -110,7 +110,7 @@ export class GameActionWorker {
           break
 
         default: {
-          const exhaustive: never = action
+          const _exhaustive: never = action
           throw new Error('Unknown action type received in game action worker')
         }
       }

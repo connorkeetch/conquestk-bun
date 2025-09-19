@@ -15,8 +15,8 @@ export function logStartupDiagnostics() {
   logger.info(`  Script directory: ${__dirname}`)
   logger.info(
     `  Memory: ${JSON.stringify({
-      rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
-      heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
     })}`,
   )
 
@@ -109,8 +109,8 @@ export async function testMigrationFiles() {
   logger.info('📁 Checking migration files...')
 
   try {
-    const fs = require('fs')
-    const path = require('path')
+    const fs = require('node:fs')
+    const path = require('node:path')
 
     const migrationsPath = path.join(__dirname, '../migrations')
     logger.info(`  Looking for migrations in: ${migrationsPath}`)
