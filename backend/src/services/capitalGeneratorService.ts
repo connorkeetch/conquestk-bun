@@ -1,11 +1,13 @@
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger'
 
+type BoundaryCoordinates = Array<[number, number]>
+
 interface Territory {
   id: string
   name: string
   map_id: string
-  boundary_coords: any
+  boundary_coords: BoundaryCoordinates
   army_position: { x: number; y: number }
 }
 
@@ -202,7 +204,11 @@ export class CapitalGeneratorService {
     visited.add(from)
 
     while (queue.length > 0) {
-      const [current, distance] = queue.shift()!
+      const next = queue.shift()
+      if (!next) {
+        break
+      }
+      const [current, distance] = next
 
       const neighbors = graph.get(current) || new Set()
       for (const neighbor of neighbors) {
@@ -275,7 +281,11 @@ export class CapitalGeneratorService {
         const queue = [territory.id]
 
         while (queue.length > 0) {
-          const current = queue.shift()!
+          const nextNode = queue.shift()
+          if (!nextNode) {
+            break
+          }
+          const current = nextNode
           if (visited.has(current)) continue
 
           visited.add(current)

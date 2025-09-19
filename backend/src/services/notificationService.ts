@@ -1,20 +1,22 @@
 import webpush from 'web-push'
+import { logger } from '../utils/logger'
 
 // Check if VAPID keys are configured
-const isNotificationServiceEnabled = !!(
-  process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
-)
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+const isNotificationServiceEnabled = Boolean(vapidPublicKey && vapidPrivateKey)
 
 // Only configure web-push if VAPID keys are available
-if (isNotificationServiceEnabled) {
+if (isNotificationServiceEnabled && vapidPublicKey && vapidPrivateKey) {
   try {
     webpush.setVapidDetails(
       process.env.VAPID_EMAIL || 'mailto:admin@conquestk.com',
-      process.env.VAPID_PUBLIC_KEY!, // We know these exist because of the check above
-      process.env.VAPID_PRIVATE_KEY!,
+      vapidPublicKey,
+      vapidPrivateKey,
     )
-  } catch (_error) {}
-} else {
+  } catch (error) {
+    logger.error('Failed to configure web-push VAPID details', error)
+  }
 }
 
 // Store subscriptions in memory for now (should be in database in production)
@@ -26,15 +28,25 @@ export interface NotificationPayload {
   icon?: string
   badge?: string
   tag?: string
-  data?: {
-    gameId?: number
-    url?: string
-    [key: string]: any
-  }
+  data?: NotificationPayloadData
   actions?: Array<{
     action: string
     title: string
   }>
+}
+
+interface NotificationPayloadData {
+  gameId?: number
+  url?: string
+  [key: string]: unknown
+}
+
+type WebPushError = {
+  statusCode?: number
+}
+
+function isWebPushError(error: unknown): error is WebPushError {
+  return typeof error === 'object' && error !== null && 'statusCode' in error
 }
 
 class NotificationService {
@@ -71,7 +83,7 @@ class NotificationService {
       return true
     } catch (error) {
       // If subscription is invalid, remove it
-      if ((error as any).statusCode === 410) {
+      if (isWebPushError(error) && error.statusCode === 410) {
         await this.removeSubscription(userId)
       }
 

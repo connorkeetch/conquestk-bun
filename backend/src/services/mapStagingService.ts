@@ -31,6 +31,17 @@ export interface UserQuota {
   maxSizeBytes: number | null
 }
 
+interface UserQuotaSummary {
+  isAdmin: boolean
+  unlimited: boolean
+  stagingImages: number
+  drafts: number
+  pendingSubmissions: number
+  total: number
+  maxAllowed: number | null
+  remaining: number | null
+}
+
 export class MapStagingService {
   private readonly UPLOADS_DIR = path.join(__dirname, '../../uploads/maps/staging')
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -239,7 +250,7 @@ export class MapStagingService {
   /**
    * Get quota summary for a user
    */
-  async getUserQuotaSummary(userId: string): Promise<any> {
+  async getUserQuotaSummary(userId: string): Promise<UserQuotaSummary> {
     try {
       // Check if admin
       const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [userId])
