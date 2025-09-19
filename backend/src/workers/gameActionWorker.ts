@@ -4,6 +4,7 @@ import { GameService } from '../services/gameService'
 import { type GameActionJob, queueService } from '../services/queueService'
 import { type CompoundDelta, DeltaBuilder, type GameDelta } from '../types/deltaUpdates'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import { logger } from '../utils/logger'
 
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>
@@ -24,25 +25,35 @@ export class GameActionWorker {
 
     // Job event handlers
     this.queue.on('completed', (job, result) => {
-      console.log(`✅ Game action completed: ${job.id}`, result)
+      logger.info('✅ Game action job completed', {
+        jobId: job.id,
+        result,
+      })
     })
 
     this.queue.on('failed', (job, error) => {
-      console.error(`❌ Game action failed: ${job.id}`, error)
+      logger.error('❌ Game action job failed', {
+        jobId: job.id,
+        error,
+      })
     })
 
     this.queue.on('stalled', (job) => {
-      console.warn(`⚠️ Game action stalled: ${job.id}`)
+      logger.warn('⚠️ Game action job stalled', { jobId: job.id })
     })
 
-    console.log('✅ GameActionWorker initialized')
+    logger.info('✅ GameActionWorker initialized')
   }
 
   private async processGameAction(jobData: GameActionJob): Promise<any> {
     const { gameId, playerId, action, socketId } = jobData
 
     try {
-      console.log(`🎮 Processing game action: ${action.type} for game ${gameId}`)
+      logger.debug('Processing game action', {
+        gameId,
+        playerId,
+        actionType: action.type,
+      })
 
       // Get current game state
       const currentState = await this.gameService.getGameState(gameId)
@@ -115,7 +126,12 @@ export class GameActionWorker {
         processed: true,
       }
     } catch (error) {
-      console.error(`❌ Failed to process game action:`, error)
+      logger.error('❌ Failed to process game action', {
+        gameId,
+        playerId,
+        actionType: action.type,
+        error,
+      })
 
       // Emit error to specific socket if available
       if (socketId) {

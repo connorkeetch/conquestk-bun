@@ -4,6 +4,7 @@ import { cdnService } from '../services/cdnService'
 import { databaseClusterService } from '../services/databaseClusterService'
 import { performanceMonitorService } from '../services/performanceMonitorService'
 import { redisClusterService } from '../services/redisClusterService'
+import { logger } from '../utils/logger'
 
 const router = express.Router()
 
@@ -255,7 +256,7 @@ router.post('/test/load', authenticateToken, async (req, res) => {
     // Simulate load test initiation
     setTimeout(() => {
       // Would implement actual load testing here
-      console.log(`Load test ${testId} completed`)
+      logger.info(`Load test ${testId} completed`)
     }, duration * 1000)
 
     res.json({

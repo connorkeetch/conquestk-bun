@@ -2,6 +2,7 @@ import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
+import { logger } from '../utils/logger'
 // TODO: Fix import when territoryModifierService is implemented
 // import { TerritoryModifierService } from '../services/territoryModifierService'
 
@@ -24,29 +25,35 @@ export class CleanupWorker {
 
     // Job event handlers
     this.queue.on('completed', (job, result) => {
-      console.log(`🧹 Game cleanup completed: ${job.id}`)
+      logger.info('🧹 Game cleanup job completed', {
+        jobId: job.id,
+        result,
+      })
     })
 
     this.queue.on('failed', (job, error) => {
-      console.error(`❌ Game cleanup failed: ${job.id}`, error)
+      logger.error('❌ Game cleanup job failed', {
+        jobId: job.id,
+        error,
+      })
     })
 
     // Schedule periodic cleanup for abandoned games
     setInterval(() => this.scheduleAbandonedGameCleanup(), 5 * 60 * 1000) // Every 5 minutes
 
-    console.log('✅ CleanupWorker initialized')
+    logger.info('✅ CleanupWorker initialized')
   }
 
   private async cleanupGame(jobData: GameCleanupJob): Promise<any> {
     const { gameId, reason } = jobData
 
     try {
-      console.log(`🧹 Cleaning up game ${gameId}, reason: ${reason}`)
+      logger.info('🧹 Cleaning up game', { gameId, reason })
 
       // Get game state before cleanup
       const gameState = await this.gameService.getGameState(gameId)
       if (!gameState) {
-        console.log(`Game ${gameId} already cleaned up`)
+        logger.info('Cleanup skipped because game state already absent', { gameId })
         return { success: true, alreadyClean: true }
       }
 
@@ -65,20 +72,24 @@ export class CleanupWorker {
           break
 
         default:
-          console.warn(`Unknown cleanup reason: ${reason}`)
+          logger.warn('Unknown cleanup reason received', { gameId, reason })
       }
 
       // Common cleanup tasks
       await this.performCommonCleanup(gameId)
 
-      console.log(`✅ Game ${gameId} cleanup completed`)
+      logger.info('✅ Game cleanup completed', { gameId, reason })
       return {
         success: true,
         reason,
         cleanedAt: new Date().toISOString(),
       }
     } catch (error) {
-      console.error(`❌ Failed to cleanup game ${gameId}:`, error)
+      logger.error('❌ Failed to cleanup game', {
+        gameId,
+        reason,
+        error,
+      })
       throw error
     }
   }
@@ -135,7 +146,7 @@ export class CleanupWorker {
     })
 
     // No ELO changes for abandoned games
-    console.log(`Game ${gameId} marked as abandoned - no ELO changes`)
+    logger.info('Game marked as abandoned without ELO changes', { gameId })
   }
 
   private async performCommonCleanup(gameId: string): Promise<void> {
@@ -156,7 +167,7 @@ export class CleanupWorker {
     // Clean up any temporary files, logs, or other resources
     // This could include battle logs, chat history, etc.
     // Implementation depends on what temporary resources you create
-    console.log(`Cleaned temp resources for game ${gameId}`)
+    logger.debug('Cleaned temporary resources for game', { gameId })
   }
 
   private calculatePlayerStats(gameState: any): Record<string, any> {
@@ -193,7 +204,7 @@ export class CleanupWorker {
       const abandonedGames = await this.gameService.findAbandonedGames(30 * 60 * 1000)
 
       for (const gameId of abandonedGames) {
-        console.log(`📅 Scheduling cleanup for abandoned game: ${gameId}`)
+        logger.info('📅 Scheduling cleanup for abandoned game', { gameId })
         await queueService.addGameCleanup({
           gameId,
           reason: 'abandoned',
@@ -201,10 +212,12 @@ export class CleanupWorker {
       }
 
       if (abandonedGames.length > 0) {
-        console.log(`📅 Scheduled cleanup for ${abandonedGames.length} abandoned games`)
+        logger.info('📅 Scheduled cleanup for abandoned games', {
+          count: abandonedGames.length,
+        })
       }
     } catch (error) {
-      console.error('❌ Failed to schedule abandoned game cleanup:', error)
+      logger.error('❌ Failed to schedule abandoned game cleanup', { error })
     }
   }
 }

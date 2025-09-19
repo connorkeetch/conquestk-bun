@@ -377,17 +377,17 @@ export class GameService {
 
   async archiveGameResults(gameId: string, results: any): Promise<void> {
     // TODO: Store in database
-    console.log(`Archiving game ${gameId}:`, results)
+    logger.debug(`Archiving game ${gameId}:`, results)
   }
 
   async updateEloRatings(gameId: string, gameState: any): Promise<void> {
     // TODO: Update ELO ratings
-    console.log(`Updating ELO for game ${gameId}`)
+    logger.debug(`Updating ELO for game ${gameId}`)
   }
 
   async recordGameHistory(gameId: string, gameState: any): Promise<void> {
     // TODO: Record in database
-    console.log(`Recording history for game ${gameId}`)
+    logger.debug(`Recording history for game ${gameId}`)
   }
 
   async removeFromActiveGames(gameId: string): Promise<void> {
@@ -400,11 +400,11 @@ export class GameService {
   }
 
   async markPlayerAsInactive(gameId: string, playerId: string): Promise<void> {
-    console.log(`Marking player ${playerId} as inactive in game ${gameId}`)
+    logger.info(`Marking player ${playerId} as inactive in game ${gameId}`)
   }
 
   async pauseGame(gameId: string): Promise<void> {
-    console.log(`Pausing game ${gameId}`)
+    logger.info(`Pausing game ${gameId}`)
   }
 
   async deleteGame(gameId: string): Promise<void> {
@@ -412,7 +412,7 @@ export class GameService {
   }
 
   async cleanupTemporaryData(gameId: string): Promise<void> {
-    console.log(`Cleaning temp data for game ${gameId}`)
+    logger.debug(`Cleaning temp data for game ${gameId}`)
   }
 
   async cleanupAbandonedGame(gameId: string): Promise<void> {
@@ -420,16 +420,16 @@ export class GameService {
   }
 
   async logCleanup(gameId: string, reason: string): Promise<void> {
-    console.log(`Cleanup logged for game ${gameId}: ${reason}`)
+    logger.info(`Cleanup logged for game ${gameId}: ${reason}`)
   }
 
   async archiveGame(gameId: string): Promise<void> {
-    console.log(`Archiving game ${gameId}`)
+    logger.info(`Archiving game ${gameId}`)
   }
 
   async findAbandonedGames(thresholdMs: number): Promise<string[]> {
     // TODO: Query database for games that haven't been updated in thresholdMs
-    console.log(`Finding games abandoned for ${thresholdMs}ms`)
+    logger.debug(`Finding games abandoned for ${thresholdMs}ms`)
     return []
   }
 

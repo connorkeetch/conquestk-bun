@@ -26,15 +26,20 @@ SET is_featured = true
 WHERE name = 'World Map' 
   AND is_featured = false;
 
--- Initialize play_count from existing games if possible
--- This counts how many games have used each map
-UPDATE maps m
-SET play_count = COALESCE((
-  SELECT COUNT(*)
-  FROM games g
-  WHERE g.map_id = m.id
-), 0)
-WHERE play_count = 0;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_name = 'game_rooms'
+  ) THEN
+    UPDATE maps m
+    SET play_count = COALESCE((
+      SELECT COUNT(*)
+      FROM game_rooms gr
+      WHERE gr.map_id = m.id
+    ), 0)
+    WHERE play_count = 0;
+  END IF;
+END $$;
 
 -- Initialize rating data from map_reviews if that table exists
 DO $$
