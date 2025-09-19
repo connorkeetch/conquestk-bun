@@ -40,10 +40,6 @@ export const SKILL_TIERS: SkillTier[] = [
 ]
 
 export class EloService {
-  constructor() {
-    // No need for database initialization with query function
-  }
-
   /**
    * Calculate K-factor based on games played and current rating
    * Lower K-factor for more experienced players, higher for new players

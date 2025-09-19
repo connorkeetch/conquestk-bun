@@ -74,7 +74,7 @@ router.get('/users/:userId/rating', async (req, res) => {
 router.get('/users/:userId/rating-history', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params
-    const limit = parseInt(req.query.limit as string) || 30
+    const limit = parseInt(req.query.limit as string, 10) || 30
 
     const history = await eloService.getRatingHistory(userId, limit)
 
@@ -101,8 +101,8 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
  */
 router.get('/leaderboards/skill', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 100
-    const offset = parseInt(req.query.offset as string) || 0
+    const limit = parseInt(req.query.limit as string, 10) || 100
+    const offset = parseInt(req.query.offset as string, 10) || 0
     const tier = req.query.tier as string
 
     const leaderboard = await eloService.getLeaderboard(limit, offset, tier)

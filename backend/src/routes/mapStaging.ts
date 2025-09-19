@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import { Router } from 'express'
 import multer from 'multer'
 import { requireAdmin } from '../middleware/adminAuth'
@@ -25,31 +25,27 @@ const upload = multer({
 })
 
 // Check user's quota
-router.get(
-  '/quota',
-  authenticateToken as any,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.userId || req.user?.id
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' })
-        return
-      }
-
-      const quotaSummary = await mapStagingService.getUserQuotaSummary(userId)
-      res.json(quotaSummary)
-    } catch (error) {
-      logger.error('Error checking quota:', error)
-      res.status(500).json({ error: 'Failed to check quota' })
+router.get('/quota', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId || req.user?.id
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
     }
-  },
-)
+
+    const quotaSummary = await mapStagingService.getUserQuotaSummary(userId)
+    res.json(quotaSummary)
+  } catch (error) {
+    logger.error('Error checking quota:', error)
+    res.status(500).json({ error: 'Failed to check quota' })
+  }
+})
 
 // Upload an image to staging
 router.post(
   '/upload',
-  authenticateToken as any,
-  upload.single('image') as any,
+  authenticateToken,
+  upload.single('image'),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -77,30 +73,26 @@ router.post(
 )
 
 // Get user's staging images
-router.get(
-  '/my-images',
-  authenticateToken as any,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.userId || req.user?.id
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' })
-        return
-      }
-
-      const images = await mapStagingService.getUserStagingImages(userId)
-      res.json(images)
-    } catch (error) {
-      logger.error('Error fetching staging images:', error)
-      res.status(500).json({ error: 'Failed to fetch images' })
+router.get('/my-images', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId || req.user?.id
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
     }
-  },
-)
+
+    const images = await mapStagingService.getUserStagingImages(userId)
+    res.json(images)
+  } catch (error) {
+    logger.error('Error fetching staging images:', error)
+    res.status(500).json({ error: 'Failed to fetch images' })
+  }
+})
 
 // Delete a staging image
 router.delete(
   '/images/:imageId',
-  authenticateToken as any,
+  authenticateToken,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.userId || req.user?.id
@@ -126,8 +118,8 @@ router.delete(
 // Admin: Get all staging images
 router.get(
   '/admin/all-images',
-  authenticateToken as any,
-  requireAdmin as any,
+  authenticateToken,
+  requireAdmin,
   async (_req: Request, res: Response): Promise<void> => {
     try {
       const images = await mapStagingService.getAllStagingImages()
@@ -142,8 +134,8 @@ router.get(
 // Admin: Delete any staging image
 router.delete(
   '/admin/images/:imageId',
-  authenticateToken as any,
-  requireAdmin as any,
+  authenticateToken,
+  requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { imageId } = req.params

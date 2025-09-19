@@ -71,23 +71,23 @@ export class EnterpriseScalingService {
       region: process.env.AWS_REGION || process.env.CLOUD_REGION || 'us-east-1',
       cluster: {
         enabled: process.env.CLUSTER_ENABLED !== 'false',
-        minNodes: parseInt(process.env.MIN_NODES || '2'),
-        maxNodes: parseInt(process.env.MAX_NODES || '10'),
+        minNodes: parseInt(process.env.MIN_NODES || '2', 10),
+        maxNodes: parseInt(process.env.MAX_NODES || '10', 10),
         autoScale: process.env.AUTO_SCALE !== 'false',
       },
       cache: {
-        distributed: process.env.REDIS_CLUSTER_NODES ? true : false,
+        distributed: !!process.env.REDIS_CLUSTER_NODES,
         replication: process.env.REDIS_REPLICATION === 'true',
         sharding: process.env.REDIS_SHARDING === 'true',
       },
       database: {
-        clustering: process.env.DB_REPLICAS ? true : false,
+        clustering: !!process.env.DB_REPLICAS,
         readReplicas: (process.env.DB_REPLICAS || '').split(',').length,
         connectionPooling: process.env.DB_POOLING !== 'false',
       },
       cdn: {
-        enabled: process.env.CDN_PRIMARY_URL ? true : false,
-        multiRegion: process.env.CDN_REGIONAL_URLS ? true : false,
+        enabled: !!process.env.CDN_PRIMARY_URL,
+        multiRegion: !!process.env.CDN_REGIONAL_URLS,
         edgeOptimization: process.env.CDN_EDGE_OPTIMIZATION === 'true',
       },
       monitoring: {

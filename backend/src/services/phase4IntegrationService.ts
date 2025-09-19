@@ -256,17 +256,17 @@ export class Phase4IntegrationService {
 
     if (this.status.services.redisCluster.status === 'initialized') {
       try {
-        serviceDetails['redisCluster'] = await redisClusterService.healthCheck()
+        serviceDetails.redisCluster = await redisClusterService.healthCheck()
       } catch (error) {
-        serviceDetails['redisCluster'] = { status: 'error', error: (error as Error).message }
+        serviceDetails.redisCluster = { status: 'error', error: (error as Error).message }
       }
     }
 
     if (this.status.services.performanceMonitor.status === 'initialized') {
       try {
-        serviceDetails['performanceMonitor'] = await performanceMonitorService.healthCheck()
+        serviceDetails.performanceMonitor = await performanceMonitorService.healthCheck()
       } catch (error) {
-        serviceDetails['performanceMonitor'] = { status: 'error', error: (error as Error).message }
+        serviceDetails.performanceMonitor = { status: 'error', error: (error as Error).message }
       }
     }
 

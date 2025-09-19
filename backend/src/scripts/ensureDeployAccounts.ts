@@ -58,7 +58,10 @@ function shouldRunEnforcement(): { run: boolean; reason: string } {
     return { run: true, reason: `environment match (${candidates.join(', ')})` }
   }
 
-  return { run: false, reason: 'environment not targeted (use ENFORCE_DEPLOY_ACCOUNT_CHECK=true to force)' }
+  return {
+    run: false,
+    reason: 'environment not targeted (use ENFORCE_DEPLOY_ACCOUNT_CHECK=true to force)',
+  }
 }
 
 function buildTestAccounts() {
@@ -93,7 +96,7 @@ async function ensureOwnerSuperAdmin(query: QueryFunction) {
 
   const ownerUpdates: string[] = []
   const ownerUpdateValues: unknown[] = []
-  let ownerParamIndex = 1
+  const ownerParamIndex = 1
 
   if (userColumns.has('is_admin') && !owner.is_admin) {
     ownerUpdates.push(`is_admin = true`)
@@ -121,17 +124,15 @@ async function ensureOwnerSuperAdmin(query: QueryFunction) {
     logger.info(`Owner account ${OWNER_EMAIL} already has required flags`)
   }
 
-  const roleResult = await query<RoleRow>(
-    'SELECT id FROM admin_roles WHERE name = $1',
-    [SUPER_ADMIN_ROLE],
-  )
+  const roleResult = await query<RoleRow>('SELECT id FROM admin_roles WHERE name = $1', [
+    SUPER_ADMIN_ROLE,
+  ])
 
   let roleId: string
   if (roleResult.rows.length === 0) {
     const permissionsParam =
       adminRoleSchema.permissionsType === 'jsonb' ? JSON.stringify(['*']) : '{"*"}'
-    const permissionsCast =
-      adminRoleSchema.permissionsType === 'jsonb' ? '::jsonb' : '::text[]'
+    const permissionsCast = adminRoleSchema.permissionsType === 'jsonb' ? '::jsonb' : '::text[]'
 
     const createdRole = await query<RoleRow>(
       `INSERT INTO admin_roles (name, description, permissions, is_super_admin)
@@ -282,8 +283,7 @@ async function ensureTestAccounts(query: QueryFunction) {
       }
 
       if (updates.length > 0) {
-        const baseQuery =
-          `UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex}`
+        const baseQuery = `UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex}`
         params.push(existing.id)
         await query(baseQuery, params)
         updated += 1

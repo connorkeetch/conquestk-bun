@@ -209,15 +209,18 @@ export class GameRoomService {
       numberOfTeams: row.number_of_teams ?? undefined,
       currentPlayers: this.parseNullableNumber((row as Partial<ActiveGameRoomRow>).current_players),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
-      hostSkillRating: this.parseNullableNumber((row as Partial<ActiveGameRoomRow>).host_skill_rating),
+      hostSkillRating: this.parseNullableNumber(
+        (row as Partial<ActiveGameRoomRow>).host_skill_rating,
+      ),
       hostTier: (row as Partial<ActiveGameRoomRow>).host_tier ?? undefined,
       mapName: (row as Partial<ActiveGameRoomRow>).map_name ?? undefined,
       gameStarted: typeof row.game_started === 'boolean' ? row.game_started : undefined,
       currentTurnUserId: row.current_turn_user_id ?? undefined,
       winner: row.winner ?? undefined,
       playerCount:
-        this.parseNullableNumber(row.playerCount ?? row.playercount ?? (row as Partial<ActiveGameRoomRow>).current_players) ??
-        undefined,
+        this.parseNullableNumber(
+          row.playerCount ?? row.playercount ?? (row as Partial<ActiveGameRoomRow>).current_players,
+        ) ?? undefined,
       players: this.mapPlayers(row.players),
     }
   }
@@ -258,7 +261,7 @@ export class GameRoomService {
 
     // Determine team mode - convert string team mode to boolean
     const teamMode = roomData.teamMode || false
-    const numberOfTeams = teamMode ? (roomData.numberOfTeams || 2) : null
+    const numberOfTeams = teamMode ? roomData.numberOfTeams || 2 : null
 
     // Validate team configuration
     this.validateTeamConfiguration(roomData.maxPlayers, teamMode ? 'teams' : 'none', numberOfTeams)
@@ -413,8 +416,8 @@ export class GameRoomService {
 
         if (playersResult.rows[0].avg_rating) {
           const avgRating = parseFloat(playersResult.rows[0].avg_rating)
-          const minRating = parseFloat(playersResult.rows[0].min_rating)
-          const maxRating = parseFloat(playersResult.rows[0].max_rating)
+          const _minRating = parseFloat(playersResult.rows[0].min_rating)
+          const _maxRating = parseFloat(playersResult.rows[0].max_rating)
 
           // Check if the skill gap is too large (500 points)
           if (Math.abs(userRating - avgRating) > 500) {

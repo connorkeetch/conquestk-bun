@@ -1,5 +1,5 @@
+import * as path from 'node:path'
 import * as dotenv from 'dotenv'
-import * as path from 'path'
 
 // Load environment variables before importing database
 dotenv.config({ path: path.join(__dirname, '../../.env') })
@@ -114,7 +114,7 @@ async function checkTable(tableName: string): Promise<TableCheckResult> {
       return {
         table: tableName,
         exists: true,
-        rowCount: parseInt(countResult.rows[0].count),
+        rowCount: parseInt(countResult.rows[0].count, 10),
       }
     }
     return {
@@ -167,7 +167,7 @@ async function checkMigrationStatus(): Promise<void> {
     for (const row of result.rows) {
       logger.info(`  - Version ${row.version}: ${new Date(row.applied_at).toLocaleString()}`)
     }
-  } catch (error) {
+  } catch (_error) {
     logger.warn('⚠️  Could not check migration status')
   }
 }

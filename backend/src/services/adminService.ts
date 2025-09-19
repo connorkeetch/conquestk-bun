@@ -355,7 +355,11 @@ export class AdminService {
     )
   }
 
-  async updateUserAdminStatus(targetUserId: string, adminUserId: string, isAdmin: boolean): Promise<void> {
+  async updateUserAdminStatus(
+    targetUserId: string,
+    adminUserId: string,
+    isAdmin: boolean,
+  ): Promise<void> {
     await query('UPDATE users SET is_admin = $1 WHERE id = $2', [isAdmin, targetUserId])
 
     await this.logAdminAction(

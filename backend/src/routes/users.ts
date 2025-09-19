@@ -37,8 +37,8 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
 
     const result = await query(
       `
-      SELECT 
-        u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
+      SELECT
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
         up.preferred_color
       FROM users u
@@ -61,7 +61,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       username: user.username,
       email: user.email, // Only visible to own profile or admins
       emailVerified: user.email_verified,
-      avatarUrl: user.profile_picture,
+      avatarUrl: null,
       bio: user.bio,
       elo: user.skill_rating || 1000,
       joinDate: user.created_at,
@@ -92,8 +92,8 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     const result = await query(
       `
-      SELECT 
-        u.id, u.username, u.email, u.created_at, u.email_verified, u.profile_picture, u.bio, 
+      SELECT
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
         u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
         up.preferred_color
       FROM users u
@@ -116,7 +116,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       username: user.username,
       email: user.email,
       emailVerified: user.email_verified,
-      avatarUrl: user.profile_picture,
+      avatarUrl: null,
       bio: user.bio,
       elo: user.skill_rating || 1000,
       joinDate: user.created_at,

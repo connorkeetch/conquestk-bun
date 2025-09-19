@@ -97,7 +97,7 @@ export class MigrationRunner {
               [initialSchema],
             )
             logger.info('🗑️  Cleared migration record for re-run')
-          } catch (err) {
+          } catch (_err) {
             logger.warn('⚠️  Could not clear migration record, will attempt to run anyway')
           }
         }
@@ -306,7 +306,7 @@ export class MigrationRunner {
     return convertedSQL
   }
 
-  private async executeInTransaction(migrationSQL: string, migrationFile: string): Promise<void> {
+  private async executeInTransaction(migrationSQL: string, _migrationFile: string): Promise<void> {
     // Begin transaction
     await query('BEGIN')
 

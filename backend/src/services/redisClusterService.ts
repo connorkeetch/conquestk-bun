@@ -73,7 +73,7 @@ export class RedisClusterService {
   private async initializeCluster(nodesString: string): Promise<void> {
     const nodeArray = nodesString.split(',').map((node) => {
       const [host, port] = node.trim().split(':')
-      return { host, port: parseInt(port) || 6379 }
+      return { host, port: parseInt(port, 10) || 6379 }
     })
 
     const config: ClusterConfig = {
@@ -112,7 +112,7 @@ export class RedisClusterService {
     await this.cluster.connect()
   }
 
-  private async initializeFallback(redisUrl: string): Promise<void> {
+  private async initializeFallback(_redisUrl: string): Promise<void> {
     // Use centralized Redis client instead of creating new connection
     this.fallbackClient = getRedisClient()
 

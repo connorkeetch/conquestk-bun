@@ -10,7 +10,6 @@ import type {
   GameConfiguration,
   GamePlayer,
   GameState,
-  GoBackToReinforcementAction,
   ProcessActionResult,
   Territory,
 } from '../types/game'
@@ -66,7 +65,7 @@ export class GameEngine {
       case 'go_back_to_reinforcement':
         return { gameState: this.handleGoBackToReinforcement(newState) }
       default: {
-        const exhaustiveCheck: never = action
+        const _exhaustiveCheck: never = action
         throw new Error(`Unknown action type received in game engine`)
       }
     }

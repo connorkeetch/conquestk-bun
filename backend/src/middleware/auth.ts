@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { query } from '../config/database'
 import type { RequestUser } from '../types/express'
@@ -17,11 +17,11 @@ declare module 'express-serve-static-core' {
   }
 }
 
-export const authenticateToken = async (
+export const authenticateToken: RequestHandler = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void> => {
+) => {
   const authHeader = req.headers.authorization
   const token = authHeader?.split(' ')[1]
 

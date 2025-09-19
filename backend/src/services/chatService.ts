@@ -582,7 +582,7 @@ class ChatService {
         if (!reactionMap.has(row.emoji)) {
           reactionMap.set(row.emoji, [])
         }
-        reactionMap.get(row.emoji)!.push({
+        reactionMap.get(row.emoji)?.push({
           id: row.user_id,
           username: row.username,
         })

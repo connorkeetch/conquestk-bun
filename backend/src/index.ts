@@ -1,51 +1,29 @@
 // IMPORTANT: Import Sentry instrumentation before anything else
 import './instrument'
 
-// First, log the very start of the application
-console.log('🚀 Starting application...')
-console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
-console.log(`Current directory: ${process.cwd()}`)
-console.log(`Script directory: ${__dirname}`)
-
 import * as Sentry from '@sentry/node'
 import dotenv from 'dotenv'
 
 // Load environment variables FIRST before any other imports
 // Only load .env file in development - production/staging uses Railway's environment variables
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
-  console.log('📋 Loading .env file (development mode)')
   const result = dotenv.config()
   if (result.error) {
-    console.error('❌ Error loading .env file:', result.error)
   } else {
-    console.log(`✅ Loaded .env file with ${Object.keys(result.parsed || {}).length} variables`)
   }
 } else {
-  console.log('🏭 Production/Staging mode - using Railway environment variables')
-  console.log('Environment variables available:')
-  console.log(
-    `  DATABASE_URL: ${process.env.DATABASE_URL ? 'SET (' + process.env.DATABASE_URL.length + ' chars)' : 'NOT SET'}`,
-  )
-  console.log(`  JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`)
-  console.log(`  SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`)
-  console.log(`  PORT: ${process.env.PORT || 'NOT SET'}`)
 }
-
-// Validate environment variables immediately after loading
-console.log('🔍 Starting environment validation...')
 
 import { validateEnvironmentVariables } from './config/validateEnv'
 
 try {
   validateEnvironmentVariables()
-  console.log('✅ Environment validation completed')
-} catch (error) {
-  console.error('❌ Environment validation failed:', error)
+} catch (_error) {
   process.exit(1)
 }
 
 // Import types first
-import type { NextFunction, Request, Response, RequestHandler, Router } from 'express'
+import type { NextFunction, Request, RequestHandler, Response, Router } from 'express'
 import type { Logger } from 'winston'
 import type { RedisClients } from './config/redis'
 import type { SuspiciousActivityTracker } from './middleware/rateLimiter'
@@ -79,7 +57,6 @@ let logger: Logger
 let MigrationRunner: typeof import('./utils/migrationRunner').MigrationRunner
 
 try {
-  console.log('📦 Loading core modules...')
   createServer = require('node:http').createServer
   path = require('node:path')
   cors = require('cors')
@@ -87,9 +64,6 @@ try {
   helmet = require('helmet')
   const socketIo = require('socket.io')
   Server = socketIo.Server
-  console.log('✅ Core modules loaded')
-
-  console.log('📦 Loading config modules...')
   const dbModule = require('./config/database')
   initDatabase = dbModule.initDatabase
   const redisModule = require('./config/redis') as typeof import('./config/redis')
@@ -98,15 +72,9 @@ try {
   logStartupDiagnostics = debugModule.logStartupDiagnostics
   testDatabaseConnection = debugModule.testDatabaseConnection
   testMigrationFiles = debugModule.testMigrationFiles
-  console.log('✅ Config modules loaded')
-
-  console.log('📦 Loading middleware...')
   const rateLimiterModule = require('./middleware/rateLimiter')
   generalApiLimiter = rateLimiterModule.generalApiLimiter
   suspiciousActivityTracker = rateLimiterModule.suspiciousActivityTracker
-  console.log('✅ Middleware loaded')
-
-  console.log('📦 Loading routes...')
   adminRoutes = require('./routes/admin').default
   authRoutes = require('./routes/auth').authRoutes
   gameRoutes = require('./routes/game').gameRoutes
@@ -115,31 +83,18 @@ try {
   profileRoutes = require('./routes/profile').default
   skillsRoutes = require('./routes/skills').default
   userRoutes = require('./routes/users').default
-  console.log('✅ Routes loaded')
-
-  console.log('📦 Loading services...')
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
-
-  // Session middleware will be initialized after app is created
-
-  console.log('✅ Services loaded')
-
-  console.log('📦 Loading utils...')
   try {
     ensureTablesExist = require('./utils/initTables').ensureTablesExist
-    console.log('  ✓ initTables loaded')
   } catch (e) {
-    console.error('  ✗ Failed to load initTables:', e)
     throw e
   }
   try {
     logger = require('./utils/logger').logger
-    console.log('  ✓ logger loaded')
   } catch (e) {
-    console.error('  ✗ Failed to load logger:', e)
     throw e
   }
-  
+
   // Now that logger is available, use it for all subsequent logging
   try {
     MigrationRunner = require('./utils/migrationRunner').MigrationRunner
@@ -150,12 +105,8 @@ try {
   }
   logger.info('✅ Utils loaded')
 } catch (error) {
-  // Use console.error here as logger might not be loaded yet
-  console.error('❌ FATAL: Failed to load modules:', error)
   const normalized = toKnownError(error)
-  console.error('  Error:', normalized.message)
   if (normalized.stack) {
-    console.error('  Stack:', normalized.stack)
   }
   process.exit(1)
 }
@@ -230,17 +181,11 @@ initializeRedis()
       await workerManager.initialize()
       logger.info('✅ WorkerManager created and initialized after Redis connection')
     } catch (error) {
-      logger.error(
-        '❌ Failed to initialize WorkerManager after Redis:',
-        getErrorMessage(error),
-      )
+      logger.error('❌ Failed to initialize WorkerManager after Redis:', getErrorMessage(error))
     }
   })
   .catch((err) => {
-    logger.warn(
-      '⚠️ Redis initialization failed, using in-memory adapters:',
-      getErrorMessage(err),
-    )
+    logger.warn('⚠️ Redis initialization failed, using in-memory adapters:', getErrorMessage(err))
 
     // Create and initialize WorkerManager even if Redis failed (graceful degradation)
     const workerManager = createWorkerManager(io)
@@ -498,7 +443,7 @@ app.get('/debug/migrations', async (_req: Request, res: Response) => {
 
 // Add Sentry test endpoint (only in development/staging)
 if (process.env.NODE_ENV !== 'production') {
-  app.get('/debug-sentry', (_req: Request, res: Response) => {
+  app.get('/debug-sentry', (_req: Request, _res: Response) => {
     throw new Error('Test Sentry error!')
   })
 }
@@ -543,7 +488,7 @@ if (isProductionLike) {
 
   // Handle React Router - serve index.html for all non-API and non-asset routes
   // This catch-all route MUST come after static middleware
-  app.get('/', (req: Request, res: Response) => {
+  app.get('/', (_req: Request, res: Response) => {
     logger.info(`🌐 Root request`)
     const indexPath = path.join(frontendPath, 'index.html')
     logger.info(`📄 Serving index.html from: ${indexPath}`)
@@ -614,11 +559,9 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
         ? 'An error occurred processing your request'
         : normalizedError.message,
     ...(sentryId && { sentryId }),
-    ...(
-      process.env.NODE_ENV !== 'production' && normalizedError.stack
-        ? { stack: normalizedError.stack }
-        : {}
-    ),
+    ...(process.env.NODE_ENV !== 'production' && normalizedError.stack
+      ? { stack: normalizedError.stack }
+      : {}),
   })
 })
 

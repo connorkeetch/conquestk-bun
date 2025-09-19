@@ -108,7 +108,6 @@ export class PerformanceMonitorService {
 
   private requestCounter = 0
   private requestTimestamps: number[] = []
-  private startTime = Date.now()
 
   async initialize(): Promise<void> {
     try {

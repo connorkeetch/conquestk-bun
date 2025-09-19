@@ -1,10 +1,28 @@
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
-import { type GameActionJob, queueService } from '../services/queueService'
+import {
+  type BattleSimulationJob,
+  type GameActionJob,
+  queueService,
+} from '../services/queueService'
 import { type CompoundDelta, DeltaBuilder, type GameDelta } from '../types/deltaUpdates'
+import type {
+  AttackAction,
+  DeployAction,
+  FortifyAction,
+  GameAction,
+  GamePhase,
+  GameState,
+} from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
+
+interface ProcessGameActionResult {
+  success: true
+  delta: GameDelta | null
+  processed: true
+}
 
 export class GameActionWorker {
   private queue: Bull.Queue<GameActionJob>
@@ -45,7 +63,7 @@ export class GameActionWorker {
     logger.info('✅ GameActionWorker initialized')
   }
 
-  private async processGameAction(jobData: GameActionJob): Promise<any> {
+  private async processGameAction(jobData: GameActionJob): Promise<ProcessGameActionResult> {
     const { gameId, playerId, action, socketId } = jobData
 
     try {
@@ -76,15 +94,19 @@ export class GameActionWorker {
           break
 
         case 'attack': {
+          const attackAction = action as AttackAction
           // For attacks, we queue a battle simulation
-          const battleJob = {
+          const defendingArmies =
+            currentState.board.find(
+              (territory) => territory.id === attackAction.payload?.toTerritoryId,
+            )?.armies ?? 1
+
+          const battleJob: BattleSimulationJob = {
             gameId,
-            attackingTerritory: action.payload?.fromTerritoryId || '',
-            defendingTerritory: action.payload?.toTerritoryId || '',
-            attackingArmies: action.payload?.armies || 1,
-            defendingArmies:
-              currentState.board.find((t: any) => t.id === action.payload?.toTerritoryId)?.armies ||
-              1,
+            attackingTerritory: attackAction.payload?.fromTerritoryId ?? '',
+            defendingTerritory: attackAction.payload?.toTerritoryId ?? '',
+            attackingArmies: attackAction.payload?.armies ?? 1,
+            defendingArmies,
             playerId,
           }
 
@@ -146,9 +168,13 @@ export class GameActionWorker {
     }
   }
 
-  private canPlayerPerformAction(gameState: any, playerId: string, action: any): boolean {
+  private canPlayerPerformAction(
+    gameState: GameState,
+    playerId: string,
+    action: GameAction,
+  ): boolean {
     // Basic validation - extend as needed
-    if (!gameState.players.find((p: any) => p.id === playerId)) {
+    if (!gameState.players.some((player) => player.id === playerId)) {
       return false
     }
 
@@ -164,7 +190,7 @@ export class GameActionWorker {
   private async processPlaceArmies(
     gameId: string,
     playerId: string,
-    action: any,
+    action: DeployAction,
   ): Promise<GameDelta> {
     // Update territory armies
     const newArmyCount = await this.gameService.processPlaceArmies(gameId, {
@@ -178,7 +204,11 @@ export class GameActionWorker {
     })
   }
 
-  private async processFortify(gameId: string, playerId: string, action: any): Promise<GameDelta> {
+  private async processFortify(
+    gameId: string,
+    playerId: string,
+    action: FortifyAction,
+  ): Promise<GameDelta> {
     // Process fortification
     const result = await this.gameService.processFortify(gameId, {
       fromTerritoryId: action.payload?.fromTerritoryId || '',
@@ -213,21 +243,16 @@ export class GameActionWorker {
   private async processPhaseChange(
     gameId: string,
     playerId: string,
-    action: any,
+    action: Extract<
+      GameAction,
+      { type: 'begin_turn' | 'trade_cards' | 'go_back_to_reinforcement' }
+    >,
   ): Promise<GameDelta> {
-    await this.gameService.processPhaseChange(
-      gameId,
-      playerId,
-      action.payload?.phase || 'reinforcement',
-    )
+    const phase = ((action as { payload?: { phase?: GamePhase } }).payload?.phase ??
+      'reinforcement') as GamePhase
+    await this.gameService.processPhaseChange(gameId, playerId, phase)
 
-    return DeltaBuilder.phaseChange(
-      gameId,
-      action.payload?.phase || 'reinforcement',
-      playerId,
-      0,
-      0,
-    )
+    return DeltaBuilder.phaseChange(gameId, phase, playerId, 0, 0)
   }
 }
 

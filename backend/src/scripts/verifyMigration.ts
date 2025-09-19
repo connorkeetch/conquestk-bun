@@ -9,11 +9,8 @@ async function verifyMigration() {
   const databaseUrl = process.argv[2] || process.env.DATABASE_URL
 
   if (!databaseUrl || databaseUrl === '${DATABASE_URL}') {
-    console.error('❌ No DATABASE_URL provided')
     process.exit(1)
   }
-
-  console.log('🔍 Verifying migration...\n')
 
   const pool = new Pool({
     connectionString: databaseUrl,
@@ -21,8 +18,6 @@ async function verifyMigration() {
   })
 
   try {
-    // Check new tables
-    console.log('📊 Checking new tables:')
     const tableQuery = `
       SELECT table_name 
       FROM information_schema.tables 
@@ -46,12 +41,8 @@ async function verifyMigration() {
     ]
 
     expectedTables.forEach((table) => {
-      const found = tableResult.rows.some((row) => row.table_name === table)
-      console.log(`  ${found ? '✅' : '❌'} ${table}`)
+      const _found = tableResult.rows.some((row) => row.table_name === table)
     })
-
-    // Check user columns
-    console.log('\n👤 Checking user table columns:')
     const userColumnQuery = `
       SELECT column_name 
       FROM information_schema.columns 
@@ -85,12 +76,8 @@ async function verifyMigration() {
     ]
 
     expectedUserColumns.forEach((column) => {
-      const found = userColumnResult.rows.some((row) => row.column_name === column)
-      console.log(`  ${found ? '✅' : '❌'} ${column}`)
+      const _found = userColumnResult.rows.some((row) => row.column_name === column)
     })
-
-    // Check map columns
-    console.log('\n🗺️  Checking maps table columns:')
     const mapColumnQuery = `
       SELECT column_name 
       FROM information_schema.columns 
@@ -113,23 +100,16 @@ async function verifyMigration() {
     ]
 
     expectedMapColumns.forEach((column) => {
-      const found = mapColumnResult.rows.some((row) => row.column_name === column)
-      console.log(`  ${found ? '✅' : '❌'} ${column}`)
+      const _found = mapColumnResult.rows.some((row) => row.column_name === column)
     })
-
-    // Check map tags
-    console.log('\n🏷️  Checking default map tags:')
     const tagQuery = `
       SELECT name FROM map_tags ORDER BY name;
     `
 
     const tagResult = await pool.query(tagQuery)
     if (tagResult.rows.length > 0) {
-      tagResult.rows.forEach((row) => {
-        console.log(`  ✅ ${row.name}`)
-      })
+      tagResult.rows.forEach((_row) => {})
     } else {
-      console.log('  ❌ No tags found')
     }
 
     // Summary
@@ -142,17 +122,10 @@ async function verifyMigration() {
     const allMapColumnsExist = expectedMapColumns.every((column) =>
       mapColumnResult.rows.some((row) => row.column_name === column),
     )
-
-    console.log('\n' + '='.repeat(50))
     if (allTablesExist && allUserColumnsExist && allMapColumnsExist) {
-      console.log('✅ All migrations verified successfully!')
-      console.log('Your database is ready for the application.')
     } else {
-      console.log('⚠️  Some migrations may be incomplete.')
-      console.log('Please check the items marked with ❌ above.')
     }
-  } catch (error) {
-    console.error('❌ Verification failed:', error)
+  } catch (_error) {
     process.exit(1)
   } finally {
     await pool.end()

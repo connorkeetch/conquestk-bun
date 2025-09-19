@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { adminService } from '../services/adminService'
 
 interface SystemStatus {
@@ -28,11 +28,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [loadDashboardData])
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -44,21 +40,30 @@ export default function AdminDashboard() {
 
       setSystemStatus(statusData)
       setAdminInfo(adminData)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard data')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load dashboard data'
+      setError(message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const toggleFeatureFlag = async (flagName: string, enabled: boolean) => {
-    try {
-      await adminService.toggleFeatureFlag(flagName, enabled)
-      await loadDashboardData() // Refresh data
-    } catch (err: any) {
-      alert(`Failed to toggle feature flag: ${err.message}`)
-    }
-  }
+  useEffect(() => {
+    void loadDashboardData()
+  }, [loadDashboardData])
+
+  const toggleFeatureFlag = useCallback(
+    async (flagName: string, enabled: boolean) => {
+      try {
+        await adminService.toggleFeatureFlag(flagName, enabled)
+        await loadDashboardData() // Refresh data
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        alert(`Failed to toggle feature flag: ${message}`)
+      }
+    },
+    [loadDashboardData],
+  )
 
   if (loading) {
     return (
@@ -88,6 +93,8 @@ export default function AdminDashboard() {
     )
   }
 
+  const databaseStats = systemStatus?.database
+
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -105,7 +112,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-primary-soft">
-                  {systemStatus?.database.userCount.toLocaleString()}
+                  {databaseStats?.userCount != null ? databaseStats.userCount.toLocaleString() : '0'}
                 </div>
                 <div className="text-sm text-muted">Total Users</div>
               </div>
@@ -117,7 +124,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
-                  {systemStatus?.database.mapCount.toLocaleString()}
+                  {databaseStats?.mapCount != null ? databaseStats.mapCount.toLocaleString() : '0'}
                 </div>
                 <div className="text-sm text-muted">Custom Maps</div>
               </div>
@@ -129,7 +136,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
-                  {systemStatus?.database.activeGames.toLocaleString()}
+                  {databaseStats?.activeGames != null ? databaseStats.activeGames.toLocaleString() : '0'}
                 </div>
                 <div className="text-sm text-muted">Active Games</div>
               </div>
@@ -141,7 +148,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
-                  {systemStatus?.database.pendingApprovals.toLocaleString()}
+                  {databaseStats?.pendingApprovals != null
+                    ? databaseStats.pendingApprovals.toLocaleString()
+                    : '0'}
                 </div>
                 <div className="text-sm text-muted">Pending Approvals</div>
               </div>

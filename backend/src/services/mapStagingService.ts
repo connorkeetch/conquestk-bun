@@ -1,5 +1,5 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import sharp from 'sharp'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
@@ -80,7 +80,7 @@ export class MapStagingService {
         [userId],
       )
 
-      const currentCount = parseInt(countResult.rows[0]?.total || '0')
+      const currentCount = parseInt(countResult.rows[0]?.total || '0', 10)
       const remaining = this.NON_ADMIN_QUOTA - currentCount
 
       if (currentCount >= this.NON_ADMIN_QUOTA) {
@@ -276,9 +276,9 @@ export class MapStagingService {
         [userId],
       )
 
-      const stagingImages = parseInt(stagingResult.rows[0]?.count || '0')
-      const drafts = parseInt(draftsResult.rows[0]?.count || '0')
-      const pendingSubmissions = parseInt(submissionsResult.rows[0]?.count || '0')
+      const stagingImages = parseInt(stagingResult.rows[0]?.count || '0', 10)
+      const drafts = parseInt(draftsResult.rows[0]?.count || '0', 10)
+      const pendingSubmissions = parseInt(submissionsResult.rows[0]?.count || '0', 10)
       const total = stagingImages + drafts + pendingSubmissions
 
       return {

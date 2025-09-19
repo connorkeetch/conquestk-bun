@@ -5,18 +5,18 @@ import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
 import sizeOf from 'image-size'
+import jwt, { type JwtPayload } from 'jsonwebtoken'
 import multer from 'multer'
 import { getPool } from '../config/database'
-import jwt, { type JwtPayload } from 'jsonwebtoken'
 import { authenticateToken } from '../middleware/auth'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import { mapService } from '../services/mapService'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
-import { logger } from '../utils/logger'
-import { parseJsonField, parseTags } from '../utils/tagParser'
-import { getMapUploadsDir } from '../utils/mapUploads'
-import { resolveAssetUrl } from '../utils/url'
 import { storeBase64Image } from '../utils/imageStorage'
+import { logger } from '../utils/logger'
+import { getMapUploadsDir } from '../utils/mapUploads'
+import { parseJsonField, parseTags } from '../utils/tagParser'
+import { resolveAssetUrl } from '../utils/url'
 
 // Ensure uploads directory exists in a location aligned with express.static
 const mapUploadsDir = getMapUploadsDir()
@@ -290,7 +290,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
               Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
           }
         }
-        } catch (_error) {
+      } catch (_error) {
         // Ignore token errors – the route should still work for unauthenticated users
       }
     }

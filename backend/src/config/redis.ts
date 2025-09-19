@@ -1,5 +1,5 @@
-import Redis from 'ioredis'
 import type { RedisOptions } from 'ioredis'
+import Redis from 'ioredis'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 

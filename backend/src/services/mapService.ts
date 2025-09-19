@@ -2,11 +2,12 @@ import type { PoolClient } from 'pg'
 import { getClient, query } from '../config/database'
 import type { ContinentBonus } from '../types/game'
 import type {
+  ConnectionRequirements,
+  ContinentSpecialRules,
   Coordinate,
   CreateAdjacencyRequest,
   CreateMapRequest,
   CreateTerritoryRequest,
-  ContinentSpecialRules,
   CustomMap,
   GameMode,
   MapContinent,
@@ -19,7 +20,6 @@ import type {
   MetadataAdjacencyInput,
   MetadataContinentInput,
   MetadataTerritoryInput,
-  ConnectionRequirements,
   TerritoryAbilityType,
   TerritoryAdjacency,
   UpdateMapRequest,
@@ -744,7 +744,9 @@ export class MapService {
         updateValues,
       )
 
-      return result.rows.length > 0 ? this.formatTerritoryFromDb(result.rows[0] as TerritoryRow) : null
+      return result.rows.length > 0
+        ? this.formatTerritoryFromDb(result.rows[0] as TerritoryRow)
+        : null
     } finally {
       if (client.release) client.release()
     }
@@ -996,7 +998,13 @@ export class MapService {
   }
 
   private normalizeMapStatus(status: string | null | undefined): MapStatus {
-    const validStatuses: MapStatus[] = ['draft', 'pending_review', 'approved', 'rejected', 'archived']
+    const validStatuses: MapStatus[] = [
+      'draft',
+      'pending_review',
+      'approved',
+      'rejected',
+      'archived',
+    ]
     if (status && validStatuses.includes(status as MapStatus)) {
       return status as MapStatus
     }

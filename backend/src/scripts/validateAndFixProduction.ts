@@ -157,11 +157,6 @@ async function validateAndFixProduction() {
         type: 'BOOLEAN DEFAULT FALSE',
         condition: !columnNames.includes('email_verified'),
       },
-      {
-        name: 'profile_picture',
-        type: 'TEXT',
-        condition: !columnNames.includes('profile_picture'),
-      },
       { name: 'bio', type: 'TEXT', condition: !columnNames.includes('bio') },
       {
         name: 'skill_rating',

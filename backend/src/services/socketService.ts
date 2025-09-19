@@ -351,7 +351,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   /**
    * Handle ELO rating updates when a ranked game ends
    */
-  async function handleRankedGameEnd(
+  async function _handleRankedGameEnd(
     io: Server<ClientToServerEvents, ServerToClientEvents>,
     roomId: string,
     gameState: any,
@@ -401,7 +401,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         })
 
         // Build player ratings array
-        humanPlayers.forEach((player, index) => {
+        humanPlayers.forEach((player, _index) => {
           const userData = userDataMap.get(player.id)
           if (userData) {
             const position = sortedPlayers.findIndex((p) => p.id === player.id) + 1

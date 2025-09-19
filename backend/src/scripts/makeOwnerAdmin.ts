@@ -5,10 +5,9 @@
  * Run with: npx ts-node src/scripts/makeOwnerAdmin.ts
  */
 
+import * as path from 'node:path'
 import * as dotenv from 'dotenv'
-import * as path from 'path'
 import { getPool } from '../config/database'
-import { logger } from '../utils/logger'
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') })
@@ -22,8 +21,6 @@ async function makeOwnerAdmin() {
   const pool = getPool()
 
   try {
-    console.log('🔍 Looking for owner account...')
-
     // Find user by email or username
     const userResult = await pool.query(
       `SELECT id, username, email, is_admin 
@@ -34,12 +31,10 @@ async function makeOwnerAdmin() {
     )
 
     if (userResult.rows.length === 0) {
-      console.log('❌ Owner account not found. Please register with connorkeetch@gmail.com first.')
       process.exit(1)
     }
 
     const user = userResult.rows[0]
-    console.log(`✅ Found user: ${user.username} (${user.email})`)
 
     // Update to admin
     await pool.query(
@@ -49,7 +44,6 @@ async function makeOwnerAdmin() {
        WHERE id = $1`,
       [user.id],
     )
-    console.log('✅ User marked as admin')
 
     // Check if super_admin role exists
     const roleResult = await pool.query(`SELECT id FROM admin_roles WHERE name = 'super_admin'`)
@@ -67,9 +61,7 @@ async function makeOwnerAdmin() {
            assigned_at = CURRENT_TIMESTAMP`,
         [user.id, roleId],
       )
-      console.log('✅ Super admin role assigned')
     } else {
-      console.log('⚠️  Super admin role not found in database (migrations may need to run)')
     }
 
     // Log the action
@@ -90,20 +82,14 @@ async function makeOwnerAdmin() {
         }),
       ],
     )
-    console.log('✅ Activity logged')
-
-    console.log('\n🎉 SUCCESS! You are now an admin.')
-    console.log('📌 Login and visit /admin to access the admin dashboard')
 
     process.exit(0)
-  } catch (error) {
-    console.error('❌ Error setting up admin:', error)
+  } catch (_error) {
     process.exit(1)
   }
 }
 
 // Run the script
-makeOwnerAdmin().catch((error) => {
-  console.error('Fatal error:', error)
+makeOwnerAdmin().catch((_error) => {
   process.exit(1)
 })

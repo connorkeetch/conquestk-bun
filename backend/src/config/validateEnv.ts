@@ -22,7 +22,8 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'PORT',
     required: false,
     defaultValue: '5001',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0 && parseInt(value) < 65536,
+    validator: (value) =>
+      !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0 && parseInt(value, 10) < 65536,
     description: 'Server port number',
   },
 
@@ -66,35 +67,35 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'DB_POOL_MAX',
     required: false,
     defaultValue: '20',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Maximum database connections',
   },
   {
     name: 'DB_POOL_IDLE_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Database idle connection timeout (ms)',
   },
   {
     name: 'DB_POOL_CONNECTION_TIMEOUT',
     required: false,
     defaultValue: '2000',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Database connection timeout (ms)',
   },
   {
     name: 'DB_STATEMENT_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Database statement timeout (ms)',
   },
   {
     name: 'DB_QUERY_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Database query timeout (ms)',
   },
 
@@ -103,7 +104,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'MAX_FILE_SIZE',
     required: false,
     defaultValue: '5242880', // 5MB
-    validator: (value) => !isNaN(parseInt(value)) && parseInt(value) > 0,
+    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
     description: 'Maximum file upload size (bytes)',
   },
 
@@ -130,7 +131,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'SMTP_PORT',
     required: false,
     defaultValue: '587',
-    validator: (value) => !isNaN(parseInt(value)),
+    validator: (value) => !Number.isNaN(parseInt(value, 10)),
     description: 'SMTP server port',
   },
   {
@@ -160,7 +161,7 @@ export function validateEnvironmentVariables(): void {
 
   // Handle production/staging-specific secret generation FIRST before validation
   if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-    const crypto = require('crypto')
+    const crypto = require('node:crypto')
 
     // Generate JWT_SECRET if missing or invalid (Railway reference)
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('$')) {
