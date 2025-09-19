@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { applyTheme } from '../config/themes.config'
 import { authService } from '../services/authService'
 import type { User } from '../types/user'
+import { loadServerSettings } from './settingsSlice'
 
 interface AuthState {
   user: User | null
@@ -77,7 +78,6 @@ export const checkAuth = createAsyncThunk(
 
       // Load server settings into Redux if they exist
       if (response.user.settings) {
-        const { loadServerSettings } = await import('./settingsSlice')
         dispatch(loadServerSettings(response.user.settings))
       }
 

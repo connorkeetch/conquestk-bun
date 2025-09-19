@@ -52,7 +52,7 @@
     "ioredis": "^5.7.0",
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
-    "link-preview-js": "^3.1.0",
+    "open-graph-scraper": "^6.10.0",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.6",
