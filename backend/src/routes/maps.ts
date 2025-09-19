@@ -1,6 +1,8 @@
-import fs, { promises as fsPromises } from 'node:fs'
+import { promises as fsPromises } from 'node:fs'
+import type { FileHandle } from 'node:fs/promises'
 import path from 'node:path'
-import { type Request, type Response, Router } from 'express'
+import type { NextFunction, Request, Response } from 'express'
+import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
 import sizeOf from 'image-size'
 import multer from 'multer'
@@ -9,7 +11,7 @@ import jwt, { type JwtPayload } from 'jsonwebtoken'
 import { authenticateToken } from '../middleware/auth'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import { mapService } from '../services/mapService'
-import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
+import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
 import { parseJsonField, parseTags } from '../utils/tagParser'
 import { getMapUploadsDir } from '../utils/mapUploads'
@@ -21,9 +23,11 @@ const mapUploadsDir = getMapUploadsDir()
 
 const router = Router()
 
+type QueryParam = string | number | boolean | string[] | null
+
 // File resource management using Node.js 24's explicit resource management pattern
 class FileResource {
-  private fileHandle: fs.promises.FileHandle | null = null
+  private fileHandle: FileHandle | null = null
 
   constructor(private path: string) {}
 
@@ -64,9 +68,9 @@ async function readFileWithResourceManagement(filePath: string): Promise<Buffer>
   if (typeof Symbol.dispose !== 'undefined') {
     try {
       const fileResource = await new FileResource(filePath).open()
-      await using resource = fileResource as DisposableResource
+      await using _resource = fileResource as DisposableResource
       return await fileResource.readBuffer()
-    } catch (error) {
+    } catch (_error) {
       // Fallback to manual resource management
       const fileResource = await new FileResource(filePath).open()
       try {
@@ -95,7 +99,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880'), // 5MB default, configurable
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default, configurable
     files: 1, // Only allow 1 file per upload
     fields: 10, // Limit number of non-file fields
   },
@@ -227,7 +231,7 @@ const validateRating = [
 ]
 
 // Middleware to check validation results
-const checkValidation = (req: Request, res: Response, next: any) => {
+const checkValidation = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -236,22 +240,24 @@ const checkValidation = (req: Request, res: Response, next: any) => {
 }
 
 // Multer error handling middleware
-const handleMulterError = (error: any, _req: Request, res: Response, next: any) => {
+const handleMulterError = (error: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' })
+      res.status(400).json({ error: 'Image file is too large. Maximum size is 10MB.' })
+      return
     }
     if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res
-        .status(400)
-        .json({ error: 'Unexpected field in file upload. Use "image" field name.' })
+      res.status(400).json({ error: 'Unexpected field in file upload. Use "image" field name.' })
+      return
     }
-    return res.status(400).json({ error: `Upload error: ${error.message}` })
+    res.status(400).json({ error: `Upload error: ${error.message}` })
+    return
   }
-  if (error && error.message === 'Only image files are allowed') {
-    return res.status(400).json({ error: 'Only image files (PNG, JPG, GIF, WEBP) are allowed.' })
+  if (error instanceof Error && error.message === 'Only image files are allowed') {
+    res.status(400).json({ error: 'Only image files (PNG, JPG, GIF, WEBP) are allowed.' })
+    return
   }
-  return next(error)
+  next(error)
 }
 
 // ============= PUBLIC ROUTES =============
@@ -270,7 +276,8 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
 
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JwtPayload
-        const userId = typeof decoded === 'object' ? (decoded.userId as string | undefined) : undefined
+        const userId =
+          typeof decoded === 'object' ? (decoded.userId as string | undefined) : undefined
 
         if (userId) {
           const userResult = await pool.query(
@@ -279,10 +286,11 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
           )
 
           if (userResult.rows[0]) {
-            includeVipMaps = Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
+            includeVipMaps =
+              Boolean(userResult.rows[0].is_admin) || Boolean(userResult.rows[0].is_vip)
           }
         }
-      } catch (error) {
+        } catch (_error) {
         // Ignore token errors – the route should still work for unauthenticated users
       }
     }
@@ -328,15 +336,15 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         id: row.id,
         name: row.name,
         description: row.description || '',
-        territory_count: parseInt(row.territory_count) || 0,
-        continent_count: parseInt(row.continent_count) || 0,
+        territory_count: parseInt(row.territory_count, 10) || 0,
+        continent_count: parseInt(row.continent_count, 10) || 0,
         min_players: row.min_players || 2,
         max_players: row.max_players || 6,
         is_featured: row.is_featured || false,
         creator_name: row.creator_name || 'Unknown',
-        play_count: row.play_count || 0,
-        rating_average: row.rating_average || 0,
-        rating_count: row.rating_count || 0,
+        play_count: parseInt(row.play_count, 10) || 0,
+        rating_average: parseFloat(row.rating_average) || 0,
+        rating_count: parseInt(row.rating_count, 10) || 0,
         tags: row.tags || [],
         image_url: imageUrl,
         imageUrl,
@@ -394,7 +402,7 @@ router.get('/', async (req: Request, res: Response) => {
       WHERE 1=1
     `
 
-    const params: any[] = []
+    const params: QueryParam[] = []
     let paramCount = 0
 
     // Add filters
@@ -423,7 +431,6 @@ router.get('/', async (req: Request, res: Response) => {
       case 'name':
         query += ` ORDER BY m.name ASC`
         break
-      case 'popularity':
       default:
         query += ` ORDER BY m.is_featured DESC, m.play_count DESC, m.rating_average DESC NULLS LAST`
         break
@@ -446,13 +453,13 @@ router.get('/', async (req: Request, res: Response) => {
       maxPlayers: row.max_players || 6,
       isFeatured: row.is_featured || false,
       ratingAverage: parseFloat(row.rating_average) || 0,
-      ratingCount: parseInt(row.rating_count) || 0,
-      playCount: parseInt(row.play_count) || 0,
+      ratingCount: parseInt(row.rating_count, 10) || 0,
+      playCount: parseInt(row.play_count, 10) || 0,
       tags: row.tags || [],
       createdAt: row.created_at,
       status: row.status,
-      territoryCount: parseInt(row.territory_count) || 0,
-      continentCount: parseInt(row.continent_count) || 0,
+      territoryCount: parseInt(row.territory_count, 10) || 0,
+      continentCount: parseInt(row.continent_count, 10) || 0,
     }))
 
     // Get total count for pagination
@@ -465,7 +472,7 @@ router.get('/', async (req: Request, res: Response) => {
       ${tag ? ` AND '${tag}' = ANY(m.tags)` : ''}
     `
     const countResult = await pool.query(countQuery)
-    const total = parseInt(countResult.rows[0]?.total || '0')
+    const total = parseInt(countResult.rows[0]?.total || '0', 10)
 
     return res.json({
       maps,
@@ -493,10 +500,7 @@ router.get(
       }
 
       // Check if map is public or user owns it
-      if (
-        !mapData.map.isPublic &&
-        (!req.userId || req.userId !== mapData.map.creatorId)
-      ) {
+      if (!mapData.map.isPublic && (!req.userId || req.userId !== mapData.map.creatorId)) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
@@ -584,7 +588,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
       tags = ['custom', 'user-created']
     }
 
-    const mapData: CreateMapRequest = {
+    const mapData: CreateMapRequest & { metadata?: MapMetadataPayload } = {
       name: req.body.name,
       description: req.body.description,
       isPublic: req.body.isPublic === true || req.body.isPublic === 'true',
@@ -594,7 +598,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
     }
 
     // Handle base64 image if provided
-    if (req.body.image && req.body.image.data) {
+    if (req.body.image?.data) {
       try {
         const imageData = req.body.image.data
         const mimeType = req.body.image.mimeType || 'image/png'
@@ -619,7 +623,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 
     // Store metadata if provided
     if (req.body.metadata) {
-      ;(mapData as any).metadata = req.body.metadata
+      mapData.metadata = req.body.metadata as MapMetadataPayload
     }
 
     const map = await mapService.createMap(req.userId, mapData)
@@ -639,7 +643,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({
         error: 'Map name already exists',
         message: 'Please choose a different name for your map',
-        suggestion: `${req.body.name} (${new Date().getTime()})`,
+        suggestion: `${req.body.name} (${Date.now()})`,
       })
     }
 
@@ -662,7 +666,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 router.post(
   '/',
   authenticateToken,
-  upload.single('image') as any,
+  upload.single('image'),
   handleMulterError,
   validateCreateMap,
   checkValidation,
@@ -675,7 +679,7 @@ router.post(
         userId: req.userId,
       })
 
-      const mapData: CreateMapRequest = {
+      const mapData: CreateMapRequest & { metadata?: MapMetadataPayload } = {
         name: req.body.name,
         description: req.body.description,
         isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
@@ -683,9 +687,9 @@ router.post(
       }
 
       // Parse metadata if provided
-      let metadata: any = null
+      let metadata: MapMetadataPayload | null = null
       if (req.body.metadata) {
-        metadata = parseJsonField(req.body.metadata, null)
+        metadata = parseJsonField<MapMetadataPayload | null>(req.body.metadata, null)
         if (metadata) {
           logger.info('Parsed metadata:', {
             territories: metadata.territories?.length || 0,
@@ -719,7 +723,7 @@ router.post(
 
       // Store metadata in the map data (will be saved as JSONB)
       if (metadata) {
-        ;(mapData as any).metadata = metadata
+        mapData.metadata = metadata
       }
 
       const map = await mapService.createMap(req.userId, mapData)
@@ -748,7 +752,7 @@ router.post(
 router.put(
   '/:mapId',
   authenticateToken,
-  upload.single('image') as any,
+  upload.single('image'),
   validateUpdateMap,
   checkValidation,
   async (req: Request, res: Response) => {
