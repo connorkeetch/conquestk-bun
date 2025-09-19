@@ -2,20 +2,24 @@ import type { PoolClient } from 'pg'
 import { getClient, query } from '../config/database'
 import type { ContinentBonus } from '../types/game'
 import type {
+  Coordinate,
   CreateAdjacencyRequest,
   CreateMapRequest,
   CreateTerritoryRequest,
+  ContinentSpecialRules,
   CustomMap,
   GameMode,
-  MapMetadataPayload,
   MapContinent,
+  MapMetadataPayload,
   MapRating,
   MapSearchFilters,
   MapSearchResult,
+  MapStatus,
   MapTerritory,
   MetadataAdjacencyInput,
   MetadataContinentInput,
   MetadataTerritoryInput,
+  ConnectionRequirements,
   TerritoryAbilityType,
   TerritoryAdjacency,
   UpdateMapRequest,
@@ -984,8 +988,62 @@ export class MapService {
     }
   }
 
-  private formatMapFromDb(row: Record<string, unknown>): CustomMap {
-    const mapRow = row as MapDbRow
+  private parseOptionalJson<T>(value: string | null | undefined): T | undefined {
+    if (!value) return undefined
+    return this.safeJsonParse<T | undefined>(value, undefined)
+  }
+
+  private normalizeMapStatus(status: string | null | undefined): MapStatus {
+    const validStatuses: MapStatus[] = ['draft', 'pending_review', 'approved', 'rejected', 'archived']
+    if (status && validStatuses.includes(status as MapStatus)) {
+      return status as MapStatus
+    }
+    return 'pending_review'
+  }
+
+  private normalizeCoordinate(value: unknown): Coordinate | undefined {
+    if (!value || typeof value !== 'object') return undefined
+
+    if (Array.isArray(value) && value.length >= 2) {
+      const [rawX, rawY] = value
+      const x = typeof rawX === 'number' ? rawX : Number(rawX)
+      const y = typeof rawY === 'number' ? rawY : Number(rawY)
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        return { x, y }
+      }
+      return undefined
+    }
+
+    const maybe = value as { x?: unknown; y?: unknown }
+    const x = typeof maybe.x === 'number' ? maybe.x : Number(maybe.x)
+    const y = typeof maybe.y === 'number' ? maybe.y : Number(maybe.y)
+
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return { x, y }
+    }
+
+    return undefined
+  }
+
+  private normalizeConnectionType(value: string | null): TerritoryAdjacency['connectionType'] {
+    switch (value) {
+      case 'land':
+      case 'sea':
+      case 'air':
+      case 'tunnel':
+      case 'special':
+        return value
+      default:
+        return 'land'
+    }
+  }
+
+  private formatMapFromDb(row: MapDbRow): CustomMap {
+    const mapRow = row
+
+    const capitalTerritories = this.parseOptionalJson<Record<string, number[]>>(
+      mapRow.capital_territories,
+    )
 
     return {
       id: mapRow.id,
@@ -997,7 +1055,7 @@ export class MapService {
       imageHeight: mapRow.image_height ?? 450,
       isPublic: Boolean(mapRow.is_public),
       isFeatured: Boolean(mapRow.is_featured),
-      status: (mapRow.status as MapStatus | null) ?? 'pending_review',
+      status: this.normalizeMapStatus(mapRow.status),
       version: mapRow.version ?? 1,
       parentMapId: mapRow.parent_map_id ?? undefined,
       downloadCount: mapRow.download_count ?? 0,
@@ -1005,9 +1063,10 @@ export class MapService {
       ratingAverage: parseFloat(String(mapRow.rating_average ?? 0)) || 0,
       ratingCount: parseInt(String(mapRow.rating_count ?? 0), 10) || 0,
       tags: this.parseTags(mapRow.tags),
-      capitalTerritories: mapRow.capital_territories
-        ? this.safeJsonParse(mapRow.capital_territories, undefined)
-        : undefined,
+      capitalTerritories:
+        capitalTerritories && Object.keys(capitalTerritories).length > 0
+          ? capitalTerritories
+          : undefined,
       submittedAt: mapRow.submitted_at ? new Date(mapRow.submitted_at) : undefined,
       reviewedAt: mapRow.reviewed_at ? new Date(mapRow.reviewed_at) : undefined,
       reviewedBy: mapRow.reviewed_by ?? undefined,
@@ -1018,12 +1077,16 @@ export class MapService {
     }
   }
 
-  private formatTerritoryFromDb(row: Record<string, unknown>): MapTerritory {
-    const territoryRow = row as TerritoryRow
+  private formatTerritoryFromDb(row: TerritoryRow): MapTerritory {
+    const territoryRow = row
 
     const polygonData = this.safeJsonParse<Record<string, unknown>>(territoryRow.polygon_data, {})
-    const armyPosition =
-      (polygonData?.armyPosition as Coordinate | undefined) ?? ({ x: 0, y: 0 } as Coordinate)
+    const armyPosition = this.normalizeCoordinate(polygonData?.armyPosition) ?? { x: 0, y: 0 }
+    const boundaryCoords = Array.isArray(polygonData?.points)
+      ? polygonData.points
+          .map((point) => this.normalizeCoordinate(point))
+          .filter((coord): coord is Coordinate => Boolean(coord))
+      : []
 
     return {
       id: territoryRow.id,
@@ -1031,9 +1094,7 @@ export class MapService {
       territoryId: territoryRow.id,
       name: territoryRow.name,
       continentId: territoryRow.continent ?? undefined,
-      boundaryCoords: Array.isArray(polygonData?.points)
-        ? (polygonData.points as Coordinate[])
-        : [],
+      boundaryCoords,
       armyPosition,
       abilityTypeId: undefined, // No ability_type_id in schema
       customAbilityConfig: undefined,
@@ -1043,34 +1104,36 @@ export class MapService {
     }
   }
 
-  private formatContinentFromDb(row: Record<string, unknown>): MapContinent {
-    const continentRow = row as ContinentRow
+  private formatContinentFromDb(row: ContinentRow): MapContinent {
+    const continentRow = row
+
+    const specialRules = this.parseOptionalJson<ContinentSpecialRules>(continentRow.special_rules)
 
     return {
       id: continentRow.id,
       mapId: continentRow.map_id,
       name: continentRow.name,
       bonusArmies: continentRow.bonus_troops,
-      color: continentRow.color ?? undefined,
-      specialRules: continentRow.special_rules
-        ? this.safeJsonParse(continentRow.special_rules, undefined)
-        : undefined,
+      color: continentRow.color ?? '#cccccc',
+      specialRules,
       createdAt: new Date(continentRow.created_at),
     }
   }
 
-  private formatAdjacencyFromDb(row: Record<string, unknown>): TerritoryAdjacency {
-    const adjacencyRow = row as AdjacencyRow
+  private formatAdjacencyFromDb(row: AdjacencyRow): TerritoryAdjacency {
+    const adjacencyRow = row
+
+    const specialRequirements = this.parseOptionalJson<ConnectionRequirements>(
+      adjacencyRow.special_requirements,
+    )
 
     return {
       id: adjacencyRow.id,
       fromTerritoryId: adjacencyRow.from_territory_id,
       toTerritoryId: adjacencyRow.to_territory_id,
-      connectionType: adjacencyRow.connection_type || undefined,
+      connectionType: this.normalizeConnectionType(adjacencyRow.connection_type),
       isBidirectional: adjacencyRow.is_bidirectional,
-      specialRequirements: adjacencyRow.special_requirements
-        ? this.safeJsonParse(adjacencyRow.special_requirements, undefined)
-        : undefined,
+      specialRequirements,
     }
   }
 

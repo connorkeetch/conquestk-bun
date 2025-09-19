@@ -5,6 +5,9 @@
 - The repo expects Node.js 22+, npm 9+, PostgreSQL access (Railway in hosted envs), and Redis for socket scaling and sessions.
 - Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with components in `frontend/src/components`.
 
+## Tooling expectations
+- Always use Context7 MCP and its tools whenever you are writing complex code or if you are unsure about the best approach.
+
 ## Quick start
 - Install deps: `npm install`
 - Prepare local database/seeds (optional for quick start): `npm run setup`
