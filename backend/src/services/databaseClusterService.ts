@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type PoolConfig } from 'pg'
+import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg'
 import { logger } from '../utils/logger'
 
 interface DatabaseNode {
@@ -23,6 +23,13 @@ interface QueryMetrics {
   avgResponseTime: number
   slowQueries: number
   connectionErrors: number
+}
+
+interface DatabaseHealthDetails {
+  totalNodes: number
+  healthyNodes: number
+  primaryHealthy: boolean
+  metrics: ReturnType<DatabaseClusterService['getMetrics']>
 }
 
 interface LoadBalancerConfig {
@@ -244,9 +251,9 @@ export class DatabaseClusterService {
   // Query execution with automatic retry and failover
   async query(
     text: string,
-    params?: any[],
+    params?: readonly unknown[],
     options: { writeQuery?: boolean; retries?: number } = {},
-  ): Promise<any> {
+  ): Promise<QueryResult<QueryResultRow>> {
     const { writeQuery = false, retries = this.config.maxRetries } = options
     const startTime = Date.now()
 
@@ -268,7 +275,7 @@ export class DatabaseClusterService {
 
         // Execute query with timeout
         const queryPromise = client.query(text, params)
-        const timeoutPromise = new Promise((_, reject) => {
+        const timeoutPromise: Promise<never> = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Query timeout')), this.config.queryTimeout)
         })
 
@@ -311,6 +318,8 @@ export class DatabaseClusterService {
         }
       }
     }
+
+    throw new Error('Query execution failed after retries')
   }
 
   private updateNodeMetrics(node: DatabaseNode, responseTime: number, _success: boolean): void {
@@ -404,11 +413,11 @@ export class DatabaseClusterService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: 'healthy' | 'degraded'; details: DatabaseHealthDetails }> {
     const healthyNodes = Array.from(this.nodes.values()).filter((node) => node.isHealthy)
     const hasHealthyPrimary = healthyNodes.some((node) => node.role === 'primary')
 
-    const status = hasHealthyPrimary ? 'healthy' : 'degraded'
+    const status: 'healthy' | 'degraded' = hasHealthyPrimary ? 'healthy' : 'degraded'
 
     return {
       status,

@@ -342,7 +342,12 @@ export interface ClientToServerEvents {
   'leave-room': (roomId: string) => void
   'game-action': (data: { roomId: string; action: GameAction }) => void
   deployArmies: (data: { roomId: string; territoryId: string; armies: number }) => void
-  attack: (data: { roomId: string; fromTerritoryId: string; toTerritoryId: string }) => void
+  attack: (data: {
+    roomId: string
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies?: number
+  }) => void
   checkCapitalAttack: (data: { roomId: string; targetTerritoryId: string }) => void
   fortify: (data: {
     roomId: string

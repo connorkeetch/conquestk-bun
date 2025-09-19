@@ -1,3 +1,4 @@
+import type { QueryResultRow } from 'pg'
 import { getClient } from '../config/database'
 import type {
   Achievement,
@@ -11,6 +12,39 @@ import type {
   UserRanking,
   UserStatistics,
 } from '../types/profile'
+
+interface RawLeaderboardRow {
+  user_id: string
+  username: string
+  avatar_url: string | null
+  level: number
+  games_won: number
+  games_played: number
+  win_rate: number
+  rating: number
+}
+
+interface MapStatsRow extends QueryResultRow {
+  map_name: string
+  games_played: number
+  games_won: number
+  avg_duration: number | null
+  best_territories: number
+}
+
+interface ModeStatsRow extends QueryResultRow {
+  game_mode: string
+  games_played: number
+  games_won: number
+  avg_duration: number | null
+}
+
+interface AggregatedStats {
+  gamesPlayed: number
+  gamesWon: number
+  averageGameLength: number | null
+  bestTerritories?: number
+}
 
 export class ProfileService {
   // Get complete user profile with all related data
@@ -81,7 +115,7 @@ export class ProfileService {
 
     try {
       const updateFields: string[] = []
-      const values: any[] = []
+      const values: string[] = []
       let paramCount = 0
 
       if (updates.avatarUrl !== undefined) {
@@ -130,7 +164,7 @@ export class ProfileService {
       ])
 
       // Stats by map (using game_rooms + room_players)
-      const mapStatsResult = await client.query(
+      const mapStatsResult = await client.query<MapStatsRow>(
         `
         SELECT 
           m.name as map_name,
@@ -148,7 +182,7 @@ export class ProfileService {
       )
 
       // Stats by game mode (using game_rooms + room_players)
-      const modeStatsResult = await client.query(
+      const modeStatsResult = await client.query<ModeStatsRow>(
         `
         SELECT 
           gr.game_mode,
@@ -181,8 +215,8 @@ export class ProfileService {
         [userId],
       )
 
-      const byMap: Record<string, any> = {}
-      mapStatsResult.rows.forEach((row: any) => {
+      const byMap: Record<string, AggregatedStats> = {}
+      mapStatsResult.rows.forEach((row) => {
         byMap[row.map_name] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
@@ -191,8 +225,8 @@ export class ProfileService {
         }
       })
 
-      const byGameMode: Record<string, any> = {}
-      modeStatsResult.rows.forEach((row: any) => {
+      const byGameMode: Record<string, AggregatedStats> = {}
+      modeStatsResult.rows.forEach((row) => {
         byGameMode[row.game_mode] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
@@ -347,13 +381,14 @@ export class ProfileService {
 
     try {
       const updateFields: string[] = []
-      const values: any[] = []
+      const values: Array<string | number | boolean> = []
       let paramCount = 0
 
       Object.keys(preferences).forEach((key) => {
         if (key !== 'userId' && preferences[key as keyof UserPreferences] !== undefined) {
           updateFields.push(`${this.camelToSnake(key)} = $${++paramCount}`)
-          values.push(preferences[key as keyof UserPreferences])
+          const value = preferences[key as keyof UserPreferences]
+          values.push(value as string | number | boolean)
         }
       })
 
@@ -405,7 +440,7 @@ export class ProfileService {
         [limit],
       )
 
-      return result.rows.map((row: any, index: number) => ({
+      return result.rows.map((row: RawLeaderboardRow, index: number) => ({
         userId: row.user_id,
         username: row.username,
         avatarUrl: row.avatar_url,
