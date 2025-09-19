@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import emailService from '../services/emailService'
+import { adminService } from '../services/adminService'
 import { UserService } from '../services/userService'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
@@ -126,6 +127,8 @@ export class AuthController {
       const requiresEmailVerification =
         emailService.isEnabled() && process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
 
+      const isAdmin = await adminService.isAdmin(user.id)
+
       return res.status(201).json({
         message: requiresEmailVerification
           ? 'Account created! Please check your email to verify your account.'
@@ -136,7 +139,7 @@ export class AuthController {
           username: user.username,
           email: user.email,
           emailVerified: Boolean(user.email_verified),
-          isAdmin: user.is_admin || false,
+          isAdmin,
         },
         requiresEmailVerification,
         requiresVerification: requiresEmailVerification,
@@ -226,6 +229,8 @@ export class AuthController {
         logger.warn('Could not load user preferences on login:', getErrorMessage(preferencesError))
       }
 
+      const isAdmin = await adminService.isAdmin(user.id)
+
       return res.json({
         message: 'Login successful',
         token,
@@ -234,7 +239,7 @@ export class AuthController {
           username: user.username,
           email: user.email,
           emailVerified: user.email_verified || false,
-          isAdmin: user.is_admin || false,
+          isAdmin,
           preferences: preferences,
         },
         requiresVerification: needsVerification,
@@ -258,6 +263,8 @@ export class AuthController {
       if (!user) {
         return res.status(404).json({ message: 'User not found' })
       }
+
+      const isAdmin = await adminService.isAdmin(userId)
 
       // Get user settings (if they exist)
       let settings = null
@@ -306,7 +313,7 @@ export class AuthController {
           username: user.username,
           email: user.email,
           emailVerified: user.email_verified,
-          isAdmin: user.is_admin || false,
+          isAdmin,
           settings: settings,
           preferences: preferences,
         },
