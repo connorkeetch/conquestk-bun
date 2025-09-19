@@ -876,6 +876,97 @@ kbd {
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Tertiary Button - Theme accent with high contrast */
+.btn-tertiary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: color-mix(in srgb, var(--color-bg-deep) 85%, var(--color-white) 15%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-secondary) 92%, var(--color-white) 8%),
+    color-mix(in srgb, var(--color-accent) 55%, var(--color-secondary) 45%)
+  );
+  border-radius: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--color-secondary) 65%, transparent);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+
+.btn-tertiary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.28), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-tertiary:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 3px color-mix(in srgb, var(--color-secondary) 25%, transparent);
+}
+
+.btn-tertiary:hover::before {
+  opacity: 1;
+}
+
+.btn-tertiary:focus-visible {
+  outline: none;
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 3px color-mix(in srgb, var(--color-secondary) 30%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--color-bg-deep) 75%, transparent);
+}
+
+.btn-tertiary:active {
+  transform: translateY(0) scale(1);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-tertiary[aria-pressed="true"],
+.btn-tertiary.is-active {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.btn-tertiary[aria-pressed="true"]::before,
+.btn-tertiary.is-active::before {
+  opacity: 1;
+}
+
+.btn-tertiary:disabled,
+.btn-tertiary[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  background: color-mix(in srgb, var(--color-secondary) 35%, var(--color-surface-2) 65%);
+  border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-text) 20%);
+}
+
 /* Ghost Button - Minimal, text-like */
 .btn-ghost {
   position: relative;
@@ -1010,6 +1101,19 @@ kbd {
   pointer-events: none;
 }
 
+[data-theme="halloween"] .btn-tertiary {
+  background: linear-gradient(135deg, rgba(255, 200, 87, 0.9), rgba(255, 140, 90, 0.85));
+  color: #2e0101;
+  border-color: rgba(255, 200, 87, 0.6);
+  box-shadow:
+    0 12px 26px rgba(255, 140, 90, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="halloween"] .btn-tertiary::before {
+  background: linear-gradient(120deg, rgba(255, 241, 184, 0.5), transparent 60%);
+}
+
 /* Button Sizes */
 .btn-sm {
   padding: 0.5rem 1rem;
@@ -1026,6 +1130,7 @@ kbd {
 /* Button States */
 .btn-primary:disabled,
 .btn-secondary:disabled,
+.btn-tertiary:disabled,
 .btn-ghost:disabled,
 .btn-danger:disabled,
 .btn-success:disabled {
