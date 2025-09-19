@@ -71,7 +71,6 @@ const authSchema = Joi.object({
       // Don't HTML escape username, just trim whitespace
       return value.trim()
     })
-    .when('$isRegister', { is: true, then: Joi.required() })
     .messages({
       'string.pattern.base': 'Username can only contain letters, numbers, underscores, and hyphens',
       'string.min': 'Username must be at least 3 characters',
@@ -81,7 +80,6 @@ const authSchema = Joi.object({
   // For login, we use 'identifier' which can be email or username
   identifier: Joi.string()
     .max(255)
-    .when('$isRegister', { is: false, then: Joi.required() })
     // Don't sanitize identifier - it could be username or email
     .messages({
       'string.empty': 'Please provide username or email',
@@ -91,7 +89,6 @@ const authSchema = Joi.object({
   email: Joi.string()
     .email({ tlds: { allow: true } })
     .max(100)
-    .when('$isRegister', { is: true, then: Joi.required() })
     .custom((value, helpers) => {
       if (value && !validator.isEmail(value)) {
         return helpers.error('any.invalid', { message: 'Invalid email format' })
@@ -122,6 +119,9 @@ const authSchema = Joi.object({
     }),
 })
 
+const authRegisterSchema = authSchema.fork(['username', 'email'], (schema) => schema.required())
+const authLoginSchema = authSchema.fork(['identifier'], (schema) => schema.required())
+
 // Game creation validation
 const gameSchema = Joi.object({
   name: Joi.string()
@@ -150,7 +150,6 @@ const gameSchema = Joi.object({
 
   password: Joi.string()
     .max(50)
-    .when('isPrivate', { is: true, then: Joi.required() })
     .custom((value, helpers) => {
       if (value) {
         const error = validateAgainstPatterns(value, 'Game password')
@@ -292,8 +291,14 @@ const mapSchema = Joi.object({
 export const validateAuth = (req: Request, res: Response, next: NextFunction) => {
   const isRegister = req.path === '/register' || req.path.endsWith('/register')
   const isLogin = req.path === '/login' || req.path.endsWith('/login')
-  const { error, value } = authSchema.validate(req.body, {
-    context: { isRegister, isLogin },
+  let schema = authSchema
+  if (isRegister) {
+    schema = authRegisterSchema
+  } else if (isLogin) {
+    schema = authLoginSchema
+  }
+
+  const { error, value } = schema.validate(req.body, {
     abortEarly: false,
   })
 
@@ -347,6 +352,19 @@ export const validateGame = (req: Request, res: Response, next: NextFunction) =>
         field: detail.path.join('.'),
         message: detail.message,
       })),
+    })
+  }
+
+  if (value.isPrivate && (!value.password || value.password.trim().length === 0)) {
+    return res.status(400).json({
+      error: 'Validation error',
+      message: 'Private games require a password',
+      details: [
+        {
+          field: 'password',
+          message: 'Password is required when creating a private game',
+        },
+      ],
     })
   }
 
@@ -411,7 +429,7 @@ export const validateMap = (req: Request, res: Response, next: NextFunction) => 
 /**
  * Generic input sanitization middleware for all requests
  */
-export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunction): any => {
+export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunction): void => {
   // Sanitize query parameters
   if (req.query) {
     for (const key of Object.keys(req.query)) {
@@ -419,10 +437,11 @@ export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunctio
         const value = req.query[key] as string
         const error = validateAgainstPatterns(value, `Query parameter ${key}`)
         if (error) {
-          return res.status(400).json({
+          res.status(400).json({
             error: 'Security validation failed',
             message: error,
           })
+          return
         }
       }
     }
@@ -435,16 +454,17 @@ export const sanitizeAllInputs = (req: Request, res: Response, next: NextFunctio
         const value = req.params[key]
         const error = validateAgainstPatterns(value, `URL parameter ${key}`)
         if (error) {
-          return res.status(400).json({
+          res.status(400).json({
             error: 'Security validation failed',
             message: error,
           })
+          return
         }
       }
     }
   }
 
-  return next()
+  next()
 }
 
 // Export validation schemas for testing
