@@ -136,3 +136,44 @@ tests/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Prevent accidental commits of large/temporary files
+*.mhtml
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.svg
+!frontend/public/**/*.png
+!frontend/public/**/*.jpg
+!frontend/public/**/*.jpeg
+!frontend/public/**/*.gif
+!frontend/public/**/*.svg
+!frontend/public/**/*.ico
+!frontend/src/assets/**/*.png
+!frontend/src/assets/**/*.jpg
+!frontend/src/assets/**/*.jpeg
+!frontend/src/assets/**/*.gif
+!frontend/src/assets/**/*.svg
+!frontend/src/assets/**/*.ico
+
+# Test files in root (should be in tests/)
+/test-*.js
+/test-*.ts
+/test-*.html
+!tests/**/*.js
+!tests/**/*.ts
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+*~
+
+# Downloaded files
+*.download
+*.downloaded
+*.partial
