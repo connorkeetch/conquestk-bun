@@ -5,6 +5,7 @@ import { logAdminActivity, requireAdmin, requirePermission } from '../middleware
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
 import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 import { resolveAssetUrl } from '../utils/url'
 
 const router = Router()
@@ -80,7 +81,7 @@ router.get('/status', async (req: Request, res: Response) => {
     const isAdmin = await adminService.isAdmin(userId)
     res.json({ isAdmin })
   } catch (error) {
-    logger.error('Error checking admin status:', error)
+    handleRouteError(error, req, 'Failed to check admin status', 500, { userId: req.userId })
     res.status(500).json({ error: 'Failed to check admin status' })
   }
 })
@@ -111,7 +112,7 @@ router.get('/me', async (req: Request, res: Response) => {
       isAdmin: true,
     })
   } catch (error) {
-    logger.error('Error getting admin info:', error)
+    handleRouteError(error, req, 'Failed to get admin info', 500, { userId: req.userId })
     res.status(500).json({ error: 'Failed to get admin info' })
   }
 })
@@ -135,7 +136,11 @@ router.get(
       const result = await adminService.getAllUsers(limit, offset, search)
       res.json(result)
     } catch (error) {
-      logger.error('Error getting users:', error)
+      handleRouteError(error, req, 'Failed to get users', 500, {
+        limit: req.query.limit,
+        offset: req.query.offset,
+        search: req.query.search,
+      })
       res.status(500).json({ error: 'Failed to get users' })
     }
   },
