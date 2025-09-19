@@ -6,7 +6,7 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 const authenticateRequest: RequestHandler = (req, res, next) => {
-  authenticateToken(req, res, next).catch((error) => {
+  authenticateToken(req, res, next).catch((error: unknown) => {
     next(error instanceof Error ? error : new Error(String(error)))
   })
 }
@@ -33,7 +33,7 @@ router.get(
         currentVersion: termsService.getCurrentVersion(featureType),
         termsContent: !hasAccepted ? termsContent : undefined,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error checking terms acceptance:', error)
       res.status(500).json({ error: 'Failed to check terms acceptance' })
     }
@@ -62,7 +62,7 @@ router.post(
         success: true,
         acceptance,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error accepting terms:', error)
       res.status(500).json({ error: 'Failed to accept terms' })
     }
@@ -81,7 +81,7 @@ router.get('/history', authenticateRequest, async (req: Request, res: Response):
 
     const history = await termsService.getUserTermsHistory(userId)
     res.json(history)
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching terms history:', error)
     res.status(500).json({ error: 'Failed to fetch terms history' })
   }
@@ -97,7 +97,7 @@ router.get('/content/:featureType', (req: Request, res: Response): void => {
       ...content,
       currentVersion: termsService.getCurrentVersion(featureType),
     })
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching terms content:', error)
     res.status(500).json({ error: 'Failed to fetch terms content' })
   }
