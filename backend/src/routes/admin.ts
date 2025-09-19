@@ -476,7 +476,6 @@ router.get(
       const status = req.query.status as string
       const search = req.query.search as string
 
-      const { query } = require('../config/database')
 
       const statusFilterMap: Record<string, string[]> = {
         active: ['in_progress', 'starting'],
@@ -535,7 +534,7 @@ router.get(
       `
       queryParams.push(limit, offset)
 
-      const gamesResult = await query<AdminGameRow>(gamesQuery, queryParams)
+      const gamesResult = await dbQuery<AdminGameRow>(gamesQuery, queryParams)
 
       // Get total count with the same filters (without player joins to keep it fast)
       let countQuery = `
@@ -579,12 +578,14 @@ router.get(
           WHERE rp.room_id = ANY($1)
           ORDER BY rp.room_id, rp.joined_at
         `
-        const playersResult = await query<AdminGamePlayerRow>(playersQuery, [gameIds])
+        const playersResult = await dbQuery<AdminGamePlayerRow>(playersQuery, [gameIds])
         playersData = playersResult.rows as AdminGamePlayerRow[]
       }
 
-      const games = gamesResult.rows.map((game) => {
-        const currentPlayers = playersData.filter((p) => p.room_id === game.id)
+      const games = gamesResult.rows.map((game: AdminGameRow) => {
+        const currentPlayers = playersData.filter(
+          (player: AdminGamePlayerRow) => player.room_id === game.id,
+        )
 
         const players = currentPlayers.map((player) => ({
           id: player.user_id,
@@ -636,7 +637,6 @@ router.get(
   requirePermission('games.view'),
   async (_req: Request, res: Response) => {
     try {
-      const { query } = require('../config/database')
 
       const result = await dbQuery(`
         SELECT COUNT(*) as count 
@@ -676,7 +676,7 @@ router.post(
       )
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -714,9 +714,8 @@ router.post(
       const { reason } = req.body
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
 
-      const result = await query(
+      const result = await dbQuery(
         `UPDATE game_rooms 
          SET status = 'paused', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND status IN ('in_progress', 'starting')
@@ -732,7 +731,7 @@ router.post(
       }
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -770,9 +769,8 @@ router.post(
       const { reason } = req.body
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
 
-      const result = await query(
+      const result = await dbQuery(
         `UPDATE game_rooms 
          SET status = 'in_progress', updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND status = 'paused'
@@ -788,7 +786,7 @@ router.post(
       }
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -818,7 +816,6 @@ router.get(
   requirePermission('games.view'),
   async (_req: Request, res: Response) => {
     try {
-      const { query } = require('../config/database')
 
       const gamesQuery = `
         SELECT 
@@ -842,9 +839,9 @@ router.get(
         LIMIT 50
       `
 
-      const result = await query<ActiveGameSummaryRow>(gamesQuery)
+      const result = await dbQuery<ActiveGameSummaryRow>(gamesQuery)
 
-      const games = result.rows.map((game) => ({
+      const games = result.rows.map((game: ActiveGameSummaryRow) => ({
         id: game.id,
         name: game.name || `Game ${game.id.slice(0, 8)}`,
         status: normalizeAdminGameStatus(game.status),
@@ -938,8 +935,7 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       // Get basic system metrics
-      const { query } = require('../config/database')
-      const dbStats = await query(`
+      const dbStats = await dbQuery(`
         SELECT 
           (SELECT COUNT(*) FROM users) as user_count,
           (SELECT COUNT(*) FROM maps) as map_count,
@@ -983,9 +979,8 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
-      const { query } = require('../config/database')
 
-      const mapResult = await query(
+      const mapResult = await dbQuery(
         `SELECT 
           m.*,
           u.username as creator_name
@@ -1003,12 +998,12 @@ router.get(
       const map = mapResult.rows[0]
 
       // Get territories if they exist
-      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [
+      const territoriesResult = await dbQuery('SELECT * FROM map_territories WHERE map_id = $1', [
         mapId,
       ])
 
       // Get adjacencies if they exist
-      const adjacenciesResult = await query(
+      const adjacenciesResult = await dbQuery(
         'SELECT * FROM territory_adjacencies WHERE map_id = $1',
         [mapId],
       )
@@ -1043,7 +1038,6 @@ router.get(
       const search = req.query.search as string
       const includeAll = req.query.includeAll === 'true'
 
-      const { query } = require('../config/database')
 
       let mapsQuery = `
         SELECT 
@@ -1087,7 +1081,7 @@ router.get(
       queryParams.push(limit, offset)
       paramIndex += 2 // Increment for both LIMIT and OFFSET
 
-      const mapsResult = await query<AdminMapRow>(mapsQuery, queryParams)
+      const mapsResult = await dbQuery<AdminMapRow>(mapsQuery, queryParams)
 
       // Get total count
       let countQuery = `
@@ -1111,7 +1105,7 @@ router.get(
         countParams.push(`%${search}%`)
       }
 
-      const countResult = await query(countQuery, countParams)
+      const countResult = await dbQuery(countQuery, countParams)
 
       // Convert numeric strings to numbers and map property names for proper frontend handling
       const maps = (mapsResult.rows as AdminMapRow[]).map((map) => {
@@ -1169,7 +1163,6 @@ router.patch(
         req.body
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
 
       // Build update query
       const updates: string[] = []
@@ -1239,7 +1232,7 @@ router.patch(
         RETURNING *
       `
 
-      const result = await query(updateQuery, params)
+      const result = await dbQuery(updateQuery, params)
 
       if (result.rows.length === 0) {
         res.status(404).json({ error: 'Map not found' })
@@ -1247,7 +1240,7 @@ router.patch(
       }
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -1280,10 +1273,9 @@ router.post(
     try {
       const { mapId } = req.params
       const adminUserId = req.userId
-      const { query } = require('../config/database')
 
       // Get the original map
-      const originalMapResult = await query('SELECT * FROM maps WHERE id = $1', [mapId])
+      const originalMapResult = await dbQuery('SELECT * FROM maps WHERE id = $1', [mapId])
 
       if (originalMapResult.rows.length === 0) {
         res.status(404).json({ error: 'Map not found' })
@@ -1294,7 +1286,7 @@ router.post(
       const clonedName = `${originalMap.name} (Copy)`
 
       // Create the cloned map
-      const cloneResult = await query(
+      const cloneResult = await dbQuery(
         `INSERT INTO maps (name, description, image_url, min_players, max_players, creator_id, status, capital_assignments, capital_metadata)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
@@ -1314,13 +1306,13 @@ router.post(
       const clonedMap = cloneResult.rows[0]
 
       // Clone territories if they exist
-      const territoriesResult = await query('SELECT * FROM map_territories WHERE map_id = $1', [
+      const territoriesResult = await dbQuery('SELECT * FROM map_territories WHERE map_id = $1', [
         mapId,
       ])
 
       if (territoriesResult.rows.length > 0) {
         for (const territory of territoriesResult.rows) {
-          await query(
+          await dbQuery(
             `INSERT INTO map_territories (map_id, name, polygon, center_x, center_y, continent, army_position, metadata)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
@@ -1338,14 +1330,14 @@ router.post(
       }
 
       // Clone adjacencies if they exist
-      const adjacenciesResult = await query(
+      const adjacenciesResult = await dbQuery(
         'SELECT * FROM territory_adjacencies WHERE map_id = $1',
         [mapId],
       )
 
       if (adjacenciesResult.rows.length > 0) {
         for (const adjacency of adjacenciesResult.rows) {
-          await query(
+          await dbQuery(
             `INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
              VALUES ($1, $2, $3)`,
             [clonedMap.id, adjacency.territory_from, adjacency.territory_to],
@@ -1354,7 +1346,7 @@ router.post(
       }
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -1391,10 +1383,9 @@ router.patch(
       const { status, notes } = req.body
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
 
       // Update map status
-      const mapResult = await query(
+      const mapResult = await dbQuery(
         `UPDATE maps 
          SET status = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
@@ -1409,7 +1400,7 @@ router.patch(
 
       // If approved or rejected, create a review record
       if (status === 'approved' || status === 'rejected') {
-        await query(
+        await dbQuery(
           `INSERT INTO map_reviews (map_id, reviewer_id, status, notes, reviewed_at)
            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
            ON CONFLICT (map_id, reviewer_id) 
@@ -1419,7 +1410,7 @@ router.patch(
       }
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
@@ -1453,10 +1444,9 @@ router.delete(
       const { mapId } = req.params
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
 
       // Check if map is being used in active games
-      const gamesCheck = await query(
+      const gamesCheck = await dbQuery(
         `SELECT COUNT(*) as count 
          FROM game_rooms 
          WHERE map_id = $1 AND status IN ('in_progress', 'starting')`,
@@ -1471,7 +1461,7 @@ router.delete(
       }
 
       // Get map info before deletion for logging
-      const mapInfo = await query('SELECT * FROM maps WHERE id = $1', [mapId])
+      const mapInfo = await dbQuery('SELECT * FROM maps WHERE id = $1', [mapId])
 
       if (mapInfo.rows.length === 0) {
         res.status(404).json({ error: 'Map not found' })
@@ -1479,10 +1469,10 @@ router.delete(
       }
 
       // Delete map and cascade to related tables
-      await query('DELETE FROM maps WHERE id = $1', [mapId])
+      await dbQuery('DELETE FROM maps WHERE id = $1', [mapId])
 
       // Log the action
-      await query(
+      await dbQuery(
         `INSERT INTO admin_activity_logs (admin_user_id, action_type, action_details, target_type, target_id, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [

@@ -27,17 +27,12 @@ interface PerformanceMetrics {
   cacheHitRate: number
 }
 
-type ProviderHealthCheck =
-  | {
-      provider: string
-      healthy: true
-      responseTime: number
-    }
-  | {
-      provider: string
-      healthy: false
-      error: string
-    }
+interface ProviderHealthCheck {
+  provider: string
+  healthy: boolean
+  responseTime?: number
+  error?: string
+}
 
 interface CDNHealthDetails {
   totalProviders: number
