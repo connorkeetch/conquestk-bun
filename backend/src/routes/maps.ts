@@ -15,6 +15,7 @@ import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 import { getMapUploadsDir } from '../utils/mapUploads'
+import { handleRouteError } from '../utils/routeErrorHandler'
 import { parseJsonField, parseTags } from '../utils/tagParser'
 import { resolveAssetUrl } from '../utils/url'
 
@@ -359,7 +360,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
       total: visibleMaps.length,
     })
   } catch (error) {
-    logger.error('Error fetching maps for game creation:', error)
+    handleRouteError(error, req, 'Failed to fetch available maps')
     return res.status(500).json({ error: 'Failed to fetch available maps' })
   }
 })
@@ -481,7 +482,7 @@ router.get('/', async (req: Request, res: Response) => {
       offset,
     })
   } catch (error) {
-    logger.error('Error fetching maps:', error)
+    handleRouteError(error, req, 'Failed to fetch maps')
     return res.status(500).json({ error: 'Failed to fetch maps' })
   }
 })
@@ -506,7 +507,7 @@ router.get(
 
       return res.json(mapData)
     } catch (error) {
-      logger.error('Error fetching map:', error)
+      handleRouteError(error, req, 'Failed to fetch map', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to fetch map' })
     }
   },
@@ -518,7 +519,7 @@ router.get('/game-modes/list', async (_req: Request, res: Response) => {
     const gameModes = await mapService.getGameModes()
     return res.json(gameModes)
   } catch (error) {
-    logger.error('Error fetching game modes:', error)
+    handleRouteError(error, _req, 'Failed to fetch game modes')
     return res.status(500).json({ error: 'Failed to fetch game modes' })
   }
 })
@@ -529,7 +530,7 @@ router.get('/abilities/list', async (_req: Request, res: Response) => {
     const abilities = await mapService.getTerritoryAbilityTypes()
     return res.json(abilities)
   } catch (error) {
-    logger.error('Error fetching territory abilities:', error)
+    handleRouteError(error, _req, 'Failed to fetch territory abilities')
     return res.status(500).json({ error: 'Failed to fetch territory abilities' })
   }
 })
@@ -635,7 +636,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
 
     return res.status(201).json(map)
   } catch (error) {
-    logger.error('Error creating map via JSON endpoint:', error)
+    handleRouteError(error, req, 'Failed to create map', 500, { endpoint: '/api/maps/json' })
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
 
     // More detailed error for debugging
@@ -735,7 +736,7 @@ router.post(
 
       return res.status(201).json(map)
     } catch (error) {
-      logger.error('Error creating map:', error)
+      handleRouteError(error, req, 'Failed to create map')
 
       // Provide more detailed error response
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
@@ -789,7 +790,7 @@ router.put(
 
       return res.json(map)
     } catch (error) {
-      logger.error('Error updating map:', error)
+      handleRouteError(error, req, 'Failed to update map', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to update map' })
     }
   },
@@ -811,7 +812,7 @@ router.delete(
 
       return res.json({ message: 'Map deleted successfully' })
     } catch (error) {
-      logger.error('Error deleting map:', error)
+      handleRouteError(error, req, 'Failed to delete map', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to delete map' })
     }
   },
@@ -851,7 +852,7 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
 
     return res.json(result.maps)
   } catch (error) {
-    logger.error('Error fetching user maps:', error)
+    handleRouteError(error, req, 'Failed to fetch user maps')
     return res.status(500).json({ error: 'Failed to fetch user maps' })
   }
 })
@@ -871,7 +872,7 @@ router.get('/my/maps', authenticateToken, async (req: Request, res: Response) =>
     const result = await mapService.searchMaps(filters)
     return res.json(result)
   } catch (error) {
-    logger.error('Error fetching user maps:', error)
+    handleRouteError(error, req, 'Failed to fetch user maps')
     return res.status(500).json({ error: 'Failed to fetch user maps' })
   }
 })
@@ -896,7 +897,7 @@ router.post(
 
       res.status(201).json(continent)
     } catch (error) {
-      logger.error('Error creating continent:', error)
+      handleRouteError(error, req, 'Failed to create continent', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create continent' })
     }
   },
@@ -925,7 +926,7 @@ router.post(
 
       res.status(201).json(territory)
     } catch (error) {
-      logger.error('Error creating territory:', error)
+      handleRouteError(error, req, 'Failed to create territory', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create territory' })
     }
   },
@@ -950,7 +951,7 @@ router.post(
 
       res.status(201).json(adjacency)
     } catch (error) {
-      logger.error('Error creating adjacency:', error)
+      handleRouteError(error, req, 'Failed to create adjacency', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create adjacency' })
     }
   },
@@ -975,7 +976,7 @@ router.post(
 
       res.status(201).json(rating)
     } catch (error) {
-      logger.error('Error rating map:', error)
+      handleRouteError(error, req, 'Failed to rate map', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to rate map' })
     }
   },
@@ -1028,7 +1029,7 @@ router.post(
         metadata,
       })
     } catch (error) {
-      logger.error('Error generating capitals:', error)
+      handleRouteError(error, req, 'Failed to generate capitals', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to generate capitals' })
     }
   },
@@ -1079,7 +1080,7 @@ router.patch(
         capitals: territoryIds,
       })
     } catch (error) {
-      logger.error('Error updating capitals:', error)
+      handleRouteError(error, req, 'Failed to update capitals', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to update capitals' })
     }
   },
@@ -1124,7 +1125,7 @@ router.get(
         mapId,
       })
     } catch (error) {
-      logger.error('Error fetching capitals:', error)
+      handleRouteError(error, req, 'Failed to fetch capitals', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to fetch capitals' })
     }
   },

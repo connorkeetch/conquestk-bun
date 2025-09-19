@@ -168,7 +168,10 @@ router.put(
 
       res.json({ message: 'User status updated successfully' })
     } catch (error) {
-      logger.error('Error updating user status:', error)
+      handleRouteError(error, req, 'Failed to update user status', 500, {
+        targetUserId: req.params.userId,
+        status: req.body?.status,
+      })
       res.status(500).json({ error: 'Failed to update user status' })
     }
   },
@@ -192,7 +195,9 @@ router.post(
 
       res.json({ message: 'Password reset successfully' })
     } catch (error) {
-      logger.error('Error resetting password:', error)
+      handleRouteError(error, req, 'Failed to reset password', 500, {
+        targetUserId: req.params.userId,
+      })
       res.status(500).json({ error: 'Failed to reset password' })
     }
   },
@@ -217,7 +222,10 @@ router.post(
 
       res.json({ message: 'VIP status updated successfully' })
     } catch (error) {
-      logger.error('Error updating VIP status:', error)
+      handleRouteError(error, req, 'Failed to update VIP status', 500, {
+        targetUserId: req.params.userId,
+        isVip: req.body?.isVip,
+      })
       res.status(500).json({ error: 'Failed to update VIP status' })
     }
   },
@@ -241,7 +249,10 @@ router.post(
 
       res.json({ message: 'Admin status updated successfully' })
     } catch (error) {
-      logger.error('Error updating admin status:', error)
+      handleRouteError(error, req, 'Failed to update admin status', 500, {
+        targetUserId: req.params.userId,
+        isAdmin: req.body?.isAdmin,
+      })
       res.status(500).json({ error: 'Failed to update admin status' })
     }
   },
@@ -268,7 +279,10 @@ router.post(
 
       res.json({ message: 'Premium tier updated successfully' })
     } catch (error) {
-      logger.error('Error updating premium tier:', error)
+      handleRouteError(error, req, 'Failed to update premium tier', 500, {
+        targetUserId: req.params.userId,
+        tier: req.body?.tier,
+      })
       res.status(500).json({ error: 'Failed to update premium tier' })
     }
   },
@@ -292,7 +306,9 @@ router.post(
 
       res.json({ message: 'User banned successfully' })
     } catch (error) {
-      logger.error('Error banning user:', error)
+      handleRouteError(error, req, 'Failed to ban user', 500, {
+        targetUserId: req.params.userId,
+      })
       res.status(500).json({ error: 'Failed to ban user' })
     }
   },
@@ -314,7 +330,9 @@ router.post(
 
       res.json({ message: 'User unbanned successfully' })
     } catch (error) {
-      logger.error('Error unbanning user:', error)
+      handleRouteError(error, req, 'Failed to unban user', 500, {
+        targetUserId: req.params.userId,
+      })
       res.status(500).json({ error: 'Failed to unban user' })
     }
   },
@@ -341,7 +359,10 @@ router.post(
 
       res.json({ message: 'Admin role assigned successfully' })
     } catch (error) {
-      logger.error('Error assigning admin role:', error)
+      handleRouteError(error, req, 'Failed to assign admin role', 500, {
+        targetUserId: req.params.userId,
+        roleId: req.body?.roleId,
+      })
       res.status(500).json({ error: 'Failed to assign admin role' })
     }
   },
@@ -364,7 +385,10 @@ router.delete(
 
       res.json({ message: 'Admin role removed successfully' })
     } catch (error) {
-      logger.error('Error removing admin role:', error)
+      handleRouteError(error, req, 'Failed to remove admin role', 500, {
+        targetUserId: req.params.userId,
+        roleId: req.params.roleId,
+      })
       res.status(500).json({ error: 'Failed to remove admin role' })
     }
   },
@@ -387,7 +411,10 @@ router.get(
       const result = await adminService.getContentApprovalQueue(limit, offset)
       res.json(result)
     } catch (error) {
-      logger.error('Error getting approval queue:', error)
+      handleRouteError(error, req, 'Failed to get approval queue', 500, {
+        limit: req.query.limit,
+        offset: req.query.offset,
+      })
       res.status(500).json({ error: 'Failed to get approval queue' })
     }
   },
@@ -411,7 +438,9 @@ router.post(
 
       res.json({ message: 'Content approved successfully' })
     } catch (error) {
-      logger.error('Error approving content:', error)
+      handleRouteError(error, req, 'Failed to approve content', 500, {
+        queueId: req.params.queueId,
+      })
       res.status(500).json({ error: 'Failed to approve content' })
     }
   },
@@ -435,7 +464,9 @@ router.post(
 
       res.json({ message: 'Content rejected successfully' })
     } catch (error) {
-      logger.error('Error rejecting content:', error)
+      handleRouteError(error, req, 'Failed to reject content', 500, {
+        queueId: req.params.queueId,
+      })
       res.status(500).json({ error: 'Failed to reject content' })
     }
   },
@@ -480,7 +511,6 @@ router.get(
       const offset = parseInt(req.query.offset as string, 10) || 0
       const status = req.query.status as string
       const search = req.query.search as string
-
 
       const statusFilterMap: Record<string, string[]> = {
         active: ['in_progress', 'starting'],
@@ -628,7 +658,11 @@ router.get(
         total: parseInt(countResult.rows[0]?.total || '0', 10),
       })
     } catch (error) {
-      logger.error('Error getting games:', error)
+      handleRouteError(error, req, 'Failed to get games', 500, {
+        limit: req.query.limit,
+        offset: req.query.offset,
+        status: req.query.status,
+      })
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to get games',
       })
@@ -642,7 +676,6 @@ router.get(
   requirePermission('games.view'),
   async (_req: Request, res: Response) => {
     try {
-
       const result = await dbQuery(`
         SELECT COUNT(*) as count 
         FROM game_rooms 
@@ -653,7 +686,7 @@ router.get(
         activeGames: parseInt(result.rows[0]?.count || '0', 10),
       })
     } catch (error) {
-      logger.error('Error getting active games:', error)
+      handleRouteError(error, _req, 'Failed to get active games count')
       res.status(500).json({
         error: 'Failed to get active games count',
       })
@@ -697,7 +730,9 @@ router.post(
 
       res.json({ success: true, message: 'Game force-ended successfully' })
     } catch (error) {
-      logger.error('Error force-ending game:', error)
+      handleRouteError(error, req, 'Failed to force-end game', 500, {
+        gameId: req.params.gameId,
+      })
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to force-end game',
       })
@@ -718,7 +753,6 @@ router.post(
       const { gameId } = req.params
       const { reason } = req.body
       const adminUserId = req.userId
-
 
       const result = await dbQuery(
         `UPDATE game_rooms 
@@ -752,7 +786,9 @@ router.post(
 
       res.json({ success: true, message: 'Game paused successfully' })
     } catch (error) {
-      logger.error('Error pausing game:', error)
+      handleRouteError(error, req, 'Failed to pause game', 500, {
+        gameId: req.params.gameId,
+      })
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to pause game',
       })
@@ -773,7 +809,6 @@ router.post(
       const { gameId } = req.params
       const { reason } = req.body
       const adminUserId = req.userId
-
 
       const result = await dbQuery(
         `UPDATE game_rooms 
@@ -807,7 +842,9 @@ router.post(
 
       res.json({ success: true, message: 'Game resumed successfully' })
     } catch (error) {
-      logger.error('Error resuming game:', error)
+      handleRouteError(error, req, 'Failed to resume game', 500, {
+        gameId: req.params.gameId,
+      })
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to resume game',
       })
@@ -821,7 +858,6 @@ router.get(
   requirePermission('games.view'),
   async (_req: Request, res: Response) => {
     try {
-
       const gamesQuery = `
         SELECT 
           gr.id,
@@ -861,7 +897,7 @@ router.get(
 
       res.json(games)
     } catch (error) {
-      logger.error('Error getting active games:', error)
+      handleRouteError(error, _req, 'Failed to get active games')
       res.status(500).json({ error: 'Failed to get active games' })
     }
   },
@@ -878,7 +914,7 @@ router.get(
       const flags = await adminService.getFeatureFlags()
       res.json(flags)
     } catch (error) {
-      logger.error('Error getting feature flags:', error)
+      handleRouteError(error, _req, 'Failed to get feature flags')
       res.status(500).json({ error: 'Failed to get feature flags' })
     }
   },
@@ -902,7 +938,9 @@ router.put(
 
       res.json({ message: 'Feature flag updated successfully' })
     } catch (error) {
-      logger.error('Error toggling feature flag:', error)
+      handleRouteError(error, req, 'Failed to toggle feature flag', 500, {
+        flagName: req.params.flagName,
+      })
       res.status(500).json({ error: 'Failed to toggle feature flag' })
     }
   },
@@ -925,7 +963,10 @@ router.get(
       const logs = await adminService.getAdminActivityLogs(limit, offset)
       res.json(logs)
     } catch (error) {
-      logger.error('Error getting admin activity logs:', error)
+      handleRouteError(error, req, 'Failed to get admin activity logs', 500, {
+        limit: req.query.limit,
+        offset: req.query.offset,
+      })
       res.status(500).json({ error: 'Failed to get admin activity logs' })
     }
   },
@@ -967,7 +1008,7 @@ router.get(
         ),
       })
     } catch (error) {
-      logger.error('Error getting system status:', error)
+      handleRouteError(error, _req, 'Failed to get system status')
       res.status(500).json({ error: 'Failed to get system status' })
     }
   },
@@ -1019,7 +1060,9 @@ router.get(
         adjacencies: adjacenciesResult.rows,
       })
     } catch (error) {
-      logger.error('Error getting map details:', error)
+      handleRouteError(error, req, 'Failed to get map details', 500, {
+        mapId: req.params.mapId,
+      })
       res.status(500).json({ error: 'Failed to get map details' })
     }
   },
@@ -1042,7 +1085,6 @@ router.get(
       const status = req.query.status as string
       const search = req.query.search as string
       const includeAll = req.query.includeAll === 'true'
-
 
       let mapsQuery = `
         SELECT 
@@ -1140,7 +1182,11 @@ router.get(
         total: parseInt(countResult.rows[0]?.total || '0', 10),
       })
     } catch (error) {
-      logger.error('Error getting maps:', error)
+      handleRouteError(error, req, 'Failed to get maps', 500, {
+        limit: req.query.limit,
+        offset: req.query.offset,
+        status: req.query.status,
+      })
       res.status(500).json({ error: 'Failed to get maps' })
     }
   },
@@ -1167,7 +1213,6 @@ router.patch(
       const { name, description, minPlayers, maxPlayers, status, isFeatured, isPublic, isVipOnly } =
         req.body
       const adminUserId = req.userId
-
 
       // Build update query
       const updates: string[] = []
@@ -1261,7 +1306,9 @@ router.patch(
 
       res.json({ message: 'Map updated successfully', map: result.rows[0] })
     } catch (error) {
-      logger.error('Error updating map:', error)
+      handleRouteError(error, req, 'Failed to update map', 500, {
+        mapId: req.params.mapId,
+      })
       res.status(500).json({ error: 'Failed to update map' })
     }
   },
@@ -1367,7 +1414,9 @@ router.post(
 
       res.json({ message: 'Map cloned successfully', map: clonedMap, name: clonedName })
     } catch (error) {
-      logger.error('Error cloning map:', error)
+      handleRouteError(error, req, 'Failed to clone map', 500, {
+        mapId: req.params.mapId,
+      })
       res.status(500).json({ error: 'Failed to clone map' })
     }
   },
@@ -1387,7 +1436,6 @@ router.patch(
       const { mapId } = req.params
       const { status, notes } = req.body
       const adminUserId = req.userId
-
 
       // Update map status
       const mapResult = await dbQuery(
@@ -1431,7 +1479,10 @@ router.patch(
 
       res.json({ message: 'Map status updated successfully', map: mapResult.rows[0] })
     } catch (error) {
-      logger.error('Error updating map status:', error)
+      handleRouteError(error, req, 'Failed to update map status', 500, {
+        mapId: req.params.mapId,
+        status: req.body?.status,
+      })
       res.status(500).json({ error: 'Failed to update map status' })
     }
   },
@@ -1448,7 +1499,6 @@ router.delete(
     try {
       const { mapId } = req.params
       const adminUserId = req.userId
-
 
       // Check if map is being used in active games
       const gamesCheck = await dbQuery(
@@ -1493,7 +1543,9 @@ router.delete(
 
       res.json({ message: 'Map deleted successfully' })
     } catch (error) {
-      logger.error('Error deleting map:', error)
+      handleRouteError(error, req, 'Failed to delete map', 500, {
+        mapId: req.params.mapId,
+      })
       res.status(500).json({ error: 'Failed to delete map' })
     }
   },
@@ -1563,7 +1615,7 @@ router.post(
         timestamp: new Date().toISOString(),
       })
     } catch (error) {
-      logger.error('Error refreshing cache:', error)
+      handleRouteError(error, req, 'Failed to refresh cache')
       res.status(500).json({ error: 'Failed to refresh cache' })
     }
   },
