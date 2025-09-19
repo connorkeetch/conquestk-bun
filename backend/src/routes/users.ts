@@ -2,9 +2,21 @@ import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
 import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
+
+let ensuredUserBioColumn = false
+const ensureUserBioColumn = async () => {
+  if (ensuredUserBioColumn) return
+
+  try {
+    await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT')
+    ensuredUserBioColumn = true
+  } catch (error) {
+    logger.warn('Failed to ensure users.bio column exists:', error)
+  }
+}
 
 // The Conqueror's Path - Conquest rank system
 const CONQUEST_RANKS = [
@@ -34,6 +46,8 @@ function getConquestRank(skillRating: number) {
 router.get('/:username/profile', async (req: Request, res: Response) => {
   try {
     const { username } = req.params
+
+    await ensureUserBioColumn()
 
     const result = await query(
       `
@@ -80,7 +94,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    logger.error('Error fetching user profile:', error)
+    handleRouteError(error, req, 'Failed to fetch profile', 500, { username })
     return res.status(500).json({ error: 'Failed to fetch profile' })
   }
 })
@@ -89,6 +103,8 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
 router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
+
+    await ensureUserBioColumn()
 
     const result = await query(
       `
@@ -135,7 +151,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       },
     })
   } catch (error) {
-    logger.error('Error fetching user profile:', error)
+    handleRouteError(error, req, 'Failed to fetch profile', 500, { userId: req.userId })
     return res.status(500).json({ error: 'Failed to fetch profile' })
   }
 })
@@ -163,7 +179,9 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
       username: username.trim(),
     })
   } catch (error) {
-    logger.error('Error checking username:', error)
+    handleRouteError(error, req, 'Failed to check username availability', 500, {
+      username: req.body?.username,
+    })
     return res.status(500).json({ error: 'Failed to check username availability' })
   }
 })
@@ -173,6 +191,8 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
   try {
     const userId = req.userId
     const { username, email } = req.body
+
+    await ensureUserBioColumn()
 
     // Validate inputs
     if (username && username.trim().length < 3) {
@@ -244,7 +264,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
       user: updatedUser.rows[0],
     })
   } catch (error) {
-    logger.error('Error updating user profile:', error)
+    handleRouteError(error, req, 'Failed to update profile', 500, { userId: req.userId })
     return res.status(500).json({ error: 'Failed to update profile' })
   }
 })
@@ -287,7 +307,7 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
 
     return res.json({ success: true, message: 'Password updated successfully' })
   } catch (error) {
-    logger.error('Error changing password:', error)
+    handleRouteError(error, req, 'Failed to change password', 500, { userId: req.userId })
     return res.status(500).json({ error: 'Failed to change password' })
   }
 })

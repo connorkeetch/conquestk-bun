@@ -1,10 +1,11 @@
-import express from 'express'
+import express, { type Request, type Response } from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { cdnService } from '../services/cdnService'
 import { databaseClusterService } from '../services/databaseClusterService'
 import { performanceMonitorService } from '../services/performanceMonitorService'
 import { redisClusterService } from '../services/redisClusterService'
 import { getErrorMessage } from '../utils/errorHelpers'
+import { handleRouteError } from '../utils/routeErrorHandler'
 import { logger } from '../utils/logger'
 
 type ServiceHealthResult = {
@@ -14,8 +15,23 @@ type ServiceHealthResult = {
 
 const router = express.Router()
 
+const sendFailure = (
+  req: Request,
+  res: Response,
+  error: unknown,
+  logMessage: string,
+  status = 500,
+): void => {
+  const clientError = error instanceof Error ? error.message : logMessage
+  handleRouteError(error, req, logMessage, status, { clientError })
+  res.status(status).json({
+    success: false,
+    error: clientError,
+  })
+}
+
 // Performance dashboard (admin only)
-router.get('/dashboard', authenticateToken, async (_req, res) => {
+router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const dashboard = performanceMonitorService.getDashboardData()
 
@@ -24,15 +40,12 @@ router.get('/dashboard', authenticateToken, async (_req, res) => {
       data: dashboard,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load performance dashboard')
   }
 })
 
 // Current system metrics
-router.get('/metrics', authenticateToken, async (_req, res) => {
+router.get('/metrics', authenticateToken, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
 
@@ -41,10 +54,7 @@ router.get('/metrics', authenticateToken, async (_req, res) => {
       data: current,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load current metrics')
   }
 })
 
@@ -63,10 +73,7 @@ router.get('/metrics/history', authenticateToken, async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load metrics history')
   }
 })
 
@@ -83,10 +90,7 @@ router.get('/alerts', authenticateToken, async (req, res) => {
       data: alerts,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load performance alerts')
   }
 })
 
@@ -101,15 +105,12 @@ router.post('/alerts/:alertId/resolve', authenticateToken, async (req, res) => {
       message: resolved ? 'Alert resolved' : 'Alert not found',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to resolve alert')
   }
 })
 
 // Component-specific health checks
-router.get('/health/detailed', authenticateToken, async (_req, res) => {
+router.get('/health/detailed', authenticateToken, async (req, res) => {
   try {
     const [performanceHealth, redisHealth, databaseHealth, cdnHealth] = await Promise.allSettled([
       performanceMonitorService.healthCheck(),
@@ -145,15 +146,12 @@ router.get('/health/detailed', authenticateToken, async (_req, res) => {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load detailed health status')
   }
 })
 
 // Cache management
-router.get('/cache/stats', authenticateToken, async (_req, res) => {
+router.get('/cache/stats', authenticateToken, async (req, res) => {
   try {
     const stats = redisClusterService.getMetrics()
 
@@ -162,10 +160,7 @@ router.get('/cache/stats', authenticateToken, async (_req, res) => {
       data: stats,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load cache stats')
   }
 })
 
@@ -189,15 +184,12 @@ router.post('/cache/clear', authenticateToken, async (req, res): Promise<void> =
       message: `Cleared ${cleared} keys matching pattern: ${pattern}`,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to clear cache keys')
   }
 })
 
 // Database performance
-router.get('/database/stats', authenticateToken, async (_req, res) => {
+router.get('/database/stats', authenticateToken, async (req, res) => {
   try {
     const stats = databaseClusterService.getMetrics()
 
@@ -206,15 +198,12 @@ router.get('/database/stats', authenticateToken, async (_req, res) => {
       data: stats,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load database stats')
   }
 })
 
 // CDN management
-router.get('/cdn/stats', authenticateToken, async (_req, res) => {
+router.get('/cdn/stats', authenticateToken, async (req, res) => {
   try {
     const stats = cdnService.getMetrics()
 
@@ -223,10 +212,7 @@ router.get('/cdn/stats', authenticateToken, async (_req, res) => {
       data: stats,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to load CDN stats')
   }
 })
 
@@ -242,10 +228,7 @@ router.post('/cdn/purge', authenticateToken, async (req, res) => {
       data: { paths: paths.length, tags: tags.length },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to purge CDN cache')
   }
 })
 
@@ -279,15 +262,12 @@ router.post('/test/load', authenticateToken, async (req, res) => {
       message: 'Load test started',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to start load test')
   }
 })
 
 // System optimization recommendations
-router.get('/optimization/recommendations', authenticateToken, async (_req, res) => {
+router.get('/optimization/recommendations', authenticateToken, async (req, res) => {
   try {
     const current = performanceMonitorService.getCurrentMetrics()
     const recommendations = []
@@ -348,10 +328,7 @@ router.get('/optimization/recommendations', authenticateToken, async (_req, res)
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to generate optimization recommendations')
   }
 })
 
@@ -397,10 +374,7 @@ router.get('/report', authenticateToken, async (req, res) => {
       })
     }
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: (error as Error).message,
-    })
+    sendFailure(req, res, error, 'Failed to generate performance report')
   }
 })
 

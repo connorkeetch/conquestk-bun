@@ -4,7 +4,7 @@ import multer from 'multer'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { mapStagingService } from '../services/mapStagingService'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 
@@ -36,7 +36,7 @@ router.get('/quota', authenticateToken, async (req: Request, res: Response): Pro
     const quotaSummary = await mapStagingService.getUserQuotaSummary(userId)
     res.json(quotaSummary)
   } catch (error) {
-    logger.error('Error checking quota:', error)
+    handleRouteError(error, req, 'Failed to check quota')
     res.status(500).json({ error: 'Failed to check quota' })
   }
 })
@@ -66,7 +66,7 @@ router.post(
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload image'
-      logger.error('Error uploading image:', error)
+      handleRouteError(error, req, errorMessage, 400)
       res.status(400).json({ error: errorMessage })
     }
   },
@@ -84,7 +84,7 @@ router.get('/my-images', authenticateToken, async (req: Request, res: Response):
     const images = await mapStagingService.getUserStagingImages(userId)
     res.json(images)
   } catch (error) {
-    logger.error('Error fetching staging images:', error)
+    handleRouteError(error, req, 'Failed to fetch images')
     res.status(500).json({ error: 'Failed to fetch images' })
   }
 })
@@ -109,7 +109,7 @@ router.delete(
       res.json({ success: true })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete image'
-      logger.error('Error deleting image:', error)
+      handleRouteError(error, req, errorMessage, 400)
       res.status(400).json({ error: errorMessage })
     }
   },
@@ -120,12 +120,12 @@ router.get(
   '/admin/all-images',
   authenticateToken,
   requireAdmin,
-  async (_req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const images = await mapStagingService.getAllStagingImages()
       res.json(images)
     } catch (error) {
-      logger.error('Error fetching all staging images:', error)
+      handleRouteError(error, req, 'Failed to fetch images')
       res.status(500).json({ error: 'Failed to fetch images' })
     }
   },
@@ -150,7 +150,7 @@ router.delete(
       res.json({ success: true })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete image'
-      logger.error('Error deleting image (admin):', error)
+      handleRouteError(error, req, errorMessage, 400)
       res.status(400).json({ error: errorMessage })
     }
   },
