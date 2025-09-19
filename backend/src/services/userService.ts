@@ -28,7 +28,7 @@ export class UserService {
         throw new Error('Failed to retrieve created user')
       }
 
-      return result.rows[0]
+      return result.rows[0] as User
     } catch (error: any) {
       // If email verification columns don't exist, try basic insert
       if (
@@ -52,7 +52,7 @@ export class UserService {
 
         // Add default values for missing fields
         return {
-          ...result.rows[0],
+          ...(result.rows[0] as User),
           email_verified: false,
         }
       }
@@ -62,22 +62,22 @@ export class UserService {
 
   async findById(id: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE id = $1', [id])
-    return result.rows[0] || null
+    return (result.rows[0] as User) || null
   }
 
   async findByEmail(email: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE email = $1', [email])
-    return result.rows[0] || null
+    return (result.rows[0] as User) || null
   }
 
   async findByUsername(username: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE username = $1', [username])
-    return result.rows[0] || null
+    return (result.rows[0] as User) || null
   }
 
   async findByVerificationToken(token: string): Promise<User | null> {
     const result = await query('SELECT * FROM users WHERE verification_token = $1', [token])
-    return result.rows[0] || null
+    return (result.rows[0] as User) || null
   }
 
   async verifyEmail(userId: string): Promise<void> {

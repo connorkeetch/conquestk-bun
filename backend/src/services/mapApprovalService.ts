@@ -147,7 +147,7 @@ export class MapApprovalService {
       [mapId],
     )
 
-    return result.rows[0] || null
+    return (result.rows[0] as MapVersion) || null
   }
 
   static async getVersionById(versionId: string): Promise<MapVersion> {
@@ -165,7 +165,7 @@ export class MapApprovalService {
       throw new Error('Version not found')
     }
 
-    return result.rows[0]
+    return result.rows[0] as MapVersion
   }
 
   static async getVersionHistory(mapId: string): Promise<MapVersion[]> {
@@ -180,7 +180,7 @@ export class MapApprovalService {
       [mapId],
     )
 
-    return result.rows
+    return result.rows as MapVersion[]
   }
 
   static async setCurrentVersion(versionId: string): Promise<void> {
@@ -243,7 +243,7 @@ export class MapApprovalService {
       throw new Error('Approval request not found')
     }
 
-    return result.rows[0]
+    return result.rows[0] as MapApprovalRequest
   }
 
   static async getPendingApprovalRequests(): Promise<MapApprovalRequest[]> {
@@ -257,7 +257,7 @@ export class MapApprovalService {
       ORDER BY ar.created_at ASC
     `)
 
-    return result.rows
+    return result.rows as MapApprovalRequest[]
   }
 
   static async assignReviewer(requestId: string, moderatorId: string): Promise<void> {
@@ -289,7 +289,7 @@ export class MapApprovalService {
       ORDER BY category, check_order
     `)
 
-    return result.rows
+    return result.rows as MapReviewCriteria[]
   }
 
   static async submitReviewResults(
@@ -373,7 +373,7 @@ export class MapApprovalService {
       [requestId],
     )
 
-    return result.rows
+    return result.rows as MapReviewResult[]
   }
 
   // Publishing and Status Management

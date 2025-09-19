@@ -51,6 +51,45 @@ export interface SendMessageData {
   recipientId?: string
 }
 
+interface MessageLinkPreviewRow {
+  url: string
+  title: string | null
+  description: string | null
+  image: string | null
+  site_name: string | null
+}
+
+interface PrivacyPreferenceRow {
+  dm_privacy: 'anyone' | 'friends' | 'nobody' | null
+}
+
+interface PlayerIdRow {
+  player_id: string
+}
+
+interface UnreadMessageCountRow {
+  conversation_type: 'game' | 'team' | 'dm'
+  conversation_id: string
+  unread_count: number
+}
+
+interface MessageReactionRow {
+  emoji: string
+  user_id: string
+  username: string
+}
+
+interface MessageReactionUser {
+  id: string
+  username: string
+}
+
+interface MessageReaction {
+  emoji: string
+  users: MessageReactionUser[]
+  count: number
+}
+
 class ChatService {
   /**
    * Send a message
@@ -83,7 +122,7 @@ class ChatService {
           ? await linkPreviewService.getMultiplePreviews(links.slice(0, 3)) // Limit to 3 previews
           : []
 
-      const result = await query(
+      const result = await query<ChatMessage>(
         `INSERT INTO chat_messages (
           id, sender_id, message, message_type, 
           game_id, team_id, recipient_id, created_at, is_read
@@ -102,11 +141,19 @@ class ChatService {
 
       // Add link previews to the message object
       const message = result.rows[0]
-      if (linkPreviews.length > 0) {
-        message.link_previews = linkPreviews.filter((p) => p !== null)
+      if (!message) {
+        throw new Error('Failed to persist chat message')
+      }
+
+      const sanitizedPreviews = linkPreviews.filter(
+        (preview): preview is LinkPreview => preview !== null,
+      )
+
+      if (sanitizedPreviews.length > 0) {
+        message.link_previews = sanitizedPreviews
 
         // Store link previews in database
-        for (const preview of message.link_previews) {
+        for (const preview of sanitizedPreviews) {
           await query(
             `INSERT INTO message_link_previews (
               message_id, url, title, description, image, site_name
@@ -190,24 +237,30 @@ class ChatService {
             AND m.deleted_at IS NULL
           ORDER BY m.created_at DESC
           LIMIT $3 OFFSET $4`
-        queryParams = [gameId, parseInt(teamId), limit, offset]
+        queryParams = [gameId, parseInt(teamId, 10), limit, offset]
       } else {
         return []
       }
 
-      const result = await query(queryText, queryParams)
+      const result = await query<ChatMessage>(queryText, queryParams)
 
       // Fetch link previews for messages
       const messages = result.rows
       for (const message of messages) {
-        const previewsResult = await query(
+        const previewsResult = await query<MessageLinkPreviewRow>(
           `SELECT url, title, description, image, site_name
            FROM message_link_previews
            WHERE message_id = $1`,
           [message.id],
         )
         if (previewsResult.rows.length > 0) {
-          message.link_previews = previewsResult.rows
+          message.link_previews = previewsResult.rows.map((row) => ({
+            url: row.url,
+            title: row.title ?? undefined,
+            description: row.description ?? undefined,
+            image: row.image ?? undefined,
+            siteName: row.site_name ?? undefined,
+          }))
         }
       }
 
@@ -231,7 +284,7 @@ class ChatService {
   async canSendDMTo(senderId: string, recipientId: string): Promise<boolean> {
     try {
       // Get recipient's privacy setting
-      const privacyResult = await query(
+      const privacyResult = await query<PrivacyPreferenceRow>(
         `SELECT dm_privacy FROM user_preferences WHERE user_id = $1`,
         [recipientId],
       )
@@ -265,8 +318,8 @@ class ChatService {
    */
   async areUsersFriends(userId1: string, userId2: string): Promise<boolean> {
     try {
-      const result = await query(
-        `SELECT 1 FROM friendships 
+      const result = await query<{ match_exists: number }>(
+        `SELECT 1 AS match_exists FROM friendships 
          WHERE status = 'accepted'
            AND ((user_id = $1 AND friend_id = $2) 
                 OR (user_id = $2 AND friend_id = $1))`,
@@ -354,7 +407,7 @@ class ChatService {
   async incrementGameUnreadForAllPlayers(gameId: string, senderId: string): Promise<void> {
     try {
       // Get all players in the game
-      const playersResult = await query(
+      const playersResult = await query<PlayerIdRow>(
         `SELECT player_id FROM room_players WHERE room_id = $1 AND player_id != $2`,
         [gameId, senderId],
       )
@@ -371,9 +424,9 @@ class ChatService {
   /**
    * Get unread counts for a user
    */
-  async getUnreadCounts(userId: string): Promise<any> {
+  async getUnreadCounts(userId: string): Promise<UnreadMessageCountRow[]> {
     try {
-      const result = await query(
+      const result = await query<UnreadMessageCountRow>(
         `SELECT conversation_type, conversation_id, unread_count 
          FROM unread_message_counts 
          WHERE user_id = $1 AND unread_count > 0`,
@@ -392,7 +445,7 @@ class ChatService {
    */
   async deleteMessage(messageId: string, userId: string): Promise<boolean> {
     try {
-      const result = await query(
+      const result = await query<{ id: string }>(
         `UPDATE chat_messages 
          SET deleted_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
@@ -421,7 +474,7 @@ class ChatService {
         filteredMessage = filter.clean(newMessage)
       }
 
-      const result = await query(
+      const result = await query<{ id: string }>(
         `UPDATE chat_messages 
          SET message = $1, edited_at = CURRENT_TIMESTAMP 
          WHERE id = $2 AND sender_id = $3 AND deleted_at IS NULL
@@ -441,7 +494,7 @@ class ChatService {
    */
   async shouldFilterProfanity(userId: string): Promise<boolean> {
     try {
-      const result = await query(
+      const result = await query<{ profanity_filter: boolean | null }>(
         `SELECT profanity_filter FROM user_preferences WHERE user_id = $1`,
         [userId],
       )
@@ -464,8 +517,8 @@ class ChatService {
   async addReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
     try {
       // Check if user already reacted with this emoji
-      const existing = await query(
-        `SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
+      const existing = await query<{ match_exists: number }>(
+        `SELECT 1 AS match_exists FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
         [messageId, userId, emoji],
       )
 
@@ -494,7 +547,7 @@ class ChatService {
    */
   async removeReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
     try {
-      const result = await query(
+      const result = await query<{ message_id: string }>(
         `DELETE FROM message_reactions 
          WHERE message_id = $1 AND user_id = $2 AND emoji = $3
          RETURNING message_id`,
@@ -511,9 +564,9 @@ class ChatService {
   /**
    * Get reactions for a message
    */
-  async getMessageReactions(messageId: string): Promise<any[]> {
+  async getMessageReactions(messageId: string): Promise<MessageReaction[]> {
     try {
-      const result = await query(
+      const result = await query<MessageReactionRow>(
         `SELECT r.emoji, r.user_id, u.username
          FROM message_reactions r
          JOIN users u ON r.user_id = u.id
@@ -523,7 +576,7 @@ class ChatService {
       )
 
       // Group reactions by emoji
-      const reactionMap = new Map<string, any[]>()
+      const reactionMap = new Map<string, MessageReactionUser[]>()
 
       for (const row of result.rows) {
         if (!reactionMap.has(row.emoji)) {
