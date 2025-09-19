@@ -29,9 +29,15 @@ if (process.env.SENTRY_DSN) {
     beforeSend(event, hint) {
       // Filter out non-critical errors in production
       if (process.env.NODE_ENV === 'production') {
-        const error = hint.originalException as any
+        const originalException = hint?.originalException
+        const errorMessage =
+          originalException instanceof Error
+            ? originalException.message
+            : typeof originalException === 'string'
+              ? originalException
+              : null
         // Don't send validation errors
-        if (error?.message?.includes('Validation')) {
+        if (errorMessage?.includes('Validation')) {
           return null
         }
         // Don't send 404 errors

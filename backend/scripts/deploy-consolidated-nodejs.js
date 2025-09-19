@@ -5,20 +5,29 @@
  * Uses the existing database connection instead of psql
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const writeOut = (message = '') => {
+  process.stdout.write(`${message}\n`)
+}
+
+const writeErr = (message = '') => {
+  process.stderr.write(`${message}\n`)
+}
+
+const formatError = (error) => (error instanceof Error ? error.message : String(error))
 
 // Load environment variables first
 require('dotenv').config({ path: path.join(__dirname, '../.env') })
 
 // Import database configuration
-const dbPath = path.join(__dirname, '../src/config/database.ts')
 const configPath = path.join(__dirname, '../dist/config/database.js')
 
 // Check if we need to compile TypeScript first
 if (!fs.existsSync(configPath)) {
-  console.log('📦 Compiling TypeScript files...')
-  const { execSync } = require('child_process')
+  writeOut('📦 Compiling TypeScript files...')
+  const { execSync } = require('node:child_process')
   execSync('npm run build', { cwd: path.join(__dirname, '..'), stdio: 'inherit' })
 }
 
@@ -27,12 +36,12 @@ const { getClient, query } = require(configPath)
 const migrationFile = path.join(__dirname, '../migrations/010_consolidated_schema.sql')
 
 if (!fs.existsSync(migrationFile)) {
-  console.error(`ERROR: Migration file not found: ${migrationFile}`)
+  writeErr(`ERROR: Migration file not found: ${migrationFile}`)
   process.exit(1)
 }
 
 async function backupUserData() {
-  console.log('🔄 Creating backup of user data...')
+  writeOut('🔄 Creating backup of user data...')
 
   try {
     // Check if users table exists
@@ -45,7 +54,7 @@ async function backupUserData() {
     `)
 
     if (!tableCheck.rows[0].exists) {
-      console.log('ℹ️  No users table found - skipping backup (clean install)')
+      writeOut('ℹ️  No users table found - skipping backup (clean install)')
       return { users: [], settings: [] }
     }
 
@@ -76,25 +85,25 @@ async function backupUserData() {
           WHERE u.deleted_at IS NULL
         `)
       }
-    } catch (e) {
-      console.log('ℹ️  No user_settings table found - skipping')
+    } catch (_error) {
+      writeOut('ℹ️  No user_settings table found - skipping')
     }
 
-    console.log(`📊 Backed up ${users.rows.length} users and ${settings.rows.length} user settings`)
+    writeOut(`📊 Backed up ${users.rows.length} users and ${settings.rows.length} user settings`)
     return { users: users.rows, settings: settings.rows }
   } catch (error) {
-    console.error('❌ Backup failed:', error.message)
+    writeErr(`❌ Backup failed: ${formatError(error)}`)
     throw error
   }
 }
 
 async function restoreUserData(backup) {
   if (backup.users.length === 0) {
-    console.log('ℹ️  No user data to restore')
+    writeOut('ℹ️  No user data to restore')
     return
   }
 
-  console.log('📥 Restoring user data...')
+  writeOut('📥 Restoring user data...')
 
   const client = await getClient()
   try {
@@ -158,12 +167,10 @@ async function restoreUserData(backup) {
     }
 
     await client.query('COMMIT')
-    console.log(
-      `✅ Restored ${backup.users.length} users and ${backup.settings.length} user settings`,
-    )
+    writeOut(`✅ Restored ${backup.users.length} users and ${backup.settings.length} user settings`)
   } catch (error) {
     await client.query('ROLLBACK')
-    console.error('❌ Restore failed:', error.message)
+    writeErr(`❌ Restore failed: ${formatError(error)}`)
     throw error
   } finally {
     if (client.release) client.release()
@@ -172,19 +179,19 @@ async function restoreUserData(backup) {
 
 async function createDefaultMapIfNeeded() {
   try {
-    console.log('🗺️ Creating default map...')
+    writeOut('🗺️ Creating default map...')
 
     // Check if any maps exist
     const mapCount = await query('SELECT COUNT(*) as count FROM maps')
     if (mapCount.rows[0].count > 0) {
-      console.log('ℹ️  Maps already exist, skipping default map creation')
+      writeOut('ℹ️  Maps already exist, skipping default map creation')
       return
     }
 
     // Get first user for created_by
     const firstUser = await query('SELECT id FROM users LIMIT 1')
     if (firstUser.rows.length === 0) {
-      console.log('⚠️  No users found, skipping default map creation')
+      writeOut('⚠️  No users found, skipping default map creation')
       return
     }
 
@@ -206,29 +213,29 @@ async function createDefaultMapIfNeeded() {
       ],
     )
 
-    console.log('✅ Default map created successfully')
+    writeOut('✅ Default map created successfully')
   } catch (error) {
-    console.error('❌ Failed to create default map:', error.message)
+    writeErr(`❌ Failed to create default map: ${formatError(error)}`)
     // Don't throw - this is not critical for migration success
   }
 }
 
 async function deployMigration() {
-  console.log('🚀 Deploying consolidated migration...')
-  console.log(`📁 Migration file: ${migrationFile}`)
+  writeOut('🚀 Deploying consolidated migration...')
+  writeOut(`📁 Migration file: ${migrationFile}`)
 
   try {
     // Step 1: Backup existing data
     const backup = await backupUserData()
 
     // Step 2: Run the consolidated migration
-    console.log('🗃️ Executing consolidated migration...')
+    writeOut('🗃️ Executing consolidated migration...')
     const migrationSQL = fs.readFileSync(migrationFile, 'utf8')
 
     const client = await getClient()
     try {
       await client.query(migrationSQL)
-      console.log('✅ Migration executed successfully')
+      writeOut('✅ Migration executed successfully')
     } finally {
       if (client.release) client.release()
     }
@@ -240,7 +247,7 @@ async function deployMigration() {
     await createDefaultMapIfNeeded()
 
     // Step 4: Verify migration
-    console.log('🔍 Verifying migration...')
+    writeOut('🔍 Verifying migration...')
     const tables = await query(`
       SELECT table_name 
       FROM information_schema.tables 
@@ -249,33 +256,33 @@ async function deployMigration() {
       ORDER BY table_name
     `)
 
-    console.log('📋 Core tables created:', tables.rows.map((t) => t.table_name).join(', '))
+    writeOut(`📋 Core tables created: ${tables.rows.map((t) => t.table_name).join(', ')}`)
 
     if (tables.rows.length >= 5) {
-      console.log('✅ Migration completed successfully!')
+      writeOut('✅ Migration completed successfully!')
 
       // Check restored data
       const userCount = await query('SELECT COUNT(*) as count FROM users')
-      console.log(`👤 Users in database: ${userCount.rows[0].count}`)
+      writeOut(`👤 Users in database: ${userCount.rows[0].count}`)
 
-      console.log('\n🎉 Consolidated migration deployment complete!')
-      console.log('💡 Next steps:')
-      console.log('   1. Test application functionality')
-      console.log('   2. Verify user login works')
-      console.log('   3. Check admin panel')
-      console.log('   4. Test profile pages')
+      writeOut('\n🎉 Consolidated migration deployment complete!')
+      writeOut('💡 Next steps:')
+      writeOut('   1. Test application functionality')
+      writeOut('   2. Verify user login works')
+      writeOut('   3. Check admin panel')
+      writeOut('   4. Test profile pages')
     } else {
       throw new Error(`Expected at least 5 core tables, found ${tables.rows.length}`)
     }
   } catch (error) {
-    console.error('❌ Migration deployment failed:', error.message)
-    console.error('\n🚨 Migration failed - check error details above')
+    writeErr(`❌ Migration deployment failed: ${formatError(error)}`)
+    writeErr('\n🚨 Migration failed - check error details above')
     process.exit(1)
   }
 }
 
 // Run the deployment
 deployMigration().catch((error) => {
-  console.error('Fatal error:', error)
+  writeErr(`Fatal error: ${formatError(error)}`)
   process.exit(1)
 })
