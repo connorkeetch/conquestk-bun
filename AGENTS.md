@@ -47,6 +47,10 @@
 - Run migrations: `cd backend && npm run migrate`
 - Seed demo users: `cd backend && npm run seed:users`
 - Promote accounts: `cd backend && npm run make-admin`
+- Enforce owner + test users on any environment:
+  - `cd backend`
+  - `ENFORCE_DEPLOY_ACCOUNT_CHECK=true NODE_ENV=production DATABASE_URL="postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway" TS_NODE_TRANSPILE_ONLY=1 npx ts-node src/scripts/ensureDeployAccounts.ts`
+  - Script adapts to older schemas (missing `is_verified`, array permissions, etc.) and normalizes the `connorkeetch@gmail.com` owner plus twelve `test#@test.com` accounts (`Password123!`).
 - New migrations must follow `NNN_description.sql`, never modify existing files, and should be tested locally before PRs.
 
 ## Backend notes
