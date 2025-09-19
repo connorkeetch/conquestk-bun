@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
-import { logger } from '../utils/logger'
 import type { AuthenticatedRequest } from '../types/express'
+import { logger } from '../utils/logger'
 
 export class GameController {
   private gameRoomService = new GameRoomService()
@@ -18,15 +18,7 @@ export class GameController {
 
   createRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const {
-        name,
-        maxPlayers,
-        isPrivate,
-        mapId,
-        gameMode,
-        teamMode,
-        numberOfTeams,
-      } = req.body
+      const { name, maxPlayers, isPrivate, mapId, gameMode, teamMode, numberOfTeams } = req.body
       const hostId = req.userId
 
       if (!hostId) {
@@ -47,7 +39,7 @@ export class GameController {
       const room = await this.gameRoomService.createRoom(roomData)
 
       return res.status(201).json({ room })
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Create room error:', error)
 
       // Return validation errors with appropriate status code
@@ -75,7 +67,7 @@ export class GameController {
 
       const result = await this.gameRoomService.joinRoom(roomId, userId)
       return res.json(result)
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Join room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -92,7 +84,7 @@ export class GameController {
 
       await this.gameRoomService.leaveRoom(roomId, userId)
       return res.json({ message: 'Left room successfully' })
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Leave room error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -108,7 +100,7 @@ export class GameController {
       }
 
       return res.json({ room })
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Get room details error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
@@ -138,7 +130,7 @@ export class GameController {
       }))
 
       return res.json({ games: formattedGames })
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Get my games error:', error)
       return res.status(500).json({ message: 'Internal server error' })
     }
