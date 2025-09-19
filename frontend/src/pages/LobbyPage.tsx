@@ -265,7 +265,7 @@ const LobbyPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary ${showFilters ? 'ring-2 ring-primary/40' : ''}`}
+            className={`btn-tertiary ${showFilters ? 'is-active' : ''}`}
             aria-pressed={showFilters}
           >
             🔍 Filter Games
