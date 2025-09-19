@@ -1,3 +1,4 @@
+import type { Response } from 'express'
 import mapWorkflowService from '../services/mapWorkflowService'
 import { UserService } from '../services/userService'
 import type { AuthenticatedRequest } from '../types/express'

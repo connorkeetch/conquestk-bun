@@ -1,6 +1,4 @@
 import { query } from '../config/database'
-import { mapService } from './mapService'
-import { storeBase64Image } from '../utils/imageStorage'
 import type {
   AdminNotification,
   CreateMapRequest,
@@ -10,7 +8,9 @@ import type {
   MapStatus,
   MapSubmissionLog,
 } from '../types/maps'
+import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
+import { mapService } from './mapService'
 
 export class MapWorkflowService {
   /**
@@ -597,7 +597,7 @@ export class MapWorkflowService {
 
     return {
       name: draft.name || data.name || 'Untitled Map',
-      description: draft.description || data.description || null,
+      description: draft.description ?? data.description ?? undefined,
       isPublic: Boolean(draft.isPublic || data.isPublic),
       tags:
         Array.isArray(draft.tags) && draft.tags.length > 0
@@ -605,7 +605,7 @@ export class MapWorkflowService {
           : Array.isArray(data.tags)
             ? data.tags
             : ['custom', 'user-created'],
-      imageUrl: imageUrl || null,
+      imageUrl: imageUrl ?? undefined,
       imageWidth,
       imageHeight,
       minPlayers,

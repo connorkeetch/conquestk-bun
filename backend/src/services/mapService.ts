@@ -1,5 +1,5 @@
-import { getClient, query } from '../config/database'
 import type { PoolClient } from 'pg'
+import { getClient, query } from '../config/database'
 import type { ContinentBonus } from '../types/game'
 import type {
   CreateAdjacencyRequest,
@@ -7,54 +7,80 @@ import type {
   CreateTerritoryRequest,
   CustomMap,
   GameMode,
+  MapMetadataPayload,
   MapContinent,
   MapRating,
   MapSearchFilters,
   MapSearchResult,
   MapTerritory,
+  MetadataAdjacencyInput,
+  MetadataContinentInput,
+  MetadataTerritoryInput,
   TerritoryAbilityType,
   TerritoryAdjacency,
   UpdateMapRequest,
 } from '../types/maps'
 import { logger } from '../utils/logger'
 
-type MetadataTerritory = {
-  id?: string
-  name?: string
-  boundaryCoords?: Array<{ x: number; y: number }>
-  continentId?: string
-  x?: number
-  y?: number
-  isCapital?: boolean
-  armyPosition?: { x: number; y: number }
-  connections?: string[]
+type SqlValue = string | number | boolean | string[] | null | Date
+
+interface MapDbRow {
+  id: string
+  name: string
+  description?: string | null
+  creator_id: string
+  image_url?: string | null
+  image_width?: number | null
+  image_height?: number | null
+  is_public: boolean
+  is_featured?: boolean | null
+  status?: string | null
+  version?: number | null
+  parent_map_id?: string | null
+  download_count?: number | null
+  play_count?: number | null
+  rating_average?: string | number | null
+  rating_count?: string | number | null
+  tags?: string[] | null
+  capital_territories?: string | null
+  submitted_at?: string | Date | null
+  reviewed_at?: string | Date | null
+  reviewed_by?: string | null
+  review_notes?: string | null
+  rejection_reason?: string | null
+  created_at: string | Date
+  updated_at: string | Date
 }
 
-type MetadataContinent = {
-  id?: string
-  name?: string
-  bonus?: number
-  color?: string
+interface TerritoryRow {
+  id: string
+  map_id: string
+  name: string
+  polygon_data: string | null
+  continent: string | null
+  is_capital: boolean
+  capital_for_players?: string | null
+  created_at: string | Date
 }
 
-type MetadataAdjacency = {
-  from?: string
-  to?: string
-  fromTerritoryId?: string
-  toTerritoryId?: string
-  territory_from?: string
-  territory_to?: string
-  source?: string
-  target?: string
+interface ContinentRow {
+  id: string
+  map_id: string
+  name: string
+  bonus_troops: number
+  color?: string | null
+  special_rules?: string | null
+  created_at: string | Date
 }
 
-type MapMetadataPayload = {
-  territories?: MetadataTerritory[]
-  continents?: MetadataContinent[]
-  adjacencies?: MetadataAdjacency[]
-  capitalAssignments?: Record<string, string[]>
-  width?: number
-  height?: number
+interface AdjacencyRow {
+  id: string
+  map_id: string
+  from_territory_id: string
+  to_territory_id: string
+  connection_type: string | null
+  is_bidirectional: boolean
+  special_requirements?: string | null
 }
 
 export class MapService {
@@ -200,10 +226,10 @@ export class MapService {
     if (!metadata) return
 
     try {
-      const territories: MetadataTerritory[] = Array.isArray(metadata.territories)
+      const territories: MetadataTerritoryInput[] = Array.isArray(metadata.territories)
         ? metadata.territories
         : []
-      const continents: MetadataContinent[] = Array.isArray(metadata.continents)
+      const continents: MetadataContinentInput[] = Array.isArray(metadata.continents)
         ? metadata.continents
         : []
 
@@ -311,8 +337,8 @@ export class MapService {
   }
 
   private buildAdjacencyPairs(
-    territories: MetadataTerritory[],
-    explicitAdjacencies: MetadataAdjacency[] | undefined,
+    territories: MetadataTerritoryInput[],
+    explicitAdjacencies: MetadataAdjacencyInput[] | undefined,
   ): Array<{ from: string; to: string }> {
     const pairs: Array<{ from: string; to: string }> = []
     const seen = new Set<string>()
@@ -345,7 +371,8 @@ export class MapService {
       if (!from || !Array.isArray(territory.connections)) continue
 
       for (const connection of territory.connections) {
-        const to = connection?.id || connection
+        const to = typeof connection === 'string' ? connection : ''
+        if (!to) continue
         addPair(from, to)
       }
     }
@@ -486,7 +513,7 @@ export class MapService {
       }
 
       const updateFields: string[] = []
-      const updateValues: any[] = []
+      const updateValues: SqlValue[] = []
       let paramCount = 0
 
       if (updates.name !== undefined) {
@@ -561,7 +588,7 @@ export class MapService {
 
   async searchMaps(filters: MapSearchFilters): Promise<MapSearchResult> {
     const whereConditions: string[] = []
-    const queryParams: any[] = []
+    const queryParams: SqlValue[] = []
 
     if (filters.isPublic !== false) {
       whereConditions.push('is_public = TRUE')
@@ -677,7 +704,7 @@ export class MapService {
     const client = await getClient()
     try {
       const updateFields: string[] = []
-      const updateValues: any[] = []
+      const updateValues: SqlValue[] = []
       let paramCount = 0
 
       if (updates.name) {
@@ -897,11 +924,11 @@ export class MapService {
    * Safely parse tags from various PostgreSQL array formats
    * Handles: arrays, PostgreSQL array strings, JSON strings, comma-separated strings
    */
-  private parseTags(tags: any): string[] {
+  private parseTags(tags: unknown): string[] {
     if (!tags) return []
 
     // Already an array
-    if (Array.isArray(tags)) return tags
+    if (Array.isArray(tags)) return tags.map((tag) => String(tag))
 
     // String handling
     if (typeof tags === 'string') {
@@ -957,78 +984,92 @@ export class MapService {
     }
   }
 
-  private formatMapFromDb(row: any): CustomMap {
+  private formatMapFromDb(row: Record<string, unknown>): CustomMap {
+    const mapRow = row as MapDbRow
+
     return {
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      creatorId: row.creator_id,
-      imageUrl: row.image_url,
-      imageWidth: row.image_width || 600,
-      imageHeight: row.image_height || 450,
-      isPublic: row.is_public,
-      isFeatured: row.is_featured,
-      status: row.status || 'pending_review',
-      version: row.version || 1,
-      parentMapId: row.parent_map_id,
-      downloadCount: row.download_count || 0,
-      playCount: row.play_count || 0,
-      ratingAverage: parseFloat(row.rating_average) || 0,
-      ratingCount: row.rating_count || 0,
-      tags: this.parseTags(row.tags),
-      capitalTerritories: row.capital_territories
-        ? this.safeJsonParse(row.capital_territories, undefined)
+      id: mapRow.id,
+      name: mapRow.name,
+      description: mapRow.description ?? undefined,
+      creatorId: mapRow.creator_id,
+      imageUrl: mapRow.image_url ?? undefined,
+      imageWidth: mapRow.image_width ?? 600,
+      imageHeight: mapRow.image_height ?? 450,
+      isPublic: Boolean(mapRow.is_public),
+      isFeatured: Boolean(mapRow.is_featured),
+      status: (mapRow.status as MapStatus | null) ?? 'pending_review',
+      version: mapRow.version ?? 1,
+      parentMapId: mapRow.parent_map_id ?? undefined,
+      downloadCount: mapRow.download_count ?? 0,
+      playCount: mapRow.play_count ?? 0,
+      ratingAverage: parseFloat(String(mapRow.rating_average ?? 0)) || 0,
+      ratingCount: parseInt(String(mapRow.rating_count ?? 0), 10) || 0,
+      tags: this.parseTags(mapRow.tags),
+      capitalTerritories: mapRow.capital_territories
+        ? this.safeJsonParse(mapRow.capital_territories, undefined)
         : undefined,
-      submittedAt: row.submitted_at ? new Date(row.submitted_at) : undefined,
-      reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : undefined,
-      reviewedBy: row.reviewed_by,
-      reviewNotes: row.review_notes,
-      rejectionReason: row.rejection_reason,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      submittedAt: mapRow.submitted_at ? new Date(mapRow.submitted_at) : undefined,
+      reviewedAt: mapRow.reviewed_at ? new Date(mapRow.reviewed_at) : undefined,
+      reviewedBy: mapRow.reviewed_by ?? undefined,
+      reviewNotes: mapRow.review_notes ?? undefined,
+      rejectionReason: mapRow.rejection_reason ?? undefined,
+      createdAt: new Date(mapRow.created_at),
+      updatedAt: new Date(mapRow.updated_at),
     }
   }
 
-  private formatTerritoryFromDb(row: any): MapTerritory {
+  private formatTerritoryFromDb(row: Record<string, unknown>): MapTerritory {
+    const territoryRow = row as TerritoryRow
+
+    const polygonData = this.safeJsonParse<Record<string, unknown>>(territoryRow.polygon_data, {})
+    const armyPosition =
+      (polygonData?.armyPosition as Coordinate | undefined) ?? ({ x: 0, y: 0 } as Coordinate)
+
     return {
-      id: row.id,
-      mapId: row.map_id,
-      territoryId: row.id, // Using id as territory_id doesn't exist
-      name: row.name,
-      continentId: row.continent,
-      boundaryCoords: this.safeJsonParse(row.polygon_data, []),
-      armyPosition: { x: 0, y: 0 }, // No army position columns in schema
+      id: territoryRow.id,
+      mapId: territoryRow.map_id,
+      territoryId: territoryRow.id,
+      name: territoryRow.name,
+      continentId: territoryRow.continent ?? undefined,
+      boundaryCoords: Array.isArray(polygonData?.points)
+        ? (polygonData.points as Coordinate[])
+        : [],
+      armyPosition,
       abilityTypeId: undefined, // No ability_type_id in schema
       customAbilityConfig: undefined,
       startingOwnerSlot: undefined,
       startingArmies: 1,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(territoryRow.created_at),
     }
   }
 
-  private formatContinentFromDb(row: any): MapContinent {
+  private formatContinentFromDb(row: Record<string, unknown>): MapContinent {
+    const continentRow = row as ContinentRow
+
     return {
-      id: row.id,
-      mapId: row.map_id,
-      name: row.name,
-      bonusArmies: row.bonus_armies,
-      color: row.color,
-      specialRules: row.special_rules
-        ? this.safeJsonParse(row.special_rules, undefined)
+      id: continentRow.id,
+      mapId: continentRow.map_id,
+      name: continentRow.name,
+      bonusArmies: continentRow.bonus_troops,
+      color: continentRow.color ?? undefined,
+      specialRules: continentRow.special_rules
+        ? this.safeJsonParse(continentRow.special_rules, undefined)
         : undefined,
-      createdAt: new Date(row.created_at),
+      createdAt: new Date(continentRow.created_at),
     }
   }
 
-  private formatAdjacencyFromDb(row: any): TerritoryAdjacency {
+  private formatAdjacencyFromDb(row: Record<string, unknown>): TerritoryAdjacency {
+    const adjacencyRow = row as AdjacencyRow
+
     return {
-      id: row.id,
-      fromTerritoryId: row.from_territory_id,
-      toTerritoryId: row.to_territory_id,
-      connectionType: row.connection_type,
-      isBidirectional: row.is_bidirectional,
-      specialRequirements: row.special_requirements
-        ? this.safeJsonParse(row.special_requirements, undefined)
+      id: adjacencyRow.id,
+      fromTerritoryId: adjacencyRow.from_territory_id,
+      toTerritoryId: adjacencyRow.to_territory_id,
+      connectionType: adjacencyRow.connection_type || undefined,
+      isBidirectional: adjacencyRow.is_bidirectional,
+      specialRequirements: adjacencyRow.special_requirements
+        ? this.safeJsonParse(adjacencyRow.special_requirements, undefined)
         : undefined,
     }
   }
@@ -1048,7 +1089,7 @@ export class MapService {
     }
   }
 
-  private async updateMapRatingStats(client: any, mapId: string): Promise<void> {
+  private async updateMapRatingStats(client: PoolClient, mapId: string): Promise<void> {
     await client.query(
       `
       UPDATE maps SET

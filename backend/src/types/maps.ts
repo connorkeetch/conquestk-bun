@@ -244,6 +244,45 @@ export interface MapEditorState {
 }
 
 // API Request/Response Types
+export interface MetadataTerritoryInput {
+  id?: string
+  name?: string
+  boundaryCoords?: Coordinate[]
+  continentId?: string
+  x?: number
+  y?: number
+  isCapital?: boolean
+  armyPosition?: Coordinate
+  connections?: string[]
+}
+
+export interface MetadataContinentInput {
+  id?: string
+  name?: string
+  bonus?: number
+  color?: string
+}
+
+export interface MetadataAdjacencyInput {
+  from?: string
+  to?: string
+  fromTerritoryId?: string
+  toTerritoryId?: string
+  territory_from?: string
+  territory_to?: string
+  source?: string
+  target?: string
+}
+
+export interface MapMetadataPayload {
+  territories?: MetadataTerritoryInput[]
+  continents?: MetadataContinentInput[]
+  adjacencies?: MetadataAdjacencyInput[]
+  capitalAssignments?: Record<string, string[]>
+  width?: number
+  height?: number
+}
+
 export interface CreateMapRequest {
   name: string
   description?: string
@@ -256,6 +295,7 @@ export interface CreateMapRequest {
   capitalTerritories?: Record<string, number[]>
   minPlayers?: number
   maxPlayers?: number
+  metadata?: MapMetadataPayload
 }
 
 export interface UpdateMapRequest {
