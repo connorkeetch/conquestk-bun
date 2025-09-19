@@ -128,7 +128,8 @@ mcp.json
 .copilot/
 # Playwright test results
 test-results/
-tests/
+tests/*.spec.ts
+!tests/manual/
 *.test.ts
 !backend/src/test/*.test.ts
 
