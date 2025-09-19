@@ -52,7 +52,7 @@
 - **React 19.1**: Latest stable with concurrent features
 - **Vite 7.1.5**: Rollover release with performance improvements
 - **PostgreSQL-Only**: Removed SQLite dual-database complexity
-- **Enterprise Scaling**: Phase 4 performance optimization complete
+- **Infrastructure Simplification**: Removed unused enterprise scaling scaffolding
 
 ### Backend Services (31 Total)
 **Core Services:**
@@ -61,7 +61,7 @@
 
 **Performance & Scaling:**
 - databaseClusterService, cdnService, performanceMonitorService
-- scalingService, enterpriseScalingService, performanceTestingService
+- scalingService, performanceTestingService
 - redisClusterService, benchmarkUtils
 
 **Game-Specific:**

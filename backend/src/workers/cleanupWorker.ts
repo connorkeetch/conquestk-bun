@@ -126,10 +126,12 @@ export class CleanupWorker {
 
   private async cleanupFinishedGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Archive game results
+    const duration = this.getGameDuration(gameState)
+    const winnerId = 'winner' in gameState ? gameState.winner ?? null : null
     await this.gameService.archiveGameResults(gameId, {
-      winner: gameState.winner ?? null,
+      winner: winnerId,
       endReason: 'finished',
-      duration: this.getGameDuration(gameState) ?? null,
+      duration: duration ?? 0,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
@@ -148,10 +150,11 @@ export class CleanupWorker {
     const [leadingEntry] = Object.entries(territoryCount).sort(([, a], [, b]) => b - a)
     const winner = leadingEntry?.[0] ?? null
 
+    const duration = this.getGameDuration(gameState)
     await this.gameService.archiveGameResults(gameId, {
       winner,
       endReason: 'timeout',
-      duration: this.getGameDuration(gameState) ?? null,
+      duration: duration ?? 0,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
@@ -167,10 +170,11 @@ export class CleanupWorker {
 
   private async cleanupAbandonedGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Mark as abandoned - no winner
+    const duration = this.getGameDuration(gameState)
     await this.gameService.archiveGameResults(gameId, {
       winner: null,
       endReason: 'abandoned',
-      duration: this.getGameDuration(gameState) ?? null,
+      duration: duration ?? 0,
       playerStats: this.calculatePlayerStats(gameState),
     })
 
