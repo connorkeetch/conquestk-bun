@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import { adminService } from '../services/adminService'
-import { logger } from '../utils/logger'
 import type { RequestUser } from '../types/express'
+import { logger } from '../utils/logger'
 
 // Extend Express Request type to include admin info
 declare module 'express-serve-static-core' {

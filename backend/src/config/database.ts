@@ -23,22 +23,23 @@ try {
   const isRailway = databaseUrl.includes('railway')
   const connectionTimeout = isRailway
     ? 15000
-    : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000')
+    : parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000', 10)
   const isProduction = process.env.NODE_ENV === 'production'
 
   pgPool = new Pool({
     connectionString: databaseUrl,
     // Enhanced pool sizing based on environment
-    max: parseInt(process.env.DB_POOL_MAX || (isProduction ? '25' : '15')), // More connections in production
-    min: parseInt(process.env.DB_POOL_MIN || (isProduction ? '5' : '2')), // Keep minimum connections alive
+    max: parseInt(process.env.DB_POOL_MAX || (isProduction ? '25' : '15'), 10), // More connections in production
+    min: parseInt(process.env.DB_POOL_MIN || (isProduction ? '5' : '2'), 10), // Keep minimum connections alive
     idleTimeoutMillis: parseInt(
       process.env.DB_POOL_IDLE_TIMEOUT || (isProduction ? '60000' : '30000'),
+      10,
     ), // Longer idle in production
     connectionTimeoutMillis: connectionTimeout,
     // Note: acquireTimeoutMillis is not a valid pg Pool option, removing it
     // Query timeouts
-    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
-    query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
+    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000', 10),
+    query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000', 10),
     // Connection optimization
     application_name: 'conquestk-backend',
     // Railway and production SSL
@@ -65,7 +66,7 @@ try {
     logger.error('❌ Unexpected error on idle client:', err)
   })
 
-  pgPool.on('remove', (client) => {
+  pgPool.on('remove', (_client) => {
     if (pgPool) {
       logger.debug(`🔌 Client removed. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle`)
     }

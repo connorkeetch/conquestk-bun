@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node'
 import dotenv from 'dotenv'
+import { logger } from './utils/logger'
 
 // Load environment variables for development
 if (process.env.NODE_ENV !== 'production') {
@@ -54,9 +55,11 @@ if (process.env.SENTRY_DSN) {
     },
   })
 
-  console.log('✅ Sentry initialized for', process.env.NODE_ENV, 'environment')
+  logger.info('✅ Sentry initialized for Sentry error tracking', {
+    environment: process.env.NODE_ENV,
+  })
 } else {
-  console.log('ℹ️  Sentry DSN not provided - error tracking disabled')
+  logger.info('ℹ️  Sentry DSN not provided - error tracking disabled')
 }
 
 export default Sentry
