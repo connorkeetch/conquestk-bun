@@ -135,9 +135,11 @@ export class AuthController {
           id: user.id,
           username: user.username,
           email: user.email,
+          emailVerified: Boolean(user.email_verified),
           isAdmin: user.is_admin || false,
         },
         requiresEmailVerification,
+        requiresVerification: requiresEmailVerification,
         emailSent: emailService.isEnabled() && verificationToken ? true : false,
       })
     } catch (error) {
@@ -236,6 +238,7 @@ export class AuthController {
           preferences: preferences,
         },
         requiresVerification: needsVerification,
+        requiresEmailVerification: needsVerification,
       })
     } catch (error) {
       logger.error('Login error:', error)

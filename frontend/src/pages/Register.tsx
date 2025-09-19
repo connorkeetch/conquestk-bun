@@ -12,12 +12,15 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [verificationPending, setVerificationPending] = useState(false)
   const dispatch = useAppDispatch()
-  const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth)
+  const { isLoading, error, isAuthenticated, user } = useAppSelector((state) => state.auth)
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user?.emailVerified) {
     return <Navigate to="/lobby" replace />
+  }
+
+  if (isAuthenticated && user && !user.emailVerified) {
+    return <EmailVerificationPending email={user.email} username={user.username} />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

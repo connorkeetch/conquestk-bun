@@ -55,6 +55,101 @@ const isGradientValue = (value: string): boolean => {
   return value.startsWith('linear-gradient') || value.startsWith('radial-gradient')
 }
 
+const clamp = (value: number, min: number, max: number): number => {
+  return Math.min(Math.max(value, min), max)
+}
+
+const hexToRgb = (
+  hex: string,
+): { r: number; g: number; b: number } | null => {
+  const normalized = hex.replace('#', '')
+  if (normalized.length !== 6) {
+    return null
+  }
+
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+
+  if ([r, g, b].some((channel) => Number.isNaN(channel))) {
+    return null
+  }
+
+  return { r, g, b }
+}
+
+const rgbComponentToHex = (component: number): string => {
+  return clamp(Math.round(component), 0, 255).toString(16).padStart(2, '0')
+}
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return `#${rgbComponentToHex(r)}${rgbComponentToHex(g)}${rgbComponentToHex(b)}`
+}
+
+const mixColors = (hexA: string, hexB: string, amount: number): string => {
+  const rgbA = hexToRgb(hexA)
+  const rgbB = hexToRgb(hexB)
+
+  if (!rgbA || !rgbB) {
+    return hexA
+  }
+
+  const ratio = clamp(amount, 0, 1)
+
+  return rgbToHex(
+    rgbA.r + (rgbB.r - rgbA.r) * ratio,
+    rgbA.g + (rgbB.g - rgbA.g) * ratio,
+    rgbA.b + (rgbB.b - rgbA.b) * ratio,
+  )
+}
+
+const lightenColor = (hex: string, amount: number): string => {
+  return mixColors(hex, '#FFFFFF', amount)
+}
+
+const getRelativeLuminance = (hex: string): number => {
+  const rgb = hexToRgb(hex)
+
+  if (!rgb) {
+    return 0
+  }
+
+  const transform = (channel: number) => {
+    const srgb = channel / 255
+    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4)
+  }
+
+  const r = transform(rgb.r)
+  const g = transform(rgb.g)
+  const b = transform(rgb.b)
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const ensureReadableOnDark = (hex: string, minLuminance = 0.3): string => {
+  const baseLuminance = getRelativeLuminance(hex)
+
+  if (baseLuminance >= minLuminance) {
+    return hex
+  }
+
+  const adjustments = [0.35, 0.55, 0.75]
+
+  for (const amount of adjustments) {
+    const candidate = lightenColor(hex, amount)
+    if (getRelativeLuminance(candidate) >= minLuminance) {
+      return candidate
+    }
+  }
+
+  return lightenColor(hex, 0.85)
+}
+
+const extractFirstHexColor = (value: string): string | null => {
+  const match = value.match(/#([0-9a-fA-F]{6})/)
+  return match ? `#${match[1]}` : null
+}
+
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
@@ -172,31 +267,30 @@ const ProfilePage: React.FC = () => {
     fallbackPlayerColor
 
   const resolvedPreferredColor = getColorValue(preferredColorSource)
-  const gradientPreferred = isGradientValue(resolvedPreferredColor)
-  const accentHex = gradientPreferred ? fallbackPlayerColor : resolvedPreferredColor
-  const accentGlow = gradientPreferred
-    ? resolvedPreferredColor
-    : `radial-gradient(circle at 20% 20%, ${hexToRgba(accentHex, 0.45)} 0%, transparent 70%)`
-  const crestFillStyle: React.CSSProperties = gradientPreferred
+  const signatureIsGradient = isGradientValue(resolvedPreferredColor)
+  const signatureHex = signatureIsGradient ? fallbackPlayerColor : resolvedPreferredColor
+  const signatureCrestStyle: React.CSSProperties = signatureIsGradient
     ? { backgroundImage: resolvedPreferredColor }
     : {
-        backgroundImage: `linear-gradient(145deg, ${hexToRgba(accentHex, 0.85)} 0%, ${hexToRgba(
-          accentHex,
+        backgroundImage: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.85)} 0%, ${hexToRgba(
+          signatureHex,
           0.55,
-        )} 60%, ${hexToRgba(accentHex, 0.2)} 100%)`,
+        )} 60%, ${hexToRgba(signatureHex, 0.2)} 100%)`,
       }
 
-  const colorSwatchStyle: React.CSSProperties = gradientPreferred
+  const signatureColorSwatchStyle: React.CSSProperties = signatureIsGradient
     ? { backgroundImage: resolvedPreferredColor }
-    : { backgroundColor: accentHex }
+    : { backgroundColor: signatureHex }
 
-  const accentGlowStyle: React.CSSProperties = { backgroundImage: accentGlow }
-  const callToActionStyle: React.CSSProperties = gradientPreferred
+  const signatureGlowStyle: React.CSSProperties = signatureIsGradient
     ? { backgroundImage: resolvedPreferredColor }
-    : { backgroundImage: `linear-gradient(90deg, ${accentHex}, ${hexToRgba(accentHex, 0.6)})` }
-  const largeColorSwatchStyle: React.CSSProperties = {
-    ...colorSwatchStyle,
-    boxShadow: `0 12px 35px ${hexToRgba(accentHex, 0.35)}`,
+    : {
+        backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
+      }
+
+  const signatureLargeColorSwatchStyle: React.CSSProperties = {
+    ...signatureColorSwatchStyle,
+    boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
   }
 
   const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
@@ -223,7 +317,31 @@ const ProfilePage: React.FC = () => {
   const rankDetails = getConquestRank(profile.elo)
   const nextRank = CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
 
-  const rankAccentColor = rankDetails.color.startsWith('#') ? rankDetails.color : accentHex
+  const rawRankColor = rankDetails.color
+  const rankColorIsGradient = isGradientValue(rawRankColor)
+  const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
+  const fallbackRankHex = '#F59E0B'
+  const baseRankHex = extractedRankHex && extractedRankHex.startsWith('#') ? extractedRankHex : fallbackRankHex
+  const rankAccentColor = ensureReadableOnDark(baseRankHex)
+  const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
+  const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
+  const rankGlowStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : {
+        backgroundImage: `radial-gradient(circle at 20% 20%, ${hexToRgba(rankAccentSoft, 0.45)} 0%, transparent 70%)`,
+      }
+  const rankHeaderAccentStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : {
+        backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentSoft, 0.35)} 0%, transparent 80%)`,
+      }
+  const rankProgressFill = rankColorIsGradient
+    ? rawRankColor
+    : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
+  const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : { backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})` }
+  const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
   const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
   const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
   const rankProgress = Math.min(
@@ -244,23 +362,23 @@ const ProfilePage: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {/* Profile Header Card with glass effect */}
         <div className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden">
-          <div className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none" style={accentGlowStyle} />
+          <div className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none" style={rankGlowStyle} />
           <div
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-40 pointer-events-none"
-            style={{ background: hexToRgba(accentHex, 0.45) }}
+            style={{ background: hexToRgba(rankAccentSoft, 0.45) }}
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
+          <div className="absolute inset-0 opacity-35 pointer-events-none" style={rankHeaderAccentStyle} />
           <div className="relative flex flex-col sm:flex-row gap-6">
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
               <div className="relative group">
                 <div
                   className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-                  style={accentGlowStyle}
+                  style={rankGlowStyle}
                 />
                 <div
                   className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
-                  style={{ borderColor: accentHex }}
+                  style={{ borderColor: rankAccentColor }}
                 >
                   {profile.avatarUrl ? (
                     <>
@@ -281,7 +399,7 @@ const ProfilePage: React.FC = () => {
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center text-4xl sm:text-5xl font-bold text-white drop-shadow-lg"
-                      style={crestFillStyle}
+                      style={signatureCrestStyle}
                     >
                       <span style={{ color: rankAccentColor }}>{rankDetails.insignia}</span>
                     </div>
@@ -291,7 +409,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-3/70 backdrop-blur-md border border-white/10 shadow-inner">
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ ...colorSwatchStyle, boxShadow: `0 0 12px ${hexToRgba(accentHex, 0.6)}` }}
+                  style={{ ...signatureColorSwatchStyle, boxShadow: `0 0 12px ${hexToRgba(signatureHex, 0.6)}` }}
                 />
                 <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
                   {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : 'Signature Color'}
@@ -305,9 +423,9 @@ const ProfilePage: React.FC = () => {
                 <h1
                   className="text-3xl sm:text-4xl font-bold mb-1 bg-clip-text text-transparent"
                   style={{
-                    backgroundImage: gradientPreferred
-                      ? resolvedPreferredColor
-                      : `linear-gradient(120deg, ${accentHex}, ${hexToRgba(accentHex, 0.6)})`,
+                    backgroundImage: rankColorIsGradient
+                      ? rawRankColor
+                      : `linear-gradient(120deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.6)})`,
                   }}
                 >
                   {profile.username}
@@ -356,13 +474,13 @@ const ProfilePage: React.FC = () => {
         {/* Identity highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="relative glass-box-sm p-5 overflow-hidden">
-            <div className="absolute inset-0 opacity-35 pointer-events-none" style={accentGlowStyle} />
+            <div className="absolute inset-0 opacity-35 pointer-events-none" style={signatureGlowStyle} />
             <div className="relative flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.45em] text-muted">Signature Color</p>
                 <p className="text-lg font-semibold text-white">{preferredColorDisplayName}</p>
               </div>
-              <div className="w-14 h-14 rounded-xl border border-white/10" style={largeColorSwatchStyle} />
+              <div className="w-14 h-14 rounded-xl border border-white/10" style={signatureLargeColorSwatchStyle} />
             </div>
             <p className="relative text-xs text-muted mt-4 leading-relaxed">
               {premiumColorEntry
@@ -372,10 +490,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           <div className="relative glass-box-sm p-5 overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-30 pointer-events-none"
-              style={{ backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentColor, 0.3)} 0%, transparent 80%)` }}
-            />
+            <div className="absolute inset-0 opacity-30 pointer-events-none" style={rankHeaderAccentStyle} />
             <div className="relative flex items-center gap-3">
               <div className="text-3xl" style={{ color: rankAccentColor }}>
                 {rankDetails.insignia}
@@ -396,10 +511,7 @@ const ProfilePage: React.FC = () => {
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${rankProgress}%`,
-                      background: `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(
-                        accentHex,
-                        0.65,
-                      )})`,
+                      background: rankProgressFill,
                     }}
                   />
                 </div>
@@ -419,7 +531,11 @@ const ProfilePage: React.FC = () => {
           <div className="relative glass-box-sm p-5 overflow-hidden">
             <div
               className="absolute inset-0 opacity-25 pointer-events-none"
-              style={{ backgroundImage: `linear-gradient(160deg, ${hexToRgba(accentHex, 0.35)} 0%, transparent 85%)` }}
+              style={{
+                backgroundImage: rankColorIsGradient
+                  ? rawRankColor
+                  : `linear-gradient(160deg, ${hexToRgba(rankAccentFaint, 0.35)} 0%, transparent 85%)`,
+              }}
             />
             <div className="relative flex items-center gap-3">
               <div className="text-3xl">🗺️</div>
@@ -447,13 +563,21 @@ const ProfilePage: React.FC = () => {
               key={tab.id}
               onClick={() => tab.available && setActiveTab(tab.id)}
               disabled={!tab.available}
-              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
+              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap border-b-2 ${
                 activeTab === tab.id
-                  ? 'text-primary-soft border-b-2 border-primary'
+                  ? 'text-white'
                   : tab.available
                     ? 'text-muted hover:text-white'
                     : 'text-muted/50 cursor-not-allowed'
               }`}
+              style={
+                activeTab === tab.id
+                  ? {
+                      color: rankAccentColor,
+                      borderBottomColor: rankAccentColor,
+                    }
+                  : undefined
+              }
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
@@ -470,15 +594,15 @@ const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div
                   className="group relative glass-box-sm transition-all hover:scale-105 hover:shadow-xl overflow-hidden"
-                  style={{ borderColor: hexToRgba(accentHex, 0.35) }}
+                  style={{ borderColor: rankSurfaceBorder }}
                 >
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={accentGlowStyle}
+                    style={rankGlowStyle}
                   />
                   <div className="relative text-center">
                     <div className="text-2xl mb-2">🎮</div>
-                    <div className="text-2xl font-bold text-primary-soft">
+                    <div className="text-2xl font-bold" style={{ color: rankAccentColor }}>
                       {profile.gamesPlayed}
                     </div>
                     <div className="text-muted text-sm">Games Played</div>
@@ -557,7 +681,7 @@ const ProfilePage: React.FC = () => {
                     <button
                       type="button"
                       className="mt-4 px-6 py-2 text-white rounded-lg font-medium transition-all hover:scale-105 shadow-lg"
-                      style={callToActionStyle}
+                      style={rankCallToActionStyle}
                     >
                       Start Playing
                     </button>
