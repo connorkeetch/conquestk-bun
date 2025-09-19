@@ -3,8 +3,7 @@ import { Router } from 'express'
 import type { Pool } from 'pg'
 import { authenticateToken } from '../middleware/auth'
 import { UserPreferencesService } from '../services/UserPreferencesService'
-import { getErrorMessage } from '../utils/errorHelpers'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 export function createPreferencesRouter(pool: Pool): Router {
   const router = Router()
@@ -30,7 +29,7 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json(preferences)
     } catch (error) {
-      logger.error('Error fetching preferences:', getErrorMessage(error))
+      handleRouteError(error, req, 'Failed to fetch preferences')
       return res.status(500).json({ error: 'Failed to fetch preferences' })
     }
   })
@@ -55,7 +54,7 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json(preferences)
     } catch (error) {
-      logger.error('Error updating preferences:', getErrorMessage(error))
+      handleRouteError(error, req, 'Failed to update preferences')
       return res.status(500).json({ error: 'Failed to update preferences' })
     }
   })
@@ -85,7 +84,7 @@ export function createPreferencesRouter(pool: Pool): Router {
 
       return res.json({ success: true, theme })
     } catch (error) {
-      logger.error('Error updating theme:', getErrorMessage(error))
+      handleRouteError(error, req, 'Failed to update theme')
       return res.status(500).json({ error: 'Failed to update theme' })
     }
   })

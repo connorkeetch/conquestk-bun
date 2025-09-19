@@ -1,6 +1,7 @@
 import { type Request, type Response, Router } from 'express'
 import { authenticateToken } from '../middleware/auth'
 import notificationService from '../services/notificationService'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 
@@ -39,7 +40,8 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       success: true,
       message: 'Successfully subscribed to push notifications',
     })
-  } catch (_error) {
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to subscribe to notifications')
     return res.status(500).json({ error: 'Failed to subscribe to notifications' })
   }
 })
@@ -59,7 +61,8 @@ router.post('/unsubscribe', authenticateToken, async (req: Request, res: Respons
       success: true,
       message: 'Successfully unsubscribed from push notifications',
     })
-  } catch (_error) {
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to unsubscribe from notifications')
     return res.status(500).json({ error: 'Failed to unsubscribe from notifications' })
   }
 })
@@ -91,7 +94,8 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
     return res.status(404).json({
       error: 'No push subscription found. Please enable notifications first.',
     })
-  } catch (_error) {
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to send test notification')
     return res.status(500).json({ error: 'Failed to send test notification' })
   }
 })
