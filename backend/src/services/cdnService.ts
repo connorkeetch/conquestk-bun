@@ -27,6 +27,25 @@ interface PerformanceMetrics {
   cacheHitRate: number
 }
 
+type ProviderHealthCheck =
+  | {
+      provider: string
+      healthy: true
+      responseTime: number
+    }
+  | {
+      provider: string
+      healthy: false
+      error: string
+    }
+
+interface CDNHealthDetails {
+  totalProviders: number
+  healthyProviders: number
+  metrics: ReturnType<CDNService['getMetrics']>
+  checks: Array<ProviderHealthCheck | { error: unknown }>
+}
+
 export class CDNService {
   private providers: CDNProvider[] = []
   private assetConfigs: Map<string, AssetConfig> = new Map()
@@ -393,12 +412,13 @@ export class CDNService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
-    const healthChecks = await Promise.allSettled(
+  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details: CDNHealthDetails }> {
+    const healthChecks = await Promise.allSettled<ProviderHealthCheck>(
       this.providers.map(async (provider) => {
         try {
           // Simple health check - try to fetch a small asset
           const testUrl = `${provider.baseUrl}/health-check.txt`
+          const startTime = Date.now()
           const response = await fetch(testUrl, {
             method: 'HEAD',
             signal: AbortSignal.timeout(5000),
@@ -407,7 +427,7 @@ export class CDNService {
           return {
             provider: provider.name,
             healthy: response.ok,
-            responseTime: Date.now(),
+            responseTime: Date.now() - startTime,
           }
         } catch (error) {
           return {

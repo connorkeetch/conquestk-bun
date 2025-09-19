@@ -1,3 +1,4 @@
+import type { QueryResultRow } from 'pg'
 import { query } from '../config/database'
 
 export interface PlayerRating {
@@ -23,6 +24,34 @@ export interface SkillTier {
   maxRating: number
   icon: string
   color: string
+}
+
+interface RatingHistoryEntry extends QueryResultRow {
+  id: string
+  user_id: string
+  game_id: string
+  rating_before: number
+  rating_after: number
+  rating_change: number
+  position: number
+  total_players: number
+  k_factor: number
+  expected_score: number
+  actual_score: number
+  created_at: string
+  game_name: string
+  game_date: string
+}
+
+interface SkillLeaderboardRow extends QueryResultRow {
+  user_id: string
+  username: string
+  skill_rating: number
+  skill_confidence: number
+  rank_position: number
+  tier: string
+  total_ranked_games: number
+  win_rate: number
 }
 
 // The Conqueror's Path - Historical conquest-themed ranking system
@@ -200,7 +229,7 @@ export class EloService {
     changes: RatingChange[],
     positionMap: Map<string, number>,
   ): Promise<void> {
-    const values: any[] = []
+    const values: Array<number | string> = []
     const placeholders: string[] = []
 
     changes.forEach((change, index) => {
@@ -253,7 +282,7 @@ export class EloService {
     const ratingCases: string[] = []
     const winCases: string[] = []
     const lossCases: string[] = []
-    const values: any[] = []
+    const values: Array<number | string> = []
 
     changes.forEach((change, index) => {
       const position = positionMap.get(change.userId) || 0
@@ -308,8 +337,8 @@ export class EloService {
   /**
    * Get rating history for a user
    */
-  async getRatingHistory(userId: string, limit: number = 30): Promise<any[]> {
-    const result = await query(
+  async getRatingHistory(userId: string, limit: number = 30): Promise<RatingHistoryEntry[]> {
+    const result = await query<RatingHistoryEntry>(
       `
       SELECT 
         rh.*,
@@ -317,9 +346,9 @@ export class EloService {
         gr.created_at as game_date
       FROM rating_history rh
       JOIN game_rooms gr ON rh.game_id = gr.id
-      WHERE rh.user_id = ?
+      WHERE rh.user_id = $1
       ORDER BY rh.created_at DESC
-      LIMIT ?
+      LIMIT $2
     `,
       [userId, limit],
     )
@@ -334,7 +363,7 @@ export class EloService {
     limit: number = 100,
     offset: number = 0,
     tierFilter?: string,
-  ): Promise<any[]> {
+  ): Promise<SkillLeaderboardRow[]> {
     let queryStr = `
       SELECT 
         slc.*,
@@ -344,17 +373,19 @@ export class EloService {
       JOIN users u ON slc.user_id = u.id
     `
 
-    const params: any[] = []
+    const params: Array<number | string> = []
+    let paramIndex = 1
 
     if (tierFilter) {
-      queryStr += ` WHERE slc.tier = ?`
+      queryStr += ` WHERE slc.tier = $${paramIndex}`
       params.push(tierFilter)
+      paramIndex++
     }
 
-    queryStr += ` ORDER BY slc.rank_position LIMIT ? OFFSET ?`
+    queryStr += ` ORDER BY slc.rank_position LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`
     params.push(limit, offset)
 
-    const result = await query(queryStr, params)
+    const result = await query<SkillLeaderboardRow>(queryStr, params)
     return result.rows
   }
 

@@ -64,7 +64,7 @@ export class GameService {
   async isCapitalTerritory(roomId: string, _territoryId: string): Promise<boolean> {
     // This is a placeholder - in a real implementation, you'd check the game state
     // or database to see if this territory is marked as a capital
-    const rawState = await gameStateCache.getGameState(roomId)
+    const rawState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!rawState) return false
     const _gameState = this.hydrateGameState(rawState)
 
@@ -74,7 +74,7 @@ export class GameService {
   }
 
   async processGameAction(action: GameAction, userId: string): Promise<GameState> {
-    const cachedState = await gameStateCache.getGameState(action.roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(action.roomId)
 
     if (!cachedState) {
       throw new Error('Game not found')
@@ -144,7 +144,7 @@ export class GameService {
   }
 
   async getGameState(roomId: string): Promise<GameState | null> {
-    const cachedState = await gameStateCache.getGameState(roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) return null
 
     const hydratedState = this.hydrateGameState(cachedState)
@@ -160,7 +160,7 @@ export class GameService {
   }
 
   async deployArmies(roomId: string, userId: string, territoryId: string, armies: number) {
-    const cachedState = await gameStateCache.getGameState(roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
@@ -188,7 +188,7 @@ export class GameService {
   }
 
   async attack(roomId: string, userId: string, fromTerritoryId: string, toTerritoryId: string) {
-    const cachedState = await gameStateCache.getGameState(roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
@@ -229,7 +229,7 @@ export class GameService {
     toTerritoryId: string,
     armies: number,
   ) {
-    const cachedState = await gameStateCache.getGameState(roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
@@ -259,7 +259,7 @@ export class GameService {
   }
 
   async endTurn(roomId: string, userId: string) {
-    const cachedState = await gameStateCache.getGameState(roomId)
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
     if (!cachedState) throw new Error('Game not found')
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
@@ -373,17 +373,17 @@ export class GameService {
     }
   }
 
-  async archiveGameResults(gameId: string, results: any): Promise<void> {
+  async archiveGameResults(gameId: string, results: Record<string, unknown>): Promise<void> {
     // TODO: Store in database
     logger.debug(`Archiving game ${gameId}:`, results)
   }
 
-  async updateEloRatings(gameId: string, _gameState: any): Promise<void> {
+  async updateEloRatings(gameId: string, _gameState: Record<string, unknown>): Promise<void> {
     // TODO: Update ELO ratings
     logger.debug(`Updating ELO for game ${gameId}`)
   }
 
-  async recordGameHistory(gameId: string, _gameState: any): Promise<void> {
+  async recordGameHistory(gameId: string, _gameState: Record<string, unknown>): Promise<void> {
     // TODO: Record in database
     logger.debug(`Recording history for game ${gameId}`)
   }
@@ -392,7 +392,7 @@ export class GameService {
     await gameStateCache.deleteGameState(gameId)
   }
 
-  async getIdleGames(_threshold: number): Promise<any[]> {
+  async getIdleGames(_threshold: number): Promise<string[]> {
     // TODO: Query games that have been idle
     return []
   }

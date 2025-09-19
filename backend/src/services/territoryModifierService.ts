@@ -1,3 +1,4 @@
+import type { QueryResultRow } from 'pg'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { territoryModifierCache } from './cacheService'
@@ -16,6 +17,18 @@ export interface TerritoryModifierTemplate {
 }
 
 export interface GameTerritoryModifier {
+  territory_id: string
+  defense_bonus: number
+  attack_bonus: number
+  troop_generation_bonus: number
+  movement_restriction: boolean
+  supply_line_bonus: boolean
+  icon: string
+  color: string
+  name: string
+}
+
+interface MapModifierRow extends QueryResultRow {
   territory_id: string
   defense_bonus: number
   attack_bonus: number
@@ -52,9 +65,11 @@ export class TerritoryModifierService {
   /**
    * Get modifiers for a specific map (cached)
    */
-  async getMapModifiers(mapId: string): Promise<any[]> {
+  async getMapModifiers(mapId: string): Promise<GameTerritoryModifier[]> {
     // Check cache first
-    let modifiers = (await territoryModifierCache.getMapModifiers(mapId)) as any[] | null
+    let modifiers = (await territoryModifierCache.getMapModifiers(mapId)) as
+      | GameTerritoryModifier[]
+      | null
     if (modifiers) {
       return modifiers
     }
@@ -76,8 +91,18 @@ export class TerritoryModifierService {
       JOIN territory_modifier_templates tmt ON mtm.modifier_template_id = tmt.id
       WHERE mtm.map_id = $1
     `
-    const result = await query(sql, [mapId])
-    modifiers = result.rows as any[]
+    const result = await query<MapModifierRow>(sql, [mapId])
+    modifiers = result.rows.map((row) => ({
+      territory_id: row.territory_id,
+      defense_bonus: row.defense_bonus,
+      attack_bonus: row.attack_bonus,
+      troop_generation_bonus: row.troop_generation_bonus,
+      movement_restriction: row.movement_restriction,
+      supply_line_bonus: row.supply_line_bonus,
+      icon: row.icon,
+      color: row.color,
+      name: row.name,
+    }))
 
     // Cache the results
     await territoryModifierCache.setMapModifiers(mapId, modifiers)
@@ -126,11 +151,14 @@ export class TerritoryModifierService {
   /**
    * Apply predefined map modifiers to a game (optimized batch insert)
    */
-  private async applyMapModifiers(gameId: string, mapModifiers: any[]): Promise<void> {
+  private async applyMapModifiers(
+    gameId: string,
+    mapModifiers: GameTerritoryModifier[],
+  ): Promise<void> {
     if (mapModifiers.length === 0) return
 
     // Build batch insert with PostgreSQL VALUES clause
-    const values: any[] = []
+    const values: Array<string | number | boolean> = []
     const placeholders: string[] = []
 
     mapModifiers.forEach((modifier, index) => {
@@ -192,7 +220,7 @@ export class TerritoryModifierService {
     const selectedTerritories = shuffled.slice(0, numModifiers)
 
     // Prepare batch insert data
-    const modifiersToInsert: any[] = []
+    const modifiersToInsert: GameTerritoryModifier[] = []
     for (const territoryId of selectedTerritories) {
       const template = templates[Math.floor(Math.random() * templates.length)]
       modifiersToInsert.push({

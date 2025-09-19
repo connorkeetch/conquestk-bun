@@ -1,8 +1,10 @@
 import * as jwt from 'jsonwebtoken'
+import type { QueryResultRow } from 'pg'
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { setupChatHandlers } from '../socket/chatHandlers'
 import { DeltaBuilder } from '../types/deltaUpdates'
+import type { GamePlayer, SerializedGameState, Territory } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 import { eloService, type PlayerRating } from './eloService'
@@ -14,16 +16,29 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
   username?: string
 }
 
+function requireUserId(socket: AuthenticatedSocket): string {
+  if (!socket.userId) {
+    throw new Error('User not authenticated')
+  }
+  return socket.userId
+}
+
+interface UserRatingRow extends QueryResultRow {
+  id: string
+  skill_rating: number | null
+  total_ranked_games: number | null
+}
+
 // Error handler wrapper for socket events
 function handleSocketError(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   eventName: string,
-  error: any,
+  error: unknown,
 ) {
   // Check if error is an actual Error instance (with Node.js 24+ Error.isError fallback)
   const isActualError = error instanceof Error
-  const errorMessage = isActualError ? (error as Error).message : String(error)
-  const errorStack = isActualError ? (error as Error).stack : undefined
+  const errorMessage = isActualError ? error.message : String(error)
+  const errorStack = isActualError ? error.stack : undefined
 
   logger.error(`Socket error in ${eventName}:`, {
     error: errorMessage,
@@ -47,7 +62,7 @@ function handleSocketError(
 }
 
 // Wrapper to add error handling to socket event handlers
-function withErrorHandler<T extends any[]>(
+function withErrorHandler<T extends unknown[]>(
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   eventName: string,
   handler: (...args: T) => Promise<void>,
@@ -101,12 +116,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid room ID')
         }
 
+        const userId = requireUserId(socket)
         await socket.join(roomId)
         socket.to(roomId).emit('player-joined', {
-          userId: socket.userId!,
+          userId,
           socketId: socket.id,
         })
-        logger.info(`User ${socket.userId} joined room ${roomId}`)
+        logger.info(`User ${userId} joined room ${roomId}`)
       }),
     )
 
@@ -117,12 +133,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid room ID')
         }
 
+        const userId = requireUserId(socket)
         await socket.leave(roomId)
         socket.to(roomId).emit('player-left', {
-          userId: socket.userId!,
+          userId,
           socketId: socket.id,
         })
-        logger.info(`User ${socket.userId} left room ${roomId}`)
+        logger.info(`User ${userId} left room ${roomId}`)
       }),
     )
 
@@ -133,10 +150,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid game action data')
         }
 
+        const userId = requireUserId(socket)
         // Queue the game action for processing
         const job = await queueService.addGameAction({
           gameId: data.roomId,
-          playerId: socket.userId!,
+          playerId: userId,
           action: data.action,
           socketId: socket.id,
         })
@@ -144,13 +162,13 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (job) {
           logger.info(`Queued game action: ${data.action.type} for game ${data.roomId}`, {
             jobId: job.id,
-            playerId: socket.userId!,
+            playerId: userId,
           })
         } else {
           logger.info(
             `Processed game action directly (no queue): ${data.action.type} for game ${data.roomId}`,
             {
-              playerId: socket.userId!,
+              playerId: userId,
             },
           )
         }
@@ -165,14 +183,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid deployment data')
         }
 
+        const userId = requireUserId(socket)
         // Queue the place armies action
         const job = await queueService.addGameAction({
           gameId: data.roomId,
-          playerId: socket.userId!,
+          playerId: userId,
           action: {
             type: 'deploy',
             roomId: data.roomId,
-            playerId: socket.userId!,
+            playerId: userId,
             payload: {
               territoryId: data.territoryId,
               armies: data.armies,
@@ -204,18 +223,20 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid attack data')
         }
 
+        const userId = requireUserId(socket)
+        const armies = typeof data.armies === 'number' ? data.armies : 1
         // Queue the attack action - battle simulation will be handled in background
         const job = await queueService.addGameAction({
           gameId: data.roomId,
-          playerId: socket.userId!,
+          playerId: userId,
           action: {
             type: 'attack',
             roomId: data.roomId,
-            playerId: socket.userId!,
+            playerId: userId,
             payload: {
               fromTerritoryId: data.fromTerritoryId,
               toTerritoryId: data.toTerritoryId,
-              armies: (data as any).armies || 1,
+              armies,
             },
           },
           socketId: socket.id,
@@ -270,9 +291,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid fortification data')
         }
 
+        const userId = requireUserId(socket)
         const result = await gameService.fortify(
           data.roomId,
-          socket.userId!,
+          userId,
           data.fromTerritoryId,
           data.toTerritoryId,
           data.armies,
@@ -290,7 +312,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid end turn data')
         }
 
-        const result = await gameService.endTurn(data.roomId, socket.userId!)
+        const userId = requireUserId(socket)
+        const result = await gameService.endTurn(data.roomId, userId)
 
         // Send phase change as delta update
         const phaseDelta = DeltaBuilder.phaseChange(
@@ -304,7 +327,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // Keep legacy event for backward compatibility
         io.to(data.roomId).emit('phaseChanged', {
-          phase: result.gameState.phase as any,
+          phase: result.gameState.phase,
           currentPlayer: result.gameState.currentPlayer,
           turn: result.gameState.turn,
           reinforcementArmies: result.reinforcementArmies,
@@ -319,11 +342,12 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid chat message data')
         }
 
+        const userId = requireUserId(socket)
         // Sanitize message to prevent XSS
         const sanitizedMessage = data.message.substring(0, 500).replace(/<[^>]*>/g, '')
 
         socket.to(data.roomId).emit('chat-message', {
-          userId: socket.userId!,
+          userId,
           message: sanitizedMessage,
           timestamp: new Date().toISOString(),
         })
@@ -332,12 +356,17 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
     socket.on('disconnect', () => {
       try {
-        logger.info(`User ${socket.userId} disconnected`)
+        const userId = socket.userId
+        if (!userId) {
+          return
+        }
+
+        logger.info(`User ${userId} disconnected`)
         // Notify all rooms this user was in
         socket.rooms.forEach((roomId) => {
           if (roomId !== socket.id) {
             socket.to(roomId).emit('player-disconnected', {
-              userId: socket.userId!,
+              userId,
               socketId: socket.id,
             })
           }
@@ -354,19 +383,21 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
   async function _handleRankedGameEnd(
     io: Server<ClientToServerEvents, ServerToClientEvents>,
     roomId: string,
-    gameState: any,
+    gameState: SerializedGameState,
   ) {
     try {
       // Check if this is a ranked game
-      const roomQuery = `SELECT is_ranked FROM game_rooms WHERE id = ?`
-      const roomResult = await query(roomQuery, [roomId])
+      const roomResult = await query<{ is_ranked: boolean }>(
+        `SELECT is_ranked FROM game_rooms WHERE id = $1`,
+        [roomId],
+      )
 
       if (!roomResult.rows[0]?.is_ranked) {
         return // Not a ranked game, no rating updates needed
       }
 
       // Get all players with their final positions
-      const players = gameState.players
+      const players: GamePlayer[] = gameState.players
       const playerRatings: PlayerRating[] = []
 
       // Sort players by elimination order and territory count to determine positions
@@ -376,8 +407,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (a.isEliminated && !b.isEliminated) return 1
 
         // Among eliminated players, more territories = better position
-        const aTerritories = gameState.board.filter((t: any) => t.ownerId === a.id).length
-        const bTerritories = gameState.board.filter((t: any) => t.ownerId === b.id).length
+        const board: Territory[] = gameState.board
+        const aTerritories = board.filter((territory) => territory.ownerId === a.id).length
+        const bTerritories = board.filter((territory) => territory.ownerId === b.id).length
         return bTerritories - aTerritories
       })
 
@@ -392,11 +424,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           FROM users 
           WHERE id IN (${placeholders})
         `
-        const userResults = await query(bulkUserQuery, playerIds)
+        const userResults = await query<UserRatingRow>(bulkUserQuery, playerIds)
 
         // Create a map for quick lookup
-        const userDataMap = new Map()
-        userResults.rows.forEach((row: any) => {
+        const userDataMap = new Map<string, UserRatingRow>()
+        userResults.rows.forEach((row) => {
           userDataMap.set(row.id, row)
         })
 
@@ -407,8 +439,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             const position = sortedPlayers.findIndex((p) => p.id === player.id) + 1
             playerRatings.push({
               userId: player.id,
-              currentRating: userData.skill_rating || 1000,
-              gamesPlayed: userData.total_ranked_games || 0,
+              currentRating: userData.skill_rating ?? 1000,
+              gamesPlayed: userData.total_ranked_games ?? 0,
               position: position, // Position based on original sorted array
             })
           }
@@ -435,12 +467,14 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         })
 
         // Update room status to finished
-        const updateRoomQuery = `
+        await query(
+          `
           UPDATE game_rooms 
           SET status = 'finished' 
-          WHERE id = ?
-        `
-        await query(updateRoomQuery, [roomId])
+          WHERE id = $1
+        `,
+          [roomId],
+        )
 
         logger.info(`Ranked game ${roomId} completed, ELO ratings updated`)
       }

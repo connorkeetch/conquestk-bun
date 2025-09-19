@@ -1,3 +1,4 @@
+import type { QueryResultRow } from 'pg'
 import { query } from '../config/database.js'
 
 export interface MapVersion {
@@ -61,6 +62,28 @@ export interface MapReviewResult {
   isRequired?: boolean
 }
 
+type ModerationDetails = Record<string, unknown>
+
+interface MapModerationActionRow extends QueryResultRow {
+  id: string
+  map_id: string
+  version_id: string | null
+  moderator_id: string
+  action_type: string
+  reason: string | null
+  details: string | null
+  created_at: string
+  moderator_username: string
+}
+
+interface MapApprovalStatsRow extends QueryResultRow {
+  total_requests: number
+  approved: number
+  rejected: number
+  pending: number
+  avg_review_hours: number | null
+}
+// biome-ignore lint/complexity/noStaticOnlyClass: service exposes static helpers for route handlers
 export class MapApprovalService {
   // Version Management
   static async createVersion(
@@ -423,7 +446,7 @@ export class MapApprovalService {
 
   // Utility Methods
   static async getStatusId(statusName: string): Promise<string> {
-    const result = await query(
+    const result = await query<{ id: string }>(
       `
       SELECT id FROM map_status WHERE name = ?
     `,
@@ -442,7 +465,7 @@ export class MapApprovalService {
     moderatorId: string,
     actionType: string,
     reason?: string,
-    details?: any,
+    details?: ModerationDetails,
     versionId?: string,
   ): Promise<void> {
     await query(
@@ -455,8 +478,8 @@ export class MapApprovalService {
     )
   }
 
-  static async getMapModerationHistory(mapId: string): Promise<any[]> {
-    const result = await query(
+  static async getMapModerationHistory(mapId: string): Promise<MapModerationActionRow[]> {
+    const result = await query<MapModerationActionRow>(
       `
       SELECT ma.*, u.username as moderator_username
       FROM map_moderation_actions ma
@@ -471,8 +494,8 @@ export class MapApprovalService {
   }
 
   // Statistics and Analytics
-  static async getApprovalStats(): Promise<any> {
-    const result = await query(`
+  static async getApprovalStats(): Promise<MapApprovalStatsRow> {
+    const result = await query<MapApprovalStatsRow>(`
       SELECT 
         COUNT(*) as total_requests,
         SUM(CASE WHEN decision = 'approved' THEN 1 ELSE 0 END) as approved,
@@ -486,7 +509,7 @@ export class MapApprovalService {
       WHERE created_at >= date('now', '-30 days')
     `)
 
-    return result.rows[0] || {}
+    return result.rows[0]
   }
 }
 

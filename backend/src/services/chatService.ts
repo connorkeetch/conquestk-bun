@@ -4,14 +4,19 @@ import { logger } from '../utils/logger'
 import { type LinkPreview, linkPreviewService } from './linkPreviewService'
 
 // Profanity filter - lazy loaded to handle ESM module
-let profanityFilter: any = null
+type ProfanityFilter = {
+  clean: (text: string) => string
+  isProfane: (text: string) => boolean
+}
+
+let profanityFilter: ProfanityFilter | null = null
 
 async function getProfanityFilter() {
   if (!profanityFilter) {
     try {
       // Dynamic import for ESM module compatibility
       const { Filter } = await import('bad-words')
-      profanityFilter = new Filter()
+      profanityFilter = new Filter() as ProfanityFilter
       // Add custom words if needed
       // profanityFilter.addWords('customword1', 'customword2')
     } catch (error) {
@@ -197,7 +202,7 @@ class ChatService {
   ): Promise<ChatMessage[]> {
     try {
       let queryText: string
-      let queryParams: any[]
+      let queryParams: Array<string | number>
 
       if (messageType === 'game') {
         queryText = `
@@ -227,6 +232,13 @@ class ChatService {
       } else if (messageType === 'team') {
         // Team chat - conversationId format: "gameId:teamId"
         const [gameId, teamId] = conversationId.split(':')
+        if (!gameId || !teamId) {
+          throw new Error('Invalid team conversation identifier')
+        }
+        const parsedTeamId = Number.parseInt(teamId, 10)
+        if (Number.isNaN(parsedTeamId)) {
+          throw new Error('Invalid team identifier')
+        }
         queryText = `
           SELECT m.*, u.username as sender_username
           FROM chat_messages m
@@ -237,7 +249,7 @@ class ChatService {
             AND m.deleted_at IS NULL
           ORDER BY m.created_at DESC
           LIMIT $3 OFFSET $4`
-        queryParams = [gameId, parseInt(teamId, 10), limit, offset]
+        queryParams = [gameId, parsedTeamId, limit, offset]
       } else {
         return []
       }
