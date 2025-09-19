@@ -1,6 +1,6 @@
 import { type NextFunction, type Request, type Response, Router } from 'express'
-import { body, param, query, validationResult } from 'express-validator'
-import { query } from '../config/database'
+import { body, param, query as queryParam, validationResult } from 'express-validator'
+import { query as dbQuery } from '../config/database'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
@@ -122,9 +122,9 @@ router.get('/me', async (req: Request, res: Response) => {
 router.get(
   '/users',
   requirePermission('users.view'),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
-  query('offset').optional().isInt({ min: 0 }),
-  query('search').optional().isString(),
+  queryParam('limit').optional().isInt({ min: 1, max: 100 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
+  queryParam('search').optional().isString(),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
@@ -371,8 +371,8 @@ router.delete(
 router.get(
   '/content/queue',
   requirePermission('content.moderate'),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
-  query('offset').optional().isInt({ min: 0 }),
+  queryParam('limit').optional().isInt({ min: 1, max: 100 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
@@ -464,10 +464,10 @@ const normalizeAdminGameStatus = (
 router.get(
   '/games',
   requirePermission('games.view'),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
-  query('offset').optional().isInt({ min: 0 }),
-  query('status').optional().isString(),
-  query('search').optional().isString(),
+  queryParam('limit').optional().isInt({ min: 1, max: 100 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
+  queryParam('status').optional().isString(),
+  queryParam('search').optional().isString(),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
@@ -560,7 +560,7 @@ router.get(
         countParams.push(`%${search}%`)
       }
 
-      const countResult = await query(countQuery, countParams)
+      const countResult = await dbQuery(countQuery, countParams)
 
       // Get players for each game
       const gameRows = gamesResult.rows as AdminGameRow[]
@@ -638,7 +638,7 @@ router.get(
     try {
       const { query } = require('../config/database')
 
-      const result = await query(`
+      const result = await dbQuery(`
         SELECT COUNT(*) as count 
         FROM game_rooms 
         WHERE status IN ('in_progress', 'starting')
@@ -670,7 +670,7 @@ router.post(
       const { reason } = req.body
       const adminUserId = req.userId
 
-      await query(
+      await dbQuery(
         'UPDATE game_rooms SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         ['abandoned', gameId],
       )
@@ -912,8 +912,8 @@ router.put(
 router.get(
   '/logs/admin-activity',
   requirePermission('logs.view'),
-  query('limit').optional().isInt({ min: 1, max: 500 }),
-  query('offset').optional().isInt({ min: 0 }),
+  queryParam('limit').optional().isInt({ min: 1, max: 500 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
@@ -1029,11 +1029,11 @@ router.get(
 router.get(
   '/maps',
   requirePermission('content.view'),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
-  query('offset').optional().isInt({ min: 0 }),
-  query('status').optional().isString(),
-  query('search').optional().isString(),
-  query('includeAll').optional().isBoolean(),
+  queryParam('limit').optional().isInt({ min: 1, max: 100 }),
+  queryParam('offset').optional().isInt({ min: 0 }),
+  queryParam('status').optional().isString(),
+  queryParam('search').optional().isString(),
+  queryParam('includeAll').optional().isBoolean(),
   checkValidation,
   async (req: Request, res: Response) => {
     try {

@@ -6,7 +6,9 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 const authenticateRequest: RequestHandler = (req, res, next) => {
-  authenticateToken(req, res, next).catch(next)
+  authenticateToken(req, res, next).catch((error) => {
+    next(error instanceof Error ? error : new Error(String(error)))
+  })
 }
 
 // Check if user has accepted terms for a feature
