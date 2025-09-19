@@ -378,12 +378,12 @@ export class GameService {
     logger.debug(`Archiving game ${gameId}:`, results)
   }
 
-  async updateEloRatings(gameId: string, _gameState: Record<string, unknown>): Promise<void> {
+  async updateEloRatings(gameId: string, _gameState: unknown): Promise<void> {
     // TODO: Update ELO ratings
     logger.debug(`Updating ELO for game ${gameId}`)
   }
 
-  async recordGameHistory(gameId: string, _gameState: Record<string, unknown>): Promise<void> {
+  async recordGameHistory(gameId: string, _gameState: unknown): Promise<void> {
     // TODO: Record in database
     logger.debug(`Recording history for game ${gameId}`)
   }

@@ -274,7 +274,9 @@ export class DatabaseClusterService {
         node.connectionCount++
 
         // Execute query with timeout
-        const queryPromise = client.query(text, params)
+        const queryPromise = params
+          ? client.query(text, [...params])
+          : client.query(text)
         const timeoutPromise: Promise<never> = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Query timeout')), this.config.queryTimeout)
         })

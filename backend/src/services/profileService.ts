@@ -6,6 +6,7 @@ import type {
   ProfileResponse,
   ProfileUpdateRequest,
   StatsBreakdown,
+  AggregatedStatsSummary,
   UserAchievement,
   UserPreferences,
   UserProfile,
@@ -37,13 +38,6 @@ interface ModeStatsRow extends QueryResultRow {
   games_played: number
   games_won: number
   avg_duration: number | null
-}
-
-interface AggregatedStats {
-  gamesPlayed: number
-  gamesWon: number
-  averageGameLength: number | null
-  bestTerritories?: number
 }
 
 export class ProfileService {
@@ -215,22 +209,22 @@ export class ProfileService {
         [userId],
       )
 
-      const byMap: Record<string, AggregatedStats> = {}
+      const byMap: Record<string, AggregatedStatsSummary> = {}
       mapStatsResult.rows.forEach((row) => {
         byMap[row.map_name] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
-          averageGameLength: row.avg_duration,
-          bestTerritories: row.best_territories,
+          averageGameLength: row.avg_duration ?? undefined,
+          bestTerritories: row.best_territories ?? undefined,
         }
       })
 
-      const byGameMode: Record<string, AggregatedStats> = {}
+      const byGameMode: Record<string, AggregatedStatsSummary> = {}
       modeStatsResult.rows.forEach((row) => {
         byGameMode[row.game_mode] = {
           gamesPlayed: row.games_played,
           gamesWon: row.games_won,
-          averageGameLength: row.avg_duration,
+          averageGameLength: row.avg_duration ?? undefined,
         }
       })
 
@@ -443,7 +437,7 @@ export class ProfileService {
       return result.rows.map((row: RawLeaderboardRow, index: number) => ({
         userId: row.user_id,
         username: row.username,
-        avatarUrl: row.avatar_url,
+        avatarUrl: row.avatar_url ?? undefined,
         rank: index + 1,
         rating: row.rating,
         gamesWon: row.games_won,
