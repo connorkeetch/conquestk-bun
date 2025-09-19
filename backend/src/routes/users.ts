@@ -53,10 +53,17 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       `
       SELECT
         u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
-        u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
+        u.skill_rating,
+        COALESCE(ps.games_played, 0) AS games_played,
+        COALESCE(ps.games_won, 0) AS games_won,
+        COALESCE(ps.games_lost, 0) AS games_lost,
+        u.skill_rating AS peak_rating,
+        'bronze'::text AS current_tier,
+        u.last_login,
         up.preferred_color
       FROM users u
       LEFT JOIN user_preferences up ON u.id = up.user_id
+      LEFT JOIN player_stats ps ON ps.user_id = u.id
       WHERE u.username = $1 AND u.deleted_at IS NULL
     `,
       [username],
@@ -110,10 +117,17 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       `
       SELECT
         u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
-        u.skill_rating, u.games_played, u.games_won, u.peak_rating, u.current_tier, u.last_login,
+        u.skill_rating,
+        COALESCE(ps.games_played, 0) AS games_played,
+        COALESCE(ps.games_won, 0) AS games_won,
+        COALESCE(ps.games_lost, 0) AS games_lost,
+        u.skill_rating AS peak_rating,
+        'bronze'::text AS current_tier,
+        u.last_login,
         up.preferred_color
       FROM users u
       LEFT JOIN user_preferences up ON u.id = up.user_id
+      LEFT JOIN player_stats ps ON ps.user_id = u.id
       WHERE u.id = $1
     `,
       [userId],
