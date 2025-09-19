@@ -386,7 +386,7 @@ export class MapService {
 
   async getMap(mapId: string): Promise<CustomMap | null> {
     const result = await query('SELECT * FROM maps WHERE id = $1', [mapId])
-    return result.rows.length > 0 ? this.formatMapFromDb(result.rows[0]) : null
+    return result.rows.length > 0 ? this.formatMapFromDb(result.rows[0] as MapDbRow) : null
   }
 
   async getMapWithFullData(mapId: string): Promise<{
@@ -657,7 +657,7 @@ export class MapService {
       queryParams,
     )
 
-    const maps = mapsResult.rows.map((row) => this.formatMapFromDb(row))
+    const maps = mapsResult.rows.map((row) => this.formatMapFromDb(row as MapDbRow))
     const hasMore = offset + limit < total
 
     return { maps, total, hasMore }
@@ -684,7 +684,7 @@ export class MapService {
         ],
       )
 
-      return this.formatTerritoryFromDb(result.rows[0])
+      return this.formatTerritoryFromDb(result.rows[0] as TerritoryRow)
     } finally {
       if (client.release) client.release()
     }
@@ -698,7 +698,7 @@ export class MapService {
       [mapId],
     )
 
-    return result.rows.map((row) => this.formatTerritoryFromDb(row))
+    return result.rows.map((row) => this.formatTerritoryFromDb(row as TerritoryRow))
   }
 
   async updateTerritory(
@@ -730,7 +730,9 @@ export class MapService {
         const result = await client.query('SELECT * FROM map_territories WHERE id = $1', [
           territoryId,
         ])
-        return result.rows.length > 0 ? this.formatTerritoryFromDb(result.rows[0]) : null
+        return result.rows.length > 0
+          ? this.formatTerritoryFromDb(result.rows[0] as TerritoryRow)
+          : null
       }
 
       updateValues.push(territoryId)
@@ -742,7 +744,7 @@ export class MapService {
         updateValues,
       )
 
-      return result.rows.length > 0 ? this.formatTerritoryFromDb(result.rows[0]) : null
+      return result.rows.length > 0 ? this.formatTerritoryFromDb(result.rows[0] as TerritoryRow) : null
     } finally {
       if (client.release) client.release()
     }
@@ -767,7 +769,7 @@ export class MapService {
         [mapId, name, bonusArmies, color || '#cccccc'],
       )
 
-      return this.formatContinentFromDb(result.rows[0])
+      return this.formatContinentFromDb(result.rows[0] as ContinentRow)
     } finally {
       if (client.release) client.release()
     }
@@ -777,7 +779,7 @@ export class MapService {
     const result = await query('SELECT * FROM map_continents WHERE map_id = $1 ORDER BY name', [
       mapId,
     ])
-    return result.rows.map((row) => this.formatContinentFromDb(row))
+    return result.rows.map((row) => this.formatContinentFromDb(row as ContinentRow))
   }
 
   async getMapContinentBonuses(mapId: string): Promise<ContinentBonus[]> {
@@ -846,7 +848,7 @@ export class MapService {
       [mapId, mapId],
     )
 
-    return result.rows.map((row) => this.formatAdjacencyFromDb(row))
+    return result.rows.map((row) => this.formatAdjacencyFromDb(row as AdjacencyRow))
   }
 
   // ============= GAME MODE OPERATIONS =============

@@ -406,7 +406,7 @@ export class MapWorkflowService {
         ORDER BY mrq.priority DESC, mrq.submitted_at ASC
       `)
 
-      return result.rows || []
+      return (result.rows as MapReviewItem[]) || []
     } catch (error) {
       logger.error('Error fetching pending reviews:', error)
       throw error
@@ -419,7 +419,7 @@ export class MapWorkflowService {
   async getAdminNotifications(adminId?: string, unreadOnly = false): Promise<AdminNotification[]> {
     try {
       let sql = 'SELECT * FROM admin_notifications WHERE 1=1'
-      const params: any[] = []
+      const params: Array<string> = []
 
       if (adminId) {
         sql += ' AND (admin_id = ? OR admin_id IS NULL)'
@@ -433,7 +433,7 @@ export class MapWorkflowService {
       sql += ' ORDER BY created_at DESC LIMIT 50'
 
       const result = await query(sql, params)
-      return result.rows || []
+      return (result.rows as AdminNotification[]) || []
     } catch (error) {
       logger.error('Error fetching admin notifications:', error)
       throw error
@@ -743,7 +743,7 @@ export class MapWorkflowService {
         [status, status, status],
       )
 
-      return result.rows || []
+      return (result.rows as CustomMap[]) || []
     } catch (error) {
       logger.error('Error fetching maps by status:', error)
       throw error
@@ -768,7 +768,7 @@ export class MapWorkflowService {
         [mapId],
       )
 
-      return result.rows || []
+      return (result.rows as MapSubmissionLog[]) || []
     } catch (error) {
       logger.error('Error fetching map history:', error)
       throw error

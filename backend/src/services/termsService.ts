@@ -62,7 +62,7 @@ export class TermsService {
         [userId, featureType, currentVersion, ipAddress, userAgent],
       )
 
-      return result.rows[0]
+      return result.rows[0] as TermsAcceptance
     } catch (error) {
       logger.error('Error accepting terms:', error)
       throw error
@@ -81,7 +81,7 @@ export class TermsService {
         [userId],
       )
 
-      return result.rows
+      return result.rows as TermsAcceptance[]
     } catch (error) {
       logger.error('Error fetching terms history:', error)
       throw error

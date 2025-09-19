@@ -244,10 +244,10 @@ interface PoolMetrics {
   idleCount: number
   waitingCount: number
   config: {
-    max: number
-    min: number
+    max: number | undefined
+    min: number | undefined
     idleTimeoutMillis: number | undefined
-    connectionTimeoutMillis: number | undefined
+    connectionTimeoutMillis: number | undefined | null
   }
   utilization: string
 }
@@ -265,13 +265,13 @@ export function getPoolMetrics(): PoolMetrics | { error: string } {
       max: pgPool.options.max,
       min: pgPool.options.min,
       idleTimeoutMillis: pgPool.options.idleTimeoutMillis,
-      connectionTimeoutMillis: pgPool.options.connectionTimeoutMillis,
+      connectionTimeoutMillis: pgPool.options.connectionTimeoutMillis ?? null,
     },
     utilization:
       pgPool.totalCount > 0
         ? `${(((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount) * 100).toFixed(1)}%`
         : '0%',
-  }
+  } as PoolMetrics
 }
 
 export default { query, transaction, initDatabase, closeDatabase, getClient }

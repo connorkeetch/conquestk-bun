@@ -17,6 +17,18 @@ interface FeatureFlag {
   dependencies: string[]
 }
 
+interface FeatureFlagAuditEntry {
+  id: string
+  flag_name: string
+  changed_by: string | null
+  change_type?: string | null
+  previous_value?: Record<string, unknown> | null
+  new_value?: Record<string, unknown> | null
+  reason?: string | null
+  created_at: Date | string
+  username?: string | null
+}
+
 interface User {
   id: string
   role?: string
@@ -207,7 +219,7 @@ export class FeatureFlagService {
    */
   private async getUserOverride(userId: string, flagName: string): Promise<boolean | null> {
     try {
-      const result = await query(
+      const result = await query<{ is_enabled: boolean | null }>(
         'SELECT is_enabled FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2',
         [userId, flagName],
       )
@@ -237,8 +249,8 @@ export class FeatureFlagService {
     }
 
     try {
-      const result = await query('SELECT * FROM feature_flags')
-      const flags = result.rows as FeatureFlag[]
+      const result = await query<FeatureFlag>('SELECT * FROM feature_flags')
+      const flags = result.rows
 
       this.flagCache.clear()
       flags.forEach((flag) => this.flagCache.set(flag.flag_name, flag))
@@ -293,7 +305,7 @@ export class FeatureFlagService {
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
       values.push(flagName)
 
-      const result = await query(
+      const result = await query<FeatureFlag>(
         `UPDATE feature_flags SET ${updateFields.join(', ')} 
          WHERE flag_name = $${paramCount} RETURNING *`,
         values,
@@ -354,7 +366,7 @@ export class FeatureFlagService {
   /**
    * Get audit log for a flag
    */
-  async getAuditLog(flagName?: string, limit = 50): Promise<any[]> {
+  async getAuditLog(flagName?: string, limit = 50): Promise<FeatureFlagAuditEntry[]> {
     try {
       let queryStr = `
         SELECT fa.*, u.username 
@@ -371,7 +383,7 @@ export class FeatureFlagService {
       queryStr += ' ORDER BY fa.created_at DESC LIMIT $' + (values.length + 1)
       values.push(limit)
 
-      const result = await query(queryStr, values)
+      const result = await query<FeatureFlagAuditEntry>(queryStr, values)
       return result.rows
     } catch (error) {
       logger.error('❌ Error fetching feature flag audit log', {

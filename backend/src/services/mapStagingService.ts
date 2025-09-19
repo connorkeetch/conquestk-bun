@@ -163,7 +163,7 @@ export class MapStagingService {
         ],
       )
 
-      return result.rows[0]
+      return result.rows[0] as StagingImage
     } catch (error) {
       logger.error('Error uploading image:', error)
       throw error
@@ -182,7 +182,7 @@ export class MapStagingService {
         [userId],
       )
 
-      return result.rows
+      return result.rows as StagingImage[]
     } catch (error) {
       logger.error('Error fetching staging images:', error)
       throw error
@@ -202,7 +202,7 @@ export class MapStagingService {
          ORDER BY mis.created_at DESC`,
       )
 
-      return result.rows
+      return result.rows as StagingImage[]
     } catch (error) {
       logger.error('Error fetching all staging images:', error)
       throw error
