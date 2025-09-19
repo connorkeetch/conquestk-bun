@@ -3,7 +3,7 @@ import mapWorkflowService from '../services/mapWorkflowService'
 import { UserService } from '../services/userService'
 import type { AuthenticatedRequest } from '../types/express'
 import type { MapStatus } from '../types/maps'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const userService = new UserService()
 
@@ -26,7 +26,7 @@ export class MapWorkflowController {
         draft,
       })
     } catch (error: unknown) {
-      logger.error('Error saving draft:', error)
+      handleRouteError(error, req, 'Failed to save draft')
       return res.status(500).json({
         error: 'Failed to save draft',
         message: 'An error occurred while saving your draft',
@@ -51,7 +51,7 @@ export class MapWorkflowController {
         drafts,
       })
     } catch (error: unknown) {
-      logger.error('Error fetching drafts:', error)
+      handleRouteError(error, req, 'Failed to fetch drafts')
       return res.status(500).json({
         error: 'Failed to fetch drafts',
         message: 'An error occurred while fetching your drafts',
@@ -75,7 +75,9 @@ export class MapWorkflowController {
 
       return res.json({ success: true, draft })
     } catch (error: unknown) {
-      logger.error('Error fetching draft:', error)
+      handleRouteError(error, req, 'Failed to fetch draft', 500, {
+        draftId: req.params.draftId,
+      })
       return res.status(500).json({
         error: 'Failed to fetch draft',
         message: 'An error occurred while loading the draft',
@@ -95,7 +97,9 @@ export class MapWorkflowController {
 
       return res.json({ success: true, map })
     } catch (error: unknown) {
-      logger.error('Error publishing draft:', error)
+      handleRouteError(error, req, 'Failed to publish draft', 500, {
+        draftId: req.params.draftId,
+      })
       return res.status(500).json({
         error: 'Failed to publish draft',
         message: 'An error occurred while publishing your map',
@@ -121,7 +125,9 @@ export class MapWorkflowController {
         message: 'Map submitted for review successfully',
       })
     } catch (error: unknown) {
-      logger.error('Error submitting map for review:', error)
+      handleRouteError(error, req, 'Failed to submit map for review', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to submit map',
         message: 'An error occurred while submitting your map for review',
@@ -155,7 +161,7 @@ export class MapWorkflowController {
         reviews,
       })
     } catch (error: unknown) {
-      logger.error('Error fetching pending reviews:', error)
+      handleRouteError(error, req, 'Failed to fetch pending reviews')
       return res.status(500).json({
         error: 'Failed to fetch reviews',
         message: 'An error occurred while fetching pending reviews',
@@ -191,7 +197,9 @@ export class MapWorkflowController {
         message: 'Map approved successfully',
       })
     } catch (error: unknown) {
-      logger.error('Error approving map:', error)
+      handleRouteError(error, req, 'Failed to approve map', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to approve map',
         message: 'An error occurred while approving the map',
@@ -234,7 +242,9 @@ export class MapWorkflowController {
         message: 'Map rejected',
       })
     } catch (error: unknown) {
-      logger.error('Error rejecting map:', error)
+      handleRouteError(error, req, 'Failed to reject map', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to reject map',
         message: 'An error occurred while rejecting the map',
@@ -272,7 +282,7 @@ export class MapWorkflowController {
         notifications,
       })
     } catch (error: unknown) {
-      logger.error('Error fetching notifications:', error)
+      handleRouteError(error, req, 'Failed to fetch map workflow notifications')
       return res.status(500).json({
         error: 'Failed to fetch notifications',
         message: 'An error occurred while fetching notifications',
@@ -307,7 +317,9 @@ export class MapWorkflowController {
         message: 'Notification marked as read',
       })
     } catch (error: unknown) {
-      logger.error('Error marking notification as read:', error)
+      handleRouteError(error, req, 'Failed to update notification', 500, {
+        notificationId: req.params.notificationId,
+      })
       return res.status(500).json({
         error: 'Failed to update notification',
         message: 'An error occurred while updating the notification',
@@ -342,7 +354,9 @@ export class MapWorkflowController {
         message: 'Map archived successfully',
       })
     } catch (error: unknown) {
-      logger.error('Error archiving map:', error)
+      handleRouteError(error, req, 'Failed to archive map', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to archive map',
         message: 'An error occurred while archiving the map',
@@ -377,7 +391,9 @@ export class MapWorkflowController {
         message: 'Map featured status updated',
       })
     } catch (error: unknown) {
-      logger.error('Error toggling featured status:', error)
+      handleRouteError(error, req, 'Failed to update map featured status', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to update map',
         message: 'An error occurred while updating the map',
@@ -420,7 +436,9 @@ export class MapWorkflowController {
         maps,
       })
     } catch (error: unknown) {
-      logger.error('Error fetching maps by status:', error)
+      handleRouteError(error, req, 'Failed to fetch maps by status', 500, {
+        status: req.params.status,
+      })
       return res.status(500).json({
         error: 'Failed to fetch maps',
         message: 'An error occurred while fetching maps',
@@ -453,7 +471,9 @@ export class MapWorkflowController {
         history,
       })
     } catch (error: unknown) {
-      logger.error('Error fetching map history:', error)
+      handleRouteError(error, req, 'Failed to fetch map history', 500, {
+        mapId: req.params.mapId,
+      })
       return res.status(500).json({
         error: 'Failed to fetch history',
         message: 'An error occurred while fetching map history',
