@@ -12,6 +12,8 @@ async function diagnoseAdminIssue(email: string) {
     ])
 
     if (userResult.rows.length === 0) {
+      logger.warn('⚠️  No user found with the provided email')
+      process.exit(1)
       return
     }
 
@@ -25,9 +27,14 @@ async function diagnoseAdminIssue(email: string) {
       `)
 
       if (roleTableCheck.rows.length === 0) {
+        logger.error('❌ admin_roles table exists but has no columns')
+        process.exit(1)
         return
       }
-    } catch (_error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('❌ Failed to inspect admin_roles table', { message })
+      process.exit(1)
       return
     }
     try {
@@ -39,15 +46,27 @@ async function diagnoseAdminIssue(email: string) {
       `)
 
       if (userRoleTableCheck.rows.length === 0) {
+        logger.error('❌ user_admin_roles table exists but has no columns')
+        process.exit(1)
         return
       }
-    } catch (_error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('❌ Failed to inspect user_admin_roles table', { message })
+      process.exit(1)
       return
     }
     const rolesResult = await query('SELECT id, name, description, is_super_admin FROM admin_roles')
     if (rolesResult.rows.length === 0) {
+      logger.warn('⚠️  No admin roles defined in admin_roles table')
     } else {
-      rolesResult.rows.forEach((_role) => {})
+      logger.info('✅ Admin roles detected:', {
+        roles: rolesResult.rows.map((role) => ({
+          id: role.id,
+          name: role.name,
+          isSuperAdmin: role.is_super_admin,
+        })),
+      })
     }
     const userAdminResult = await query(
       `
@@ -60,15 +79,26 @@ async function diagnoseAdminIssue(email: string) {
     )
 
     if (userAdminResult.rows.length === 0) {
+      logger.warn('⚠️  User has no admin roles assigned')
     } else {
-      userAdminResult.rows.forEach((_role) => {})
+      logger.info('✅ User admin role assignments:', {
+        roles: userAdminResult.rows.map((role) => ({
+          roleId: role.role_id,
+          roleName: role.role_name,
+          isSuperAdmin: role.is_super_admin,
+        })),
+      })
     }
     const { AdminService } = await import('../services/adminService')
     const adminService = new AdminService()
 
     try {
-      const _isAdmin = await adminService.isAdmin(user.id)
-    } catch (_error: any) {}
+      const isAdmin = await adminService.isAdmin(user.id)
+      logger.info(`ℹ️  Admin service reports user is admin: ${isAdmin}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('❌ Failed to verify admin status via service', { message })
+    }
 
     process.exit(0)
   } catch (_error) {

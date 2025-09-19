@@ -15,10 +15,8 @@ async function checkUserPreferences() {
       WHERE table_name = 'user_preferences' 
       ORDER BY ordinal_position
     `)
-    for (const _col of prefColumns.rows) {
-    }
-
-    const hasTheme = prefColumns.rows.some((c) => c.column_name === 'theme')
+    const columnNames = prefColumns.rows.map((column) => column.column_name)
+    const hasTheme = columnNames.includes('theme')
 
     if (!hasTheme) {
       // Try to add the column
@@ -27,17 +25,29 @@ async function checkUserPreferences() {
           ALTER TABLE user_preferences 
           ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default'
         `)
-      } catch (_err: any) {}
+        columnNames.push('theme')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        process.stderr.write(`❌ Failed to add theme column: ${message}\n`)
+      }
     }
 
     // Check a sample of user preferences
     const sample = await pool.query(`
       SELECT * FROM user_preferences LIMIT 1
     `)
+    const sampleRow = sample.rows[0] ?? null
 
-    if (sample.rows.length > 0) {
+    const report = {
+      columns: columnNames,
+      hasTheme,
+      sample: sampleRow,
     }
-  } catch (_error) {
+
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    process.stderr.write(`❌ User preferences check failed: ${message}\n`)
   } finally {
     await pool.end()
   }

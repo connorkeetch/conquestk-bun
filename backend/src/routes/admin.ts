@@ -1,5 +1,6 @@
-import { type Request, type Response, Router } from 'express'
+import { type NextFunction, type Request, type Response, Router } from 'express'
 import { body, param, query, validationResult } from 'express-validator'
+import { query } from '../config/database'
 import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { adminService } from '../services/adminService'
@@ -7,6 +8,67 @@ import { logger } from '../utils/logger'
 import { resolveAssetUrl } from '../utils/url'
 
 const router = Router()
+
+type AdminGameRow = {
+  id: string
+  name: string | null
+  status: string | null
+  max_players: number | null
+  is_private: boolean | null
+  created_at: Date | string | null
+  updated_at: Date | string | null
+  host_id: string | null
+  map_id: string | null
+  game_mode: string | null
+  is_ranked: boolean | null
+  started_at: Date | string | null
+  ended_at: Date | string | null
+  winner_id: string | null
+  host_username: string | null
+  map_name: string | null
+  player_count: string | number | null
+}
+
+type AdminGamePlayerRow = {
+  room_id: string
+  user_id: string
+  username: string
+  joined_at: Date | string | null
+}
+
+type AdminMapRow = {
+  id: string
+  name: string | null
+  description: string | null
+  image_url: string | null
+  creator_id: string | null
+  creatorName: string | null
+  min_players: number | null
+  max_players: number | null
+  is_featured: boolean | null
+  ratingAverage: string | number | null
+  ratingCount: string | number | null
+  playCount: string | number | null
+  tags: string[] | null
+  status: string | null
+  created_at: Date | string | null
+  updated_at: Date | string | null
+  is_public: boolean | null
+  is_vip_only: boolean | null
+}
+
+type ActiveGameSummaryRow = {
+  id: string
+  name: string | null
+  status: string | null
+  max_players: number | null
+  created_at: Date | string | null
+  updated_at: Date | string | null
+  map_name: string | null
+  host_username: string | null
+  player_count: string | number | null
+  duration_minutes: string | number | null
+}
 
 // Apply authentication to all admin routes
 router.use(authenticateToken)
@@ -27,7 +89,7 @@ router.get('/status', async (req: Request, res: Response) => {
 router.use(requireAdmin)
 
 // Validation middleware
-const checkValidation = (req: Request, res: Response, next: any) => {
+const checkValidation = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation failed', details: errors.array() })
@@ -376,6 +438,28 @@ router.post(
 
 // ============= GAME MANAGEMENT =============
 
+const normalizeAdminGameStatus = (
+  status: string | null,
+): 'waiting' | 'active' | 'paused' | 'completed' | 'abandoned' => {
+  if (!status) {
+    return 'waiting'
+  }
+
+  switch (status) {
+    case 'in_progress':
+    case 'starting':
+      return 'active'
+    case 'finished':
+      return 'completed'
+    case 'abandoned':
+      return 'abandoned'
+    case 'paused':
+      return 'paused'
+    default:
+      return 'waiting'
+  }
+}
+
 // Get all games with admin controls
 router.get(
   '/games',
@@ -394,118 +478,141 @@ router.get(
 
       const { query } = require('../config/database')
 
+      const statusFilterMap: Record<string, string[]> = {
+        active: ['in_progress', 'starting'],
+        waiting: ['waiting'],
+        finished: ['finished'],
+        completed: ['finished'],
+        abandoned: ['abandoned'],
+        paused: ['paused'],
+      }
+
       let gamesQuery = `
         SELECT 
-          g.*,
+          gr.id,
+          gr.name,
+          gr.status,
+          gr.max_players,
+          gr.is_private,
+          gr.created_at,
+          gr.updated_at,
+          gr.host_id,
+          gr.map_id,
+          gr.game_mode,
+          gr.is_ranked,
+          gr.started_at,
+          gr.ended_at,
+          gr.winner_id,
+          u.username as host_username,
           m.name as map_name,
-          u.username as created_by_username,
-          gp_current.username as current_turn_username
-        FROM games g
-        LEFT JOIN maps m ON g.map_id = m.id
-        LEFT JOIN users u ON g.created_by = u.id
-        LEFT JOIN users gp_current ON g.current_turn = gp_current.id
+          COUNT(rp.user_id) as player_count
+        FROM game_rooms gr
+        LEFT JOIN users u ON gr.host_id = u.id
+        LEFT JOIN maps m ON gr.map_id = m.id
+        LEFT JOIN room_players rp ON gr.id = rp.room_id
         WHERE 1=1
       `
-      const queryParams: any[] = []
+      const queryParams: unknown[] = []
       let paramIndex = 1
 
       if (status && status !== 'all') {
-        gamesQuery += ` AND g.status = $${paramIndex}`
-        queryParams.push(status)
-        paramIndex++
+        const dbStatuses = statusFilterMap[status] || [status]
+        const placeholders = dbStatuses.map(() => `$${paramIndex++}`).join(', ')
+        gamesQuery += ` AND gr.status IN (${placeholders})`
+        queryParams.push(...dbStatuses)
       }
 
       if (search) {
-        gamesQuery += ` AND (g.name ILIKE $${paramIndex} OR m.name ILIKE $${paramIndex} OR u.username ILIKE $${paramIndex})`
+        gamesQuery += ` AND (gr.name ILIKE $${paramIndex} OR m.name ILIKE $${paramIndex} OR u.username ILIKE $${paramIndex})`
         queryParams.push(`%${search}%`)
         paramIndex++
       }
 
       gamesQuery += `
-        ORDER BY g.updated_at DESC
+        GROUP BY gr.id, u.username, m.name
+        ORDER BY gr.updated_at DESC NULLS LAST
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `
       queryParams.push(limit, offset)
 
-      const gamesResult = await query(gamesQuery, queryParams)
+      const gamesResult = await query<AdminGameRow>(gamesQuery, queryParams)
 
-      // Get total count
+      // Get total count with the same filters (without player joins to keep it fast)
       let countQuery = `
         SELECT COUNT(*) as total
-        FROM games g
-        LEFT JOIN maps m ON g.map_id = m.id
-        LEFT JOIN users u ON g.created_by = u.id
+        FROM game_rooms gr
+        LEFT JOIN maps m ON gr.map_id = m.id
+        LEFT JOIN users u ON gr.host_id = u.id
         WHERE 1=1
       `
-      const countParams: any[] = []
+      const countParams: unknown[] = []
       let countParamIndex = 1
 
       if (status && status !== 'all') {
-        countQuery += ` AND g.status = $${countParamIndex}`
-        countParams.push(status)
-        countParamIndex++
+        const dbStatuses = statusFilterMap[status] || [status]
+        const placeholders = dbStatuses.map(() => `$${countParamIndex++}`).join(', ')
+        countQuery += ` AND gr.status IN (${placeholders})`
+        countParams.push(...dbStatuses)
       }
 
       if (search) {
-        countQuery += ` AND (g.name ILIKE $${countParamIndex} OR m.name ILIKE $${countParamIndex} OR u.username ILIKE $${countParamIndex})`
+        countQuery += ` AND (gr.name ILIKE $${countParamIndex} OR m.name ILIKE $${countParamIndex} OR u.username ILIKE $${countParamIndex})`
         countParams.push(`%${search}%`)
       }
 
       const countResult = await query(countQuery, countParams)
 
       // Get players for each game
-      const gameIds = gamesResult.rows.map((g: any) => g.id)
-      let playersData: any[] = []
+      const gameRows = gamesResult.rows as AdminGameRow[]
+      const gameIds = gameRows.map((g) => g.id)
+      let playersData: AdminGamePlayerRow[] = []
 
       if (gameIds.length > 0) {
         const playersQuery = `
           SELECT 
-            gp.game_id,
-            gp.user_id,
-            gp.status,
+            rp.room_id,
+            rp.user_id,
             u.username,
-            COALESCE(gt.color, '#666666') as color,
-            COUNT(gt.id) as territories_count
-          FROM game_players gp
-          JOIN users u ON gp.user_id = u.id
-          LEFT JOIN game_territories gt ON gp.game_id = gt.game_id AND gp.user_id = gt.owner_id
-          WHERE gp.game_id = ANY($1)
-          GROUP BY gp.game_id, gp.user_id, gp.status, u.username, gt.color
-          ORDER BY gp.game_id, gp.joined_at
+            rp.joined_at
+          FROM room_players rp
+          JOIN users u ON rp.user_id = u.id
+          WHERE rp.room_id = ANY($1)
+          ORDER BY rp.room_id, rp.joined_at
         `
-        const playersResult = await query(playersQuery, [gameIds])
-        playersData = playersResult.rows
+        const playersResult = await query<AdminGamePlayerRow>(playersQuery, [gameIds])
+        playersData = playersResult.rows as AdminGamePlayerRow[]
       }
 
-      // Format games data
-      const games = gamesResult.rows.map((game: any) => {
-        const gamePlayers = playersData.filter((p: any) => p.game_id === game.id)
+      const games = gamesResult.rows.map((game) => {
+        const currentPlayers = playersData.filter((p) => p.room_id === game.id)
 
-        const players = gamePlayers.map((player: any) => ({
+        const players = currentPlayers.map((player) => ({
           id: player.user_id,
           username: player.username,
-          status: player.status || 'active',
-          color: player.color,
-          territoriesCount: parseInt(player.territories_count, 10) || 0,
-          armiesCount: 0, // TODO: Calculate actual army count from game state
+          status: 'active',
+          color: '#666666',
+          territoriesCount: 0,
+          armiesCount: 0,
         }))
+
+        const normalizedStatus = normalizeAdminGameStatus(game.status)
 
         return {
           id: game.id,
           name: game.name,
           mapName: game.map_name,
-          createdBy: game.created_by,
-          createdByUsername: game.created_by_username,
-          status: game.status,
-          currentTurn: game.current_turn,
-          currentTurnUsername: game.current_turn_username,
-          phase: game.phase || 'reinforcement',
-          turnCount: game.turn_count || 1,
+          createdBy: game.host_id,
+          createdByUsername: game.host_username,
+          status: normalizedStatus,
+          currentTurn: null,
+          currentTurnUsername: null,
+          phase: 'reinforcement',
+          turnCount: 0,
           maxPlayers: game.max_players || 6,
-          isPrivate: game.is_private || false,
+          isPrivate: Boolean(game.is_private),
           createdAt: game.created_at,
           updatedAt: game.updated_at,
-          lastActivity: game.updated_at,
+          lastActivity: game.updated_at || game.created_at,
           players,
         }
       })
@@ -533,8 +640,8 @@ router.get(
 
       const result = await query(`
         SELECT COUNT(*) as count 
-        FROM games 
-        WHERE status = 'active' OR status = 'in_progress'
+        FROM game_rooms 
+        WHERE status IN ('in_progress', 'starting')
       `)
 
       res.json({
@@ -563,12 +670,10 @@ router.post(
       const { reason } = req.body
       const adminUserId = req.userId
 
-      const { query } = require('../config/database')
-
-      await query('UPDATE games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
-        'abandoned',
-        gameId,
-      ])
+      await query(
+        'UPDATE game_rooms SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        ['abandoned', gameId],
+      )
 
       // Log the action
       await query(
@@ -595,7 +700,7 @@ router.post(
   },
 )
 
-// Pause a game
+// Pause a game (only admins)
 router.post(
   '/games/:gameId/pause',
   requirePermission('games.manage'),
@@ -611,10 +716,20 @@ router.post(
 
       const { query } = require('../config/database')
 
-      await query(
-        'UPDATE games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = $3',
-        ['paused', gameId, 'active'],
+      const result = await query(
+        `UPDATE game_rooms 
+         SET status = 'paused', updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $1 AND status IN ('in_progress', 'starting')
+         RETURNING id`,
+        [gameId],
       )
+
+      if (result.rowCount === 0) {
+        res.status(409).json({
+          error: 'Game must be in progress to pause',
+        })
+        return
+      }
 
       // Log the action
       await query(
@@ -641,7 +756,7 @@ router.post(
   },
 )
 
-// Resume a game
+// Resume a game (only admins)
 router.post(
   '/games/:gameId/resume',
   requirePermission('games.manage'),
@@ -657,10 +772,20 @@ router.post(
 
       const { query } = require('../config/database')
 
-      await query(
-        'UPDATE games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = $3',
-        ['active', gameId, 'paused'],
+      const result = await query(
+        `UPDATE game_rooms 
+         SET status = 'in_progress', updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $1 AND status = 'paused'
+         RETURNING id`,
+        [gameId],
       )
+
+      if (result.rowCount === 0) {
+        res.status(409).json({
+          error: 'Game must be paused to resume',
+        })
+        return
+      }
 
       // Log the action
       await query(
@@ -687,7 +812,7 @@ router.post(
   },
 )
 
-// Get active games
+// Get active games summary
 router.get(
   '/games/active',
   requirePermission('games.view'),
@@ -697,41 +822,39 @@ router.get(
 
       const gamesQuery = `
         SELECT 
-          g.id,
-          g.name,
-          g.status,
-          g.phase,
-          g.turn_count,
-          g.max_players,
-          g.created_at,
-          g.updated_at,
+          gr.id,
+          gr.name,
+          gr.status,
+          gr.max_players,
+          gr.created_at,
+          gr.updated_at,
           m.name as map_name,
-          u.username as created_by_username,
-          COUNT(DISTINCT gp.user_id) as player_count,
-          EXTRACT(EPOCH FROM (NOW() - g.created_at)) / 60 as duration_minutes
-        FROM games g
-        LEFT JOIN maps m ON g.map_id = m.id
-        LEFT JOIN users u ON g.created_by = u.id
-        LEFT JOIN game_players gp ON g.id = gp.game_id AND gp.status = 'active'
-        WHERE g.status IN ('waiting', 'in_progress')
-        GROUP BY g.id, m.name, u.username
-        ORDER BY g.created_at DESC
+          u.username as host_username,
+          COUNT(rp.user_id) as player_count,
+          EXTRACT(EPOCH FROM (NOW() - gr.created_at)) / 60 as duration_minutes
+        FROM game_rooms gr
+        LEFT JOIN maps m ON gr.map_id = m.id
+        LEFT JOIN users u ON gr.host_id = u.id
+        LEFT JOIN room_players rp ON gr.id = rp.room_id
+        WHERE gr.status IN ('waiting', 'in_progress', 'starting')
+        GROUP BY gr.id, m.name, u.username
+        ORDER BY gr.created_at DESC
         LIMIT 50
       `
 
-      const result = await query(gamesQuery)
+      const result = await query<ActiveGameSummaryRow>(gamesQuery)
 
-      const games = result.rows.map((game: any) => ({
+      const games = result.rows.map((game) => ({
         id: game.id,
         name: game.name || `Game ${game.id.slice(0, 8)}`,
-        status: game.status,
-        phase: game.phase,
-        playerCount: parseInt(game.player_count || '0', 10),
-        maxPlayers: game.max_players,
-        mapName: game.map_name,
-        createdBy: game.created_by_username,
-        duration: `${Math.floor(parseFloat(game.duration_minutes || '0'))} min`,
-        turnCount: game.turn_count || 0,
+        status: normalizeAdminGameStatus(game.status),
+        phase: 'reinforcement',
+        playerCount: parseInt(String(game.player_count ?? '0'), 10),
+        maxPlayers: game.max_players ?? 0,
+        mapName: game.map_name ?? undefined,
+        createdBy: game.host_username ?? undefined,
+        duration: `${Math.floor(parseFloat(String(game.duration_minutes ?? '0')))} min`,
+        turnCount: 0,
       }))
 
       res.json(games)
@@ -820,7 +943,7 @@ router.get(
         SELECT 
           (SELECT COUNT(*) FROM users) as user_count,
           (SELECT COUNT(*) FROM maps) as map_count,
-          (SELECT COUNT(*) FROM games WHERE status = 'active') as active_games,
+          (SELECT COUNT(*) FROM game_rooms WHERE status IN ('in_progress', 'starting')) as active_games,
           (SELECT COUNT(*) FROM content_approval_queue WHERE status = 'pending') as pending_approvals
       `)
 
@@ -926,16 +1049,16 @@ router.get(
         SELECT 
           m.*,
           u.username as "creatorName",
-          COUNT(DISTINCT g.id) as "playCount",
+          COUNT(DISTINCT gr.id) as "playCount",
           COALESCE(AVG(mr.rating), 0) as "ratingAverage",
           COUNT(DISTINCT mr.id) as "ratingCount"
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
-        LEFT JOIN games g ON g.map_id = m.id
+        LEFT JOIN game_rooms gr ON gr.map_id = m.id
         LEFT JOIN map_ratings mr ON mr.map_id = m.id
         WHERE 1=1
       `
-      const queryParams: any[] = []
+      const queryParams: unknown[] = []
       let paramIndex = 1
 
       // Only filter by status if specified and not includeAll
@@ -964,7 +1087,7 @@ router.get(
       queryParams.push(limit, offset)
       paramIndex += 2 // Increment for both LIMIT and OFFSET
 
-      const mapsResult = await query(mapsQuery, queryParams)
+      const mapsResult = await query<AdminMapRow>(mapsQuery, queryParams)
 
       // Get total count
       let countQuery = `
@@ -972,7 +1095,7 @@ router.get(
         FROM maps m
         WHERE 1=1
       `
-      const countParams: any[] = []
+      const countParams: unknown[] = []
       let countParamIndex = 1
 
       if (!includeAll && status && status !== 'all') {
@@ -991,16 +1114,16 @@ router.get(
       const countResult = await query(countQuery, countParams)
 
       // Convert numeric strings to numbers and map property names for proper frontend handling
-      const maps = mapsResult.rows.map((map: any) => {
+      const maps = (mapsResult.rows as AdminMapRow[]).map((map) => {
         const imageUrl = resolveAssetUrl(req, map.image_url)
 
         return {
           ...map,
           image_url: imageUrl,
           imageUrl,
-          playCount: parseInt(map.playCount || '0', 10),
-          ratingAverage: parseFloat(map.ratingAverage || '0'),
-          ratingCount: parseInt(map.ratingCount || '0', 10),
+          playCount: parseInt(String(map.playCount ?? '0'), 10),
+          ratingAverage: Number.parseFloat(String(map.ratingAverage ?? '0')),
+          ratingCount: parseInt(String(map.ratingCount ?? '0'), 10),
           // Map snake_case to camelCase for dates
           createdAt: map.created_at,
           updatedAt: map.updated_at,
@@ -1050,7 +1173,7 @@ router.patch(
 
       // Build update query
       const updates: string[] = []
-      const params: any[] = []
+      const params: unknown[] = []
       let paramIndex = 1
 
       if (name !== undefined) {
@@ -1335,8 +1458,8 @@ router.delete(
       // Check if map is being used in active games
       const gamesCheck = await query(
         `SELECT COUNT(*) as count 
-         FROM games 
-         WHERE map_id = $1 AND status IN ('active', 'in_progress')`,
+         FROM game_rooms 
+         WHERE map_id = $1 AND status IN ('in_progress', 'starting')`,
         [mapId],
       )
 

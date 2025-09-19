@@ -12,7 +12,7 @@ interface FeatureFlag {
   is_enabled: boolean
   access_level: AccessLevel
   rollout_percentage: number
-  target_criteria: Record<string, any>
+  target_criteria: Record<string, unknown>
   category: FeatureCategory
   dependencies: string[]
 }
@@ -152,13 +152,14 @@ export class FeatureFlagService {
   /**
    * Check if user matches target criteria
    */
-  private matchesTargetCriteria(criteria: Record<string, any>, user?: User): boolean {
+  private matchesTargetCriteria(criteria: Record<string, unknown>, user?: User): boolean {
     if (!criteria || Object.keys(criteria).length === 0) {
       return true
     }
 
     // Check VIP requirement
-    if (criteria.require_vip && !user?.isVip) {
+    const requireVip = criteria.require_vip === true
+    if (requireVip && !user?.isVip) {
       return false
     }
 
@@ -166,12 +167,15 @@ export class FeatureFlagService {
     const userTier = normalizeTier(user?.premiumTier)
     const userHasPremium = user?.hasPremium ?? userTier !== 'free'
 
-    if (criteria.require_premium && !userHasPremium) {
+    const requirePremium = criteria.require_premium === true
+    if (requirePremium && !userHasPremium) {
       return false
     }
 
     const minimumTierRaw =
-      criteria.minimum_premium_tier || criteria.min_premium_tier || criteria.required_premium_tier
+      (criteria.minimum_premium_tier as string | undefined) ||
+      (criteria.min_premium_tier as string | undefined) ||
+      (criteria.required_premium_tier as string | undefined)
 
     if (minimumTierRaw) {
       const requiredTier = normalizeTier(minimumTierRaw)
@@ -182,19 +186,22 @@ export class FeatureFlagService {
       }
     }
 
-    if (Array.isArray(criteria.allowed_roles) && criteria.allowed_roles.length > 0) {
-      if (!user?.role || !criteria.allowed_roles.includes(user.role)) {
+    const allowedRoles = criteria.allowed_roles as string[] | undefined
+    if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
+      if (!user?.role || !allowedRoles.includes(user.role)) {
         return false
       }
     }
 
-    if (Array.isArray(criteria.excluded_roles) && criteria.excluded_roles.length > 0) {
-      if (user?.role && criteria.excluded_roles.includes(user.role)) {
+    const excludedRoles = criteria.excluded_roles as string[] | undefined
+    if (Array.isArray(excludedRoles) && excludedRoles.length > 0) {
+      if (user?.role && excludedRoles.includes(user.role)) {
         return false
       }
     }
 
-    if (criteria.require_admin && !user?.isAdmin) {
+    const requireAdmin = criteria.require_admin === true
+    if (requireAdmin && !user?.isAdmin) {
       return false
     }
 
@@ -253,7 +260,9 @@ export class FeatureFlagService {
       const flags = result.rows
 
       this.flagCache.clear()
-      flags.forEach((flag) => this.flagCache.set(flag.flag_name, flag))
+      for (const flag of flags) {
+        this.flagCache.set(flag.flag_name, flag)
+      }
       this.lastCacheUpdate = now
 
       return flags

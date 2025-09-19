@@ -6,7 +6,7 @@ import { logger } from '../utils/logger'
  */
 export class CacheService {
   private redisClient = getRedisClient()
-  private inMemoryCache = new Map<string, { data: any; expires: number }>()
+  private inMemoryCache = new Map<string, { data: unknown; expires: number }>()
 
   /**
    * Get value from cache
@@ -99,12 +99,14 @@ export class CacheService {
 
     // Clear from in-memory cache
     const keysToDelete: string[] = []
-    this.inMemoryCache.forEach((_, key) => {
+    for (const key of this.inMemoryCache.keys()) {
       if (key.startsWith(prefix)) {
         keysToDelete.push(key)
       }
-    })
-    keysToDelete.forEach((key) => this.inMemoryCache.delete(key))
+    }
+    for (const key of keysToDelete) {
+      this.inMemoryCache.delete(key)
+    }
   }
 
   /**
@@ -139,13 +141,15 @@ export class CacheService {
     const now = Date.now()
     const keysToDelete: string[] = []
 
-    this.inMemoryCache.forEach((value, key) => {
+    for (const [key, value] of this.inMemoryCache) {
       if (value.expires <= now) {
         keysToDelete.push(key)
       }
-    })
+    }
 
-    keysToDelete.forEach((key) => this.inMemoryCache.delete(key))
+    for (const key of keysToDelete) {
+      this.inMemoryCache.delete(key)
+    }
   }
 }
 
@@ -162,16 +166,16 @@ export class GameStateCache {
   private readonly DEFAULT_TTL = 3600 // 1 hour for active games
   private readonly INACTIVE_TTL = 86400 // 24 hours for inactive games
 
-  async getGameState(gameId: string): Promise<any | null> {
-    return this.cache.get(`game:state:${gameId}`)
+  async getGameState<T = unknown>(gameId: string): Promise<T | null> {
+    return this.cache.get<T>(`game:state:${gameId}`)
   }
 
-  async setGameState(gameId: string, state: any, ttl?: number) {
+  async setGameState<T>(gameId: string, state: T, ttl?: number) {
     const cacheTime = ttl || this.DEFAULT_TTL
     return this.cache.set(`game:state:${gameId}`, state, cacheTime)
   }
 
-  async setInactiveGameState(gameId: string, state: any) {
+  async setInactiveGameState<T>(gameId: string, state: T) {
     // Longer TTL for finished or inactive games to prevent immediate cleanup
     return this.cache.set(`game:state:${gameId}`, state, this.INACTIVE_TTL)
   }
@@ -198,11 +202,11 @@ export class UserCache {
   private cache = new CacheService()
   private readonly TTL = 600 // 10 minutes
 
-  async getUser(userId: string) {
-    return this.cache.get(`user:${userId}`)
+  async getUser<T = unknown>(userId: string) {
+    return this.cache.get<T>(`user:${userId}`)
   }
 
-  async setUser(userId: string, userData: any) {
+  async setUser<T>(userId: string, userData: T) {
     return this.cache.set(`user:${userId}`, userData, this.TTL)
   }
 
@@ -210,11 +214,11 @@ export class UserCache {
     return this.cache.delete(`user:${userId}`)
   }
 
-  async getUserStats(userId: string) {
-    return this.cache.get(`user:stats:${userId}`)
+  async getUserStats<T = unknown>(userId: string) {
+    return this.cache.get<T>(`user:stats:${userId}`)
   }
 
-  async setUserStats(userId: string, stats: any) {
+  async setUserStats<T>(userId: string, stats: T) {
     return this.cache.set(`user:stats:${userId}`, stats, this.TTL)
   }
 }
@@ -224,11 +228,11 @@ export class LeaderboardCache {
   private cache = new CacheService()
   private readonly TTL = 300 // 5 minutes
 
-  async getLeaderboard(page = 1) {
-    return this.cache.get(`leaderboard:page:${page}`)
+  async getLeaderboard<T = unknown>(page = 1) {
+    return this.cache.get<T>(`leaderboard:page:${page}`)
   }
 
-  async setLeaderboard(page: number, data: any) {
+  async setLeaderboard<T>(page: number, data: T) {
     return this.cache.set(`leaderboard:page:${page}`, data, this.TTL)
   }
 
@@ -246,7 +250,7 @@ export class MapCache {
     return this.cache.get(`map:${mapId}`)
   }
 
-  async setMap(mapId: string, mapData: any) {
+  async setMap<T>(mapId: string, mapData: T) {
     return this.cache.set(`map:${mapId}`, mapData, this.TTL)
   }
 
@@ -254,7 +258,7 @@ export class MapCache {
     return this.cache.get('maps:list')
   }
 
-  async setMapList(maps: any[]) {
+  async setMapList<T>(maps: T[]) {
     return this.cache.set('maps:list', maps, this.TTL)
   }
 }
@@ -277,7 +281,7 @@ export class TerritoryModifierCache extends CacheService {
   /**
    * Cache modifier templates
    */
-  async setTemplates(templates: any[]) {
+  async setTemplates<T>(templates: T[]) {
     await this.set(`${this.CACHE_PREFIX}:${this.TEMPLATES_KEY}`, templates, this.DEFAULT_TTL)
   }
 
@@ -291,7 +295,7 @@ export class TerritoryModifierCache extends CacheService {
   /**
    * Cache game modifiers
    */
-  async setGameModifiers(gameId: string, modifiers: Map<string, any>) {
+  async setGameModifiers<T>(gameId: string, modifiers: Map<string, T>) {
     const serializedModifiers = Object.fromEntries(modifiers)
     await this.set(`${this.CACHE_PREFIX}:game:${gameId}`, serializedModifiers, this.DEFAULT_TTL * 2) // 1 hour
   }
@@ -306,7 +310,7 @@ export class TerritoryModifierCache extends CacheService {
   /**
    * Cache map modifiers
    */
-  async setMapModifiers(mapId: string, modifiers: any[]) {
+  async setMapModifiers<T>(mapId: string, modifiers: T[]) {
     await this.set(`${this.CACHE_PREFIX}:map:${mapId}`, modifiers, this.DEFAULT_TTL * 4) // 2 hours
   }
 

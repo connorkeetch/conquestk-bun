@@ -43,7 +43,7 @@ export interface AdminRole {
 // ============================================
 
 export type GamePhase = 'setup' | 'deployment' | 'attack' | 'fortification' | 'ended'
-export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned'
+export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned' | 'paused'
 export type PlayerColor =
   | 'red'
   | 'blue'
@@ -126,6 +126,7 @@ export interface GameState {
   settings: GameSettings
   lastAction?: GameAction
   reinforcementArmies?: number
+  capitalAssignments?: Record<string, string>
 }
 
 export interface GameSettings {
@@ -456,7 +457,7 @@ export interface FeatureFlag {
 // Database Query Types
 // ============================================
 
-export interface QueryResult<T = any> {
+export interface QueryResult<T = unknown> {
   rows: T[]
   rowCount: number | null
 }

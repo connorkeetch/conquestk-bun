@@ -8,6 +8,16 @@ interface EnvVariable {
   description?: string
 }
 
+const isPositiveInteger = (value: string): boolean => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isInteger(parsed) && parsed > 0
+}
+
+const isValidPort = (value: string): boolean => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isInteger(parsed) && parsed > 0 && parsed < 65536
+}
+
 const ENV_VARIABLES: EnvVariable[] = [
   // Database
   {
@@ -22,8 +32,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'PORT',
     required: false,
     defaultValue: '5001',
-    validator: (value) =>
-      !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0 && parseInt(value, 10) < 65536,
+    validator: isValidPort,
     description: 'Server port number',
   },
 
@@ -67,35 +76,35 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'DB_POOL_MAX',
     required: false,
     defaultValue: '20',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Maximum database connections',
   },
   {
     name: 'DB_POOL_IDLE_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Database idle connection timeout (ms)',
   },
   {
     name: 'DB_POOL_CONNECTION_TIMEOUT',
     required: false,
     defaultValue: '2000',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Database connection timeout (ms)',
   },
   {
     name: 'DB_STATEMENT_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Database statement timeout (ms)',
   },
   {
     name: 'DB_QUERY_TIMEOUT',
     required: false,
     defaultValue: '30000',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Database query timeout (ms)',
   },
 
@@ -104,7 +113,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'MAX_FILE_SIZE',
     required: false,
     defaultValue: '5242880', // 5MB
-    validator: (value) => !Number.isNaN(parseInt(value, 10)) && parseInt(value, 10) > 0,
+    validator: isPositiveInteger,
     description: 'Maximum file upload size (bytes)',
   },
 
@@ -131,7 +140,7 @@ const ENV_VARIABLES: EnvVariable[] = [
     name: 'SMTP_PORT',
     required: false,
     defaultValue: '587',
-    validator: (value) => !Number.isNaN(parseInt(value, 10)),
+    validator: (value) => Number.isInteger(Number.parseInt(value, 10)),
     description: 'SMTP server port',
   },
   {
@@ -239,17 +248,23 @@ export function validateEnvironmentVariables(): void {
   // Log results
   if (applied.length > 0) {
     logger.info('Applied defaults:')
-    applied.forEach((msg) => logger.info(msg))
+    for (const msg of applied) {
+      logger.info(msg)
+    }
   }
 
   if (warnings.length > 0) {
     logger.warn('Environment warnings:')
-    warnings.forEach((msg) => logger.warn(msg))
+    for (const msg of warnings) {
+      logger.warn(msg)
+    }
   }
 
   if (errors.length > 0) {
     logger.error('Environment validation failed:')
-    errors.forEach((msg) => logger.error(msg))
+    for (const msg of errors) {
+      logger.error(msg)
+    }
 
     // In production/staging, fail fast on missing required variables
     if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {

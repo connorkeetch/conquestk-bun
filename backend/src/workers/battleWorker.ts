@@ -8,6 +8,7 @@ import {
   type GameDelta,
   type GameEndDelta,
 } from '../types/deltaUpdates'
+import type { GameState } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 
@@ -190,16 +191,14 @@ export class BattleWorker {
           ...battleResult,
           fromTerritory: {
             id: attackingTerritory,
-            name: attackingTerr.name,
             armies: attackingTerr.armies - battleResult.attackerLosses,
           },
           toTerritory: {
             id: defendingTerritory,
-            name: defendingTerr.name,
             armies: defendingTerr.armies - battleResult.defenderLosses,
             ownerId: battleResult.territoryConquered
               ? attackerOwnerId
-              : (defenderOwnerId ?? attackerOwnerId),
+              : defenderOwnerId ?? attackerOwnerId,
           },
           conquered: battleResult.territoryConquered,
           attackerDice: battleResult.dice.attacker,

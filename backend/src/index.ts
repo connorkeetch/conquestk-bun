@@ -9,9 +9,8 @@ import dotenv from 'dotenv'
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
   const result = dotenv.config()
   if (result.error) {
-  } else {
+    throw result.error
   }
-} else {
 }
 
 import { validateEnvironmentVariables } from './config/validateEnv'
@@ -84,16 +83,8 @@ try {
   skillsRoutes = require('./routes/skills').default
   userRoutes = require('./routes/users').default
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
-  try {
-    ensureTablesExist = require('./utils/initTables').ensureTablesExist
-  } catch (e) {
-    throw e
-  }
-  try {
-    logger = require('./utils/logger').logger
-  } catch (e) {
-    throw e
-  }
+  ensureTablesExist = require('./utils/initTables').ensureTablesExist
+  logger = require('./utils/logger').logger
 
   // Now that logger is available, use it for all subsequent logging
   try {
@@ -106,7 +97,10 @@ try {
   logger.info('✅ Utils loaded')
 } catch (error) {
   const normalized = toKnownError(error)
+  const message = normalized.message || 'Unknown startup error'
+  process.stderr.write(`❌ Failed to initialize server: ${message}\n`)
   if (normalized.stack) {
+    process.stderr.write(`${normalized.stack}\n`)
   }
   process.exit(1)
 }
@@ -505,7 +499,7 @@ if (isProductionLike) {
   })
 
   // Handle all other routes for React Router
-  app.use((req: Request, res: Response, next: Function) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     // Don't interfere with API routes or static assets
     if (
       req.path.startsWith('/api') ||
@@ -534,7 +528,7 @@ if (isProductionLike) {
 Sentry.setupExpressErrorHandler(app)
 
 // Custom error handler (comes after Sentry)
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const normalizedError = toKnownError(err)
   const sentryResponse = res as Response & { sentry?: string }
   const sentryId = sentryResponse.sentry

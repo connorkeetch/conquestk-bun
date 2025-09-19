@@ -8,6 +8,7 @@
 import * as path from 'node:path'
 import * as dotenv from 'dotenv'
 import { getPool } from '../config/database'
+import { logger } from '../utils/logger'
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') })
@@ -31,6 +32,7 @@ async function makeOwnerAdmin() {
     )
 
     if (userResult.rows.length === 0) {
+      logger.error('❌ Owner account not found; cannot assign admin privileges')
       process.exit(1)
     }
 
@@ -62,6 +64,7 @@ async function makeOwnerAdmin() {
         [user.id, roleId],
       )
     } else {
+      logger.warn('⚠️ super_admin role not found; only legacy admin flag updated')
     }
 
     // Log the action
@@ -84,7 +87,10 @@ async function makeOwnerAdmin() {
     )
 
     process.exit(0)
-  } catch (_error) {
+    logger.info('✅ Owner admin setup completed', { userId: user.id, email: user.email })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error('❌ Failed to assign owner admin privileges', { message })
     process.exit(1)
   }
 }

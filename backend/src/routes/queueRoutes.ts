@@ -1,6 +1,6 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth'
-import { queueService } from '../services/queueService'
+import { type QueueStats, queueService } from '../services/queueService'
 import { getWorkerManagerInstance } from '../workers/workerManager'
 
 const router = express.Router()
@@ -68,27 +68,16 @@ router.get('/dashboard', authenticateToken, async (_req, res) => {
     const stats = await queueService.getQueueStats()
     const health = await workerManager.healthCheck()
 
+    const queueList: QueueStats[] = Object.values(stats)
     const dashboard = {
       timestamp: new Date().toISOString(),
       status: health.status,
       queues: stats,
       summary: {
-        totalWaiting: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.waiting,
-          0,
-        ),
-        totalActive: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.active,
-          0,
-        ),
-        totalCompleted: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.completed,
-          0,
-        ),
-        totalFailed: Object.values(stats).reduce(
-          (sum: number, queue: any) => sum + queue.failed,
-          0,
-        ),
+        totalWaiting: queueList.reduce((sum, queue) => sum + queue.waiting, 0),
+        totalActive: queueList.reduce((sum, queue) => sum + queue.active, 0),
+        totalCompleted: queueList.reduce((sum, queue) => sum + queue.completed, 0),
+        totalFailed: queueList.reduce((sum, queue) => sum + queue.failed, 0),
       },
     }
 

@@ -45,7 +45,7 @@ export interface AdminActivityLog {
   id: string
   adminUserId: string
   actionType: string
-  actionDetails: any
+  actionDetails: Record<string, unknown>
   targetType?: string
   targetId?: string
   ipAddress?: string
@@ -58,10 +58,72 @@ export interface FeatureFlag {
   flagName: string
   description?: string
   isEnabled: boolean
-  config: any
+  config: Record<string, unknown>
   createdBy: string
   createdAt: Date
   updatedAt: Date
+}
+
+export interface AdminUserSummary {
+  id: string
+  username: string | null
+  email: string | null
+  status: string | null
+  statusReason: string | null
+  adminRoles: string[]
+  createdAt: Date | string | null
+  lastLogin: Date | string | null
+  isAdmin: boolean
+  isVip: boolean
+  vipReason?: string | null
+  vipGrantedAt?: Date | string | null
+  premiumTier: string
+  premiumExpiresAt?: Date | string | null
+  gamesPlayed: number
+  elo: number
+}
+
+export interface ContentApprovalQueueItem {
+  id: string
+  contentType: string
+  contentId: string
+  contentName: string | null
+  submitterId: string
+  submitterUsername: string
+  status: string
+  submittedAt: Date
+}
+
+type QueryParam = string | number | boolean | null | Date
+
+type AdminUserQueryRow = {
+  id: string
+  username: string | null
+  email: string | null
+  status: string | null
+  status_reason: string | null
+  admin_roles: string | null
+  createdAt: Date | string | null
+  lastLogin: Date | string | null
+  isAdmin: boolean | null
+  isVip: boolean | null
+  vipReason: string | null
+  vipGrantedAt: Date | string | null
+  premiumTier: string | null
+  premiumExpiresAt: Date | string | null
+  gamesPlayed: string | number | null
+  elo: string | number | null
+}
+
+type ContentApprovalRow = {
+  id: string
+  content_type: string
+  content_id: string
+  content_name: string | null
+  submitter_id: string
+  submitter_username: string
+  status: string
+  submitted_at: Date | string
 }
 
 export class AdminService {
@@ -180,11 +242,11 @@ export class AdminService {
     offset = 0,
     search?: string,
   ): Promise<{
-    users: any[]
+    users: AdminUserSummary[]
     total: number
   }> {
     let whereClause = ''
-    const params: any[] = []
+    const params: QueryParam[] = []
 
     if (search) {
       whereClause = 'WHERE u.username ILIKE $1 OR u.email ILIKE $2'
@@ -233,7 +295,8 @@ export class AdminService {
       params,
     )
 
-    const users = result.rows.map((row) => ({
+    const rows = result.rows as AdminUserQueryRow[]
+    const users = rows.map((row) => ({
       id: row.id,
       username: row.username,
       email: row.email,
@@ -248,8 +311,8 @@ export class AdminService {
       vipGrantedAt: row.vipGrantedAt,
       premiumTier: row.premiumTier || 'free',
       premiumExpiresAt: row.premiumExpiresAt,
-      gamesPlayed: parseInt(row.gamesPlayed || '0', 10),
-      elo: parseInt(row.elo || '1000', 10),
+      gamesPlayed: Number.parseInt(String(row.gamesPlayed ?? '0'), 10),
+      elo: Number.parseInt(String(row.elo ?? '1000'), 10),
     }))
 
     return { users, total }
@@ -458,7 +521,7 @@ export class AdminService {
     limit = 50,
     offset = 0,
   ): Promise<{
-    items: any[]
+    items: ContentApprovalQueueItem[]
     total: number
   }> {
     const countResult = await query(`
@@ -487,7 +550,7 @@ export class AdminService {
     )
 
     return {
-      items: result.rows.map((row) => ({
+      items: (result.rows as ContentApprovalRow[]).map((row) => ({
         id: row.id,
         contentType: row.content_type,
         contentId: row.content_id,
@@ -679,7 +742,7 @@ export class AdminService {
   async logAdminAction(
     adminUserId: string,
     actionType: string,
-    actionDetails: any,
+    actionDetails: Record<string, unknown>,
     targetType?: string,
     targetId?: string,
     ipAddress?: string,
@@ -706,7 +769,7 @@ export class AdminService {
   async logUserActivity(
     userId: string,
     actionType: string,
-    actionDetails?: any,
+    actionDetails?: Record<string, unknown>,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {

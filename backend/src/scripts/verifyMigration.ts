@@ -8,7 +8,7 @@ async function verifyMigration() {
   // Use command line argument or environment variable
   const databaseUrl = process.argv[2] || process.env.DATABASE_URL
 
-  if (!databaseUrl || databaseUrl === '${DATABASE_URL}') {
+  if (!databaseUrl || databaseUrl.startsWith('${')) {
     process.exit(1)
   }
 
@@ -40,9 +40,9 @@ async function verifyMigration() {
       'map_usage_stats',
     ]
 
-    expectedTables.forEach((table) => {
-      const _found = tableResult.rows.some((row) => row.table_name === table)
-    })
+    const missingTables = expectedTables.filter(
+      (table) => !tableResult.rows.some((row) => row.table_name === table),
+    )
     const userColumnQuery = `
       SELECT column_name 
       FROM information_schema.columns 
@@ -75,9 +75,9 @@ async function verifyMigration() {
       'deletion_reason',
     ]
 
-    expectedUserColumns.forEach((column) => {
-      const _found = userColumnResult.rows.some((row) => row.column_name === column)
-    })
+    const missingUserColumns = expectedUserColumns.filter(
+      (column) => !userColumnResult.rows.some((row) => row.column_name === column),
+    )
     const mapColumnQuery = `
       SELECT column_name 
       FROM information_schema.columns 
@@ -99,18 +99,15 @@ async function verifyMigration() {
       'featured_at',
     ]
 
-    expectedMapColumns.forEach((column) => {
-      const _found = mapColumnResult.rows.some((row) => row.column_name === column)
-    })
+    const missingMapColumns = expectedMapColumns.filter(
+      (column) => !mapColumnResult.rows.some((row) => row.column_name === column),
+    )
     const tagQuery = `
       SELECT name FROM map_tags ORDER BY name;
     `
 
     const tagResult = await pool.query(tagQuery)
-    if (tagResult.rows.length > 0) {
-      tagResult.rows.forEach((_row) => {})
-    } else {
-    }
+    const tagNames = tagResult.rows.map((row) => row.name)
 
     // Summary
     const allTablesExist = expectedTables.every((table) =>
@@ -123,9 +120,26 @@ async function verifyMigration() {
       mapColumnResult.rows.some((row) => row.column_name === column),
     )
     if (allTablesExist && allUserColumnsExist && allMapColumnsExist) {
+      process.stdout.write('✅ Schema checks passed\n')
     } else {
+      process.stdout.write('⚠️  Schema inconsistencies detected\n')
+      if (!allTablesExist) {
+        process.stdout.write(`Missing tables: ${missingTables.join(', ')}\n`)
+      }
+      if (!allUserColumnsExist) {
+        process.stdout.write(`Missing user columns: ${missingUserColumns.join(', ')}\n`)
+      }
+      if (!allMapColumnsExist) {
+        process.stdout.write(`Missing map columns: ${missingMapColumns.join(', ')}\n`)
+      }
     }
-  } catch (_error) {
+
+    if (tagNames.length > 0) {
+      process.stdout.write(`Existing map tags: ${tagNames.join(', ')}\n`)
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    process.stderr.write(`❌ Migration verification failed: ${message}\n`)
     process.exit(1)
   } finally {
     await pool.end()
@@ -133,4 +147,8 @@ async function verifyMigration() {
 }
 
 // Run verification
-verifyMigration().catch(console.error)
+verifyMigration().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error)
+  process.stderr.write(`❌ Unexpected error: ${message}\n`)
+  process.exit(1)
+})

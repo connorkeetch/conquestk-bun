@@ -1,4 +1,5 @@
 import { initDatabase, query } from '../config/database'
+import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 async function setupProductionAdmin(email: string) {
@@ -107,8 +108,8 @@ async function setupProductionAdmin(email: string) {
       } else {
         logger.info('ℹ️  user_account_status table not found, skipping status setup')
       }
-    } catch (error: any) {
-      logger.warn('⚠️  Could not setup account status:', error.message)
+    } catch (error) {
+      logger.warn('⚠️  Could not setup account status:', getErrorMessage(error))
     }
 
     // 5. Ensure is_admin flag in users table is also true (keep both systems consistent)
@@ -161,8 +162,8 @@ Next steps:
     }
 
     process.exit(0)
-  } catch (error: any) {
-    logger.error('❌ Failed to setup production admin:', error)
+  } catch (error) {
+    logger.error('❌ Failed to setup production admin:', getErrorMessage(error))
     process.exit(1)
   }
 }

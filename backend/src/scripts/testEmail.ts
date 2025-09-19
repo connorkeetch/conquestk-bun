@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import emailService from '../services/emailService'
+import { logger } from '../utils/logger'
 
 async function testEmail() {
   const testEmail = 'connorkeetch@gmail.com' // Your email for testing
@@ -19,7 +20,9 @@ async function testEmail() {
     })
 
     if (verificationResult) {
+      logger.info('✅ Verification email sent successfully', { testEmail })
     } else {
+      logger.warn('⚠️ Verification email service returned falsy result', { testEmail })
     }
 
     // Wait a bit before sending the next email
@@ -34,9 +37,13 @@ async function testEmail() {
     })
 
     if (resetResult) {
+      logger.info('✅ Password reset email sent successfully', { testEmail })
     } else {
+      logger.warn('⚠️ Password reset email service returned falsy result', { testEmail })
     }
-  } catch (_error) {}
+  } catch (error) {
+    logger.error('❌ Test email script encountered an error', { error })
+  }
 
   process.exit(0)
 }
