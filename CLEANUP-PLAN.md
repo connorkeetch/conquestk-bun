@@ -93,9 +93,10 @@ Found multiple versions of the same sounds in Audio Files/:
 
 ## Storage Savings Summary
 
-- **Immediate savings**: ~160MB (Screenshot + WAV files)
-- **After audio cleanup**: ~200MB total
-- **File count reduction**: ~30 files
+- **Immediate savings**: ~4MB (Screenshot + mhtml + test files)
+- **Audio reorganization**: Moved 150MB+ to proper location, kept all WAV versions
+- **File count reduction**: ~25 duplicate MP3 files removed
+- **Final audio size**: 153MB (4MB MP3s + 149MB WAVs - all 3 versions kept)
 
 ## Recommended Execution Order
 
