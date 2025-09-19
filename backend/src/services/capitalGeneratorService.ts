@@ -1,4 +1,5 @@
 import type { Pool } from 'pg'
+import { logger } from '../utils/logger'
 
 interface Territory {
   id: string
@@ -44,9 +45,10 @@ export class CapitalGeneratorService {
       // Check if graph is connected
       const connectedComponents = this.findConnectedComponents(territories, graph)
       if (connectedComponents.length > 1) {
-        console.warn(
-          `Map has ${connectedComponents.length} disconnected components. Using largest component.`,
-        )
+        logger.warn('Map has disconnected components; using largest component', {
+          mapId,
+          componentCount: connectedComponents.length,
+        })
         // Use only the largest connected component
         const largestComponent = connectedComponents.reduce((a, b) => (a.length > b.length ? a : b))
         territories.length = 0
@@ -59,13 +61,18 @@ export class CapitalGeneratorService {
       for (let playerCount = 2; playerCount <= 12; playerCount++) {
         // Skip if not enough territories for this player count
         if (territories.length < playerCount) {
-          console.log(
-            `Skipping ${playerCount} players - only ${territories.length} territories available`,
-          )
+          logger.info('Skipping capital generation due to insufficient territories', {
+            mapId,
+            playerCount,
+            territoryCount: territories.length,
+          })
           continue
         }
 
-        console.log(`Generating capitals for ${playerCount} players...`)
+        logger.info('Generating capitals for player count', {
+          mapId,
+          playerCount,
+        })
         capitalAssignments[playerCount] = this.selectOptimalCapitals(
           territories,
           graph,
@@ -75,7 +82,7 @@ export class CapitalGeneratorService {
 
       return capitalAssignments
     } catch (error) {
-      console.error('Error generating capitals:', error)
+      logger.error('❌ Error generating capitals for map', { mapId, error })
       throw error
     }
   }
@@ -96,7 +103,10 @@ export class CapitalGeneratorService {
     // This provides a good starting point for distribution
     const centerTerr = this.findMostCentralTerritory(territories, graph)
     capitals.push(centerTerr)
-    console.log(`  Capital 1: ${territories.find((t) => t.id === centerTerr)?.name}`)
+    logger.debug('Selected first capital (most central territory)', {
+      centerTerritoryId: centerTerr,
+      centerTerritoryName: territories.find((t) => t.id === centerTerr)?.name,
+    })
 
     // Step 2: Iteratively add capitals maximizing minimum distance to existing capitals
     while (capitals.length < count) {
@@ -120,11 +130,16 @@ export class CapitalGeneratorService {
       if (bestCandidate) {
         capitals.push(bestCandidate)
         const territory = territories.find((t) => t.id === bestCandidate)
-        console.log(
-          `  Capital ${capitals.length}: ${territory?.name} (min distance: ${bestMinDistance})`,
-        )
+        logger.debug('Selected additional capital candidate', {
+          position: capitals.length,
+          territoryId: territory?.id,
+          territoryName: territory?.name,
+          minDistance: bestMinDistance,
+        })
       } else {
-        console.warn(`Could not find ${count}th capital - using random selection`)
+        logger.warn('Could not find additional capital; using fallback selection', {
+          desiredCount: count,
+        })
         // Fallback: select random territory if algorithm fails
         const remaining = territoryIds.filter((id) => !capitals.includes(id))
         if (remaining.length > 0) {
@@ -168,9 +183,10 @@ export class CapitalGeneratorService {
       }
     }
 
-    console.log(
-      `  Most central territory: ${territories.find((t) => t.id === bestTerritory)?.name}`,
-    )
+    logger.debug('Identified most central territory', {
+      territoryId: bestTerritory,
+      territoryName: territories.find((t) => t.id === bestTerritory)?.name,
+    })
     return bestTerritory
   }
 

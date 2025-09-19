@@ -62,18 +62,18 @@ SELECT
     u.created_at,
     u.last_login,
     u.email_verified,
-    COALESCE(uas.status, 'active') as status,
-    COALESCE(ps.games_played, 0) as games_played,
-    COALESCE(ps.games_won, 0) as games_won,
-    COALESCE(u.skill_rating, 1000) as elo_rating,
-    COUNT(DISTINCT m.id) as maps_created,
-    COUNT(DISTINCT g.id) as active_games
+    COALESCE(uas.status, 'active') AS status,
+    COALESCE(ps.games_played, 0) AS games_played,
+    COALESCE(ps.games_won, 0) AS games_won,
+    COALESCE(u.skill_rating, 1000) AS elo_rating,
+    COUNT(DISTINCT m.id) AS maps_created,
+    COUNT(DISTINCT gr.id) FILTER (WHERE gr.status IN ('waiting', 'in_progress')) AS active_games
 FROM users u
 LEFT JOIN user_account_status uas ON u.id = uas.user_id
 LEFT JOIN player_stats ps ON u.id = ps.user_id
 LEFT JOIN maps m ON u.id = m.creator_id
-LEFT JOIN game_players gp ON u.id = gp.user_id
-LEFT JOIN games g ON gp.game_id = g.id AND g.status IN ('waiting', 'in_progress')
+LEFT JOIN room_players rp ON u.id = rp.user_id
+LEFT JOIN game_rooms gr ON rp.room_id = gr.id
 GROUP BY u.id, u.username, u.email, u.is_vip, u.is_admin, u.premium_tier, 
          u.vip_reason, u.created_at, u.last_login, u.email_verified, u.skill_rating, uas.status,
          ps.games_played, ps.games_won;

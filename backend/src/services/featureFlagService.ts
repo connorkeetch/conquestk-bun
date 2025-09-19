@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { query } from '../config/database'
+import { logger } from '../utils/logger'
 
 export type AccessLevel = 'disabled' | 'internal' | 'beta' | 'public'
 export type FeatureCategory = 'gameplay' | 'ui' | 'experimental' | 'premium' | 'vip'
@@ -215,7 +216,11 @@ export class FeatureFlagService {
         return result.rows[0].is_enabled
       }
     } catch (error) {
-      console.error('Error fetching user override:', error)
+      logger.error('❌ Error fetching user override', {
+        userId,
+        flagName,
+        error,
+      })
     }
 
     return null
@@ -241,7 +246,7 @@ export class FeatureFlagService {
 
       return flags
     } catch (error) {
-      console.error('Error fetching feature flags:', error)
+      logger.error('❌ Error fetching feature flags', { error })
       return []
     }
   }
@@ -313,7 +318,12 @@ export class FeatureFlagService {
         return result.rows[0]
       }
     } catch (error) {
-      console.error('Error updating feature flag:', error)
+      logger.error('❌ Error updating feature flag', {
+        flagName,
+        updates,
+        changedBy,
+        error,
+      })
     }
 
     return null
@@ -332,7 +342,12 @@ export class FeatureFlagService {
         [userId, flagName, enabled],
       )
     } catch (error) {
-      console.error('Error setting user override:', error)
+      logger.error('❌ Error setting user override', {
+        userId,
+        flagName,
+        enabled,
+        error,
+      })
     }
   }
 
@@ -359,7 +374,11 @@ export class FeatureFlagService {
       const result = await query(queryStr, values)
       return result.rows
     } catch (error) {
-      console.error('Error fetching audit log:', error)
+      logger.error('❌ Error fetching feature flag audit log', {
+        flagName,
+        limit,
+        error,
+      })
       return []
     }
   }

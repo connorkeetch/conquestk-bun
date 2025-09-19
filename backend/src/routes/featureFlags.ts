@@ -4,6 +4,7 @@ import { query } from '../config/database'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import { featureFlagService } from '../services/featureFlagService'
+import { logger } from '../utils/logger'
 
 const router = Router()
 
@@ -14,7 +15,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const flags = await featureFlagService.evaluateForUser(req.user ? { ...req.user } : undefined)
     res.json({ flags })
   } catch (error) {
-    console.error('Error fetching feature flags:', error)
+    logger.error('Error fetching feature flags:', error)
     res.status(500).json({ error: 'Failed to fetch feature flags' })
   }
 })
@@ -30,7 +31,7 @@ router.get(
 
       res.json({ flags: result.rows })
     } catch (error) {
-      console.error('Error fetching admin feature flags:', error)
+      logger.error('Error fetching admin feature flags:', error)
       res.status(500).json({ error: 'Failed to fetch feature flags' })
     }
   },
@@ -62,7 +63,7 @@ router.put(
 
       res.json({ flag })
     } catch (error) {
-      console.error('Error updating feature flag:', error)
+      logger.error('Error updating feature flag:', error)
       res.status(500).json({ error: 'Failed to update feature flag' })
     }
   },
@@ -80,7 +81,7 @@ router.get(
       const auditLog = await featureFlagService.getAuditLog(flag_name as string, Number(limit))
       res.json({ audit: auditLog })
     } catch (error) {
-      console.error('Error fetching audit log:', error)
+      logger.error('Error fetching audit log:', error)
       res.status(500).json({ error: 'Failed to fetch audit log' })
     }
   },
@@ -98,7 +99,7 @@ router.post(
       await featureFlagService.setUserOverride(user_id, flag_name, enabled)
       res.json({ success: true })
     } catch (error) {
-      console.error('Error setting user override:', error)
+      logger.error('Error setting user override:', error)
       res.status(500).json({ error: 'Failed to set user override' })
     }
   },

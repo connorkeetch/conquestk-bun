@@ -9,6 +9,7 @@
 
 -- Audio preferences (currently missing, causing errors)
 ALTER TABLE user_preferences 
+ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'default',
 ADD COLUMN IF NOT EXISTS sound_enabled BOOLEAN DEFAULT true,
 ADD COLUMN IF NOT EXISTS music_enabled BOOLEAN DEFAULT true,
 ADD COLUMN IF NOT EXISTS master_volume INTEGER DEFAULT 75,

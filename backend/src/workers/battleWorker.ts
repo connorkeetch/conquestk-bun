@@ -4,6 +4,7 @@ import { GameService } from '../services/gameService'
 import { type BattleSimulationJob, queueService } from '../services/queueService'
 import { DeltaBuilder, type GameDelta, type GameEndDelta } from '../types/deltaUpdates'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import { logger } from '../utils/logger'
 
 interface BattleResult {
   attackerLosses: number
@@ -37,18 +38,24 @@ export class BattleWorker {
 
     // Job event handlers
     this.queue.on('completed', (job, result) => {
-      console.log(`⚔️ Battle simulation completed: ${job.id}`)
+      logger.info('⚔️ Battle simulation job completed', {
+        jobId: job.id,
+        result,
+      })
     })
 
     this.queue.on('failed', (job, error) => {
-      console.error(`❌ Battle simulation failed: ${job.id}`, error)
+      logger.error('❌ Battle simulation job failed', {
+        jobId: job.id,
+        error,
+      })
     })
 
     this.queue.on('stalled', (job) => {
-      console.warn(`⚠️ Battle simulation stalled: ${job.id}`)
+      logger.warn('⚠️ Battle simulation job stalled', { jobId: job.id })
     })
 
-    console.log('✅ BattleWorker initialized')
+    logger.info('✅ BattleWorker initialized')
   }
 
   private async simulateBattle(jobData: BattleSimulationJob): Promise<BattleResult> {
@@ -62,7 +69,12 @@ export class BattleWorker {
     } = jobData
 
     try {
-      console.log(`⚔️ Simulating battle: ${attackingTerritory} vs ${defendingTerritory}`)
+      logger.debug('Simulating battle', {
+        gameId,
+        attackingTerritory,
+        defendingTerritory,
+        playerId,
+      })
 
       // Simulate dice roll and battle outcome
       const battleResult = this.calculateBattleResult(attackingArmies, defendingArmies)
@@ -189,7 +201,12 @@ export class BattleWorker {
 
       return battleResult
     } catch (error) {
-      console.error(`❌ Battle simulation failed:`, error)
+      logger.error('❌ Battle simulation failed during processing', {
+        gameId,
+        attackingTerritory,
+        defendingTerritory,
+        error,
+      })
 
       // Emit battle error to game room
       this.io.to(`game:${gameId}`).emit('error', {

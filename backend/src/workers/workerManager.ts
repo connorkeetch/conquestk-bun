@@ -1,6 +1,7 @@
 import type { Server } from 'socket.io'
 import { queueService } from '../services/queueService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import { logger } from '../utils/logger'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
@@ -20,7 +21,7 @@ export class WorkerManager {
     if (this.isInitialized) return
 
     try {
-      console.log('🔄 Initializing WorkerManager...')
+      logger.info('🔄 Initializing WorkerManager...')
 
       // Initialize queue service first
       await queueService.initialize()
@@ -37,20 +38,20 @@ export class WorkerManager {
       ])
 
       this.isInitialized = true
-      console.log('✅ WorkerManager initialized successfully')
+      logger.info('✅ WorkerManager initialized successfully')
 
       // Log initial queue stats without failing initialization if Redis is still warming up
       try {
         const stats = await queueService.getQueueStats()
-        console.log('📊 Initial queue stats:', stats)
+        logger.info('📊 Initial queue stats:', stats)
       } catch (statsError) {
-        console.warn(
+        logger.warn(
           '⚠️ Unable to retrieve initial queue stats:',
           statsError instanceof Error ? statsError.message : statsError,
         )
       }
     } catch (error) {
-      console.error('❌ Failed to initialize WorkerManager:', error)
+      logger.error('❌ Failed to initialize WorkerManager:', error)
       throw error
     }
   }
@@ -87,14 +88,14 @@ export class WorkerManager {
   }
 
   async shutdown(): Promise<void> {
-    console.log('🔄 Shutting down WorkerManager...')
+    logger.info('🔄 Shutting down WorkerManager...')
 
     try {
       await queueService.shutdown()
       this.isInitialized = false
-      console.log('✅ WorkerManager shutdown complete')
+      logger.info('✅ WorkerManager shutdown complete')
     } catch (error) {
-      console.error('❌ Error during WorkerManager shutdown:', error)
+      logger.error('❌ Error during WorkerManager shutdown:', error)
       throw error
     }
   }

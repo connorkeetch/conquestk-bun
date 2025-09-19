@@ -7,80 +7,90 @@ dotenv.config({ path: path.join(__dirname, '../../.env') })
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 
-// Complete list of required tables after migration 003
+// Required tables mirrored from the current production schema snapshot
 const REQUIRED_TABLES = [
-  // Core Game Tables
-  'users',
-  'game_rooms',
-  'room_players',
-  'game_states',
-  'game_moves',
-  'game_history',
-  'player_game_stats',
-  'player_stats',
-
-  // Map System
-  'maps',
-  'map_territories',
-  'territory_adjacencies',
-  'custom_maps',
-  'map_submissions',
-  'map_reviews',
-  'map_test_games',
-  'map_approval_history',
-  'map_featured_history',
-  'map_usage_stats',
-  'map_ratings',
-  'map_comments',
-  'map_downloads',
-  'map_favorites',
-  'map_tags',
-  'map_tag_associations',
-
-  // Social Features
-  'user_profiles',
-  'friendships',
-  'user_blocks',
-  'chat_messages',
-  'private_messages',
-
-  // Achievement System
-  'achievements',
-  'user_achievements',
   'achievement_progress',
-
-  // Tournament System
-  'tournaments',
-  'tournament_participants',
-  'tournament_matches',
-  'ranking_history',
-
-  // Territory Features
-  'territory_modifiers',
-  'territory_events',
-  'active_territory_effects',
-
-  // Admin & Moderation
-  'admin_roles',
-  'user_admin_roles',
+  'achievements',
   'admin_activity_logs',
-  'user_reports',
-  'user_bans',
-  'user_account_status',
-
-  // Support Tables
+  'admin_roles',
+  'capital_eliminations',
+  'chat_messages',
+  'email_verification_logs',
+  'events',
+  'feature_flags',
+  'friendships',
+  'game_moves',
+  'game_rooms',
+  'game_states',
+  'game_territory_modifiers',
+  'game_variants',
+  'map_continents',
+  'map_ratings',
+  'map_submissions',
+  'map_territories',
+  'map_territory_modifiers',
+  'maps',
+  'matchmaking_queue',
+  'message_link_previews',
+  'message_reactions',
   'notifications',
-  'game_analytics',
-  'user_activity',
-  'map_editor_sessions',
+  'password_reset_tokens',
+  'player_stats',
+  'rating_history',
+  'room_players',
   'schema_migrations',
+  'seasons',
+  'skill_leaderboard_cache',
+  'territory_adjacencies',
+  'territory_modifier_templates',
+  'transactions',
+  'unread_message_counts',
+  'user_account_status',
+  'user_achievements',
+  'user_admin_roles',
+  'user_bans',
+  'user_behavior_patterns',
+  'user_feature_flags',
+  'user_inventory',
+  'user_preferences',
+  'user_profiles',
+  'user_reports',
+  'user_seasonal_stats',
+  'user_sessions',
+  'user_settings',
+  'user_terms_acceptance',
+  'users',
 ]
 
-// Tables that are referenced in code but optional
+// Tables that are being tracked for future features but are not present in production
 const OPTIONAL_TABLES = [
-  'sessions', // Express sessions (if using database store)
-  'email_queue', // Email queue (if implementing)
-  'audit_logs', // General audit logs
+  'active_territory_effects',
+  'audit_logs',
+  'custom_maps',
+  'email_queue',
+  'game_analytics',
+  'game_history',
+  'map_approval_history',
+  'map_comments',
+  'map_downloads',
+  'map_editor_sessions',
+  'map_featured_history',
+  'map_reviews',
+  'map_tags',
+  'map_tag_associations',
+  'map_test_games',
+  'map_usage_stats',
+  'player_game_stats',
+  'private_messages',
+  'ranking_history',
+  'sessions',
+  'territory_events',
+  'territory_modifiers',
+  'tournament_matches',
+  'tournament_participants',
+  'tournaments',
+  'user_activity',
+  'user_blocks',
 ]
 
 interface TableCheckResult {

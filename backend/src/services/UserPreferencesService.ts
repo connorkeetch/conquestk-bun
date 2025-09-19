@@ -1,4 +1,5 @@
 import type { Pool } from 'pg'
+import { logger } from '../utils/logger'
 
 export interface UserPreferences {
   userId: number
@@ -94,7 +95,7 @@ export class UserPreferencesService {
 
       return result.rows[0]
     } catch (error) {
-      console.error('Error fetching user preferences:', error)
+      logger.error('❌ Error fetching user preferences', { userId, error })
       return null
     }
   }
@@ -177,7 +178,11 @@ export class UserPreferencesService {
 
       return result.rows[0]
     } catch (error) {
-      console.error('Error updating user preferences:', error)
+      logger.error('❌ Error updating user preferences', {
+        userId,
+        preferences,
+        error,
+      })
       return null
     }
   }
@@ -187,7 +192,11 @@ export class UserPreferencesService {
       const result = await this.updatePreferences(userId, { theme })
       return result !== null
     } catch (error) {
-      console.error('Error updating theme:', error)
+      logger.error('❌ Error updating theme preference', {
+        userId,
+        theme,
+        error,
+      })
       return false
     }
   }
@@ -254,7 +263,11 @@ export class UserPreferencesService {
 
       return result.rows[0]
     } catch (error) {
-      console.error('Error creating default preferences:', error)
+      logger.error('❌ Error creating default preferences', {
+        userId,
+        overrides,
+        error,
+      })
       // Return in-memory defaults as fallback
       return {
         userId,

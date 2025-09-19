@@ -139,15 +139,18 @@ try {
     console.error('  ✗ Failed to load logger:', e)
     throw e
   }
+  
+  // Now that logger is available, use it for all subsequent logging
   try {
     MigrationRunner = require('./utils/migrationRunner').MigrationRunner
-    console.log('  ✓ MigrationRunner loaded')
+    logger.debug('  ✓ MigrationRunner loaded')
   } catch (e) {
-    console.error('  ✗ Failed to load MigrationRunner:', e)
+    logger.error('  ✗ Failed to load MigrationRunner:', e)
     throw e
   }
-  console.log('✅ Utils loaded')
+  logger.info('✅ Utils loaded')
 } catch (error) {
+  // Use console.error here as logger might not be loaded yet
   console.error('❌ FATAL: Failed to load modules:', error)
   const normalized = toKnownError(error)
   console.error('  Error:', normalized.message)
@@ -197,27 +200,27 @@ initializeRedis()
       try {
         const { createAdapter } = require('@socket.io/redis-adapter')
         io.adapter(createAdapter(pubClient, subClient))
-        console.log('✅ Socket.io using Redis adapter for multi-server support')
+        logger.info('✅ Socket.io using Redis adapter for multi-server support')
       } catch (error) {
-        console.log(
+        logger.warn(
           '⚠️ Failed to create Redis adapter, using in-memory adapter:',
           getErrorMessage(error),
         )
       }
     } else {
-      console.log('⚠️ Socket.io using in-memory adapter (single server only)')
+      logger.warn('⚠️ Socket.io using in-memory adapter (single server only)')
     }
 
     // Enable Redis session store only if Redis is available
     if (redisClient) {
       const { enableRedisSessionStore } = require('./middleware/session')
       if (enableRedisSessionStore()) {
-        console.log('✅ Session storage upgraded to Redis')
+        logger.info('✅ Session storage upgraded to Redis')
       } else {
-        console.log('⚠️ Failed to upgrade session storage to Redis')
+        logger.warn('⚠️ Failed to upgrade session storage to Redis')
       }
     } else {
-      console.log('⚠️ Using in-memory session store (Redis not available)')
+      logger.warn('⚠️ Using in-memory session store (Redis not available)')
     }
 
     // Create and initialize WorkerManager AFTER Redis is ready
@@ -225,16 +228,16 @@ initializeRedis()
     setWorkerManagerInstance(workerManager)
     try {
       await workerManager.initialize()
-      console.log('✅ WorkerManager created and initialized after Redis connection')
+      logger.info('✅ WorkerManager created and initialized after Redis connection')
     } catch (error) {
-      console.error(
+      logger.error(
         '❌ Failed to initialize WorkerManager after Redis:',
         getErrorMessage(error),
       )
     }
   })
   .catch((err) => {
-    console.log(
+    logger.warn(
       '⚠️ Redis initialization failed, using in-memory adapters:',
       getErrorMessage(err),
     )
@@ -245,10 +248,10 @@ initializeRedis()
     workerManager
       .initialize()
       .then(() => {
-        console.log('✅ WorkerManager initialized without Redis (degraded mode)')
+        logger.info('✅ WorkerManager initialized without Redis (degraded mode)')
       })
       .catch((error) => {
-        console.error(
+        logger.error(
           '❌ Failed to initialize WorkerManager in degraded mode:',
           getErrorMessage(error),
         )

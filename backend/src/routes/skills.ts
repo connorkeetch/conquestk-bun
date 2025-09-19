@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import { eloService } from '../services/eloService'
+import { logger } from '../utils/logger'
 
 const router = Router()
 
@@ -62,7 +63,7 @@ router.get('/users/:userId/rating', async (req, res) => {
       lastRankedGame: user.last_ranked_game_at,
     })
   } catch (error) {
-    console.error('Error fetching user rating:', error)
+    logger.error('Error fetching user rating:', error)
     return res.status(500).json({ error: 'Failed to fetch user rating' })
   }
 })
@@ -90,7 +91,7 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
       })),
     })
   } catch (error) {
-    console.error('Error fetching rating history:', error)
+    logger.error('Error fetching rating history:', error)
     res.status(500).json({ error: 'Failed to fetch rating history' })
   }
 })
@@ -121,7 +122,7 @@ router.get('/leaderboards/skill', async (req, res) => {
       })),
     })
   } catch (error) {
-    console.error('Error fetching leaderboard:', error)
+    logger.error('Error fetching leaderboard:', error)
     res.status(500).json({ error: 'Failed to fetch leaderboard' })
   }
 })
@@ -161,7 +162,7 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
       percentile: (((total - rank + 1) / total) * 100).toFixed(1),
     })
   } catch (error) {
-    console.error('Error fetching user rank:', error)
+    logger.error('Error fetching user rank:', error)
     res.status(500).json({ error: 'Failed to fetch user rank' })
   }
 })
@@ -182,7 +183,7 @@ router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
     await eloService.updateLeaderboardCache()
     return res.json({ message: 'Leaderboard cache refreshed successfully' })
   } catch (error) {
-    console.error('Error refreshing leaderboard:', error)
+    logger.error('Error refreshing leaderboard:', error)
     return res.status(500).json({ error: 'Failed to refresh leaderboard' })
   }
 })

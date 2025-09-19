@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from '../utils/logger'
 
 interface EmailOptions {
   to: string
@@ -30,12 +31,12 @@ class EmailService {
 
     if (apiKey && this.emailEnabled) {
       this.resend = new Resend(apiKey)
-      console.log('✅ Email service initialized with Resend')
+      logger.info('✅ Email service initialized with Resend')
     } else {
       if (!apiKey) {
-        console.log('⚠️ Email service disabled - RESEND_API_KEY not configured')
+        logger.warn('⚠️ Email service disabled - RESEND_API_KEY not configured')
       } else {
-        console.log('⚠️ Email service disabled - EMAIL_ENABLED is false')
+        logger.warn('⚠️ Email service disabled - EMAIL_ENABLED is false')
       }
       this.emailEnabled = false
     }
@@ -43,7 +44,7 @@ class EmailService {
 
   private async sendEmail(options: EmailOptions): Promise<boolean> {
     if (!this.emailEnabled || !this.resend) {
-      console.log('⚠️ Email not sent - service disabled')
+      logger.debug('⚠️ Email not sent - service disabled')
       return false
     }
 
@@ -61,14 +62,14 @@ class EmailService {
       })
 
       if (error) {
-        console.error('❌ Email send error:', error)
+        logger.error('❌ Email send error:', error)
         return false
       }
 
-      console.log('✅ Email sent successfully:', data?.id)
+      logger.info('✅ Email sent successfully:', data?.id)
       return true
     } catch (error) {
-      console.error('❌ Email service error:', error)
+      logger.error('❌ Email service error:', error)
       return false
     }
   }
