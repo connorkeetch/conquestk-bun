@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { profileService } from '../services/profileService'
-import type { ProfileUpdateRequest } from '../types/profile'
+import type { ProfileResponse, ProfileUpdateRequest } from '../types/profile'
 
 const router = Router()
 
@@ -112,21 +112,24 @@ router.get('/:userId', async (req, res) => {
     const requesterId = req.userId
 
     // Get basic profile info (respecting privacy settings)
-    const profile = await profileService.getUserProfile(userId)
+    const profileResponse: ProfileResponse = await profileService.getUserProfile(userId)
 
     // Filter based on privacy settings
-    if (profile.preferences.privacyLevel === 'private' && userId !== requesterId) {
+    if (profileResponse.preferences.privacyLevel === 'private' && userId !== requesterId) {
       return res.status(403).json({ error: 'Profile is private' })
     }
 
     // Remove sensitive information for other users
     if (userId !== requesterId) {
-      delete (profile as any).preferences
+      const { preferences: _preferences, ...publicProfile } = profileResponse
       // Only show limited data for non-friends
-      profile.recentGames = []
+      return res.json({
+        ...publicProfile,
+        recentGames: [],
+      })
     }
 
-    return res.json(profile)
+    return res.json(profileResponse)
   } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch user profile' })
   }

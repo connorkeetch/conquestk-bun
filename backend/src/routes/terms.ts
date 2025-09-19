@@ -1,15 +1,18 @@
-import type { Request, Response } from 'express'
+import type { Request, RequestHandler, Response } from 'express'
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { termsService } from '../services/termsService'
 import { logger } from '../utils/logger'
 
 const router = Router()
+const authenticateRequest: RequestHandler = (req, res, next) => {
+  authenticateToken(req, res, next).catch(next)
+}
 
 // Check if user has accepted terms for a feature
 router.get(
   '/check/:featureType',
-  authenticateToken as any,
+  authenticateRequest,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { featureType } = req.params
@@ -38,7 +41,7 @@ router.get(
 // Accept terms for a feature
 router.post(
   '/accept/:featureType',
-  authenticateToken as any,
+  authenticateRequest,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { featureType } = req.params
@@ -65,26 +68,22 @@ router.post(
 )
 
 // Get user's terms acceptance history
-router.get(
-  '/history',
-  authenticateToken as any,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.userId || req.user?.id
+router.get('/history', authenticateRequest, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId || req.user?.id
 
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' })
-        return
-      }
-
-      const history = await termsService.getUserTermsHistory(userId)
-      res.json(history)
-    } catch (error) {
-      logger.error('Error fetching terms history:', error)
-      res.status(500).json({ error: 'Failed to fetch terms history' })
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
     }
-  },
-)
+
+    const history = await termsService.getUserTermsHistory(userId)
+    res.json(history)
+  } catch (error) {
+    logger.error('Error fetching terms history:', error)
+    res.status(500).json({ error: 'Failed to fetch terms history' })
+  }
+})
 
 // Get terms content for a feature (public)
 router.get('/content/:featureType', (req: Request, res: Response): void => {

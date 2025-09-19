@@ -1,11 +1,19 @@
 #!/usr/bin/env ts-node
 
+import path from 'node:path'
 import dotenv from 'dotenv'
-import path from 'path'
 import { Pool } from 'pg'
 
 // Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
+
+const writeOut = (message = '') => {
+  process.stdout.write(`${message}\n`)
+}
+
+const writeErr = (message = '') => {
+  process.stderr.write(`${message}\n`)
+}
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
@@ -18,7 +26,7 @@ async function checkMapsTable() {
   })
 
   try {
-    console.log('Connecting to database...')
+    writeOut('Connecting to database...')
 
     // Check what columns exist in maps table
     const columnsQuery = `
@@ -30,12 +38,14 @@ async function checkMapsTable() {
 
     const result = await pool.query(columnsQuery)
 
-    console.log('\n=== MAPS TABLE COLUMNS ===')
-    console.log('Total columns:', result.rows.length)
-    console.log('\nColumns:')
+    writeOut('\n=== MAPS TABLE COLUMNS ===')
+    writeOut(`Total columns: ${result.rows.length}`)
+    writeOut('\nColumns:')
     result.rows.forEach((col) => {
-      console.log(
-        `  - ${col.column_name}: ${col.data_type} ${col.is_nullable === 'NO' ? 'NOT NULL' : 'NULL'} ${col.column_default ? `DEFAULT ${col.column_default}` : ''}`,
+      writeOut(
+        `  - ${col.column_name}: ${col.data_type} ${col.is_nullable === 'NO' ? 'NOT NULL' : 'NULL'} ${
+          col.column_default ? `DEFAULT ${col.column_default}` : ''
+        }`,
       )
     })
 
@@ -51,26 +61,32 @@ async function checkMapsTable() {
     ]
     const existingColumns = result.rows.map((r) => r.column_name)
 
-    console.log('\n=== COLUMN CHECK ===')
+    writeOut('\n=== COLUMN CHECK ===')
     expectedColumns.forEach((col) => {
       const exists = existingColumns.includes(col)
-      console.log(`  ${col}: ${exists ? '✓ EXISTS' : '✗ MISSING'}`)
+      writeOut(`  ${col}: ${exists ? '✓ EXISTS' : '✗ MISSING'}`)
     })
 
     // Check a sample query to see what fails
-    console.log('\n=== TESTING QUERY ===')
+    writeOut('\n=== TESTING QUERY ===')
     try {
       const testQuery = `SELECT id, name, is_featured FROM maps LIMIT 1`
       await pool.query(testQuery)
-      console.log('Query with is_featured: SUCCESS')
-    } catch (err: any) {
-      console.log('Query with is_featured: FAILED -', err.message)
+      writeOut('Query with is_featured: SUCCESS')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      writeErr(`Query with is_featured: FAILED - ${message}`)
     }
   } catch (error) {
-    console.error('Error:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    writeErr(`Error: ${message}`)
   } finally {
     await pool.end()
   }
 }
 
-checkMapsTable().catch(console.error)
+checkMapsTable().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error)
+  writeErr(`Fatal error: ${message}`)
+  process.exit(1)
+})
