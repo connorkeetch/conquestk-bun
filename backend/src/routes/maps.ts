@@ -14,11 +14,12 @@ import { logger } from '../utils/logger'
 import { parseJsonField, parseTags } from '../utils/tagParser'
 import { resolveAssetUrl } from '../utils/url'
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads', 'maps')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-  logger.info('Created uploads directory:', uploadsDir)
+// Ensure uploads directory exists in a location aligned with express.static
+const uploadsRoot = path.join(__dirname, '../uploads')
+const mapUploadsDir = path.join(uploadsRoot, 'maps')
+if (!fs.existsSync(mapUploadsDir)) {
+  fs.mkdirSync(mapUploadsDir, { recursive: true })
+  logger.info('Created uploads directory:', mapUploadsDir)
 }
 
 const router = Router()
@@ -82,7 +83,7 @@ async function readFileWithResourceManagement(filePath: string): Promise<Buffer>
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, 'uploads/maps/')
+    cb(null, mapUploadsDir)
   },
   filename: (_req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
@@ -604,7 +605,7 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
         // Generate unique filename
         const ext = path.extname(filename) || '.png'
         const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-        const filepath = path.join(process.cwd(), 'uploads', 'maps', uniqueFilename)
+        const filepath = path.join(mapUploadsDir, uniqueFilename)
 
         // Ensure directory exists
         const dir = path.dirname(filepath)

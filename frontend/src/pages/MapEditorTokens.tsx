@@ -587,15 +587,9 @@ export default function MapEditorTokens() {
     try {
       // Check if user is logged in
       const token = localStorage.getItem('token')
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
 
       if (!token || token === 'null' || token === 'undefined') {
         alert('Please log in to load your draft maps')
-        return
-      }
-
-      if (!user.id) {
-        alert('User session expired. Please log in again.')
         return
       }
 
@@ -1002,9 +996,8 @@ export default function MapEditorTokens() {
     try {
       // Check authentication first
       const token = localStorage.getItem('token')
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
 
-      if (!token || token === 'null' || token === 'undefined' || !user.id) {
+      if (!token || token === 'null' || token === 'undefined') {
         alert('Please log in to save maps to the server. Your map is auto-saved locally.')
         return
       }
