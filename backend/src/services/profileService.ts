@@ -108,43 +108,41 @@ export class ProfileService {
     const client = await getClient()
 
     try {
-      const updateFields: string[] = []
-      const values: string[] = []
-      let paramCount = 0
+      const updateClauses: string[] = []
+      const values: unknown[] = []
+      let paramIndex = 0
 
       if (updates.avatarUrl !== undefined) {
-        updateFields.push(`avatar_url = $${++paramCount}`)
+        updateClauses.push(`avatar_url = $${++paramIndex}`)
         values.push(updates.avatarUrl)
       }
 
       if (updates.bio !== undefined) {
-        updateFields.push(`bio = $${++paramCount}`)
+        updateClauses.push(`bio = $${++paramIndex}`)
         values.push(updates.bio)
       }
 
-      if (updates.preferences) {
-        updateFields.push(`preferences = $${++paramCount}`)
-        values.push(JSON.stringify(updates.preferences))
+      if (updateClauses.length > 0) {
+        updateClauses.push('updated_at = CURRENT_TIMESTAMP')
+        const queryText = `
+          UPDATE users
+          SET ${updateClauses.join(', ')}
+          WHERE id = $${++paramIndex}
+        `
+
+        values.push(userId)
+        await client.query(queryText, values)
       }
-
-      updateFields.push('last_active = CURRENT_TIMESTAMP')
-      values.push(userId)
-
-      const query = `
-        UPDATE users 
-        SET ${updateFields.join(', ')} 
-        WHERE user_id = $${++paramCount}
-      `
-
-      await client.query(query, values)
-
-      // Return updated profile
-      const result = await client.query('SELECT * FROM users WHERE id = $1', [userId])
-
-      return result.rows[0]
     } finally {
       if (client.release) client.release()
     }
+
+    if (updates.preferences && Object.keys(updates.preferences).length > 0) {
+      await this.updatePreferences(userId, updates.preferences)
+    }
+
+    const updatedProfile = await this.getUserProfile(userId)
+    return updatedProfile.profile
   }
 
   // Get user statistics with breakdowns

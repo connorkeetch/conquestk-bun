@@ -13,6 +13,7 @@ const AdminSettings: React.FC = () => {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([])
   const [loading, setLoading] = useState(true)
   const [cacheClearing, setCacheClearing] = useState(false)
+  const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
 
   useEffect(() => {
     fetchFeatureFlags()
@@ -56,6 +57,19 @@ const AdminSettings: React.FC = () => {
     }
   }
 
+  const handleRefreshLeaderboard = async () => {
+    try {
+      setLeaderboardRefreshing(true)
+      await api.post('/skills/leaderboards/refresh')
+      alert('Leaderboard cache refreshed successfully')
+    } catch (error) {
+      console.error('Failed to refresh leaderboard cache:', error)
+      alert('Failed to refresh leaderboard cache')
+    } finally {
+      setLeaderboardRefreshing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -90,26 +104,31 @@ const AdminSettings: React.FC = () => {
           </button>
 
           <button
-            onClick={() => alert('Database backup functionality coming soon')}
-            className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors text-left"
+            onClick={handleRefreshLeaderboard}
+            disabled={leaderboardRefreshing}
+            className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors text-left disabled:opacity-50"
           >
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">💾</span>
-              <span className="font-medium text-white">Backup Database</span>
+              <span className="text-2xl">🏆</span>
+              <span className="font-medium text-white">Refresh Leaderboard</span>
             </div>
-            <p className="text-sm text-muted">Create a backup of the database</p>
+            <p className="text-sm text-muted">
+              {leaderboardRefreshing
+                ? 'Refreshing leaderboard...'
+                : 'Rebuild cached rankings for the skills leaderboard'}
+            </p>
           </button>
 
-          <button
-            onClick={() => alert('System logs viewer coming soon')}
-            className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors text-left"
-          >
+          <div className="p-4 bg-surface-1 rounded-lg border border-surface-1/40 text-left">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">📋</span>
-              <span className="font-medium text-white">View System Logs</span>
+              <span className="text-2xl">🛠️</span>
+              <span className="font-medium text-white">More Tools Coming Soon</span>
             </div>
-            <p className="text-sm text-muted">View server and application logs</p>
-          </button>
+            <p className="text-sm text-muted">
+              Have an action you perform regularly? Let us know and we can automate it here.
+            </p>
+          </div>
+
         </div>
       </div>
 
@@ -165,42 +184,15 @@ const AdminSettings: React.FC = () => {
       {/* Configuration */}
       <div className="bg-surface-2 rounded-lg p-6">
         <h3 className="text-lg font-bold text-white mb-4">System Configuration</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-medium text-white mb-3">Email Settings</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted">Email Provider:</span>
-                <span className="text-white">Resend</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">From Address:</span>
-                <span className="text-white">noreply@updates.conquestk.com</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Email Verification:</span>
-                <span className="text-green-400">Enabled</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-medium text-white mb-3">Game Settings</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted">Max Players per Game:</span>
-                <span className="text-white">8</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Turn Timer:</span>
-                <span className="text-white">3 minutes</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">ELO Calculations:</span>
-                <span className="text-green-400">Enabled</span>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-3 text-sm text-muted">
+          <p>
+            Operational settings like game defaults and email verification are managed through
+            environment variables and feature flags rather than fixed values.
+          </p>
+          <p>
+            Use the create game flow to set lobby-specific rules. Update environment configs if you
+            need global behaviour changes.
+          </p>
         </div>
       </div>
 
