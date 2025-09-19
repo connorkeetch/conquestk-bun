@@ -11,7 +11,7 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState('')
   const dispatch = useAppDispatch()
   const location = useLocation()
-  const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth)
+  const { isLoading, error, isAuthenticated, user } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
     // Check for success message from verification
@@ -22,8 +22,12 @@ export default function Login() {
     }
   }, [location])
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user?.emailVerified) {
     return <Navigate to="/lobby" replace />
+  }
+
+  if (isAuthenticated && user && !user.emailVerified) {
+    return <Navigate to="/verify-email" replace />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

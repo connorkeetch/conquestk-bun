@@ -145,7 +145,7 @@ function App() {
           <Route
             path="/verify-email"
             element={
-              <AuthGuard requireAuth={true}>
+              <AuthGuard requireAuth={true} allowUnverified={true}>
                 <VerifyEmail />
               </AuthGuard>
             }

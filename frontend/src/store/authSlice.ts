@@ -9,6 +9,7 @@ interface AuthState {
   isLoading: boolean
   error: string | null
   isAuthenticated: boolean
+  requiresEmailVerification: boolean
 }
 
 const getInitialToken = () => {
@@ -24,6 +25,7 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   isAuthenticated: false, // Don't set to true until we verify the token and load user
+  requiresEmailVerification: false,
 }
 
 export const login = createAsyncThunk(
@@ -107,6 +109,7 @@ const authSlice = createSlice({
       state.user = null
       state.token = null
       state.isAuthenticated = false
+      state.requiresEmailVerification = false
       localStorage.removeItem('token')
     },
     clearError: (state) => {
@@ -124,6 +127,7 @@ const authSlice = createSlice({
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        state.requiresEmailVerification = !action.payload.user?.emailVerified
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false
@@ -140,6 +144,7 @@ const authSlice = createSlice({
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        state.requiresEmailVerification = !action.payload.user?.emailVerified
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false
@@ -153,6 +158,7 @@ const authSlice = createSlice({
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
+        state.requiresEmailVerification = !action.payload.user.emailVerified
       })
       .addCase(checkAuth.rejected, (state) => {
         state.isLoading = false
@@ -160,6 +166,7 @@ const authSlice = createSlice({
         state.user = null
         state.token = null
         state.isAuthenticated = false
+        state.requiresEmailVerification = false
         localStorage.removeItem('token')
       })
   },

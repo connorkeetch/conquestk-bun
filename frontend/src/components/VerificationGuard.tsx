@@ -6,10 +6,10 @@ interface VerificationGuardProps {
 }
 
 export default function VerificationGuard({ children }: VerificationGuardProps) {
-  const user = useAppSelector((state) => state.auth.user)
+  const { user, requiresEmailVerification } = useAppSelector((state) => state.auth)
 
   // If user exists but email is not verified, redirect to verification page
-  if (user && !user.emailVerified) {
+  if (requiresEmailVerification && user && !user.emailVerified) {
     return <Navigate to="/verify-email" replace />
   }
 
