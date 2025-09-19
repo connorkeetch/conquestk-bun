@@ -38,15 +38,15 @@ export class AuthController {
       const hashedPassword = await bcrypt.hash(password, 10)
 
       // Only generate verification token if email service is enabled
-      let verificationToken = null
-      let _verificationSentAt = null
+      let verificationToken: string | null = null
+      let _verificationSentAt: Date | null = null
 
       if (emailService.isEnabled()) {
         verificationToken = emailService.generateVerificationToken()
         _verificationSentAt = new Date()
       }
 
-      let user
+      let user: Awaited<ReturnType<UserService['create']>>
       try {
         logger.info('Creating user with data:', {
           username,

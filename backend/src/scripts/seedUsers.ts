@@ -44,9 +44,11 @@ async function seedUsers() {
     await initDatabase()
 
     // Check current users
-    const existingUsers = await query('SELECT username, email FROM users')
-    const existingEmails = new Set(existingUsers.rows.map((u: any) => u.email))
-    const existingUsernames = new Set(existingUsers.rows.map((u: any) => u.username))
+    const existingUsers = await query<{ username: string; email: string }>(
+      'SELECT username, email FROM users',
+    )
+    const existingEmails = new Set(existingUsers.rows.map((user) => user.email))
+    const existingUsernames = new Set(existingUsers.rows.map((user) => user.username))
 
     logger.info(`📊 Found ${existingUsers.rows.length} existing users`)
 

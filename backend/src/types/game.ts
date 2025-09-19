@@ -25,6 +25,7 @@ export interface GameState {
   gameConfig: GameConfiguration
   movementTracking?: Record<string, boolean>
   territoryModifiers?: Map<string, GameTerritoryModifier>
+  capitalAssignments?: Record<string, string>
 }
 
 export interface GamePlayer {
@@ -35,6 +36,7 @@ export interface GamePlayer {
   territories: string[]
   cards: Card[]
   isEliminated: boolean
+  capitalTerritory?: string
 }
 
 export interface Territory {
@@ -44,6 +46,8 @@ export interface Territory {
   ownerId: string | null
   armies: number
   adjacentTerritories: string[]
+  isCapital?: boolean
+  capitalOwnerId?: string | null
 }
 
 export interface Card {

@@ -4,7 +4,7 @@ export interface GameRoom {
   hostId: string
   maxPlayers: number
   isPrivate: boolean
-  status: 'waiting' | 'in_progress' | 'finished' | 'active'
+  status: 'waiting' | 'in_progress' | 'finished' | 'active' | 'paused' | 'abandoned'
   is_ranked?: boolean
   avg_skill_rating?: number
   skill_variance?: number

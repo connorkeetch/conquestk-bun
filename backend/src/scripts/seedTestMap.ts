@@ -4,12 +4,12 @@ import { testWorldMap } from '../data/defaultMaps'
 
 async function seedTestMap() {
   // Check if test map already exists
-  const existingMap = (await query('SELECT id FROM maps WHERE name = $1', [
+  const existingMapResult = await query<{ id: string }>('SELECT id FROM maps WHERE name = $1', [
     testWorldMap.name,
-  ])) as any as any[]
+  ])
 
-  if (existingMap && existingMap.length > 0) {
-    return existingMap[0].id
+  if (existingMapResult.rows.length > 0) {
+    return existingMapResult.rows[0].id
   }
 
   // Create map

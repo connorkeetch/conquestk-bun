@@ -4,7 +4,13 @@ import { cdnService } from '../services/cdnService'
 import { databaseClusterService } from '../services/databaseClusterService'
 import { performanceMonitorService } from '../services/performanceMonitorService'
 import { redisClusterService } from '../services/redisClusterService'
+import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
+
+type ServiceHealthResult = {
+  status: string
+  [key: string]: unknown
+}
 
 const router = express.Router()
 
@@ -112,10 +118,12 @@ router.get('/health/detailed', authenticateToken, async (_req, res) => {
       cdnService.healthCheck(),
     ])
 
-    const extractResult = (result: PromiseSettledResult<any>) =>
+    const extractResult = (
+      result: PromiseSettledResult<ServiceHealthResult>,
+    ): ServiceHealthResult =>
       result.status === 'fulfilled'
         ? result.value
-        : { status: 'error', error: result.reason.message }
+        : { status: 'error', error: getErrorMessage(result.reason) }
 
     const health = {
       performance: extractResult(performanceHealth),

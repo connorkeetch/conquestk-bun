@@ -25,7 +25,7 @@ export interface GameRoom {
   maxPlayers: number
   currentPlayers: number
   isPrivate: boolean
-  status: 'waiting' | 'active' | 'completed'
+  status: 'waiting' | 'active' | 'completed' | 'paused' | 'abandoned'
   mapId?: string
   mapName?: string
   createdAt: string

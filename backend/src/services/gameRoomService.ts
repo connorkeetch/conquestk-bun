@@ -108,7 +108,17 @@ export class GameRoomService {
       return 'in_progress'
     }
 
-    if (status === 'in_progress' || status === 'finished' || status === 'waiting') {
+    if (status === 'starting') {
+      return 'in_progress'
+    }
+
+    if (
+      status === 'in_progress' ||
+      status === 'finished' ||
+      status === 'waiting' ||
+      status === 'paused' ||
+      status === 'abandoned'
+    ) {
       return status
     }
 
@@ -305,7 +315,7 @@ export class GameRoomService {
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON gr.host_id = u.id
       LEFT JOIN maps m ON gr.map_id = m.id
-      WHERE gr.status IN ('waiting', 'active')
+      WHERE gr.status IN ('waiting', 'in_progress', 'starting')
       GROUP BY gr.id, u.username, u.skill_rating, m.name
       ORDER BY gr.created_at DESC
     `
@@ -463,8 +473,10 @@ export class GameRoomService {
       SELECT DISTINCT gr.*, 
         (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
         CASE 
-          WHEN gr.status = 'in_progress' THEN 'active'
+          WHEN gr.status IN ('in_progress', 'starting') THEN 'active'
           WHEN gr.status = 'finished' THEN 'finished'
+          WHEN gr.status = 'paused' THEN 'paused'
+          WHEN gr.status = 'abandoned' THEN 'abandoned'
           ELSE 'waiting'
         END as status
       FROM game_rooms gr

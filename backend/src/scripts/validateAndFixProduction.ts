@@ -1,4 +1,5 @@
 import { initDatabase, query } from '../config/database'
+import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 async function validateAndFixProduction() {
@@ -57,8 +58,8 @@ async function validateAndFixProduction() {
           logger.info('✅ Added preferred_color column')
         }
       }
-    } catch (error: any) {
-      logger.error('Error with user_settings table:', error.message)
+    } catch (error) {
+      logger.error('Error with user_settings table:', getErrorMessage(error))
     }
 
     // 2. Check admin_roles table
@@ -87,8 +88,8 @@ async function validateAndFixProduction() {
       } else {
         logger.info('✅ admin_roles table exists')
       }
-    } catch (error: any) {
-      logger.error('Error with admin_roles table:', error.message)
+    } catch (error) {
+      logger.error('Error with admin_roles table:', getErrorMessage(error))
     }
 
     // 3. Check user_admin_roles table
@@ -120,8 +121,8 @@ async function validateAndFixProduction() {
       } else {
         logger.info('✅ user_admin_roles table exists')
       }
-    } catch (error: any) {
-      logger.error('Error with user_admin_roles table:', error.message)
+    } catch (error) {
+      logger.error('Error with user_admin_roles table:', getErrorMessage(error))
     }
 
     // 4. Create super_admin role if it doesn't exist
@@ -210,8 +211,8 @@ async function validateAndFixProduction() {
         LIMIT 1
       `)
       logger.info('✅ user_settings.preferred_color query works')
-    } catch (error: any) {
-      logger.error('❌ user_settings query still fails:', error.message)
+    } catch (error) {
+      logger.error('❌ user_settings query still fails:', getErrorMessage(error))
     }
 
     // Test admin query
@@ -223,8 +224,8 @@ async function validateAndFixProduction() {
         LIMIT 1
       `)
       logger.info('✅ admin roles query works')
-    } catch (error: any) {
-      logger.error('❌ admin roles query still fails:', error.message)
+    } catch (error) {
+      logger.error('❌ admin roles query still fails:', getErrorMessage(error))
     }
 
     logger.info(`
@@ -245,7 +246,7 @@ Next steps:
 
     process.exit(0)
   } catch (error) {
-    logger.error('❌ Production validation failed:', error)
+    logger.error('❌ Production validation failed:', getErrorMessage(error))
     process.exit(1)
   }
 }

@@ -46,7 +46,7 @@ async function createPostgreSQLTables(): Promise<void> {
         host_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         max_players INTEGER NOT NULL DEFAULT 6,
         is_private BOOLEAN DEFAULT FALSE,
-        status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'in_progress', 'finished')),
+        status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'starting', 'in_progress', 'finished', 'abandoned', 'paused')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -163,9 +163,14 @@ async function createPostgreSQLTables(): Promise<void> {
     try {
       await query(statement)
       logger.debug(`✅ Executed: ${statement.substring(0, 50)}...`)
-    } catch (error: any) {
-      if (error.message.includes('already exists') || error.message.includes('duplicate')) {
-        logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+          logger.debug(`⏭️  Skipped duplicate: ${statement.substring(0, 50)}...`)
+        } else {
+          logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`)
+          throw error
+        }
       } else {
         logger.error(`❌ Failed statement: ${statement.substring(0, 100)}...`)
         throw error

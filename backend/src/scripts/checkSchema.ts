@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv'
 dotenv.config({ path: path.join(__dirname, '../../.env') })
 
 import { query } from '../config/database'
+import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 // Required tables mirrored from the current production schema snapshot
@@ -121,11 +122,11 @@ async function checkTable(tableName: string): Promise<TableCheckResult> {
       table: tableName,
       exists: false,
     }
-  } catch (error: any) {
+  } catch (error) {
     return {
       table: tableName,
       exists: false,
-      error: error.message,
+      error: getErrorMessage(error),
     }
   }
 }
@@ -223,7 +224,9 @@ export async function validateDatabaseSchema(): Promise<boolean> {
 
   if (missingTables.length > 0) {
     logger.error('\n⚠️  Missing tables:')
-    missingTables.forEach((t) => logger.error(`  - ${t.table}`))
+    for (const table of missingTables) {
+      logger.error(`  - ${table.table}`)
+    }
     logger.error('\n💡 Run migrations to create missing tables:')
     logger.error('   cd backend && npm run migrate')
   } else {

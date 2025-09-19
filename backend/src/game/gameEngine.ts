@@ -284,7 +284,7 @@ export class GameEngine {
   }
 
   private async handleAttack(gameState: GameState, action: AttackAction): Promise<BattleResult> {
-    const { fromTerritoryId, toTerritoryId, armies = 1 } = action.payload
+    const { fromTerritoryId, toTerritoryId } = action.payload
 
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
@@ -358,7 +358,7 @@ export class GameEngine {
         id: toTerritory.id,
         name: toTerritory.name,
         armies: toTerritory.armies,
-        ownerId: toTerritory.ownerId!,
+        ownerId: toTerritory.ownerId ?? action.playerId,
       },
     }
 
@@ -384,8 +384,12 @@ export class GameEngine {
       throw new Error('Invalid fortify action')
     }
 
-    const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)!
-    const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)!
+    const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
+    const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
+
+    if (!fromTerritory || !toTerritory) {
+      throw new Error('Fortification territories not found')
+    }
 
     // Perform the fortification
     fromTerritory.armies -= armies
@@ -781,7 +785,10 @@ export class GameEngine {
     const queue = [fromId]
 
     while (queue.length > 0) {
-      const currentId = queue.shift()!
+      const currentId = queue.shift()
+      if (!currentId) {
+        continue
+      }
 
       if (currentId === toId) {
         return true
@@ -863,7 +870,7 @@ export class GameEngine {
     gameState.phase = 'finished'
 
     if (winner) {
-    } else {
+      gameState.currentPlayer = winner.id
     }
   }
 

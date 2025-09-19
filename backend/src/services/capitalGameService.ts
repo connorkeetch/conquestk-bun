@@ -1,21 +1,24 @@
 import { query } from '../config/database'
+import type { SerializedGameState } from '../types/game'
 import { logger } from '../utils/logger'
+import { gameStateCache } from './cacheService'
+import { mapService } from './mapService'
 
 export interface CapitalGameState {
   gameId: string
   capitalsEnabled: boolean
-  capitals: Map<string, number> // playerId -> territoryId
+  capitals: Map<string, string> // playerId -> territoryId
   eliminatedPlayers: Set<string>
 }
 
 export interface CapitalAttackResult {
-  territoryId: number
+  territoryId: string
   attackerId: string
   defenderId: string
   isCapital: boolean
   capitalElimination?: {
     eliminatedPlayer: string
-    territoriesGained: number[]
+    territoriesGained: string[]
     troopsGained: number
   }
 }
@@ -23,97 +26,107 @@ export interface CapitalAttackResult {
 export class CapitalGameService {
   private gameStates: Map<string, CapitalGameState> = new Map()
 
-  async initializeCapitals(gameId: string, playerCount: number, mapId: string): Promise<void> {
-    try {
-      // Get map's capital configuration
-      const mapResult = await query(
-        `
-        SELECT capital_territories 
-        FROM maps 
-        WHERE id = ?
-      `,
-        [mapId],
-      )
+  private normalizeTerritoryId(value: string | number): string {
+    return typeof value === 'number' ? value.toString() : value
+  }
 
-      if (!mapResult.rows[0]?.capital_territories) {
-        logger.warn(`Map ${mapId} has no capital configuration`)
-        return
-      }
-
-      const capitalConfig = JSON.parse(mapResult.rows[0].capital_territories)
-      const capitals = capitalConfig[playerCount.toString()]
-
-      if (!capitals || capitals.length !== playerCount) {
-        logger.warn(`Invalid capital configuration for ${playerCount} players`)
-        return
-      }
-
-      // Get players in the game
-      const playersResult = await query(
-        `
-        SELECT id, player_position 
-        FROM game_players 
-        WHERE game_id = ? 
-        ORDER BY player_position
-      `,
-        [gameId],
-      )
-
-      const players = playersResult.rows
-
-      // Assign capitals to players based on position
-      for (let i = 0; i < players.length && i < capitals.length; i++) {
-        const player = players[i]
-        const capitalTerritoryId = capitals[i]
-
-        // Update player's capital
-        await query(
-          `
-          UPDATE game_players 
-          SET capital_territory_id = ?
-          WHERE id = ?
-        `,
-          [capitalTerritoryId, player.id],
-        )
-
-        // Mark territory as capital
-        await query(
-          `
-          UPDATE game_territories 
-          SET is_capital = true, 
-              capital_owner_id = ?,
-              troop_count = 15
-          WHERE game_id = ? AND territory_id = ?
-        `,
-          [player.id, gameId, capitalTerritoryId],
-        )
-
-        logger.info(`Assigned capital ${capitalTerritoryId} to player ${player.id}`)
-      }
-
-      // Initialize game state
-      const gameState: CapitalGameState = {
+  private getOrCreateState(
+    gameId: string,
+    cachedState?: SerializedGameState | null,
+  ): CapitalGameState {
+    let state = this.gameStates.get(gameId)
+    if (!state) {
+      state = {
         gameId,
-        capitalsEnabled: true,
+        capitalsEnabled: false,
         capitals: new Map(),
         eliminatedPlayers: new Set(),
       }
+      this.gameStates.set(gameId, state)
+    }
 
-      players.forEach((player, i) => {
-        if (i < capitals.length) {
-          gameState.capitals.set(player.id, capitals[i])
+    if (cachedState?.capitalAssignments) {
+      state.capitals.clear()
+      for (const [playerId, capitalId] of Object.entries(cachedState.capitalAssignments)) {
+        state.capitals.set(playerId, capitalId)
+      }
+      state.capitalsEnabled = state.capitals.size > 0
+    } else if (state.capitals.size === 0) {
+      state.capitalsEnabled = false
+    }
+
+    return state
+  }
+
+  private async getCachedGameState(gameId: string): Promise<SerializedGameState | null> {
+    try {
+      const state = await gameStateCache.getGameState(gameId)
+      return state as SerializedGameState | null
+    } catch (error) {
+      logger.error('Failed to load game state from cache for capitals', { gameId, error })
+      return null
+    }
+  }
+
+  private persistCapitalState(
+    gameId: string,
+    cachedState: SerializedGameState,
+    state: CapitalGameState,
+  ): void {
+    cachedState.capitalAssignments = Object.fromEntries(state.capitals.entries())
+    gameStateCache.setGameState(gameId, cachedState).catch((error) => {
+      logger.error('Failed to persist capital assignments to cache', { gameId, error })
+    })
+  }
+
+  async initializeCapitals(gameId: string, playerCount: number, mapId: string): Promise<void> {
+    try {
+      const map = await mapService.getMap(mapId)
+      const capitalAssignments = map?.capitalTerritories?.[playerCount.toString()]
+
+      if (!capitalAssignments || capitalAssignments.length !== playerCount) {
+        logger.warn('Capital configuration missing or invalid for map', {
+          mapId,
+          playerCount,
+        })
+        return
+      }
+
+      const cachedState = await this.getCachedGameState(gameId)
+      if (!cachedState) {
+        logger.warn('Cannot initialize capitals without an active game state', { gameId })
+        return
+      }
+
+      const state = this.getOrCreateState(gameId, cachedState)
+      const players = Array.isArray(cachedState.players) ? cachedState.players : []
+      const board = Array.isArray(cachedState.board) ? cachedState.board : []
+
+      state.capitals.clear()
+      state.capitalsEnabled = true
+
+      players.forEach((player, index) => {
+        const capitalId = capitalAssignments[index]
+        if (!capitalId) return
+
+        const normalizedCapitalId = this.normalizeTerritoryId(capitalId)
+        state.capitals.set(player.id, normalizedCapitalId)
+        player.capitalTerritory = normalizedCapitalId
+
+        const territory = board.find((t) => t.id === normalizedCapitalId)
+        if (territory) {
+          territory.isCapital = true
+          territory.capitalOwnerId = player.id
         }
       })
 
-      this.gameStates.set(gameId, gameState)
+      this.persistCapitalState(gameId, cachedState, state)
 
-      // TODO: Emit capital initialization event from socket service
-      // io.to(gameId).emit('capitalsInitialized', {
-      //   capitals: Array.from(gameState.capitals.entries()).map(([playerId, territoryId]) => ({
-      //     playerId,
-      //     territoryId
-      //   }))
-      // });
+      logger.info('Capitals initialized for game', {
+        gameId,
+        playerCount,
+        mapId,
+      })
     } catch (error) {
       logger.error('Error initializing capitals:', error)
       throw error
@@ -122,78 +135,87 @@ export class CapitalGameService {
 
   async checkCapitalElimination(
     gameId: string,
-    territoryId: number,
+    territoryId: string | number,
     attackerId: string,
     defenderId: string,
   ): Promise<CapitalAttackResult> {
+    const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
     const result: CapitalAttackResult = {
-      territoryId,
+      territoryId: normalizedTerritoryId,
       attackerId,
       defenderId,
       isCapital: false,
     }
 
-    const gameState = this.gameStates.get(gameId)
-    if (!gameState?.capitalsEnabled) {
+    const cachedState = await this.getCachedGameState(gameId)
+    const state = this.getOrCreateState(gameId, cachedState)
+
+    if (!state.capitalsEnabled || !cachedState) {
       return result
     }
 
-    // Check if this territory is a capital
-    const defenderCapital = gameState.capitals.get(defenderId)
-    if (defenderCapital !== territoryId) {
+    const defenderCapital = state.capitals.get(defenderId)
+    if (defenderCapital !== normalizedTerritoryId) {
       return result
     }
 
     result.isCapital = true
 
     try {
-      // Get all territories owned by the eliminated player
-      const territoriesResult = await query(
-        `
-        SELECT territory_id, troop_count 
-        FROM game_territories 
-        WHERE game_id = ? AND owner_player_id = ?
-      `,
-        [gameId, defenderId],
+      const board = Array.isArray(cachedState.board) ? cachedState.board : []
+      const players = Array.isArray(cachedState.players) ? cachedState.players : []
+
+      const defenderTerritories = board.filter((territory) => territory.ownerId === defenderId)
+      const territoryIds = defenderTerritories.map((territory) => territory.id)
+      const totalTroops = defenderTerritories.reduce(
+        (sum, territory) => sum + (territory.armies || 0),
+        0,
       )
 
-      const territories = territoriesResult.rows
-      const territoryIds = territories.map((t) => t.territory_id)
-      const totalTroops = territories.reduce((sum, t) => sum + t.troop_count, 0)
+      // Transfer territory ownership in the cached game state
+      for (const territory of board) {
+        if (territory.ownerId === defenderId) {
+          territory.ownerId = attackerId
+        }
+        if (territory.id === defenderCapital) {
+          territory.isCapital = true
+          territory.capitalOwnerId = attackerId
+        }
+      }
 
-      // Transfer all territories to the attacker
-      await query(
-        `
-        UPDATE game_territories 
-        SET owner_player_id = ? 
-        WHERE game_id = ? AND owner_player_id = ?
-      `,
-        [attackerId, gameId, defenderId],
-      )
+      const defenderPlayer = players.find((player) => player.id === defenderId)
+      if (defenderPlayer) {
+        defenderPlayer.isEliminated = true
+        defenderPlayer.capitalTerritory = undefined
+      }
 
-      // Mark player as eliminated
-      await query(
-        `
-        UPDATE game_players 
-        SET is_eliminated = true,
-            eliminated_at = CURRENT_TIMESTAMP,
-            eliminated_by = ?
-        WHERE game_id = ? AND player_id = ?
-      `,
-        [attackerId, gameId, defenderId],
-      )
+      const attackerPlayer = players.find((player) => player.id === attackerId)
+      if (attackerPlayer) {
+        attackerPlayer.capitalTerritory = defenderCapital
+      }
 
-      // Record elimination event
+      state.capitals.delete(defenderId)
+      state.eliminatedPlayers.add(defenderId)
+
+      if (!state.capitals.has(attackerId)) {
+        state.capitals.set(attackerId, defenderCapital)
+      } else {
+        state.capitals.set(attackerId, defenderCapital)
+      }
+
+      this.persistCapitalState(gameId, cachedState, state)
+
+      // Record elimination for analytics/history purposes
       await query(
         `
         INSERT INTO capital_eliminations 
-        (game_id, eliminated_player_id, conqueror_player_id, capital_territory_id, territories_gained, troops_gained)
-        VALUES (?, ?, ?, ?, ?, ?)
+          (game_id, eliminated_player_id, conqueror_player_id, capital_territory_id, territories_gained, troops_gained)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `,
-        [gameId, defenderId, attackerId, territoryId, territoryIds.length, totalTroops],
-      )
-
-      gameState.eliminatedPlayers.add(defenderId)
+        [gameId, defenderId, attackerId, defenderCapital, territoryIds.length, totalTroops],
+      ).catch((error) => {
+        logger.warn('Failed to insert capital elimination record', { gameId, error })
+      })
 
       result.capitalElimination = {
         eliminatedPlayer: defenderId,
@@ -201,12 +223,14 @@ export class CapitalGameService {
         troopsGained: totalTroops,
       }
 
-      // Emit capital elimination event
       this.emitCapitalElimination(gameId, result)
 
-      logger.info(
-        `Capital elimination: ${attackerId} eliminated ${defenderId} by capturing capital ${territoryId}`,
-      )
+      logger.info('Capital elimination processed', {
+        gameId,
+        attackerId,
+        defenderId,
+        capitalTerritory: defenderCapital,
+      })
     } catch (error) {
       logger.error('Error processing capital elimination:', error)
       throw error
@@ -217,79 +241,58 @@ export class CapitalGameService {
 
   private emitCapitalElimination(_gameId: string, result: CapitalAttackResult): void {
     if (!result.capitalElimination) return
-
-    // TODO: Emit capital elimination event from socket service
-    // io.to(gameId).emit('capitalElimination', {
-    //   eliminatedPlayerId: result.capitalElimination.eliminatedPlayer,
-    //   conquerorPlayerId: result.attackerId,
-    //   capitalTerritoryId: result.territoryId,
-    //   territoriesGained: result.capitalElimination.territoriesGained,
-    //   troopsGained: result.capitalElimination.troopsGained,
-    //   timestamp: new Date()
-    // });
-
-    // TODO: Special notification for eliminated player from socket service
-    // io.to(result.capitalElimination.eliminatedPlayer).emit('youWereEliminated', {
-    //   conquerorId: result.attackerId,
-    //   capitalLost: result.territoryId
-    // });
+    // Placeholder for socket emission once real-time events are wired in
   }
 
-  emitCapitalUnderAttack(gameId: string, defenderId: string, territoryId: number): void {
-    const gameState = this.gameStates.get(gameId)
-    if (!gameState?.capitalsEnabled) return
+  emitCapitalUnderAttack(gameId: string, defenderId: string, territoryId: string | number): void {
+    const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
+    const state = this.gameStates.get(gameId)
+    if (!state?.capitalsEnabled) return
 
-    const defenderCapital = gameState.capitals.get(defenderId)
-    if (defenderCapital === territoryId) {
-      // TODO: Emit capital under attack warning from socket service
-      // io.to(defenderId).emit('capitalUnderAttack', {
-      //   territoryId,
-      //   warning: '⚠️ YOUR CAPITAL IS UNDER ATTACK!'
-      // });
-      // TODO: Emit capital battle event from socket service
-      // io.to(gameId).emit('capitalBattle', {
-      //   territoryId,
-      //   defenderId
-      // });
+    const defenderCapital = state.capitals.get(defenderId)
+    if (defenderCapital === normalizedTerritoryId) {
+      // Placeholder for socket emission once real-time events are wired in
+      logger.debug('Capital under attack', {
+        gameId,
+        defenderId,
+        territoryId: normalizedTerritoryId,
+      })
     }
   }
 
-  getCapitalDefenseBonus(gameId: string, territoryId: number, defenderId: string): number {
-    const gameState = this.gameStates.get(gameId)
-    if (!gameState?.capitalsEnabled) return 0
+  getCapitalDefenseBonus(gameId: string, territoryId: string | number, defenderId: string): number {
+    const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
+    const state = this.gameStates.get(gameId)
+    if (!state?.capitalsEnabled) return 0
 
-    const defenderCapital = gameState.capitals.get(defenderId)
-    if (defenderCapital === territoryId) {
-      return 2 // +2 defense bonus for capitals
-    }
-
-    return 0
+    return state.capitals.get(defenderId) === normalizedTerritoryId ? 2 : 0
   }
 
   canMoveFromCapital(
     gameId: string,
     playerId: string,
-    territoryId: number,
+    territoryId: string | number,
     troopsToMove: number,
   ): boolean {
-    const gameState = this.gameStates.get(gameId)
-    if (!gameState?.capitalsEnabled) return true
+    const normalizedTerritoryId = this.normalizeTerritoryId(territoryId)
+    const state = this.gameStates.get(gameId)
+    if (!state?.capitalsEnabled) return true
 
-    const playerCapital = gameState.capitals.get(playerId)
-    if (playerCapital !== territoryId) return true
+    const playerCapital = state.capitals.get(playerId)
+    if (playerCapital !== normalizedTerritoryId) return true
 
-    // Must leave at least 1 troop in capital
-    return troopsToMove < 1 // This ensures at least 1 troop remains
+    // Must leave at least one troop in the capital territory
+    return troopsToMove < 1
   }
 
-  getGameCapitals(gameId: string): Map<string, number> | null {
-    const gameState = this.gameStates.get(gameId)
-    return gameState?.capitals || null
+  getGameCapitals(gameId: string): Map<string, string> | null {
+    const state = this.gameStates.get(gameId)
+    return state?.capitals ?? null
   }
 
   isPlayerEliminated(gameId: string, playerId: string): boolean {
-    const gameState = this.gameStates.get(gameId)
-    return gameState?.eliminatedPlayers.has(playerId) || false
+    const state = this.gameStates.get(gameId)
+    return state?.eliminatedPlayers.has(playerId) ?? false
   }
 
   cleanupGameState(gameId: string): void {
