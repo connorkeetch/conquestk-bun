@@ -18,7 +18,7 @@ interface Game {
   status: 'waiting' | 'active' | 'paused' | 'completed' | 'abandoned'
   currentTurn?: string
   currentTurnUsername?: string
-  phase: 'reinforcement' | 'attack' | 'fortification'
+  phase: 'reinforcement' | 'attack' | 'fortify'
   turnCount: number
   createdAt: string
   updatedAt: string

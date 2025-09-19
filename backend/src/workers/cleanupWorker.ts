@@ -211,10 +211,8 @@ export class CleanupWorker {
         (territory) => this.getTerritoryOwnerId(territory) === player.id,
       )
       const totalArmies = territories.reduce((sum, territory) => sum + territory.armies, 0)
-      const turnsPlayed =
-        typeof (player as { turnsPlayed?: unknown }).turnsPlayed === 'number'
-          ? (player as { turnsPlayed?: number }).turnsPlayed
-          : 0
+      const turnsPlayedRaw = (player as { turnsPlayed?: unknown }).turnsPlayed
+      const turnsPlayed = typeof turnsPlayedRaw === 'number' ? turnsPlayedRaw : 0
 
       stats[player.id] = {
         territoriesControlled: territories.length,

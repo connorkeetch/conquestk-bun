@@ -134,10 +134,17 @@ export interface UserRanking {
   level: number
 }
 
+export interface AggregatedStatsSummary {
+  gamesPlayed: number
+  gamesWon: number
+  averageGameLength?: number
+  bestTerritories?: number
+}
+
 export interface StatsBreakdown {
   overall: UserStatistics
-  byMap: Record<string, Partial<UserStatistics>>
-  byGameMode: Record<string, Partial<UserStatistics>>
+  byMap: Record<string, AggregatedStatsSummary>
+  byGameMode: Record<string, AggregatedStatsSummary>
   timeline: {
     date: string
     gamesPlayed: number

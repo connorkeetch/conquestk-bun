@@ -42,7 +42,7 @@ export interface AdminRole {
 // Game Types
 // ============================================
 
-export type GamePhase = 'setup' | 'deployment' | 'attack' | 'fortification' | 'ended'
+export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
 export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned' | 'paused'
 export type PlayerColor =
   | 'red'
