@@ -99,13 +99,10 @@ const GameListPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-border">
+      <div className="tabs mb-8">
         <button
-          className={`px-6 py-3 font-medium transition-colors relative ${
-            activeTab === 'active'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'active' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('active')}
         >
           ⚡ Active Games
@@ -116,21 +113,15 @@ const GameListPage: React.FC = () => {
           )}
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'completed'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'completed' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('completed')}
         >
           ✅ Completed
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'spectate'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'spectate' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('spectate')}
         >
           👁️ Spectate

@@ -15,43 +15,31 @@ const LearnPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-8 border-b border-border">
+      <div className="tabs mb-8">
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'tutorial'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'tutorial' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('tutorial')}
         >
           🎯 Tutorial
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'rules'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'rules' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('rules')}
         >
           📜 Rules
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'strategies'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'strategies' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('strategies')}
         >
           🧠 Strategies
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'videos'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'videos' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('videos')}
         >
           📹 Videos

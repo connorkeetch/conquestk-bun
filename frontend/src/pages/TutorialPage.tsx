@@ -18,69 +18,51 @@ const TutorialPage: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
+      <div className="tabs mb-8">
         <button
+          type="button"
           onClick={() => setActiveTab('basics')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'basics'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'basics' ? 'tab-active' : ''}`}
         >
           <BookOpen className="w-4 h-4" />
           Basics
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('gametypes')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'gametypes'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'gametypes' ? 'tab-active' : ''}`}
         >
           <Gamepad2 className="w-4 h-4" />
           Game Types
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('strategy')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'strategy'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'strategy' ? 'tab-active' : ''}`}
         >
           <Shield className="w-4 h-4" />
           Strategy
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('rankings')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'rankings'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'rankings' ? 'tab-active' : ''}`}
         >
           <Trophy className="w-4 h-4" />
           Rankings & ELO
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('editor')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'editor'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'editor' ? 'tab-active' : ''}`}
         >
           <Map className="w-4 h-4" />
           Map Editor
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('options')}
-          className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'options'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          className={`tab ${activeTab === 'options' ? 'tab-active' : ''}`}
         >
           <Settings className="w-4 h-4" />
           Game Options
