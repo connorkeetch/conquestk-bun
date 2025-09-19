@@ -45,9 +45,8 @@ function getConquestRank(skillRating: number) {
 
 // Get user profile by username (public route)
 router.get('/:username/profile', async (req: Request, res: Response) => {
+  const { username } = req.params
   try {
-    const { username } = req.params
-
     await ensureUserBioColumn()
 
     const result = await query(
