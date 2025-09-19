@@ -5,4 +5,4 @@ cmd = "cd backend && npm ci && npm run build"
 cmd = "cd backend && node dist/index.js"
 
 [variables]
-NODE_VERSION = "22"
+NODE_VERSION = "22.12.0"
