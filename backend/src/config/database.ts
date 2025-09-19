@@ -1,11 +1,13 @@
-import { QueryResult as PgQueryResult, Pool, type PoolClient, QueryResultRow } from 'pg'
+import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { logger } from '../utils/logger'
 
 // Normalized query result interface
-export interface QueryResult<T = any> {
+export interface DatabaseQueryResult<T extends QueryResultRow = QueryResultRow> {
   rows: T[]
   rowCount: number | null
 }
+
+type QueryValues = ReadonlyArray<unknown>
 
 let pgPool: Pool | null = null
 
@@ -54,7 +56,7 @@ try {
   )
 
   // Enhanced connection monitoring
-  pgPool.on('connect', (client) => {
+  pgPool.on('connect', (_client) => {
     if (pgPool) {
       logger.debug(
         `🔌 New client connected. Pool: ${pgPool.totalCount} total, ${pgPool.idleCount} idle, ${pgPool.waitingCount} waiting`,
@@ -62,7 +64,7 @@ try {
     }
   })
 
-  pgPool.on('error', (err, client) => {
+  pgPool.on('error', (err, _client) => {
     logger.error('❌ Unexpected error on idle client:', err)
   })
 
@@ -86,15 +88,18 @@ try {
 }
 
 // Generic query function
-export async function query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: QueryValues,
+): Promise<DatabaseQueryResult<T>> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
 
   try {
-    const result = await pgPool.query(text, params)
+    const result = await pgPool.query<T>(text, params ? [...params] : undefined)
     return {
-      rows: result.rows as T[],
+      rows: result.rows,
       rowCount: result.rowCount,
     }
   } catch (error) {
@@ -159,12 +164,12 @@ export async function closeDatabase(): Promise<void> {
 // Helper function for parameterized queries
 export function buildUpdateQuery(
   table: string,
-  updates: Record<string, any>,
-  conditions: Record<string, any>,
-): { text: string; values: any[] } {
+  updates: Record<string, unknown>,
+  conditions: Record<string, unknown>,
+): { text: string; values: unknown[] } {
   const updateParts: string[] = []
   const conditionParts: string[] = []
-  const values: any[] = []
+  const values: unknown[] = []
   let paramCounter = 1
 
   // Build SET clause
@@ -193,12 +198,12 @@ export function buildUpdateQuery(
 // Helper for INSERT queries with RETURNING
 export function buildInsertQuery(
   table: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   returning = '*',
-): { text: string; values: any[] } {
+): { text: string; values: unknown[] } {
   const columns: string[] = []
   const placeholders: string[] = []
-  const values: any[] = []
+  const values: unknown[] = []
   let paramCounter = 1
 
   for (const [key, value] of Object.entries(data)) {
@@ -218,7 +223,7 @@ export function buildInsertQuery(
 }
 
 // Export getClient function for transaction support
-export async function getClient() {
+export async function getClient(): Promise<PoolClient> {
   if (!pgPool) {
     throw new Error('Database connection not available')
   }
@@ -234,7 +239,20 @@ export function getPool(): Pool {
 }
 
 // Get detailed pool metrics for monitoring
-export function getPoolMetrics() {
+interface PoolMetrics {
+  totalCount: number
+  idleCount: number
+  waitingCount: number
+  config: {
+    max: number
+    min: number
+    idleTimeoutMillis: number | undefined
+    connectionTimeoutMillis: number | undefined
+  }
+  utilization: string
+}
+
+export function getPoolMetrics(): PoolMetrics | { error: string } {
   if (!pgPool) {
     return { error: 'Pool not initialized' }
   }
@@ -251,7 +269,7 @@ export function getPoolMetrics() {
     },
     utilization:
       pgPool.totalCount > 0
-        ? (((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount) * 100).toFixed(1) + '%'
+        ? `${(((pgPool.totalCount - pgPool.idleCount) / pgPool.totalCount) * 100).toFixed(1)}%`
         : '0%',
   }
 }

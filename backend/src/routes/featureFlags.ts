@@ -3,7 +3,7 @@ import { Router } from 'express'
 import { query } from '../config/database'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
-import { featureFlagService } from '../services/featureFlagService'
+import { type AccessLevel, featureFlagService } from '../services/featureFlagService'
 import { logger } from '../utils/logger'
 
 const router = Router()
@@ -44,11 +44,28 @@ router.put(
   requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     const { flagName } = req.params
-    const { enabled, access_level, rollout_percentage, target_criteria, reason } = req.body
+    const {
+      enabled,
+      access_level,
+      rollout_percentage,
+      target_criteria,
+      reason,
+    }: {
+      enabled?: boolean
+      access_level?: AccessLevel
+      rollout_percentage?: number
+      target_criteria?: Record<string, unknown>
+      reason?: string
+    } = req.body
     const userId = req.user?.id || 'system'
 
     try {
-      const updates: any = {}
+      const updates: Partial<{
+        is_enabled: boolean
+        access_level: AccessLevel
+        rollout_percentage: number
+        target_criteria: Record<string, unknown>
+      }> = {}
       if (enabled !== undefined) updates.is_enabled = enabled
       if (access_level !== undefined) updates.access_level = access_level
       if (rollout_percentage !== undefined) updates.rollout_percentage = rollout_percentage
