@@ -8,11 +8,13 @@ const mapWorkflowController = new MapWorkflowController()
 
 // All routes require authentication
 router.use(authenticateToken)
-router.use(standardLimiter as any)
+router.use(standardLimiter)
 
 // Draft management
 router.post('/drafts', mapWorkflowController.saveDraft)
 router.get('/drafts', mapWorkflowController.getUserDrafts)
+router.get('/drafts/:draftId', mapWorkflowController.getDraft)
+router.post('/drafts/:draftId/publish', mapWorkflowController.publishDraft)
 
 // Map submission
 router.post('/maps/:mapId/submit', mapWorkflowController.submitForReview)

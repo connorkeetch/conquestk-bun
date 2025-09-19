@@ -1,9 +1,8 @@
-import type { Request, Response } from 'express'
 import mapWorkflowService from '../services/mapWorkflowService'
 import { UserService } from '../services/userService'
-import { logger } from '../utils/logger'
-import type { MapStatus } from '../types/maps'
 import type { AuthenticatedRequest } from '../types/express'
+import type { MapStatus } from '../types/maps'
+import { logger } from '../utils/logger'
 
 const userService = new UserService()
 
@@ -25,7 +24,7 @@ export class MapWorkflowController {
         success: true,
         draft,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error saving draft:', error)
       return res.status(500).json({
         error: 'Failed to save draft',
@@ -50,11 +49,55 @@ export class MapWorkflowController {
         success: true,
         drafts,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching drafts:', error)
       return res.status(500).json({
         error: 'Failed to fetch drafts',
         message: 'An error occurred while fetching your drafts',
+      })
+    }
+  }
+
+  async getDraft(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+
+      const { draftId } = req.params
+      const draft = await mapWorkflowService.getDraftById(draftId, userId)
+
+      if (!draft) {
+        return res.status(404).json({ error: 'Draft not found' })
+      }
+
+      return res.json({ success: true, draft })
+    } catch (error: unknown) {
+      logger.error('Error fetching draft:', error)
+      return res.status(500).json({
+        error: 'Failed to fetch draft',
+        message: 'An error occurred while loading the draft',
+      })
+    }
+  }
+
+  async publishDraft(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
+
+      const { draftId } = req.params
+      const map = await mapWorkflowService.publishDraft(draftId, userId)
+
+      return res.json({ success: true, map })
+    } catch (error: unknown) {
+      logger.error('Error publishing draft:', error)
+      return res.status(500).json({
+        error: 'Failed to publish draft',
+        message: 'An error occurred while publishing your map',
       })
     }
   }
@@ -76,7 +119,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map submitted for review successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error submitting map for review:', error)
       return res.status(500).json({
         error: 'Failed to submit map',
@@ -110,7 +153,7 @@ export class MapWorkflowController {
         success: true,
         reviews,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching pending reviews:', error)
       return res.status(500).json({
         error: 'Failed to fetch reviews',
@@ -146,7 +189,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map approved successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error approving map:', error)
       return res.status(500).json({
         error: 'Failed to approve map',
@@ -189,7 +232,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map rejected',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error rejecting map:', error)
       return res.status(500).json({
         error: 'Failed to reject map',
@@ -227,7 +270,7 @@ export class MapWorkflowController {
         success: true,
         notifications,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching notifications:', error)
       return res.status(500).json({
         error: 'Failed to fetch notifications',
@@ -262,7 +305,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Notification marked as read',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error marking notification as read:', error)
       return res.status(500).json({
         error: 'Failed to update notification',
@@ -297,7 +340,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map archived successfully',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error archiving map:', error)
       return res.status(500).json({
         error: 'Failed to archive map',
@@ -332,7 +375,7 @@ export class MapWorkflowController {
         success: true,
         message: 'Map featured status updated',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error toggling featured status:', error)
       return res.status(500).json({
         error: 'Failed to update map',
@@ -375,7 +418,7 @@ export class MapWorkflowController {
         success: true,
         maps,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching maps by status:', error)
       return res.status(500).json({
         error: 'Failed to fetch maps',
@@ -408,7 +451,7 @@ export class MapWorkflowController {
         success: true,
         history,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error fetching map history:', error)
       return res.status(500).json({
         error: 'Failed to fetch history',

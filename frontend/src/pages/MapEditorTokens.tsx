@@ -8,6 +8,11 @@ import ImageProcessor from '../components/ImageProcessor'
 import TerritoryToken from '../components/TerritoryToken'
 import { PLAYER_COLORS } from '../constants/colors'
 import api from '../services/api'
+import mapWorkflowApi, {
+  type DraftImagePayload,
+  type MapDraftPayload,
+  type MapDraftResponse,
+} from '../services/mapWorkflowService'
 
 interface Territory {
   id: string
@@ -69,31 +74,6 @@ interface CapitalMetadata {
   manuallyAdjusted?: {
     [playerCount: string]: boolean
   }
-}
-
-interface DraftMapSummary {
-  id: string
-  name: string
-  description?: string | null
-  status: string
-  created_at: string
-}
-
-interface MapMetadata {
-  territories?: Territory[]
-  continents?: Continent[]
-  width?: number
-  height?: number
-}
-
-interface DraftMapResponse {
-  id: string
-  name: string
-  description?: string | null
-  min_players?: number
-  max_players?: number
-  image_url?: string
-  metadata?: MapMetadata
 }
 
 interface ApiErrorResponse {
@@ -224,9 +204,11 @@ export default function MapEditorTokens() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [searchParams] = useSearchParams()
-  const [editingMapId, setEditingMapId] = useState<string | null>(null)
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
   const [showDraftsList, setShowDraftsList] = useState(false)
-  const [availableDrafts, setAvailableDrafts] = useState<DraftMapSummary[]>([])
+  const [availableDrafts, setAvailableDrafts] = useState<MapDraftResponse[]>([])
+  const [draftStatus, setDraftStatus] = useState<string>('editing')
 
   // Generate unique map name with timestamp
   const generateMapName = () => {
@@ -417,6 +399,8 @@ export default function MapEditorTokens() {
   const [tokenSize, setTokenSize] = useState<number>(20)
   const [showGrid, setShowGrid] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [uploadInfo, setUploadInfo] = useState<string | null>(null)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showLoadDraftDialog, setShowLoadDraftDialog] = useState(false)
@@ -479,13 +463,13 @@ export default function MapEditorTokens() {
         // Fallback to regular maps endpoint
         response = await api.get(`/maps/${mapId}`)
       }
-      
+
       const map = response.data
 
       // Handle territories from different sources
       let territories: Territory[] = []
       let continents: Continent[] = []
-      
+
       if (map.territories && Array.isArray(map.territories)) {
         // From admin endpoint - raw territories from database
         territories = map.territories.map((t: any) => ({
@@ -501,7 +485,7 @@ export default function MapEditorTokens() {
         // From regular endpoint - metadata format
         territories = map.metadata.territories
       }
-      
+
       if (map.metadata?.continents) {
         continents = map.metadata.continents
       }
@@ -520,10 +504,10 @@ export default function MapEditorTokens() {
           connectionsMap.get(adj.territory_from)?.add(adj.territory_to)
           connectionsMap.get(adj.territory_to)?.add(adj.territory_from)
         })
-        
-        territories = territories.map(t => ({
+
+        territories = territories.map((t) => ({
           ...t,
-          connections: Array.from(connectionsMap.get(t.name) || [])
+          connections: Array.from(connectionsMap.get(t.name) || []),
         }))
       }
 
@@ -553,9 +537,108 @@ export default function MapEditorTokens() {
         }
         img.src = map.image_url
       }
+
+      setDraftId(null)
+      setPublishedMapId(mapId)
+      setDraftStatus('editing')
     } catch (error: unknown) {
       reportError('Failed to load map for editing:', error)
       alert('Failed to load map. Starting with a new map instead.')
+    }
+  }, [])
+
+  const loadDraftForEditing = useCallback(async (draftIdToLoad: string) => {
+    try {
+      const response = await mapWorkflowApi.getDraft(draftIdToLoad)
+      const draft = response.draft
+
+      if (!draft) {
+        alert('Draft not found or access denied.')
+        return
+      }
+
+      const draftData = (draft.data ?? {}) as Record<string, any>
+      let territories: Territory[] = Array.isArray(draft.territories)
+        ? (draft.territories as Territory[])
+        : Array.isArray(draftData.territories)
+          ? (draftData.territories as Territory[])
+          : []
+
+      if (Array.isArray(draft.adjacencies) && draft.adjacencies.length > 0) {
+        const adjacencyMap = new Map<string, Set<string>>()
+        draft.adjacencies.forEach((adj: any) => {
+          const from = adj.from || adj.fromTerritoryId || adj.territory_from
+          const to = adj.to || adj.toTerritoryId || adj.territory_to
+          if (!from || !to) return
+          if (!adjacencyMap.has(from)) adjacencyMap.set(from, new Set())
+          adjacencyMap.get(from)?.add(to)
+        })
+
+        territories = territories.map((territory) => {
+          const connections =
+            Array.from(
+              adjacencyMap.get(territory.id) ||
+                adjacencyMap.get(territory.name) ||
+                new Set<string>(),
+            ) || []
+          return {
+            ...territory,
+            connections,
+          }
+        })
+      }
+
+      const continents: Continent[] = Array.isArray(draft.continents)
+        ? (draft.continents as Continent[])
+        : Array.isArray(draftData.continents)
+          ? (draftData.continents as Continent[])
+          : []
+
+      const imagePayload = (draftData.image ?? {}) as DraftImagePayload | undefined
+
+      let imageUrl = draft.imageUrl
+      if (!imageUrl && imagePayload?.data) {
+        imageUrl = `data:${imagePayload.mimeType || 'image/png'};base64,${imagePayload.data}`
+      }
+
+      setState((prev) => ({
+        ...prev,
+        name: draft.name || prev.name,
+        description: draft.description || '',
+        minPlayers:
+          typeof draftData.minPlayers === 'number' ? draftData.minPlayers : prev.minPlayers,
+        maxPlayers:
+          typeof draftData.maxPlayers === 'number' ? draftData.maxPlayers : prev.maxPlayers,
+        mapWidth:
+          typeof draftData.width === 'number' ? draftData.width : draft.imageWidth || prev.mapWidth,
+        mapHeight:
+          typeof draftData.height === 'number'
+            ? draftData.height
+            : draft.imageHeight || prev.mapHeight,
+        imageWidth: draft.imageWidth || prev.imageWidth,
+        imageHeight: draft.imageHeight || prev.imageHeight,
+        imageUrl: imageUrl || prev.imageUrl,
+        territories,
+        continents,
+      }))
+
+      setCapitalAssignments(draft.capitalAssignments || {})
+      setDraftId(draft.id)
+      setDraftStatus(draft.draftStatus || 'editing')
+      setPublishedMapId(draft.parentMapId || draftData.parentMapId || null)
+      setLastSaved(draft.updatedAt ? new Date(draft.updatedAt) : new Date())
+      setShowDraftsList(false)
+    } catch (error: unknown) {
+      reportError('Failed to load draft:', error)
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data as ApiErrorResponse | undefined
+        const message = responseData?.error || responseData?.message || error.message
+        alert(`Failed to load draft: ${message}`)
+      } else if (error instanceof Error) {
+        alert(`Failed to load draft: ${error.message}`)
+      } else {
+        alert('Failed to load draft due to an unexpected error.')
+      }
     }
   }, [])
 
@@ -564,7 +647,8 @@ export default function MapEditorTokens() {
   useEffect(() => {
     const mapId = searchParams.get('edit')
     if (mapId) {
-      setEditingMapId(mapId)
+      setDraftId(null)
+      setPublishedMapId(mapId)
       loadMapForEditing(mapId)
     } else {
       // Check for local auto-saved draft if not editing
@@ -593,11 +677,8 @@ export default function MapEditorTokens() {
         return
       }
 
-      // Get user's maps including drafts
-      const response = await api.get<DraftMapSummary[]>('/maps/my-maps')
-
-      // Filter for draft maps only
-      const drafts = response.data.filter((map) => map.status === 'draft')
+      const response = await mapWorkflowApi.listDrafts()
+      const drafts = response.drafts
 
       if (drafts.length === 0) {
         alert('No draft maps found. Create and save a map first.')
@@ -619,9 +700,6 @@ export default function MapEditorTokens() {
         } else if (status === 401) {
           alert('Session expired. Please log in again.')
           localStorage.removeItem('token')
-          localStorage.removeItem('user')
-        } else if (status === 404) {
-          alert('Maps endpoint not found. This might be a server issue.')
         } else {
           alert(`Failed to load draft maps: ${fallbackMessage || 'Unknown error'}`)
         }
@@ -949,7 +1027,7 @@ export default function MapEditorTokens() {
   // Submit map for approval
   const handleSubmitForApproval = async () => {
     try {
-      if (!editingMapId) {
+      if (!draftId) {
         alert('Please save your map as a draft first')
         return
       }
@@ -967,15 +1045,16 @@ export default function MapEditorTokens() {
 
       if (!confirmed) return
 
-      // Update map status to pending_review
-      await api.patch(`/maps/${editingMapId}`, {
-        status: 'pending_review',
-      })
+      const response = await mapWorkflowApi.publishDraft(draftId)
+      const publishedMap = response?.map
 
+      if (publishedMap?.id) {
+        setPublishedMapId(publishedMap.id)
+      }
+
+      setDraftStatus('submitted')
       alert('Map submitted for approval! You will be notified when it is reviewed.')
 
-      // Clear editing state and redirect
-      setEditingMapId(null)
       window.location.href = '/maps'
     } catch (error: unknown) {
       reportError('Failed to submit map:', error)
@@ -994,7 +1073,6 @@ export default function MapEditorTokens() {
   // Save map as draft to database
   const handleSaveMap = async () => {
     try {
-      // Check authentication first
       const token = localStorage.getItem('token')
 
       if (!token || token === 'null' || token === 'undefined') {
@@ -1006,26 +1084,22 @@ export default function MapEditorTokens() {
         alert('Please add at least 2 territories before saving')
         return
       }
-      // Continents are optional - removed requirement
 
-      // Prepare map data as JSON with base64 image
+      setSaveStatus('saving')
+      setSaveError(null)
+
       let imageBase64: string | null = null
       let imageMimeType: string | null = null
 
-      // Convert image to base64 if present
       if (state.imageUrl) {
         try {
           if (state.imageUrl.startsWith('data:')) {
-            // Already a data URL, just extract the parts
             const parts = state.imageUrl.split(',')
             imageBase64 = parts[1]
             imageMimeType = parts[0].match(/data:([^;]+)/)?.[1] || 'image/png'
-          } else {
-            // For regular URLs, fetch and convert to base64
+          } else if (!state.imageUrl.startsWith('/uploads/')) {
             const response = await fetch(state.imageUrl)
             const blob = await response.blob()
-
-            // Convert blob to base64
             const reader = new FileReader()
             const base64Promise = new Promise<string>((resolve, reject) => {
               reader.onloadend = () => {
@@ -1045,108 +1119,69 @@ export default function MapEditorTokens() {
         }
       }
 
-      // Create JSON payload
-      const mapData = {
+      const adjacencyList = state.territories.flatMap((territory) =>
+        (territory.connections || []).map((targetId) => ({
+          from: territory.id,
+          to: targetId,
+        })),
+      )
+
+      const draftPayload: MapDraftPayload = {
+        id: draftId ?? undefined,
         name: state.name,
-        description:
-          state.description ||
-          `Map with ${state.territories.length} territories and ${state.continents.length} continents`,
-        isPublic: false, // Drafts are private by default
-        status: 'draft', // Always save as draft
-        tags: ['custom', 'user-created'],
-        minPlayers: state.minPlayers,
-        maxPlayers: state.maxPlayers,
-        metadata: {
-          territories: state.territories,
-          continents: state.continents,
+        description: state.description,
+        data: {
+          name: state.name,
+          description: state.description,
+          minPlayers: state.minPlayers,
+          maxPlayers: state.maxPlayers,
           width: state.mapWidth,
           height: state.mapHeight,
+          image: imageBase64
+            ? {
+                data: imageBase64,
+                mimeType: imageMimeType || 'image/png',
+                filename: 'map-background.png',
+              }
+            : undefined,
+          capitalAssignments,
         },
-        image: imageBase64
-          ? {
-              data: imageBase64,
-              mimeType: imageMimeType,
-              filename: 'map-background.png',
-            }
-          : null,
+        territories: state.territories,
+        continents: state.continents,
+        adjacencies: adjacencyList,
+        capitalAssignments,
+        imageUrl: imageBase64 ? undefined : state.imageUrl,
+        imageWidth: state.imageWidth,
+        imageHeight: state.imageHeight,
+        tags: ['custom', 'user-created'],
+        isPublic: false,
+        parentMapId: publishedMapId ?? undefined,
       }
 
-      // Save to backend
-      reportInfo('Uploading map with data:', {
-        name: state.name,
-        territoriesCount: state.territories.length,
-        continentsCount: state.continents.length,
-        hasImage: !!state.imageUrl,
-      })
+      const response = await mapWorkflowApi.saveDraft(draftPayload)
+      setDraftId(response.draft.id)
+      setDraftStatus(response.draft.draftStatus || 'editing')
+      setLastSaved(new Date())
+      setSaveStatus('saved')
+      reportInfo('Draft saved successfully', response.draft)
 
-      // Use correct backend URL for API calls - use JSON endpoint
-      const apiUrl =
-        import.meta.env.MODE === 'production'
-          ? '/api/maps/json'
-          : 'http://localhost:5001/api/maps/json'
-
-      if (editingMapId) {
-        // Update existing map
-        const response = await axios.patch<DraftMapResponse>(
-          `${apiUrl.replace('/json', '')}/${editingMapId}/json`,
-          mapData,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          },
-        )
-        reportInfo('Map updated successfully:', response.data)
-        alert('Draft map updated successfully!')
-      } else {
-        // Create new map
-        const response = await axios.post<DraftMapResponse>(apiUrl, mapData, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-        reportInfo('Map created successfully:', response.data)
-        setEditingMapId(response.data.id) // Now editing this map
-        alert('Map saved as draft! You can continue editing or submit for approval.')
-      }
+      setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (error: unknown) {
       reportError('Map upload failed:', error)
-
-      let errorMessage = 'Failed to save map.'
+      setSaveStatus('error')
 
       if (axios.isAxiosError(error)) {
         const responseData = error.response?.data as ApiErrorResponse | undefined
-        if (responseData) {
-          reportError('Server error response:', responseData)
-          errorMessage += `\n\nServer error: ${
-            responseData.error || responseData.message || 'Unknown server error'
-          }`
-        }
-
-        if (error.response?.status) {
-          errorMessage += `\nStatus: ${error.response.status}`
-        }
-
-        if (responseData?.errors && responseData.errors.length > 0) {
-          errorMessage += '\n\nValidation errors:'
-          responseData.errors.forEach((err) => {
-            errorMessage += `\n- ${err.msg || err.message || 'Unknown issue'}`
-          })
-        }
-
-        if (!error.response && error.request) {
-          reportError('No response from server:', error.request)
-          errorMessage += '\n\nNo response from server. Check your connection.'
-        }
+        const message = responseData?.error || responseData?.message || error.message
+        setSaveError(message || 'Failed to save map.')
+        alert(`Failed to save map. ${message ? `\n\n${message}` : ''}`)
       } else if (error instanceof Error) {
-        errorMessage += `\n\nError: ${error.message}`
+        setSaveError(error.message)
+        alert(`Failed to save map.\n\nError: ${error.message}`)
       } else {
-        errorMessage += '\n\nAn unexpected error occurred.'
+        setSaveError('An unexpected error occurred.')
+        alert('Failed to save map due to an unexpected error.')
       }
-
-      alert(errorMessage)
     }
   }
 
@@ -2022,9 +2057,7 @@ export default function MapEditorTokens() {
                     type="button"
                     className="w-full bg-surface-2 p-4 rounded-lg hover:bg-gray-700 text-left transition"
                     onClick={() => {
-                      setEditingMapId(map.id)
-                      loadMapForEditing(map.id)
-                      setShowDraftsList(false)
+                      loadDraftForEditing(map.id)
                     }}
                   >
                     <div className="flex justify-between items-start">
@@ -2033,8 +2066,11 @@ export default function MapEditorTokens() {
                         <p className="text-sm text-muted mt-1">
                           {map.description || 'No description'}
                         </p>
+                        <p className="text-xs text-muted mt-1 uppercase">
+                          Status: {map.draftStatus || 'editing'}
+                        </p>
                         <p className="text-xs text-muted mt-2">
-                          Created: {new Date(map.created_at).toLocaleDateString()}
+                          Updated: {new Date(map.updatedAt).toLocaleString()}
                         </p>
                       </div>
                       <span className="text-primary hover:text-primary-dark">Load →</span>
@@ -2388,10 +2424,26 @@ export default function MapEditorTokens() {
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
                 title="Save your map as a draft"
               >
-                💾 {editingMapId ? 'Update' : 'Save Draft'}
+                💾 {draftId ? 'Update Draft' : 'Save Draft'}
               </button>
 
-              {editingMapId && (
+              {draftId && (
+                <span className="self-center text-xs text-muted uppercase tracking-wide">
+                  Status: {draftStatus}
+                </span>
+              )}
+
+              {saveStatus === 'saving' && (
+                <span className="self-center text-xs text-muted">Saving…</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="self-center text-xs text-green-400">Draft saved</span>
+              )}
+              {saveStatus === 'error' && saveError && (
+                <span className="self-center text-xs text-red-400">{saveError}</span>
+              )}
+
+              {draftId && draftStatus !== 'submitted' && (
                 <button
                   type="button"
                   onClick={handleSubmitForApproval}
@@ -2433,6 +2485,10 @@ export default function MapEditorTokens() {
                     })
                     setCapitalAssignments({})
                     setCapitalMetadata({})
+                    setDraftId(null)
+                    setDraftStatus('editing')
+                    setPublishedMapId(null)
+                    setLastSaved(null)
                   }
                 }}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"

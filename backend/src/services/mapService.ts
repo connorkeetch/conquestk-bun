@@ -1,4 +1,5 @@
 import { getClient, query } from '../config/database'
+import type { PoolClient } from 'pg'
 import type { ContinentBonus } from '../types/game'
 import type {
   CreateAdjacencyRequest,
@@ -17,12 +18,51 @@ import type {
 } from '../types/maps'
 import { logger } from '../utils/logger'
 
+type MetadataTerritory = {
+  id?: string
+  name?: string
+  boundaryCoords?: Array<{ x: number; y: number }>
+  continentId?: string
+  x?: number
+  y?: number
+  isCapital?: boolean
+  armyPosition?: { x: number; y: number }
+  connections?: string[]
+}
+
+type MetadataContinent = {
+  id?: string
+  name?: string
+  bonus?: number
+  color?: string
+}
+
+type MetadataAdjacency = {
+  from?: string
+  to?: string
+  fromTerritoryId?: string
+  toTerritoryId?: string
+  territory_from?: string
+  territory_to?: string
+  source?: string
+  target?: string
+}
+
+type MapMetadataPayload = {
+  territories?: MetadataTerritory[]
+  continents?: MetadataContinent[]
+  adjacencies?: MetadataAdjacency[]
+  capitalAssignments?: Record<string, string[]>
+  width?: number
+  height?: number
+}
+
 export class MapService {
   // ============= MAP CRUD OPERATIONS =============
 
   async createMap(
     userId: string,
-    mapData: CreateMapRequest & { metadata?: any },
+    mapData: CreateMapRequest & { metadata?: MapMetadataPayload },
   ): Promise<CustomMap> {
     const client = await getClient()
     try {
@@ -76,6 +116,10 @@ export class MapService {
       const mapResult = await client.query(mapQuery, mapValues)
 
       const map = mapResult.rows[0]
+
+      if (mapData.metadata) {
+        await this.synchronizeMapStructure(client, map.id, mapData.metadata)
+      }
       logger.info(`Created new map: ${map.name} (${map.id}) with metadata:`, {
         hasMetadata: !!mapData.metadata,
         territories: mapData.metadata?.territories?.length || 0,
@@ -99,9 +143,9 @@ export class MapService {
       }
 
       return this.formatMapFromDb(map)
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If metadata column doesn't exist, try without it
-      if (error.message && error.message.includes('metadata')) {
+      if (error instanceof Error && error.message.includes('metadata')) {
         logger.warn('Metadata column not found, creating map without metadata')
         const mapResult = await client.query(
           `
@@ -146,6 +190,167 @@ export class MapService {
     } finally {
       if (client.release) client.release()
     }
+  }
+
+  private async synchronizeMapStructure(
+    client: PoolClient,
+    mapId: string,
+    metadata: MapMetadataPayload | undefined,
+  ): Promise<void> {
+    if (!metadata) return
+
+    try {
+      const territories: MetadataTerritory[] = Array.isArray(metadata.territories)
+        ? metadata.territories
+        : []
+      const continents: MetadataContinent[] = Array.isArray(metadata.continents)
+        ? metadata.continents
+        : []
+
+      await client.query('DELETE FROM territory_adjacencies WHERE map_id = $1', [mapId])
+      await client.query('DELETE FROM map_territories WHERE map_id = $1', [mapId])
+      await client.query('DELETE FROM map_continents WHERE map_id = $1', [mapId])
+
+      for (const continent of continents) {
+        await client.query(
+          `
+          INSERT INTO map_continents (map_id, name, bonus_troops, color)
+          VALUES ($1, $2, $3, $4)
+        `,
+          [
+            mapId,
+            continent.name || continent.id || 'Continent',
+            typeof continent.bonus === 'number' ? continent.bonus : 0,
+            continent.color || null,
+          ],
+        )
+      }
+
+      const capitalAssignments = metadata?.capitalAssignments
+
+      for (const territory of territories) {
+        const territoryName = territory.name || territory.id || 'Territory'
+        const storedPolygon =
+          Array.isArray(territory.boundaryCoords) && territory.boundaryCoords.length > 0
+            ? {
+                type: 'polygon',
+                points: territory.boundaryCoords,
+              }
+            : {
+                type: 'token',
+                x: territory.x ?? 0,
+                y: territory.y ?? 0,
+              }
+
+        const assignedPlayers = this.extractCapitalAssignments(
+          territory.id || territoryName,
+          capitalAssignments,
+        )
+
+        await client.query(
+          `
+          INSERT INTO map_territories (
+            map_id, name, polygon_data, continent, is_capital, capital_for_players
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+        `,
+          [
+            mapId,
+            territoryName,
+            JSON.stringify({
+              ...storedPolygon,
+              originalId: territory.id || territoryName,
+              armyPosition: territory.armyPosition || {
+                x: territory.x ?? 0,
+                y: territory.y ?? 0,
+              },
+            }),
+            territory.continentId || null,
+            territory.isCapital === true,
+            JSON.stringify(assignedPlayers),
+          ],
+        )
+      }
+
+      const adjacencyPairs = this.buildAdjacencyPairs(territories, metadata?.adjacencies)
+
+      for (const { from, to } of adjacencyPairs) {
+        await client.query(
+          `
+          INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (map_id, territory_from, territory_to) DO NOTHING
+        `,
+          [mapId, from, to],
+        )
+      }
+    } catch (error) {
+      logger.warn('Failed to synchronize map structure from metadata', {
+        mapId,
+        error,
+      })
+    }
+  }
+
+  private extractCapitalAssignments(
+    territoryId: string,
+    assignments: Record<string, string[]> | undefined,
+  ): number[] {
+    if (!assignments || typeof assignments !== 'object') return []
+
+    const result: number[] = []
+    for (const [playerCount, territoryList] of Object.entries(assignments)) {
+      if (!Array.isArray(territoryList)) continue
+      if (territoryList.includes(territoryId)) {
+        const parsed = Number(playerCount)
+        if (!Number.isNaN(parsed)) {
+          result.push(parsed)
+        }
+      }
+    }
+    return result
+  }
+
+  private buildAdjacencyPairs(
+    territories: MetadataTerritory[],
+    explicitAdjacencies: MetadataAdjacency[] | undefined,
+  ): Array<{ from: string; to: string }> {
+    const pairs: Array<{ from: string; to: string }> = []
+    const seen = new Set<string>()
+
+    const addPair = (from?: string, to?: string) => {
+      if (!from || !to || from === to) return
+      const key = from < to ? `${from}|${to}` : `${to}|${from}`
+      if (seen.has(key)) return
+      seen.add(key)
+      pairs.push({ from, to })
+      pairs.push({ from: to, to: from })
+    }
+
+    if (Array.isArray(explicitAdjacencies) && explicitAdjacencies.length > 0) {
+      for (const adjacency of explicitAdjacencies) {
+        const from =
+          adjacency.from ||
+          adjacency.fromTerritoryId ||
+          adjacency.territory_from ||
+          adjacency.source
+        const to =
+          adjacency.to || adjacency.toTerritoryId || adjacency.territory_to || adjacency.target
+        addPair(from, to)
+      }
+      return pairs
+    }
+
+    for (const territory of territories) {
+      const from = territory.id || territory.name
+      if (!from || !Array.isArray(territory.connections)) continue
+
+      for (const connection of territory.connections) {
+        const to = connection?.id || connection
+        addPair(from, to)
+      }
+    }
+
+    return pairs
   }
 
   async getMap(mapId: string): Promise<CustomMap | null> {

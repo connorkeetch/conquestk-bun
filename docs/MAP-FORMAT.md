@@ -152,7 +152,14 @@ The editor uses a **tabbed navigation system** with contextual sidebar panels:
 - **Format**: JPG, PNG, GIF, WebP
 - **Size**: Max 10MB
 - **Dimensions**: Recommended 600x400 to 1200x800
-- **Storage**: `/backend/uploads/maps/`
+- **Storage**: filesystem path `backend/uploads/maps/`, exposed at `/uploads/maps/...`
+- **Drafts**: Map editor drafts keep their background images alongside the draft metadata and move them into `/uploads/maps` when published
+
+### Draft → Publish Workflow
+- **Save Draft**: The Map Editor writes to `/api/workflow/drafts`, storing metadata (territories, continents, adjacencies, capitals) and the image payload
+- **Review Prep**: Publishing a draft promotes it into the `maps` table, persists the background image under `/uploads/maps`, and hydrates `map_continents`, `map_territories`, and `territory_adjacencies`
+- **Submission**: Published drafts immediately enter the approval queue (`status = pending_review`) and are hidden from the draft list
+- **Existing Maps**: Loading a live map creates a new draft linked via `parent_map_id`; publishing submits the updated version for review
 
 ### Territory Boundaries
 - **Format**: JSON array of [x,y] coordinate pairs
