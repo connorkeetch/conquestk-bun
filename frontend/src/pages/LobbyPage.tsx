@@ -343,45 +343,33 @@ const LobbyPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
+      <div className="tabs mb-8">
         <button
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'browse'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'browse' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('browse')}
         >
           🌍 Browse Games
         </button>
         {user && (
           <button
-            className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'my-games'
-                ? 'text-primary-soft border-b-2 border-primary'
-                : 'text-muted hover:text-white'
-            }`}
+            type="button"
+            className={`tab ${activeTab === 'my-games' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('my-games')}
           >
             🎮 My Games
           </button>
         )}
         <button
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'private'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'private' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('private')}
         >
           🔒 Private Game
         </button>
         <button
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'tournaments'
-              ? 'text-primary-soft border-b-2 border-primary'
-              : 'text-muted hover:text-white'
-          }`}
+          type="button"
+          className={`tab ${activeTab === 'tournaments' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('tournaments')}
         >
           🏆 Tournaments
