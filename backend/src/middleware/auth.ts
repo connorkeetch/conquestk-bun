@@ -32,7 +32,11 @@ export const authenticateToken = async (
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
-    if (!decoded || typeof decoded !== 'object' || typeof (decoded as AuthTokenPayload).userId !== 'string') {
+    if (
+      !decoded ||
+      typeof decoded !== 'object' ||
+      typeof (decoded as AuthTokenPayload).userId !== 'string'
+    ) {
       logger.warn('Token verification succeeded but payload was invalid')
       res.status(403).json({ message: 'Invalid token payload' })
       return

@@ -5,15 +5,23 @@
  * Creates a backup of current production data before running consolidated migration
  */
 
-const { execSync } = require('child_process')
-const fs = require('fs')
-const path = require('path')
+const { execSync } = require('node:child_process')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const writeOut = (message = '') => {
+  process.stdout.write(`${message}\n`)
+}
+
+const writeErr = (message = '') => {
+  process.stderr.write(`${message}\n`)
+}
 
 // Get DATABASE_URL from environment or prompt
 const DATABASE_URL = process.env.DATABASE_URL
 
 if (!DATABASE_URL) {
-  console.error('ERROR: DATABASE_URL environment variable is required')
+  writeErr('ERROR: DATABASE_URL environment variable is required')
   process.exit(1)
 }
 
@@ -26,8 +34,8 @@ if (!fs.existsSync(backupDir)) {
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 const backupFile = path.join(backupDir, `production-backup-${timestamp}.sql`)
 
-console.log('🔄 Starting production database backup...')
-console.log(`📁 Backup location: ${backupFile}`)
+writeOut('🔄 Starting production database backup...')
+writeOut(`📁 Backup location: ${backupFile}`)
 
 try {
   // Backup essential user data only (since user said minimal data aside from theirs)
@@ -69,23 +77,23 @@ try {
 
   execSync(command, { stdio: 'inherit' })
 
-  console.log('✅ Backup completed successfully!')
-  console.log(`📄 Backup file: ${backupFile}`)
+  writeOut('✅ Backup completed successfully!')
+  writeOut(`📄 Backup file: ${backupFile}`)
 
   // Verify backup file exists and has content
   if (fs.existsSync(backupFile)) {
     const stats = fs.statSync(backupFile)
-    console.log(`📊 Backup size: ${stats.size} bytes`)
+    writeOut(`📊 Backup size: ${stats.size} bytes`)
 
     if (stats.size === 0) {
-      console.warn('⚠️  Warning: Backup file is empty - this may be expected if no user data exists')
+      writeErr('⚠️  Warning: Backup file is empty - this may be expected if no user data exists')
     }
   }
 
-  console.log('\n🚀 Ready to deploy consolidated migration!')
-  console.log('💡 To restore from backup if needed:')
-  console.log(`   psql "\\$DATABASE_URL" < "${backupFile}"`)
+  writeOut('\n🚀 Ready to deploy consolidated migration!')
+  writeOut('💡 To restore from backup if needed:')
+  writeOut(`   psql "\\$DATABASE_URL" < "${backupFile}"`)
 } catch (error) {
-  console.error('❌ Backup failed:', error.message)
+  writeErr(`❌ Backup failed: ${error instanceof Error ? error.message : String(error)}`)
   process.exit(1)
 }

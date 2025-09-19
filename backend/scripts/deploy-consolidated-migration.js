@@ -5,40 +5,48 @@
  * Deploys the consolidated schema migration to production
  */
 
-const { execSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
+const { execSync } = require('node:child_process')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const writeOut = (message = '') => {
+  process.stdout.write(`${message}\n`)
+}
+
+const writeErr = (message = '') => {
+  process.stderr.write(`${message}\n`)
+}
 
 // Get DATABASE_URL from environment
 const DATABASE_URL = process.env.DATABASE_URL
 
 if (!DATABASE_URL) {
-  console.error('ERROR: DATABASE_URL environment variable is required')
+  writeErr('ERROR: DATABASE_URL environment variable is required')
   process.exit(1)
 }
 
 const migrationFile = path.join(__dirname, '../migrations/010_consolidated_schema.sql')
 
 if (!fs.existsSync(migrationFile)) {
-  console.error(`ERROR: Migration file not found: ${migrationFile}`)
+  writeErr(`ERROR: Migration file not found: ${migrationFile}`)
   process.exit(1)
 }
 
-console.log('🚀 Deploying consolidated migration to production...')
-console.log(`📁 Migration file: ${migrationFile}`)
+writeOut('🚀 Deploying consolidated migration to production...')
+writeOut(`📁 Migration file: ${migrationFile}`)
 
 try {
   // First, run the backup script
-  console.log('\n1️⃣ Creating backup of current data...')
+  writeOut('\n1️⃣ Creating backup of current data...')
   const backupScript = path.join(__dirname, 'backup-production.js')
   execSync(`node "${backupScript}"`, { stdio: 'inherit' })
 
   // Run the consolidated migration
-  console.log('\n2️⃣ Executing consolidated migration...')
+  writeOut('\n2️⃣ Executing consolidated migration...')
   execSync(`psql "${DATABASE_URL}" -f "${migrationFile}"`, { stdio: 'inherit' })
 
   // Verify the migration by checking if key tables exist
-  console.log('\n3️⃣ Verifying migration success...')
+  writeOut('\n3️⃣ Verifying migration success...')
 
   const verifyQuery = `
     SELECT table_name 
@@ -54,37 +62,38 @@ try {
     .split('\n')
     .filter((line) => line.trim())
 
-  console.log('📋 Created tables:', tables.join(', '))
+  writeOut(`📋 Created tables: ${tables.join(', ')}`)
 
   if (tables.length >= 5) {
-    console.log('✅ Migration completed successfully!')
-    console.log('🎯 All core tables created')
+    writeOut('✅ Migration completed successfully!')
+    writeOut('🎯 All core tables created')
 
     // Check if any data was migrated
-    console.log('\n4️⃣ Checking migrated data...')
+    writeOut('\n4️⃣ Checking migrated data...')
     const userCount = execSync(`psql "${DATABASE_URL}" -t -c "SELECT COUNT(*) FROM users;"`, {
       encoding: 'utf8',
     }).trim()
-    console.log(`👤 Users in database: ${userCount}`)
+    writeOut(`👤 Users in database: ${userCount}`)
 
-    if (parseInt(userCount) > 0) {
-      console.log('✅ User data successfully migrated!')
+    if (parseInt(userCount, 10) > 0) {
+      writeOut('✅ User data successfully migrated!')
     } else {
-      console.log('ℹ️  No user data found - this may be expected for clean install')
+      writeOut('ℹ️  No user data found - this may be expected for clean install')
     }
   } else {
     throw new Error(`Expected at least 5 core tables, found ${tables.length}`)
   }
 
-  console.log('\n🎉 Consolidated migration deployment complete!')
-  console.log('💡 Next steps:')
-  console.log('   1. Test the application functionality')
-  console.log('   2. Verify user authentication works')
-  console.log('   3. Check admin panel functionality')
-  console.log('   4. Remove old migration files if everything works')
+  writeOut('\n🎉 Consolidated migration deployment complete!')
+  writeOut('💡 Next steps:')
+  writeOut('   1. Test the application functionality')
+  writeOut('   2. Verify user authentication works')
+  writeOut('   3. Check admin panel functionality')
+  writeOut('   4. Remove old migration files if everything works')
 } catch (error) {
-  console.error('❌ Migration deployment failed:', error.message)
-  console.error('\n🚨 To rollback, restore from backup:')
-  console.error('   Check backup files in backend/backups/ directory')
+  const message = error instanceof Error ? error.message : String(error)
+  writeErr(`❌ Migration deployment failed: ${message}`)
+  writeErr('\n🚨 To rollback, restore from backup:')
+  writeErr('   Check backup files in backend/backups/ directory')
   process.exit(1)
 }
