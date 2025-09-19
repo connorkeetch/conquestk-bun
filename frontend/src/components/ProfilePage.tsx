@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import type { PlayerColor } from '../constants/colors'
 import {
@@ -201,7 +201,7 @@ const ProfilePage: React.FC = () => {
 
   const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
 
-  const premiumColorEntry = useMemo(() => {
+  const premiumColorEntry = (() => {
     if (!preferredColorSource) return null
 
     if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
@@ -218,12 +218,10 @@ const ProfilePage: React.FC = () => {
         return value.solid === preferredColorSource
       }) || null
     )
-  }, [preferredColorSource])
+  })()
 
-  const rankDetails = useMemo(() => getConquestRank(profile.elo), [profile.elo])
-  const nextRank = useMemo(() => {
-    return CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
-  }, [rankDetails.minRating])
+  const rankDetails = getConquestRank(profile.elo)
+  const nextRank = CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
 
   const rankAccentColor = rankDetails.color.startsWith('#') ? rankDetails.color : accentHex
   const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
