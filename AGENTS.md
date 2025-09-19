@@ -2,8 +2,12 @@
 
 ## Project overview
 - ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
+- The public site is not live yet; assume all deployments are still in staging or local environments.
 - The repo expects Node.js 22+, npm 9+, PostgreSQL access (Railway in hosted envs), and Redis for socket scaling and sessions.
 - Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with components in `frontend/src/components`.
+
+## Team & collaboration
+- Connor Keetch owns the project and is the sole developer; communicate changes clearly and explain concepts with extra context for someone who isn’t a full-time coder.
 
 ## Tooling expectations
 - Always use Context7 MCP and its tools whenever you are writing complex code or if you are unsure about the best approach.
