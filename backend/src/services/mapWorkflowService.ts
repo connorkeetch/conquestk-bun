@@ -1,6 +1,9 @@
 import { query } from '../config/database'
+import { mapService } from './mapService'
+import { storeBase64Image } from '../utils/imageStorage'
 import type {
   AdminNotification,
+  CreateMapRequest,
   CustomMap,
   MapDraft,
   MapReviewItem,
@@ -58,7 +61,7 @@ export class MapWorkflowService {
           ],
         )
 
-        return result.rows[0]
+        return this.formatDraftRow(result.rows[0])
       }
 
       // Create new draft - check quota first
@@ -75,7 +78,7 @@ export class MapWorkflowService {
 
       const userCheck = await query('SELECT is_admin FROM users WHERE id = $1', [userId])
       const isAdmin = userCheck.rows[0]?.is_admin
-      const currentCount = parseInt(quotaCheck.rows[0]?.count || '0')
+      const currentCount = parseInt(quotaCheck.rows[0]?.count || '0', 10)
 
       if (!isAdmin && currentCount >= 5) {
         throw new Error('Quota exceeded: Maximum 5 unpublished maps/images allowed')
@@ -113,7 +116,7 @@ export class MapWorkflowService {
         ],
       )
 
-      return result.rows[0]
+      return this.formatDraftRow(result.rows[0])
     } catch (error) {
       logger.error('Error saving map draft:', error)
       throw error
@@ -134,9 +137,70 @@ export class MapWorkflowService {
         [userId],
       )
 
-      return result.rows || []
+      return (result.rows || []).map((row: any) => this.formatDraftRow(row))
     } catch (error) {
       logger.error('Error fetching user drafts:', error)
+      throw error
+    }
+  }
+
+  async getDraftById(draftId: string, userId: string): Promise<MapDraft | null> {
+    try {
+      const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
+        draftId,
+        userId,
+      ])
+
+      const draft = result.rows?.[0]
+      return draft ? this.formatDraftRow(draft) : null
+    } catch (error) {
+      logger.error('Error fetching draft:', error)
+      throw error
+    }
+  }
+
+  async publishDraft(draftId: string, userId: string): Promise<CustomMap> {
+    try {
+      const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
+        draftId,
+        userId,
+      ])
+
+      const draftRow = result.rows?.[0]
+      if (!draftRow) {
+        throw new Error('Draft not found or access denied')
+      }
+
+      const draft = this.formatDraftRow(draftRow)
+      const mapPayload = await this.buildMapPayloadFromDraft(draft)
+
+      const createdMap = await mapService.createMap(userId, mapPayload)
+
+      await query(
+        `
+        UPDATE map_drafts
+        SET draft_status = 'submitted',
+            parent_map_id = $1,
+            image_url = $2,
+            image_width = $3,
+            image_height = $4,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $5
+      `,
+        [
+          createdMap.id,
+          mapPayload.imageUrl || null,
+          mapPayload.imageWidth || null,
+          mapPayload.imageHeight || null,
+          draftId,
+        ],
+      )
+
+      await this.submitForReview(createdMap.id, userId)
+
+      return createdMap
+    } catch (error) {
+      logger.error('Error publishing draft:', error)
       throw error
     }
   }
@@ -392,6 +456,175 @@ export class MapWorkflowService {
     } catch (error) {
       logger.error('Error marking notification as read:', error)
       throw error
+    }
+  }
+
+  private safeJson<T>(value: any, fallback: T): T {
+    if (value === null || value === undefined) return fallback
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T
+      } catch (error) {
+        logger.warn('Failed to parse JSON field', { value, error })
+        return fallback
+      }
+    }
+    return value as T
+  }
+
+  private formatDraftRow(row: any): MapDraft {
+    const mapData = this.safeJson<Record<string, any>>(row.map_data, {})
+
+    return {
+      id: row.id,
+      userId: row.user_id,
+      stagingImageId: row.staging_image_id || undefined,
+      parentMapId: row.parent_map_id || undefined,
+      name: row.name || 'Untitled Map',
+      description: row.description || undefined,
+      data: mapData,
+      territories: this.safeJson(row.territories, mapData.territories ?? []),
+      continents: this.safeJson(row.continents, mapData.continents ?? []),
+      adjacencies: this.safeJson(row.adjacencies, mapData.adjacencies ?? []),
+      capitalAssignments: this.safeJson(row.capital_assignments, mapData.capitalAssignments ?? {}),
+      thumbnailUrl: row.thumbnail_url || undefined,
+      imageUrl: row.image_url || undefined,
+      imageWidth: row.image_width || mapData.imageWidth,
+      imageHeight: row.image_height || mapData.imageHeight,
+      draftStatus: row.draft_status || 'editing',
+      validationStatus: row.validation_status || undefined,
+      validationErrors: this.safeJson(row.validation_errors, []),
+      isPublic: row.is_public ?? false,
+      tags: this.safeJson(row.tags, mapData.tags ?? []),
+      autoSavedAt: row.auto_saved_at ? new Date(row.auto_saved_at) : undefined,
+      lastEditedAt: row.last_edited_at ? new Date(row.last_edited_at) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }
+  }
+
+  private buildCapitalTerritories(assignments: Record<string, string[]> | undefined) {
+    if (!assignments) return undefined
+
+    const result: Record<string, number[]> = {}
+
+    for (const [playerCount, territories] of Object.entries(assignments)) {
+      const count = Number(playerCount)
+      if (Number.isNaN(count) || !Array.isArray(territories)) continue
+
+      for (const territoryId of territories) {
+        if (!territoryId) continue
+        if (!result[territoryId]) {
+          result[territoryId] = []
+        }
+        result[territoryId].push(count)
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined
+  }
+
+  private async buildMapPayloadFromDraft(
+    draft: MapDraft,
+  ): Promise<CreateMapRequest & { metadata?: any }> {
+    const data = typeof draft.data === 'object' && draft.data !== null ? draft.data : {}
+
+    const territories =
+      Array.isArray(draft.territories) && draft.territories.length > 0
+        ? draft.territories
+        : Array.isArray(data.territories)
+          ? data.territories
+          : []
+
+    const continents =
+      Array.isArray(draft.continents) && draft.continents.length > 0
+        ? draft.continents
+        : Array.isArray(data.continents)
+          ? data.continents
+          : []
+
+    const adjacencies =
+      Array.isArray(draft.adjacencies) && draft.adjacencies.length > 0
+        ? draft.adjacencies
+        : Array.isArray(data.adjacencies)
+          ? data.adjacencies
+          : []
+
+    const capitalAssignments =
+      (draft.capitalAssignments && Object.keys(draft.capitalAssignments).length > 0
+        ? draft.capitalAssignments
+        : data.capitalAssignments) || {}
+
+    let imageUrl = draft.imageUrl
+    let imageWidth = draft.imageWidth || data.imageWidth || 800
+    let imageHeight = draft.imageHeight || data.imageHeight || 600
+
+    const imagePayload = data.image
+
+    if (imagePayload?.data) {
+      const stored = await storeBase64Image(imagePayload.data, {
+        mimeType: imagePayload.mimeType,
+        preferredFilename: imagePayload.filename,
+      })
+      imageUrl = stored.relativeUrl
+      imageWidth = stored.width
+      imageHeight = stored.height
+    } else if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+      const parsed = this.parseDataUrl(imageUrl)
+      if (parsed) {
+        const stored = await storeBase64Image(parsed.data, {
+          mimeType: parsed.mimeType,
+        })
+        imageUrl = stored.relativeUrl
+        imageWidth = stored.width
+        imageHeight = stored.height
+      }
+    }
+
+    const minPlayers =
+      typeof data.minPlayers === 'number' ? data.minPlayers : (data.metadata?.minPlayers ?? 2)
+    const maxPlayers =
+      typeof data.maxPlayers === 'number' ? data.maxPlayers : (data.metadata?.maxPlayers ?? 6)
+
+    const metadata = {
+      territories,
+      continents,
+      adjacencies,
+      capitalAssignments,
+      width: data.width || data.mapWidth || imageWidth || 1920,
+      height: data.height || data.mapHeight || imageHeight || 1080,
+    }
+
+    return {
+      name: draft.name || data.name || 'Untitled Map',
+      description: draft.description || data.description || null,
+      isPublic: Boolean(draft.isPublic || data.isPublic),
+      tags:
+        Array.isArray(draft.tags) && draft.tags.length > 0
+          ? draft.tags
+          : Array.isArray(data.tags)
+            ? data.tags
+            : ['custom', 'user-created'],
+      imageUrl: imageUrl || null,
+      imageWidth,
+      imageHeight,
+      minPlayers,
+      maxPlayers,
+      metadata,
+      capitalTerritories: this.buildCapitalTerritories(capitalAssignments),
+    }
+  }
+
+  private parseDataUrl(dataUrl: string): { data: string; mimeType?: string } | null {
+    const [header, data] = dataUrl.split(',')
+    if (!header || !data) return null
+
+    const mimeMatch = header.match(/^data:(.+);base64$/)
+    const mimeType = mimeMatch?.[1]
+
+    return {
+      data,
+      mimeType,
     }
   }
 

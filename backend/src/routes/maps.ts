@@ -12,15 +12,12 @@ import { mapService } from '../services/mapService'
 import type { CreateMapRequest, UpdateMapRequest } from '../types/maps'
 import { logger } from '../utils/logger'
 import { parseJsonField, parseTags } from '../utils/tagParser'
+import { getMapUploadsDir } from '../utils/mapUploads'
 import { resolveAssetUrl } from '../utils/url'
+import { storeBase64Image } from '../utils/imageStorage'
 
 // Ensure uploads directory exists in a location aligned with express.static
-const uploadsRoot = path.join(__dirname, '../uploads')
-const mapUploadsDir = path.join(uploadsRoot, 'maps')
-if (!fs.existsSync(mapUploadsDir)) {
-  fs.mkdirSync(mapUploadsDir, { recursive: true })
-  logger.info('Created uploads directory:', mapUploadsDir)
-}
+const mapUploadsDir = getMapUploadsDir()
 
 const router = Router()
 
@@ -57,13 +54,17 @@ class FileResource {
   }
 }
 
+type DisposableResource = {
+  [Symbol.dispose](): Promise<void> | void
+}
+
 // Safe file reading with automatic resource cleanup
 async function readFileWithResourceManagement(filePath: string): Promise<Buffer> {
   // Use Node.js 24's explicit resource management when available
   if (typeof Symbol.dispose !== 'undefined') {
     try {
       const fileResource = await new FileResource(filePath).open()
-      await using resource = fileResource as any // TypeScript needs to catch up with the spec
+      await using resource = fileResource as DisposableResource
       return await fileResource.readBuffer()
     } catch (error) {
       // Fallback to manual resource management
@@ -599,35 +600,14 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
         const mimeType = req.body.image.mimeType || 'image/png'
         const filename = req.body.image.filename || `map-${Date.now()}.png`
 
-        // Decode base64 to buffer
-        const buffer = Buffer.from(imageData, 'base64')
+        const storedImage = await storeBase64Image(imageData, {
+          mimeType,
+          preferredFilename: filename,
+        })
 
-        // Generate unique filename
-        const ext = path.extname(filename) || '.png'
-        const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-        const filepath = path.join(mapUploadsDir, uniqueFilename)
-
-        // Ensure directory exists
-        const dir = path.dirname(filepath)
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true })
-        }
-
-        // Write file
-        await fsPromises.writeFile(filepath, buffer)
-
-        mapData.imageUrl = `/uploads/maps/${uniqueFilename}`
-
-        // Get image dimensions
-        try {
-          const dimensions = sizeOf(buffer)
-          mapData.imageWidth = dimensions.width || 800
-          mapData.imageHeight = dimensions.height || 600
-        } catch (dimensionError) {
-          logger.warn('Failed to get image dimensions:', dimensionError)
-          mapData.imageWidth = 800
-          mapData.imageHeight = 600
-        }
+        mapData.imageUrl = storedImage.relativeUrl
+        mapData.imageWidth = storedImage.width
+        mapData.imageHeight = storedImage.height
       } catch (imageError) {
         logger.error('Failed to process base64 image:', imageError)
         return res.status(400).json({
