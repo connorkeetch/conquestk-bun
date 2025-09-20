@@ -1,7 +1,18 @@
+import { isAxiosError } from 'axios'
 import type React from 'react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useId, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import api from '../services/api'
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (isAxiosError(error)) {
+    return error.response?.data?.message || error.message || fallback
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return fallback
+}
 
 interface Map {
   id: string
@@ -57,14 +68,19 @@ export const AdminMaps: React.FC = () => {
     isPublic: true,
     isVipOnly: false,
   })
+  const mapNameId = useId()
+  const mapStatusId = useId()
+  const mapDescriptionId = useId()
+  const mapMinPlayersId = useId()
+  const mapMaxPlayersId = useId()
+  const mapFeaturedId = useId()
+  const mapPublicId = useId()
+  const mapVipOnlyId = useId()
 
-  useEffect(() => {
-    loadMaps()
-  }, [filters])
-
-  const loadMaps = async () => {
+  const loadMaps = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
       const response = await api.get('/admin/maps', {
         params: {
           ...filters,
@@ -72,12 +88,16 @@ export const AdminMaps: React.FC = () => {
         },
       })
       setMaps(response.data.maps || [])
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load maps')
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to load maps'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
+
+  useEffect(() => {
+    void loadMaps()
+  }, [loadMaps])
 
   const handleStatusChange = async (mapId: string, newStatus: string, notes?: string) => {
     try {
@@ -88,9 +108,10 @@ export const AdminMaps: React.FC = () => {
       await loadMaps()
       setShowApprovalModal(false)
       setApprovalNotes('')
-      alert(`Map ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully!`)
-    } catch (err: any) {
-      alert(`Failed to update status: ${err.response?.data?.message || err.message}`)
+      toast.success(`Map ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully`)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to update status')
+      toast.error(`Failed to update status: ${message}`)
     }
   }
 
@@ -100,9 +121,10 @@ export const AdminMaps: React.FC = () => {
       await api.patch(`/admin/maps/${selectedMap.id}`, editForm)
       await loadMaps()
       setShowEditModal(false)
-      alert('Map updated successfully!')
-    } catch (err: any) {
-      alert(`Failed to update map: ${err.response?.data?.message || err.message}`)
+      toast.success('Map updated successfully')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to update map')
+      toast.error(`Failed to update map: ${message}`)
     }
   }
 
@@ -112,9 +134,10 @@ export const AdminMaps: React.FC = () => {
       await api.delete(`/admin/maps/${selectedMap.id}`)
       await loadMaps()
       setShowDeleteModal(false)
-      alert('Map deleted successfully!')
-    } catch (err: any) {
-      alert(`Failed to delete map: ${err.response?.data?.message || err.message}`)
+      toast.success('Map deleted successfully')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to delete map')
+      toast.error(`Failed to delete map: ${message}`)
     }
   }
 
@@ -122,9 +145,10 @@ export const AdminMaps: React.FC = () => {
     try {
       const response = await api.post(`/admin/maps/${mapId}/clone`)
       await loadMaps()
-      alert(`Map cloned successfully! New map: ${response.data.name}`)
-    } catch (err: any) {
-      alert(`Failed to clone map: ${err.response?.data?.message || err.message}`)
+      toast.success(`Map cloned successfully. New map: ${response.data.name}`)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to clone map')
+      toast.error(`Failed to clone map: ${message}`)
     }
   }
 
@@ -524,8 +548,11 @@ export const AdminMaps: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-muted mb-1">Name</label>
+                <label className="block text-sm text-muted mb-1" htmlFor={mapNameId}>
+                  Name
+                </label>
                 <input
+                  id={mapNameId}
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -534,8 +561,11 @@ export const AdminMaps: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-1">Status</label>
+                <label className="block text-sm text-muted mb-1" htmlFor={mapStatusId}>
+                  Status
+                </label>
                 <select
+                  id={mapStatusId}
                   value={editForm.status || 'draft'}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
@@ -549,8 +579,11 @@ export const AdminMaps: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-1">Description</label>
+                <label className="block text-sm text-muted mb-1" htmlFor={mapDescriptionId}>
+                  Description
+                </label>
                 <textarea
+                  id={mapDescriptionId}
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white h-20"
@@ -559,27 +592,33 @@ export const AdminMaps: React.FC = () => {
 
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm text-muted mb-1">Min Players</label>
+                  <label className="block text-sm text-muted mb-1" htmlFor={mapMinPlayersId}>
+                    Min Players
+                  </label>
                   <input
+                    id={mapMinPlayersId}
                     type="number"
                     min="2"
                     max="12"
                     value={editForm.minPlayers}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, minPlayers: parseInt(e.target.value) })
+                      setEditForm({ ...editForm, minPlayers: parseInt(e.target.value, 10) })
                     }
                     className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm text-muted mb-1">Max Players</label>
+                  <label className="block text-sm text-muted mb-1" htmlFor={mapMaxPlayersId}>
+                    Max Players
+                  </label>
                   <input
+                    id={mapMaxPlayersId}
                     type="number"
                     min="2"
                     max="12"
                     value={editForm.maxPlayers}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, maxPlayers: parseInt(e.target.value) })
+                      setEditForm({ ...editForm, maxPlayers: parseInt(e.target.value, 10) })
                     }
                     className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                   />
@@ -588,8 +627,9 @@ export const AdminMaps: React.FC = () => {
 
               <div className="space-y-2">
                 <div className="flex gap-4">
-                  <label className="flex items-center">
+                  <label className="flex items-center" htmlFor={mapFeaturedId}>
                     <input
+                      id={mapFeaturedId}
                       type="checkbox"
                       checked={editForm.isFeatured}
                       onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
@@ -597,8 +637,9 @@ export const AdminMaps: React.FC = () => {
                     />
                     <span className="text-sm text-white">⭐ Featured</span>
                   </label>
-                  <label className="flex items-center">
+                  <label className="flex items-center" htmlFor={mapPublicId}>
                     <input
+                      id={mapPublicId}
                       type="checkbox"
                       checked={editForm.isPublic}
                       onChange={(e) => setEditForm({ ...editForm, isPublic: e.target.checked })}
@@ -608,8 +649,9 @@ export const AdminMaps: React.FC = () => {
                   </label>
                 </div>
                 <div>
-                  <label className="flex items-center">
+                  <label className="flex items-center" htmlFor={mapVipOnlyId}>
                     <input
+                      id={mapVipOnlyId}
                       type="checkbox"
                       checked={editForm.isVipOnly || false}
                       onChange={(e) => setEditForm({ ...editForm, isVipOnly: e.target.checked })}
@@ -626,12 +668,14 @@ export const AdminMaps: React.FC = () => {
 
             <div className="flex justify-end gap-3 mt-6">
               <button
+                type="button"
                 onClick={() => setShowEditModal(false)}
                 className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleEditMap}
                 className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
               >
@@ -652,12 +696,14 @@ export const AdminMaps: React.FC = () => {
             </p>
             <div className="flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setShowDeleteModal(false)}
                 className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDeleteMap}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
@@ -682,6 +728,7 @@ export const AdminMaps: React.FC = () => {
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
+                type="button"
                 onClick={() => {
                   setShowApprovalModal(false)
                   setApprovalNotes('')
@@ -691,6 +738,7 @@ export const AdminMaps: React.FC = () => {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => handleStatusChange(selectedMap.id, 'rejected', approvalNotes)}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
@@ -704,12 +752,26 @@ export const AdminMaps: React.FC = () => {
       {/* Map Preview Modal */}
       {showPreviewModal && previewMap && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview map ${previewMap.name}`}
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-          onClick={() => setShowPreviewModal(false)}
+          tabIndex={-1}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowPreviewModal(false)
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setShowPreviewModal(false)
+            }
+          }}
         >
           <div
+            role="document"
             className="bg-surface-2 rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -769,6 +831,7 @@ export const AdminMaps: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowPreviewModal(false)}
                 className="text-muted hover:text-white text-2xl"
               >
@@ -800,12 +863,14 @@ export const AdminMaps: React.FC = () => {
             {/* Action Buttons */}
             <div className="flex gap-3 justify-end">
               <button
+                type="button"
                 onClick={() => window.open(`/map-editor-tokens?edit=${previewMap.id}`, '_blank')}
                 className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
               >
                 🗺️ Open in Map Editor
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowPreviewModal(false)
                   openEditModal(previewMap)
@@ -815,6 +880,7 @@ export const AdminMaps: React.FC = () => {
                 ✏️ Edit Details
               </button>
               <button
+                type="button"
                 onClick={() => setShowPreviewModal(false)}
                 className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
               >

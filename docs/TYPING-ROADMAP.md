@@ -29,4 +29,4 @@ This document captures a phased plan to reintroduce strict TypeScript typing acr
 - Remove temporary tsconfig relaxations (`useUnknownInCatchVariables`, etc.).
 - Revisit lint pipeline gating once legacy scripts are migrated to structured logging utilities.
 
-Progress tracking lives in `TODO.md` until a dedicated issue board is spun up.
+Progress tracking now lives in [planning/ROADMAP.md](planning/ROADMAP.md) until a dedicated issue board is spun up.

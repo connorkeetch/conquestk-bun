@@ -10,6 +10,7 @@ import {
   type MapTerritory,
   mapService,
   type TerritoryAbilityType,
+  type TerritoryAdjacency,
 } from '../services/mapService'
 import { termsService } from '../services/termsService'
 
@@ -30,6 +31,33 @@ interface EditorState {
   imageScale: number // Scale factor for resizing image
   adjacencies: Array<{ from: string; to: string }>
   firstSelectedTerritory?: string
+}
+
+type NotificationType = 'success' | 'error' | 'warning' | 'info'
+
+interface EditorNotification {
+  id: string
+  message: string
+  type: NotificationType
+}
+
+const NOTIFICATION_STYLES: Record<NotificationType, { container: string; icon: string }> = {
+  success: {
+    container: 'bg-emerald-900/60 border border-emerald-500 text-emerald-100',
+    icon: '✅',
+  },
+  error: {
+    container: 'bg-red-900/60 border border-red-500 text-red-100',
+    icon: '❌',
+  },
+  warning: {
+    container: 'bg-amber-900/60 border border-amber-500 text-amber-100',
+    icon: '⚠️',
+  },
+  info: {
+    container: 'bg-slate-800 border border-slate-600 text-slate-100',
+    icon: 'ℹ️',
+  },
 }
 
 export default function MapEditor() {
@@ -68,7 +96,6 @@ export default function MapEditor() {
   const [isPublic, setIsPublic] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -78,6 +105,68 @@ export default function MapEditor() {
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
   const [showImageOptions, setShowImageOptions] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [notifications, setNotifications] = useState<EditorNotification[]>([])
+  const notificationTimeoutsRef = useRef<Map<string, number>>(new Map())
+
+  const createNotificationId = useCallback(() => {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID()
+    }
+    return `notice_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  }, [])
+
+  const dismissNotification = useCallback((id: string) => {
+    const timeoutId = notificationTimeoutsRef.current.get(id)
+    if (timeoutId && typeof window !== 'undefined') {
+      window.clearTimeout(timeoutId)
+      notificationTimeoutsRef.current.delete(id)
+    }
+    setNotifications((prev) => prev.filter((notice) => notice.id !== id))
+  }, [])
+
+  const scheduleNotificationRemoval = useCallback(
+    (id: string, duration = 6000) => {
+      if (typeof window === 'undefined') return
+
+      const existingTimeout = notificationTimeoutsRef.current.get(id)
+      if (existingTimeout) {
+        window.clearTimeout(existingTimeout)
+      }
+      const timeoutId = window.setTimeout(() => {
+        dismissNotification(id)
+      }, duration)
+      notificationTimeoutsRef.current.set(id, timeoutId)
+    },
+    [dismissNotification],
+  )
+
+  const addNotification = useCallback(
+    (message: string, type: NotificationType) => {
+      setNotifications((prev) => {
+        const existing = prev.find((notice) => notice.message === message && notice.type === type)
+        if (existing) {
+          scheduleNotificationRemoval(existing.id)
+          return prev
+        }
+
+        const id = createNotificationId()
+        scheduleNotificationRemoval(id)
+        return [...prev, { id, message, type }]
+      })
+    },
+    [createNotificationId, scheduleNotificationRemoval],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        notificationTimeoutsRef.current.forEach((timeoutId) => {
+          window.clearTimeout(timeoutId)
+        })
+      }
+      notificationTimeoutsRef.current.clear()
+    }
+  }, [])
 
   // Check terms acceptance on mount
   useEffect(() => {
@@ -113,7 +202,7 @@ export default function MapEditor() {
       setShowTermsModal(false)
     } catch (error) {
       console.error('Error accepting terms:', error)
-      alert('Failed to accept terms. Please try again.')
+      addNotification('Failed to accept terms. Please try again.', 'error')
     }
   }
 
@@ -308,7 +397,10 @@ export default function MapEditor() {
           ctx.setLineDash([8, 4])
 
           ctx.beginPath()
-          ctx.arc(firstTerritory.armyPosition.x, firstTerritory.armyPosition.y, 20, 0, 2 * Math.PI)
+          const centerX = firstTerritory.armyPosition.x * state.imageScale
+          const centerY = firstTerritory.armyPosition.y * state.imageScale
+          const radius = 20 * state.imageScale
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
           ctx.stroke()
           ctx.setLineDash([])
         }
@@ -377,6 +469,8 @@ export default function MapEditor() {
     state.selectedTool,
     state.firstSelectedTerritory,
     state.imageScale,
+    state.imageWidth,
+    state.imageHeight,
     drawGrid,
     redrawTerritories,
     drawAdjacencies,
@@ -470,7 +564,6 @@ export default function MapEditor() {
     setUploadProgress(10)
 
     // Store the actual file for upload
-    setSelectedFile(file)
     setImageFile(file) // Store for later upload
 
     // Use FileReader API for better compatibility (avoids blob URL security issues)
@@ -584,13 +677,13 @@ export default function MapEditor() {
     if (imageFile) {
       processImageFile(imageFile)
     } else {
-      alert('Please drop an image file (PNG, JPG, GIF, WEBP)')
+      addNotification('Please drop an image file (PNG, JPG, GIF, WEBP)', 'error')
     }
   }
 
   const createContinent = () => {
     if (!newContinentName.trim()) {
-      alert('Please enter a continent name')
+      addNotification('Please enter a continent name', 'error')
       return
     }
 
@@ -598,13 +691,13 @@ export default function MapEditor() {
     if (
       state.continents.some((c) => c.name.toLowerCase() === newContinentName.trim().toLowerCase())
     ) {
-      alert('A continent with this name already exists')
+      addNotification('A continent with this name already exists', 'error')
       return
     }
 
     // Validate bonus armies range
     if (newContinentBonus < 1 || newContinentBonus > 20) {
-      alert('Bonus armies must be between 1 and 20')
+      addNotification('Bonus armies must be between 1 and 20', 'error')
       return
     }
 
@@ -648,13 +741,13 @@ export default function MapEditor() {
           c.name.toLowerCase() === newContinentName.trim().toLowerCase(),
       )
     ) {
-      alert('A continent with this name already exists')
+      addNotification('A continent with this name already exists', 'error')
       return
     }
 
     // Validate bonus armies range
     if (newContinentBonus < 1 || newContinentBonus > 20) {
-      alert('Bonus armies must be between 1 and 20')
+      addNotification('Bonus armies must be between 1 and 20', 'error')
       return
     }
 
@@ -733,7 +826,7 @@ export default function MapEditor() {
 
   const saveMap = async () => {
     if (!mapName.trim()) {
-      alert('Please enter a map name')
+      addNotification('Please enter a map name', 'error')
       return
     }
 
@@ -747,15 +840,6 @@ export default function MapEditor() {
         isPublic,
         tags: ['custom'],
       }
-
-      console.log('Saving map with data:', {
-        mapData,
-        hasImageFile: !!imageFile,
-        mapName: mapName,
-        nameLength: mapName.length,
-        territories: state.territories.length,
-        continents: state.continents.length,
-      })
 
       const savedMap = await mapService.createMap(mapData, imageFile || undefined)
 
@@ -806,6 +890,7 @@ export default function MapEditor() {
 
       setState((prev) => ({ ...prev, currentMap: savedMap }))
       setSaveStatus('saved')
+      addNotification('Map saved successfully! You can manage it from your profile.', 'success')
 
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (error: any) {
@@ -817,12 +902,12 @@ export default function MapEditor() {
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error
         if (error.response.data.details) {
-          console.log('Validation details:', error.response.data.details)
           errorMessage += ': ' + error.response.data.details.map((d: any) => d.msg).join(', ')
         }
       }
 
       setSaveError(errorMessage)
+      addNotification(errorMessage, 'error')
       setTimeout(() => {
         setSaveStatus('idle')
         setSaveError(null)
@@ -847,7 +932,6 @@ export default function MapEditor() {
       }))
       setMapName('')
       setMapDescription('')
-      setSelectedFile(null)
       setImageFile(null)
     }
   }
@@ -867,7 +951,6 @@ export default function MapEditor() {
       const blob = new Blob([bytes], { type: 'image/png' })
       const file = new File([blob], imageFile?.name || 'cropped-image.png', { type: 'image/png' })
       setImageFile(file)
-      setSelectedFile(file)
     } catch (error) {
       console.error('Failed to convert cropped image:', error)
       setUploadError('Failed to process cropped image')
@@ -892,25 +975,28 @@ export default function MapEditor() {
   }
 
   const validateMap = () => {
-    // Custom validation that only requires 2+ territories
-    const errors: string[] = []
+    const issues: string[] = []
 
     if (state.territories.length < 2) {
-      errors.push('Map must have at least 2 territories')
+      issues.push('Map must have at least 2 territories')
     }
 
-    // Check if territories have adjacencies (optional warning, not error)
-    const hasAdjacencies = state.adjacencies.length > 0
-    if (!hasAdjacencies && state.territories.length > 1) {
-      errors.push(
-        'Warning: No territory connections defined. Players may not be able to attack between territories.',
-      )
-    }
+    const normalizedAdjacencies: TerritoryAdjacency[] = state.adjacencies.map((adjacency) => ({
+      id: `${adjacency.from}-${adjacency.to}`,
+      fromTerritoryId: adjacency.from,
+      toTerritoryId: adjacency.to,
+      connectionType: 'land',
+      isBidirectional: true,
+    }))
 
-    if (errors.length === 0) {
-      alert('✅ Map validation passed! Your map is ready to use.')
+    const validationResult = mapService.validateMapData(state.territories, normalizedAdjacencies)
+    issues.push(...validationResult.errors)
+
+    if (issues.length === 0) {
+      addNotification('✅ Map validation passed! Your map is ready to use.', 'success')
     } else {
-      alert(`⚠️ Map validation:\n\n${errors.join('\n')}`)
+      issues.forEach((message) => addNotification(message, 'warning'))
+      addNotification('Map validation found issues that need attention.', 'error')
     }
   }
 
@@ -964,9 +1050,9 @@ export default function MapEditor() {
           imageHeight: mapData.imageHeight || 600,
         }))
 
-        alert('Map data imported successfully!')
+        addNotification('Map data imported successfully!', 'success')
       } catch (error) {
-        alert('Failed to import map data. Please check the file format.')
+        addNotification('Failed to import map data. Please check the file format.', 'error')
       }
     }
     reader.readAsText(file)
@@ -995,8 +1081,6 @@ export default function MapEditor() {
     setState((prev) => ({
       ...prev,
       imageScale: newScale,
-      imageWidth: prev.imageWidth,
-      imageHeight: prev.imageHeight,
     }))
   }
 
@@ -1180,6 +1264,31 @@ export default function MapEditor() {
       )}
 
       <div className="max-w-7xl mx-auto">
+        {notifications.length > 0 && (
+          <div className="mb-6 space-y-2" role="status" aria-live="polite">
+            {notifications.map((notice) => (
+              <div
+                key={notice.id}
+                className={`flex items-start justify-between gap-3 px-4 py-3 rounded-lg shadow-sm ${NOTIFICATION_STYLES[notice.type].container}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-lg" aria-hidden="true">
+                    {NOTIFICATION_STYLES[notice.type].icon}
+                  </span>
+                  <p className="text-sm leading-relaxed">{notice.message}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dismissNotification(notice.id)}
+                  className="text-xs text-slate-200 hover:text-white"
+                  aria-label="Dismiss notification"
+                >
+                  ✖
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-slate-100">🗺️ Map Editor</h1>
           <div className="space-x-2">
@@ -1260,12 +1369,12 @@ export default function MapEditor() {
               <div className="bg-surface-2 rounded overflow-hidden">
                 <canvas
                   ref={canvasRef}
-                  width={800}
-                  height={600}
+                  width={Math.round(state.imageWidth * state.imageScale)}
+                  height={Math.round(state.imageHeight * state.imageScale)}
                   onClick={handleCanvasClick}
                   onDoubleClick={handleCanvasDoubleClick}
                   className="w-full cursor-crosshair border border-border"
-                  style={{ maxHeight: '600px' }}
+                  style={{ maxHeight: `${Math.round(state.imageHeight * state.imageScale)}px` }}
                 />
               </div>
               <div className="mt-4 text-sm text-muted">
@@ -1371,7 +1480,6 @@ export default function MapEditor() {
                             <button
                               onClick={() => {
                                 setState((prev) => ({ ...prev, imageUrl: undefined }))
-                                setSelectedFile(null)
                                 setUploadError(null)
                                 setUploadInfo(null)
                               }}

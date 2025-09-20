@@ -218,15 +218,16 @@ Follow these core principles (see CODING-STANDARDS.md):
 ## 📚 Documentation Structure
 - **README.md** - Project overview and quick start
 - **CLAUDE.md** - This file (AI assistant guide)
-- **TODO.md** - Development task tracking
-- **docs/** - Technical documentation folder
-  - ARCHITECTURE.md - System design and patterns
-  - DEPLOYMENT.md - Deployment procedures
-  - CODING-STANDARDS.md - Code quality standards
-  - THEME-SYSTEM.md - Theme architecture
-  - MAP-FORMAT.md - Map file specification
-  - EMAIL-VERIFICATION.md - Email system docs
-  - TROUBLESHOOTING.md - Common issues
+- **docs/README.md** - Index of every guide inside `docs/`
+- **docs/planning/ROADMAP.md** - Active priorities and backlog
+- **docs/planning/CODEBASE-CLEANUP.md** - Technical-debt follow-ups
+- **docs/ARCHITECTURE.md** - System design and patterns
+- **docs/DEPLOYMENT.md** - Deployment procedures
+- **docs/CODING-STANDARDS.md** - Code quality standards
+- **docs/THEME-SYSTEM.md** - Theme architecture
+- **docs/MAP-FORMAT.md** - Map file specification
+- **docs/EMAIL-VERIFICATION.md** - Email system docs
+- **docs/TROUBLESHOOTING.md** - Common issues
 
 ## 🎯 Key Reminders
 - Create new files ONLY when architecturally necessary

@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import { adminService } from '../services/adminService'
 import type { RequestUser } from '../types/express'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 // Extend Express Request type to include admin info
 declare module 'express-serve-static-core' {
@@ -59,7 +59,7 @@ export const requireAdmin: RequestHandler = async (
 
     next()
   } catch (error) {
-    logger.error('Admin authentication error:', error)
+    handleRouteError(error, req, 'Admin authentication error')
     res.status(500).json({ error: 'Authentication error' })
     return
   }
@@ -106,7 +106,7 @@ export const requirePermission = (permission: string): RequestHandler => {
 
       next()
     } catch (error) {
-      logger.error('Permission check error:', error)
+      handleRouteError(error, req, 'Permission check failed')
       res.status(500).json({ error: 'Permission check failed' })
       return
     }
@@ -140,7 +140,7 @@ export const logAdminActivity = (actionType: string) => {
               req.get('User-Agent'),
             )
             .catch((error) => {
-              logger.error('Failed to log admin activity:', error)
+              handleRouteError(error, req, 'Failed to log admin activity')
             })
         }
       }
