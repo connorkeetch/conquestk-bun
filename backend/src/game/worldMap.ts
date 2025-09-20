@@ -1,90 +1,47 @@
+import classicMap from '../../../shared/maps/territories-classic.json'
 import type { Territory } from '../types/game'
 
+type ClassicMap = {
+  territories: Record<
+    string,
+    {
+      id: string
+      name: string
+      continent: string
+      adjacentTerritories: string[]
+      armyPosition: { x: number; y: number }
+    }
+  >
+}
+
+const mapData = classicMap as ClassicMap
+
 export class WorldMap {
-  private territories: Territory[] = [
-    {
-      id: 'alaska',
-      name: 'Alaska',
-      continent: 'north-america',
+  private readonly territories: Territory[]
+
+  constructor() {
+    this.territories = Object.values(mapData.territories).map((territory) => ({
+      id: territory.id,
+      name: territory.name,
+      continent: territory.continent,
       ownerId: null,
       armies: 0,
-      adjacentTerritories: ['northwest-territory', 'alberta', 'kamchatka'],
-    },
-    {
-      id: 'northwest-territory',
-      name: 'Northwest Territory',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['alaska', 'alberta', 'ontario', 'greenland'],
-    },
-    {
-      id: 'alberta',
-      name: 'Alberta',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['alaska', 'northwest-territory', 'ontario', 'western-united-states'],
-    },
-    {
-      id: 'ontario',
-      name: 'Ontario',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: [
-        'northwest-territory',
-        'alberta',
-        'western-united-states',
-        'eastern-united-states',
-        'quebec',
-        'greenland',
-      ],
-    },
-    {
-      id: 'greenland',
-      name: 'Greenland',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['northwest-territory', 'ontario', 'quebec', 'iceland'],
-    },
-    {
-      id: 'eastern-united-states',
-      name: 'Eastern United States',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['ontario', 'western-united-states', 'quebec', 'central-america'],
-    },
-    {
-      id: 'western-united-states',
-      name: 'Western United States',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['alberta', 'ontario', 'eastern-united-states', 'central-america'],
-    },
-    {
-      id: 'central-america',
-      name: 'Central America',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['western-united-states', 'eastern-united-states', 'venezuela'],
-    },
-    {
-      id: 'quebec',
-      name: 'Quebec',
-      continent: 'north-america',
-      ownerId: null,
-      armies: 0,
-      adjacentTerritories: ['ontario', 'eastern-united-states', 'greenland'],
-    },
-  ]
+      adjacentTerritories: [...territory.adjacentTerritories],
+      coordinates: {
+        x: territory.armyPosition.x,
+        y: territory.armyPosition.y,
+      },
+    }))
+  }
 
   getTerritories(): Territory[] {
-    return this.territories.map((territory) => ({ ...territory }))
+    return this.territories.map((territory) => ({
+      ...territory,
+      adjacentTerritories: [...territory.adjacentTerritories],
+      coordinates: territory.coordinates
+        ? { ...territory.coordinates }
+        : undefined,
+    }))
   }
 
   getTerritoryById(id: string): Territory | undefined {

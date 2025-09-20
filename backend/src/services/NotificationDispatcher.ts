@@ -1,4 +1,4 @@
-import { NotificationEvent, NotificationResult } from '@shared/types/notifications'
+import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
 import { SlackWebhookChannel } from './channels/SlackWebhookChannel'
 import { logger } from '../utils/logger'
 

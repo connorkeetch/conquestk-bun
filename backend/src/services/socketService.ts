@@ -4,16 +4,19 @@ import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { setupChatHandlers } from '../socket/chatHandlers'
 import { DeltaBuilder } from '../types/deltaUpdates'
-import type { GamePlayer, SerializedGameState, Territory } from '../types/game'
+import type { GamePlayer, GameState, SerializedGameState, Territory } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 import { eloService, type PlayerRating } from './eloService'
 import { GameService } from './gameService'
+import { GameRoomService } from './gameRoomService'
+import { gameStateCache } from './cacheService'
 import { queueService } from './queueService'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
   username?: string
+  joinedGameRooms?: Set<string>
 }
 
 function requireUserId(socket: AuthenticatedSocket): string {
@@ -21,6 +24,37 @@ function requireUserId(socket: AuthenticatedSocket): string {
     throw new Error('User not authenticated')
   }
   return socket.userId
+}
+
+function getGameChannel(roomId: string): string {
+  return `game:${roomId}`
+}
+
+function isGameChannel(channel: string): boolean {
+  return channel.startsWith('game:')
+}
+
+function getRoomIdFromChannel(channel: string): string {
+  return channel.slice('game:'.length)
+}
+
+function serializeGameStateForClient(
+  state: GameState | SerializedGameState | null | undefined,
+): SerializedGameState | null {
+  if (!state) {
+    return null
+  }
+
+  const baseState: SerializedGameState = { ...state } as SerializedGameState
+  const territoryModifiers = (state as GameState).territoryModifiers
+
+  if (territoryModifiers instanceof Map) {
+    baseState.territoryModifiers = Object.fromEntries(territoryModifiers.entries())
+  } else if (territoryModifiers) {
+    baseState.territoryModifiers = territoryModifiers as SerializedGameState['territoryModifiers']
+  }
+
+  return baseState
 }
 
 interface UserRatingRow extends QueryResultRow {
@@ -78,6 +112,7 @@ function withErrorHandler<T extends unknown[]>(
 
 export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   const gameService = new GameService()
+  const gameRoomService = new GameRoomService()
 
   io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth.token
@@ -117,12 +152,44 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
-        await socket.join(roomId)
-        socket.to(roomId).emit('player-joined', {
-          userId,
-          socketId: socket.id,
+        const hasAccess = await gameRoomService.isPlayerInRoom(roomId, userId)
+        if (!hasAccess) {
+          throw new Error('You are not a member of this game')
+        }
+
+        const channel = getGameChannel(roomId)
+        await socket.join(channel)
+
+        if (!socket.joinedGameRooms) {
+          socket.joinedGameRooms = new Set()
+        }
+        socket.joinedGameRooms.add(roomId)
+
+        const player = await gameRoomService.getPlayer(roomId, userId)
+        const normalizedPlayer = {
+          userId: player?.userId ?? userId,
+          username: player?.username ?? socket.username ?? 'Unknown player',
+          joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
+        }
+
+        socket.to(channel).emit('player-joined', {
+          roomId,
+          player: normalizedPlayer,
         })
-        logger.info(`User ${userId} joined room ${roomId}`)
+
+        const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+        let serializedState = serializeGameStateForClient(cachedState)
+
+        if (!serializedState) {
+          const freshState = await gameService.getGameState(roomId)
+          serializedState = serializeGameStateForClient(freshState)
+        }
+
+        if (serializedState) {
+          socket.emit('game-update', serializedState)
+        }
+
+        logger.info(`User ${userId} subscribed to game channel ${channel}`)
       }),
     )
 
@@ -134,12 +201,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const userId = requireUserId(socket)
-        await socket.leave(roomId)
-        socket.to(roomId).emit('player-left', {
-          userId,
-          socketId: socket.id,
+        const channel = getGameChannel(roomId)
+
+        await socket.leave(channel)
+        socket.joinedGameRooms?.delete(roomId)
+
+        socket.to(channel).emit('player-left', {
+          roomId,
+          playerId: userId,
         })
-        logger.info(`User ${userId} left room ${roomId}`)
+        logger.info(`User ${userId} left game channel ${channel}`)
       }),
     )
 
@@ -299,8 +370,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           data.toTerritoryId,
           data.armies,
         )
-        io.to(data.roomId).emit('territoriesFortified', result)
-        io.to(data.roomId).emit('game-update', result.gameState)
+        const channel = getGameChannel(data.roomId)
+        io.to(channel).emit('territoriesFortified', result)
+        io.to(channel).emit('game-update', result.gameState)
       }),
     )
 
@@ -323,10 +395,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           result.gameState.turn,
           result.reinforcementArmies,
         )
-        io.to(data.roomId).emit('game-delta', phaseDelta)
+        const channel = getGameChannel(data.roomId)
+        io.to(channel).emit('game-delta', phaseDelta)
 
         // Keep legacy event for backward compatibility
-        io.to(data.roomId).emit('phaseChanged', {
+        io.to(channel).emit('phaseChanged', {
           phase: result.gameState.phase,
           currentPlayer: result.gameState.currentPlayer,
           turn: result.gameState.turn,
@@ -346,7 +419,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         // Sanitize message to prevent XSS
         const sanitizedMessage = data.message.substring(0, 500).replace(/<[^>]*>/g, '')
 
-        socket.to(data.roomId).emit('chat-message', {
+        const channel = getGameChannel(data.roomId)
+        socket.to(channel).emit('chat-message', {
+          roomId: data.roomId,
           userId,
           message: sanitizedMessage,
           timestamp: new Date().toISOString(),
@@ -362,15 +437,18 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         logger.info(`User ${userId} disconnected`)
-        // Notify all rooms this user was in
-        socket.rooms.forEach((roomId) => {
-          if (roomId !== socket.id) {
-            socket.to(roomId).emit('player-disconnected', {
-              userId,
-              socketId: socket.id,
-            })
-          }
+        const gameRooms = socket.joinedGameRooms ?? new Set<string>()
+
+        gameRooms.forEach((roomId) => {
+          const channel = getGameChannel(roomId)
+          socket.to(channel).emit('player-disconnected', {
+            roomId,
+            playerId: userId,
+            socketId: socket.id,
+          })
         })
+
+        socket.joinedGameRooms?.clear()
       } catch (error) {
         logger.error('Disconnect handler error:', error)
       }
@@ -455,7 +533,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         await eloService.applyRatingChanges(roomId, ratingChanges)
 
         // Emit rating updates to all players in the room
-        io.to(roomId).emit('ratingUpdate', {
+        const channel = getGameChannel(roomId)
+        io.to(channel).emit('ratingUpdate', {
           changes: ratingChanges.map((change) => ({
             userId: change.userId,
             username: sortedPlayers.find((p) => p.id === change.userId)?.username,

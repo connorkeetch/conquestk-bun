@@ -79,7 +79,7 @@ export const PLAYER_COLORS = [
 
   // Earth Tones
   '#918151', // Tan - Light brown/tan
-  '#7C2D12', // Brown - Richer, earthier brown
+  '#5C4033', // Brown - Deep coffee brown
 ] as const
 
 // ===== PREMIUM PLAYER COLORS =====
@@ -242,7 +242,7 @@ export const getColorDisplayName = (color: string): string => {
     '#06B6D4': 'Cyan',
     '#7C3AED': 'Violet',
     '#918151': 'Tan',
-    '#7C2D12': 'Brown',
+    '#5C4033': 'Brown',
     // Premium colors (5)
     '#000000': 'Midnight Black',
     '#FFFFFF': 'Pure White',

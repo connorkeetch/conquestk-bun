@@ -54,7 +54,8 @@
   },
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "shared"
   ],
   "overrides": {
     "simple-swizzle": "0.2.2"

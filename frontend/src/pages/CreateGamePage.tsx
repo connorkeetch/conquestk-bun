@@ -102,7 +102,7 @@ const getColorName = (color: string | PlayerColor): string => {
     'Cyan', // #06B6D4
     'Violet', // #7C3AED
     'Tan', // #918151
-    'Brown', // #7C2D12
+    'Brown', // #5C4033
   ]
 
   // For standard player colors, get the index and return the name

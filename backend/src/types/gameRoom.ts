@@ -1,10 +1,20 @@
+import type { GamePhase } from './game'
+
+export type GameLifecycleStatus =
+  | 'lobby'
+  | 'initializing'
+  | 'active'
+  | 'completed'
+  | 'paused'
+  | 'abandoned'
+
 export interface GameRoom {
   id: string
   name: string
   hostId: string
   maxPlayers: number
   isPrivate: boolean
-  status: 'waiting' | 'in_progress' | 'finished' | 'active' | 'paused' | 'abandoned'
+  status: GameLifecycleStatus
   is_ranked?: boolean
   avg_skill_rating?: number
   skill_variance?: number
@@ -24,6 +34,10 @@ export interface GameRoom {
   mapName?: string
   gameStarted?: boolean
   currentTurnUserId?: string | null
+  lifecyclePhase?: GamePhase | 'lobby' | 'initializing'
+  turnNumber?: number
+  turnExpiresAt?: Date | null
+  readyCheckStartedAt?: Date | null
   winner?: string | null
   playerCount?: number
   players?: Player[]
@@ -35,4 +49,6 @@ export interface Player {
   skill_rating?: number
   current_tier?: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Master' | 'Grandmaster'
   joinedAt: Date
+  isReady?: boolean
+  readyAt?: Date | null
 }

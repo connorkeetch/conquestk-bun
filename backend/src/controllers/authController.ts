@@ -10,7 +10,11 @@ import { logger } from '../utils/logger'
 export class AuthController {
   private userService = new UserService()
 
-  private readonly tokenExpiration = process.env.JWT_EXPIRES_IN || '7d'
+  private readonly tokenExpiration: jwt.SignOptions['expiresIn'] =
+    (process.env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] | undefined) ??
+    ('7d' as jwt.SignOptions['expiresIn'])
+
+  private readonly jwtSecret: jwt.Secret = process.env.JWT_SECRET ?? 'fallback-secret'
 
   register = async (req: Request, res: Response) => {
     try {
@@ -121,7 +125,7 @@ export class AuthController {
         }
       }
 
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
+      const token = jwt.sign({ userId: user.id }, this.jwtSecret, {
         expiresIn: this.tokenExpiration,
       })
 
@@ -205,7 +209,7 @@ export class AuthController {
       await this.userService.updateLastLogin(user.id)
 
       // Generate token regardless of verification status
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
+      const token = jwt.sign({ userId: user.id }, this.jwtSecret, {
         expiresIn: this.tokenExpiration,
       })
 
