@@ -78,6 +78,7 @@ _Last updated: September 20, 2025_
   - In-app notifications delivered via WebSocket fan-out for creators and moderators.
   - Service worker registered; VAPID keys configured; durable subscription storage (database-backed).
   - Notification preferences exposed in profile. DM push stays deferred to C3.
+- _Progress (Feb 2025): Web push now persists in `web_push_subscriptions`, the service worker serves production-ready assets, and gameplay events (start/turn/end) trigger push notifications. Map approval/DM fan-out still pending._
 
 ### B3. Map staging asset lifecycle
 - **Priority:** P1 • **Tags:** [be][ops]

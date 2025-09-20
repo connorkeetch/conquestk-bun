@@ -10,6 +10,7 @@ import type {
 import { logger } from '../utils/logger'
 import { gameStateCache } from './cacheService'
 import { mapService } from './mapService'
+import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
 
 type BattleWorkerResult = {
@@ -139,6 +140,15 @@ export class GameService {
     // Cache the game state with TTL for automatic cleanup (24 hours)
     await gameStateCache.setGameState(roomId, this.serializeGameState(gameState))
 
+    if (notificationService.isEnabled()) {
+      notificationService.notifyGameStart(roomId, players).catch((error) => {
+        logger.warn('Failed to send game start push notifications', {
+          roomId,
+          error: error instanceof Error ? error.message : error,
+        })
+      })
+    }
+
     logger.info(`Game initialized for room ${roomId} with ${players.length} players`)
     return gameState
   }
@@ -216,6 +226,17 @@ export class GameService {
 
     await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
 
+    if (notificationService.isEnabled() && battleResult.gameEnded) {
+      const participantIds = updatedState.players.map((player) => player.id)
+      const winnerId = battleResult.winner?.id ?? updatedState.currentPlayer
+      notificationService.notifyGameEnd(roomId, winnerId, participantIds).catch((error) => {
+        logger.warn('Failed to send game end push notifications after battle', {
+          roomId,
+          error: error instanceof Error ? error.message : error,
+        })
+      })
+    }
+
     return {
       ...battleResult,
       gameState: this.serializeGameState(updatedState),
@@ -264,6 +285,8 @@ export class GameService {
     const gameState = this.hydrateGameState(cachedState)
     if (gameState.currentPlayer !== userId) throw new Error('Not your turn')
 
+    const previousPlayerId = gameState.currentPlayer
+    const previousPhase = gameState.phase
     const updatedState = this.gameEngine.advancePhase(gameState)
 
     // Use longer TTL for finished games
@@ -271,6 +294,36 @@ export class GameService {
       await gameStateCache.setInactiveGameState(roomId, this.serializeGameState(updatedState))
     } else {
       await gameStateCache.setGameState(roomId, this.serializeGameState(updatedState))
+    }
+
+    if (notificationService.isEnabled()) {
+      const nextPlayerId = updatedState.currentPlayer
+      const participantIds = updatedState.players.map((player) => player.id)
+
+      if (updatedState.phase === 'finished' && previousPhase !== 'finished') {
+        const winner = updatedState.players.find(
+          (player) => player.id === nextPlayerId && !player.isEliminated,
+        )
+        notificationService
+          .notifyGameEnd(roomId, winner?.id ?? nextPlayerId, participantIds)
+          .catch((error) => {
+            logger.warn('Failed to send game end push notifications', {
+              roomId,
+              error: error instanceof Error ? error.message : error,
+            })
+          })
+      } else if (nextPlayerId !== previousPlayerId && updatedState.phase === 'reinforcement') {
+        const nextPlayer = updatedState.players.find((player) => player.id === nextPlayerId)
+        notificationService
+          .notifyTurnStart(roomId, nextPlayerId, nextPlayer?.username ?? 'Your turn')
+          .catch((error) => {
+            logger.warn('Failed to send turn start push notification', {
+              roomId,
+              nextPlayerId,
+              error: error instanceof Error ? error.message : error,
+            })
+          })
+      }
     }
 
     // Calculate reinforcement armies if moving to reinforcement phase

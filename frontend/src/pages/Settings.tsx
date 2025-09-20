@@ -313,6 +313,9 @@ interface SettingItem {
   buttonVariant?: 'primary' | 'secondary' | 'danger'
   onChange?: (value: any) => void
   onClick?: () => void
+  disabled?: boolean
+  disabledReason?: string
+  statusMessage?: string | React.ReactNode
 }
 
 export default function Settings() {
@@ -347,6 +350,9 @@ export default function Settings() {
   }, [isThemeDropdownOpen])
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>('default')
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [pushBackendEnabled, setPushBackendEnabled] = useState(true)
+  const [pushStatusMessage, setPushStatusMessage] = useState<string | null>(null)
+  const [pushOperationInFlight, setPushOperationInFlight] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
@@ -356,13 +362,34 @@ export default function Settings() {
   const [profileUpdateLoading, setProfileUpdateLoading] = useState(false)
 
   useEffect(() => {
-    // Initialize push notification service and check status
     const initNotifications = async () => {
-      await pushNotificationService.initialize()
-      setNotificationStatus(pushNotificationService.getPermissionStatus())
-      setIsSubscribed(pushNotificationService.isEnabled())
+      setPushStatusMessage(null)
+      const supported = await pushNotificationService.initialize()
+      const permission = pushNotificationService.getPermissionStatus()
+      const hasSubscription = pushNotificationService.isEnabled()
+
+      setNotificationStatus(permission)
+      setIsSubscribed(hasSubscription)
+
+      const backendEnabled = pushNotificationService.isBackendEnabled()
+      setPushBackendEnabled(backendEnabled)
+      const initError = pushNotificationService.getLastError()
+
+      if (!backendEnabled) {
+        if (hasSubscription) {
+          setPushStatusMessage(
+            initError || 'Push notifications are currently disabled by the server.',
+          )
+        } else if (initError) {
+          setPushStatusMessage(initError)
+        }
+      } else if (!supported && initError) {
+        setPushStatusMessage(initError)
+      } else {
+        setPushStatusMessage(null)
+      }
     }
-    initNotifications()
+    void initNotifications()
   }, [])
 
   // Check username availability
@@ -499,15 +526,17 @@ export default function Settings() {
 
   // Unified settings renderer
   const renderSetting = (setting: SettingItem) => {
+    const isDisabled = !setting.isWorking || setting.disabled === true
+
     const baseContainerClass = `p-4 rounded-lg border transition-all ${
-      setting.isWorking
+      !isDisabled
         ? 'bg-slate-800/50 border-slate-600 hover:border-slate-500'
         : 'bg-slate-800/20 border-slate-700/50 opacity-60'
     }`
 
-    const labelClass = `text-base font-medium ${setting.isWorking ? 'text-gray-200' : 'text-muted'}`
+    const labelClass = `text-base font-medium ${!isDisabled ? 'text-gray-200' : 'text-muted'}`
 
-    const descriptionClass = `text-sm mt-1 ${setting.isWorking ? 'text-muted' : 'text-muted'}`
+    const descriptionClass = 'text-sm mt-1 text-muted'
 
     const renderComingSoonBadge = () => {
       if (!setting.isWorking) {
@@ -528,13 +557,13 @@ export default function Settings() {
               <input
                 type="checkbox"
                 checked={setting.defaultValue}
-                disabled={!setting.isWorking}
+                disabled={isDisabled}
                 onChange={(e) => {
-                  if (setting.isWorking && setting.onChange) {
+                  if (!isDisabled && setting.onChange) {
                     setting.onChange(e.target.checked)
                   }
                 }}
-                className={!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}
+                className={isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
               />
               <span className={`slider ${!setting.isWorking ? 'opacity-50' : ''}`}></span>
             </label>
@@ -544,12 +573,12 @@ export default function Settings() {
           return (
             <select
               className={`px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${
-                !setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
-              disabled={!setting.isWorking}
+              disabled={isDisabled}
               value={setting.defaultValue}
               onChange={(e) => {
-                if (setting.isWorking && setting.onChange) {
+                if (!isDisabled && setting.onChange) {
                   setting.onChange(e.target.value)
                 }
               }}
@@ -570,13 +599,13 @@ export default function Settings() {
                 min="0"
                 max="100"
                 value={setting.defaultValue}
-                disabled={!setting.isWorking}
+                disabled={isDisabled}
                 onChange={(e) => {
-                  if (setting.isWorking && setting.onChange) {
+                  if (!isDisabled && setting.onChange) {
                     setting.onChange(Number(e.target.value))
                   }
                 }}
-                className={`w-full ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               <div className="text-xs text-muted text-center mt-1">{setting.defaultValue}%</div>
             </div>
@@ -593,9 +622,9 @@ export default function Settings() {
           return (
             <button
               className={buttonClass}
-              disabled={!setting.isWorking}
+              disabled={isDisabled}
               onClick={() => {
-                if (setting.isWorking && setting.onClick) {
+                if (!isDisabled && setting.onClick) {
                   setting.onClick()
                 }
               }}
@@ -617,7 +646,7 @@ export default function Settings() {
                   <span className="text-muted text-sm">
                     {fieldValues[setting.id] || setting.defaultValue || 'Not set'}
                   </span>
-                  {setting.isWorking && (
+                  {!isDisabled && (
                     <button
                       onClick={() => {
                         setEditingField(setting.id)
@@ -776,7 +805,7 @@ export default function Settings() {
               {/* Dropdown Button */}
               <button
                 onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
-                disabled={!setting.isWorking}
+                disabled={isDisabled}
                 className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px] disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
@@ -818,12 +847,12 @@ export default function Settings() {
                     <button
                       key={theme.id}
                       onClick={() => {
-                        if (setting.isWorking && setting.onChange) {
+                        if (!isDisabled && setting.onChange) {
                           setting.onChange(theme.id)
                         }
                         setIsThemeDropdownOpen(false)
                       }}
-                      disabled={!setting.isWorking}
+                      disabled={isDisabled}
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
                     >
                       {/* Color Circle */}
@@ -867,14 +896,22 @@ export default function Settings() {
     }
 
     return (
-      <div key={setting.id} className={`relative ${baseContainerClass}`}>
+      <div key={setting.id} className="relative">
         {renderComingSoonBadge()}
-        <div className="flex justify-between items-center">
-          <div className="flex-1 pr-4">
-            <label className={labelClass}>{setting.label}</label>
-            <p className={descriptionClass}>{setting.description}</p>
+        <div className={baseContainerClass}>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
+              <h4 className={labelClass}>{setting.label}</h4>
+              <p className={descriptionClass}>{setting.description}</p>
+              {setting.disabled && setting.disabledReason && (
+                <p className="text-sm text-orange-300 mt-2">{setting.disabledReason}</p>
+              )}
+              {setting.statusMessage && (
+                <p className="text-sm text-red-300 mt-2">{setting.statusMessage}</p>
+              )}
+            </div>
+            <div className="shrink-0">{renderControl()}</div>
           </div>
-          <div className="flex-shrink-0">{renderControl()}</div>
         </div>
       </div>
     )
@@ -1135,30 +1172,69 @@ export default function Settings() {
           },
         ]
 
-      case 'notifications':
+      case 'notifications': {
+        const pushDescription =
+          !pushBackendEnabled && !isSubscribed
+            ? 'Push notifications are temporarily disabled while the server push service is offline.'
+            : notificationStatus === 'granted'
+              ? isSubscribed
+                ? 'Push notifications are enabled'
+                : 'Click to enable push notifications'
+              : notificationStatus === 'denied'
+                ? 'Notifications blocked - please enable in browser settings'
+                : 'Enable notifications for game updates'
+
+        const disabled = pushOperationInFlight || (!pushBackendEnabled && !isSubscribed)
+        const disabledReason =
+          !pushBackendEnabled && !isSubscribed
+            ? 'Push notifications are currently disabled by the server. Please try again later.'
+            : undefined
+
         return [
           {
             id: 'browser-notifications',
             label: 'Browser Push Notifications',
-            description:
-              notificationStatus === 'granted'
-                ? isSubscribed
-                  ? 'Push notifications are enabled'
-                  : 'Click to enable push notifications'
-                : notificationStatus === 'denied'
-                  ? 'Notifications blocked - please enable in browser settings'
-                  : 'Enable notifications for game updates',
+            description: pushDescription,
             type: 'toggle',
             isWorking: true,
             defaultValue: isSubscribed,
+            disabled,
+            disabledReason,
+            statusMessage: pushStatusMessage ?? undefined,
             onChange: async (value: boolean) => {
-              if (value) {
-                const success = await pushNotificationService.subscribe()
-                setIsSubscribed(success)
+              setPushStatusMessage(null)
+              setPushOperationInFlight(true)
+              try {
+                if (value) {
+                  const result = await pushNotificationService.subscribe()
+                  setNotificationStatus(pushNotificationService.getPermissionStatus())
+                  setPushBackendEnabled(pushNotificationService.isBackendEnabled())
+                  if (result.success) {
+                    setIsSubscribed(true)
+                  } else {
+                    setIsSubscribed(false)
+                    setPushStatusMessage(result.message || 'Unable to enable push notifications')
+                  }
+                } else {
+                  const result = await pushNotificationService.unsubscribe()
+                  setNotificationStatus(pushNotificationService.getPermissionStatus())
+                  setPushBackendEnabled(pushNotificationService.isBackendEnabled())
+                  if (result.success) {
+                    setIsSubscribed(false)
+                  } else {
+                    setIsSubscribed(true)
+                    setPushStatusMessage(result.message || 'Unable to disable push notifications')
+                  }
+                }
+              } catch (error) {
+                console.error('Push notification toggle failed', error)
+                const message =
+                  error instanceof Error ? error.message : 'Unexpected push notification error'
+                setPushStatusMessage(message)
+                setIsSubscribed(pushNotificationService.isEnabled())
                 setNotificationStatus(pushNotificationService.getPermissionStatus())
-              } else {
-                await pushNotificationService.unsubscribe()
-                setIsSubscribed(false)
+              } finally {
+                setPushOperationInFlight(false)
               }
             },
           },
@@ -1189,6 +1265,7 @@ export default function Settings() {
             },
           },
         ]
+      }
 
       case 'privacy':
         return [
@@ -1417,9 +1494,7 @@ export default function Settings() {
 
           <div>
             <h3 className="text-xl font-semibold text-white mb-6">Notification Preferences</h3>
-            <div className="glass-box">
-              {renderNotificationTable()}
-            </div>
+            <div className="glass-box">{renderNotificationTable()}</div>
           </div>
         </div>
       )
@@ -1509,9 +1584,7 @@ export default function Settings() {
 
           {/* Settings Content */}
           <div className="lg:col-span-3">
-            <div className="glass-box-xl">
-              {renderTabContent()}
-            </div>
+            <div className="glass-box-xl">{renderTabContent()}</div>
           </div>
         </div>
       </div>

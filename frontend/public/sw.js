@@ -1,4 +1,3 @@
-// Service Worker for Push Notifications
 self.addEventListener('install', (_event) => {
   self.skipWaiting()
 })
@@ -7,7 +6,6 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim())
 })
 
-// Handle push notifications
 self.addEventListener('push', (event) => {
   if (!event.data) {
     return
@@ -23,16 +21,24 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const payloadData =
+    typeof notificationData.data === 'object' && notificationData.data !== null
+      ? notificationData.data
+      : {}
+  const targetUrl = notificationData.url || payloadData.url || '/'
+  const mergedData = {
+    ...payloadData,
+    gameId: notificationData.gameId ?? payloadData.gameId,
+    url: targetUrl,
+    timestamp: new Date().toISOString(),
+  }
+
   const options = {
     body: notificationData.body || 'You have a new notification',
-    icon: '/icon.svg',
-    badge: '/vite.svg',
-    vibrate: [100, 50, 100],
-    data: {
-      gameId: notificationData.gameId,
-      url: notificationData.url || '/',
-      timestamp: new Date().toISOString(),
-    },
+    icon: notificationData.icon || '/icon-192.png',
+    badge: notificationData.badge || '/icon-192.png',
+    vibrate: notificationData.vibrate || [100, 50, 100],
+    data: mergedData,
     actions: notificationData.actions || [
       {
         action: 'view',
@@ -44,7 +50,7 @@ self.addEventListener('push', (event) => {
       },
     ],
     tag: notificationData.tag || 'risk-game-notification',
-    renotify: true,
+    renotify: notificationData.renotify ?? true,
   }
 
   event.waitUntil(
@@ -52,43 +58,50 @@ self.addEventListener('push', (event) => {
   )
 })
 
-// Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  let targetUrl = '/'
+  const data = event.notification.data || {}
 
-  if (event.notification.data) {
-    if (event.action === 'view' && event.notification.data.gameId) {
-      targetUrl = `/game/${event.notification.data.gameId}`
-    } else if (event.notification.data.url) {
-      targetUrl = event.notification.data.url
-    }
+  let destination = '/'
+  if (event.action === 'view' && data.gameId) {
+    destination = `/game/${data.gameId}`
+  } else if (typeof data.url === 'string' && data.url.length > 0) {
+    destination = data.url
+  }
+
+  let targetHref
+  try {
+    targetHref = new URL(destination, self.location.origin).href
+  } catch (_error) {
+    targetHref = self.location.origin
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window/tab open
-      for (const client of clientList) {
-        if (client.url.includes('localhost:5173') || client.url.includes('conquestk.com')) {
-          client.focus()
-          client.navigate(targetUrl)
-          return
+    (async () => {
+      const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const targetOrigin = new URL(targetHref).origin
+
+      for (const client of allClients) {
+        try {
+          const clientOrigin = new URL(client.url).origin
+          if (clientOrigin === targetOrigin) {
+            await client.focus()
+            if ('navigate' in client && client.url !== targetHref) {
+              try {
+                await client.navigate(targetHref)
+              } catch (_navigateError) {
+                // ignore navigate errors and fall back to openWindow
+              }
+            }
+            return
+          }
+        } catch (_urlError) {
+          // ignore invalid client URLs
         }
       }
-      // If no window is open, open a new one
-      return clients.openWindow(targetUrl)
-    }),
+
+      await clients.openWindow(targetHref)
+    })(),
   )
 })
-
-// Background sync for offline notification queue
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-notifications') {
-    event.waitUntil(syncNotifications())
-  }
-})
-
-async function syncNotifications() {
-  // Implementation will be added when we have the backend ready
-}
