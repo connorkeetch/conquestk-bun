@@ -22,7 +22,7 @@ interface GameInfo {
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private' | 'tournaments'>(
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private'>(
     'browse',
   )
   const [publicGames, setPublicGames] = useState<GameRoom[]>([])
@@ -367,13 +367,6 @@ const LobbyPage: React.FC = () => {
         >
           🔒 Private Game
         </button>
-        <button
-          type="button"
-          className={`tab ${activeTab === 'tournaments' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('tournaments')}
-        >
-          🏆 Tournaments
-        </button>
       </div>
 
       {/* Error Display */}
@@ -696,18 +689,6 @@ const LobbyPage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'tournaments' && (
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Tournaments</h2>
-            <div className="text-center text-muted py-16">
-              <div className="text-6xl mb-4">🏆</div>
-              <p className="text-lg text-muted">Tournament system coming soon!</p>
-              <p className="text-sm mt-2">
-                This will show active tournaments, brackets, and registration
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

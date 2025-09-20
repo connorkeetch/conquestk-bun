@@ -1,6 +1,6 @@
 # ✅ Browser Push Notification Hardening Plan
 
-_Last updated: February 19, 2025_
+_Last updated: September 20, 2025_
 
 ## 🎯 Objectives
 - Make browser push reliable across deploys and multiple devices.
@@ -12,7 +12,7 @@ _Last updated: February 19, 2025_
 
 ### Persistence & Subscription Lifecycle
 - [x] Replace the in-memory `Map<number, PushSubscription>` with a durable table keyed by `(user_id, endpoint)` so subscriptions persist across restarts and support multiple browsers per user.
-- [ ] Add a maintenance job or admin endpoint to prune expired/invalid subscriptions once persistence exists.
+- [x] Add a maintenance job or admin endpoint to prune expired/invalid subscriptions once persistence exists. _(Admin route `POST /api/notifications/admin/prune-subscriptions` removes expired, repeatedly failing, and long-stale registrations.)_
 - [x] Guard `pushManager.subscribe()` with `getSubscription()` checks to reuse existing registrations and avoid `InvalidStateError` crashes when the toggle is re-enabled.
 
 ### Client UX & Error Handling
@@ -27,7 +27,7 @@ _Last updated: February 19, 2025_
 
 ### Backend Delivery & Reliability
 - [x] Wrap `webpush.sendNotification` with retry/backoff for transient 5xx/429 responses and record failures for later inspection.
-- [ ] Integrate structured logging (`logger.child({ channel: 'webpush', eventId })`) around subscription saves, sends, and errors.
+- [x] Integrate structured logging (`logger.child({ channel: 'webpush', eventId })`) around subscription saves, sends, and errors. _(Each delivery flow now tags logs with stable `eventId` metadata for tracing across retries and cleanups.)_
 - [ ] Extend the notification service to fan out gameplay events (`notifyTurnStart`, `notifyGameStart`, eliminations, invitations) so pushes are emitted without manual testing. _(Game start/turn/end pushes now wired via `gameService`; eliminations & invites remain TODO.)_
 
 ### Future Integration Work

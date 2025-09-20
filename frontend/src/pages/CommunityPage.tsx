@@ -1,14 +1,4 @@
-import {
-  Calendar,
-  CalendarDays,
-  Crown,
-  Medal,
-  MessageSquare,
-  Shield,
-  TrendingUp,
-  Trophy,
-  Users,
-} from 'lucide-react'
+import { Calendar, Crown, Medal, TrendingUp, Trophy, Users } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import api from '../services/api'
@@ -25,9 +15,6 @@ interface LeaderboardEntry {
 }
 
 const CommunityPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'clans' | 'forums' | 'events'>(
-    'leaderboard',
-  )
   const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'monthly' | 'friends'>('global')
   const [globalLeaderboard, setGlobalLeaderboard] = useState<LeaderboardEntry[]>([])
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -35,9 +22,7 @@ const CommunityPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (activeTab === 'leaderboard') {
-      fetchLeaderboardData()
-    }
+    fetchLeaderboardData()
   }, [leaderboardTab])
 
   const fetchLeaderboardData = async () => {
@@ -95,190 +80,128 @@ const CommunityPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Navigation Tabs */}
-      <div className="tabs">
-        <button
-          onClick={() => setActiveTab('leaderboard')}
-          className={`tab ${activeTab === 'leaderboard' ? 'tab-active' : ''}`}
-        >
-          <Trophy className="w-4 h-4" />
-          Leaderboard
-        </button>
-        <button
-          onClick={() => setActiveTab('clans')}
-          className={`tab ${activeTab === 'clans' ? 'tab-active' : ''}`}
-          disabled
-        >
-          <Shield className="w-4 h-4" />
-          Clans
-          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('forums')}
-          className={`tab ${activeTab === 'forums' ? 'tab-active' : ''}`}
-          disabled
-        >
-          <MessageSquare className="w-4 h-4" />
-          Forums
-          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('events')}
-          className={`tab ${activeTab === 'events' ? 'tab-active' : ''}`}
-          disabled
-        >
-          <CalendarDays className="w-4 h-4" />
-          Events
-          <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">Soon</span>
-        </button>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary-soft">
+          <Trophy className="w-5 h-5" />
+        </div>
+        <h2 className="text-xl font-semibold text-white">Leaderboard</h2>
       </div>
 
       {/* Leaderboard Content */}
-      {activeTab === 'leaderboard' && (
-        <>
-          {/* Leaderboard Sub-tabs */}
-          <div className="tabs-pills mb-6">
-            <button
-              onClick={() => setLeaderboardTab('global')}
-              className={`tab-pill ${leaderboardTab === 'global' ? 'tab-pill-active' : ''}`}
-            >
-              <Trophy className="w-4 h-4" />
-              Global Rankings
-            </button>
-            <button
-              onClick={() => setLeaderboardTab('monthly')}
-              className={`tab-pill ${leaderboardTab === 'monthly' ? 'tab-pill-active' : ''}`}
-            >
-              <Calendar className="w-4 h-4" />
-              This Month
-            </button>
-            <button
-              onClick={() => setLeaderboardTab('friends')}
-              className={`tab-pill ${leaderboardTab === 'friends' ? 'tab-pill-active' : ''}`}
-            >
-              <Users className="w-4 h-4" />
-              Friends
-            </button>
-          </div>
+        {/* Leaderboard Sub-tabs */}
+        <div className="tabs-pills mb-6">
+          <button
+            onClick={() => setLeaderboardTab('global')}
+            className={`tab-pill ${leaderboardTab === 'global' ? 'tab-pill-active' : ''}`}
+          >
+            <Trophy className="w-4 h-4" />
+            Global Rankings
+          </button>
+          <button
+            onClick={() => setLeaderboardTab('monthly')}
+            className={`tab-pill ${leaderboardTab === 'monthly' ? 'tab-pill-active' : ''}`}
+          >
+            <Calendar className="w-4 h-4" />
+            This Month
+          </button>
+          <button
+            onClick={() => setLeaderboardTab('friends')}
+            className={`tab-pill ${leaderboardTab === 'friends' ? 'tab-pill-active' : ''}`}
+          >
+            <Users className="w-4 h-4" />
+            Friends
+          </button>
+        </div>
 
-          {/* Leaderboard Table */}
-          <div className="glass-box-lg overflow-hidden p-0">
-            {loading ? (
-              <div className="p-16 text-center">
-                <div className="text-muted">Loading leaderboard...</div>
-              </div>
-            ) : currentLeaderboard.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-ink border-b border-border">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                        Rank
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                        Player
-                      </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        ELO
-                      </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        Games
-                      </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        Wins
-                      </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        Win Rate
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {currentLeaderboard.map((player, index) => (
-                      <tr
-                        key={player.id}
-                        className={`hover:bg-surface-2/50 transition-colors ${
-                          index < 3 ? 'bg-surface-2/30' : ''
-                        }`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {renderRankBadge(player.rank || index + 1)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-2">
-                              <div className="text-sm font-medium text-white">
-                                {player.username}
-                              </div>
+        {/* Leaderboard Table */}
+        <div className="glass-box-lg overflow-hidden p-0">
+          {loading ? (
+            <div className="p-16 text-center">
+              <div className="text-muted">Loading leaderboard...</div>
+            </div>
+          ) : currentLeaderboard.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-ink border-b border-border">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                      Rank
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                      Player
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
+                      ELO
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
+                      Games
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
+                      Wins
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
+                      Win Rate
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {currentLeaderboard.map((player, index) => (
+                    <tr
+                      key={player.id}
+                      className={`hover:bg-surface-2/50 transition-colors ${
+                        index < 3 ? 'bg-surface-2/30' : ''
+                      }`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {renderRankBadge(player.rank || index + 1)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="ml-2">
+                            <div className="text-sm font-medium text-white">
+                              {player.username}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <TrendingUp className="w-4 h-4 text-success" />
-                            <span className="text-white font-medium">{player.elo}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
-                          {player.gamesPlayed || player.wins + player.losses}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-success">
-                          {player.wins}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span
-                            className={`font-medium ${
-                              player.winRate > 60
-                                ? 'text-success'
-                                : player.winRate > 50
-                                  ? 'text-warning'
-                                  : 'text-danger'
-                            }`}
-                          >
-                            {player.winRate.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-16 text-center">
-                <Trophy className="w-16 h-16 text-muted mx-auto mb-4" />
-                <p className="text-muted text-lg mb-2">No rankings available yet</p>
-                <p className="text-muted text-sm">Play ranked games to appear on the leaderboard</p>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Clans Content */}
-      {activeTab === 'clans' && (
-        <div className="glass-box-lg text-center">
-          <Shield className="w-16 h-16 text-muted mx-auto mb-4" />
-          <p className="text-muted text-lg mb-2">Clans Coming Soon</p>
-          <p className="text-muted text-sm">Form alliances and compete as a team</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <TrendingUp className="w-4 h-4 text-success" />
+                          <span className="text-white font-medium">{player.elo}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-muted">
+                        {player.gamesPlayed || player.wins + player.losses}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-success">
+                        {player.wins}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span
+                          className={`font-medium ${
+                            player.winRate > 60
+                              ? 'text-success'
+                              : player.winRate > 50
+                                ? 'text-warning'
+                                : 'text-danger'
+                          }`}
+                        >
+                          {player.winRate.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-16 text-center">
+              <Trophy className="w-16 h-16 text-muted mx-auto mb-4" />
+              <p className="text-muted text-lg mb-2">No rankings available yet</p>
+              <p className="text-muted text-sm">Play ranked games to appear on the leaderboard</p>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Forums Content */}
-      {activeTab === 'forums' && (
-        <div className="glass-box-lg text-center">
-          <MessageSquare className="w-16 h-16 text-muted mx-auto mb-4" />
-          <p className="text-muted text-lg mb-2">Forums Coming Soon</p>
-          <p className="text-muted text-sm">Discuss strategies and connect with players</p>
-        </div>
-      )}
-
-      {/* Events Content */}
-      {activeTab === 'events' && (
-        <div className="glass-box-lg text-center">
-          <CalendarDays className="w-16 h-16 text-muted mx-auto mb-4" />
-          <p className="text-muted text-lg mb-2">Events & Tournaments Coming Soon</p>
-          <p className="text-muted text-sm">Compete in special events for exclusive rewards</p>
-        </div>
-      )}
     </div>
   )
 }

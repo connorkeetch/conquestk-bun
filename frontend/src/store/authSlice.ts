@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { applyTheme } from '../config/themes.config'
 import { authService } from '../services/authService'
 import type { User } from '../types/user'
+import { isTokenExpired } from '../utils/token'
 import { loadServerSettings } from './settingsSlice'
 
 interface AuthState {
@@ -15,8 +16,19 @@ interface AuthState {
 
 const getInitialToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('token')
+    const storedToken = localStorage.getItem('token')
+    if (!storedToken) {
+      return null
+    }
+
+    if (isTokenExpired(storedToken, 30)) {
+      localStorage.removeItem('token')
+      return null
+    }
+
+    return storedToken
   }
+
   return null
 }
 
@@ -72,6 +84,11 @@ export const checkAuth = createAsyncThunk(
       const token = localStorage.getItem('token')
       if (!token) {
         return rejectWithValue('No token found')
+      }
+
+      if (isTokenExpired(token, 30)) {
+        localStorage.removeItem('token')
+        return rejectWithValue('Token expired')
       }
 
       const response = await authService.getProfile()

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import webpush from 'web-push'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
@@ -18,11 +19,56 @@ if (isNotificationServiceEnabled && vapidPublicKey && vapidPrivateKey) {
   }
 }
 
-const webpushLogger = logger.child({ channel: 'webpush' })
+const webpushLogger =
+  typeof logger.child === 'function' ? logger.child({ channel: 'webpush' }) : logger
 const retryableStatusCodes = new Set([429, 500, 502, 503, 504])
 const retryDelaysMs = [250, 1000, 3000]
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+type EventLogger = {
+  context: Record<string, unknown>
+  debug: (message: string, extra?: Record<string, unknown>) => void
+  info: (message: string, extra?: Record<string, unknown>) => void
+  warn: (message: string, extra?: Record<string, unknown>) => void
+  error: (message: string, extra?: Record<string, unknown>) => void
+}
+
+const createEventLogger = (
+  metadata: Record<string, unknown>,
+  parentContext?: Record<string, unknown>,
+): EventLogger => {
+  const context = parentContext
+    ? { ...parentContext, ...metadata }
+    : { eventId: randomUUID(), ...metadata }
+  const supportsChild = typeof webpushLogger.child === 'function'
+  const baseLogger = (supportsChild ? webpushLogger.child(context) : webpushLogger) as Pick<
+    typeof logger,
+    LogLevel
+  >
+
+  const log = (level: LogLevel, message: string, extra: Record<string, unknown> = {}) => {
+    const method = baseLogger[level]
+    if (typeof method !== 'function') {
+      return
+    }
+    if (supportsChild) {
+      method.call(baseLogger, message, extra)
+    } else {
+      method.call(baseLogger, message, { ...context, ...extra })
+    }
+  }
+
+  return {
+    context,
+    debug: (message: string, extra?: Record<string, unknown>) => log('debug', message, extra ?? {}),
+    info: (message: string, extra?: Record<string, unknown>) => log('info', message, extra ?? {}),
+    warn: (message: string, extra?: Record<string, unknown>) => log('warn', message, extra ?? {}),
+    error: (message: string, extra?: Record<string, unknown>) => log('error', message, extra ?? {}),
+  }
+}
 
 export interface NotificationPayload {
   title: string
@@ -38,7 +84,7 @@ export interface NotificationPayload {
 }
 
 interface NotificationPayloadData {
-  gameId?: number
+  gameId?: string | number
   url?: string
   [key: string]: unknown
 }
@@ -58,6 +104,27 @@ function isWebPushError(error: unknown): error is WebPushError {
   return typeof error === 'object' && error !== null && 'statusCode' in error
 }
 
+interface PruneOptions {
+  failureThreshold?: number
+  failureAgeDays?: number
+  staleRegistrationDays?: number
+}
+
+export interface PruneResult {
+  removedExpired: number
+  removedFailed: number
+  removedStale: number
+  totalRemoved: number
+  remainingSubscriptions: number
+  ranAt: string
+}
+
+const defaultPruneOptions: Required<PruneOptions> = {
+  failureThreshold: 3,
+  failureAgeDays: 14,
+  staleRegistrationDays: 90,
+}
+
 class NotificationService {
   async saveSubscription(userId: string, subscription: webpush.PushSubscription): Promise<void> {
     const { endpoint, expirationTime = null, keys } = subscription
@@ -65,6 +132,8 @@ class NotificationService {
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       throw new Error('Invalid push subscription payload')
     }
+
+    const eventLogger = createEventLogger({ userId, endpoint })
 
     const normalizedSubscription: webpush.PushSubscription = {
       endpoint,
@@ -105,30 +174,41 @@ class NotificationService {
       ],
     )
 
-    webpushLogger.debug('Saved web push subscription', { userId, endpoint })
+    eventLogger.debug('Saved web push subscription')
   }
 
-  async removeSubscription(userId: string, endpoint?: string): Promise<number> {
+  async removeSubscription(
+    userId: string,
+    endpoint?: string,
+    parentContext?: Record<string, unknown>,
+  ): Promise<number> {
     if (endpoint) {
+      const eventLogger = createEventLogger({ userId, endpoint }, parentContext)
       const result = await query<{ count: string }>(
         'DELETE FROM web_push_subscriptions WHERE user_id = $1 AND endpoint = $2 RETURNING 1 as count',
         [userId, endpoint],
       )
       if (result.rowCount === 0) {
-        webpushLogger.debug('No matching subscription to remove', { userId, endpoint })
+        eventLogger.debug('No matching subscription to remove')
+      } else {
+        eventLogger.info('Removed web push subscription', {
+          removed: Number(result.rowCount ?? 0),
+        })
       }
       return Number(result.rowCount ?? 0)
     }
 
+    const eventLogger = createEventLogger({ userId, scope: 'all' }, parentContext)
     const result = await query<{ count: string }>(
       'DELETE FROM web_push_subscriptions WHERE user_id = $1 RETURNING 1 as count',
       [userId],
     )
-    if (result.rowCount) {
-      webpushLogger.debug('Removed all subscriptions for user', {
-        userId,
-        removed: result.rowCount,
+    if (result.rowCount && result.rowCount > 0) {
+      eventLogger.info('Removed all subscriptions for user', {
+        removed: Number(result.rowCount ?? 0),
       })
+    } else {
+      eventLogger.debug('No web push subscriptions found for user')
     }
     return Number(result.rowCount ?? 0)
   }
@@ -188,22 +268,23 @@ class NotificationService {
   private async sendToSubscription(
     subscriptionRow: PushSubscriptionRow,
     payload: string,
+    parentLogger: EventLogger,
   ): Promise<boolean> {
     const { user_id: userId, endpoint, subscription } = subscriptionRow
-    const context = { userId, endpoint }
+    const eventLogger = createEventLogger({ endpoint }, parentLogger.context)
 
     for (let attempt = 1; attempt <= retryDelaysMs.length + 1; attempt++) {
       try {
         await webpush.sendNotification(subscription, payload)
         await this.markDeliverySuccess(userId, endpoint)
-        webpushLogger.debug('Delivered web push notification', { ...context, attempt })
+        eventLogger.debug('Delivered web push notification', { attempt })
         return true
       } catch (error) {
         const statusCode = isWebPushError(error) ? error.statusCode : undefined
 
         if (statusCode === 404 || statusCode === 410) {
-          webpushLogger.info('Removing expired web push subscription', { ...context, statusCode })
-          await this.removeSubscription(userId, endpoint)
+          eventLogger.info('Removing expired web push subscription', { statusCode })
+          await this.removeSubscription(userId, endpoint, eventLogger.context)
           return false
         }
 
@@ -214,8 +295,7 @@ class NotificationService {
 
         if (shouldRetry) {
           const delayMs = retryDelaysMs[attempt - 1]
-          webpushLogger.warn('Retrying transient web push failure', {
-            ...context,
+          eventLogger.warn('Retrying transient web push failure', {
             statusCode,
             attempt,
             delayMs,
@@ -230,8 +310,7 @@ class NotificationService {
           endpoint,
           statusCode ? `${reason} (status ${statusCode})` : reason,
         )
-        webpushLogger.error('Failed to deliver web push notification', {
-          ...context,
+        eventLogger.error('Failed to deliver web push notification', {
           statusCode,
           attempt,
           reason,
@@ -244,22 +323,45 @@ class NotificationService {
   }
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<boolean> {
+    const baseMetadata = {
+      userId,
+      notificationTag: payload.tag,
+      notificationTitle: payload.title,
+    }
+
     if (!isNotificationServiceEnabled) {
+      const eventLogger = createEventLogger({ ...baseMetadata, reason: 'service-disabled' })
+      eventLogger.debug('Web push service disabled; skipping delivery')
       return false
     }
 
+    const eventLogger = createEventLogger(baseMetadata)
     const subscriptions = await this.getSubscriptions(userId)
     if (subscriptions.length === 0) {
-      webpushLogger.debug('No web push subscriptions found for user', { userId })
+      eventLogger.debug('No web push subscriptions found for user')
       return false
     }
 
     const serializedPayload = JSON.stringify(payload)
     let delivered = false
 
+    eventLogger.debug('Attempting web push delivery', {
+      subscriptionCount: subscriptions.length,
+    })
+
     for (const subscription of subscriptions) {
-      const success = await this.sendToSubscription(subscription, serializedPayload)
+      const success = await this.sendToSubscription(subscription, serializedPayload, eventLogger)
       delivered = delivered || success
+    }
+
+    if (delivered) {
+      eventLogger.info('Web push delivered to at least one subscription', {
+        subscriptionCount: subscriptions.length,
+      })
+    } else {
+      eventLogger.warn('Web push delivery failed for all subscriptions', {
+        subscriptionCount: subscriptions.length,
+      })
     }
 
     return delivered
@@ -271,8 +373,12 @@ class NotificationService {
         try {
           await this.sendToUser(userId, payload)
         } catch (error) {
-          webpushLogger.error('Failed to send web push notification to user', {
+          const eventLogger = createEventLogger({
             userId,
+            notificationTag: payload.tag,
+            notificationTitle: payload.title,
+          })
+          eventLogger.error('Failed to send web push notification to user', {
             error: error instanceof Error ? error.message : error,
           })
         }
@@ -361,6 +467,103 @@ class NotificationService {
     }
 
     await this.sendToUser(userId, payload)
+  }
+
+  async pruneStaleSubscriptions(options: PruneOptions = {}): Promise<PruneResult> {
+    const { failureThreshold, failureAgeDays, staleRegistrationDays } = {
+      ...defaultPruneOptions,
+      ...options,
+    }
+
+    if (failureThreshold <= 0) {
+      throw new Error('failureThreshold must be greater than zero')
+    }
+
+    if (failureAgeDays <= 0) {
+      throw new Error('failureAgeDays must be greater than zero')
+    }
+
+    if (staleRegistrationDays <= 0) {
+      throw new Error('staleRegistrationDays must be greater than zero')
+    }
+
+    const failureAgeInterval = `${failureAgeDays} days`
+    const staleInterval = `${staleRegistrationDays} days`
+
+    const pruneResult = await query<{
+      expired_removed: string
+      failed_removed: string
+      stale_removed: string
+    }>(
+      `
+        WITH expired AS (
+          DELETE FROM web_push_subscriptions
+          WHERE expiration_time IS NOT NULL
+            AND expiration_time < NOW()
+          RETURNING 1
+        ), failed AS (
+          DELETE FROM web_push_subscriptions
+          WHERE failure_count >= $1
+            AND last_failure_at IS NOT NULL
+            AND last_failure_at < NOW() - ($2::interval)
+          RETURNING 1
+        ), stale AS (
+          DELETE FROM web_push_subscriptions
+          WHERE last_success_at IS NULL
+            AND last_failure_at IS NULL
+            AND expiration_time IS NULL
+            AND created_at < NOW() - ($3::interval)
+          RETURNING 1
+        )
+        SELECT
+          (SELECT COUNT(*) FROM expired) AS expired_removed,
+          (SELECT COUNT(*) FROM failed) AS failed_removed,
+          (SELECT COUNT(*) FROM stale) AS stale_removed
+      `,
+      [failureThreshold, failureAgeInterval, staleInterval],
+    )
+
+    const row = pruneResult.rows[0] ?? {
+      expired_removed: '0',
+      failed_removed: '0',
+      stale_removed: '0',
+    }
+
+    const removedExpired = Number(row.expired_removed ?? 0)
+    const removedFailed = Number(row.failed_removed ?? 0)
+    const removedStale = Number(row.stale_removed ?? 0)
+    const totalRemoved = removedExpired + removedFailed + removedStale
+
+    const remainingResult = await query<{ total: string }>(
+      'SELECT COUNT(*) AS total FROM web_push_subscriptions',
+    )
+    const remainingSubscriptions = Number(remainingResult.rows[0]?.total ?? 0)
+
+    const ranAt = new Date().toISOString()
+
+    const summary: PruneResult = {
+      removedExpired,
+      removedFailed,
+      removedStale,
+      totalRemoved,
+      remainingSubscriptions,
+      ranAt,
+    }
+
+    const metadata = {
+      ...summary,
+      options: { failureThreshold, failureAgeDays, staleRegistrationDays },
+    }
+
+    const pruneLogger = createEventLogger({ operation: 'prune-webpush-subscriptions' })
+
+    if (totalRemoved > 0) {
+      pruneLogger.info('Pruned web push subscriptions', metadata)
+    } else {
+      pruneLogger.debug('Pruned web push subscriptions', metadata)
+    }
+
+    return summary
   }
 
   async sendTestNotification(userId: string): Promise<boolean> {

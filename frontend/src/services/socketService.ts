@@ -280,7 +280,7 @@ class SocketService {
 
       // Play sound if it's now the current user's turn
       if (data.currentPlayer === currentUserId) {
-        audioService.playEffect('yourturn')
+        audioService.playEffect('turn')
       }
 
       store.dispatch(

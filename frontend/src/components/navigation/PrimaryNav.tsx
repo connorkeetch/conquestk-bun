@@ -92,12 +92,6 @@ const PrimaryNav: React.FC = () => {
           description: 'Top players',
         },
         {
-          path: '/community/tournaments',
-          label: 'Tournaments',
-          icon: '🎪',
-          description: 'Organized events',
-        },
-        {
           path: '/community/friends',
           label: 'Friends',
           icon: '👫',

@@ -127,11 +127,13 @@ _Last updated: September 20, 2025_
 - **Problem:** `playEffect('turn')` vs `yourturn` mismatch.
 - **Acceptance criteria:**
   - Unified key map or aliasing, with a unit test preventing regressions.
+- _Progress (Mar 2026): Normalized the turn notification sound so both `turn` and `yourturn` funnel through the same AudioService key and added a regression test to guard against future mismatches._
 
 ### D4. Hide "Tournaments" and other "coming soon" surfaces
 - **Priority:** P2 • **Tags:** [fe]
 - **Acceptance criteria:**
   - Feature-flag or remove until real data exists.
+- _Progress (Nov 2025): Removed all tournament links and "coming soon" tabs from navigation, home, dashboard, lobby, and the Community page so unactionable surfaces no longer appear in the UI._
 
 ## Epic E — Workers, Queues & Cleanup
 ### E1. Enable Bull queues safely

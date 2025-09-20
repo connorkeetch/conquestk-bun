@@ -1,5 +1,5 @@
 # Slack & Discord Notifications — Unified Plan
-_Last updated: September 20, 2025_
+_Last updated: September 20, 2025 (progress noted below)_
 
 ## 🎯 Objectives
 Provide a clear, incremental path to deliver automated notifications from ConquestK into Slack channels and Discord servers without disrupting existing workflows. Centralize channel delivery logic so future surfaces (email, SMS, in-game inbox, web push) plug in with minimal friction. Keep configuration environment-driven and secrets out of the codebase.
@@ -142,6 +142,10 @@ Start with CLI/manual hooks and expand over time.
 - Update `docs/LOGGING-STANDARDS.md` with escalation paths and severity mapping.
 - Add README quickstart, CLI usage, and examples.
 - Extend `.env.example` with all relevant variables and commentary.
+
+## 📈 Progress Log
+- **September 20, 2025:** Added shared notification event/result types and introduced the `NotificationDispatcher` service skeleton. Dispatcher currently supports environment-driven channel gating, channel availability checks, and per-channel logging while we continue wiring producers and specific providers.
+- **September 22, 2025:** Implemented the Slack webhook channel with rich block formatting, retries, jittered backoff, and a circuit breaker. Slack env vars now live in `.env.example`, and the dispatcher auto-registers the channel when webhooks are configured.
 
 ## ⚠️ Risks & Mitigations
 - **Webhook leakage:** rely on secrets management, URL redaction, and rotation drills.

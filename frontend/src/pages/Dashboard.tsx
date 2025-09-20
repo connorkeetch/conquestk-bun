@@ -181,16 +181,6 @@ const Dashboard: React.FC = () => {
           </div>
         </Link>
 
-        <Link
-          to="/community/tournaments"
-          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
-        >
-          <div className="text-center">
-            <div className="text-3xl mb-3">🏆</div>
-            <h3 className="text-xl font-bold text-white mb-2">Tournaments</h3>
-            <p className="text-primary-soft text-sm">Compete for glory</p>
-          </div>
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
