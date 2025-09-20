@@ -1,12 +1,13 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { type QueueStats, queueService } from '../services/queueService'
+import { handleRouteError } from '../utils/routeErrorHandler'
 import { getWorkerManagerInstance } from '../workers/workerManager'
 
 const router = express.Router()
 
 // Queue monitoring endpoints (admin only)
-router.get('/stats', authenticateToken, async (_req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -22,14 +23,15 @@ router.get('/stats', authenticateToken, async (_req, res) => {
       data: stats,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load queue stats')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load queue statistics',
     })
   }
 })
 
-router.get('/health', authenticateToken, async (_req, res) => {
+router.get('/health', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -48,14 +50,15 @@ router.get('/health', authenticateToken, async (_req, res) => {
       details: health.details,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to evaluate queue health')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to evaluate queue health',
     })
   }
 })
 
-router.get('/dashboard', authenticateToken, async (_req, res) => {
+router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -86,9 +89,10 @@ router.get('/dashboard', authenticateToken, async (_req, res) => {
       data: dashboard,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load queue dashboard')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load queue dashboard',
     })
   }
 })
@@ -103,9 +107,12 @@ router.post('/pause/:queueName', authenticateToken, async (req, res) => {
       message: `Queue ${queueName} paused`,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to pause queue', 500, {
+      queueName: req.params.queueName,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to pause queue',
     })
   }
 })
@@ -119,9 +126,12 @@ router.post('/resume/:queueName', authenticateToken, async (req, res) => {
       message: `Queue ${queueName} resumed`,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to resume queue', 500, {
+      queueName: req.params.queueName,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to resume queue',
     })
   }
 })
@@ -137,15 +147,19 @@ router.delete('/clear/:queueName', authenticateToken, async (req, res) => {
       message: `Cleared ${type} jobs from queue ${queueName}`,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to clear queue', 500, {
+      queueName: req.params.queueName,
+      type: req.query.type,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to clear queue',
     })
   }
 })
 
 // Public health check (lighter version)
-router.get('/ping', async (_req, res) => {
+router.get('/ping', async (req, res) => {
   try {
     const workerManager = getWorkerManagerInstance()
     if (!workerManager) {
@@ -161,9 +175,10 @@ router.get('/ping', async (_req, res) => {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
+    handleRouteError(error, req, 'Queue ping failed', 503)
     res.status(503).json({
       status: 'unhealthy',
-      error: (error as Error).message,
+      error: 'Queue service unavailable',
     })
   }
 })

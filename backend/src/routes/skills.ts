@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import { eloService } from '../services/eloService'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 
@@ -63,7 +63,9 @@ router.get('/users/:userId/rating', async (req, res) => {
       lastRankedGame: user.last_ranked_game_at,
     })
   } catch (error) {
-    logger.error('Error fetching user rating:', error)
+    handleRouteError(error, req, 'Failed to fetch user rating', 500, {
+      userId: req.params.userId,
+    })
     return res.status(500).json({ error: 'Failed to fetch user rating' })
   }
 })
@@ -91,7 +93,10 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
       })),
     })
   } catch (error) {
-    logger.error('Error fetching rating history:', error)
+    handleRouteError(error, req, 'Failed to fetch rating history', 500, {
+      userId: req.params.userId,
+      limit: req.query.limit,
+    })
     res.status(500).json({ error: 'Failed to fetch rating history' })
   }
 })
@@ -122,7 +127,11 @@ router.get('/leaderboards/skill', async (req, res) => {
       })),
     })
   } catch (error) {
-    logger.error('Error fetching leaderboard:', error)
+    handleRouteError(error, req, 'Failed to fetch leaderboard', 500, {
+      limit: req.query.limit,
+      offset: req.query.offset,
+      tier: req.query.tier,
+    })
     res.status(500).json({ error: 'Failed to fetch leaderboard' })
   }
 })
@@ -162,7 +171,9 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
       percentile: (((total - rank + 1) / total) * 100).toFixed(1),
     })
   } catch (error) {
-    logger.error('Error fetching user rank:', error)
+    handleRouteError(error, req, 'Failed to fetch user rank', 500, {
+      userId: req.params.userId,
+    })
     res.status(500).json({ error: 'Failed to fetch user rank' })
   }
 })
@@ -183,7 +194,7 @@ router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
     await eloService.updateLeaderboardCache()
     return res.json({ message: 'Leaderboard cache refreshed successfully' })
   } catch (error) {
-    logger.error('Error refreshing leaderboard:', error)
+    handleRouteError(error, req, 'Failed to refresh leaderboard cache')
     return res.status(500).json({ error: 'Failed to refresh leaderboard' })
   }
 })
