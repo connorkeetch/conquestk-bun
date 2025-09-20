@@ -75,8 +75,8 @@ export const gameService = {
     return response.data
   },
 
-  async getRoomDetails(roomId: string) {
-    const response = await api.get(`/game/rooms/${roomId}`)
+  async getRoomDetails(roomId: string): Promise<{ room: GameRoom }> {
+    const response = await api.get<{ room: GameRoom }>(`/game/rooms/${roomId}`)
     return response.data
   },
 

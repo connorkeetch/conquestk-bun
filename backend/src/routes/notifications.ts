@@ -5,7 +5,6 @@ import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 
-// Get VAPID public key for push subscription
 router.get('/vapid-public-key', (_req: Request, res: Response) => {
   res.json({
     publicKey: notificationService.getVapidPublicKey(),
@@ -13,7 +12,6 @@ router.get('/vapid-public-key', (_req: Request, res: Response) => {
   })
 })
 
-// Subscribe to push notifications
 router.post('/subscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
     if (!notificationService.isEnabled()) {
@@ -23,15 +21,18 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       })
     }
 
-    const userId = Number(req.userId)
-
-    if (Number.isNaN(userId)) {
+    const userId = req.userId
+    if (!userId) {
       return res.status(400).json({ error: 'Invalid user identifier' })
     }
-    const { subscription } = req.body
 
+    const { subscription } = req.body
     if (!subscription) {
       return res.status(400).json({ error: 'Subscription data is required' })
+    }
+
+    if (!subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
+      return res.status(400).json({ error: 'Invalid subscription payload' })
     }
 
     await notificationService.saveSubscription(userId, subscription)
@@ -46,20 +47,24 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
   }
 })
 
-// Unsubscribe from push notifications
 router.post('/unsubscribe', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = Number(req.userId)
-
-    if (Number.isNaN(userId)) {
+    const userId = req.userId
+    if (!userId) {
       return res.status(400).json({ error: 'Invalid user identifier' })
     }
 
-    await notificationService.removeSubscription(userId)
+    const { endpoint, subscription } = req.body
+    const targetEndpoint: string | undefined = endpoint ?? subscription?.endpoint
+
+    const removed = await notificationService.removeSubscription(userId, targetEndpoint)
 
     return res.json({
       success: true,
-      message: 'Successfully unsubscribed from push notifications',
+      message:
+        removed > 0
+          ? 'Successfully unsubscribed from push notifications'
+          : 'No push subscription found to remove',
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to unsubscribe from notifications')
@@ -67,7 +72,6 @@ router.post('/unsubscribe', authenticateToken, async (req: Request, res: Respons
   }
 })
 
-// Send test notification
 router.post('/test', authenticateToken, async (req: Request, res: Response) => {
   try {
     if (!notificationService.isEnabled()) {
@@ -77,9 +81,8 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
       })
     }
 
-    const userId = Number(req.userId)
-
-    if (Number.isNaN(userId)) {
+    const userId = req.userId
+    if (!userId) {
       return res.status(400).json({ error: 'Invalid user identifier' })
     }
 
@@ -91,6 +94,7 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
         message: 'Test notification sent successfully',
       })
     }
+
     return res.status(404).json({
       error: 'No push subscription found. Please enable notifications first.',
     })
