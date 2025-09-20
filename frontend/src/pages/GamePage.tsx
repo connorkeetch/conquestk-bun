@@ -1,42 +1,164 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { gameService } from '../services/gameService'
+import { socketService } from '../services/socketService'
+import { clearGame, setError } from '../store/gameSlice'
+import { setCurrentRoom } from '../store/roomSlice'
 
 const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>()
-  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'history' | 'stats'>('board')
+  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'stats'>('board')
   const [isFullScreen, setIsFullScreen] = useState(false)
+  const [isLoadingRoom, setIsLoadingRoom] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // Mock game data
-  const gameData = {
-    id: gameId,
-    name: 'World Conquest',
-    currentPlayer: 'You',
-    phase: 'ATTACK' as const,
-    turn: 12,
-    players: [
-      { id: '1', name: 'You', color: getPlayerColor(0), territories: 18, armies: 45 },
-      { id: '2', name: 'Player 2', color: getPlayerColor(1), territories: 12, armies: 32 },
-      { id: '3', name: 'Player 3', color: getPlayerColor(2), territories: 8, armies: 24 },
-      { id: '4', name: 'Player 4', color: getPlayerColor(3), territories: 4, armies: 16 },
-    ],
+  const dispatch = useAppDispatch()
+  const { currentGame, isLoading, error } = useAppSelector((state) => state.game)
+  const { currentRoom } = useAppSelector((state) => state.room)
+
+  useEffect(() => {
+    if (!gameId) {
+      setPageError('Missing game identifier in URL')
+      return
+    }
+
+    let isSubscribed = true
+
+    const joinRoom = () => {
+      try {
+        socketService.connect()
+        socketService.joinRoom(gameId)
+      } catch (_error) {
+        // Silently ignore socket errors during initial load
+      }
+    }
+
+    const loadRoom = async () => {
+      if (currentRoom && currentRoom.id === gameId) {
+        return
+      }
+
+      setIsLoadingRoom(true)
+      try {
+        const response = await gameService.getRoomDetails(gameId)
+        if (!isSubscribed) return
+        dispatch(setCurrentRoom(response.room))
+      } catch (loadError) {
+        if (!isSubscribed) return
+        const message =
+          loadError instanceof Error
+            ? loadError.message
+            : 'Failed to load game details'
+        setPageError(message)
+        dispatch(setError(message))
+      } finally {
+        if (isSubscribed) {
+          setIsLoadingRoom(false)
+        }
+      }
+    }
+
+    joinRoom()
+    void loadRoom()
+
+    return () => {
+      isSubscribed = false
+      socketService.leaveRoom(gameId)
+      dispatch(clearGame())
+      dispatch(setCurrentRoom(null))
+    }
+  }, [gameId, currentRoom, dispatch])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+
+    const handleFullScreenChange = () => {
+      setIsFullScreen(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange)
+    }
+  }, [])
+
+  const gameName = currentRoom?.name || 'Conquest Match'
+  const currentTurnPlayer = useMemo(() => {
+    if (!currentGame) return null
+    return currentGame.players.find((player) => player.id === currentGame.currentPlayer)
+  }, [currentGame])
+
+  const displayPlayers = useMemo(() => {
+    if (currentGame?.players?.length) {
+      return currentGame.players.map((player, index) => ({
+        id: player.id,
+        name: player.username,
+        color: player.color || getPlayerColor(index),
+        territories: player.territories?.length || 0,
+        armies: player.armies ?? 0,
+      }))
+    }
+
+    if (currentRoom?.players?.length) {
+      return currentRoom.players.map((player, index) => ({
+        id: player.userId,
+        name: player.username,
+        color: getPlayerColor(index),
+        territories: 0,
+        armies: 0,
+      }))
+    }
+
+    return []
+  }, [currentGame, currentRoom])
+
+  const showLoadingState = isLoading || isLoadingRoom
+
+  if (pageError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass-box-lg max-w-md text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h2 className="text-2xl font-bold mb-2">Unable to load game</h2>
+          <p className="text-muted mb-6">{pageError}</p>
+          <Link to="/games/active" className="btn-primary px-4 py-2 inline-flex justify-center">
+            Return to My Games
+          </Link>
+        </div>
+      </div>
+    )
   }
 
-  // Full-screen toggle
-  const toggleFullScreen = () => {
+  const toggleFullScreen = async () => {
+    if (typeof document === 'undefined') {
+      return
+    }
+
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullScreen(true)
+      try {
+        await containerRef.current?.requestFullscreen?.()
+      } catch (toggleError) {
+        console.error('Failed to enter fullscreen mode', toggleError)
+      }
     } else {
-      document.exitFullscreen()
-      setIsFullScreen(false)
+      try {
+        await document.exitFullscreen?.()
+      } catch (toggleError) {
+        console.error('Failed to exit fullscreen mode', toggleError)
+      }
     }
   }
 
   return (
-    <div className={`${isFullScreen ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`}>
+    <div ref={containerRef} className={`${isFullScreen ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`}>
       {/* Game Header - Minimal when full-screen */}
       <div className={`bg-surface-1 border-b border-border ${isFullScreen ? 'h-12' : 'h-16'}`}>
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
@@ -47,19 +169,20 @@ const GamePage: React.FC = () => {
               </Link>
             )}
             <div>
-              <h1 className={`font-bold ${isFullScreen ? 'text-lg' : 'text-xl'}`}>
-                {gameData.name}
-              </h1>
+              <h1 className={`font-bold ${isFullScreen ? 'text-lg' : 'text-xl'}`}>{gameName}</h1>
               {!isFullScreen && (
                 <p className="text-sm text-muted">
-                  Turn {gameData.turn} • {gameData.currentPlayer}'s turn
+                  {currentGame && currentTurnPlayer
+                    ? `Turn ${currentGame.turn} • ${currentTurnPlayer.username}'s turn`
+                    : currentRoom?.status
+                      ? `Status: ${currentRoom.status.replace(/_/g, ' ')}`
+                      : 'Preparing game details...'}
                 </p>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Game Navigation - Only show in full-screen */}
             {isFullScreen && (
               <div className="flex gap-1">
                 <button
@@ -89,7 +212,6 @@ const GamePage: React.FC = () => {
               </div>
             )}
 
-            {/* Game Actions */}
             <button className="btn-secondary px-3 py-1 text-sm">⚙️</button>
             <button className="btn-secondary px-3 py-1 text-sm" onClick={toggleFullScreen}>
               {isFullScreen ? '🗗' : '🗖'}
@@ -101,12 +223,9 @@ const GamePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Game Content */}
       <div className="flex h-full">
-        {/* Sidebar - Only show when not full-screen */}
         {!isFullScreen && (
           <div className="w-80 bg-surface-1 border-r border-border flex flex-col">
-            {/* Tab Navigation */}
             <div className="flex border-b border-border">
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
@@ -134,8 +253,14 @@ const GamePage: React.FC = () => {
               </button>
             </div>
 
-            {/* Tab Content */}
             <div className="flex-1 p-4">
+              {showLoadingState && (
+                <div className="text-center text-muted py-8">
+                  <div className="text-4xl mb-2 animate-spin">🔄</div>
+                  <p>Loading game details...</p>
+                </div>
+              )}
+
               {activeTab === 'board' && (
                 <div>
                   <h3 className="font-bold mb-4">Game Controls</h3>
@@ -152,7 +277,7 @@ const GamePage: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'chat' && (
+              {!showLoadingState && activeTab === 'chat' && (
                 <div>
                   <h3 className="font-bold mb-4">Game Chat</h3>
                   <div className="text-center text-muted py-8">
@@ -162,40 +287,45 @@ const GamePage: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'stats' && (
+              {!showLoadingState && activeTab === 'stats' && (
                 <div>
                   <h3 className="font-bold mb-4">Live Statistics</h3>
-                  <div className="space-y-3">
-                    {gameData.players.map((player) => (
-                      <div
-                        key={player.id}
-                        className="flex items-center justify-between p-2 bg-surface-2 rounded"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: player.color }}
-                          ></div>
-                          <span className="font-medium">{player.name}</span>
+                  {displayPlayers.length === 0 ? (
+                    <div className="text-center text-muted py-8">
+                      <p>No player information available yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {displayPlayers.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center justify-between p-2 bg-surface-2 rounded"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: player.color }}
+                            ></div>
+                            <span className="font-medium">{player.name}</span>
+                          </div>
+                          <div className="text-sm text-muted">
+                            {player.territories} territories • {player.armies} armies
+                          </div>
                         </div>
-                        <div className="text-sm text-muted">{player.territories} territories</div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Main Game Area */}
         <div className="flex-1 relative">
-          {/* Game Board */}
           <div className="h-full relative overflow-hidden">
             <SimpleRiskGameBoard onTerritoryClick={(_territoryId) => {}} />
 
-            {/* Full-screen overlay content */}
-            {isFullScreen && activeTab !== 'board' && (
+            {isFullScreen && activeTab !== 'board' && !showLoadingState && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
                 <div className="glass-box-lg max-w-md w-full mx-4">
                   {activeTab === 'chat' && (
@@ -211,28 +341,40 @@ const GamePage: React.FC = () => {
                   {activeTab === 'stats' && (
                     <div>
                       <h3 className="text-xl font-bold mb-4">Live Statistics</h3>
-                      <div className="space-y-3">
-                        {gameData.players.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center justify-between p-3 bg-surface-2 rounded"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-6 h-6 rounded-full"
-                                style={{ backgroundColor: player.color }}
-                              ></div>
-                              <span className="font-medium">{player.name}</span>
+                      {displayPlayers.length === 0 ? (
+                        <div className="text-center text-muted py-8">
+                          <p>No player information available yet.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {displayPlayers.map((player) => (
+                            <div
+                              key={player.id}
+                              className="flex items-center justify-between p-3 bg-surface-2 rounded"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-6 h-6 rounded-full"
+                                  style={{ backgroundColor: player.color }}
+                                ></div>
+                                <span className="font-medium">{player.name}</span>
+                              </div>
+                              <div className="text-sm text-muted">
+                                {player.territories} territories • {player.armies} armies
+                              </div>
                             </div>
-                            <div className="text-sm text-muted">
-                              {player.territories} territories
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {error && !showLoadingState && (
+              <div className="absolute bottom-4 right-4 bg-danger-soft text-danger px-4 py-2 rounded-lg shadow-lg">
+                {error}
               </div>
             )}
           </div>
