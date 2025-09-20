@@ -7,15 +7,16 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 
-let ensuredUserBioColumn = false
-const ensureUserBioColumn = async () => {
-  if (ensuredUserBioColumn) return
+let ensuredUserProfileColumns = false
+const ensureUserProfileColumns = async () => {
+  if (ensuredUserProfileColumns) return
 
   try {
     await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT')
-    ensuredUserBioColumn = true
+    await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP')
+    ensuredUserProfileColumns = true
   } catch (error) {
-    logger.warn('Failed to ensure users.bio column exists:', error)
+    logger.warn('Failed to ensure required user columns exist:', error)
   }
 }
 
@@ -47,7 +48,7 @@ function getConquestRank(skillRating: number) {
 router.get('/:username/profile', async (req: Request, res: Response) => {
   const { username } = req.params
   try {
-    await ensureUserBioColumn()
+    await ensureUserProfileColumns()
 
     const result = await query(
       `
@@ -111,7 +112,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
   try {
     const userId = req.userId
 
-    await ensureUserBioColumn()
+    await ensureUserProfileColumns()
 
     const result = await query(
       `
@@ -206,7 +207,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     const userId = req.userId
     const { username, email } = req.body
 
-    await ensureUserBioColumn()
+    await ensureUserProfileColumns()
 
     // Validate inputs
     if (username && username.trim().length < 3) {
