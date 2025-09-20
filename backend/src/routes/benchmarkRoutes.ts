@@ -2,11 +2,12 @@ import express from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { performanceTestingService } from '../services/performanceTestingService'
 import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = express.Router()
 
 // Get available test scenarios
-router.get('/scenarios', authenticateToken, async (_req, res) => {
+router.get('/scenarios', authenticateToken, async (req, res) => {
   try {
     const scenarios = performanceTestingService.getTestScenarios()
 
@@ -19,9 +20,10 @@ router.get('/scenarios', authenticateToken, async (_req, res) => {
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load benchmark scenarios')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load benchmark scenarios',
     })
   }
 })
@@ -70,9 +72,12 @@ router.post('/load-test/:scenario', authenticateToken, async (req, res): Promise
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to start load test', 500, {
+      scenario: req.params.scenario,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to start load test',
     })
   }
 })
@@ -131,9 +136,10 @@ router.post('/game-scenario', authenticateToken, async (req, res): Promise<void>
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to start game scenario test', 500)
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to start game scenario test',
     })
   }
 })
@@ -178,15 +184,16 @@ router.post('/stress-test', authenticateToken, async (req, res): Promise<void> =
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to start stress test', 500)
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to start stress test',
     })
   }
 })
 
 // Get test status
-router.get('/status', authenticateToken, async (_req, res) => {
+router.get('/status', authenticateToken, async (req, res) => {
   try {
     const activeTests = performanceTestingService.getActiveTests()
     const recentHistory = performanceTestingService.getBenchmarkHistory(10)
@@ -218,9 +225,10 @@ router.get('/status', authenticateToken, async (_req, res) => {
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load benchmark status')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load benchmark status',
     })
   }
 })
@@ -245,9 +253,12 @@ router.get('/results/:testId', authenticateToken, async (req, res): Promise<void
       data: testResult,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load benchmark result', 500, {
+      testId: req.params.testId,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load benchmark result',
     })
   }
 })
@@ -271,9 +282,12 @@ router.post('/stop/:testId', authenticateToken, async (req, res): Promise<void> 
       message: `Test ${testId} stopped successfully`,
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to stop benchmark test', 500, {
+      testId: req.params.testId,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to stop test',
     })
   }
 })
@@ -293,15 +307,18 @@ router.get('/history', authenticateToken, async (req, res) => {
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to load benchmark history', 500, {
+      limit: req.query.limit,
+    })
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to load benchmark history',
     })
   }
 })
 
 // Generate benchmark report
-router.get('/report', authenticateToken, async (_req, res) => {
+router.get('/report', authenticateToken, async (req, res) => {
   try {
     const report = performanceTestingService.generateBenchmarkReport()
 
@@ -314,9 +331,10 @@ router.get('/report', authenticateToken, async (_req, res) => {
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to generate benchmark report')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to generate benchmark report',
     })
   }
 })
@@ -366,15 +384,16 @@ router.post('/quick-test', authenticateToken, async (req, res): Promise<void> =>
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to run quick benchmark')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to run quick benchmark',
     })
   }
 })
 
 // System performance baseline
-router.get('/baseline', authenticateToken, async (_req, res) => {
+router.get('/baseline', authenticateToken, async (req, res) => {
   try {
     const baselineTests = ['api_health_check', 'cache_performance']
 
@@ -411,9 +430,10 @@ router.get('/baseline', authenticateToken, async (_req, res) => {
       },
     })
   } catch (error) {
+    handleRouteError(error, req, 'Failed to run baseline benchmarks')
     res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: 'Failed to run baseline benchmarks',
     })
   }
 })

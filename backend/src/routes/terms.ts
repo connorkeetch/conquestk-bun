@@ -2,7 +2,7 @@ import type { Request, RequestHandler, Response } from 'express'
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth'
 import { termsService } from '../services/termsService'
-import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 const authenticateRequest: RequestHandler = async (req, res, next) => {
@@ -36,7 +36,9 @@ router.get(
         termsContent: !hasAccepted ? termsContent : undefined,
       })
     } catch (error: unknown) {
-      logger.error('Error checking terms acceptance:', error)
+      handleRouteError(error, req, 'Failed to check terms acceptance', 500, {
+        featureType: req.params.featureType,
+      })
       res.status(500).json({ error: 'Failed to check terms acceptance' })
     }
   },
@@ -65,7 +67,9 @@ router.post(
         acceptance,
       })
     } catch (error: unknown) {
-      logger.error('Error accepting terms:', error)
+      handleRouteError(error, req, 'Failed to accept terms', 500, {
+        featureType: req.params.featureType,
+      })
       res.status(500).json({ error: 'Failed to accept terms' })
     }
   },
@@ -84,7 +88,7 @@ router.get('/history', authenticateRequest, async (req: Request, res: Response):
     const history = await termsService.getUserTermsHistory(userId)
     res.json(history)
   } catch (error: unknown) {
-    logger.error('Error fetching terms history:', error)
+    handleRouteError(error, req, 'Failed to fetch terms history')
     res.status(500).json({ error: 'Failed to fetch terms history' })
   }
 })
@@ -100,7 +104,9 @@ router.get('/content/:featureType', (req: Request, res: Response): void => {
       currentVersion: termsService.getCurrentVersion(featureType),
     })
   } catch (error: unknown) {
-    logger.error('Error fetching terms content:', error)
+    handleRouteError(error, req, 'Failed to fetch terms content', 500, {
+      featureType: req.params.featureType,
+    })
     res.status(500).json({ error: 'Failed to fetch terms content' })
   }
 })
