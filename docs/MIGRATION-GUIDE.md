@@ -14,6 +14,12 @@ cd backend && npm run migrate:status
 # Runs on deployment via backend/package.json start script
 ```
 
+### Update Schema Documentation
+```bash
+# Regenerate the docs/DATABASE_SCHEMA.md catalog after applying migrations
+cd backend && npm run check:schema -- --skip-validation --export ../docs/DATABASE_SCHEMA.md
+```
+
 ### Direct Database Access
 ```bash
 # Production connection

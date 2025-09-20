@@ -1,8 +1,21 @@
+import { existsSync } from 'node:fs'
+import { promises as fsPromises } from 'node:fs'
 import * as path from 'node:path'
 import * as dotenv from 'dotenv'
 
-// Load environment variables before importing database
-dotenv.config({ path: path.join(__dirname, '../../.env') })
+// Load environment variables before importing database configuration.
+// Prefer local overrides, then project defaults, and finally fall back to
+// development credentials so the script works out of the box.
+const envCandidates = ['../../.env.local', '../../.env', '../../.env.development']
+for (const candidate of envCandidates) {
+  const candidatePath = path.join(__dirname, candidate)
+  if (existsSync(candidatePath)) {
+    dotenv.config({ path: candidatePath })
+    break
+  }
+}
+// Allow environment variables that are already defined (e.g. CI) to take precedence.
+dotenv.config()
 
 import { query } from '../config/database'
 import { getErrorMessage } from '../utils/errorHelpers'
@@ -93,6 +106,53 @@ const OPTIONAL_TABLES = [
   'user_activity',
   'user_blocks',
 ]
+
+interface CliOptions {
+  exportPath?: string
+  format: 'markdown'
+  skipValidation: boolean
+  includeRowCounts: boolean
+}
+
+function parseCliOptions(): CliOptions {
+  const args = process.argv.slice(2)
+  const options: CliOptions = {
+    format: 'markdown',
+    skipValidation: false,
+    includeRowCounts: true,
+  }
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+
+    if (arg === '--export' || arg === '--output') {
+      const next = args[index + 1]
+      if (next && !next.startsWith('--')) {
+        options.exportPath = next
+        index += 1
+      } else {
+        options.exportPath = '../docs/DATABASE_SCHEMA.md'
+      }
+    } else if (arg === '--format') {
+      const next = args[index + 1]
+      if (next && !next.startsWith('--')) {
+        if (next !== 'markdown') {
+          throw new Error(`Unsupported export format: ${next}`)
+        }
+        options.format = 'markdown'
+        index += 1
+      }
+    } else if (arg === '--skip-validation') {
+      options.skipValidation = true
+    } else if (arg === '--skip-row-counts') {
+      options.includeRowCounts = false
+    } else if (arg === '--include-row-counts') {
+      options.includeRowCounts = true
+    }
+  }
+
+  return options
+}
 
 interface TableCheckResult {
   table: string
@@ -236,20 +296,557 @@ export async function validateDatabaseSchema(): Promise<boolean> {
   return !hasErrors
 }
 
-// Run if called directly
-if (require.main === module) {
-  validateDatabaseSchema()
-    .then((isValid) => {
-      if (isValid) {
-        logger.info('✅ Database schema is valid')
-        process.exit(0)
+interface ColumnDefinitionRow {
+  column_name: string
+  data_type: string
+  udt_name: string
+  is_nullable: 'YES' | 'NO'
+  column_default: string | null
+  character_maximum_length: number | null
+  numeric_precision: number | null
+  numeric_scale: number | null
+  datetime_precision: number | null
+}
+
+interface TableColumn {
+  name: string
+  dataType: string
+  isNullable: boolean
+  defaultValue: string | null
+}
+
+interface ConstraintSummary {
+  name: string
+  columns: string[]
+}
+
+interface ForeignKeySummary {
+  name: string
+  columns: string[]
+  referencedTable: string
+  referencedColumns: string[]
+  updateRule: string | null
+  deleteRule: string | null
+}
+
+interface CheckConstraintSummary {
+  name: string
+  definition: string
+}
+
+interface IndexInfo {
+  name: string
+  definition: string
+}
+
+interface TableInfo {
+  name: string
+  columns: TableColumn[]
+  rowCount: number | null
+  primaryKey: string[]
+  uniqueConstraints: ConstraintSummary[]
+  foreignKeys: ForeignKeySummary[]
+  checkConstraints: CheckConstraintSummary[]
+  indexes: IndexInfo[]
+}
+
+interface SchemaExportOptions {
+  format: 'markdown'
+  outputPath: string
+  includeRowCounts: boolean
+}
+
+interface SchemaMetadata {
+  database: string
+  schema: string
+  serverVersion: string
+}
+
+const numberFormatter = new Intl.NumberFormat('en-US')
+
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`
+}
+
+function formatDataType(column: ColumnDefinitionRow): string {
+  if (column.data_type === 'USER-DEFINED') {
+    return column.udt_name
+  }
+
+  if (column.data_type === 'ARRAY') {
+    const baseType = column.udt_name.startsWith('_') ? column.udt_name.slice(1) : column.udt_name
+    return `${baseType}[]`
+  }
+
+  if (column.data_type === 'character varying') {
+    if (column.character_maximum_length != null) {
+      return `varchar(${column.character_maximum_length})`
+    }
+    return 'varchar'
+  }
+
+  if (column.data_type === 'character') {
+    if (column.character_maximum_length != null) {
+      return `char(${column.character_maximum_length})`
+    }
+    return 'char'
+  }
+
+  if (column.data_type === 'numeric') {
+    if (column.numeric_precision != null && column.numeric_scale != null) {
+      return `numeric(${column.numeric_precision}, ${column.numeric_scale})`
+    }
+    if (column.numeric_precision != null) {
+      return `numeric(${column.numeric_precision})`
+    }
+    return 'numeric'
+  }
+
+  if (column.data_type === 'timestamp without time zone') {
+    return 'timestamp'
+  }
+
+  if (column.data_type === 'timestamp with time zone') {
+    return 'timestamptz'
+  }
+
+  return column.data_type
+}
+
+function sanitizeDefaultValue(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+
+  return value.replace(/::[\w\s\.\[\]]+/g, '')
+}
+
+function escapeMarkdown(value: string): string {
+  return value.replace(/\|/g, '\\|').replace(/\n/g, '<br>')
+}
+
+function formatRowCount(rowCount: number | null): string {
+  if (rowCount == null) {
+    return '—'
+  }
+
+  return numberFormatter.format(rowCount)
+}
+
+function extractPostgresVersion(rawVersion: string): string {
+  const match = /^PostgreSQL\s+([^\s]+)/i.exec(rawVersion)
+  if (match && match[1]) {
+    return `PostgreSQL ${match[1]}`
+  }
+  return rawVersion
+}
+
+async function getSchemaMetadata(): Promise<SchemaMetadata> {
+  const result = await query<{ database: string; schema: string; version: string }>(
+    `SELECT current_database() AS database, current_schema() AS schema, version() AS version`,
+  )
+
+  const row = result.rows[0]
+  return {
+    database: row.database,
+    schema: row.schema,
+    serverVersion: extractPostgresVersion(row.version),
+  }
+}
+
+async function getTableNames(): Promise<string[]> {
+  const result = await query<{ table_name: string }>(
+    `SELECT table_name
+       FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+      ORDER BY table_name`,
+  )
+
+  return result.rows.map((row) => row.table_name)
+}
+
+async function getColumnsForTable(tableName: string): Promise<TableColumn[]> {
+  const result = await query<ColumnDefinitionRow>(
+    `SELECT column_name, data_type, udt_name, is_nullable, column_default,
+            character_maximum_length, numeric_precision, numeric_scale, datetime_precision
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = $1
+      ORDER BY ordinal_position`,
+    [tableName],
+  )
+
+  return result.rows.map((row) => ({
+    name: row.column_name,
+    dataType: formatDataType(row),
+    isNullable: row.is_nullable === 'YES',
+    defaultValue: sanitizeDefaultValue(row.column_default),
+  }))
+}
+
+async function getConstraintDetails(tableName: string): Promise<{
+  primaryKey: string[]
+  uniqueConstraints: ConstraintSummary[]
+  foreignKeys: ForeignKeySummary[]
+}> {
+  const result = await query<{
+    constraint_name: string
+    constraint_type: string
+    column_name: string | null
+    foreign_table_name: string | null
+    foreign_column_name: string | null
+    update_rule: string | null
+    delete_rule: string | null
+  }>(
+    `SELECT tc.constraint_name, tc.constraint_type, kcu.column_name,
+            ccu.table_name AS foreign_table_name,
+            ccu.column_name AS foreign_column_name,
+            rc.update_rule, rc.delete_rule
+       FROM information_schema.table_constraints tc
+  LEFT JOIN information_schema.key_column_usage kcu
+         ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+  LEFT JOIN information_schema.constraint_column_usage ccu
+         ON tc.constraint_name = ccu.constraint_name
+        AND tc.table_schema = ccu.table_schema
+  LEFT JOIN information_schema.referential_constraints rc
+         ON tc.constraint_name = rc.constraint_name
+        AND tc.table_schema = rc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = $1
+      ORDER BY tc.constraint_name, kcu.ordinal_position`,
+    [tableName],
+  )
+
+  const primaryKey: string[] = []
+  const uniqueByConstraint = new Map<string, string[]>()
+  const foreignByConstraint = new Map<
+    string,
+    {
+      columns: string[]
+      referencedTable: string
+      referencedColumns: string[]
+      updateRule: string | null
+      deleteRule: string | null
+    }
+  >()
+
+  for (const row of result.rows) {
+    if (row.constraint_type === 'PRIMARY KEY' && row.column_name) {
+      primaryKey.push(row.column_name)
+    }
+
+    if (row.constraint_type === 'UNIQUE' && row.column_name) {
+      const columns = uniqueByConstraint.get(row.constraint_name) ?? []
+      columns.push(row.column_name)
+      uniqueByConstraint.set(row.constraint_name, columns)
+    }
+
+    if (row.constraint_type === 'FOREIGN KEY' && row.column_name && row.foreign_table_name && row.foreign_column_name) {
+      const existing = foreignByConstraint.get(row.constraint_name)
+      if (existing) {
+        existing.columns.push(row.column_name)
+        existing.referencedColumns.push(row.foreign_column_name)
       } else {
-        logger.error('❌ Database schema validation failed')
-        process.exit(1)
+        foreignByConstraint.set(row.constraint_name, {
+          columns: [row.column_name],
+          referencedTable: row.foreign_table_name,
+          referencedColumns: [row.foreign_column_name],
+          updateRule: row.update_rule,
+          deleteRule: row.delete_rule,
+        })
       }
+    }
+  }
+
+  return {
+    primaryKey,
+    uniqueConstraints: Array.from(uniqueByConstraint.entries()).map(([name, columns]) => ({
+      name,
+      columns,
+    })),
+    foreignKeys: Array.from(foreignByConstraint.entries()).map(([name, value]) => ({
+      name,
+      columns: value.columns,
+      referencedTable: value.referencedTable,
+      referencedColumns: value.referencedColumns,
+      updateRule: value.updateRule,
+      deleteRule: value.deleteRule,
+    })),
+  }
+}
+
+async function getCheckConstraints(tableName: string): Promise<CheckConstraintSummary[]> {
+  const result = await query<{ name: string; definition: string }>(
+    `SELECT con.conname AS name, pg_get_constraintdef(con.oid, true) AS definition
+       FROM pg_constraint con
+       JOIN pg_class rel ON con.conrelid = rel.oid
+       JOIN pg_namespace nsp ON rel.relnamespace = nsp.oid
+      WHERE con.contype = 'c'
+        AND nsp.nspname = 'public'
+        AND rel.relname = $1
+      ORDER BY con.conname`,
+    [tableName],
+  )
+
+  return result.rows.map((row) => ({
+    name: row.name,
+    definition: row.definition,
+  }))
+}
+
+async function getIndexesForTable(tableName: string): Promise<IndexInfo[]> {
+  const result = await query<{ indexname: string; indexdef: string }>(
+    `SELECT indexname, indexdef
+       FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND tablename = $1
+      ORDER BY indexname`,
+    [tableName],
+  )
+
+  return result.rows.map((row) => ({
+    name: row.indexname,
+    definition: row.indexdef,
+  }))
+}
+
+async function getRowCountForTable(tableName: string): Promise<number | null> {
+  try {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::bigint AS count FROM ${quoteIdentifier('public')}.${quoteIdentifier(tableName)}`,
+    )
+    const value = result.rows[0]?.count
+    return value ? Number.parseInt(value, 10) : null
+  } catch (error) {
+    logger.warn(`⚠️  Unable to count rows for ${tableName}: ${getErrorMessage(error)}`)
+    return null
+  }
+}
+
+async function getTableInfos(includeRowCounts: boolean): Promise<TableInfo[]> {
+  const tableNames = await getTableNames()
+  const tables: TableInfo[] = []
+
+  for (const tableName of tableNames) {
+    const columns = await getColumnsForTable(tableName)
+    const constraints = await getConstraintDetails(tableName)
+    const checkConstraints = await getCheckConstraints(tableName)
+    const indexes = await getIndexesForTable(tableName)
+    const rowCount = includeRowCounts ? await getRowCountForTable(tableName) : null
+
+    tables.push({
+      name: tableName,
+      columns,
+      rowCount,
+      primaryKey: constraints.primaryKey,
+      uniqueConstraints: constraints.uniqueConstraints,
+      foreignKeys: constraints.foreignKeys,
+      checkConstraints,
+      indexes,
     })
-    .catch((error) => {
-      logger.error('❌ Schema validation error:', error)
-      process.exit(1)
+  }
+
+  return tables
+}
+
+function buildTableSummaryMarkdown(table: TableInfo): string[] {
+  const lines: string[] = []
+
+  lines.push(`### \`${table.name}\``)
+  lines.push('')
+  lines.push('| Column | Type | Nullable | Default |')
+  lines.push('| --- | --- | --- | --- |')
+
+  for (const column of table.columns) {
+    const defaultValue = column.defaultValue ? `\`${escapeMarkdown(column.defaultValue)}\`` : '—'
+    lines.push(
+      `| \`${column.name}\` | \`${escapeMarkdown(column.dataType)}\` | ${column.isNullable ? 'Yes' : 'No'} | ${defaultValue} |`,
+    )
+  }
+
+  lines.push('')
+
+  if (table.primaryKey.length > 0) {
+    lines.push(`**Primary key:** \`${table.primaryKey.join('`, `')}\``)
+  } else {
+    lines.push('**Primary key:** —')
+  }
+
+  lines.push('')
+
+  lines.push('**Unique constraints:**')
+  if (table.uniqueConstraints.length === 0) {
+    lines.push('- —')
+  } else {
+    for (const unique of table.uniqueConstraints) {
+      lines.push(`- \`${unique.name}\`: \`${unique.columns.join('`, `')}\``)
+    }
+  }
+
+  lines.push('')
+
+  lines.push('**Foreign keys:**')
+  if (table.foreignKeys.length === 0) {
+    lines.push('- —')
+  } else {
+    for (const foreignKey of table.foreignKeys) {
+      const updateRule = foreignKey.updateRule ? ` ON UPDATE ${foreignKey.updateRule}` : ''
+      const deleteRule = foreignKey.deleteRule ? ` ON DELETE ${foreignKey.deleteRule}` : ''
+      lines.push(
+        `- \`${foreignKey.name}\`: (\`${foreignKey.columns.join('`, `')}\`) → \`${foreignKey.referencedTable}\` (\`${foreignKey.referencedColumns.join('`, `')}\`)${updateRule}${deleteRule}`,
+      )
+    }
+  }
+
+  lines.push('')
+
+  lines.push('**Check constraints:**')
+  if (table.checkConstraints.length === 0) {
+    lines.push('- —')
+  } else {
+    for (const constraint of table.checkConstraints) {
+      lines.push(`- \`${constraint.name}\`: ${escapeMarkdown(constraint.definition)}`)
+    }
+  }
+
+  lines.push('')
+
+  lines.push('**Indexes:**')
+  if (table.indexes.length === 0) {
+    lines.push('- —')
+  } else {
+    for (const index of table.indexes) {
+      lines.push(`- \`${index.name}\`: ${escapeMarkdown(index.definition)}`)
+    }
+  }
+
+  lines.push('')
+
+  return lines
+}
+
+async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> {
+  if (options.format !== 'markdown') {
+    throw new Error(`Unsupported export format: ${options.format}`)
+  }
+
+  const resolvedOutputPath = path.isAbsolute(options.outputPath)
+    ? options.outputPath
+    : path.resolve(process.cwd(), options.outputPath)
+
+  logger.info(`📝 Exporting database schema to ${resolvedOutputPath}`)
+
+  const [metadata, tables] = await Promise.all([
+    getSchemaMetadata(),
+    getTableInfos(options.includeRowCounts),
+  ])
+
+  const generatedAt = new Date()
+  const relationships = tables.flatMap((table) =>
+    table.foreignKeys.map((foreignKey) => ({
+      constraint: foreignKey.name,
+      fromTable: table.name,
+      fromColumns: foreignKey.columns,
+      toTable: foreignKey.referencedTable,
+      toColumns: foreignKey.referencedColumns,
+      updateRule: foreignKey.updateRule,
+      deleteRule: foreignKey.deleteRule,
+    })),
+  )
+
+  relationships.sort((a, b) => {
+    if (a.fromTable === b.fromTable) {
+      return a.toTable.localeCompare(b.toTable)
+    }
+    return a.fromTable.localeCompare(b.fromTable)
+  })
+
+  const lines: string[] = []
+  lines.push('# ConquestK Database Schema')
+  lines.push('')
+  lines.push(`Generated on ${generatedAt.toISOString()}`)
+  lines.push('')
+  lines.push('> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/DATABASE_SCHEMA.md`. Run the command after any migration changes to keep it current.')
+  lines.push('')
+  lines.push('## Overview')
+  lines.push('')
+  lines.push(`- Database: \`${metadata.database}\``)
+  lines.push(`- Schema: \`${metadata.schema}\``)
+  lines.push(`- PostgreSQL: ${metadata.serverVersion}`)
+  lines.push(`- Tables: ${tables.length}`)
+  if (options.includeRowCounts) {
+    lines.push('- Row counts reflect the snapshot captured when this file was generated.')
+  }
+
+  lines.push('')
+  lines.push('## Table Summary')
+  lines.push('')
+  lines.push('| Table | Columns | Rows |')
+  lines.push('| --- | ---: | ---: |')
+  for (const table of tables) {
+    lines.push(`| \`${table.name}\` | ${table.columns.length} | ${formatRowCount(table.rowCount)} |`)
+  }
+
+  lines.push('')
+  lines.push('## Tables')
+  lines.push('')
+
+  for (const table of tables) {
+    lines.push(...buildTableSummaryMarkdown(table))
+  }
+
+  if (relationships.length > 0) {
+    lines.push('## Foreign Key Relationships')
+    lines.push('')
+    lines.push('| Constraint | From table | Columns | To table | Columns | On Update | On Delete |')
+    lines.push('| --- | --- | --- | --- | --- | --- | --- |')
+    for (const relationship of relationships) {
+      const updateRule = relationship.updateRule ?? '—'
+      const deleteRule = relationship.deleteRule ?? '—'
+      lines.push(
+        `| \`${relationship.constraint}\` | \`${relationship.fromTable}\` | \`${relationship.fromColumns.join('`, `')}\` | \`${relationship.toTable}\` | \`${relationship.toColumns.join('`, `')}\` | ${updateRule} | ${deleteRule} |`,
+      )
+    }
+    lines.push('')
+  }
+
+  await fsPromises.mkdir(path.dirname(resolvedOutputPath), { recursive: true })
+  await fsPromises.writeFile(resolvedOutputPath, `${lines.join('\n')}\n`, 'utf8')
+
+  logger.info(`✅ Schema catalog written to ${resolvedOutputPath}`)
+}
+
+async function main(): Promise<void> {
+  const options = parseCliOptions()
+  let validationPassed = true
+
+  if (!options.skipValidation) {
+    validationPassed = await validateDatabaseSchema()
+    if (validationPassed) {
+      logger.info('✅ Database schema is valid')
+    } else {
+      logger.error('❌ Database schema validation failed')
+    }
+  }
+
+  if (options.exportPath) {
+    await exportSchemaCatalog({
+      format: options.format,
+      outputPath: options.exportPath,
+      includeRowCounts: options.includeRowCounts,
     })
+  }
+
+  if (!options.skipValidation && !validationPassed) {
+    process.exitCode = 1
+  }
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    logger.error('❌ Schema validation error:', error)
+    process.exitCode = 1
+  })
 }

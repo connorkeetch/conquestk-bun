@@ -158,12 +158,10 @@ Access at `/map-editor` when running locally.
 
 ## 📚 Documentation
 
+- [Documentation index](docs/README.md) - Single entry point for all guides
+- [Roadmap](docs/planning/ROADMAP.md) - Current priorities and backlog
+- [Codebase cleanup plan](docs/planning/CODEBASE-CLEANUP.md) - Technical debt tracker
 - [CLAUDE.md](CLAUDE.md) - AI assistant development guide
-- [Architecture](docs/ARCHITECTURE.md) - System design and patterns
-- [Deployment](docs/DEPLOYMENT.md) - Production deployment guide
-- [Development](docs/DEVELOPMENT.md) - Development setup
-- [Coding Standards](docs/CODING-STANDARDS.md) - Code style guide
-- [Theme System](docs/THEME-SYSTEM.md) - Theming architecture
 
 ## 🤝 Contributing
 

@@ -273,7 +273,7 @@ const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'green', 'black
 
 ## Future Enhancements
 
-Planned improvements (see TODO.md):
+Planned improvements (tracked in [planning/ROADMAP.md](planning/ROADMAP.md)):
 - Style themes (modern, retro, minimal)
 - Auto theme based on time of day
 - Custom theme creator

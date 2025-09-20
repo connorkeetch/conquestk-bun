@@ -1,6 +1,6 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import type { PlayerColor } from '../constants/colors'
 import {
   PLAYER_COLORS,
@@ -37,6 +37,13 @@ interface UserProfile {
 }
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
+
+type CopyState = 'idle' | 'copied' | 'error'
+
+interface ActionFeedback {
+  type: 'success' | 'error'
+  message: string
+}
 
 const hexToRgba = (hex: string, alpha = 1): string => {
   const normalized = hex.replace('#', '')
@@ -158,43 +165,138 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
+  const [copyState, setCopyState] = useState<CopyState>('idle')
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
+  const requestControllerRef = useRef<AbortController | null>(null)
 
-  // Check if this is the current user's profile
   const isOwnProfile = currentUser && currentUser.username === username
 
-  useEffect(() => {
-    fetchProfile()
-  }, [username])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!username) {
       setError('Username is required')
+      setProfile(null)
       setLoading(false)
       return
     }
 
+    requestControllerRef.current?.abort()
+    const controller = new AbortController()
+    requestControllerRef.current = controller
+
     try {
       setLoading(true)
+      setError(null)
+
       const apiUrl =
         import.meta.env.VITE_API_URL ||
         (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
 
-      const response = await fetch(`${apiUrl}/users/${username}/profile`)
+      const response = await fetch(
+        `${apiUrl}/users/${encodeURIComponent(username)}/profile`,
+        {
+          signal: controller.signal,
+        },
+      )
 
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to load profile')
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null
+        setProfile(null)
+        setError(errorData?.error ?? 'Failed to load profile')
+        return
       }
-    } catch (err: any) {
+
+      const data = (await response.json()) as UserProfile
+      setProfile(data)
+      setError(null)
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return
+      }
+
       console.error('Failed to fetch profile:', err)
       setError('Failed to load profile data')
+      setProfile(null)
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
+
+      if (requestControllerRef.current === controller) {
+        requestControllerRef.current = null
+      }
     }
-  }
+  }, [username])
+
+  useEffect(() => {
+    fetchProfile()
+
+    return () => {
+      requestControllerRef.current?.abort()
+      requestControllerRef.current = null
+    }
+  }, [fetchProfile])
+
+  useEffect(() => {
+    if (copyState === 'idle') {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyState('idle')
+    }, 2500)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [copyState])
+
+  useEffect(() => {
+    if (!actionFeedback) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setActionFeedback(null)
+    }, 4000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [actionFeedback])
+
+  const handleRefreshProfile = useCallback(() => {
+    setActionFeedback(null)
+    setCopyState('idle')
+    void fetchProfile()
+  }, [fetchProfile])
+
+  const handleShareProfile = useCallback(async () => {
+    if (!profile) {
+      return
+    }
+
+    const shareUrl = `${window.location.origin}/profile/${profile.username}`
+
+    try {
+      if ('share' in navigator && typeof navigator.share === 'function') {
+        await navigator.share({ title: `${profile.username} on ConquestK`, url: shareUrl })
+        setActionFeedback({ type: 'success', message: 'Share panel opened.' })
+        setCopyState('idle')
+        return
+      }
+
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(shareUrl)
+        setCopyState('copied')
+        setActionFeedback({ type: 'success', message: 'Profile link copied to clipboard.' })
+        return
+      }
+
+      window.prompt('Copy this profile link:', shareUrl)
+      setCopyState('copied')
+      setActionFeedback({ type: 'success', message: 'Profile link ready to share.' })
+    } catch (err: unknown) {
+      console.error('Failed to share profile link:', err)
+      setCopyState('error')
+      setActionFeedback({ type: 'error', message: 'Unable to share profile link. Try again?' })
+    }
+  }, [profile])
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -239,7 +341,7 @@ const ProfilePage: React.FC = () => {
           <div className="text-5xl mb-4">❌</div>
           <div className="text-white text-lg mb-4 font-medium">{error}</div>
           <button
-            onClick={fetchProfile}
+            onClick={handleRefreshProfile}
             className="px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
           >
             Try Again
@@ -260,95 +362,159 @@ const ProfilePage: React.FC = () => {
     )
   }
 
-  const fallbackPlayerColor = PLAYER_COLORS[0]
-  const preferredColorSource =
-    (profile.preferredColor as PlayerColor | undefined) ||
-    (settings.game.preferredColor as PlayerColor | undefined) ||
-    fallbackPlayerColor
+  const signatureVisuals = useMemo(() => {
+    const fallbackPlayerColor = PLAYER_COLORS[0]
+    const preferredColorSource =
+      (profile?.preferredColor as PlayerColor | undefined) ||
+      (settings?.game?.preferredColor as PlayerColor | undefined) ||
+      fallbackPlayerColor
 
-  const resolvedPreferredColor = getColorValue(preferredColorSource)
-  const signatureIsGradient = isGradientValue(resolvedPreferredColor)
-  const signatureHex = signatureIsGradient ? fallbackPlayerColor : resolvedPreferredColor
-  const signatureCrestStyle: React.CSSProperties = signatureIsGradient
-    ? { backgroundImage: resolvedPreferredColor }
-    : {
-        backgroundImage: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.85)} 0%, ${hexToRgba(
-          signatureHex,
-          0.55,
-        )} 60%, ${hexToRgba(signatureHex, 0.2)} 100%)`,
-      }
-
-  const signatureColorSwatchStyle: React.CSSProperties = signatureIsGradient
-    ? { backgroundImage: resolvedPreferredColor }
-    : { backgroundColor: signatureHex }
-
-  const signatureGlowStyle: React.CSSProperties = signatureIsGradient
-    ? { backgroundImage: resolvedPreferredColor }
-    : {
-        backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
-      }
-
-  const signatureLargeColorSwatchStyle: React.CSSProperties = {
-    ...signatureColorSwatchStyle,
-    boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
-  }
-
-  const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
-
-  const premiumColorEntry = (() => {
-    if (!preferredColorSource) return null
-
-    if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
-      const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
-      return [preferredColorSource, entry] as const
-    }
-
-    return (
-      Object.entries(PREMIUM_PLAYER_COLORS).find(([_, value]) => {
-        if ('gradient' in value && value.gradient) {
-          return value.gradient === preferredColorSource
+    const resolvedPreferredColor = getColorValue(preferredColorSource)
+    const signatureIsGradient = isGradientValue(resolvedPreferredColor)
+    const signatureHex = signatureIsGradient ? fallbackPlayerColor : resolvedPreferredColor
+    const signatureCrestStyle: React.CSSProperties = signatureIsGradient
+      ? { backgroundImage: resolvedPreferredColor }
+      : {
+          backgroundImage: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.85)} 0%, ${hexToRgba(
+            signatureHex,
+            0.55,
+          )} 60%, ${hexToRgba(signatureHex, 0.2)} 100%)`,
+        }
+    const signatureColorSwatchStyle: React.CSSProperties = signatureIsGradient
+      ? { backgroundImage: resolvedPreferredColor }
+      : { backgroundColor: signatureHex }
+    const signatureGlowStyle: React.CSSProperties = signatureIsGradient
+      ? { backgroundImage: resolvedPreferredColor }
+      : {
+          backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
         }
 
-        return value.solid === preferredColorSource
-      }) || null
+    const signatureLargeColorSwatchStyle: React.CSSProperties = {
+      ...signatureColorSwatchStyle,
+      boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
+    }
+
+    const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
+
+    const premiumColorEntry = (() => {
+      if (!preferredColorSource) return null
+
+      if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
+        const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
+        return [preferredColorSource, entry] as const
+      }
+
+      return (
+        Object.entries(PREMIUM_PLAYER_COLORS).find(([_, value]) => {
+          if ('gradient' in value && value.gradient) {
+            return value.gradient === preferredColorSource
+          }
+
+          return value.solid === preferredColorSource
+        }) || null
+      )
+    })()
+
+    return {
+      signatureCrestStyle,
+      signatureColorSwatchStyle,
+      signatureGlowStyle,
+      signatureLargeColorSwatchStyle,
+      preferredColorDisplayName,
+      premiumColorEntry,
+      signatureHex,
+    }
+  }, [profile?.preferredColor, settings?.game?.preferredColor])
+
+  const rankVisuals = useMemo(() => {
+    if (!profile) {
+      return null
+    }
+
+    const rankDetails = getConquestRank(profile.elo)
+    const nextRank = CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
+
+    const rawRankColor = rankDetails.color
+    const rankColorIsGradient = isGradientValue(rawRankColor)
+    const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
+    const fallbackRankHex = '#F59E0B'
+    const baseRankHex = extractedRankHex && extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
+    const rankAccentColor = ensureReadableOnDark(baseRankHex)
+    const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
+    const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
+    const rankGlowStyle: React.CSSProperties = rankColorIsGradient
+      ? { backgroundImage: rawRankColor }
+      : {
+          backgroundImage: `radial-gradient(circle at 20% 20%, ${hexToRgba(rankAccentSoft, 0.45)} 0%, transparent 70%)`,
+        }
+    const rankHeaderAccentStyle: React.CSSProperties = rankColorIsGradient
+      ? { backgroundImage: rawRankColor }
+      : {
+          backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentSoft, 0.35)} 0%, transparent 80%)`,
+        }
+    const rankProgressFill = rankColorIsGradient
+      ? rawRankColor
+      : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
+    const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
+      ? { backgroundImage: rawRankColor }
+      : { backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})` }
+    const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
+    const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
+    const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
+    const rankProgress = Math.min(
+      100,
+      Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
     )
-  })()
+    const ratingToNextRank = Math.max(0, (nextRank?.minRating ?? profile.elo) - profile.elo)
 
-  const rankDetails = getConquestRank(profile.elo)
-  const nextRank = CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
+    return {
+      rankDetails,
+      nextRank,
+      rawRankColor,
+      rankColorIsGradient,
+      rankAccentColor,
+      rankAccentSoft,
+      rankAccentFaint,
+      rankGlowStyle,
+      rankHeaderAccentStyle,
+      rankProgressFill,
+      rankCallToActionStyle,
+      rankSurfaceBorder,
+      rankProgress,
+      ratingToNextRank,
+    }
+  }, [profile])
 
-  const rawRankColor = rankDetails.color
-  const rankColorIsGradient = isGradientValue(rawRankColor)
-  const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
-  const fallbackRankHex = '#F59E0B'
-  const baseRankHex = extractedRankHex && extractedRankHex.startsWith('#') ? extractedRankHex : fallbackRankHex
-  const rankAccentColor = ensureReadableOnDark(baseRankHex)
-  const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
-  const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
-  const rankGlowStyle: React.CSSProperties = rankColorIsGradient
-    ? { backgroundImage: rawRankColor }
-    : {
-        backgroundImage: `radial-gradient(circle at 20% 20%, ${hexToRgba(rankAccentSoft, 0.45)} 0%, transparent 70%)`,
-      }
-  const rankHeaderAccentStyle: React.CSSProperties = rankColorIsGradient
-    ? { backgroundImage: rawRankColor }
-    : {
-        backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentSoft, 0.35)} 0%, transparent 80%)`,
-      }
-  const rankProgressFill = rankColorIsGradient
-    ? rawRankColor
-    : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
-  const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
-    ? { backgroundImage: rawRankColor }
-    : { backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})` }
-  const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
-  const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
-  const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
-  const rankProgress = Math.min(
-    100,
-    Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
-  )
-  const ratingToNextRank = Math.max(0, (nextRank?.minRating ?? profile.elo) - profile.elo)
+  const {
+    signatureCrestStyle,
+    signatureColorSwatchStyle,
+    signatureGlowStyle,
+    signatureLargeColorSwatchStyle,
+    preferredColorDisplayName,
+    premiumColorEntry,
+    signatureHex,
+  } = signatureVisuals
+
+  if (!rankVisuals) {
+    return null
+  }
+
+  const {
+    rankDetails,
+    nextRank,
+    rawRankColor,
+    rankColorIsGradient,
+    rankAccentColor,
+    rankAccentSoft,
+    rankAccentFaint,
+    rankGlowStyle,
+    rankHeaderAccentStyle,
+    rankProgressFill,
+    rankCallToActionStyle,
+    rankSurfaceBorder,
+    rankProgress,
+    ratingToNextRank,
+  } = rankVisuals
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
@@ -360,6 +526,23 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
+        {actionFeedback && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mb-6 glass-box-sm px-4 py-3 rounded-xl border ${
+              actionFeedback.type === 'success'
+                ? 'border-emerald-500/50 text-emerald-200'
+                : 'border-red-500/60 text-red-200'
+            }`}
+          >
+            <div className="flex items-center gap-3 text-sm font-medium">
+              <span aria-hidden="true">{actionFeedback.type === 'success' ? '✅' : '⚠️'}</span>
+              <span>{actionFeedback.message}</span>
+            </div>
+          </div>
+        )}
+
         {/* Profile Header Card with glass effect */}
         <div className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden">
           <div className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none" style={rankGlowStyle} />
@@ -368,6 +551,46 @@ const ProfilePage: React.FC = () => {
             style={{ background: hexToRgba(rankAccentSoft, 0.45) }}
           />
           <div className="absolute inset-0 opacity-35 pointer-events-none" style={rankHeaderAccentStyle} />
+          <div className="absolute top-4 right-4 flex flex-col items-end gap-2 text-sm">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleRefreshProfile}
+                disabled={loading}
+                className="px-3 py-1.5 rounded-lg bg-surface-3/80 hover:bg-surface-3/100 border border-white/10 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <span>🔄</span>
+                <span className="font-medium">Refresh</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShareProfile}
+                className="px-3 py-1.5 rounded-lg bg-surface-3/80 hover:bg-surface-3/100 border border-white/10 transition-colors flex items-center gap-2"
+              >
+                <span>🔗</span>
+                <span className="font-medium">Share</span>
+              </button>
+              {isOwnProfile && (
+                <Link
+                  to="/settings"
+                  aria-label="Edit your profile settings"
+                  className="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 border border-white/10 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <span>✏️</span>
+                  Edit Profile
+                </Link>
+              )}
+            </div>
+            {copyState !== 'idle' && (
+              <span
+                className={`text-xs ${copyState === 'copied' ? 'text-green-400' : 'text-red-400'}`}
+                role="status"
+                aria-live="polite"
+              >
+                {copyState === 'copied' ? 'Profile link copied!' : 'Unable to copy link'}
+              </span>
+            )}
+          </div>
           <div className="relative flex flex-col sm:flex-row gap-6">
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
@@ -444,6 +667,26 @@ const ProfilePage: React.FC = () => {
                 className="justify-center sm:justify-start px-4 py-2 rounded-full bg-surface-3/60 border border-white/10 backdrop-blur-sm shadow-inner"
               />
 
+              <div className="flex flex-col sm:flex-row items-center sm:items-stretch justify-center sm:justify-start gap-3">
+                {isOwnProfile && (
+                  <Link
+                    to="/settings"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-soft text-white font-semibold transition-transform hover:scale-105 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
+                  >
+                    <span aria-hidden="true">✏️</span>
+                    <span>Edit Profile</span>
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={handleShareProfile}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-3/60 border border-white/10 text-white/90 hover:text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
+                >
+                  <span aria-hidden="true">🔗</span>
+                  <span>Share Profile</span>
+                </button>
+              </div>
+
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
                 <span className="flex items-center gap-1">
                   <span className="text-lg">🎯</span>
@@ -465,6 +708,18 @@ const ProfilePage: React.FC = () => {
               {profile.bio && (
                 <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
                   <p className="text-muted text-base leading-relaxed">{profile.bio}</p>
+                </div>
+              )}
+
+              {!profile.bio && isOwnProfile && (
+                <div className="p-4 rounded-xl bg-surface-2/60 border border-dashed border-white/10 backdrop-blur-sm">
+                  <p className="text-muted text-base leading-relaxed">
+                    Introduce yourself to other commanders.{' '}
+                    <Link to="/settings" className="text-primary-soft hover:underline">
+                      Add a short bio
+                    </Link>{' '}
+                    to share your playstyle and favorite strategies.
+                  </p>
                 </div>
               )}
             </div>

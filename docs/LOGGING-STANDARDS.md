@@ -1,5 +1,7 @@
 # Logging Standards and Best Practices
 
+_Last updated: February 21, 2025_
+
 ## Overview
 This document outlines the logging standards for the ConquestK codebase, explaining when and how to use different logging methods.
 
@@ -78,6 +80,16 @@ Scripts in `backend/src/scripts/` may use `console.log` for user-facing output:
 
 Internal errors should still use logger when available.
 
+### Route error helper
+
+Recent service hardening introduced a shared `handleRouteError` utility (`backend/src/utils/routeErrorHandler.ts`). Use it in Express handlers whenever you need to:
+
+- Log the failure with consistent structure and context
+- Capture the exception in Sentry
+- Avoid duplicating `logger.error` payloads across routes
+
+Pass any request-specific identifiers through the optional `context` argument so the log line surfaces parameters like `queueName` or `userId` alongside the stack trace.
+
 ## Frontend Logging (React)
 
 ### Development vs Production
@@ -147,15 +159,15 @@ socket.on('game:update', (data) => {
 ## Migration Status
 
 ### ✅ Completed
-- **index.ts**: Properly uses console.log before logger initialization, logger after
-- **gameService.ts**: All console.logs replaced with appropriate logger levels
-- **emailService.ts**: All console.logs replaced with logger
+- **Core boot flow:** `index.ts` still uses `console.log` only before the logger is initialised.
+- **Routes:** Queue, benchmark, preferences, terms, and skills routes now defer to `handleRouteError` for structured logging.
+- **Workers:** `battleWorker`, `cleanupWorker`, `gameActionWorker`, and `workerManager` emit through the shared logger.
+- **Services:** `UserPreferencesService`, `capitalGeneratorService`, and `featureFlagService` swapped remaining `console.log` calls for semantic logger levels.
 
-### 🔄 Remaining Backend Files
-These files still have console.logs that need review:
-- Routes: `featureFlags.ts`, `performanceRoutes.ts`, `preferences.ts`, `skills.ts`
-- Workers: `battleWorker.ts`, `cleanupWorker.ts`, `gameActionWorker.ts`, `workerManager.ts`
-- Services: `UserPreferencesService.ts`, `capitalGeneratorService.ts`, `featureFlagService.ts`
+### 🧭 Ongoing vigilance
+- New routes should wire `handleRouteError` instead of hand-written `logger.error` calls.
+- Background workers must use the shared logger instance so queue health metrics stay centralised.
+- Keep CLI scripts user-friendly with `console.log`, but route operational failures through the logger for alerting.
 
 ### 📝 Scripts (Keep console.log)
 CLI scripts should keep console.log for user interaction:

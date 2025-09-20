@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { adminService, type ContentApprovalItem } from '../services/adminService'
 
 interface ContentModal {
@@ -15,17 +16,15 @@ export default function AdminContent() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
-  const [limit] = useState(20)
+  const limit = 20
 
   // Modal state
   const [actionModal, setActionModal] = useState<ContentModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [submittingAction, setSubmittingAction] = useState(false)
 
-  useEffect(() => {
-    loadContentQueue()
-  }, [loadContentQueue])
-
-  const loadContentQueue = async () => {
+  const loadContentQueue = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -38,46 +37,68 @@ export default function AdminContent() {
 
       setContentQueue(result.items)
       setTotalItems(result.total)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load content queue')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load content queue'
+      setError(message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage])
+
+  useEffect(() => {
+    void loadContentQueue()
+  }, [loadContentQueue])
 
   const handleContentAction = async () => {
     if (!actionModal) return
 
+    setSubmittingAction(true)
+    setActionError(null)
+
+    if (actionModal.action === 'reject' && !actionNotes.trim()) {
+      setActionError('Please provide a reason for rejection')
+      setSubmittingAction(false)
+      return
+    }
+
     try {
       if (actionModal.action === 'approve') {
         await adminService.approveContent(actionModal.item.id, actionNotes)
+        toast.success('Content approved')
       } else {
-        if (!actionNotes.trim()) {
-          alert('Please provide a reason for rejection')
-          return
-        }
         await adminService.rejectContent(actionModal.item.id, actionNotes)
+        toast.success('Content rejected')
       }
 
       await loadContentQueue()
       setActionModal(null)
       setActionNotes('')
-    } catch (err: any) {
-      alert(`Failed to ${actionModal.action} content: ${err.message}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : `Failed to ${actionModal.action} content`
+      setActionError(message)
+      toast.error(message)
+    } finally {
+      setSubmittingAction(false)
     }
   }
 
   const openActionModal = (item: ContentApprovalItem, action: 'approve' | 'reject') => {
     setActionModal({ item, isOpen: true, action })
     setActionNotes('')
+    setActionError(null)
   }
 
   const closeActionModal = () => {
     setActionModal(null)
     setActionNotes('')
+    setActionError(null)
+    setSubmittingAction(false)
   }
 
   const totalPages = Math.ceil(totalItems / limit)
+  const notesFieldId = actionModal
+    ? `content-action-notes-${actionModal.item.id}`
+    : 'content-action-notes'
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
@@ -138,7 +159,8 @@ export default function AdminContent() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Approval Queue</h2>
               <button
-                onClick={loadContentQueue}
+                type="button"
+                onClick={() => void loadContentQueue()}
                 className="bg-primary hover:brightness-110 px-4 py-2 rounded text-sm"
               >
                 🔄 Refresh
@@ -156,7 +178,8 @@ export default function AdminContent() {
               <div className="text-2xl mb-4 text-red-400">❌</div>
               <div className="text-red-400 mb-4">{error}</div>
               <button
-                onClick={loadContentQueue}
+                type="button"
+                onClick={() => void loadContentQueue()}
                 className="bg-primary hover:brightness-110 px-4 py-2 rounded"
               >
                 Retry
@@ -234,12 +257,14 @@ export default function AdminContent() {
 
                     <div className="flex space-x-2 ml-6">
                       <button
+                        type="button"
                         onClick={() => openActionModal(item, 'approve')}
                         className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium"
                       >
                         ✅ Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => openActionModal(item, 'reject')}
                         className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-medium"
                       >
@@ -262,6 +287,7 @@ export default function AdminContent() {
                 </div>
                 <div className="flex space-x-2">
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
@@ -272,6 +298,7 @@ export default function AdminContent() {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
@@ -303,12 +330,13 @@ export default function AdminContent() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label htmlFor={notesFieldId} className="block text-sm font-medium mb-2">
                   {actionModal.action === 'approve'
                     ? 'Notes (optional)'
                     : 'Reason for rejection (required)'}
                 </label>
                 <textarea
+                  id={notesFieldId}
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
                   className="w-full px-3 py-2 bg-surface-2 border border-border rounded resize-none"
@@ -322,23 +350,32 @@ export default function AdminContent() {
               </div>
             </div>
 
+            {actionError && <div className="mt-4 text-sm text-red-400">{actionError}</div>}
             <div className="flex justify-end space-x-2 mt-6">
               <button
+                type="button"
                 onClick={closeActionModal}
                 className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleContentAction}
-                disabled={actionModal.action === 'reject' && !actionNotes.trim()}
+                disabled={
+                  submittingAction || (actionModal.action === 'reject' && !actionNotes.trim())
+                }
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
                   actionModal.action === 'approve'
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
-                {actionModal.action === 'approve' ? '✅ Approve' : '❌ Reject'}
+                {submittingAction
+                  ? 'Working...'
+                  : actionModal.action === 'approve'
+                    ? '✅ Approve'
+                    : '❌ Reject'}
               </button>
             </div>
           </div>
