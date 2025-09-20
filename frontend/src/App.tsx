@@ -9,6 +9,7 @@ import Layout from './components/Layout'
 import VerificationGuard from './components/VerificationGuard'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { useFaviconBadge } from './hooks/useFaviconBadge'
+import { isTokenExpired } from './utils/token'
 
 const CommunityPage = lazy(() => import('./pages/CommunityPage'))
 const CreateGamePage = lazy(() => import('./pages/CreateGamePage'))
@@ -79,8 +80,12 @@ function App() {
       console.log('[APP] Token exists:', !!token)
 
       if (token) {
-        console.log('[APP] Dispatching checkAuth...')
-        await dispatch(checkAuth())
+        if (isTokenExpired(token, 30)) {
+          localStorage.removeItem('token')
+        } else {
+          console.log('[APP] Dispatching checkAuth...')
+          await dispatch(checkAuth())
+        }
       }
 
       setInitialCheckDone(true)

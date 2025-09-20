@@ -33,7 +33,7 @@ class AudioService {
   private audioUsageTracker: Map<string, { lastUsed: Date; count: number }> = new Map()
 
   // Sound effect definitions - mapped from actual audio files
-  private readonly SOUND_EFFECTS = {
+  private readonly SOUND_EFFECTS: Record<string, string | string[]> = {
     // Dice rolling sounds (rotate through multiple - reduced from 7 to 3)
     dice: [
       '/audio-files/11L-Dice_roll_sound_effe-1756344593515.mp3',
@@ -86,6 +86,10 @@ class AudioService {
     // These are aliases for backwards compatibility
     defeat: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
     eliminated: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
+  }
+
+  private readonly EFFECT_ALIASES: Record<string, string> = {
+    turn: 'yourturn',
   }
 
   // Background music tracks
@@ -213,15 +217,23 @@ class AudioService {
   public playEffect(effectName: string): void {
     if (!this.preferences.enabled || this.isMuted || !this.isTabFocused) return
 
-    // Track usage
-    this.trackAudioUsage(effectName)
+    const resolvedEffectName = this.resolveEffectName(effectName)
+    const effectConfig = this.SOUND_EFFECTS[resolvedEffectName]
 
-    // Check if this is a rotating sound effect (has multiple variations)
-    const effectConfig = this.SOUND_EFFECTS[effectName as keyof typeof this.SOUND_EFFECTS]
+    if (!effectConfig) {
+      console.warn(
+        `Sound effect '${effectName}' not found or failed to load (resolved as '${resolvedEffectName}')`,
+      )
+      return
+    }
+
+    // Track usage
+    this.trackAudioUsage(resolvedEffectName)
+
     if (Array.isArray(effectConfig)) {
       // Get current index and rotate
-      const currentIndex = this.soundIndices.get(effectName) || 0
-      const soundKey = `${effectName}_${currentIndex}`
+      const currentIndex = this.soundIndices.get(resolvedEffectName) || 0
+      const soundKey = `${resolvedEffectName}_${currentIndex}`
       const sound = this.sounds.get(soundKey)
 
       if (sound?.howl) {
@@ -232,17 +244,22 @@ class AudioService {
       }
 
       // Update index for next time (rotate through available sounds)
-      this.soundIndices.set(effectName, (currentIndex + 1) % effectConfig.length)
+      this.soundIndices.set(resolvedEffectName, (currentIndex + 1) % effectConfig.length)
     } else {
       // Single sound effect
-      const sound = this.sounds.get(effectName)
+      const sound = this.sounds.get(resolvedEffectName)
       if (sound?.howl) {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()
       } else {
-        console.warn(`Sound effect '${effectName}' not found or failed to load`)
+        console.warn(`Sound effect '${resolvedEffectName}' not found or failed to load`)
       }
     }
+  }
+
+  private resolveEffectName(effectName: string): string {
+    const normalizedEffectName = effectName.toLowerCase()
+    return this.EFFECT_ALIASES[normalizedEffectName] || normalizedEffectName
   }
 
   // Track audio usage for debugging/analytics

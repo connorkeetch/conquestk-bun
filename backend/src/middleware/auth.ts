@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import jwt, { TokenExpiredError } from 'jsonwebtoken'
 import { query } from '../config/database'
 import type { RequestUser } from '../types/express'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
@@ -91,6 +91,15 @@ export const authenticateToken: RequestHandler = async (
 
     next()
   } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      logger.info('Token verification failed: token expired', {
+        path: req.path,
+        method: req.method,
+      })
+      res.status(401).json({ message: 'Token expired' })
+      return
+    }
+
     logger.error('Token verification failed:', toKnownError(error))
     res.status(403).json({ message: 'Invalid token' })
     return

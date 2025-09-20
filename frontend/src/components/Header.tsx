@@ -45,9 +45,6 @@ export default function Header() {
     ...(user?.isAdmin ? [{ path: '/admin', label: 'Admin', icon: '🛡️' }] : []),
   ]
 
-  // Future features (keeping track for later)
-  const futureItems: MenuItem[] = [{ path: '/tournaments', label: 'Tournaments', icon: '🏅' }]
-
   const handleLogout = () => {
     dispatch(logout())
     setIsMenuOpen(false)
@@ -384,26 +381,6 @@ export default function Header() {
               ))}
             </div>
 
-            {/* Coming Soon Section */}
-            <div className="mt-8 pt-6 border-t border-border-muted">
-              <div className="px-4 mb-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                Coming Soon
-              </div>
-              <div className="space-y-1 opacity-50">
-                {futureItems.map((item) => (
-                  <div
-                    key={item.path}
-                    className="flex items-center gap-3 px-4 py-3 text-muted cursor-not-allowed"
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                    <span className="ml-auto text-xs bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded">
-                      Soon
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Bottom Auth Section */}

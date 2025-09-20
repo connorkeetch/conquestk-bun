@@ -1,4 +1,5 @@
 import { type Request, type Response, Router } from 'express'
+import { logAdminActivity, requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import notificationService from '../services/notificationService'
 import { handleRouteError } from '../utils/routeErrorHandler'
@@ -103,5 +104,51 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to send test notification' })
   }
 })
+
+router.post(
+  '/admin/prune-subscriptions',
+  authenticateToken,
+  requireAdmin,
+  logAdminActivity('notifications.prune_subscriptions'),
+  async (req: Request, res: Response) => {
+    try {
+      const { failureThreshold, failureAgeDays, staleRegistrationDays } = req.body ?? {}
+
+      const normalizeOptionalNumber = (value: unknown, field: string): number | undefined => {
+        if (value === undefined) return undefined
+        const parsed = typeof value === 'number' ? value : Number(value)
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          throw new Error(`${field} must be a positive number`)
+        }
+        return parsed
+      }
+
+      const result = await notificationService.pruneStaleSubscriptions({
+        failureThreshold: normalizeOptionalNumber(failureThreshold, 'failureThreshold'),
+        failureAgeDays: normalizeOptionalNumber(failureAgeDays, 'failureAgeDays'),
+        staleRegistrationDays: normalizeOptionalNumber(
+          staleRegistrationDays,
+          'staleRegistrationDays',
+        ),
+      })
+
+      return res.json({
+        success: true,
+        result,
+      })
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('must be a positive number') ||
+          error.message.includes('must be greater than zero'))
+      ) {
+        return res.status(400).json({ error: error.message })
+      }
+
+      handleRouteError(error, req, 'Failed to prune notification subscriptions')
+      return res.status(500).json({ error: 'Failed to prune notification subscriptions' })
+    }
+  },
+)
 
 export default router

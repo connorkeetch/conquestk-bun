@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { API_URL } from '../config'
 import { applyTheme, getStoredTheme, storeTheme, THEMES } from '../config/themes.config'
 import {
   COLOR_DISPLAY_NAMES,
@@ -1243,24 +1244,64 @@ export default function Settings() {
             label: 'Test Notification',
             description: 'Send a test push notification',
             type: 'button',
-            isWorking: isSubscribed,
+            isWorking: isSubscribed && pushBackendEnabled && !pushOperationInFlight,
             buttonText: '🔔 Send Test',
+            disabled: !pushBackendEnabled || pushOperationInFlight,
+            disabledReason: !pushBackendEnabled
+              ? 'Push notifications are currently disabled by the server. Please try again later.'
+              : pushOperationInFlight
+                ? 'Please wait while we update your notification settings.'
+                : undefined,
             onClick: async () => {
-              if (isSubscribed) {
-                const response = await fetch('/api/notifications/test', {
+              if (!isSubscribed) {
+                alert('Please enable browser notifications first')
+                return
+              }
+
+              if (!pushBackendEnabled) {
+                alert('Push notifications are currently disabled. Please try again later.')
+                return
+              }
+
+              const token = localStorage.getItem('token')
+              if (!token) {
+                alert('You need to be logged in to send a test notification')
+                return
+              }
+
+              try {
+                const response = await fetch(`${API_URL}/notifications/test`, {
                   method: 'POST',
                   headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
                   },
                 })
-                const result = await response.json()
-                if (result.success) {
-                  alert('Test notification sent! Check your notifications.')
-                } else {
-                  alert(result.error || 'Failed to send test notification')
+
+                let result: { success?: boolean; error?: string; message?: string } | null = null
+                try {
+                  result = await response.json()
+                } catch (_error) {
+                  // Ignore JSON parsing errors for non-JSON responses
                 }
-              } else {
-                alert('Please enable browser notifications first')
+
+                if (response.ok && result?.success) {
+                  alert(result.message || 'Test notification sent! Check your notifications.')
+                  return
+                }
+
+                const errorMessage =
+                  result?.error ||
+                  result?.message ||
+                  (response.status === 503
+                    ? 'The notification service is currently disabled. Please try again later.'
+                    : `Failed to send test notification (${response.status})`)
+
+                alert(errorMessage)
+              } catch (error) {
+                const message =
+                  error instanceof Error ? error.message : 'Unexpected error while sending test notification'
+                alert(message)
               }
             },
           },

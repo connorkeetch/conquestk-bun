@@ -1,14 +1,16 @@
 import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import emailService from '../services/emailService'
 import { adminService } from '../services/adminService'
+import emailService from '../services/emailService'
 import { UserService } from '../services/userService'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
 
 export class AuthController {
   private userService = new UserService()
+
+  private readonly tokenExpiration = process.env.JWT_EXPIRES_IN || '7d'
 
   register = async (req: Request, res: Response) => {
     try {
@@ -120,7 +122,7 @@ export class AuthController {
       }
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
-        expiresIn: '24h',
+        expiresIn: this.tokenExpiration,
       })
 
       // Check if email verification is required
@@ -204,7 +206,7 @@ export class AuthController {
 
       // Generate token regardless of verification status
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'fallback-secret', {
-        expiresIn: '24h',
+        expiresIn: this.tokenExpiration,
       })
 
       // Check email verification status

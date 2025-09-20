@@ -20,18 +20,97 @@ const ensureUserProfileColumns = async () => {
   }
 }
 
-// The Conqueror's Path - Conquest rank system
+const PLAYER_COLOR_DEFAULT = '#DC2626'
+
+const PREMIUM_COLOR_KEYS = new Set([
+  'MidnightBlack',
+  'PureWhite',
+  'MetallicGold',
+  'NeonGreen',
+  'Dragonfire',
+])
+
+const LEGACY_COLOR_MAP: Record<string, string> = {
+  red: '#DC2626',
+  'bright-red': '#DC2626',
+  crimson: '#851D2D',
+  orange: '#EA580C',
+  amber: '#F59E0B',
+  yellow: '#F59E0B',
+  green: '#059669',
+  emerald: '#059669',
+  forest: '#014421',
+  blue: '#2563EB',
+  cyan: '#06B6D4',
+  teal: '#06B6D4',
+  pink: '#EC4899',
+  violet: '#7C3AED',
+  purple: '#7C3AED',
+  brown: '#7C2D12',
+  tan: '#918151',
+  lime: '#918151',
+  indigo: '#7C3AED',
+}
+
+const HEX_NORMALIZATION_MAP: Record<string, string> = {
+  '#dc2626': '#DC2626',
+  '#851d2d': '#851D2D',
+  '#ec4899': '#EC4899',
+  '#ea580c': '#EA580C',
+  '#f59e0b': '#F59E0B',
+  '#014421': '#014421',
+  '#059669': '#059669',
+  '#2563eb': '#2563EB',
+  '#06b6d4': '#06B6D4',
+  '#7c3aed': '#7C3AED',
+  '#918151': '#918151',
+  '#7c2d12': '#7C2D12',
+}
+
+const normalizePreferredColor = (color?: string | null): string => {
+  if (!color) {
+    return PLAYER_COLOR_DEFAULT
+  }
+
+  const trimmed = color.trim()
+
+  if (PREMIUM_COLOR_KEYS.has(trimmed)) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith('linear-gradient(')) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith('#')) {
+    return HEX_NORMALIZATION_MAP[trimmed.toLowerCase()] ?? trimmed.toUpperCase()
+  }
+
+  const normalized = LEGACY_COLOR_MAP[trimmed.toLowerCase()]
+  if (normalized) {
+    return normalized
+  }
+
+  return PLAYER_COLOR_DEFAULT
+}
+
+// The Conqueror's Path - Conquest rank system (mirrors frontend constants)
 const CONQUEST_RANKS = [
-  { name: 'Chieftain', minRating: 0, color: '#8B7355', insignia: '🛡️' },
-  { name: 'Warlord', minRating: 800, color: '#C41E3A', insignia: '⚔️' },
-  { name: 'Raider King', minRating: 1000, color: '#4682B4', insignia: '⚓' },
-  { name: 'Sultan', minRating: 1200, color: '#228B22', insignia: '☪️' },
-  { name: 'Caesar', minRating: 1400, color: '#B8860B', insignia: '🦅' },
-  { name: 'Khan', minRating: 1600, color: '#8B4513', insignia: '🏹' },
-  { name: 'Emperor', minRating: 1800, color: '#483D8B', insignia: '👑' },
-  { name: 'The Great King', minRating: 2000, color: '#FF8C00', insignia: '☀️' },
-  { name: 'Overlord', minRating: 2200, color: '#8B008B', insignia: '💀' },
-  { name: 'Worldbreaker', minRating: 2400, color: '#DC143C', insignia: '☄️' },
+  { name: 'Chieftain', minRating: 0, color: '#9CA3AF', insignia: '🛡️' },
+  { name: 'Warlord', minRating: 800, color: '#92400E', insignia: '⚔️' },
+  { name: 'Raider King', minRating: 1000, color: '#B22222', insignia: '⚓' },
+  { name: 'Sultan', minRating: 1200, color: '#10B981', insignia: '☪️' },
+  { name: 'Caesar', minRating: 1400, color: '#C0C0C0', insignia: '🦅' },
+  { name: 'Khan', minRating: 1600, color: '#9B111E', insignia: '🏹' },
+  { name: 'Emperor', minRating: 1800, color: '#2563EB', insignia: '👑' },
+  { name: 'The Great King', minRating: 2000, color: '#FFD700', insignia: '☀️' },
+  { name: 'Overlord', minRating: 2200, color: '#000000', insignia: '💀' },
+  {
+    name: 'Worldbreaker',
+    minRating: 2400,
+    color: 'linear-gradient(90deg, #EF4444, #F59E0B)',
+    insignia: '☄️',
+  },
 ]
 
 // Helper function to calculate conquest rank
@@ -75,8 +154,16 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     }
 
     const user = result.rows[0]
-    const rank = getConquestRank(user.skill_rating || 1000)
-    const winRate = user.games_played > 0 ? (user.games_won / user.games_played) * 100 : 0
+    const elo = user.skill_rating || 1000
+    const rank = getConquestRank(elo)
+    const nextRank =
+      CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const gamesPlayed = user.games_played || 0
+    const wins = user.games_won || 0
+    const recordedLosses: number | null = user.games_lost ?? null
+    const losses = recordedLosses !== null ? recordedLosses : Math.max(0, gamesPlayed - wins)
+    const winRate = gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0
+    const preferredColor = normalizePreferredColor(user.preferred_color)
 
     return res.json({
       id: user.id,
@@ -85,20 +172,27 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       emailVerified: user.email_verified,
       avatarUrl: null,
       bio: user.bio,
-      elo: user.skill_rating || 1000,
+      elo,
       joinDate: user.created_at,
       lastActive: user.last_login,
-      gamesPlayed: user.games_played || 0,
-      wins: user.games_won || 0,
-      losses: (user.games_played || 0) - (user.games_won || 0),
-      winRate: winRate,
-      peakRating: user.peak_rating || user.skill_rating || 1000,
-      preferredColor: user.preferred_color || 'bright-red',
+      gamesPlayed,
+      wins,
+      losses,
+      winRate,
+      peakRating: user.peak_rating || elo,
+      preferredColor,
       rank: {
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1000,
+        rating: elo,
+        minRating: rank.minRating,
+        nextRank: nextRank
+          ? {
+              name: nextRank.name,
+              minRating: nextRank.minRating,
+            }
+          : null,
       },
     })
   } catch (error) {
@@ -139,8 +233,16 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     }
 
     const user = result.rows[0]
-    const rank = getConquestRank(user.skill_rating || 1000)
-    const winRate = user.games_played > 0 ? (user.games_won / user.games_played) * 100 : 0
+    const elo = user.skill_rating || 1000
+    const rank = getConquestRank(elo)
+    const nextRank =
+      CONQUEST_RANKS.find((candidate) => candidate.minRating > rank.minRating) ?? null
+    const gamesPlayed = user.games_played || 0
+    const wins = user.games_won || 0
+    const recordedLosses: number | null = user.games_lost ?? null
+    const losses = recordedLosses !== null ? recordedLosses : Math.max(0, gamesPlayed - wins)
+    const winRate = gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0
+    const preferredColor = normalizePreferredColor(user.preferred_color)
 
     return res.json({
       id: user.id,
@@ -149,20 +251,27 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       emailVerified: user.email_verified,
       avatarUrl: null,
       bio: user.bio,
-      elo: user.skill_rating || 1000,
+      elo,
       joinDate: user.created_at,
       lastActive: user.last_login,
-      gamesPlayed: user.games_played || 0,
-      wins: user.games_won || 0,
-      losses: (user.games_played || 0) - (user.games_won || 0),
-      winRate: winRate,
-      peakRating: user.peak_rating || user.skill_rating || 1000,
-      preferredColor: user.preferred_color || 'bright-red',
+      gamesPlayed,
+      wins,
+      losses,
+      winRate,
+      peakRating: user.peak_rating || elo,
+      preferredColor,
       rank: {
         name: rank.name,
         color: rank.color,
         insignia: rank.insignia,
-        rating: user.skill_rating || 1000,
+        rating: elo,
+        minRating: rank.minRating,
+        nextRank: nextRank
+          ? {
+              name: nextRank.name,
+              minRating: nextRank.minRating,
+            }
+          : null,
       },
     })
   } catch (error) {

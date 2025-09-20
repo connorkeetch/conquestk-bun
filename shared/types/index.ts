@@ -3,6 +3,8 @@
  * This ensures type consistency across the entire application
  */
 
+export * from './notifications'
+
 // ============================================
 // User & Authentication Types
 // ============================================

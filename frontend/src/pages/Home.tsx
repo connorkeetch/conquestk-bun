@@ -31,12 +31,6 @@ const Home: React.FC = () => {
       description: 'Epic battles with up to 12 conquerors',
       status: 'available',
     },
-    {
-      icon: '🏆',
-      title: 'Tournaments',
-      description: 'Ranked seasons and competitive events',
-      status: 'coming-soon',
-    },
   ]
 
   return (

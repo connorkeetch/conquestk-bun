@@ -33,6 +33,11 @@ interface UserProfile {
     color: string
     insignia: string
     rating: number
+    minRating?: number
+    nextRank?: {
+      name: string
+      minRating: number
+    } | null
   }
 }
 
@@ -66,9 +71,7 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max)
 }
 
-const hexToRgb = (
-  hex: string,
-): { r: number; g: number; b: number } | null => {
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const normalized = hex.replace('#', '')
   if (normalized.length !== 6) {
     return null
@@ -123,7 +126,7 @@ const getRelativeLuminance = (hex: string): number => {
 
   const transform = (channel: number) => {
     const srgb = channel / 255
-    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4)
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
   }
 
   const r = transform(rgb.r)
@@ -191,12 +194,9 @@ const ProfilePage: React.FC = () => {
         import.meta.env.VITE_API_URL ||
         (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
 
-      const response = await fetch(
-        `${apiUrl}/users/${encodeURIComponent(username)}/profile`,
-        {
-          signal: controller.signal,
-        },
-      )
+      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(username)}/profile`, {
+        signal: controller.signal,
+      })
 
       if (!response.ok) {
         const errorData = (await response.json().catch(() => null)) as { error?: string } | null
@@ -213,7 +213,6 @@ const ProfilePage: React.FC = () => {
         return
       }
 
-      console.error('Failed to fetch profile:', err)
       setError('Failed to load profile data')
       setProfile(null)
     } finally {
@@ -292,7 +291,6 @@ const ProfilePage: React.FC = () => {
       setCopyState('copied')
       setActionFeedback({ type: 'success', message: 'Profile link ready to share.' })
     } catch (err: unknown) {
-      console.error('Failed to share profile link:', err)
       setCopyState('error')
       setActionFeedback({ type: 'error', message: 'Unable to share profile link. Try again?' })
     }
@@ -341,6 +339,7 @@ const ProfilePage: React.FC = () => {
           <div className="text-5xl mb-4">❌</div>
           <div className="text-white text-lg mb-4 font-medium">{error}</div>
           <button
+            type="button"
             onClick={handleRefreshProfile}
             className="px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
           >
@@ -400,7 +399,8 @@ const ProfilePage: React.FC = () => {
       if (!preferredColorSource) return null
 
       if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
-        const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
+        const entry =
+          PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
         return [preferredColorSource, entry] as const
       }
 
@@ -431,14 +431,31 @@ const ProfilePage: React.FC = () => {
       return null
     }
 
-    const rankDetails = getConquestRank(profile.elo)
-    const nextRank = CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
+    const fallbackRankDetails = getConquestRank(profile.elo)
+    const backendRank = profile.rank
+
+    const rankDetails = {
+      name: backendRank?.name ?? fallbackRankDetails.name,
+      minRating: backendRank?.minRating ?? fallbackRankDetails.minRating,
+      color: backendRank?.color ?? fallbackRankDetails.color,
+      insignia: backendRank?.insignia ?? fallbackRankDetails.insignia,
+    }
+
+    const nextRankFromBackend = backendRank?.nextRank ?? null
+    const nextRankDetails = nextRankFromBackend
+      ? (CONQUEST_RANKS.find((rank) => rank.minRating === nextRankFromBackend.minRating) ?? {
+          name: nextRankFromBackend.name,
+          minRating: nextRankFromBackend.minRating,
+          color: rankDetails.color,
+          insignia: rankDetails.insignia,
+        })
+      : CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
 
     const rawRankColor = rankDetails.color
     const rankColorIsGradient = isGradientValue(rawRankColor)
     const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
     const fallbackRankHex = '#F59E0B'
-    const baseRankHex = extractedRankHex && extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
+    const baseRankHex = extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
     const rankAccentColor = ensureReadableOnDark(baseRankHex)
     const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
     const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
@@ -457,19 +474,21 @@ const ProfilePage: React.FC = () => {
       : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
     const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
       ? { backgroundImage: rawRankColor }
-      : { backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})` }
+      : {
+          backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})`,
+        }
     const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
-    const nextRankTarget = nextRank?.minRating ?? rankDetails.minRating
+    const nextRankTarget = nextRankDetails?.minRating ?? rankDetails.minRating
     const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
     const rankProgress = Math.min(
       100,
       Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
     )
-    const ratingToNextRank = Math.max(0, (nextRank?.minRating ?? profile.elo) - profile.elo)
+    const ratingToNextRank = Math.max(0, (nextRankDetails?.minRating ?? profile.elo) - profile.elo)
 
     return {
       rankDetails,
-      nextRank,
+      nextRank: nextRankDetails ?? null,
       rawRankColor,
       rankColorIsGradient,
       rankAccentColor,
@@ -528,7 +547,6 @@ const ProfilePage: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {actionFeedback && (
           <div
-            role="status"
             aria-live="polite"
             className={`mb-6 glass-box-sm px-4 py-3 rounded-xl border ${
               actionFeedback.type === 'success'
@@ -545,12 +563,18 @@ const ProfilePage: React.FC = () => {
 
         {/* Profile Header Card with glass effect */}
         <div className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden">
-          <div className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none" style={rankGlowStyle} />
+          <div
+            className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none"
+            style={rankGlowStyle}
+          />
           <div
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-40 pointer-events-none"
             style={{ background: hexToRgba(rankAccentSoft, 0.45) }}
           />
-          <div className="absolute inset-0 opacity-35 pointer-events-none" style={rankHeaderAccentStyle} />
+          <div
+            className="absolute inset-0 opacity-35 pointer-events-none"
+            style={rankHeaderAccentStyle}
+          />
           <div className="absolute top-4 right-4 flex flex-col items-end gap-2 text-sm">
             <div className="flex flex-wrap justify-end gap-2">
               <button
@@ -584,7 +608,6 @@ const ProfilePage: React.FC = () => {
             {copyState !== 'idle' && (
               <span
                 className={`text-xs ${copyState === 'copied' ? 'text-green-400' : 'text-red-400'}`}
-                role="status"
                 aria-live="polite"
               >
                 {copyState === 'copied' ? 'Profile link copied!' : 'Unable to copy link'}
@@ -632,7 +655,10 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-3/70 backdrop-blur-md border border-white/10 shadow-inner">
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ ...signatureColorSwatchStyle, boxShadow: `0 0 12px ${hexToRgba(signatureHex, 0.6)}` }}
+                  style={{
+                    ...signatureColorSwatchStyle,
+                    boxShadow: `0 0 12px ${hexToRgba(signatureHex, 0.6)}`,
+                  }}
                 />
                 <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
                   {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : 'Signature Color'}
@@ -654,7 +680,9 @@ const ProfilePage: React.FC = () => {
                   {profile.username}
                 </h1>
                 <p className="text-xs sm:text-sm uppercase tracking-[0.45em] text-muted">
-                  {premiumColorEntry ? premiumColorEntry[1].description : 'Commander of the Conquest Realms'}
+                  {premiumColorEntry
+                    ? premiumColorEntry[1].description
+                    : 'Commander of the Conquest Realms'}
                 </p>
               </div>
 
@@ -729,13 +757,19 @@ const ProfilePage: React.FC = () => {
         {/* Identity highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="relative glass-box-sm p-5 overflow-hidden">
-            <div className="absolute inset-0 opacity-35 pointer-events-none" style={signatureGlowStyle} />
+            <div
+              className="absolute inset-0 opacity-35 pointer-events-none"
+              style={signatureGlowStyle}
+            />
             <div className="relative flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.45em] text-muted">Signature Color</p>
                 <p className="text-lg font-semibold text-white">{preferredColorDisplayName}</p>
               </div>
-              <div className="w-14 h-14 rounded-xl border border-white/10" style={signatureLargeColorSwatchStyle} />
+              <div
+                className="w-14 h-14 rounded-xl border border-white/10"
+                style={signatureLargeColorSwatchStyle}
+              />
             </div>
             <p className="relative text-xs text-muted mt-4 leading-relaxed">
               {premiumColorEntry
@@ -745,7 +779,10 @@ const ProfilePage: React.FC = () => {
           </div>
 
           <div className="relative glass-box-sm p-5 overflow-hidden">
-            <div className="absolute inset-0 opacity-30 pointer-events-none" style={rankHeaderAccentStyle} />
+            <div
+              className="absolute inset-0 opacity-30 pointer-events-none"
+              style={rankHeaderAccentStyle}
+            />
             <div className="relative flex items-center gap-3">
               <div className="text-3xl" style={{ color: rankAccentColor }}>
                 {rankDetails.insignia}
@@ -796,7 +833,9 @@ const ProfilePage: React.FC = () => {
               <div className="text-3xl">🗺️</div>
               <div>
                 <p className="text-xs uppercase tracking-[0.45em] text-muted">Campaign Status</p>
-                <p className="text-lg font-semibold text-white">{formatLastActive(profile.lastActive)}</p>
+                <p className="text-lg font-semibold text-white">
+                  {formatLastActive(profile.lastActive)}
+                </p>
               </div>
             </div>
             <p className="relative text-xs text-muted mt-4 leading-relaxed">
@@ -903,15 +942,11 @@ const ProfilePage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <div className="text-muted text-sm mb-1">Current Rating</div>
-                    <div className="text-3xl font-bold text-primary">
-                      {profile.elo}
-                    </div>
+                    <div className="text-3xl font-bold text-primary">{profile.elo}</div>
                   </div>
                   <div>
                     <div className="text-muted text-sm mb-1">Peak Rating</div>
-                    <div className="text-3xl font-bold text-violet-soft">
-                      {profile.peakRating}
-                    </div>
+                    <div className="text-3xl font-bold text-violet-soft">{profile.peakRating}</div>
                   </div>
                 </div>
               </div>

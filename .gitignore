@@ -131,6 +131,7 @@ test-results/
 tests/*.spec.ts
 !tests/manual/
 *.test.ts
+!frontend/src/**/*.test.ts
 !backend/src/test/*.test.ts
 
 # Playwright
