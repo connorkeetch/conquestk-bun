@@ -50,15 +50,8 @@ const createEventLogger = (
   >
 
   const log = (level: LogLevel, message: string, extra: Record<string, unknown> = {}) => {
-    const method = baseLogger[level]
-    if (typeof method !== 'function') {
-      return
-    }
-    if (supportsChild) {
-      method.call(baseLogger, message, extra)
-    } else {
-      method.call(baseLogger, message, { ...context, ...extra })
-    }
+    const metadata = supportsChild ? extra : { ...context, ...extra }
+    baseLogger[level](message, metadata)
   }
 
   return {

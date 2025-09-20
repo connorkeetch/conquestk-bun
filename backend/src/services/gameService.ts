@@ -3,15 +3,19 @@ import type {
   GameAction,
   GameConfiguration,
   GamePhase,
+  GamePlayer,
   GameState,
   GameTerritoryModifier,
   SerializedGameState,
+  Territory,
 } from '../types/game'
 import { logger } from '../utils/logger'
+import { transaction } from '../config/database'
 import { gameStateCache } from './cacheService'
 import { mapService } from './mapService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
+import { battleMetrics } from './metricsService'
 
 type BattleWorkerResult = {
   attackerLosses: number
@@ -23,6 +27,26 @@ type BattleWorkerResult = {
     attacker: number[]
     defender: number[]
   }
+  jobId: string
+  attackingTerritoryId: string
+  defendingTerritoryId: string
+  attackingPlayerId: string
+  defendingPlayerId?: string | null
+  attackingArmiesCommitted: number
+}
+
+type BattleLogEntry = {
+  jobId: string
+  timestamp: string
+  attackingTerritoryId: string
+  defendingTerritoryId: string
+  attackerId: string
+  defenderId: string | null
+  losses: {
+    attacker: number
+    defender: number
+  }
+  conquered: boolean
 }
 
 export class GameService {
@@ -402,28 +426,289 @@ export class GameService {
     await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
   }
 
-  async applyBattleResult(
-    gameId: string,
-    battleResult: BattleWorkerResult,
-    attackingTerritory: string,
-    defendingTerritory: string,
-  ): Promise<void> {
+  async applyBattleResult(gameId: string, payload: BattleWorkerResult): Promise<{ applied: boolean }> {
+    const {
+      jobId,
+      attackerLosses,
+      defenderLosses,
+      territoryConquered,
+      attackingArmiesRemaining,
+      defendingArmiesRemaining,
+      dice,
+      attackingTerritoryId,
+      defendingTerritoryId,
+      attackingPlayerId,
+      defendingPlayerId,
+      attackingArmiesCommitted,
+    } = payload
+
     const gameState = await this.getGameState(gameId)
     if (!gameState) throw new Error('Game not found')
 
-    const attacker = gameState.board.find((t) => t.id === attackingTerritory)
-    const defender = gameState.board.find((t) => t.id === defendingTerritory)
+    const attackerTerritory = gameState.board.find((t) => t.id === attackingTerritoryId)
+    const defenderTerritory = gameState.board.find((t) => t.id === defendingTerritoryId)
 
-    if (attacker && defender) {
-      attacker.armies -= battleResult.attackerLosses
-      defender.armies -= battleResult.defenderLosses
+    if (!attackerTerritory || !defenderTerritory) {
+      throw new Error('Territory not found')
+    }
 
-      if (battleResult.territoryConquered) {
-        defender.ownerId = attacker.ownerId
+    const attackerId = attackerTerritory.ownerId ?? attackingPlayerId
+    if (!attackerId) {
+      throw new Error('Attacking player missing from state')
+    }
+
+    const defenderId = defenderTerritory.ownerId ?? defendingPlayerId ?? null
+
+    const preMoveAttackerArmies = Math.max(attackingArmiesRemaining, 0)
+    const maxMovable = Math.max(preMoveAttackerArmies - 1, 0)
+    const movingArmies = territoryConquered
+      ? Math.max(0, Math.min(attackingArmiesCommitted, maxMovable))
+      : 0
+    const finalAttackerArmies = territoryConquered
+      ? Math.max(preMoveAttackerArmies - movingArmies, 1)
+      : Math.max(preMoveAttackerArmies, 1)
+    const finalDefenderArmies = territoryConquered
+      ? Math.max(movingArmies, 0)
+      : Math.max(defendingArmiesRemaining, 0)
+
+    const updatedBoard: Territory[] = gameState.board.map((territory) => {
+      if (territory.id === attackingTerritoryId) {
+        return {
+          ...territory,
+          armies: finalAttackerArmies,
+        }
       }
 
-      await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
+      if (territory.id === defendingTerritoryId) {
+        return {
+          ...territory,
+          ownerId: territoryConquered ? attackerId : territory.ownerId,
+          armies: finalDefenderArmies,
+        }
+      }
+
+      return territory
+    })
+
+    const playersAfterBattle = this.rebuildPlayersAfterBattle(gameState.players, updatedBoard)
+    const activePlayers = playersAfterBattle.filter((player) => !player.isEliminated)
+    const gameEnded = activePlayers.length <= 1
+    const winner = gameEnded ? activePlayers[0] ?? null : null
+
+    const lastBattleResult = {
+      attackerDice: dice.attacker,
+      defenderDice: dice.defender,
+      attackerLosses,
+      defenderLosses,
+      conquered: territoryConquered,
+      fromTerritory: {
+        id: attackingTerritoryId,
+        name: attackerTerritory.name,
+        armies: finalAttackerArmies,
+      },
+      toTerritory: {
+        id: defendingTerritoryId,
+        name: defenderTerritory.name,
+        armies: finalDefenderArmies,
+        ownerId: territoryConquered
+          ? attackerId
+          : defenderTerritory.ownerId ?? defenderId ?? attackerId,
+      },
+      gameEnded,
+      winner,
+      eliminatedPlayers: playersAfterBattle.filter((player) => player.isEliminated).map((p) => p.id),
     }
+
+    const updatedGameState: GameState = {
+      ...gameState,
+      board: updatedBoard,
+      players: playersAfterBattle,
+      lastBattleResult,
+      hasAttackedThisTurn: true,
+      phase: gameEnded ? 'finished' : gameState.phase,
+      currentPlayer: gameEnded && winner ? winner.id : gameState.currentPlayer,
+    }
+
+    const serializedState = this.serializeGameState(updatedGameState)
+    const playerStats = this.buildPlayerStats(playersAfterBattle, updatedBoard)
+    const logEntry: BattleLogEntry = {
+      jobId,
+      timestamp: new Date().toISOString(),
+      attackingTerritoryId,
+      defendingTerritoryId,
+      attackerId,
+      defenderId,
+      losses: {
+        attacker: attackerLosses,
+        defender: defenderLosses,
+      },
+      conquered: territoryConquered,
+    }
+
+    let persistenceOutcome: { applied: boolean; divergence: number }
+
+    try {
+      persistenceOutcome = await transaction(async (client) => {
+        const existingStateResult = await client.query<{
+          territories: Territory[] | null
+          game_log: BattleLogEntry[] | null
+          winner_id: string | null
+        }>(
+          'SELECT territories, game_log, winner_id FROM game_states WHERE room_id = $1 FOR UPDATE',
+          [gameId],
+        )
+
+        const existingRow = existingStateResult.rows[0]
+        const existingLog = Array.isArray(existingRow?.game_log) ? existingRow?.game_log : []
+        const alreadyApplied = existingLog.some((entry) => entry?.jobId === jobId)
+        const divergence = this.calculateTerritoryDivergence(
+          existingRow?.territories ?? null,
+          updatedBoard,
+        )
+
+        if (alreadyApplied) {
+          return { applied: false, divergence }
+        }
+
+        const updatedLog = [...existingLog, logEntry].slice(-500)
+        const roundNumber = this.calculateRoundNumber(updatedGameState)
+
+        await client.query(
+          `INSERT INTO game_states (
+            room_id,
+            current_player_id,
+            game_phase,
+            turn_number,
+            round_number,
+            territories,
+            player_stats,
+            game_log,
+            last_activity,
+            winner_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)
+          ON CONFLICT (room_id) DO UPDATE SET
+            current_player_id = EXCLUDED.current_player_id,
+            game_phase = EXCLUDED.game_phase,
+            turn_number = EXCLUDED.turn_number,
+            round_number = EXCLUDED.round_number,
+            territories = EXCLUDED.territories,
+            player_stats = EXCLUDED.player_stats,
+            game_log = EXCLUDED.game_log,
+            last_activity = NOW(),
+            winner_id = EXCLUDED.winner_id`,
+          [
+            gameId,
+            serializedState.currentPlayer,
+            serializedState.phase,
+            serializedState.turn,
+            roundNumber,
+            JSON.stringify(serializedState.board),
+            JSON.stringify(playerStats),
+            JSON.stringify(updatedLog),
+            gameEnded ? winner?.id ?? null : existingRow?.winner_id ?? null,
+          ],
+        )
+
+        return { applied: true, divergence }
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown battle persistence error'
+      battleMetrics.recordFailure(message, { gameId, jobId })
+      throw error
+    }
+
+    const status = persistenceOutcome.applied ? 'applied' : 'duplicate'
+    battleMetrics.recordApply(gameId, status, persistenceOutcome.divergence)
+
+    if (persistenceOutcome.applied) {
+      await gameStateCache.setGameState(gameId, serializedState)
+    }
+
+    return { applied: persistenceOutcome.applied }
+  }
+
+  private rebuildPlayersAfterBattle(players: GamePlayer[], board: Territory[]): GamePlayer[] {
+    return players.map((player) => {
+      const territories = board.filter((territory) => territory.ownerId === player.id)
+      const territoryIds = territories.map((territory) => territory.id)
+      const totalArmies = territories.reduce((sum, territory) => sum + territory.armies, 0)
+
+      return {
+        ...player,
+        territories: territoryIds,
+        armies: totalArmies,
+        isEliminated: territoryIds.length === 0,
+      }
+    })
+  }
+
+  private buildPlayerStats(players: GamePlayer[], board: Territory[]) {
+    const boardByOwner = board.reduce<Record<string, { territories: number; armies: number }>>(
+      (acc, territory) => {
+        if (!territory.ownerId) return acc
+
+        if (!acc[territory.ownerId]) {
+          acc[territory.ownerId] = { territories: 0, armies: 0 }
+        }
+
+        acc[territory.ownerId].territories += 1
+        acc[territory.ownerId].armies += territory.armies
+        return acc
+      },
+      {},
+    )
+
+    return players.reduce<Record<string, { territories: number; armies: number; eliminated: boolean }>>(
+      (acc, player) => {
+        const metrics = boardByOwner[player.id] ?? { territories: 0, armies: 0 }
+        acc[player.id] = {
+          territories: metrics.territories,
+          armies: metrics.armies,
+          eliminated: player.isEliminated,
+        }
+        return acc
+      },
+      {},
+    )
+  }
+
+  private calculateTerritoryDivergence(
+    persisted: Territory[] | null,
+    updatedBoard: Territory[],
+  ): number {
+    if (!persisted || persisted.length === 0) {
+      return updatedBoard.length
+    }
+
+    const persistedById = new Map<string, Territory>()
+    for (const territory of persisted) {
+      persistedById.set(territory.id, territory)
+    }
+
+    let divergences = 0
+
+    for (const territory of updatedBoard) {
+      const persistedTerritory = persistedById.get(territory.id)
+      if (!persistedTerritory) {
+        divergences += 1
+        continue
+      }
+
+      if (
+        persistedTerritory.ownerId !== territory.ownerId ||
+        persistedTerritory.armies !== territory.armies
+      ) {
+        divergences += 1
+      }
+    }
+
+    return divergences
+  }
+
+  private calculateRoundNumber(gameState: GameState): number {
+    const activePlayers = gameState.players.filter((player) => !player.isEliminated).length
+    const divisor = Math.max(activePlayers, 1)
+    return Math.max(1, Math.ceil(gameState.turn / divisor))
   }
 
   async archiveGameResults(gameId: string, results: Record<string, unknown>): Promise<void> {

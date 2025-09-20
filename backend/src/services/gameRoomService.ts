@@ -1,5 +1,5 @@
 import { getClient, query } from '../config/database'
-import type { GameRoom, Player } from '../types/gameRoom'
+import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom'
 
 export interface CreateRoomData {
   name: string
@@ -20,6 +20,10 @@ interface GameRoomRow {
   max_players: number
   is_private: boolean
   status: string
+  lifecycle_phase?: string | null
+  turn_number?: number | string | null
+  turn_expires_at?: Date | string | null
+  ready_check_started_at?: Date | string | null
   created_at: Date | string
   updated_at?: Date | string | null
   is_ranked?: boolean | null
@@ -54,6 +58,8 @@ interface PlayerRow {
   skill_rating?: number | null
   current_tier?: string | null
   joinedAt: Date | string | null
+  isReady?: boolean | null
+  readyAt?: Date | string | null
 }
 
 interface GameRoomWithPlayersRow extends GameRoomRow {
@@ -99,30 +105,38 @@ export class GameRoomService {
     return validOptions
   }
 
-  private normalizeStatus(status: string | null | undefined): GameRoom['status'] {
+  private normalizeStatus(status: string | null | undefined): GameLifecycleStatus {
     if (!status) {
-      return 'waiting'
+      return 'lobby'
     }
 
-    if (status === 'active') {
-      return 'in_progress'
+    if (status === 'waiting') {
+      return 'lobby'
     }
 
     if (status === 'starting') {
-      return 'in_progress'
+      return 'initializing'
     }
 
-    if (
-      status === 'in_progress' ||
-      status === 'finished' ||
-      status === 'waiting' ||
-      status === 'paused' ||
-      status === 'abandoned'
-    ) {
-      return status
+    if (status === 'in_progress') {
+      return 'active'
     }
 
-    return 'waiting'
+    if (status === 'finished') {
+      return 'completed'
+    }
+
+    const allowedStatuses: GameLifecycleStatus[] = [
+      'lobby',
+      'initializing',
+      'active',
+      'completed',
+      'paused',
+      'abandoned',
+    ]
+
+    const normalized = status as GameLifecycleStatus
+    return allowedStatuses.includes(normalized) ? normalized : 'lobby'
   }
 
   private toDate(value: Date | string | null | undefined): Date | undefined {
@@ -187,6 +201,8 @@ export class GameRoomService {
         skill_rating: this.parseNullableNumber(player.skill_rating) ?? undefined,
         current_tier: this.normalizePlayerTier(player.current_tier),
         joinedAt: this.toDate(player.joinedAt) ?? new Date(),
+        isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
+        readyAt: this.toDate(player.readyAt) ?? null,
       }))
 
     return mapped.length > 0 ? mapped : undefined
@@ -226,6 +242,13 @@ export class GameRoomService {
       mapName: (row as Partial<ActiveGameRoomRow>).map_name ?? undefined,
       gameStarted: typeof row.game_started === 'boolean' ? row.game_started : undefined,
       currentTurnUserId: row.current_turn_user_id ?? undefined,
+      lifecyclePhase:
+        typeof row.lifecycle_phase === 'string'
+          ? ((row.lifecycle_phase as GameRoom['lifecyclePhase']) ?? undefined)
+          : undefined,
+      turnNumber: this.parseNullableNumber(row.turn_number) ?? undefined,
+      turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
+      readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
       winner: row.winner ?? undefined,
       playerCount:
         this.parseNullableNumber(
@@ -277,8 +300,20 @@ export class GameRoomService {
     this.validateTeamConfiguration(roomData.maxPlayers, teamMode ? 'teams' : 'none', numberOfTeams)
 
     const insertQuery = `
-      INSERT INTO game_rooms (name, host_id, max_players, is_private, map_id, game_mode, team_mode, number_of_teams, is_ranked, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'waiting')
+      INSERT INTO game_rooms (
+        name,
+        host_id,
+        max_players,
+        is_private,
+        map_id,
+        game_mode,
+        team_mode,
+        number_of_teams,
+        is_ranked,
+        status,
+        lifecycle_phase
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'lobby', 'lobby')
       RETURNING *
     `
 
@@ -315,7 +350,7 @@ export class GameRoomService {
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON gr.host_id = u.id
       LEFT JOIN maps m ON gr.map_id = m.id
-      WHERE gr.status IN ('waiting', 'in_progress', 'starting')
+      WHERE gr.status IN ('lobby', 'initializing', 'active')
       GROUP BY gr.id, u.username, u.skill_rating, m.name
       ORDER BY gr.created_at DESC
     `
@@ -340,7 +375,9 @@ export class GameRoomService {
                  'skill_rating', u.skill_rating,
                  -- 'current_tier', u.current_tier, -- Column doesn't exist yet
                  'current_tier', NULL,
-                 'joinedAt', rp.joined_at
+                 'joinedAt', rp.joined_at,
+                 'isReady', rp.is_ready,
+                 'readyAt', rp.ready_at
                )
              ) as players
       FROM game_rooms gr
@@ -358,6 +395,44 @@ export class GameRoomService {
     return this.mapRoomRow(row)
   }
 
+  async isPlayerInRoom(roomId: string, userId: string): Promise<boolean> {
+    const membershipQuery = `
+      SELECT 1
+      FROM room_players
+      WHERE room_id = $1 AND user_id = $2
+      LIMIT 1
+    `
+
+    const result = await query(membershipQuery, [roomId, userId])
+    return result.rowCount > 0
+  }
+
+  async getPlayer(roomId: string, userId: string): Promise<Player | null> {
+    const playerQuery = `
+      SELECT rp.user_id, u.username, rp.joined_at
+      FROM room_players rp
+      LEFT JOIN users u ON rp.user_id = u.id
+      WHERE rp.room_id = $1 AND rp.user_id = $2
+      LIMIT 1
+    `
+
+    const result = await query<{ user_id: string; username: string | null; joined_at: Date | string | null }>(
+      playerQuery,
+      [roomId, userId],
+    )
+
+    const row = result.rows[0]
+    if (!row) {
+      return null
+    }
+
+    return {
+      userId: row.user_id,
+      username: row.username ?? 'Unknown player',
+      joinedAt: this.toDate(row.joined_at) ?? new Date(),
+    }
+  }
+
   async joinRoom(roomId: string, userId: string): Promise<{ success: boolean; message: string }> {
     const client = await getClient()
 
@@ -373,7 +448,9 @@ export class GameRoomService {
 
       const room = roomResult.rows[0]
 
-      if (room.status !== 'waiting') {
+      const lifecycleStatus = this.normalizeStatus(room.status)
+
+      if (lifecycleStatus !== 'lobby') {
         throw new Error('Room is not accepting new players')
       }
 
@@ -444,9 +521,9 @@ export class GameRoomService {
       }
 
       const joinQuery = `
-        INSERT INTO room_players (room_id, user_id)
-        VALUES ($1, $2)
-        ON CONFLICT (room_id, user_id) DO NOTHING
+        INSERT INTO room_players (room_id, user_id, is_ready, ready_at)
+        VALUES ($1, $2, FALSE, NULL)
+        ON CONFLICT (room_id, user_id) DO UPDATE SET is_ready = EXCLUDED.is_ready, ready_at = NULL
       `
       await client.query(joinQuery, [roomId, userId])
 
@@ -473,11 +550,11 @@ export class GameRoomService {
       SELECT DISTINCT gr.*, 
         (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
         CASE 
-          WHEN gr.status IN ('in_progress', 'starting') THEN 'active'
-          WHEN gr.status = 'finished' THEN 'finished'
+          WHEN gr.status IN ('active', 'initializing') THEN 'active'
+          WHEN gr.status = 'completed' THEN 'completed'
           WHEN gr.status = 'paused' THEN 'paused'
           WHEN gr.status = 'abandoned' THEN 'abandoned'
-          ELSE 'waiting'
+          ELSE 'lobby'
         END as status
       FROM game_rooms gr
       INNER JOIN room_players rp ON gr.id = rp.room_id

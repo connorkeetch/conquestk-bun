@@ -2,7 +2,7 @@ import type {
   NotificationCallToAction,
   NotificationEvent,
   NotificationRecipientFilters,
-} from '@shared/types/notifications'
+} from '@risk-game/shared/types/notifications'
 
 interface SlackPlainTextObject {
   type: 'plain_text'

@@ -48,6 +48,10 @@ export interface Territory {
   adjacentTerritories: string[]
   isCapital?: boolean
   capitalOwnerId?: string | null
+  coordinates?: {
+    x: number
+    y: number
+  }
 }
 
 export interface Card {
