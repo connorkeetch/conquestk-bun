@@ -17,6 +17,7 @@ export interface GameRoom {
   hostUsername?: string
   maxPlayers: number
   isPrivate: boolean
+  isRanked?: boolean
   status: GameLifecycleStatus
   createdAt: string
   updatedAt?: string

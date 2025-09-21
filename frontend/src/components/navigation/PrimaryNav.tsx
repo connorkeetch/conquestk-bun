@@ -34,27 +34,28 @@ const PrimaryNav: React.FC = () => {
       label: 'Play',
       icon: '🎮',
       dropdown: [
-        {
-          path: '/play/quick-match',
-          label: 'Quick Match',
-          icon: '🚀',
-          description: 'Find a game fast',
-        },
+        { path: '/play/casual', label: 'Casual', icon: '🎮', description: 'Find a relaxed match' },
         { path: '/play/ranked', label: 'Ranked', icon: '🏆', description: 'Competitive play' },
         {
-          path: '/play/create',
+          path: '/create',
           label: 'Create Lobby',
           icon: '➕',
           description: 'Host custom game',
         },
         {
-          path: '/play/browse',
+          path: '/lobby',
           label: 'Browse Lobbies',
           icon: '🔍',
           description: 'Join existing games',
         },
-        { path: '/play/ai', label: 'vs AI', icon: '🤖', description: 'Single player' },
-        { path: '/play/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
+        {
+          path: '/play/ai',
+          label: 'vs AI',
+          icon: '🤖',
+          description: 'Single player practice',
+          comingSoon: true,
+        },
+        { path: '/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
       ],
     },
     {

@@ -6,48 +6,56 @@ import { Link } from 'react-router-dom'
 const Play: React.FC = () => {
   const gameOptions = [
     {
-      title: 'Quick Match',
-      description: 'Jump into a game instantly',
-      icon: '🚀',
-      path: '/play/quick-match',
+      title: 'Casual',
+      description: 'Jump into relaxed public games',
+      icon: '🎮',
+      path: '/play/casual',
       color: 'from-blue-600 to-purple-600',
     },
     {
       title: 'Ranked',
-      description: 'Competitive ladder games',
+      description: 'Battle for ladder position',
       icon: '🏆',
       path: '/play/ranked',
       color: 'from-yellow-600 to-orange-600',
     },
     {
       title: 'Create Lobby',
-      description: 'Host a custom game',
+      description: 'Host a custom game with friends',
       icon: '➕',
-      path: '/play/create',
+      path: '/create',
       color: 'from-green-600 to-teal-600',
     },
     {
       title: 'Browse Lobbies',
-      description: 'Join existing games',
+      description: 'Find existing rooms to join',
       icon: '🔍',
-      path: '/play/browse',
+      path: '/lobby',
       color: 'from-indigo-600 to-blue-600',
     },
     {
       title: 'vs AI',
-      description: 'Single player practice',
+      description: 'Solo practice matches (coming soon)',
       icon: '🤖',
       path: '/play/ai',
       color: 'from-purple-600 to-pink-600',
+      comingSoon: true,
     },
     {
       title: 'Tutorial',
-      description: 'Learn to play Risk',
+      description: 'Learn the ropes before you play',
       icon: '📚',
-      path: '/play/tutorial',
+      path: '/tutorial',
       color: 'from-red-600 to-pink-600',
     },
-  ]
+  ] satisfies Array<{
+    title: string
+    description: string
+    icon: string
+    path: string
+    color: string
+    comingSoon?: boolean
+  }>
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,6 +83,11 @@ const Play: React.FC = () => {
               </div>
               <h3 className="text-2xl font-bold text-white mb-3">{option.title}</h3>
               <p className="text-gray-100 text-sm opacity-90">{option.description}</p>
+              {option.comingSoon && (
+                <span className="inline-block mt-3 bg-yellow-600/80 text-yellow-100 px-3 py-1 rounded-full text-xs font-semibold">
+                  Coming Soon
+                </span>
+              )}
             </div>
           </Link>
         ))}
