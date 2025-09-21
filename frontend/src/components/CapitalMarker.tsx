@@ -41,6 +41,7 @@ const CapitalMarker: React.FC<CapitalMarkerProps> = ({
           filter: `drop-shadow(0 0 4px ${displayColor})`,
         }}
       >
+        <title>Capital marker</title>
         {/* Crown outline */}
         <path
           d="M5 16L3 7L7 10L12 4L17 10L21 7L19 16H5Z"

@@ -105,6 +105,7 @@ export default function TabbedGameChat({
               }
               ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}
+            type="button"
           >
             <span>{tab.label}</span>
 

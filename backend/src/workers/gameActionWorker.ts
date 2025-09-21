@@ -1,6 +1,7 @@
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
+import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import {
   type BattleSimulationJob,
   type GameActionJob,
@@ -21,7 +22,7 @@ import { logger } from '../utils/logger'
 interface ProcessGameActionResult {
   success: true
   delta: GameDelta | null
-  processed: true
+  processed: boolean
 }
 
 export class GameActionWorker {
@@ -38,7 +39,7 @@ export class GameActionWorker {
   async initialize(): Promise<void> {
     // Process game action jobs
     this.queue.process('process-game-action', 10, async (job: Bull.Job<GameActionJob>) => {
-      return this.processGameAction(job.data)
+      return this.processGameAction(job)
     })
 
     // Job event handlers
@@ -63,8 +64,23 @@ export class GameActionWorker {
     logger.info('✅ GameActionWorker initialized')
   }
 
-  private async processGameAction(jobData: GameActionJob): Promise<ProcessGameActionResult> {
-    const { gameId, playerId, action, socketId } = jobData
+  private async processGameAction(job: Bull.Job<GameActionJob>): Promise<ProcessGameActionResult> {
+    const { gameId, playerId, action, socketId, idempotencyKey } = job.data
+    const idKey = idempotencyKey ?? (job.id !== undefined ? String(job.id) : `${gameId}:${playerId}:${action.type}`)
+
+    const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
+      this.queue.name,
+      idKey,
+    )
+    if (cached.exists && cached.value) {
+      logger.info('♻️ Skipping already processed game action job', {
+        gameId,
+        playerId,
+        actionType: action.type,
+        jobId: job.id,
+      })
+      return { ...cached.value, processed: false }
+    }
 
     try {
       logger.debug('Processing game action', {
@@ -108,6 +124,7 @@ export class GameActionWorker {
             attackingArmies: attackAction.payload?.armies ?? 1,
             defendingArmies,
             playerId,
+            idempotencyKey: `${idKey}:battle:${attackAction.payload?.fromTerritoryId ?? 'unknown'}:${attackAction.payload?.toTerritoryId ?? 'unknown'}`,
           }
 
           await queueService.addBattleSimulation(battleJob)
@@ -142,11 +159,13 @@ export class GameActionWorker {
         this.io.to(`game:${gameId}`).emit('game-delta', delta)
       }
 
-      return {
+      const result: ProcessGameActionResult = {
         success: true,
         delta: delta || null,
         processed: true,
       }
+      await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, result, 60 * 60)
+      return result
     } catch (error) {
       logger.error('❌ Failed to process game action', {
         gameId,

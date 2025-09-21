@@ -1,6 +1,7 @@
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
+import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type BattleSimulationJob, queueService } from '../services/queueService'
 import {
   type BattleResultDelta,
@@ -72,8 +73,24 @@ export class BattleWorker {
       attackingArmies,
       defendingArmies,
       playerId,
+      idempotencyKey,
     } = job.data
     const jobId = job.id !== undefined ? String(job.id) : `${gameId}:${Date.now()}`
+    const idKey = idempotencyKey ?? jobId
+
+    const cached = await jobIdempotencyService.getProcessedJob<BattleResult>(
+      this.queue.name,
+      idKey,
+    )
+    if (cached.exists && cached.value) {
+      logger.info('♻️ Skipping already processed battle simulation job', {
+        jobId,
+        gameId,
+        attackingTerritory,
+        defendingTerritory,
+      })
+      return cached.value
+    }
 
     try {
       logger.debug('Simulating battle', {
@@ -235,6 +252,8 @@ export class BattleWorker {
         defendingPlayerId: defenderOwnerId,
         attackingArmiesCommitted: attackingArmies,
       })
+
+      await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, battleResult, 60 * 60)
 
       return battleResult
     } catch (error) {

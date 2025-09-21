@@ -1,12 +1,11 @@
 import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
 import { GameService } from '../services/gameService'
+import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
+import territoryModifierService from '../services/territoryModifierService'
 import type { GameState } from '../types/game'
 import { logger } from '../utils/logger'
-
-// TODO: Fix import when territoryModifierService is implemented
-// import { TerritoryModifierService } from '../services/territoryModifierService'
 
 interface CleanupMetadata {
   winner?: string | null
@@ -48,7 +47,7 @@ export class CleanupWorker {
   async initialize(): Promise<void> {
     // Process cleanup jobs
     this.queue.process('cleanup-game', 2, async (job: Bull.Job<GameCleanupJob>) => {
-      return this.cleanupGame(job.data)
+      return this.cleanupGame(job)
     })
 
     // Job event handlers
@@ -72,8 +71,21 @@ export class CleanupWorker {
     logger.info('✅ CleanupWorker initialized')
   }
 
-  private async cleanupGame(jobData: GameCleanupJob): Promise<CleanupResult> {
-    const { gameId, reason } = jobData
+  private async cleanupGame(job: Bull.Job<GameCleanupJob>): Promise<CleanupResult> {
+    const { gameId, reason, idempotencyKey } = job.data
+    const idKey = idempotencyKey ?? (job.id !== undefined ? String(job.id) : gameId)
+
+    const existing = await jobIdempotencyService.getProcessedJob<CleanupResult>(
+      this.queue.name,
+      idKey,
+    )
+    if (existing.exists && existing.value) {
+      logger.info('♻️ Skipping already processed cleanup job', {
+        jobId: job.id,
+        gameId,
+      })
+      return existing.value
+    }
 
     try {
       logger.info('🧹 Cleaning up game', { gameId, reason })
@@ -82,7 +94,14 @@ export class CleanupWorker {
       const gameState = await this.gameService.getGameState(gameId)
       if (!gameState) {
         logger.info('Cleanup skipped because game state already absent', { gameId })
-        return { success: true, alreadyClean: true }
+        const result: CleanupResult = { success: true, alreadyClean: true }
+        await jobIdempotencyService.markProcessedJob(
+          this.queue.name,
+          idKey,
+          result,
+          24 * 60 * 60,
+        )
+        return result
       }
 
       const cleanupState: CleanupGameState = gameState
@@ -109,16 +128,29 @@ export class CleanupWorker {
       await this.performCommonCleanup(gameId)
 
       logger.info('✅ Game cleanup completed', { gameId, reason })
-      return {
+      const result: CleanupResult = {
         success: true,
         reason,
         cleanedAt: new Date().toISOString(),
       }
+      await jobIdempotencyService.markProcessedJob(
+        this.queue.name,
+        idKey,
+        result,
+        24 * 60 * 60,
+      )
+      return result
     } catch (error) {
       logger.error('❌ Failed to cleanup game', {
         gameId,
         reason,
         error,
+      })
+      await jobIdempotencyService.clearProcessedJob(this.queue.name, idKey).catch((cleanupError) => {
+        logger.warn('Failed to clear idempotency state after cleanup failure', {
+          gameId,
+          error: cleanupError,
+        })
       })
       throw error
     }
@@ -187,7 +219,14 @@ export class CleanupWorker {
     await this.cacheService.deleteGameState(gameId)
 
     // Clean up territory modifiers
-    // await territoryModifierService.cleanupFinishedGameModifiers([gameId])
+    try {
+      await territoryModifierService.cleanupFinishedGameModifiers([gameId])
+    } catch (error) {
+      logger.warn('Failed to clean up territory modifiers for game', {
+        gameId,
+        error,
+      })
+    }
 
     // Clean up any temporary files or resources
     await this.cleanupTempResources(gameId)

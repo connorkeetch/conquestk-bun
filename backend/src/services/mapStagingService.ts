@@ -2,6 +2,8 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import sharp from 'sharp'
 import { query } from '../config/database'
+import { adminService } from './adminService'
+import notificationService from './notificationService'
 import { logger } from '../utils/logger'
 
 export interface StagingImage {
@@ -18,6 +20,10 @@ export interface StagingImage {
   processingError?: string
   isDeleted: boolean
   deletedAt?: Date
+  deletionAttempts?: number
+  lastDeletionAttempt?: Date
+  lastDeletionError?: string
+  purgedAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -43,12 +49,24 @@ interface UserQuotaSummary {
 }
 
 export class MapStagingService {
-  private readonly UPLOADS_DIR = path.join(__dirname, '../../uploads/maps/staging')
+  private readonly UPLOADS_DIR: string
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
   private readonly ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   private readonly NON_ADMIN_QUOTA = 5
+  private readonly PURGE_BATCH_SIZE = Number(process.env.MAP_ASSET_PURGE_BATCH_SIZE ?? 100)
+  private readonly PURGE_MIN_AGE_MINUTES = Number(
+    process.env.MAP_ASSET_PURGE_MIN_AGE_MINUTES ?? 60,
+  )
+  private readonly DELETION_ALERT_THRESHOLD = Number(
+    process.env.MAP_ASSET_PURGE_ALERT_THRESHOLD ?? 3,
+  )
 
   constructor() {
+    const configuredDir = process.env.MAP_UPLOADS_DIR
+    this.UPLOADS_DIR = configuredDir
+      ? path.resolve(configuredDir)
+      : path.join(__dirname, '../../uploads/maps/staging')
+
     // Ensure uploads directory exists
     this.ensureUploadsDirectory()
   }
@@ -220,6 +238,69 @@ export class MapStagingService {
     }
   }
 
+  private getAbsolutePath(filename: string): string {
+    if (path.isAbsolute(filename)) {
+      return filename
+    }
+    return path.join(this.UPLOADS_DIR, filename)
+  }
+
+  private async deleteFileIfExists(filePath: string): Promise<void> {
+    try {
+      await fs.access(filePath)
+      await fs.unlink(filePath)
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        // File already removed - treat as success
+        return
+      }
+      throw error
+    }
+  }
+
+  private async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath)
+      return true
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return false
+      }
+      throw error
+    }
+  }
+
+  private async notifyDeletionFailure(
+    image: Pick<StagingImage, 'id' | 'userId' | 'filename'>,
+    errorMessage: string,
+  ): Promise<void> {
+    try {
+      const adminIds = await adminService.getActiveAdminUserIds()
+      if (adminIds.length === 0) {
+        return
+      }
+
+      await Promise.allSettled(
+        adminIds.map((adminId) =>
+          notificationService.createInAppNotification(adminId, {
+            type: 'system',
+            title: 'Map asset purge failed',
+            message: `Failed to remove staging asset ${image.filename}. Manual intervention may be required.`,
+            data: {
+              stagingImageId: image.id,
+              ownerId: image.userId,
+              filename: image.filename,
+              error: errorMessage,
+            },
+            sendPush: false,
+          }),
+        ),
+      )
+    } catch (notifyError) {
+      logger.error('Failed to notify admins about purge failure', notifyError)
+    }
+  }
+
   /**
    * Delete a staging image
    */
@@ -231,7 +312,12 @@ export class MapStagingService {
 
       const result = await query(
         `UPDATE map_images_staging 
-         SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP
+         SET is_deleted = TRUE,
+             deleted_at = CURRENT_TIMESTAMP,
+             deletion_attempts = 0,
+             last_deletion_attempt = NULL,
+             last_deletion_error = NULL,
+             purged_at = NULL
          WHERE id = $1 ${ownershipCheck}`,
         params,
       )
@@ -245,6 +331,223 @@ export class MapStagingService {
       logger.error('Error deleting staging image:', error)
       throw error
     }
+  }
+
+  async purgeDeletedImages(options?: {
+    batchSize?: number
+    minAgeMinutes?: number
+    dryRun?: boolean
+  }): Promise<{
+    processed: number
+    purged: number
+    failed: number
+    bytesPurged: number
+  }> {
+    const batchSize = options?.batchSize ?? this.PURGE_BATCH_SIZE
+    const minAgeMinutes = options?.minAgeMinutes ?? this.PURGE_MIN_AGE_MINUTES
+    const dryRun = options?.dryRun ?? false
+
+    if (batchSize <= 0) {
+      throw new Error('batchSize must be greater than zero')
+    }
+
+    if (minAgeMinutes < 0) {
+      throw new Error('minAgeMinutes must be zero or greater')
+    }
+
+    const startedAt = new Date()
+
+    const candidatesResult = await query<
+      (StagingImage & { deletion_attempts: number }) & { file_size: number }
+    >(
+      `
+        SELECT *
+        FROM map_images_staging
+        WHERE is_deleted = TRUE
+          AND purged_at IS NULL
+          AND deleted_at IS NOT NULL
+          AND deleted_at < NOW() - ($1::interval)
+        ORDER BY deleted_at ASC
+        LIMIT $2
+      `,
+      [`${minAgeMinutes} minutes`, batchSize],
+    )
+
+    const rows = candidatesResult.rows
+    let purgedCount = 0
+    let failedCount = 0
+    let bytesPurged = 0
+
+    for (const row of rows) {
+      const ownerId = (row as unknown as { userId?: string; user_id?: string }).userId ??
+        (row as unknown as { user_id?: string }).user_id ??
+        row.userId
+      const fileName = (row as unknown as { filename?: string }).filename ?? row.filename
+      const fileSizeRaw =
+        (row as unknown as { fileSize?: number }).fileSize ??
+        (row as unknown as { file_size?: number | string }).file_size
+      const fileSize =
+        typeof fileSizeRaw === 'number' ? fileSizeRaw : Number(fileSizeRaw ?? 0)
+
+      const filePath = this.getAbsolutePath(fileName)
+      const currentAttempts = row.deletion_attempts ?? 0
+      const nextAttempts = currentAttempts + 1
+
+      if (dryRun) {
+        purgedCount += 1
+        bytesPurged += fileSize
+        continue
+      }
+
+      try {
+        await this.deleteFileIfExists(filePath)
+
+        purgedCount += 1
+        bytesPurged += fileSize
+
+        await query(
+          `
+            UPDATE map_images_staging
+            SET purged_at = NOW(),
+                deletion_attempts = $2,
+                last_deletion_attempt = NOW(),
+                last_deletion_error = NULL
+            WHERE id = $1
+          `,
+          [row.id, nextAttempts],
+        )
+      } catch (error) {
+        failedCount += 1
+        const message = error instanceof Error ? error.message : String(error)
+
+        await query(
+          `
+            UPDATE map_images_staging
+            SET deletion_attempts = $2,
+                last_deletion_attempt = NOW(),
+                last_deletion_error = $3
+            WHERE id = $1
+          `,
+          [row.id, nextAttempts, message.substring(0, 1000)],
+        )
+
+        if (nextAttempts === this.DELETION_ALERT_THRESHOLD) {
+          await this.notifyDeletionFailure(
+            {
+              id: row.id,
+              userId: ownerId ?? row.userId,
+              filename: fileName,
+            },
+            message,
+          )
+        }
+
+        logger.warn('Failed to purge staging image', {
+          imageId: row.id,
+          filename: fileName,
+          error: message,
+        })
+      }
+    }
+
+    await query(
+      `
+        INSERT INTO map_asset_purge_runs (
+          run_type,
+          processed_count,
+          purged_count,
+          failed_count,
+          bytes_purged,
+          started_at,
+          completed_at,
+          duration_ms,
+          metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8)
+      `,
+      [
+        'staging',
+        rows.length,
+        purgedCount,
+        failedCount,
+        bytesPurged,
+        startedAt,
+        Date.now() - startedAt.getTime(),
+        JSON.stringify({
+          batchSize,
+          minAgeMinutes,
+          dryRun,
+        }),
+      ],
+    )
+
+    return {
+      processed: rows.length,
+      purged: purgedCount,
+      failed: failedCount,
+      bytesPurged,
+    }
+  }
+
+  async reclaimStagingImage(adminId: string, imageId: string): Promise<StagingImage> {
+    const result = await query<StagingImage>(
+      'SELECT * FROM map_images_staging WHERE id = $1',
+      [imageId],
+    )
+
+    const row = result.rows[0]
+    if (!row) {
+      throw new Error('Staging image not found')
+    }
+
+    const isDeleted = (row as unknown as { is_deleted?: boolean }).is_deleted ?? row.isDeleted
+    if (!isDeleted) {
+      throw new Error('Image is not deleted')
+    }
+
+    const fileName = (row as unknown as { filename?: string }).filename ?? row.filename
+    const filePath = this.getAbsolutePath(fileName)
+    const exists = await this.fileExists(filePath)
+    if (!exists) {
+      throw new Error('The original file has already been purged and cannot be reclaimed')
+    }
+
+    const updated = await query<StagingImage>(
+      `
+        UPDATE map_images_staging
+        SET is_deleted = FALSE,
+            deleted_at = NULL,
+            purged_at = NULL,
+            deletion_attempts = 0,
+            last_deletion_attempt = NULL,
+            last_deletion_error = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `,
+      [imageId],
+    )
+
+    logger.info('Staging image reclaimed', {
+      imageId,
+      adminId,
+      filename: fileName,
+    })
+
+    return updated.rows[0]
+  }
+
+  async getRecentPurgeRuns(limit = 20) {
+    const result = await query(
+      `
+        SELECT * FROM map_asset_purge_runs
+        WHERE run_type = 'staging'
+        ORDER BY started_at DESC
+        LIMIT $1
+      `,
+      [limit],
+    )
+
+    return result.rows
   }
 
   /**

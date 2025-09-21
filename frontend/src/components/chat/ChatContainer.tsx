@@ -8,6 +8,8 @@ import {
   setActiveConversation,
   setTypingUser,
   setUnreadCounts,
+  editMessage,
+  deleteMessage,
 } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
@@ -65,22 +67,22 @@ export default function ChatContainer({
     const handleMessage = (message: any) => {
       // Only add messages for this conversation
       if (conversationType === 'game' && message.game_id === conversationId) {
-        dispatch(addMessage(message))
+        dispatch(addMessage({ message, currentUserId }))
       } else if (conversationType === 'team') {
         const [gameId, teamId] = conversationId.split(':')
         if (
           message.message_type === 'team' &&
           message.game_id === gameId &&
-          message.team_id === parseInt(teamId)
+          message.team_id === parseInt(teamId, 10)
         ) {
-          dispatch(addMessage(message))
+          dispatch(addMessage({ message, currentUserId }))
         }
       } else if (conversationType === 'dm') {
         const isDMForUs =
           (message.sender_id === currentUserId && message.recipient_id === conversationId) ||
           (message.sender_id === conversationId && message.recipient_id === currentUserId)
         if (isDMForUs) {
-          dispatch(addMessage(message))
+          dispatch(addMessage({ message, currentUserId }))
         }
       }
     }
@@ -120,11 +122,28 @@ export default function ChatContainer({
       dispatch(setUnreadCounts(formattedCounts))
     }
 
+    const handleMessageEdited = (data: { messageId: string; newMessage: string; editedAt: string | Date }) => {
+      const editedAt = typeof data.editedAt === 'string' ? data.editedAt : new Date(data.editedAt).toISOString()
+      dispatch(
+        editMessage({
+          messageId: data.messageId,
+          newMessage: data.newMessage,
+          editedAt,
+        }),
+      )
+    }
+
+    const handleMessageDeleted = (data: { messageId: string }) => {
+      dispatch(deleteMessage(data.messageId))
+    }
+
     // Listen for events
     socketService.on('chat:message', handleMessage)
     socketService.on('chat:history', handleHistory)
     socketService.on('chat:user-typing', handleTyping)
     socketService.on('chat:unread-counts', handleUnreadCounts)
+    socketService.on('chat:message-edited', handleMessageEdited)
+    socketService.on('chat:message-deleted', handleMessageDeleted)
 
     // Mark messages as read
     socketService.markChatAsRead({
@@ -142,6 +161,8 @@ export default function ChatContainer({
       socketService.off('chat:history', handleHistory)
       socketService.off('chat:user-typing', handleTyping)
       socketService.off('chat:unread-counts', handleUnreadCounts)
+      socketService.off('chat:message-edited', handleMessageEdited)
+      socketService.off('chat:message-deleted', handleMessageDeleted)
 
       // Clear active conversation
       dispatch(setActiveConversation(null))
@@ -160,7 +181,7 @@ export default function ChatContainer({
     } else if (conversationType === 'team') {
       const [gId, tId] = conversationId.split(':')
       gameId = gId
-      teamId = parseInt(tId)
+      teamId = parseInt(tId, 10)
     } else if (conversationType === 'dm') {
       recipientId = conversationId
     }

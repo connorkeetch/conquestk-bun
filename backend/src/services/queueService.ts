@@ -1,6 +1,7 @@
 import Bull from 'bull'
 import type Redis from 'ioredis'
 import type { RedisOptions } from 'ioredis'
+import { randomUUID } from 'node:crypto'
 import { getRedisClient } from '../config/redis'
 import type { GameAction } from '../types/game'
 import { logger } from '../utils/logger'
@@ -11,6 +12,7 @@ export interface GameActionJob {
   playerId: string
   action: GameAction
   socketId?: string
+  idempotencyKey?: string
 }
 
 export interface BattleSimulationJob {
@@ -20,11 +22,29 @@ export interface BattleSimulationJob {
   attackingArmies: number
   defendingArmies: number
   playerId: string
+  idempotencyKey?: string
 }
 
 export interface GameCleanupJob {
   gameId: string
   reason: 'finished' | 'timeout' | 'abandoned'
+  idempotencyKey?: string
+}
+
+type QueueConfigKey = keyof typeof QUEUE_CONFIGS
+
+const QUEUE_LATENCY_WARNING_MS = 2 * 60 * 1000 // 2 minutes
+const DEAD_LETTER_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
+
+type DeadLetterJobPayload = {
+  originalQueue: string
+  jobId: string | number | null
+  jobName: string
+  attemptsMade: number
+  failedReason: string
+  failedAt: string
+  data: unknown
+  stacktrace?: string[] | null
 }
 
 // Queue configurations
@@ -53,6 +73,16 @@ export interface QueueStats {
   failed: number
   delayed: number
   isPaused: boolean
+  deadLetter: number
+  stalled: number
+  oldestWaitingMs: number | null
+  avgProcessingMs: number | null
+  lastFailedJob?: {
+    id: string | number
+    reason: string
+    failedAt: string
+  }
+  warnings: string[]
 }
 
 type QueueHealthDisabled = {
@@ -77,6 +107,8 @@ export type QueueHealthResult = QueueHealthOperational | QueueHealthDisabled
 export class QueueService {
   private redis: Redis | null = null
   private queues: Map<string, Bull.Queue> = new Map()
+  private deadLetterQueues: Map<string, Bull.Queue> = new Map()
+  private queueDisplayNames: Map<string, string> = new Map()
   private isInitialized = false
 
   async initialize(): Promise<void> {
@@ -115,7 +147,9 @@ export class QueueService {
 
             client.on('error', (err) =>
               logger.warn(
-                `Redis client error for ${config.name} (${type}): ${err instanceof Error ? err.message : err}`,
+                `Redis client error for ${config.name} (${type}): ${
+                  err instanceof Error ? err.message : err
+                }`,
               ),
             )
 
@@ -132,7 +166,37 @@ export class QueueService {
           },
         })
 
-        this.queues.set(key, queue)
+        const deadLetterQueue = new Bull(`${config.name}:dead-letter`, {
+          createClient: (type) => {
+            const client = redisClient.duplicate({
+              ...baseRedisOptions,
+              connectionName: `bull:${config.name}:dlq:${type}`,
+            })
+
+            client.on('error', (err) =>
+              logger.warn(
+                `Redis client error for ${config.name}:dead-letter (${type}): ${
+                  err instanceof Error ? err.message : err
+                }`,
+              ),
+            )
+
+            return client
+          },
+          defaultJobOptions: {
+            removeOnComplete: false,
+            removeOnFail: false,
+            attempts: 1,
+          },
+        })
+
+        const queueKey = key as QueueConfigKey
+        this.queues.set(queueKey, queue)
+        this.deadLetterQueues.set(queueKey, deadLetterQueue)
+        this.queueDisplayNames.set(queueKey, config.name)
+
+        this.attachQueueEventHandlers(queueKey, queue, deadLetterQueue)
+
         logger.info(`✅ Queue initialized: ${config.name}`)
       }
 
@@ -159,7 +223,14 @@ export class QueueService {
     const queue = this.queues.get('gameActions')
     if (!queue) throw new Error('Game actions queue not initialized')
 
-    return queue.add('process-game-action', job, {
+    const idempotencyKey = job.idempotencyKey ?? randomUUID()
+    const payload: GameActionJob = {
+      ...job,
+      idempotencyKey,
+    }
+
+    return queue.add('process-game-action', payload, {
+      jobId: idempotencyKey,
       priority: this.getActionPriority(job.action),
       delay: 0,
     })
@@ -177,7 +248,14 @@ export class QueueService {
     const queue = this.queues.get('battleSimulations')
     if (!queue) throw new Error('Battle simulations queue not initialized')
 
-    return queue.add('simulate-battle', job, {
+    const idempotencyKey = job.idempotencyKey ?? randomUUID()
+    const payload: BattleSimulationJob = {
+      ...job,
+      idempotencyKey,
+    }
+
+    return queue.add('simulate-battle', payload, {
+      jobId: idempotencyKey,
       priority: 5, // Medium priority
       delay: 0,
     })
@@ -193,7 +271,14 @@ export class QueueService {
     const queue = this.queues.get('gameCleanup')
     if (!queue) throw new Error('Game cleanup queue not initialized')
 
-    return queue.add('cleanup-game', job, {
+    const idempotencyKey = job.idempotencyKey ?? job.gameId
+    const payload: GameCleanupJob = {
+      ...job,
+      idempotencyKey,
+    }
+
+    return queue.add('cleanup-game', payload, {
+      jobId: idempotencyKey,
       priority: 1, // Low priority
       delay: job.reason === 'timeout' ? 30000 : 0, // 30s delay for timeouts
     })
@@ -202,23 +287,105 @@ export class QueueService {
   // Queue monitoring
   async getQueueStats(): Promise<Record<string, QueueStats>> {
     const stats: Record<string, QueueStats> = {}
+    const now = Date.now()
 
     for (const [key, queue] of this.queues) {
-      const [waiting, active, completed, failed, delayed] = await Promise.all([
-        queue.getWaiting(),
-        queue.getActive(),
-        queue.getCompleted(),
-        queue.getFailed(),
-        queue.getDelayed(),
-      ])
+      const [jobCounts, isPaused, waitingSamples, completedSamples, stalledCount, failedSamples] =
+        await Promise.all([
+          queue.getJobCounts(),
+          queue.isPaused(),
+          (queue as any).getWaiting(0, 19, { excludeData: true }) as Promise<
+            Array<{ timestamp?: number }>
+          >,
+          (queue as any).getCompleted(0, 9, { excludeData: true }) as Promise<
+            Array<{ finishedOn?: number; processedOn?: number }>
+          >,
+          (queue as any).getStalledCount() as Promise<number>,
+          (queue as any).getFailed(0, 0, { excludeData: true }) as Promise<
+            Array<{
+              id?: string
+              failedReason?: string
+              finishedOn?: number
+              processedOn?: number
+              timestamp?: number
+            }>
+          >,
+        ])
+
+      const deadLetterQueue = this.deadLetterQueues.get(key)
+      let deadLetterCount = 0
+      if (deadLetterQueue) {
+        const deadLetterCounts = await deadLetterQueue.getJobCounts()
+        deadLetterCount = Object.values(deadLetterCounts).reduce<number>((sum, count) => {
+          const numeric = typeof count === 'number' ? count : Number(count ?? 0)
+          return sum + numeric
+        }, 0)
+      }
+
+      const oldestWaiting = waitingSamples.reduce<number>((max, job) => {
+        if (typeof job.timestamp === 'number') {
+          return Math.max(max, now - job.timestamp)
+        }
+        return max
+      }, 0)
+
+      const completedDurations = completedSamples
+        .map((job) => {
+          if (typeof job.finishedOn === 'number' && typeof job.processedOn === 'number') {
+            return job.finishedOn - job.processedOn
+          }
+          return null
+        })
+        .filter((value): value is number => value !== null && value >= 0)
+
+      const avgProcessingMs =
+        completedDurations.length > 0
+          ? Math.round(
+              completedDurations.reduce((sum, duration) => sum + duration, 0) /
+                completedDurations.length,
+            )
+          : null
+
+      const lastFailedJob = failedSamples[0]
+      const lastFailed = lastFailedJob
+        ? {
+            id: lastFailedJob.id ?? 'unknown',
+            reason: lastFailedJob.failedReason || 'Unknown failure',
+            failedAt: new Date(
+              (lastFailedJob.finishedOn ?? lastFailedJob.processedOn ?? lastFailedJob.timestamp) ||
+                Date.now(),
+            ).toISOString(),
+          }
+        : undefined
+
+      const warnings: string[] = []
+      if (isPaused) {
+        warnings.push('queue paused')
+      }
+      if (stalledCount > 0) {
+        warnings.push(`${stalledCount} stalled job${stalledCount === 1 ? '' : 's'}`)
+      }
+      if (deadLetterCount > 0) {
+        warnings.push(`${deadLetterCount} dead-letter job${deadLetterCount === 1 ? '' : 's'}`)
+      }
+      if (oldestWaiting > QUEUE_LATENCY_WARNING_MS) {
+        const seconds = Math.round(oldestWaiting / 1000)
+        warnings.push(`oldest waiting job is ${seconds}s old`)
+      }
 
       stats[key] = {
-        waiting: waiting.length,
-        active: active.length,
-        completed: completed.length,
-        failed: failed.length,
-        delayed: delayed.length,
-        isPaused: await queue.isPaused(),
+        waiting: jobCounts.waiting,
+        active: jobCounts.active,
+        completed: jobCounts.completed,
+        failed: jobCounts.failed,
+        delayed: jobCounts.delayed,
+        isPaused,
+        deadLetter: deadLetterCount,
+        stalled: stalledCount,
+        oldestWaitingMs: oldestWaiting > 0 ? oldestWaiting : null,
+        avgProcessingMs,
+        lastFailedJob: lastFailed,
+        warnings,
       }
     }
 
@@ -245,18 +412,98 @@ export class QueueService {
     }
   }
 
+  private attachQueueEventHandlers(
+    queueKey: QueueConfigKey,
+    queue: Bull.Queue,
+    deadLetterQueue: Bull.Queue,
+  ): void {
+    queue.on('failed', async (job, error) => {
+      const attemptsMade = job.attemptsMade ?? 0
+      const maxAttempts = typeof job.opts?.attempts === 'number' && job.opts.attempts > 0 ? job.opts.attempts : 1
+
+      if (attemptsMade >= maxAttempts) {
+        try {
+          await this.moveToDeadLetter(queueKey, deadLetterQueue, job, error)
+        } catch (deadLetterError) {
+          logger.error('❌ Failed to move job to dead-letter queue', {
+            queue: queue.name,
+            jobId: job.id,
+            error: deadLetterError,
+          })
+        }
+      }
+    })
+
+    queue.on('stalled', (job) => {
+      logger.warn('⚠️ Detected stalled queue job', {
+        queue: queue.name,
+        jobId: job?.id,
+      })
+    })
+
+    queue.on('error', (queueError) => {
+      logger.error('❌ Queue error detected', {
+        queue: queue.name,
+        error: queueError instanceof Error ? queueError.message : queueError,
+      })
+    })
+  }
+
+  private async moveToDeadLetter(
+    queueKey: QueueConfigKey,
+    deadLetterQueue: Bull.Queue,
+    job: Bull.Job,
+    error: unknown,
+  ): Promise<void> {
+    const queueName = this.queueDisplayNames.get(queueKey) ?? job.queue?.name ?? String(queueKey)
+    const payload: DeadLetterJobPayload = {
+      originalQueue: queueName,
+      jobId: job.id ?? null,
+      jobName: job.name || 'unnamed-job',
+      attemptsMade: job.attemptsMade ?? 0,
+      failedReason:
+        job.failedReason || (error instanceof Error ? error.message : 'Unknown failure reason'),
+      failedAt: new Date().toISOString(),
+      data: job.data,
+      stacktrace: job.stacktrace,
+    }
+
+    await deadLetterQueue.add('dead-letter', payload, {
+      jobId: `${job.id ?? randomUUID()}::${Date.now()}`,
+      removeOnComplete: false,
+      removeOnFail: false,
+      attempts: 1,
+      delay: 0,
+      lifo: true,
+      timeout: undefined,
+      backoff: undefined,
+    })
+
+    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 'completed')
+    await deadLetterQueue.clean(DEAD_LETTER_TTL_SECONDS * 1000, 'failed')
+
+    logger.warn('Moved job to dead-letter queue', {
+      queue: queueName,
+      jobId: job.id,
+      attemptsMade: job.attemptsMade,
+    })
+  }
+
   // Graceful shutdown
   async shutdown(): Promise<void> {
     logger.info('🔄 Shutting down QueueService...')
 
-    const shutdownPromises = Array.from(this.queues.values()).map((queue) => queue.close())
+    const activeQueues = Array.from(this.queues.values())
+    const deadLetterQueues = Array.from(this.deadLetterQueues.values())
 
-    await Promise.all(shutdownPromises)
+    await Promise.all([...activeQueues, ...deadLetterQueues].map((queue) => queue.close()))
 
     // Only disconnect if redis is available (it's managed by the central config)
     if (this.redis) {
       logger.info('QueueService shutdown - Redis connection managed by central config')
     }
+
+    this.isInitialized = false
 
     logger.info('✅ QueueService shutdown complete')
   }
@@ -276,9 +523,10 @@ export class QueueService {
 
       const pingResult = await this.redis.ping()
       const stats = await this.getQueueStats()
+      const hasWarnings = Object.values(stats).some((queueStats) => queueStats.warnings.length > 0)
 
       return {
-        status: pingResult === 'PONG' ? 'healthy' : 'unhealthy',
+        status: pingResult === 'PONG' && !hasWarnings ? 'healthy' : 'unhealthy',
         details: {
           redis: pingResult,
           queues: stats,
@@ -298,7 +546,7 @@ export class QueueService {
     }
   }
 
-  private getQueue(name: string): Bull.Queue {
+  private getQueue(name: QueueConfigKey): Bull.Queue {
     const queue = this.queues.get(name)
     if (!queue) {
       throw new Error(`Queue ${name} not found. Make sure initialize() was called first.`)

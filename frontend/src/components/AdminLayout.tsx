@@ -22,7 +22,6 @@ const AdminLayout: React.FC = () => {
         navigate('/')
       }
     } catch (error) {
-      console.error('Failed to check admin status:', error)
       navigate('/')
     } finally {
       setLoading(false)

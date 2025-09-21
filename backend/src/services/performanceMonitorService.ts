@@ -33,6 +33,7 @@ interface SystemMetrics {
     waitingJobs: number
     failedJobs: number
     processedJobs: number
+    deadLetterJobs: number
   }
   cdn: {
     hitRate: number
@@ -251,6 +252,7 @@ export class PerformanceMonitorService {
     let waitingJobs = 0
     let failedJobs = 0
     let processedJobs = 0
+    let deadLetterJobs = 0
 
     if (queueStats?.queues) {
       for (const queue of Object.values(queueStats.queues)) {
@@ -258,8 +260,13 @@ export class PerformanceMonitorService {
         waitingJobs += queue.waiting || 0
         failedJobs += queue.failed || 0
         processedJobs += queue.completed || 0
+        deadLetterJobs += queue.deadLetter || 0
         totalJobs +=
-          (queue.active || 0) + (queue.waiting || 0) + (queue.failed || 0) + (queue.completed || 0)
+          (queue.active || 0) +
+          (queue.waiting || 0) +
+          (queue.failed || 0) +
+          (queue.completed || 0) +
+          (queue.deadLetter || 0)
       }
     }
 
@@ -269,6 +276,7 @@ export class PerformanceMonitorService {
       waitingJobs,
       failedJobs,
       processedJobs,
+      deadLetterJobs,
     }
   }
 

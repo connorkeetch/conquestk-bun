@@ -98,27 +98,30 @@ _Last updated: September 21, 2025_
 
 ### B3. Map staging asset lifecycle
 - **Priority:** P1 • **Tags:** [be][ops]
-- **Status:** ⏳ Not started (blocked behind B1/B2 hardening).
+- **Status:** 🟡 In progress (purge worker + metrics live; still monitoring failure telemetry to tune thresholds).
 - **Problem:** Deleting map images marks rows deleted but never removes files.
 - **Acceptance criteria:**
   - Soft-delete policy with background purge (bucket/API delete) and metrics.
   - Admin reclaim tool exists; deletion failures retry and alert.
+- _Progress (Mar 2025): Staging images now purge automatically after retention, recording runs in `map_asset_purge_runs`; admins can reclaim before purge, trigger manual runs, and receive alerts when deletions repeatedly fail._
 
 ## Epic C — Chat & Social Consistency
 ### C1. Identity & state source of truth
 - **Priority:** P1 • **Tags:** [fe][be][ws]
-- **Status:** ⚠️ In progress (`chatSlice` still reads `localStorage`; needs authenticated Redux plumbing).
+- **Status:** ✅ Completed (January 2026)
 - **Problem:** `chatSlice` reads `userId` from `localStorage`; auth never writes it; DM addressing breaks.
 - **Acceptance criteria:**
   - Chat derives identity from Redux auth state; `localStorage` reserved for auth session plumbing.
   - DM conversation IDs deterministic and auth-backed.
+- _Progress (Jan 2026): Redux-authenticated user IDs now drive chat identity, replacing the `localStorage` lookup and stabilizing DM conversation keys so both ends resolve to the same deterministic conversation ID._
 
 ### C2. Broadcast chat edits/deletes
 - **Priority:** P1 • **Tags:** [be][ws][fe]
-- **Status:** ⚠️ Open (server echoes edits/deletes to the issuing client only; missing room fan-out + reconciliation).
+- **Status:** ✅ Completed (January 2026)
 - **Problem:** Edit/delete acknowledgements stream only to the issuing client.
 - **Acceptance criteria:**
   - Server emits edit/delete to all participants; frontend updates in-place and reconciles on reconnect.
+- _Progress (Jan 2026): Socket handlers now fan out edit/delete events to every participant (game, team, or DM rooms), and the chat container reconciles those broadcasts so messages mutate or mark deleted immediately across clients._
 
 ### C3. DM push notifications (deferred)
 - **Priority:** P3 • **Tags:** [be][ops][fe]
@@ -164,11 +167,12 @@ _Last updated: September 21, 2025_
 ## Epic E — Workers, Queues & Cleanup
 ### E1. Enable Bull queues safely
 - **Priority:** P1 • **Tags:** [wrk][ops][be]
-- **Status:** ⚠️ Blocked (modifier cleanup + queue health/alerting still outstanding; see cleanup worker TODOs).
-- **Problem:** Cleanup worker references unimplemented territory modifier service; queues will crash at runtime.
+- **Status:** ✅ Completed (January 2026)
+- **Problem:** Cleanup worker now wires through territory modifier cleanup, queue telemetry surfaces stalled/latency warnings, and failed jobs flow into a managed dead-letter queue with alerts.
 - **Acceptance criteria:**
   - Referenced services exist or hooks removed before enabling queues.
   - Health checks for stall/latency, dead-letter handling, and idempotent jobs.
+- _Progress (Jan 2026): Activated Bull queues behind idempotency guards so duplicate jobs short-circuit, promoted cleanup worker territory modifier purge, introduced per-queue latency/stall diagnostics in the health endpoint, and routed terminal failures into a dedicated DLQ with automatic retention cleanup._
 
 ### E2. Cleanup worker modifier service
 - **Priority:** P1 • **Tags:** [be][wrk]

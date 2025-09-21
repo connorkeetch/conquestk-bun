@@ -34,7 +34,6 @@ const ActiveGamesDropdown: React.FC = () => {
       const response = await api.get('/game/my-games')
       setGames(response.data.games || [])
     } catch (error) {
-      console.error('Failed to fetch games:', error)
       setGames([])
     } finally {
       setLoading(false)
