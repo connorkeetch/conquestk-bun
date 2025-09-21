@@ -1,7 +1,8 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { type GameRoom, gameService } from '../services/gameService'
+import { gameService } from '../services/gameService'
+import type { GameRoom } from '../types/gameRoom'
 
 const GameListPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'spectate'>('active')
@@ -9,33 +10,58 @@ const GameListPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadUserGames()
-  }, [loadUserGames])
-
-  const loadUserGames = async () => {
+  const loadUserGames = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       const response = await gameService.getUserGames()
-      setUserGames(response.rooms || [])
+      setUserGames(response.games || [])
     } catch (_err: any) {
       setError('Failed to load your games')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const getGameStatusColor = (status: string) => {
+  useEffect(() => {
+    void loadUserGames()
+  }, [loadUserGames])
+
+  const getGameStatusColor = (status: GameRoom['status']) => {
     switch (status) {
-      case 'waiting':
+      case 'lobby':
         return 'text-yellow-400'
+      case 'initializing':
+        return 'text-blue-300'
       case 'active':
         return 'text-green-400'
       case 'completed':
         return 'text-primary-soft'
+      case 'paused':
+        return 'text-orange-300'
+      case 'abandoned':
+        return 'text-muted'
       default:
         return 'text-muted'
+    }
+  }
+
+  const getStatusLabel = (status: GameRoom['status']) => {
+    switch (status) {
+      case 'lobby':
+        return 'Waiting for Players'
+      case 'initializing':
+        return 'Launching'
+      case 'active':
+        return 'In Progress'
+      case 'completed':
+        return 'Completed'
+      case 'paused':
+        return 'Paused'
+      case 'abandoned':
+        return 'Abandoned'
+      default:
+        return status
     }
   }
 
@@ -54,7 +80,8 @@ const GameListPage: React.FC = () => {
   }
 
   const activeGames = userGames.filter(
-    (game) => game.status === 'waiting' || game.status === 'active',
+    (game) =>
+      game.status === 'lobby' || game.status === 'initializing' || game.status === 'active',
   )
   const completedGames = userGames.filter((game) => game.status === 'completed')
 
@@ -161,30 +188,34 @@ const GameListPage: React.FC = () => {
                             {game.currentPlayers}/{game.maxPlayers} players
                           </span>
                           {game.mapName && <span>• {game.mapName}</span>}
-                          <span className={getGameStatusColor(game.status)}>• {game.status}</span>
+                          <span className={getGameStatusColor(game.status)}>
+                            • {getStatusLabel(game.status)}
+                          </span>
                           <span>• Updated {formatTimeAgo(game.updatedAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
                           <div className={`text-lg font-bold ${getGameStatusColor(game.status)}`}>
-                            {game.status === 'waiting'
+                            {game.status === 'lobby'
                               ? 'Waiting for Players'
-                              : game.status === 'active'
-                                ? 'Game in Progress'
-                                : game.status}
+                              : game.status === 'initializing'
+                                ? 'Launching Soon'
+                                : getStatusLabel(game.status)}
                           </div>
                           <div className="text-sm text-muted">
                             Created {formatTimeAgo(game.createdAt)}
                           </div>
                         </div>
                         <Link
-                          to={`/room/${game.id}`}
-                          className={`btn ${
-                            game.status === 'waiting' ? 'btn-primary' : 'btn-secondary'
-                          }`}
+                          to={game.status === 'active' ? `/game/${game.id}` : `/room/${game.id}`}
+                          className={`btn ${game.status === 'lobby' ? 'btn-primary' : 'btn-secondary'}`}
                         >
-                          {game.status === 'waiting' ? '🎮 Enter Lobby' : '👁️ View Game'}
+                          {game.status === 'lobby'
+                            ? '🎮 Enter Lobby'
+                            : game.status === 'active'
+                              ? '👁️ View Game'
+                              : 'Open Game'}
                         </Link>
                       </div>
                     </div>
@@ -222,13 +253,17 @@ const GameListPage: React.FC = () => {
                             {game.currentPlayers}/{game.maxPlayers} players
                           </span>
                           {game.mapName && <span>• {game.mapName}</span>}
-                          <span className="text-primary-soft">• Completed</span>
-                          <span>• Finished {formatTimeAgo(game.updatedAt)}</span>
+                          <span className={getGameStatusColor(game.status)}>
+                            • {getStatusLabel(game.status)}
+                          </span>
+                          <span>• Completed {formatTimeAgo(game.updatedAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-primary-soft">Game Completed</div>
+                          <div className={`text-lg font-bold ${getGameStatusColor(game.status)}`}>
+                            {getStatusLabel(game.status)}
+                          </div>
                           <div className="text-sm text-muted">
                             Duration: {formatTimeAgo(game.createdAt)}
                           </div>

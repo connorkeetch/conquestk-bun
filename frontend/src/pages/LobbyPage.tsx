@@ -6,16 +6,17 @@ import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 import authService from '../services/authService'
-import { type GameRoom, gameService } from '../services/gameService'
+import { gameService } from '../services/gameService'
+import type { GameRoom } from '../types/gameRoom'
 
 interface GameInfo {
   id: string
   name: string
-  status: 'active' | 'finished' | 'waiting'
+  status: GameRoom['status']
   playerCount: number
   maxPlayers: number
   isYourTurn?: boolean
-  winner?: string
+  winner?: string | null
   createdAt: string
 }
 
@@ -27,7 +28,7 @@ const LobbyPage: React.FC = () => {
   )
   const [publicGames, setPublicGames] = useState<GameRoom[]>([])
   const [myGames, setMyGames] = useState<GameInfo[]>([])
-  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'waiting' | 'finished'>(
+  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'lobby' | 'completed'>(
     'all',
   )
   const [loading, setLoading] = useState(false)
@@ -141,7 +142,9 @@ const LobbyPage: React.FC = () => {
       const response = await gameService.joinRoom(roomId)
       if (response.room) {
         navigate(`/room/${roomId}`)
+        return
       }
+      navigate(`/room/${roomId}`)
     } catch (err: any) {
       setError(`Failed to join game: ${err.response?.data?.message || err.message}`)
     }
@@ -168,6 +171,8 @@ const LobbyPage: React.FC = () => {
       const response = await gameService.joinRoom(trimmedCode)
       if (response.room) {
         navigate(`/room/${trimmedCode}`)
+      } else {
+        navigate(`/room/${trimmedCode}`)
       }
     } catch (err: any) {
       // Provide specific error messages based on the error
@@ -185,18 +190,46 @@ const LobbyPage: React.FC = () => {
     }
   }
 
-  const getGameStatusColor = (status: string) => {
+  const getGameStatusColor = (status: GameRoom['status']) => {
     switch (status) {
-      case 'waiting':
+      case 'lobby':
         return 'text-green-400'
+      case 'initializing':
+        return 'text-blue-300'
       case 'active':
         return 'text-yellow-400'
       case 'completed':
+        return 'text-muted'
+      case 'paused':
+        return 'text-orange-300'
+      case 'abandoned':
         return 'text-muted'
       default:
         return 'text-muted'
     }
   }
+
+  const getStatusLabel = (status: GameRoom['status']) => {
+    switch (status) {
+      case 'lobby':
+        return 'Waiting for players'
+      case 'initializing':
+        return 'Launching game'
+      case 'active':
+        return 'In progress'
+      case 'completed':
+        return 'Completed'
+      case 'paused':
+        return 'Paused'
+      case 'abandoned':
+        return 'Abandoned'
+      default:
+        return status
+    }
+  }
+
+  const isLobbyStatus = (status: GameRoom['status']) => status === 'lobby'
+  const isInProgressStatus = (status: GameRoom['status']) => status === 'active'
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
@@ -421,7 +454,7 @@ const LobbyPage: React.FC = () => {
                   const filteredGames = publicGames.filter((game) => {
                     // Apply filters
                     if (!filters.showFull && game.currentPlayers >= game.maxPlayers) return false
-                    if (!filters.showInProgress && game.status !== 'waiting') return false
+                    if (!filters.showInProgress && !isLobbyStatus(game.status)) return false
                     if (
                       game.maxPlayers < filters.minPlayers ||
                       game.maxPlayers > filters.maxPlayers
@@ -468,7 +501,9 @@ const LobbyPage: React.FC = () => {
                               {game.currentPlayers}/{game.maxPlayers} players
                             </span>
                             {game.mapName && <span>• {game.mapName}</span>}
-                            <span className={getGameStatusColor(game.status)}>• {game.status}</span>
+                            <span className={getGameStatusColor(game.status)}>
+                              • {getStatusLabel(game.status)}
+                            </span>
                             <span>• Created {formatTimeAgo(game.createdAt)}</span>
                           </div>
                         </div>
@@ -479,17 +514,17 @@ const LobbyPage: React.FC = () => {
                           <button
                             onClick={() => handleJoinGame(game.id)}
                             disabled={
-                              game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
+                              game.currentPlayers >= game.maxPlayers || !isLobbyStatus(game.status)
                             }
                             className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
-                              game.currentPlayers >= game.maxPlayers || game.status !== 'waiting'
+                              game.currentPlayers >= game.maxPlayers || !isLobbyStatus(game.status)
                                 ? 'bg-surface-2 text-muted opacity-50 cursor-not-allowed'
                                 : 'bg-primary hover:brightness-110 text-white'
                             }`}
                           >
                             {game.currentPlayers >= game.maxPlayers
                               ? '🚫 Full'
-                              : game.status !== 'waiting'
+                              : !isLobbyStatus(game.status)
                                 ? '👁️ Spectate'
                                 : '🎮 Join Game'}
                           </button>
@@ -532,18 +567,18 @@ const LobbyPage: React.FC = () => {
                 Active
               </button>
               <button
-                onClick={() => setMyGamesFilter('waiting')}
-                className={myGamesFilter === 'waiting' ? 'segmented-active' : ''}
+                onClick={() => setMyGamesFilter('lobby')}
+                className={myGamesFilter === 'lobby' ? 'segmented-active' : ''}
               >
                 <Clock className="inline w-4 h-4 mr-1" />
-                Waiting
+                Lobby
               </button>
               <button
-                onClick={() => setMyGamesFilter('finished')}
-                className={myGamesFilter === 'finished' ? 'segmented-active' : ''}
+                onClick={() => setMyGamesFilter('completed')}
+                className={myGamesFilter === 'completed' ? 'segmented-active' : ''}
               >
                 <Trophy className="inline w-4 h-4 mr-1" />
-                Finished
+                Completed
               </button>
             </div>
 
@@ -585,7 +620,7 @@ const LobbyPage: React.FC = () => {
                         <div className="text-6xl mb-4">
                           {myGamesFilter === 'active'
                             ? '🎮'
-                            : myGamesFilter === 'waiting'
+                            : myGamesFilter === 'lobby'
                               ? '⏰'
                               : '🏆'}
                         </div>
@@ -614,7 +649,9 @@ const LobbyPage: React.FC = () => {
                             <span>
                               {game.playerCount}/{game.maxPlayers} players
                             </span>
-                            <span className={getGameStatusColor(game.status)}>• {game.status}</span>
+                            <span className={getGameStatusColor(game.status)}>
+                              • {getStatusLabel(game.status)}
+                            </span>
                             {game.isYourTurn && (
                               <span className="text-red-500 font-semibold animate-pulse">
                                 • Your Turn!
@@ -627,7 +664,7 @@ const LobbyPage: React.FC = () => {
                           </div>
                         </div>
                         <div>
-                          {game.status === 'waiting' ? (
+                          {game.status === 'lobby' || game.status === 'initializing' ? (
                             <Link
                               to={`/room/${game.id}`}
                               className="px-3 py-1 text-sm font-medium bg-primary hover:brightness-110 text-white rounded-lg transition-colors"

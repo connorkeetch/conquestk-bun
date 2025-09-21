@@ -1,5 +1,9 @@
+const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
+const mockTransaction = jest.fn()
+
 jest.mock('../config/database', () => ({
-  query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+  query: mockDbQuery,
+  transaction: mockTransaction,
   getPool: jest.fn(() => ({
     query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
   })),
@@ -9,12 +13,22 @@ jest.mock('../config/database', () => ({
   })),
 }))
 
+import { gameStateCache } from './cacheService'
 import { GameService } from './gameService'
 
 describe('GameService', () => {
   let gameService: GameService
 
   beforeEach(() => {
+    jest.clearAllMocks()
+    mockDbQuery.mockResolvedValue({ rows: [], rowCount: 0 })
+    mockTransaction.mockReset()
+    mockTransaction.mockImplementation(async (callback: (client: unknown) => Promise<unknown>) => {
+      const client = {
+        query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      }
+      return callback(client as any)
+    })
     gameService = new GameService()
   })
 
@@ -142,6 +156,190 @@ describe('GameService', () => {
       await expect(
         gameService.deployArmies(roomId, currentPlayer, territory.id, 1),
       ).rejects.toThrow('Not reinforcement phase')
+    })
+  })
+
+  describe('applyBattleResult', () => {
+    const gameId = 'battle-room'
+
+    afterEach(async () => {
+      await gameStateCache.invalidateGame(gameId)
+    })
+
+    const buildBaseState = () => ({
+      roomId: gameId,
+      players: [
+        {
+          id: 'attacker',
+          username: 'Attacker',
+          color: 'red',
+          armies: 5,
+          territories: ['attacking'],
+          cards: [],
+          isEliminated: false,
+        },
+        {
+          id: 'defender',
+          username: 'Defender',
+          color: 'blue',
+          armies: 3,
+          territories: ['defending'],
+          cards: [],
+          isEliminated: false,
+        },
+        {
+          id: 'support',
+          username: 'Support',
+          color: 'green',
+          armies: 4,
+          territories: ['support'],
+          cards: [],
+          isEliminated: false,
+        },
+      ],
+      currentPlayer: 'attacker',
+      phase: 'attack' as const,
+      turn: 1,
+      board: [
+        {
+          id: 'attacking',
+          name: 'Attacking',
+          continent: 'earth',
+          ownerId: 'attacker',
+          armies: 5,
+          adjacentTerritories: ['defending'],
+        },
+        {
+          id: 'defending',
+          name: 'Defending',
+          continent: 'earth',
+          ownerId: 'defender',
+          armies: 3,
+          adjacentTerritories: ['attacking'],
+        },
+        {
+          id: 'support',
+          name: 'Support',
+          continent: 'earth',
+          ownerId: 'support',
+          armies: 4,
+          adjacentTerritories: [],
+        },
+      ],
+      cards: [],
+      gameConfig: {
+        movementType: 'classic_adjacent' as const,
+        maxPlayers: 3,
+      },
+    })
+
+    const payload = {
+      jobId: 'job-1',
+      attackerLosses: 1,
+      defenderLosses: 3,
+      territoryConquered: true,
+      attackingArmiesRemaining: 4,
+      defendingArmiesRemaining: 0,
+      dice: {
+        attacker: [6, 5, 4],
+        defender: [4, 2],
+      },
+      attackingTerritoryId: 'attacking',
+      defendingTerritoryId: 'defending',
+      attackingPlayerId: 'attacker',
+      defendingPlayerId: 'defender',
+      attackingArmiesCommitted: 3,
+    }
+
+    it('persists conquest results and updates cache', async () => {
+      await gameStateCache.setGameState(gameId, buildBaseState())
+
+      let persistedBoardSnapshot: unknown[] = []
+      let persistedLogSnapshot: unknown[] = []
+
+      const client = {
+        query: jest
+          .fn()
+          .mockImplementationOnce(async () => ({ rows: [], rowCount: 0 }))
+          .mockImplementationOnce(async (_sql: string, params: unknown[]) => {
+            persistedBoardSnapshot = JSON.parse(params[5] as string)
+            persistedLogSnapshot = JSON.parse(params[7] as string)
+            return { rows: [], rowCount: 1 }
+          }),
+      }
+
+      mockTransaction.mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
+        callback(client as any),
+      )
+
+      const result = await gameService.applyBattleResult(gameId, payload)
+      expect(result.applied).toBe(true)
+      expect(client.query).toHaveBeenCalledTimes(2)
+      expect((client.query.mock.calls[1] ?? [])[0]).toContain('INSERT INTO game_states')
+
+      const persistedDefending = (persistedBoardSnapshot as Array<{ id: string; ownerId: string; armies: number }>).find(
+        (territory) => territory.id === 'defending',
+      )
+      expect(persistedDefending?.ownerId).toBe('attacker')
+      expect(persistedDefending?.armies).toBe(3)
+      expect(persistedLogSnapshot).toEqual(
+        expect.arrayContaining([expect.objectContaining({ jobId: payload.jobId })]),
+      )
+
+      const cachedState = await gameService.getGameState(gameId)
+      expect(cachedState?.board.find((territory) => territory.id === 'defending')?.ownerId).toBe(
+        'attacker',
+      )
+      expect(cachedState?.board.find((territory) => territory.id === 'attacking')?.armies).toBe(1)
+    })
+
+    it('is idempotent when the same battle is re-applied', async () => {
+      await gameStateCache.setGameState(gameId, buildBaseState())
+
+      let persistedBoardSnapshot: unknown[] = []
+
+      const firstClient = {
+        query: jest
+          .fn()
+          .mockImplementationOnce(async () => ({ rows: [], rowCount: 0 }))
+          .mockImplementationOnce(async (_sql: string, params: unknown[]) => {
+            persistedBoardSnapshot = JSON.parse(params[5] as string)
+            return { rows: [], rowCount: 1 }
+          }),
+      }
+
+      const duplicateClient = {
+        query: jest.fn(async (sql: string) => {
+          if (sql.includes('SELECT')) {
+            return {
+              rows: [
+                {
+                  territories: persistedBoardSnapshot,
+                  game_log: [{ jobId: payload.jobId }],
+                  winner_id: null,
+                },
+              ],
+              rowCount: 1,
+            }
+          }
+          throw new Error('Duplicate apply should not issue write queries')
+        }),
+      }
+
+      mockTransaction
+        .mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
+          callback(firstClient as any),
+        )
+        .mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
+          callback(duplicateClient as any),
+        )
+
+      await gameService.applyBattleResult(gameId, payload)
+      const secondResult = await gameService.applyBattleResult(gameId, payload)
+
+      expect(secondResult.applied).toBe(false)
+      expect(duplicateClient.query).toHaveBeenCalledTimes(1)
+      expect((duplicateClient.query.mock.calls[0] ?? [])[0]).toContain('SELECT')
     })
   })
 })

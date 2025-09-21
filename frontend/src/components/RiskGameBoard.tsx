@@ -1,17 +1,17 @@
 import type React from 'react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import territoryData from '../data/territories-classic.json'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
-import { calculateAllPlayersContinentStatus } from '../utils/continentBonuses'
+import { CONTINENTS, calculateAllPlayersContinentStatus } from '../utils/continentBonuses'
 import CustomMapDisplay from './CustomMapDisplay'
 import { GamePhaseControls } from './GamePhaseControls'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
 import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
+import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
 
 interface TerritoryDisplay {
   id: string
@@ -28,24 +28,23 @@ interface RiskGameBoardProps {
 }
 
 // Helper function to convert Redux territories to display format
-const createTerritoryDisplayMap = (
-  territories: any[],
-  territoryData: any,
-): { [key: string]: TerritoryDisplay } => {
+const createTerritoryDisplayMap = (territories: any[]): { [key: string]: TerritoryDisplay } => {
   const displayMap: { [key: string]: TerritoryDisplay } = {}
 
   territories.forEach((territory) => {
-    const staticData = territoryData.territories[territory.id]
-    if (staticData) {
-      displayMap[territory.id] = {
-        id: territory.id,
-        name: staticData.name,
-        continent: staticData.continent,
-        adjacentTerritories: staticData.adjacentTerritories,
-        armyPosition: staticData.armyPosition,
-        owner: territory.ownerId,
-        armies: territory.armies,
-      }
+    const coordinates = territory.coordinates
+    const armyPosition = coordinates
+      ? { x: coordinates.x, y: coordinates.y }
+      : { x: 0, y: 0 }
+
+    displayMap[territory.id] = {
+      id: territory.id,
+      name: territory.name,
+      continent: territory.continent ?? territory.continentId ?? 'unknown',
+      adjacentTerritories: territory.adjacentTerritories,
+      armyPosition,
+      owner: territory.ownerId,
+      armies: territory.armies,
     }
   })
 
@@ -89,13 +88,35 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
     )
   }
 
-  const territories = createTerritoryDisplayMap(gameState.board, territoryData)
+  const territories = createTerritoryDisplayMap(gameState.board)
   const players = gameState.players
   const currentPlayer = gameState.currentPlayer
   const currentPhase = gameState.phase
 
   // Calculate continent control status for all players
   const allPlayersContinentStatus = calculateAllPlayersContinentStatus(players, gameState.board)
+
+  const continentDefinitions = useMemo(() => {
+    const bonuses = gameState.gameConfig?.continentBonuses
+    if (bonuses && bonuses.length > 0) {
+      const fallbackColors = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336', '#FFEB3B']
+      return bonuses.map((bonus, index) => ({
+        id: bonus.id,
+        name: bonus.name,
+        bonus: bonus.bonusArmies,
+        color: fallbackColors[index % fallbackColors.length],
+        territories: bonus.territories,
+      }))
+    }
+
+    return CONTINENTS.map((continent) => ({
+      id: continent.id,
+      name: continent.name,
+      bonus: continent.bonusArmies,
+      color: continent.color,
+      territories: continent.territories,
+    }))
+  }, [gameState.gameConfig?.continentBonuses])
 
   const getTerritoryColor = useCallback(
     (territoryId: string): string => {
@@ -328,16 +349,12 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
           <div className="p-4 flex-1 overflow-y-auto">
             <h3 className="text-lg font-semibold mb-3">Continent Control</h3>
             <div className="space-y-3">
-              {Object.entries(territoryData.continents).map(([continentId, continent]) => {
-                // Find which player controls this continent (if any)
+              {continentDefinitions.map((continent) => {
+                const continentId = continent.id
                 const controllingPlayer = allPlayersContinentStatus.find((playerStatus) =>
                   playerStatus.controlledContinents.some(
                     (cc) => cc.continent.id === continentId && cc.controlled,
                   ),
-                )
-
-                const _continentStatus = controllingPlayer?.controlledContinents.find(
-                  (cc) => cc.continent.id === continentId,
                 )
 
                 return (

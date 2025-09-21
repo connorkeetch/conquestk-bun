@@ -12,7 +12,12 @@ import {
   updateGameState,
   updateTerritory,
 } from '../store/gameSlice'
-import { addPlayerToRoom, removePlayerFromRoom, updateRoom } from '../store/roomSlice'
+import {
+  addPlayerToRoom,
+  removePlayerFromRoom,
+  updateRoom,
+  applyLifecycleUpdate,
+} from '../store/roomSlice'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
 
@@ -20,6 +25,10 @@ class SocketService {
   private socket: Socket | null = null
 
   connect() {
+    if (this.socket && this.socket.connected) {
+      return
+    }
+
     const token = localStorage.getItem('token')
     if (!token) return
 
@@ -123,6 +132,10 @@ class SocketService {
     this.socket.on('disconnect', () => {})
 
     this.socket.on('player-joined', (data) => {
+      if (!data?.roomId || !data?.player) {
+        return
+      }
+
       store.dispatch(
         addPlayerToRoom({
           roomId: data.roomId,
@@ -132,10 +145,14 @@ class SocketService {
     })
 
     this.socket.on('player-left', (data) => {
+      if (!data?.roomId || !data?.playerId) {
+        return
+      }
+
       store.dispatch(
         removePlayerFromRoom({
           roomId: data.roomId,
-          playerId: data.userId,
+          playerId: data.playerId,
         }),
       )
     })
@@ -205,17 +222,68 @@ class SocketService {
       store.dispatch(setGameState(gameState))
     })
 
-    this.socket.on('room-update', (roomData) => {
-      const previousRoom = store.getState().room.currentRoom
-
-      // Play game start sound when game status changes to 'playing'
-      if (previousRoom?.status === 'waiting' && roomData.status === 'playing') {
-        audioService.playEffect('gamestart')
-        // Start background music
-        audioService.playMusic()
+    this.socket.on('lifecycle:update', (lifecycle) => {
+      if (!lifecycle?.roomId || !lifecycle?.status) {
+        return
       }
 
-      store.dispatch(updateRoom(roomData))
+      const previousRoom = store.getState().room.currentRoom
+      if (previousRoom?.id === lifecycle.roomId) {
+        if (previousRoom.status === 'lobby' && lifecycle.status === 'active') {
+          audioService.playEffect('gamestart')
+          audioService.playMusic()
+        }
+      }
+
+      store.dispatch(applyLifecycleUpdate(lifecycle))
+    })
+
+    this.socket.on('room-update', (roomData) => {
+      if (!roomData) {
+        return
+      }
+
+      const previousRoom = store.getState().room.currentRoom
+
+      const status = (roomData.status ?? previousRoom?.status ?? 'lobby') as
+        | 'lobby'
+        | 'initializing'
+        | 'active'
+        | 'completed'
+        | 'paused'
+        | 'abandoned'
+
+      if (previousRoom?.id === roomData.id) {
+        if (previousRoom.status === 'lobby' && status === 'active') {
+          audioService.playEffect('gamestart')
+          audioService.playMusic()
+        }
+      }
+
+      const lifecyclePayload = {
+        roomId: roomData.id ?? roomData.roomId,
+        status: status,
+        lifecyclePhase: roomData.lifecyclePhase,
+        turnNumber: roomData.turnNumber,
+        currentTurnUserId: roomData.currentTurnUserId ?? null,
+        turnExpiresAt: roomData.turnExpiresAt ?? null,
+        readyCheckStartedAt: roomData.readyCheckStartedAt ?? null,
+        players: roomData.players,
+      }
+
+      store.dispatch(applyLifecycleUpdate(lifecyclePayload))
+      store.dispatch(
+        updateRoom({
+          id: lifecyclePayload.roomId,
+          status: lifecyclePayload.status,
+          lifecyclePhase: lifecyclePayload.lifecyclePhase,
+          turnNumber: lifecyclePayload.turnNumber,
+          currentTurnUserId: lifecyclePayload.currentTurnUserId,
+          turnExpiresAt: lifecyclePayload.turnExpiresAt,
+          readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt,
+          players: lifecyclePayload.players,
+        }),
+      )
     })
 
     // Game-specific event listeners

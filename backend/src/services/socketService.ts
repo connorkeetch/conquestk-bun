@@ -12,6 +12,7 @@ import { GameService } from './gameService'
 import { GameRoomService } from './gameRoomService'
 import { gameStateCache } from './cacheService'
 import { queueService } from './queueService'
+import { registerSocketServer } from './socketRegistry'
 
 interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
   userId?: string
@@ -28,14 +29,6 @@ function requireUserId(socket: AuthenticatedSocket): string {
 
 function getGameChannel(roomId: string): string {
   return `game:${roomId}`
-}
-
-function isGameChannel(channel: string): boolean {
-  return channel.startsWith('game:')
-}
-
-function getRoomIdFromChannel(channel: string): string {
-  return channel.slice('game:'.length)
 }
 
 function serializeGameStateForClient(
@@ -111,6 +104,7 @@ function withErrorHandler<T extends unknown[]>(
 }
 
 export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+  registerSocketServer(io)
   const gameService = new GameService()
   const gameRoomService = new GameRoomService()
 
@@ -127,6 +121,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         username: string
       }
       socket.userId = decoded.userId
+      socket.username = decoded.username
       next()
     } catch (_error) {
       next(new Error('Authentication error'))
@@ -170,6 +165,8 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           userId: player?.userId ?? userId,
           username: player?.username ?? socket.username ?? 'Unknown player',
           joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
+          isReady: Boolean(player?.isReady),
+          readyAt: player?.readyAt instanceof Date ? player?.readyAt.toISOString() : null,
         }
 
         socket.to(channel).emit('player-joined', {

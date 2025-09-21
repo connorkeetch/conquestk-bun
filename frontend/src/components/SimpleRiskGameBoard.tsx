@@ -1,8 +1,7 @@
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { getPlayerColor, PLAYER_COLORS } from '../constants/colors'
-import territoryData from '../data/territories-example.json'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
@@ -25,25 +24,34 @@ interface SimpleRiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
 }
 
+const FANTASY_CONTINENTS: Record<
+  string,
+  { name: string; bonus: number; color: string }
+> = {
+  'northern-lands': { name: 'Northern Lands', bonus: 3, color: '#4CAF50' },
+  'central-kingdoms': { name: 'Central Kingdoms', bonus: 4, color: '#2196F3' },
+  'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
+  'eastern-empire': { name: 'Eastern Empire', bonus: 3, color: '#9C27B0' },
+}
+
 // Helper function to convert Redux territories to display format
-const createTerritoryDisplayMap = (
-  territories: any[],
-  territoryData: any,
-): { [key: string]: TerritoryDisplay } => {
+const createTerritoryDisplayMap = (territories: any[]): { [key: string]: TerritoryDisplay } => {
   const displayMap: { [key: string]: TerritoryDisplay } = {}
 
   territories.forEach((territory) => {
-    const staticData = territoryData.territories[territory.id]
-    if (staticData) {
-      displayMap[territory.id] = {
-        id: territory.id,
-        name: staticData.name,
-        continent: staticData.continent,
-        adjacentTerritories: staticData.adjacentTerritories,
-        armyPosition: staticData.armyPosition,
-        owner: territory.ownerId,
-        armies: territory.armies,
-      }
+    const coordinates = territory.coordinates
+    const armyPosition = coordinates
+      ? { x: coordinates.x, y: coordinates.y }
+      : { x: 0, y: 0 }
+
+    displayMap[territory.id] = {
+      id: territory.id,
+      name: territory.name,
+      continent: territory.continent ?? territory.continentId ?? 'unknown',
+      adjacentTerritories: territory.adjacentTerritories,
+      armyPosition,
+      owner: territory.ownerId,
+      armies: territory.armies,
     }
   })
 
@@ -83,10 +91,35 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     )
   }
 
-  const territories = createTerritoryDisplayMap(gameState.board, territoryData)
+  const territories = createTerritoryDisplayMap(gameState.board)
   const players = gameState.players
   const currentPlayer = gameState.currentPlayer
   const currentPhase = gameState.phase
+
+  const continentDefinitions = useMemo(() => {
+    const bonuses = gameState.gameConfig?.continentBonuses
+    if (bonuses && bonuses.length > 0) {
+      const fallbackColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#FFEB3B']
+      return bonuses.map((bonus, index) => ({
+        id: bonus.id,
+        name: bonus.name,
+        bonus: bonus.bonusArmies,
+        color: fallbackColors[index % fallbackColors.length],
+      }))
+    }
+
+    return Object.entries(FANTASY_CONTINENTS).map(([id, meta]) => ({
+      id,
+      name: meta.name,
+      bonus: meta.bonus,
+      color: meta.color,
+    }))
+  }, [gameState.gameConfig?.continentBonuses])
+
+  const continentLookup = useMemo(
+    () => Object.fromEntries(continentDefinitions.map((continent) => [continent.id, continent])),
+    [continentDefinitions],
+  )
 
   const getTerritoryColor = useCallback(
     (territoryId: string): string => {
@@ -347,10 +380,8 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
                 const territoryId = hoveredTerritory || selectedTerritory
                 const territory = territories[territoryId!]
                 const owner = players.find((p) => p.id === territory?.owner)
-                const continentInfo =
-                  territoryData.continents[
-                    territory?.continent as keyof typeof territoryData.continents
-                  ]
+                const continentKey = territory?.continent ?? ''
+                const continentInfo = continentLookup[continentKey]
 
                 return (
                   <div className="space-y-3">
@@ -392,9 +423,9 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
           <div className="p-4 flex-1 overflow-y-auto">
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">🏆 Realm Bonuses</h3>
             <div className="space-y-3">
-              {Object.entries(territoryData.continents).map(([continentId, continent]) => (
+              {continentDefinitions.map((continent) => (
                 <div
-                  key={continentId}
+                  key={continent.id}
                   className="p-3 rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50"
                 >
                   <div className="font-medium text-gray-800">{continent.name}</div>

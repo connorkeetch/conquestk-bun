@@ -82,14 +82,12 @@ router.get('/users/:userId/rating-history', authenticateToken, async (req, res) 
 
     res.json({
       history: history.map((entry) => ({
-        gameId: entry.game_id,
-        gameName: entry.game_name,
-        gameDate: entry.game_date,
-        ratingBefore: entry.rating_before,
-        ratingAfter: entry.rating_after,
+        gameId: entry.game_room_id,
+        recordedAt: entry.created_at,
+        ratingBefore: entry.old_rating,
+        ratingAfter: entry.new_rating,
         change: entry.rating_change,
-        position: entry.position,
-        totalPlayers: entry.total_players,
+        reason: entry.reason,
       })),
     })
   } catch (error) {
@@ -108,29 +106,21 @@ router.get('/leaderboards/skill', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string, 10) || 100
     const offset = parseInt(req.query.offset as string, 10) || 0
-    const tier = req.query.tier as string
-
-    const leaderboard = await eloService.getLeaderboard(limit, offset, tier)
+    const leaderboard = await eloService.getLeaderboard(limit, offset)
 
     res.json({
       leaderboard: leaderboard.map((entry, index) => ({
-        rank: offset + index + 1,
+        rank: entry.rank_position,
         userId: entry.user_id,
         username: entry.username,
         skillRating: entry.skill_rating,
-        tier: entry.tier,
-        confidence: entry.skill_confidence,
-        totalGames: entry.total_ranked_games,
-        winRate: entry.win_rate,
-        recentTrend: entry.recent_trend,
-        lastChange: entry.last_game_change,
+        tier: eloService.getSkillTier(entry.skill_rating).name,
       })),
     })
   } catch (error) {
     handleRouteError(error, req, 'Failed to fetch leaderboard', 500, {
       limit: req.query.limit,
       offset: req.query.offset,
-      tier: req.query.tier,
     })
     res.status(500).json({ error: 'Failed to fetch leaderboard' })
   }

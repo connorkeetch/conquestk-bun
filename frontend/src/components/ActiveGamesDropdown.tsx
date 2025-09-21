@@ -3,15 +3,16 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
+import type { GameRoom } from '../types/gameRoom'
 
 interface GameInfo {
   id: string
   name: string
-  status: 'active' | 'finished' | 'waiting'
+  status: GameRoom['status']
   playerCount: number
   maxPlayers: number
   isYourTurn?: boolean
-  winner?: string
+  winner?: string | null
   createdAt: string
 }
 
@@ -43,8 +44,8 @@ const ActiveGamesDropdown: React.FC = () => {
   if (!user) return null
 
   const activeGames = games.filter((g) => g.status === 'active')
-  const waitingGames = games.filter((g) => g.status === 'waiting')
-  const finishedGames = games.filter((g) => g.status === 'finished').slice(0, 3)
+  const waitingGames = games.filter((g) => g.status === 'lobby' || g.status === 'initializing')
+  const finishedGames = games.filter((g) => g.status === 'completed').slice(0, 3)
 
   const totalActive = activeGames.length + waitingGames.length
   const yourTurnCount = activeGames.filter((g) => g.isYourTurn).length
@@ -142,7 +143,7 @@ const ActiveGamesDropdown: React.FC = () => {
                       {waitingGames.slice(0, 3).map((game) => (
                         <Link
                           key={game.id}
-                          to={`/lobby/${game.id}`}
+                          to={`/room/${game.id}`}
                           className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
                           onClick={() => setIsOpen(false)}
                         >
@@ -161,12 +162,12 @@ const ActiveGamesDropdown: React.FC = () => {
                   </div>
                 )}
 
-                {/* Finished Games */}
+                {/* Completed Games */}
                 {finishedGames.length > 0 && (
                   <div className="p-4 border-b border-border">
                     <h4 className="text-sm font-semibold text-muted mb-2 uppercase flex items-center gap-2">
                       <Trophy className="w-3 h-3" />
-                      Recently Finished
+                      Recently Completed
                     </h4>
                     <div className="space-y-2">
                       {finishedGames.map((game) => (

@@ -30,7 +30,13 @@ export interface SharedUser {
 // ============================================
 
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
-export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned'
+export type GameStatus =
+  | 'lobby'
+  | 'initializing'
+  | 'active'
+  | 'completed'
+  | 'paused'
+  | 'abandoned'
 export type PlayerColor =
   | 'red'
   | 'blue'
@@ -50,9 +56,18 @@ export type PlayerColor =
 // ============================================
 
 export interface ServerToClientEvents {
-  'player-joined': (data: { userId: string; socketId: string }) => void
-  'player-left': (data: { userId: string; socketId: string }) => void
-  'player-disconnected': (data: { userId: string; socketId: string }) => void
+  'player-joined': (data: {
+    roomId: string
+    player: {
+      userId: string
+      username: string
+      joinedAt: string
+      isReady: boolean
+      readyAt: string | null
+    }
+  }) => void
+  'player-left': (data: { roomId: string; playerId: string }) => void
+  'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game-update': (gameState: any) => void
   'game-delta': (delta: any) => void // Delta update for efficient real-time broadcasting
   armiesDeployed: (result: { gameState: any }) => void
@@ -75,7 +90,45 @@ export interface ServerToClientEvents {
   ratingUpdate: (data: {
     changes: Array<{ userId: string; oldRating: number; newRating: number; change: number }>
   }) => void
-  'chat-message': (data: { userId: string; message: string; timestamp: string }) => void
+  'chat-message': (data: {
+    roomId: string
+    userId: string
+    message: string
+    timestamp: string
+  }) => void
+  'lifecycle:update': (data: {
+    roomId: string
+    status: GameStatus
+    lifecyclePhase: GamePhase | 'lobby' | 'initializing'
+    turnNumber: number
+    currentTurnUserId: string | null
+    turnExpiresAt: string | null
+    readyCheckStartedAt: string | null
+    readyStates: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
+    players?: Array<{
+      userId: string
+      username: string
+      joinedAt: string
+      isReady: boolean
+      readyAt: string | null
+    }>
+  }) => void
+  'room-update': (data: {
+    id: string
+    status: GameStatus
+    lifecyclePhase?: GamePhase | 'lobby' | 'initializing' | null
+    turnNumber?: number | null
+    currentTurnUserId?: string | null
+    turnExpiresAt?: string | null
+    readyCheckStartedAt?: string | null
+    players?: Array<{
+      userId: string
+      username: string
+      joinedAt: string | Date
+      isReady: boolean
+      readyAt: string | null
+    }>
+  }) => void
   error: (data: { event: string; message: string; timestamp: string }) => void
   gameError: (data: { message: string }) => void
 }

@@ -28,6 +28,7 @@ _Last updated: September 20, 2025_
   - Metrics exist (`battle_applied_total`, in-memory vs DB divergence gauge, alert on failed apply > _N_/min).
 - **Dependencies:** A3 lifecycle state machine, D2 observability/stats.
 - **Notes:** Replace SQLite-style `INSERT OR REPLACE` with `INSERT ... ON CONFLICT ... DO UPDATE`.
+- _Progress (Sep 2026): Worker apply now persists territory updates atomically, archives to new `game_results` + `player_game_results`, updates ELO/leaderboard via `ON CONFLICT`, and emits battle apply/failure metrics with alerting._
 
 ### A2. Replace fixtures with live server state
 - **Priority:** P0 • **Tags:** [fe][ws]
