@@ -39,7 +39,7 @@ export class BattleWorker {
   async initialize(): Promise<void> {
     // Process battle simulation jobs
     this.queue.process('simulate-battle', 5, async (job: Bull.Job<BattleSimulationJob>) => {
-      return this.simulateBattle(job.data)
+      return this.simulateBattle(job)
     })
 
     // Job event handlers
@@ -64,7 +64,7 @@ export class BattleWorker {
     logger.info('✅ BattleWorker initialized')
   }
 
-  private async simulateBattle(jobData: BattleSimulationJob): Promise<BattleResult> {
+  private async simulateBattle(job: Bull.Job<BattleSimulationJob>): Promise<BattleResult> {
     const {
       gameId,
       attackingTerritory,
@@ -72,7 +72,8 @@ export class BattleWorker {
       attackingArmies,
       defendingArmies,
       playerId,
-    } = jobData
+    } = job.data
+    const jobId = job.id !== undefined ? String(job.id) : `${gameId}:${Date.now()}`
 
     try {
       logger.debug('Simulating battle', {
@@ -107,21 +108,30 @@ export class BattleWorker {
       const attackerOwnerId = attackingTerr.ownerId ?? playerId
       const defenderOwnerId = defendingTerr.ownerId ?? null
 
+      const preMoveArmies = Math.max(newAttackingArmies, 0)
+      const movingArmies = battleResult.territoryConquered
+        ? Math.max(0, Math.min(attackingArmies, preMoveArmies - 1))
+        : 0
+      const finalAttackerArmies = battleResult.territoryConquered
+        ? Math.max(preMoveArmies - movingArmies, 1)
+        : Math.max(preMoveArmies, 1)
+      const finalDefenderArmies = battleResult.territoryConquered
+        ? Math.max(movingArmies, 0)
+        : Math.max(newDefendingArmies, 0)
+
       if (battleResult.territoryConquered) {
         // Territory conquered - transfer ownership
-        const movingArmies = Math.min(attackingArmies, newAttackingArmies - 1)
-
         // Update attacking territory
         deltas.push(
           DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
-            armies: newAttackingArmies - movingArmies,
+            armies: finalAttackerArmies,
           }),
         )
 
         // Update defending territory (new owner)
         deltas.push(
           DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
-            armies: movingArmies,
+            armies: finalDefenderArmies,
             ownerId: attackerOwnerId,
           }),
         )
@@ -171,13 +181,13 @@ export class BattleWorker {
         // Territory defended successfully
         deltas.push(
           DeltaBuilder.territoryUpdate(gameId, attackingTerritory, {
-            armies: newAttackingArmies,
+            armies: finalAttackerArmies,
           }),
         )
 
         deltas.push(
           DeltaBuilder.territoryUpdate(gameId, defendingTerritory, {
-            armies: newDefendingArmies,
+            armies: finalDefenderArmies,
           }),
         )
       }
@@ -191,11 +201,11 @@ export class BattleWorker {
           ...battleResult,
           fromTerritory: {
             id: attackingTerritory,
-            armies: attackingTerr.armies - battleResult.attackerLosses,
+            armies: finalAttackerArmies,
           },
           toTerritory: {
             id: defendingTerritory,
-            armies: defendingTerr.armies - battleResult.defenderLosses,
+            armies: finalDefenderArmies,
             ownerId: battleResult.territoryConquered
               ? attackerOwnerId
               : defenderOwnerId ?? attackerOwnerId,
@@ -211,8 +221,20 @@ export class BattleWorker {
       this.io.to(`game:${gameId}`).emit('game-delta', battleDelta)
 
       // Update persistent game state
-      // TODO: Implement applyBattleResult method in GameService
-      // await this.gameService.applyBattleResult(gameId, battleResult, attackingTerritory, defendingTerritory)
+      await this.gameService.applyBattleResult(gameId, {
+        jobId,
+        attackerLosses: battleResult.attackerLosses,
+        defenderLosses: battleResult.defenderLosses,
+        territoryConquered: battleResult.territoryConquered,
+        attackingArmiesRemaining: preMoveArmies,
+        defendingArmiesRemaining: Math.max(newDefendingArmies, 0),
+        dice: battleResult.dice,
+        attackingTerritoryId: attackingTerritory,
+        defendingTerritoryId: defendingTerritory,
+        attackingPlayerId: attackerOwnerId,
+        defendingPlayerId: defenderOwnerId,
+        attackingArmiesCommitted: attackingArmies,
+      })
 
       return battleResult
     } catch (error) {

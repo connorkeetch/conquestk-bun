@@ -1,5 +1,7 @@
+const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
+
 jest.mock('../config/database', () => ({
-  query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+  query: mockDbQuery,
 }))
 
 const mockAddGameAction = jest.fn()
@@ -27,6 +29,30 @@ jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => mockGameServiceInstance),
 }))
 
+const mockIsPlayerInRoom = jest.fn()
+const mockGetPlayer = jest.fn()
+
+jest.mock('../services/gameRoomService', () => ({
+  GameRoomService: jest.fn(() => ({
+    isPlayerInRoom: mockIsPlayerInRoom,
+    getPlayer: mockGetPlayer,
+  })),
+}))
+
+const mockGetCachedState = jest.fn()
+
+jest.mock('../services/cacheService', () => ({
+  gameStateCache: {
+    getGameState: mockGetCachedState,
+  },
+}))
+
+const mockRegisterSocketServer = jest.fn()
+
+jest.mock('../services/socketRegistry', () => ({
+  registerSocketServer: mockRegisterSocketServer,
+}))
+
 jest.mock('../socket/chatHandlers', () => ({
   setupChatHandlers: jest.fn(),
 }))
@@ -51,18 +77,30 @@ describe('socketService event handlers', () => {
     return {
       id: 'socket-1',
       userId: 'user-1',
-      handshake: { auth: { token: 'stub' } },
+      username: 'User One',
+      handshake: { auth: { token: 'stub-token' } },
       on: jest.fn(),
       emit: jest.fn(),
       join: jest.fn().mockResolvedValue(undefined),
       leave: jest.fn().mockResolvedValue(undefined),
       to: jest.fn(() => ({ emit: toEmit })),
       rooms: new Set<string>(['socket-1']),
+      joinedGameRooms: new Set<string>(),
+      broadcastEmit: toEmit,
     }
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockDbQuery.mockResolvedValue({ rows: [], rowCount: 0 })
+    mockGetCachedState.mockResolvedValue(null)
+    mockIsPlayerInRoom.mockResolvedValue(true)
+    mockGetPlayer.mockResolvedValue({
+      userId: 'user-1',
+      username: 'User One',
+      joinedAt: new Date('2024-01-01T00:00:00Z'),
+    })
+
     mockGameServiceInstance.fortify.mockReset()
     mockGameServiceInstance.fortify.mockResolvedValue({
       fromArmies: 1,
@@ -129,7 +167,7 @@ describe('socketService event handlers', () => {
     )
   })
 
-  it('sends fortify results to room after processing', async () => {
+  it('sends fortify results to canonical channel after processing', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const fortifyHandler = getSocketHandler(socket, 'fortify')
 
@@ -149,7 +187,7 @@ describe('socketService event handlers', () => {
     )
 
     const ioToMock = io.to as unknown as jest.Mock
-    expect(ioToMock).toHaveBeenCalledWith('room-99')
+    expect(ioToMock).toHaveBeenCalledWith('game:room-99')
     expect(roomEmit).toHaveBeenNthCalledWith(1, 'territoriesFortified', {
       fromArmies: 1,
       toArmies: 2,
@@ -158,7 +196,7 @@ describe('socketService event handlers', () => {
     expect(roomEmit).toHaveBeenNthCalledWith(2, 'game-update', { id: 'state' })
   })
 
-  it('broadcasts phase changes on end turn', async () => {
+  it('broadcasts phase changes to game channel on end turn', async () => {
     const { socket, io, roomEmit } = initialiseHandlers()
     const endTurnHandler = getSocketHandler(socket, 'endTurn')
 
@@ -167,7 +205,7 @@ describe('socketService event handlers', () => {
     expect(mockGameServiceInstance.endTurn).toHaveBeenCalledWith('room-end', 'user-1')
 
     const ioToMock = io.to as unknown as jest.Mock
-    expect(ioToMock).toHaveBeenCalledWith('room-end')
+    expect(ioToMock).toHaveBeenCalledWith('game:room-end')
     expect(roomEmit).toHaveBeenNthCalledWith(
       1,
       'game-delta',
@@ -201,5 +239,79 @@ describe('socketService event handlers', () => {
     expect(queueService.addGameAction).toHaveBeenCalled()
     const ioToMock = io.to as unknown as jest.Mock
     expect(ioToMock).not.toHaveBeenCalled()
+  })
+
+  it('emits error event when queue call fails', async () => {
+    mockAddGameAction.mockRejectedValue(new Error('queue offline'))
+
+    const { socket } = initialiseHandlers()
+    const attackHandler = getSocketHandler(socket, 'attack')
+
+    await attackHandler({
+      roomId: 'room-failure',
+      fromTerritoryId: 'x',
+      toTerritoryId: 'y',
+      armies: 2,
+    })
+
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({
+        event: 'attack',
+        message: expect.stringContaining('queue offline'),
+      }),
+    )
+  })
+
+  it('validates membership before joining a game channel', async () => {
+    mockIsPlayerInRoom.mockResolvedValue(false)
+
+    const { socket } = initialiseHandlers()
+    const joinHandler = getSocketHandler(socket, 'join-room')
+
+    await joinHandler('room-unauthorized')
+
+    expect(mockIsPlayerInRoom).toHaveBeenCalledWith('room-unauthorized', 'user-1')
+    const joinCalls = (socket.join as jest.Mock).mock.calls
+    expect(joinCalls.find(([roomId]: [string]) => roomId === 'game:room-unauthorized')).toBeUndefined()
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({
+        event: 'join-room',
+        message: expect.stringContaining('member'),
+      }),
+    )
+  })
+
+  it('joins canonical channel and backfills state when authorized', async () => {
+    const serializedState = {
+      roomId: 'room-123',
+      phase: 'setup',
+      board: [],
+      players: [],
+    }
+    mockGetCachedState.mockResolvedValue(serializedState)
+
+    const { socket } = initialiseHandlers()
+    const joinHandler = getSocketHandler(socket, 'join-room')
+
+    await joinHandler('room-123')
+
+    expect(mockIsPlayerInRoom).toHaveBeenCalledWith('room-123', 'user-1')
+    expect(socket.join).toHaveBeenCalledWith('game:room-123')
+    expect(socket.joinedGameRooms.has('room-123')).toBe(true)
+    expect(socket.emit).toHaveBeenCalledWith('game-update', serializedState)
+
+    const toMock = socket.to as jest.Mock
+    expect(toMock).toHaveBeenCalledWith('game:room-123')
+
+    const broadcastCalls = socket.broadcastEmit.mock.calls
+    expect(broadcastCalls[0]).toEqual([
+      'player-joined',
+      expect.objectContaining({
+        roomId: 'room-123',
+        player: expect.objectContaining({ userId: 'user-1', username: 'User One' }),
+      }),
+    ])
   })
 })

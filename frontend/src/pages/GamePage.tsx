@@ -6,7 +6,7 @@ import { getPlayerColor } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { gameService } from '../services/gameService'
 import { socketService } from '../services/socketService'
-import { clearGame, setError } from '../store/gameSlice'
+import { clearGame, fetchGameState, setError } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 
 const GamePage: React.FC = () => {
@@ -90,7 +90,40 @@ const GamePage: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    if (!gameId) {
+      return
+    }
+
+    if (currentGame && currentGame.roomId === gameId) {
+      return
+    }
+
+    void dispatch(fetchGameState(gameId))
+  }, [dispatch, gameId, currentGame])
+
   const gameName = currentRoom?.name || 'Conquest Match'
+  const formatRoomStatus = (status?: string) => {
+    if (!status) {
+      return 'Unknown status'
+    }
+    switch (status) {
+      case 'lobby':
+        return 'Waiting for players'
+      case 'initializing':
+        return 'Launching'
+      case 'active':
+        return 'In progress'
+      case 'completed':
+        return 'Completed'
+      case 'paused':
+        return 'Paused'
+      case 'abandoned':
+        return 'Abandoned'
+      default:
+        return status.replace(/_/g, ' ')
+    }
+  }
   const currentTurnPlayer = useMemo(() => {
     if (!currentGame) return null
     return currentGame.players.find((player) => player.id === currentGame.currentPlayer)
@@ -171,13 +204,13 @@ const GamePage: React.FC = () => {
             <div>
               <h1 className={`font-bold ${isFullScreen ? 'text-lg' : 'text-xl'}`}>{gameName}</h1>
               {!isFullScreen && (
-                <p className="text-sm text-muted">
-                  {currentGame && currentTurnPlayer
-                    ? `Turn ${currentGame.turn} • ${currentTurnPlayer.username}'s turn`
-                    : currentRoom?.status
-                      ? `Status: ${currentRoom.status.replace(/_/g, ' ')}`
-                      : 'Preparing game details...'}
-                </p>
+              <p className="text-sm text-muted">
+                {currentGame && currentTurnPlayer
+                  ? `Turn ${currentGame.turn} • ${currentTurnPlayer.username}'s turn`
+                  : currentRoom?.status
+                    ? `Status: ${formatRoomStatus(currentRoom.status)}`
+                    : 'Preparing game details...'}
+              </p>
               )}
             </div>
           </div>

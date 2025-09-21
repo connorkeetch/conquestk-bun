@@ -1,5 +1,6 @@
-import type { QueryResultRow } from 'pg'
-import { query } from '../config/database'
+import type { PoolClient, QueryResultRow } from 'pg'
+import { query, transaction } from '../config/database'
+import type { DatabaseQueryResult } from '../config/database'
 
 export interface PlayerRating {
   userId: string
@@ -26,74 +27,51 @@ export interface SkillTier {
   color: string
 }
 
-interface RatingHistoryEntry extends QueryResultRow {
+interface RatingHistoryEntryRow extends QueryResultRow {
   id: string
   user_id: string
-  game_id: string
-  rating_before: number
-  rating_after: number
+  old_rating: number
+  new_rating: number
   rating_change: number
-  position: number
-  total_players: number
-  k_factor: number
-  expected_score: number
-  actual_score: number
+  game_room_id: string | null
+  reason: string
   created_at: string
-  game_name: string
-  game_date: string
 }
 
-interface SkillLeaderboardRow extends QueryResultRow {
+interface LeaderboardRow extends QueryResultRow {
   user_id: string
   username: string
   skill_rating: number
-  skill_confidence: number
   rank_position: number
-  tier: string
-  total_ranked_games: number
-  win_rate: number
 }
 
-// The Conqueror's Path - Historical conquest-themed ranking system
 export const SKILL_TIERS: SkillTier[] = [
-  { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: '#8B4513' }, // Brown - tribal leader
-  { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: '#DC143C' }, // Crimson - rules by might
-  { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: '#4682B4' }, // Steel blue - Viking raiders
-  { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: '#228B22' }, // Forest green - faith & politics
-  { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: '#FFD700' }, // Gold - Roman empire
-  { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: '#FF8C00' }, // Dark orange - steppe warriors
-  { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: '#9370DB' }, // Medium purple - European dominance
-  { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: '#FF6347' }, // Tomato - Alexander's empire
-  { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: '#2F4F4F' }, // Dark slate gray - terror & tribute
-  { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: '#8B0000' }, // Dark red - apocalyptic conqueror
+  { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: '#8B4513' },
+  { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: '#DC143C' },
+  { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: '#4682B4' },
+  { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: '#228B22' },
+  { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: '#FFD700' },
+  { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: '#FF8C00' },
+  { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: '#9370DB' },
+  { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: '#FF6347' },
+  { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: '#2F4F4F' },
+  { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: '#8B0000' },
 ]
 
 export class EloService {
-  /**
-   * Calculate K-factor based on games played and current rating
-   * Lower K-factor for more experienced players, higher for new players
-   */
-  private calculateKFactor(
-    gamesPlayed: number,
-    currentRating: number,
-    numberOfPlayers: number,
-  ): number {
-    // Base K-factor depends on experience
+  private calculateKFactor(gamesPlayed: number, currentRating: number, numberOfPlayers: number): number {
     let baseK: number
     if (gamesPlayed < 30) {
-      baseK = 32 // New players have higher volatility
+      baseK = 32
     } else if (gamesPlayed < 100) {
-      baseK = 24 // Intermediate players
+      baseK = 24
     } else {
-      baseK = 16 // Experienced players
+      baseK = 16
     }
 
-    // Adjust for game size (more players = more variance)
-    // Scale factor: more players means each individual game has less impact
     const playerAdjustment = numberOfPlayers / 4
     const adjustedK = baseK * playerAdjustment
 
-    // Additional adjustment for high-rated players (slower changes at the top)
     if (currentRating > 1800) {
       return adjustedK * 0.8
     }
@@ -104,47 +82,32 @@ export class EloService {
     return adjustedK
   }
 
-  /**
-   * Calculate expected score for a player against multiple opponents
-   * In multiplayer, we calculate average expected score against all opponents
-   */
   private calculateExpectedScore(playerRating: number, opponentRatings: number[]): number {
     const expectedScores = opponentRatings.map((opponentRating) => {
       const ratingDiff = (opponentRating - playerRating) / 400
       return 1 / (1 + 10 ** ratingDiff)
     })
 
-    // Average expected score against all opponents
     return expectedScores.reduce((sum, score) => sum + score, 0) / expectedScores.length
   }
 
-  /**
-   * Calculate actual score based on final position
-   * Winner gets 1.0, positions scale down from there
-   */
   private calculateActualScore(position: number, totalPlayers: number): number {
     if (position === 1) {
-      return 1.0 // Winner gets full score
+      return 1.0
     }
 
-    // Linear scaling for other positions
-    // 2nd place gets higher score than 3rd, etc.
     const baseScore = (totalPlayers - position) / (totalPlayers - 1)
 
-    // Apply position-based adjustments
     if (position === 2) {
-      return baseScore * 0.75 // 2nd place loses 25% less
+      return baseScore * 0.75
     }
     if (position === 3) {
-      return baseScore * 0.5 // 3rd place loses 50% less
+      return baseScore * 0.5
     }
 
-    return baseScore * 0.25 // Other positions get minimal score
+    return baseScore * 0.25
   }
 
-  /**
-   * Calculate new ratings for all players after a ranked game
-   */
   calculateRatingChanges(players: PlayerRating[]): RatingChange[] {
     if (players.length < 3) {
       throw new Error('Ranked games require at least 3 players')
@@ -153,25 +116,15 @@ export class EloService {
     const changes: RatingChange[] = []
 
     for (const player of players) {
-      // Get opponent ratings (everyone except current player)
       const opponentRatings = players
         .filter((p) => p.userId !== player.userId)
         .map((p) => p.currentRating)
 
-      // Calculate K-factor
-      const kFactor = this.calculateKFactor(
-        player.gamesPlayed,
-        player.currentRating,
-        players.length,
-      )
-
-      // Calculate expected and actual scores
+      const kFactor = this.calculateKFactor(player.gamesPlayed, player.currentRating, players.length)
       const expectedScore = this.calculateExpectedScore(player.currentRating, opponentRatings)
       const actualScore = this.calculateActualScore(player.position, players.length)
-
-      // Calculate rating change
       const ratingChange = Math.round(kFactor * (actualScore - expectedScore))
-      const newRating = Math.max(0, player.currentRating + ratingChange) // Never go below 0
+      const newRating = Math.max(0, player.currentRating + ratingChange)
 
       changes.push({
         userId: player.userId,
@@ -187,236 +140,208 @@ export class EloService {
     return changes
   }
 
-  /**
-   * Apply rating changes to database after a game (optimized bulk operations)
-   */
-  async applyRatingChanges(gameId: string, changes: RatingChange[]): Promise<void> {
+  async applyRatingChanges(gameId: string, changes: RatingChange[], client?: PoolClient): Promise<void> {
     if (changes.length === 0) return
 
-    try {
-      // Start transaction
-      await query('BEGIN')
-
-      // Sort changes by new rating to determine positions
-      const sortedChanges = [...changes].sort((a, b) => b.newRating - a.newRating)
-      const positionMap = new Map<string, number>()
-      sortedChanges.forEach((change, index) => {
-        positionMap.set(change.userId, index + 1)
-      })
-
-      // Bulk insert rating history
-      if (changes.length > 0) {
-        await this.bulkInsertRatingHistory(gameId, changes, positionMap)
-      }
-
-      // Bulk update user ratings
-      await this.bulkUpdateUserRatings(changes, positionMap)
-
-      // Commit transaction
-      await query('COMMIT')
-    } catch (error) {
-      // Rollback on error
-      await query('ROLLBACK')
-      throw error
+    const persist = async (dbClient: PoolClient) => {
+      await this.bulkInsertRatingHistory(dbClient, gameId, changes)
+      await this.bulkUpdateUserRatings(dbClient, changes)
     }
+
+    if (client) {
+      await persist(client)
+      return
+    }
+
+    await transaction(async (dbClient) => {
+      await persist(dbClient)
+    })
   }
 
-  /**
-   * Bulk insert rating history records
-   */
   private async bulkInsertRatingHistory(
+    client: PoolClient,
     gameId: string,
     changes: RatingChange[],
-    positionMap: Map<string, number>,
   ): Promise<void> {
+    if (changes.length === 0) return
+
     const values: Array<number | string> = []
     const placeholders: string[] = []
 
     changes.forEach((change, index) => {
-      const baseIndex = index * 10
-      const position = positionMap.get(change.userId) || 0
-
+      const baseIndex = index * 6
       placeholders.push(
-        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`,
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`,
       )
-
       values.push(
         change.userId,
-        gameId,
         change.oldRating,
         change.newRating,
         change.change,
-        position,
-        changes.length,
-        change.kFactor,
-        change.expectedScore,
-        change.actualScore,
+        gameId,
+        'match_completed',
       )
     })
 
-    const sql = `
-      INSERT INTO rating_history (
-        user_id, game_id, rating_before, rating_after, rating_change,
-        position, total_players, k_factor, expected_score, actual_score
-      ) VALUES ${placeholders.join(', ')}
-    `
-
-    await query(sql, values)
-  }
-
-  /**
-   * Bulk update user ratings using PostgreSQL UPDATE with CASE statements
-   */
-  private async bulkUpdateUserRatings(
-    changes: RatingChange[],
-    positionMap: Map<string, number>,
-  ): Promise<void> {
-    if (changes.length === 0) return
-
-    const userIds = changes.map((change) => change.userId)
-    const userIdPlaceholders = userIds
-      .map((_, index) => `$${changes.length * 4 + index + 1}`)
-      .join(', ')
-
-    // Build CASE statements for each field
-    const ratingCases: string[] = []
-    const winCases: string[] = []
-    const lossCases: string[] = []
-    const values: Array<number | string> = []
-
-    changes.forEach((change, index) => {
-      const position = positionMap.get(change.userId) || 0
-      const isWinner = position === 1
-      const baseIndex = index * 4
-
-      ratingCases.push(`WHEN id = $${baseIndex + 1} THEN $${baseIndex + 2}`)
-      winCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_wins + $${baseIndex + 3}`)
-      lossCases.push(`WHEN id = $${baseIndex + 1} THEN ranked_losses + $${baseIndex + 4}`)
-
-      values.push(change.userId, change.newRating, isWinner ? 1 : 0, isWinner ? 0 : 1)
-    })
-
-    // Add user IDs for the WHERE clause
-    values.push(...userIds)
-
-    const sql = `
-      UPDATE users SET 
-        skill_rating = CASE ${ratingCases.join(' ')} END,
-        skill_confidence = LEAST(1.0, skill_confidence + 0.05),
-        total_ranked_games = total_ranked_games + 1,
-        ranked_wins = CASE ${winCases.join(' ')} END,
-        ranked_losses = CASE ${lossCases.join(' ')} END,
-        last_ranked_game_at = CURRENT_TIMESTAMP
-      WHERE id IN (${userIdPlaceholders})
-    `
-
-    await query(sql, values)
-  }
-
-  /**
-   * Get skill tier for a rating
-   */
-  getSkillTier(rating: number): SkillTier {
-    return (
-      SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
-      SKILL_TIERS[0]
+    await client.query(
+      `
+        INSERT INTO rating_history (
+          user_id,
+          old_rating,
+          new_rating,
+          rating_change,
+          game_room_id,
+          reason
+        ) VALUES ${placeholders.join(', ')}
+      `,
+      values,
     )
   }
 
-  /**
-   * Check if players can join a ranked game (skill gap validation)
-   */
-  canJoinRankedGame(
-    playerRating: number,
-    gameAvgRating: number,
-    maxSkillGap: number = 500,
-  ): boolean {
+  private async bulkUpdateUserRatings(client: PoolClient, changes: RatingChange[]): Promise<void> {
+    if (changes.length === 0) return
+
+    const ratingCases: string[] = []
+    const values: Array<number | string> = []
+
+    changes.forEach((change, index) => {
+      const baseIndex = index * 2
+      ratingCases.push(`WHEN id = $${baseIndex + 1} THEN $${baseIndex + 2}`)
+      values.push(change.userId, change.newRating)
+    })
+
+    const idPlaceholders = changes
+      .map((_, index) => `$${changes.length * 2 + index + 1}`)
+      .join(', ')
+
+    values.push(...changes.map((change) => change.userId))
+
+    await client.query(
+      `
+        UPDATE users SET
+          skill_rating = CASE ${ratingCases.join(' ')} END,
+          updated_at = NOW()
+        WHERE id IN (${idPlaceholders})
+      `,
+      values,
+    )
+  }
+
+  getSkillTier(rating: number): SkillTier {
+    return (
+      SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) || SKILL_TIERS[0]
+    )
+  }
+
+  canJoinRankedGame(playerRating: number, gameAvgRating: number, maxSkillGap: number = 500): boolean {
     return Math.abs(playerRating - gameAvgRating) <= maxSkillGap
   }
 
-  /**
-   * Get rating history for a user
-   */
-  async getRatingHistory(userId: string, limit: number = 30): Promise<RatingHistoryEntry[]> {
-    const result = await query<RatingHistoryEntry>(
+  async getRatingHistory(userId: string, limit: number = 30): Promise<RatingHistoryEntryRow[]> {
+    const result = await query<RatingHistoryEntryRow>(
       `
-      SELECT 
-        rh.*,
-        gr.name as game_name,
-        gr.created_at as game_date
-      FROM rating_history rh
-      JOIN game_rooms gr ON rh.game_id = gr.id
-      WHERE rh.user_id = $1
-      ORDER BY rh.created_at DESC
-      LIMIT $2
-    `,
+        SELECT *
+        FROM rating_history
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+      `,
       [userId, limit],
     )
 
     return result.rows
   }
 
-  /**
-   * Get leaderboard
-   */
   async getLeaderboard(
     limit: number = 100,
     offset: number = 0,
-    tierFilter?: string,
-  ): Promise<SkillLeaderboardRow[]> {
-    let queryStr = `
-      SELECT 
-        slc.*,
-        u.username,
-        u.id as user_id
-      FROM skill_leaderboard_cache slc
-      JOIN users u ON slc.user_id = u.id
-    `
+  ): Promise<LeaderboardRow[]> {
+    const result = await query<LeaderboardRow>(
+      `
+        SELECT
+          (entry.data ->> 'userId')::uuid AS user_id,
+          entry.data ->> 'username' AS username,
+          (entry.data ->> 'skillRating')::int AS skill_rating,
+          (entry.data ->> 'rank')::int AS rank_position
+        FROM skill_leaderboard_cache cache,
+        LATERAL jsonb_array_elements(cache.rankings) WITH ORDINALITY AS entry(data, ord)
+        WHERE cache.period_type = 'all_time'
+        ORDER BY ord
+        LIMIT $1 OFFSET $2
+      `,
+      [limit, offset],
+    )
 
-    const params: Array<number | string> = []
-    let paramIndex = 1
-
-    if (tierFilter) {
-      queryStr += ` WHERE slc.tier = $${paramIndex}`
-      params.push(tierFilter)
-      paramIndex++
+    if ((result.rowCount ?? 0) > 0) {
+      return result.rows
     }
 
-    queryStr += ` ORDER BY slc.rank_position LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`
-    params.push(limit, offset)
+    // Fallback to live query if cache is empty
+    const fallback = await query<LeaderboardRow>(
+      `
+        SELECT
+          id as user_id,
+          username,
+          skill_rating,
+          ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) + $2 AS rank_position
+        FROM users
+        ORDER BY skill_rating DESC, created_at ASC
+        LIMIT $1 OFFSET $2
+      `,
+      [limit, offset],
+    )
 
-    const result = await query<SkillLeaderboardRow>(queryStr, params)
-    return result.rows
+    return fallback.rows
   }
 
-  /**
-   * Recalculate leaderboard rankings (should be run periodically)
-   */
-  async updateLeaderboardCache(): Promise<void> {
-    await query(`
-      INSERT OR REPLACE INTO skill_leaderboard_cache (
-        user_id, username, skill_rating, skill_confidence,
-        rank_position, tier, total_ranked_games, win_rate
-      )
-      SELECT 
-        u.id,
-        u.username,
-        u.skill_rating,
-        u.skill_confidence,
-        ROW_NUMBER() OVER (ORDER BY u.skill_rating DESC) as rank_position,
-        u.current_tier,
-        u.total_ranked_games,
-        CASE 
-          WHEN u.total_ranked_games > 0 
-          THEN CAST(u.ranked_wins AS REAL) / u.total_ranked_games 
-          ELSE 0 
-        END as win_rate
-      FROM users u
-      WHERE u.total_ranked_games > 0
-      ORDER BY u.skill_rating DESC
-    `)
+  async updateLeaderboardCache(client?: PoolClient): Promise<void> {
+    const executeQuery = async <T extends QueryResultRow>(
+      sql: string,
+      params?: unknown[],
+    ): Promise<DatabaseQueryResult<T>> => {
+      if (client) {
+        const result = await client.query<T>(sql, params)
+        return {
+          rows: result.rows,
+          rowCount: result.rowCount ?? null,
+        }
+      }
+
+      return query<T>(sql, params)
+    }
+
+    const leaderboard = await executeQuery<LeaderboardRow>(
+      `
+        SELECT id as user_id, username, skill_rating,
+               ROW_NUMBER() OVER (ORDER BY skill_rating DESC, created_at ASC) AS rank_position
+        FROM users
+        ORDER BY skill_rating DESC, created_at ASC
+        LIMIT 100
+      `,
+    )
+
+    const rankings = leaderboard.rows.map((row) => ({
+      userId: row.user_id,
+      username: row.username,
+      skillRating: row.skill_rating,
+      rank: row.rank_position,
+    }))
+
+    await executeQuery(
+      `
+        INSERT INTO skill_leaderboard_cache (
+          period_type,
+          period_start,
+          period_end,
+          rankings,
+          generated_at
+        ) VALUES ($1, $2, $3, $4::jsonb, NOW())
+        ON CONFLICT (period_type, period_start, period_end)
+        DO UPDATE SET rankings = EXCLUDED.rankings, generated_at = EXCLUDED.generated_at
+      `,
+      ['all_time', '1970-01-01', '9999-12-31', JSON.stringify(rankings)],
+    )
   }
 }
 
-// Export singleton instance
 export const eloService = new EloService()

@@ -1,4 +1,6 @@
 import axios from 'axios'
+import type { GameState } from '../types/game'
+import type { GameRoom } from '../types/gameRoom'
 
 // Use relative URL in production, absolute URL in development
 const API_URL =
@@ -16,21 +18,6 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
-
-export interface GameRoom {
-  id: string
-  name: string
-  hostId: string
-  hostUsername?: string
-  maxPlayers: number
-  currentPlayers: number
-  isPrivate: boolean
-  status: 'waiting' | 'active' | 'completed' | 'paused' | 'abandoned'
-  mapId?: string
-  mapName?: string
-  createdAt: string
-  updatedAt: string
-}
 
 export interface CreateGameData {
   name: string
@@ -50,7 +37,7 @@ export interface CreateGameData {
 
 export interface JoinGameResponse {
   success: boolean
-  room: GameRoom
+  room?: GameRoom
   message?: string
 }
 
@@ -80,9 +67,14 @@ export const gameService = {
     return response.data
   },
 
+  async getGameState(roomId: string): Promise<GameState> {
+    const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`)
+    return response.data.game
+  },
+
   // Get user's active games (for GameListPage)
   async getUserGames() {
-    const response = await api.get('/game/rooms')
+    const response = await api.get('/game/my-games')
     return response.data
   },
 
@@ -95,5 +87,10 @@ export const gameService = {
       ...response.data,
       rooms: rooms.filter((room: GameRoom) => !room.isPrivate),
     }
+  },
+
+  async setReadyState(roomId: string, ready: boolean) {
+    const response = await api.post(`/game/rooms/${roomId}/ready-state`, { ready })
+    return response.data
   },
 }

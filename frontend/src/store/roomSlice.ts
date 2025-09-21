@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { gameService } from '../services/gameService'
-import type { GameRoom } from '../types/gameRoom'
+import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 
 interface RoomState {
   rooms: GameRoom[]
@@ -14,6 +14,18 @@ const initialState: RoomState = {
   currentRoom: null,
   isLoading: false,
   error: null,
+}
+
+interface LifecycleUpdatePayload {
+  roomId: string
+  status: GameRoom['status']
+  lifecyclePhase?: GameRoom['lifecyclePhase']
+  turnNumber?: number
+  currentTurnUserId?: string | null
+  turnExpiresAt?: string | null
+  readyCheckStartedAt?: string | null
+  readyStates?: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
+  players?: RoomPlayer[]
 }
 
 export const fetchRooms = createAsyncThunk('room/fetchRooms', async () => {
@@ -56,12 +68,15 @@ const roomSlice = createSlice({
         state.rooms[roomIndex] = { ...state.rooms[roomIndex], ...action.payload }
       }
     },
-    addPlayerToRoom: (state, action: PayloadAction<{ roomId: string; player: any }>) => {
+    addPlayerToRoom: (state, action: PayloadAction<{ roomId: string; player: RoomPlayer }>) => {
       const { roomId, player } = action.payload
 
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players = state.currentRoom.players || []
-        state.currentRoom.players.push(player)
+        const exists = state.currentRoom.players.some((p) => p.userId === player.userId)
+        if (!exists) {
+          state.currentRoom.players.push(player)
+        }
       }
     },
     removePlayerFromRoom: (state, action: PayloadAction<{ roomId: string; playerId: string }>) => {
@@ -70,6 +85,73 @@ const roomSlice = createSlice({
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players =
           state.currentRoom.players?.filter((player) => player.userId !== playerId) || []
+      }
+    },
+    applyLifecycleUpdate: (state, action: PayloadAction<LifecycleUpdatePayload>) => {
+      const {
+        roomId,
+        status,
+        lifecyclePhase,
+        turnNumber,
+        currentTurnUserId,
+        turnExpiresAt,
+        readyCheckStartedAt,
+        readyStates,
+        players,
+      } = action.payload
+
+      const applyUpdate = (room?: GameRoom | null) => {
+        if (!room || room.id !== roomId) {
+          return
+        }
+
+        room.status = status
+        if (lifecyclePhase) {
+          room.lifecyclePhase = lifecyclePhase
+        }
+
+        if (typeof turnNumber === 'number') {
+          room.turnNumber = turnNumber
+        }
+
+        if (currentTurnUserId !== undefined) {
+          room.currentTurnUserId = currentTurnUserId
+        }
+
+        if (turnExpiresAt !== undefined) {
+          room.turnExpiresAt = turnExpiresAt
+        }
+
+        if (readyCheckStartedAt !== undefined) {
+          room.readyCheckStartedAt = readyCheckStartedAt
+        }
+
+        if (players && players.length > 0) {
+          room.players = players
+          return
+        }
+
+        if (readyStates) {
+          const readyMap = new Map(readyStates.map((entry) => [entry.userId, entry]))
+          room.players = room.players?.map((player) => {
+            const readyEntry = readyMap.get(player.userId)
+            if (!readyEntry) {
+              return player
+            }
+            return {
+              ...player,
+              isReady: readyEntry.isReady,
+              readyAt: readyEntry.readyAt,
+            }
+          })
+        }
+      }
+
+      applyUpdate(state.currentRoom)
+
+      const index = state.rooms.findIndex((room) => room.id === roomId)
+      if (index !== -1) {
+        applyUpdate(state.rooms[index])
       }
     },
     clearError: (state) => {
@@ -100,7 +182,13 @@ const roomSlice = createSlice({
   },
 })
 
-export const { setCurrentRoom, updateRoom, addPlayerToRoom, removePlayerFromRoom, clearError } =
-  roomSlice.actions
+export const {
+  setCurrentRoom,
+  updateRoom,
+  addPlayerToRoom,
+  removePlayerFromRoom,
+  applyLifecycleUpdate,
+  clearError,
+} = roomSlice.actions
 
 export default roomSlice.reducer

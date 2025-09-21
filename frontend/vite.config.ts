@@ -9,12 +9,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, '../shared'),
     },
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-redux', '@reduxjs/toolkit'],
   },
   server: {
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
     port: 5173,
     proxy: {
       '/api': {

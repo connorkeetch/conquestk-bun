@@ -9,6 +9,7 @@ import type {
   SerializedGameState,
   Territory,
 } from '../types/game'
+import type { PoolClient } from 'pg'
 import { logger } from '../utils/logger'
 import { transaction } from '../config/database'
 import { gameStateCache } from './cacheService'
@@ -16,6 +17,8 @@ import { mapService } from './mapService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
 import { battleMetrics } from './metricsService'
+import { eloService } from './eloService'
+import type { PlayerRating, RatingChange } from './eloService'
 
 type BattleWorkerResult = {
   attackerLosses: number
@@ -47,6 +50,17 @@ type BattleLogEntry = {
     defender: number
   }
   conquered: boolean
+  eliminatedPlayers: string[]
+}
+
+type PlayerRankingSummary = {
+  userId: string
+  position: number
+  isWinner: boolean
+  eliminated: boolean
+  territories: number
+  armies: number
+  eliminationOrder: number | null
 }
 
 export class GameService {
@@ -543,9 +557,11 @@ export class GameService {
         defender: defenderLosses,
       },
       conquered: territoryConquered,
+      eliminatedPlayers: lastBattleResult.eliminatedPlayers ?? [],
     }
 
     let persistenceOutcome: { applied: boolean; divergence: number }
+    let latestBattleLog: BattleLogEntry[] = []
 
     try {
       persistenceOutcome = await transaction(async (client) => {
@@ -560,6 +576,7 @@ export class GameService {
 
         const existingRow = existingStateResult.rows[0]
         const existingLog = Array.isArray(existingRow?.game_log) ? existingRow?.game_log : []
+        latestBattleLog = existingLog
         const alreadyApplied = existingLog.some((entry) => entry?.jobId === jobId)
         const divergence = this.calculateTerritoryDivergence(
           existingRow?.territories ?? null,
@@ -571,6 +588,7 @@ export class GameService {
         }
 
         const updatedLog = [...existingLog, logEntry].slice(-500)
+        latestBattleLog = updatedLog
         const roundNumber = this.calculateRoundNumber(updatedGameState)
 
         await client.query(
@@ -622,6 +640,17 @@ export class GameService {
 
     if (persistenceOutcome.applied) {
       await gameStateCache.setGameState(gameId, serializedState)
+    }
+
+    if (persistenceOutcome.applied && gameEnded) {
+      await this.finalizeCompletedGame(
+        gameId,
+        serializedState,
+        playersAfterBattle,
+        playerStats,
+        latestBattleLog,
+      )
+      battleMetrics.clearGame(gameId)
     }
 
     return { applied: persistenceOutcome.applied }
@@ -709,6 +738,303 @@ export class GameService {
     const activePlayers = gameState.players.filter((player) => !player.isEliminated).length
     const divisor = Math.max(activePlayers, 1)
     return Math.max(1, Math.ceil(gameState.turn / divisor))
+  }
+
+  private buildEliminationOrder(battleLog: BattleLogEntry[]): string[] {
+    const order: string[] = []
+    for (const entry of battleLog) {
+      for (const eliminated of entry.eliminatedPlayers ?? []) {
+        if (eliminated && !order.includes(eliminated)) {
+          order.push(eliminated)
+        }
+      }
+    }
+    return order
+  }
+
+  private buildPlayerRanking(
+    players: GamePlayer[],
+    playerStatsSnapshot: Record<string, { territories: number; armies: number; eliminated: boolean }>,
+    battleLog: BattleLogEntry[],
+  ): PlayerRankingSummary[] {
+    const eliminationOrder = this.buildEliminationOrder(battleLog)
+    const playersById = new Map(players.map((player) => [player.id, player]))
+    const winner = players.find((player) => !player.isEliminated) ?? null
+
+    const orderedIds: string[] = []
+    if (winner) {
+      orderedIds.push(winner.id)
+    }
+
+    for (const eliminated of eliminationOrder) {
+      if (!orderedIds.includes(eliminated) && playersById.has(eliminated)) {
+        orderedIds.push(eliminated)
+      }
+    }
+
+    for (const player of players) {
+      if (!orderedIds.includes(player.id)) {
+        orderedIds.push(player.id)
+      }
+    }
+
+    return orderedIds.map((playerId, index) => {
+      const stats = playerStatsSnapshot[playerId] ?? {
+        territories: 0,
+        armies: 0,
+        eliminated: true,
+      }
+      const eliminationIndex = eliminationOrder.indexOf(playerId)
+      const player = playersById.get(playerId)
+
+      return {
+        userId: playerId,
+        position: index + 1,
+        isWinner: winner?.id === playerId,
+        eliminated: stats.eliminated ?? player?.isEliminated ?? true,
+        territories: stats.territories,
+        armies: stats.armies,
+        eliminationOrder: eliminationIndex === -1 ? null : eliminationIndex + 1,
+      }
+    })
+  }
+
+  private async finalizeCompletedGame(
+    gameId: string,
+    serializedState: SerializedGameState,
+    players: GamePlayer[],
+    playerStatsSnapshot: Record<string, { territories: number; armies: number; eliminated: boolean }>,
+    battleLog: BattleLogEntry[],
+  ): Promise<void> {
+    const playerRankings = this.buildPlayerRanking(players, playerStatsSnapshot, battleLog)
+    const winner = playerRankings.find((ranking) => ranking.isWinner) ?? null
+    const playerIds = playerRankings.map((ranking) => ranking.userId)
+    const finalStateJson = JSON.stringify(serializedState)
+    const battleLogJson = JSON.stringify(battleLog)
+    const totalTurns = serializedState.turn ?? 0
+    const archiveTimestamp = new Date()
+
+    await transaction(async (client) => {
+      const existingResult = await client.query<{ room_id: string }>(
+        'SELECT room_id FROM game_results WHERE room_id = $1',
+        [gameId],
+      )
+
+      if ((existingResult.rowCount ?? 0) > 0) {
+        return
+      }
+
+      const roomResult = await client.query<{
+        map_id: string | null
+        started_at: Date | null
+        ended_at: Date | null
+      }>('SELECT map_id, started_at, ended_at FROM game_rooms WHERE id = $1 FOR UPDATE', [gameId])
+
+      if ((roomResult.rowCount ?? 0) === 0) {
+        throw new Error('Game room not found during archival')
+      }
+
+      const room = roomResult.rows[0]
+      const startedAt = room.started_at ? new Date(room.started_at) : null
+      const durationSeconds =
+        startedAt !== null
+          ? Math.max(0, Math.round((archiveTimestamp.getTime() - startedAt.getTime()) / 1000))
+          : null
+
+      await client.query(
+        `UPDATE game_rooms
+         SET status = 'finished',
+             ended_at = COALESCE(ended_at, NOW()),
+             winner_id = $2,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [gameId, winner?.userId ?? null],
+      )
+
+      const usersResult = await client.query<{
+        id: string
+        username: string
+        skill_rating: number
+        created_at: Date
+      }>('SELECT id, username, skill_rating, created_at FROM users WHERE id = ANY($1)', [playerIds])
+
+      const userMap = new Map(usersResult.rows.map((user) => [user.id, user]))
+
+      const statsResult = await client.query<{ user_id: string; games_played: number }>(
+        'SELECT user_id, games_played FROM player_stats WHERE user_id = ANY($1)',
+        [playerIds],
+      )
+
+      const statsMap = new Map(statsResult.rows.map((row) => [row.user_id, row.games_played]))
+
+      const playerRatings: PlayerRating[] = playerRankings.map((ranking) => ({
+        userId: ranking.userId,
+        currentRating: userMap.get(ranking.userId)?.skill_rating ?? 1000,
+        gamesPlayed: statsMap.get(ranking.userId) ?? 0,
+        position: ranking.position,
+      }))
+
+      let ratingChanges: RatingChange[] = []
+      try {
+        ratingChanges = eloService.calculateRatingChanges(playerRatings)
+      } catch (error) {
+        logger.warn('Skipping ELO calculation for game', {
+          gameId,
+          playerCount: playerRatings.length,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+
+      const ratingChangeMap = new Map(ratingChanges.map((change) => [change.userId, change]))
+
+      const playerSummary = playerRankings.map((ranking) => {
+        const user = userMap.get(ranking.userId)
+        const ratingChange = ratingChangeMap.get(ranking.userId)
+        return {
+          userId: ranking.userId,
+          username: user?.username ?? ranking.userId,
+          position: ranking.position,
+          isWinner: ranking.isWinner,
+          eliminated: ranking.eliminated,
+          territories: ranking.territories,
+          armies: ranking.armies,
+          eliminationOrder: ranking.eliminationOrder,
+          ratingBefore: ratingChange?.oldRating ?? user?.skill_rating ?? 1000,
+          ratingAfter: ratingChange?.newRating ?? user?.skill_rating ?? 1000,
+          ratingChange: ratingChange?.change ?? 0,
+        }
+      })
+
+      await client.query(
+        `INSERT INTO game_results (
+           room_id,
+           map_id,
+           winner_id,
+           duration_seconds,
+           total_turns,
+           final_state,
+           player_summary,
+           battle_log
+         ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
+         ON CONFLICT (room_id) DO NOTHING`,
+        [
+          gameId,
+          room.map_id,
+          winner?.userId ?? null,
+          durationSeconds,
+          totalTurns,
+          finalStateJson,
+          JSON.stringify(playerSummary),
+          battleLogJson,
+        ],
+      )
+
+      if (playerRankings.length > 0) {
+        const playerStatsPlaceholders: string[] = []
+        const playerStatsValues: Array<string | number> = []
+        playerRankings.forEach((ranking, index) => {
+          const baseIndex = index * 4
+          playerStatsPlaceholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4})`)
+          playerStatsValues.push(
+            ranking.userId,
+            1,
+            ranking.isWinner ? 1 : 0,
+            ranking.isWinner ? 0 : 1,
+          )
+        })
+
+        await client.query(
+          `INSERT INTO player_stats (user_id, games_played, games_won, games_lost)
+           VALUES ${playerStatsPlaceholders.join(', ')}
+           ON CONFLICT (user_id) DO UPDATE SET
+             games_played = player_stats.games_played + EXCLUDED.games_played,
+             games_won = player_stats.games_won + EXCLUDED.games_won,
+             games_lost = player_stats.games_lost + EXCLUDED.games_lost,
+             updated_at = NOW()`,
+          playerStatsValues,
+        )
+      }
+
+      if (playerRankings.length > 0) {
+        const resultsPlaceholders: string[] = []
+        const resultsValues: Array<string | number | boolean | null> = []
+        playerRankings.forEach((ranking, index) => {
+          const ratingChange = ratingChangeMap.get(ranking.userId)
+          const user = userMap.get(ranking.userId)
+          const ratingBefore = ratingChange?.oldRating ?? user?.skill_rating ?? 1000
+          const ratingAfter = ratingChange?.newRating ?? user?.skill_rating ?? 1000
+          const ratingDelta = ratingChange?.change ?? 0
+          const baseIndex = index * 11
+          resultsPlaceholders.push(
+            `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10}, $${baseIndex + 11})`,
+          )
+          resultsValues.push(
+            gameId,
+            ranking.userId,
+            ranking.position,
+            ranking.isWinner,
+            ranking.eliminated,
+            ranking.territories,
+            ranking.armies,
+            ranking.eliminationOrder,
+            ratingBefore,
+            ratingAfter,
+            ratingDelta,
+          )
+        })
+
+        await client.query(
+          `INSERT INTO player_game_results (
+             room_id,
+             user_id,
+             position,
+             is_winner,
+             eliminated,
+             territories,
+             armies,
+             elimination_order,
+             rating_before,
+             rating_after,
+             rating_change
+           ) VALUES ${resultsPlaceholders.join(', ')}
+           ON CONFLICT (room_id, user_id) DO UPDATE SET
+             position = EXCLUDED.position,
+             is_winner = EXCLUDED.is_winner,
+             eliminated = EXCLUDED.eliminated,
+             territories = EXCLUDED.territories,
+             armies = EXCLUDED.armies,
+             elimination_order = EXCLUDED.elimination_order,
+             rating_before = EXCLUDED.rating_before,
+             rating_after = EXCLUDED.rating_after,
+             rating_change = EXCLUDED.rating_change`,
+          resultsValues,
+        )
+      }
+
+      for (const ranking of playerRankings) {
+        await client.query(
+          `UPDATE room_players
+           SET is_eliminated = $3,
+               elimination_reason = CASE WHEN $3 THEN COALESCE(elimination_reason, 'defeated') ELSE elimination_reason END,
+               left_at = CASE WHEN $3 THEN COALESCE(left_at, NOW()) ELSE left_at END,
+               player_order = $4
+           WHERE room_id = $1 AND user_id = $2`,
+          [gameId, ranking.userId, ranking.eliminated, ranking.position],
+        )
+      }
+
+      if (ratingChanges.length > 0) {
+        await eloService.applyRatingChanges(gameId, ratingChanges, client)
+      }
+
+      await eloService.updateLeaderboardCache(client)
+    })
+
+    await gameStateCache.setInactiveGameState(gameId, serializedState)
+    logger.info('Archived completed game', {
+      gameId,
+      winnerId: winner?.userId ?? null,
+    })
   }
 
   async archiveGameResults(gameId: string, results: Record<string, unknown>): Promise<void> {

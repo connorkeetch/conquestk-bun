@@ -404,19 +404,25 @@ export class GameRoomService {
     `
 
     const result = await query(membershipQuery, [roomId, userId])
-    return result.rowCount > 0
+    return (result.rowCount ?? 0) > 0
   }
 
   async getPlayer(roomId: string, userId: string): Promise<Player | null> {
     const playerQuery = `
-      SELECT rp.user_id, u.username, rp.joined_at
+      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at
       FROM room_players rp
       LEFT JOIN users u ON rp.user_id = u.id
       WHERE rp.room_id = $1 AND rp.user_id = $2
       LIMIT 1
     `
 
-    const result = await query<{ user_id: string; username: string | null; joined_at: Date | string | null }>(
+    const result = await query<{
+      user_id: string
+      username: string | null
+      joined_at: Date | string | null
+      is_ready: boolean | null
+      ready_at: Date | string | null
+    }>(
       playerQuery,
       [roomId, userId],
     )
@@ -430,6 +436,8 @@ export class GameRoomService {
       userId: row.user_id,
       username: row.username ?? 'Unknown player',
       joinedAt: this.toDate(row.joined_at) ?? new Date(),
+      isReady: typeof row.is_ready === 'boolean' ? row.is_ready : undefined,
+      readyAt: this.toDate(row.ready_at) ?? null,
     }
   }
 
@@ -542,20 +550,27 @@ export class GameRoomService {
   async leaveRoom(roomId: string, userId: string): Promise<void> {
     const deleteQuery = `DELETE FROM room_players WHERE room_id = $1 AND user_id = $2`
     await query(deleteQuery, [roomId, userId])
+
+    await query(
+      `
+      UPDATE game_rooms
+      SET status = 'lobby',
+          lifecycle_phase = 'lobby',
+          ready_check_started_at = NULL,
+          turn_number = 0,
+          turn_expires_at = NULL,
+          current_turn_user_id = NULL
+      WHERE id = $1 AND status IN ('lobby', 'initializing')
+    `,
+      [roomId],
+    )
   }
 
   async getUserGames(userId: string): Promise<GameRoom[]> {
     // Query for all games the user is involved in
     const gamesQuery = `
       SELECT DISTINCT gr.*, 
-        (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount,
-        CASE 
-          WHEN gr.status IN ('active', 'initializing') THEN 'active'
-          WHEN gr.status = 'completed' THEN 'completed'
-          WHEN gr.status = 'paused' THEN 'paused'
-          WHEN gr.status = 'abandoned' THEN 'abandoned'
-          ELSE 'lobby'
-        END as status
+        (SELECT COUNT(*) FROM room_players WHERE room_id = gr.id) as playerCount
       FROM game_rooms gr
       INNER JOIN room_players rp ON gr.id = rp.room_id
       WHERE rp.user_id = $1

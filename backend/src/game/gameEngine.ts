@@ -32,6 +32,14 @@ export class GameEngine {
     // Each player starts with 3 armies per territory
     this.deployInitialArmies(territories, players, gameConfig)
 
+    const hydratedConfig: GameConfiguration = {
+      ...gameConfig,
+      continentBonuses:
+        gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
+          ? gameConfig.continentBonuses
+          : this.worldMap.getContinentBonuses(),
+    }
+
     return {
       roomId,
       players,
@@ -40,7 +48,7 @@ export class GameEngine {
       turn: 1,
       board: territories,
       cards: [],
-      gameConfig,
+      gameConfig: hydratedConfig,
       movementTracking: {},
     }
   }
@@ -200,12 +208,6 @@ export class GameEngine {
 
     // Base armies: 3 minimum, or territories/3 (rounded down)
     let armies = Math.max(3, Math.floor(territoryCount / 3))
-
-    // Bonus for territories above 12: +1 army for each additional 3 territories
-    if (territoryCount > 12) {
-      const extraTerritories = territoryCount - 12
-      armies += Math.floor(extraTerritories / 3)
-    }
 
     // Add continent bonuses
     armies += this.calculateContinentBonuses(playerTerritories, allTerritories, gameConfig)

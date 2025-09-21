@@ -1,6 +1,7 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { GameDelta } from '../types/deltaUpdates'
 import type { GameState } from '../types/game'
+import { gameService } from '../services/gameService'
 
 // Helper function to check if territories are connected through owned territories
 const isConnectedThroughOwnedTerritories = (
@@ -140,6 +141,37 @@ const initialState: GameSliceState = {
   battleResult: null,
   reinforcementArmies: 0,
 }
+
+export const fetchGameState = createAsyncThunk<
+  GameState,
+  string,
+  { rejectValue: string }
+>('game/fetchGameState', async (roomId, { rejectWithValue }) => {
+  try {
+    const game = await gameService.getGameState(roomId)
+    return game
+  } catch (error) {
+    if (typeof error === 'object' && error && 'response' in error) {
+      const axiosError = error as {
+        response?: { data?: { message?: string }; status?: number }
+        message?: string
+      }
+
+      if (axiosError.response?.status === 404) {
+        return rejectWithValue('NOT_READY')
+      }
+
+      const message = axiosError.response?.data?.message || axiosError.message
+      return rejectWithValue(message || 'Failed to load game state')
+    }
+
+    if (error instanceof Error) {
+      return rejectWithValue(error.message)
+    }
+
+    return rejectWithValue('Failed to load game state')
+  }
+})
 
 const gameSlice = createSlice({
   name: 'game',
@@ -315,6 +347,25 @@ const gameSlice = createSlice({
         }
       }
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchGameState.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchGameState.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.currentGame = action.payload
+      })
+      .addCase(fetchGameState.rejected, (state, action) => {
+        state.isLoading = false
+        if (action.payload === 'NOT_READY') {
+          state.error = null
+        } else {
+          state.error = action.payload || 'Failed to load game state'
+        }
+      })
   },
 })
 
