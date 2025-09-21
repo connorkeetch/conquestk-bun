@@ -1,3 +1,9 @@
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import type { Server } from 'socket.io'
+import { queueService } from '../services/queueService'
+import { setupSocketHandlers } from '../services/socketService'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+
 const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 
 jest.mock('../config/database', () => ({
@@ -57,9 +63,20 @@ jest.mock('../socket/chatHandlers', () => ({
   setupChatHandlers: jest.fn(),
 }))
 
-import type { Server } from 'socket.io'
-import { queueService } from '../services/queueService'
-import { setupSocketHandlers } from '../services/socketService'
+type MockedSocket = {
+  id: string
+  userId: string
+  username: string
+  handshake: { auth: { token: string } }
+  on: jest.Mock
+  emit: jest.Mock
+  join: jest.Mock<Promise<void>, [string]>
+  leave: jest.Mock<Promise<void>, [string]>
+  to: jest.Mock<{ emit: jest.Mock }, [string]>
+  rooms: Set<string>
+  joinedGameRooms: Set<string>
+  broadcastEmit: jest.Mock
+}
 
 describe('socketService event handlers', () => {
   const createIoMock = () => {
@@ -68,26 +85,27 @@ describe('socketService event handlers', () => {
       use: jest.fn(),
       on: jest.fn(),
       to: jest.fn(() => ({ emit: roomEmit })),
-    } as unknown as Server
+    } as unknown as Server<ClientToServerEvents, ServerToClientEvents>
     return { io, roomEmit }
   }
 
   const createFakeSocket = () => {
     const toEmit = jest.fn()
-    return {
+    const socket: MockedSocket = {
       id: 'socket-1',
       userId: 'user-1',
       username: 'User One',
       handshake: { auth: { token: 'stub-token' } },
       on: jest.fn(),
       emit: jest.fn(),
-      join: jest.fn().mockResolvedValue(undefined),
-      leave: jest.fn().mockResolvedValue(undefined),
+      join: jest.fn<Promise<void>, [string]>().mockResolvedValue(undefined),
+      leave: jest.fn<Promise<void>, [string]>().mockResolvedValue(undefined),
       to: jest.fn(() => ({ emit: toEmit })),
       rooms: new Set<string>(['socket-1']),
       joinedGameRooms: new Set<string>(),
       broadcastEmit: toEmit,
     }
+    return socket
   }
 
   beforeEach(() => {
@@ -119,22 +137,27 @@ describe('socketService event handlers', () => {
     mockGameServiceInstance.isCapitalTerritory.mockResolvedValue(false)
   })
 
-  const getSocketHandler = (socket: any, eventName: string) => {
-    const call = socket.on.mock.calls.find(([name]: [string, any]) => name === eventName)
+  const getSocketHandler = (
+    socket: MockedSocket,
+    eventName: keyof ClientToServerEvents,
+  ): ((...args: unknown[]) => Promise<void> | void) => {
+    const onMock = socket.on as jest.Mock
+    const call = onMock.mock.calls.find(([name]) => name === eventName)
     expect(call).toBeDefined()
-    return call?.[1]
+    const handler = call?.[1]
+    expect(typeof handler).toBe('function')
+    return handler as (...args: unknown[]) => Promise<void> | void
   }
 
   const initialiseHandlers = () => {
     const { io, roomEmit } = createIoMock()
     setupSocketHandlers(io)
-    const connectionCall = (io.on as jest.Mock).mock.calls.find(
-      ([event]: [string, any]) => event === 'connection',
-    )
+    const onMock = io.on as jest.Mock
+    const connectionCall = onMock.mock.calls.find(([event]) => event === 'connection')
     expect(connectionCall).toBeDefined()
-    const [, handler] = connectionCall!
+    const [, connectionHandler] = connectionCall as [string, (socket: MockedSocket) => void]
     const socket = createFakeSocket()
-    handler(socket)
+    connectionHandler(socket)
     return { socket, io, roomEmit }
   }
 
@@ -273,7 +296,9 @@ describe('socketService event handlers', () => {
 
     expect(mockIsPlayerInRoom).toHaveBeenCalledWith('room-unauthorized', 'user-1')
     const joinCalls = (socket.join as jest.Mock).mock.calls
-    expect(joinCalls.find(([roomId]: [string]) => roomId === 'game:room-unauthorized')).toBeUndefined()
+    expect(
+      joinCalls.find(([roomId]: [string]) => roomId === 'game:room-unauthorized'),
+    ).toBeUndefined()
     expect(socket.emit).toHaveBeenCalledWith(
       'error',
       expect.objectContaining({

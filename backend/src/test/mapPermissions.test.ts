@@ -1,9 +1,18 @@
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://tester:tester@localhost:5432/risk_game_test'
 
+import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import type { NextFunction, Request, Response } from 'express'
 import express from 'express'
 import request from 'supertest'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+
+type TestRequest = Request & {
+  userId?: string
+  user?: {
+    id: string
+    isAdmin?: boolean
+  }
+}
 
 jest.mock('../config/database', () => {
   const queryMock = jest.fn()
@@ -17,7 +26,7 @@ jest.mock('../config/database', () => {
 })
 
 jest.mock('../middleware/auth', () => ({
-  authenticateToken: (req: any, _res: express.Response, next: express.NextFunction) => {
+  authenticateToken: (req: TestRequest, _res: Response, next: NextFunction) => {
     const headerUser = req.headers['x-test-user-id']
     req.userId = typeof headerUser === 'string' ? headerUser : 'test-user'
     const isAdminHeader = req.headers['x-test-admin']
@@ -39,12 +48,17 @@ const createApp = () => {
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
 
-  let mapsRouter: express.Router
+  let mapsRouter: express.Router | undefined
   jest.isolateModules(() => {
-    mapsRouter = require('../routes/maps').default as express.Router
+    const module = require('../routes/maps') as { default: express.Router }
+    mapsRouter = module.default
   })
 
-  app.use('/api/maps', mapsRouter!)
+  if (!mapsRouter) {
+    throw new Error('Failed to load maps router')
+  }
+
+  app.use('/api/maps', mapsRouter)
   return app
 }
 

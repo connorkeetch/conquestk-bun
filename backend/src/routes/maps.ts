@@ -10,12 +10,12 @@ import multer from 'multer'
 import { getPool } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
-import { mapService } from '../services/mapService'
 import {
-  mapPermissionService,
-  MapPermissionError,
   MapNotFoundError,
+  MapPermissionError,
+  mapPermissionService,
 } from '../services/mapPermissionService'
+import { mapService } from '../services/mapService'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
@@ -914,10 +914,10 @@ router.post(
     }
 
     try {
-      await mapPermissionService.assertCanEditMap(
-        req.params.mapId,
-        { userId, isAdmin: req.user?.isAdmin },
-      )
+      await mapPermissionService.assertCanEditMap(req.params.mapId, {
+        userId,
+        isAdmin: req.user?.isAdmin,
+      })
       const continent = await mapService.createContinent(
         req.params.mapId,
         req.body.name,
@@ -952,10 +952,10 @@ router.post(
     }
 
     try {
-      await mapPermissionService.assertCanEditMap(
-        req.params.mapId,
-        { userId, isAdmin: req.user?.isAdmin },
-      )
+      await mapPermissionService.assertCanEditMap(req.params.mapId, {
+        userId,
+        isAdmin: req.user?.isAdmin,
+      })
       const territory = await mapService.createTerritory({
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,

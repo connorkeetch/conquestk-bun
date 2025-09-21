@@ -6,7 +6,7 @@ export interface UserProfile {
   bio?: string
   joinDate: Date
   lastActive: Date
-  preferences: Record<string, any>
+  preferences: Record<string, unknown>
   level: number
   experiencePoints: number
   totalPlaytime: number // in minutes
@@ -24,7 +24,7 @@ export interface Achievement {
   category: string
   points: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
-  requirements: Record<string, any>
+  requirements: Record<string, unknown>
   isHidden: boolean
   createdAt: Date
 }
@@ -33,7 +33,7 @@ export interface UserAchievement {
   userId: string
   achievementId: string
   unlockedAt: Date
-  progress: Record<string, any>
+  progress: Record<string, unknown>
   achievement?: Achievement // populated in joins
 }
 
