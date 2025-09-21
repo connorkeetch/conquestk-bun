@@ -143,7 +143,7 @@ _Last updated: September 21, 2025_
   - Profile and Stats pages read real API data; header reflects actual values.
   - Advanced metrics (e.g., `best_territories`, `streaks`) compute once history exists.
   - If backend not ready, gate the page via feature flag instead of displaying placeholders.
-- _Progress (Dec 2025): Hooked `/profile` + `/profile/stats` responses into the profile Stats tab, dedicated /profile/stats page, and header menu so games played, wins, win rate, streaks, map/mode breakdown, and rank all read from live data; noted remaining backend enhancements (territory bests, timeline depth) for future iteration._
+- _Progress (Dec 2025): Hooked `/profile` + `/profile/stats` responses into the profile Stats tab, dedicated /profile/stats page, and header menu so games played, wins, win rate, streaks, map/mode breakdown, and rank all read from live data. New queries mine `player_game_results`, `game_results`, `game_moves`, and `player_stats` for territory highs, 90-day timelines, and card trade counts (no separate card tables exist today). Manual smoke checklist added for validating stats after a match._
 
 ### D3. Audio cue mismatches
 - **Priority:** P1 • **Tags:** [fe]

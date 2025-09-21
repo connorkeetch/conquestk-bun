@@ -56,6 +56,10 @@ export interface UserStatistics {
   tournamentsJoined: number
   tournamentsWon: number
   updatedAt: Date
+  best_territories?: number
+  best_armies?: number
+  card_trades?: number
+  cards_traded?: number
 }
 
 export interface GameHistoryEntry {

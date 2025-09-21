@@ -55,6 +55,10 @@ const deriveSummary = (
   const currentWinStreak = stats?.overall.currentWinStreak ?? 0
   const eliminations = stats?.overall.totalEliminations ?? 0
   const territoriesConquered = stats?.overall.territoriesConquered ?? 0
+  const bestTerritories = stats?.overall.bestTerritories ?? stats?.overall.best_territories ?? 0
+  const bestArmies = stats?.overall.bestArmies ?? stats?.overall.best_armies ?? 0
+  const cardTrades = stats?.overall.cardTrades ?? stats?.overall.card_trades ?? 0
+  const cardsTraded = stats?.overall.cardsTraded ?? stats?.overall.cards_traded ?? 0
 
   return {
     gamesPlayed,
@@ -65,6 +69,10 @@ const deriveSummary = (
     currentWinStreak,
     eliminations,
     territoriesConquered,
+    bestTerritories,
+    bestArmies,
+    cardTrades,
+    cardsTraded,
   }
 }
 
@@ -160,7 +168,7 @@ const UserStats: React.FC<UserStatsProps> = ({
           </div>
         )}
 
-        <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           <div className="glass-box p-5">
             <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Games Played</h3>
             <div className="text-4xl font-bold text-primary">
@@ -192,7 +200,28 @@ const UserStats: React.FC<UserStatsProps> = ({
               {formatNumber(summary.eliminations)}
             </div>
             <p className="text-xs text-muted mt-1">
-              Eliminations · Territories: {formatNumber(summary.territoriesConquered)}
+              Territories conquered: {formatNumber(summary.territoriesConquered)}
+            </p>
+          </div>
+          <div className="glass-box p-5">
+            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">
+              Territory Mastery
+            </h3>
+            <div className="text-4xl font-bold text-cyan-300">
+              {formatNumber(summary.bestTerritories)}
+            </div>
+            <p className="text-xs text-muted mt-1">Most territories held at once</p>
+            <p className="text-xs text-muted mt-1">
+              Strongest army: {formatNumber(summary.bestArmies)} units
+            </p>
+          </div>
+          <div className="glass-box p-5">
+            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Card Trades</h3>
+            <div className="text-4xl font-bold text-indigo-300">
+              {formatNumber(summary.cardTrades)}
+            </div>
+            <p className="text-xs text-muted mt-1">
+              Cards redeemed: {formatNumber(summary.cardsTraded)}
             </p>
           </div>
         </div>
@@ -283,7 +312,7 @@ const UserStats: React.FC<UserStatsProps> = ({
           <section className="glass-box-lg p-8 space-y-4">
             <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
               <span>📅</span>
-              Last 30 Days
+              Last 90 Days
             </h3>
             {stats.timeline.length === 0 ? (
               <EmptyState message="Play matches to populate your recent history." />
