@@ -1,4 +1,5 @@
 import cluster from 'node:cluster'
+import type { Worker as ClusterWorker } from 'node:cluster'
 import os from 'node:os'
 import { logger } from '../utils/logger'
 
@@ -138,7 +139,7 @@ export class ScalingService {
     this.setupWorkerMonitoring()
   }
 
-  private addWorkerMetrics(worker: cluster.Worker): void {
+  private addWorkerMetrics(worker: ClusterWorker): void {
     const pid = worker.process?.pid ?? process.pid
     const metrics: WorkerMetrics = {
       id: worker.id,
@@ -296,7 +297,7 @@ export class ScalingService {
 
       const clusterWorkers = cluster.workers ?? {}
       const worker = Object.values(clusterWorkers).find(
-        (candidate): candidate is cluster.Worker => candidate?.id === leastBusyWorker.id,
+        (candidate): candidate is ClusterWorker => candidate?.id === leastBusyWorker.id,
       )
 
       if (worker) {

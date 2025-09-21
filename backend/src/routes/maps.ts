@@ -925,7 +925,7 @@ router.post(
         req.body.color,
       )
 
-      res.status(201).json(continent)
+      return res.status(201).json(continent)
     } catch (error) {
       if (error instanceof MapPermissionError) {
         return res.status(403).json({ error: error.message })
@@ -934,7 +934,7 @@ router.post(
         return res.status(404).json({ error: 'Map not found' })
       }
       handleRouteError(error, req, 'Failed to create continent', 500, { mapId: req.params.mapId })
-      res.status(500).json({ error: 'Failed to create continent' })
+      return res.status(500).json({ error: 'Failed to create continent' })
     }
   },
 )
@@ -968,7 +968,7 @@ router.post(
         startingArmies: req.body.startingArmies,
       })
 
-      res.status(201).json(territory)
+      return res.status(201).json(territory)
     } catch (error) {
       if (error instanceof MapPermissionError) {
         return res.status(403).json({ error: error.message })
@@ -977,7 +977,7 @@ router.post(
         return res.status(404).json({ error: 'Map not found' })
       }
       handleRouteError(error, req, 'Failed to create territory', 500, { mapId: req.params.mapId })
-      res.status(500).json({ error: 'Failed to create territory' })
+      return res.status(500).json({ error: 'Failed to create territory' })
     }
   },
 )
@@ -1007,7 +1007,7 @@ router.post(
         specialRequirements: req.body.specialRequirements,
       })
 
-      res.status(201).json(adjacency)
+      return res.status(201).json(adjacency)
     } catch (error) {
       if (error instanceof MapPermissionError) {
         return res.status(403).json({ error: error.message })
@@ -1016,7 +1016,7 @@ router.post(
         return res.status(404).json({ error: error.message })
       }
       handleRouteError(error, req, 'Failed to create adjacency', 500, { mapId: req.params.mapId })
-      res.status(500).json({ error: 'Failed to create adjacency' })
+      return res.status(500).json({ error: 'Failed to create adjacency' })
     }
   },
 )
@@ -1038,10 +1038,10 @@ router.post(
         req.body.review,
       )
 
-      res.status(201).json(rating)
+      return res.status(201).json(rating)
     } catch (error) {
       handleRouteError(error, req, 'Failed to rate map', 500, { mapId: req.params.mapId })
-      res.status(500).json({ error: 'Failed to rate map' })
+      return res.status(500).json({ error: 'Failed to rate map' })
     }
   },
 )

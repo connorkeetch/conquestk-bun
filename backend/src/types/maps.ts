@@ -370,7 +370,7 @@ export interface MapDraft {
   territories?: unknown
   continents?: unknown
   adjacencies?: unknown
-  capitalAssignments?: Record<string, unknown>
+  capitalAssignments?: Record<string, string[]>
   thumbnailUrl?: string
   imageUrl?: string
   imageWidth?: number

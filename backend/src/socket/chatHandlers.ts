@@ -1,7 +1,14 @@
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { chatService } from '../services/chatService'
-import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
+import type {
+  ChatHistoryPayload,
+  ChatMessagePayload,
+  ChatReactionSummary,
+  ChatUnreadCount,
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from '../types/shared'
 import { logger } from '../utils/logger'
 
 type SocketWithUser = Socket<ClientToServerEvents, ServerToClientEvents> & {
@@ -57,7 +64,7 @@ export const setupChatHandlers = (
 
         // Get sender username
         const senderInfo = await getUserInfo(userId)
-        const messageWithSender = {
+        const messageWithSender: ChatMessagePayload = {
           ...message,
           sender_username: senderInfo.username,
         }
@@ -109,11 +116,13 @@ export const setupChatHandlers = (
           data.offset || 0,
         )
 
-        socket.emit('chat:history', {
+        const historyPayload: ChatHistoryPayload = {
           conversationId: data.conversationId,
           messageType: data.messageType,
           messages,
-        })
+        }
+
+        socket.emit('chat:history', historyPayload)
       } catch (error: unknown) {
         logger.error('Error loading chat history:', error)
         socket.emit('chat:error', { error: 'Failed to load chat history' })
@@ -130,7 +139,7 @@ export const setupChatHandlers = (
         return
       }
 
-      const unreadCounts = await chatService.getUnreadCounts(userId)
+      const unreadCounts = (await chatService.getUnreadCounts(userId)) as ChatUnreadCount[]
       socket.emit('chat:unread-counts', unreadCounts)
     } catch (error: unknown) {
       logger.error('Error getting unread counts:', error)
@@ -267,7 +276,9 @@ export const setupChatHandlers = (
       const success = await chatService.addReaction(data.messageId, userId, data.emoji)
 
       if (success) {
-        const reactions = await chatService.getMessageReactions(data.messageId)
+        const reactions = (await chatService.getMessageReactions(
+          data.messageId,
+        )) as ChatReactionSummary[]
 
         // Get the message to find the conversation
         const messageResult = await query(
@@ -319,7 +330,9 @@ export const setupChatHandlers = (
       const success = await chatService.removeReaction(data.messageId, userId, data.emoji)
 
       if (success) {
-        const reactions = await chatService.getMessageReactions(data.messageId)
+        const reactions = (await chatService.getMessageReactions(
+          data.messageId,
+        )) as ChatReactionSummary[]
 
         // Get the message to find the conversation
         const messageResult = await query(

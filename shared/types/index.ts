@@ -6,6 +6,51 @@
 export * from './notifications'
 
 // ============================================
+// Chat Types
+// ============================================
+
+export type ChatConversationType = 'game' | 'team' | 'dm'
+
+export interface ChatMessagePayload {
+  id: string
+  sender_id: string
+  sender_username?: string
+  message: string
+  message_type: ChatConversationType
+  game_id?: string | null
+  team_id?: number | null
+  recipient_id?: string | null
+  created_at: string | Date
+  edited_at?: string | Date | null
+  deleted_at?: string | Date | null
+  link_previews?: Array<{
+    url: string
+    title?: string
+    description?: string
+    image?: string
+    siteName?: string
+  }>
+}
+
+export interface ChatHistoryPayload {
+  conversationId: string
+  messageType: ChatConversationType
+  messages: ChatMessagePayload[]
+}
+
+export interface ChatUnreadCount {
+  conversation_type: ChatConversationType
+  conversation_id: string
+  unread_count: number
+}
+
+export interface ChatReactionSummary {
+  emoji: string
+  users: Array<{ id: string; username: string }>
+  count: number
+}
+
+// ============================================
 // User & Authentication Types
 // ============================================
 
@@ -330,6 +375,20 @@ export interface ServerToClientEvents {
   armiesDeployed: (result: { gameState: GameState }) => void
   attackResult: (result: BattleResult) => void
   territoriesFortified: (result: { gameState: GameState }) => void
+  'chat:message': (message: ChatMessagePayload) => void
+  'chat:error': (data: { error: string }) => void
+  'chat:history': (payload: ChatHistoryPayload) => void
+  'chat:unread-counts': (counts: ChatUnreadCount[]) => void
+  'chat:message-deleted': (data: { messageId: string }) => void
+  'chat:message-edited': (data: { messageId: string; newMessage: string; editedAt: Date | string }) => void
+  'chat:user-typing': (data: {
+    userId: string
+    username: string
+    isTyping: boolean
+    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationId: string
+  }) => void
+  'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string
@@ -410,6 +469,30 @@ export interface ClientToServerEvents {
   }) => void
   endTurn: (data: { roomId: string }) => void
   'chat-message': (data: { roomId: string; message: string }) => void
+  'chat:send': (data: {
+    message: string
+    messageType: ChatConversationType
+    gameId?: string
+    teamId?: number
+    recipientId?: string
+  }) => void
+  'chat:load-history': (data: {
+    messageType: ChatConversationType
+    conversationId: string
+    limit?: number
+    offset?: number
+  }) => void
+  'chat:get-unread': () => void
+  'chat:mark-read': (data: { conversationType: Extract<ChatConversationType, 'game' | 'dm'>; conversationId: string }) => void
+  'chat:delete': (data: { messageId: string }) => void
+  'chat:edit': (data: { messageId: string; newMessage: string }) => void
+  'chat:typing': (data: {
+    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationId: string
+    isTyping: boolean
+  }) => void
+  'chat:add-reaction': (data: { messageId: string; emoji: string }) => void
+  'chat:remove-reaction': (data: { messageId: string; emoji: string }) => void
 }
 
 // ============================================

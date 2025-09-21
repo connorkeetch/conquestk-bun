@@ -239,7 +239,19 @@ export class PerformanceTestingService {
     try {
       const testResults = await this.executeGameScenario(testId, config)
       const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
-      const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
+      const finalResults =
+        testResults || {
+          totalRequests: 0,
+          successfulRequests: 0,
+          failedRequests: 0,
+          avgResponseTime: 0,
+          p95ResponseTime: 0,
+          p99ResponseTime: 0,
+          requestsPerSecond: 0,
+          errorsPerSecond: 0,
+          throughputMBps: 0,
+        }
+      const bottlenecks = this.analyzeBottlenecks(finalResults, systemMetrics)
 
       const benchmarkResult: BenchmarkResult = {
         testId,
@@ -363,7 +375,19 @@ export class PerformanceTestingService {
       }
 
       const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
-      const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
+      const finalResults =
+        testResults || {
+          totalRequests: 0,
+          successfulRequests: 0,
+          failedRequests: 0,
+          avgResponseTime: 0,
+          p95ResponseTime: 0,
+          p99ResponseTime: 0,
+          requestsPerSecond: 0,
+          errorsPerSecond: 0,
+          throughputMBps: 0,
+        }
+      const bottlenecks = this.analyzeBottlenecks(finalResults, systemMetrics)
 
       const stressTestResult: StressTestResult = {
         testId,
@@ -376,17 +400,7 @@ export class PerformanceTestingService {
           duration: 1800,
           scenario: 'stress_test' as const,
         } as GameScenarioConfig,
-        results: testResults || {
-          totalRequests: 0,
-          successfulRequests: 0,
-          failedRequests: 0,
-          avgResponseTime: 0,
-          p95ResponseTime: 0,
-          p99ResponseTime: 0,
-          requestsPerSecond: 0,
-          errorsPerSecond: 0,
-          throughputMBps: 0,
-        },
+        results: finalResults,
         systemMetrics,
         bottlenecks,
         breakingPoint: breakingPoint || {

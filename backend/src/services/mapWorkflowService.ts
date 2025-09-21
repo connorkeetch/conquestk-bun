@@ -4,9 +4,13 @@ import type {
   CreateMapRequest,
   CustomMap,
   MapDraft,
+  MapMetadataPayload,
   MapReviewItem,
   MapStatus,
   MapSubmissionLog,
+  MetadataAdjacencyInput,
+  MetadataContinentInput,
+  MetadataTerritoryInput,
 } from '../types/maps'
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
@@ -322,7 +326,7 @@ export class MapWorkflowService {
         [mapId],
       )
 
-      await this.logMapAction(mapId, 'approved', adminId, { notes })
+      await this.logMapAction(mapId, 'approved', adminId, notes ? { notes } : undefined)
 
       // Notify the map creator
       const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = ?', [mapId])
@@ -602,7 +606,7 @@ export class MapWorkflowService {
 
   private async buildMapPayloadFromDraft(
     draft: MapDraft,
-  ): Promise<CreateMapRequest & { metadata?: Record<string, unknown> }> {
+  ): Promise<CreateMapRequest & { metadata?: MapMetadataPayload }> {
     const data: Record<string, unknown> =
       typeof draft.data === 'object' && draft.data !== null
         ? (draft.data as Record<string, unknown>)
@@ -636,12 +640,12 @@ export class MapWorkflowService {
           ? (dataAdjacencies as unknown[])
           : []
 
-    const capitalAssignments =
-      (draft.capitalAssignments && Object.keys(draft.capitalAssignments).length > 0
+    const capitalAssignments: Record<string, string[]> =
+      draft.capitalAssignments && Object.keys(draft.capitalAssignments).length > 0
         ? draft.capitalAssignments
         : isRecordOfStringArray(dataCapitalAssignments)
           ? dataCapitalAssignments
-          : undefined) || {}
+          : ({} as Record<string, string[]>)
 
     let imageUrl = draft.imageUrl
     let imageWidth = draft.imageWidth || asNumber(data.imageWidth) || 800
@@ -677,10 +681,10 @@ export class MapWorkflowService {
     const minPlayers = asNumber(data.minPlayers) ?? asNumber(metadataRecord?.minPlayers) ?? 2
     const maxPlayers = asNumber(data.maxPlayers) ?? asNumber(metadataRecord?.maxPlayers) ?? 6
 
-    const metadata = {
-      territories,
-      continents,
-      adjacencies,
+    const metadata: MapMetadataPayload = {
+      territories: territories as MetadataTerritoryInput[],
+      continents: continents as MetadataContinentInput[],
+      adjacencies: adjacencies as MetadataAdjacencyInput[],
       capitalAssignments,
       width: asNumber(data.width) ?? asNumber(data.mapWidth) ?? imageWidth ?? 1920,
       height: asNumber(data.height) ?? asNumber(data.mapHeight) ?? imageHeight ?? 1080,

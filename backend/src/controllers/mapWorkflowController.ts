@@ -2,7 +2,7 @@ import type { Response } from 'express'
 import mapWorkflowService from '../services/mapWorkflowService'
 import { UserService } from '../services/userService'
 import type { AuthenticatedRequest } from '../types/express'
-import type { MapStatus } from '../types/maps'
+import type { MapDraft, MapStatus } from '../types/maps'
 import { handleRouteError } from '../utils/routeErrorHandler'
 
 const userService = new UserService()
@@ -17,7 +17,7 @@ export class MapWorkflowController {
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' })
       }
-      const draftData = req.body
+      const draftData = req.body as Partial<MapDraft>
 
       const draft = await mapWorkflowService.saveDraft(userId, draftData)
 
@@ -179,7 +179,7 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { mapId } = req.params
-      const { notes } = req.body
+      const { notes } = req.body as { notes?: string }
 
       // Check if user is admin
       const user = await userService.findById(adminId)
@@ -190,7 +190,7 @@ export class MapWorkflowController {
         })
       }
 
-      await mapWorkflowService.approveMap(mapId, adminId, notes)
+      await mapWorkflowService.approveMap(mapId, adminId, notes ?? undefined)
 
       return res.json({
         success: true,
@@ -217,7 +217,7 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { mapId } = req.params
-      const { reason } = req.body
+      const { reason } = req.body as { reason?: string }
 
       if (!reason) {
         return res.status(400).json({
