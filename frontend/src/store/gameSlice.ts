@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { GameDelta } from '../types/deltaUpdates'
 import type { GameState } from '../types/game'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { gameService } from '../services/gameService'
 
 // Helper function to check if territories are connected through owned territories
@@ -57,8 +58,9 @@ const calculateValidTargets = (
 
   switch (gameState.phase) {
     case 'reinforcement':
-      // Can only deploy to own territories
-      return selectedTerritory.ownerId === currentPlayerId ? [selectedTerritoryId] : []
+      return isFriendlyTerritoryOwner(gameState, selectedTerritory.ownerId, currentPlayerId)
+        ? [selectedTerritoryId]
+        : []
 
     case 'attack':
       // Can attack adjacent territories owned by other players

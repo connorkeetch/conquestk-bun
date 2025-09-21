@@ -92,6 +92,8 @@ const TutorialPage: React.FC = () => {
                     <p className="text-muted mt-1">
                       Place new troops on your territories. You receive troops based on the number
                       of territories you control, plus bonuses for controlling entire continents.
+                      In team games you can station those reinforcements directly on a teammate's
+                      territory to boost their front lines.
                     </p>
                   </div>
 
@@ -117,7 +119,10 @@ const TutorialPage: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-primary-soft mb-3">Basic Controls</h3>
                 <ul className="text-muted space-y-2">
-                  <li>• Click on your territories during reinforcement to place troops</li>
+                  <li>
+                    • Click on your territories (or a teammate's during reinforcement) to place
+                    troops
+                  </li>
                   <li>• Click and drag from your territory to an enemy territory to attack</li>
                   <li>• Use the mouse wheel or pinch to zoom the map</li>
                   <li>• Click and drag to pan around the map</li>

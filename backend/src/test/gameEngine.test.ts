@@ -1,18 +1,19 @@
+import { describe, expect, it, jest } from '@jest/globals'
+
 jest.mock('../config/database', () => ({
   query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
 }))
 
-import { describe, expect, it } from '@jest/globals'
 import { GameEngine } from '../game/gameEngine'
-import { GameService } from '../services/gameService'
 import { gameStateCache } from '../services/cacheService'
+import { GameService } from '../services/gameService'
 import type {
   AttackAction,
   GameAction,
   GamePlayer,
   GameState,
-  SerializedGameState,
   GameTerritoryModifier,
+  SerializedGameState,
   Territory,
 } from '../types/game'
 
@@ -205,12 +206,114 @@ describe('GameEngine', () => {
     // Owns two territories -> base 3 armies + 4 continent bonus
     expect(reinforcementArmies).toBe(7)
   })
+
+  it('allows reinforcement onto teammate territories when team play is enabled', async () => {
+    const gameState: GameState = {
+      roomId: 'team-reinforcement',
+      players: [
+        {
+          id: 'player-1',
+          username: 'Player One',
+          color: 'red',
+          armies: 6,
+          territories: ['territory-a'],
+          cards: [],
+          isEliminated: false,
+          teamId: 1,
+        },
+        {
+          id: 'player-2',
+          username: 'Player Two',
+          color: 'blue',
+          armies: 3,
+          territories: ['territory-b'],
+          cards: [],
+          isEliminated: false,
+          teamId: 1,
+        },
+      ],
+      currentPlayer: 'player-1',
+      phase: 'reinforcement',
+      turn: 2,
+      board: [
+        {
+          id: 'territory-a',
+          name: 'Territory A',
+          continent: 'continent-alpha',
+          ownerId: 'player-1',
+          armies: 5,
+          adjacentTerritories: ['territory-b'],
+        },
+        {
+          id: 'territory-b',
+          name: 'Territory B',
+          continent: 'continent-alpha',
+          ownerId: 'player-2',
+          armies: 2,
+          adjacentTerritories: ['territory-a'],
+        },
+      ],
+      cards: [],
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        allowTeamPlay: true,
+        maxPlayers: 4,
+        mapId: 'classic',
+        gameMode: 'standard',
+      },
+    }
+
+    const action: GameAction = {
+      type: 'deploy',
+      roomId: 'team-reinforcement',
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-b',
+        armies: 3,
+      },
+    }
+
+    expect(engine.validateAction(gameState, action)).toBe(true)
+
+    const result = await engine.processAction(gameState, action)
+    const updatedBoard = result.gameState.board
+    const teammateTerritory = updatedBoard.find((t) => t.id === 'territory-b')
+    const currentPlayer = result.gameState.players.find((p) => p.id === 'player-1')
+
+    expect(teammateTerritory?.armies).toBe(5)
+    expect(currentPlayer?.armies).toBe(3)
+  })
+
+  it('blocks reinforcement onto teammate territories when team play is disabled', () => {
+    const gameState = createBaseGameState({
+      phase: 'reinforcement',
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        allowTeamPlay: false,
+        maxPlayers: 6,
+        mapId: 'classic',
+        gameMode: 'standard',
+      },
+    })
+
+    const action: GameAction = {
+      type: 'deploy',
+      roomId: 'room-1',
+      playerId: 'player-1',
+      payload: {
+        territoryId: 'territory-b',
+        armies: 2,
+      },
+    }
+
+    expect(engine.validateAction(gameState, action)).toBe(false)
+  })
 })
 
 describe('GameService serialization', () => {
   const service = new GameService() as unknown as {
-    serializeGameState: (state: GameState) => any
-    hydrateGameState: (state: any) => GameState
+    serializeGameState: (state: GameState) => SerializedGameState
+    hydrateGameState: (state: SerializedGameState | GameState) => GameState
   }
 
   const modifiers: Map<string, GameTerritoryModifier> = new Map([

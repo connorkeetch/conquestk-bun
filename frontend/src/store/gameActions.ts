@@ -8,6 +8,7 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { RootState } from './index'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -56,18 +57,34 @@ export const handleReinforcementClick = createAsyncThunk(
   'game/handleReinforcementClick',
   async ({ territoryId, territory, selectedTerritory, state }: any, { dispatch }) => {
     const currentPlayerId = state.auth.user?.id
+    const currentGame = state.game.currentGame
 
-    if (territory?.ownerId === currentPlayerId) {
-      if (selectedTerritory === territoryId) {
-        // Deploy armies to selected territory
-        return dispatch(deployArmies({ territoryId, armies: 1 }))
-      }
-      // Select territory for deployment
-      dispatch(selectTerritory(territoryId))
-      dispatch(setPendingAction('deploy'))
-    } else {
-      dispatch(setError('You can only deploy armies to your own territories'))
+    if (!currentPlayerId || !currentGame) {
+      dispatch(setError('No active game'))
+      return
     }
+
+    const friendly = territory
+      ? isFriendlyTerritoryOwner(currentGame, territory.ownerId, currentPlayerId)
+      : false
+
+    if (!friendly) {
+      const errorMessage = currentGame.gameConfig?.allowTeamPlay
+        ? 'You can only deploy armies to territories owned by your team'
+        : 'You can only deploy armies to your own territories'
+      dispatch(setError(errorMessage))
+      dispatch(selectTerritory(null))
+      return
+    }
+
+    if (selectedTerritory === territoryId) {
+      // Deploy a single army for quick-placement UX
+      return dispatch(deployArmies({ territoryId, armies: 1 }))
+    }
+
+    // Select territory for deployment
+    dispatch(selectTerritory(territoryId))
+    dispatch(setPendingAction('deploy'))
   },
 )
 

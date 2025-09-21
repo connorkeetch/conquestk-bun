@@ -3,7 +3,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
-import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
+import {
+  selectTargetTerritory,
+  selectTerritory,
+  setError,
+  setPendingAction,
+} from '../store/gameSlice'
 import {
   calculateAllPlayersContinentStatus,
   resolveContinentDefinitions,
@@ -15,6 +20,7 @@ import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
 import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 interface TerritoryDisplay {
   id: string
@@ -121,6 +127,28 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
 
   const handleTerritoryClick = useCallback(
     (territoryId: string) => {
+      const territory = territories[territoryId]
+      if (!territory) {
+        return
+      }
+
+      const territoryOwnerId = territory.owner ?? null
+
+      if (currentPhase === 'reinforcement') {
+        const isFriendly = isFriendlyTerritoryOwner(gameState, territoryOwnerId, currentPlayer)
+
+        if (!isFriendly) {
+          const message = gameState.gameConfig?.allowTeamPlay
+            ? 'You can only deploy armies to territories owned by your team'
+            : 'You can only deploy armies to your own territories'
+          dispatch(setError(message))
+          dispatch(selectTerritory(null))
+          dispatch(selectTargetTerritory(null))
+          dispatch(setPendingAction(null))
+          return
+        }
+      }
+
       // If clicking the same territory, deselect it
       if (selectedTerritory === territoryId) {
         dispatch(selectTerritory(null))

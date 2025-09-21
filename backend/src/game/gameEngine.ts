@@ -284,7 +284,7 @@ export class GameEngine {
     const { territoryId, armies } = action.payload
     const territory = gameState.board.find((t) => t.id === territoryId)
 
-    if (territory && territory.ownerId === action.playerId) {
+    if (territory && this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)) {
       territory.armies += armies
       const player = gameState.players.find((p) => p.id === action.playerId)
       if (player) {
@@ -569,14 +569,31 @@ export class GameEngine {
     const player = gameState.players.find((p) => p.id === action.playerId)
     const territory = gameState.board.find((t) => t.id === territoryId)
 
-    // Basic validation - player owns territory and valid army count
-    return !!(
-      player &&
-      territory &&
-      territory.ownerId === action.playerId &&
-      armies > 0 &&
-      gameState.phase === 'reinforcement'
-    )
+    if (!player || !territory || armies <= 0 || gameState.phase !== 'reinforcement') {
+      return false
+    }
+
+    return this.isFriendlyTerritory(gameState, action.playerId, territory.ownerId)
+  }
+
+  private isFriendlyTerritory(
+    gameState: GameState,
+    playerId: string,
+    ownerId?: string | null,
+  ): boolean {
+    if (!ownerId) {
+      return false
+    }
+
+    if (ownerId === playerId) {
+      return true
+    }
+
+    if (ownerId === 'neutral') {
+      return false
+    }
+
+    return this.arePlayersTeammates(gameState, playerId, ownerId)
   }
 
   private validateAttack(gameState: GameState, action: AttackAction): boolean {
