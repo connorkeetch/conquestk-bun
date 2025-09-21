@@ -143,7 +143,7 @@ describe('GamePhaseControls', () => {
       renderWithProvider(<GamePhaseControls onEndTurn={mockOnEndTurn} />)
 
       expect(
-        screen.getByText('Click on one of your territories to deploy armies'),
+        screen.getByText("Click on a friendly territory (yours or a teammate's) to deploy armies"),
       ).toBeInTheDocument()
     })
   })

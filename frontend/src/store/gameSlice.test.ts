@@ -7,6 +7,7 @@ import gameReducer, {
   setValidTargets,
   updateTerritory,
 } from './gameSlice'
+import type { GameState } from '../types/game'
 
 describe('gameSlice', () => {
   let store: any
@@ -150,6 +151,140 @@ describe('gameSlice', () => {
     it('should clear valid targets', () => {
       store.dispatch(setValidTargets(['siberia', 'china']))
       store.dispatch(setValidTargets([]))
+
+      const state = store.getState().game
+      expect(state.validTargets).toEqual([])
+    })
+
+    it('allows reinforcement selection on teammate territory when team play is enabled', () => {
+      const teamGameState: GameState = {
+        roomId: 'team-room',
+        players: [
+          {
+            id: 'player1',
+            username: 'Player 1',
+            color: 'red',
+            armies: 0,
+            territories: ['alpha'],
+            cards: [],
+            isEliminated: false,
+            teamId: 1,
+          },
+          {
+            id: 'player2',
+            username: 'Player 2',
+            color: 'blue',
+            armies: 0,
+            territories: ['beta'],
+            cards: [],
+            isEliminated: false,
+            teamId: 1,
+          },
+        ],
+        currentPlayer: 'player1',
+        phase: 'reinforcement',
+        turn: 2,
+        board: [
+          {
+            id: 'alpha',
+            name: 'Alpha',
+            continent: 'north_america',
+            ownerId: 'player1',
+            armies: 3,
+            adjacentTerritories: ['beta'],
+          },
+          {
+            id: 'beta',
+            name: 'Beta',
+            continent: 'north_america',
+            ownerId: 'player2',
+            armies: 2,
+            adjacentTerritories: ['alpha'],
+          },
+        ],
+        cards: [],
+        gameConfig: {
+          mapId: 'classic',
+          gameMode: 'standard',
+          maxPlayers: 6,
+          movementSystem: 'classic',
+          fogOfWar: 'off',
+          startingArmies: 0,
+          isRanked: false,
+          isPrivate: false,
+          allowTeamPlay: true,
+          movementType: 'classic_adjacent',
+        },
+      }
+
+      store.dispatch(setGameState(teamGameState))
+      store.dispatch(selectTerritory('beta'))
+
+      const state = store.getState().game
+      expect(state.validTargets).toEqual(['beta'])
+    })
+
+    it('rejects teammate territory selection when team play is disabled', () => {
+      const noTeamGameState: GameState = {
+        roomId: 'team-room',
+        players: [
+          {
+            id: 'player1',
+            username: 'Player 1',
+            color: 'red',
+            armies: 0,
+            territories: ['alpha'],
+            cards: [],
+            isEliminated: false,
+          },
+          {
+            id: 'player2',
+            username: 'Player 2',
+            color: 'blue',
+            armies: 0,
+            territories: ['beta'],
+            cards: [],
+            isEliminated: false,
+          },
+        ],
+        currentPlayer: 'player1',
+        phase: 'reinforcement',
+        turn: 2,
+        board: [
+          {
+            id: 'alpha',
+            name: 'Alpha',
+            continent: 'north_america',
+            ownerId: 'player1',
+            armies: 3,
+            adjacentTerritories: ['beta'],
+          },
+          {
+            id: 'beta',
+            name: 'Beta',
+            continent: 'north_america',
+            ownerId: 'player2',
+            armies: 2,
+            adjacentTerritories: ['alpha'],
+          },
+        ],
+        cards: [],
+        gameConfig: {
+          mapId: 'classic',
+          gameMode: 'standard',
+          maxPlayers: 6,
+          movementSystem: 'classic',
+          fogOfWar: 'off',
+          startingArmies: 0,
+          isRanked: false,
+          isPrivate: false,
+          allowTeamPlay: false,
+          movementType: 'classic_adjacent',
+        },
+      }
+
+      store.dispatch(setGameState(noTeamGameState))
+      store.dispatch(selectTerritory('beta'))
 
       const state = store.getState().game
       expect(state.validTargets).toEqual([])

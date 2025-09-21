@@ -4,7 +4,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { getPlayerColor, PLAYER_COLORS } from '../constants/colors'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
-import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
+import {
+  selectTargetTerritory,
+  selectTerritory,
+  setError,
+  setPendingAction,
+} from '../store/gameSlice'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { GameOverModal } from './GameOverModal'
 import { GamePhaseControls } from './GamePhaseControls'
 import { SimpleMapSVG } from './SimpleMapSVG'
@@ -136,6 +142,28 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
 
   const handleTerritoryClick = useCallback(
     (territoryId: string) => {
+      const territory = territories[territoryId]
+      if (!territory) {
+        return
+      }
+
+      const territoryOwnerId = territory.owner ?? null
+
+      if (currentPhase === 'reinforcement') {
+        const isFriendly = isFriendlyTerritoryOwner(gameState, territoryOwnerId, currentPlayer)
+
+        if (!isFriendly) {
+          const message = gameState.gameConfig?.allowTeamPlay
+            ? 'You can only deploy armies to territories owned by your team'
+            : 'You can only deploy armies to your own territories'
+          dispatch(setError(message))
+          dispatch(selectTerritory(null))
+          dispatch(selectTargetTerritory(null))
+          dispatch(setPendingAction(null))
+          return
+        }
+      }
+
       // If clicking the same territory, deselect it
       if (selectedTerritory === territoryId) {
         dispatch(selectTerritory(null))

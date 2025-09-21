@@ -69,8 +69,10 @@ _Last updated: September 21, 2025_
 - _Progress (Mar 2026): Lobby creation now supports explicit team counts, hosts can assign players per team,
   and the engine enforces alliances for movement/combat with team-based victory checks. Reinforcement math
   now pulls continent bonuses from map metadata for both backend workers and the client UI, and the capital
-  warning path (`isCapitalTerritory`) reflects cached game state. Team reinforcement pooling stays a follow-up
-  item (tracked separately)._
+  warning path (`isCapitalTerritory`) reflects cached game state._
+- _Progress (Apr 2026): Reinforcement placements can now target any teammate-owned territory. Backend validation
+  and tests cover the new path, the board blocks enemy selections, and the reinforcement panel highlights
+  team gifts. The pooling follow-up is closed out in favor of this direct placement flow._
 
 ## Epic B — Security & Map Authoring Workflow
 ### B1. Enforce map ownership & permissions (incl. approval/versioning)
@@ -81,6 +83,7 @@ _Last updated: September 21, 2025_
   - Permission model documented and enforced for creator, collaborator, admin.
   - Every mutate route returns 403 to non-owners; Supertest covers IDOR attempts.
   - Approval/rejection requires appropriate role and writes audit logs (actor, timestamp, before/after).
+  - _Implementation notes (Mar 2025): Map collaborator roles (`editor`, `viewer`) now back the permission checks; creator/admin retain implicit edit rights and approvals capture before/after deltas in `admin_activity_logs`._
 
 ### B2. Creator & reviewer notifications (real fan-out)
 - **Priority:** P1 (upgrade pieces that block workflow sooner) • **Tags:** [be][ws][fe][ops]
@@ -126,10 +129,11 @@ _Last updated: September 21, 2025_
 ## Epic D — Navigation, Stats & UX Truthfulness
 ### D1. Repair Play hub routing
 - **Priority:** P0 • **Tags:** [fe]
-- **Status:** ⚠️ Open (`/play` still links to Quick Match/Ranked/AI stubs; needs gating or reroutes).
+- **Status:** ✅ Completed (December 2025)
 - **Problem:** Hub advertises Quick Match/Ranked/vs AI but only `/play` exists.
 - **Acceptance criteria:**
   - Either ship working routes or hide cards behind feature flags; hub produces zero 404s.
+- _Progress (Dec 2025): `/play` now links to working Casual and Ranked matchmaking pages, Create/Browse cards target existing lobby flows, and the AI tile leads to a Coming Soon screen so nothing throws 404s._
 
 ### D2. Player stats & header data
 - **Priority:** P1 (depends on A1/A3) • **Tags:** [fe][be]

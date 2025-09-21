@@ -20,6 +20,7 @@ import {
   resolveContinentDefinitions,
 } from '../utils/continentBonuses'
 import { BattleModal } from './BattleModal'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 interface GamePhaseControlsProps {
   onEndTurn: () => void
@@ -85,6 +86,14 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   const selectedTargetData = selectedTargetTerritory
     ? gameState.board.find((t) => t.id === selectedTargetTerritory)
     : null
+  const selectedTerritoryOwner = selectedTerritoryData
+    ? gameState.players.find((p) => p.id === selectedTerritoryData.ownerId)
+    : null
+  const isTeammateReinforcement =
+    !!selectedTerritoryData &&
+    !!currentPlayer &&
+    selectedTerritoryData.ownerId !== currentPlayer.id &&
+    isFriendlyTerritoryOwner(gameState, selectedTerritoryData.ownerId, currentPlayer.id)
 
   const handleDeploy = () => {
     if (selectedTerritory && reinforcementArmies > 0) {
@@ -223,6 +232,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   Deploying to: <strong>{selectedTerritoryData?.name}</strong>
                   (Current: {selectedTerritoryData?.armies} armies)
                 </p>
+                {isTeammateReinforcement && selectedTerritoryOwner && (
+                  <div className="text-xs text-yellow-200 bg-yellow-900/40 border border-yellow-500/50 rounded p-2">
+                    Team boost: {selectedTerritoryOwner.username} will control these armies.
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <label className="text-sm">Armies to deploy:</label>
                   <input
@@ -243,7 +257,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
               </div>
             ) : (
               <p className="text-sm text-green-400">
-                Click on one of your territories to deploy armies
+                Click on a friendly territory (yours or a teammate's) to deploy armies
               </p>
             )}
           </div>
