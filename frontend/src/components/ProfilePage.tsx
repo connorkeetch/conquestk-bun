@@ -1,7 +1,8 @@
 import type React from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import type { PlayerColor } from '../constants/colors'
+import type { RootState } from '../store'
 import {
   PLAYER_COLORS,
   PREMIUM_PLAYER_COLORS,
@@ -160,6 +161,155 @@ const extractFirstHexColor = (value: string): string | null => {
   return match ? `#${match[1]}` : null
 }
 
+const buildSignatureVisuals = (
+  profile: UserProfile | null,
+  settings: RootState['settings'],
+) => {
+  const fallbackPlayerColor = PLAYER_COLORS[0]
+  const preferredColorSource =
+    (profile?.preferredColor as PlayerColor | undefined) ||
+    (settings?.game?.preferredColor as PlayerColor | undefined) ||
+    fallbackPlayerColor
+
+  const resolvedPreferredColor = getColorValue(preferredColorSource)
+  const signatureIsGradient = isGradientValue(resolvedPreferredColor)
+  const signatureHex = signatureIsGradient ? fallbackPlayerColor : resolvedPreferredColor
+
+  const signatureCrestStyle: React.CSSProperties = signatureIsGradient
+    ? { backgroundImage: resolvedPreferredColor }
+    : {
+        backgroundImage: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.85)} 0%, ${hexToRgba(
+          signatureHex,
+          0.55,
+        )} 60%, ${hexToRgba(signatureHex, 0.2)} 100%)`,
+      }
+
+  const signatureColorSwatchStyle: React.CSSProperties = signatureIsGradient
+    ? { backgroundImage: resolvedPreferredColor }
+    : { backgroundColor: signatureHex }
+
+  const signatureGlowStyle: React.CSSProperties = signatureIsGradient
+    ? { backgroundImage: resolvedPreferredColor }
+    : {
+        backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
+      }
+
+  const signatureLargeColorSwatchStyle: React.CSSProperties = {
+    ...signatureColorSwatchStyle,
+    boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
+  }
+
+  const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
+
+  const premiumColorEntry = (() => {
+    if (!preferredColorSource) return null
+
+    if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
+      const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
+      return [preferredColorSource, entry] as const
+    }
+
+    return (
+      Object.entries(PREMIUM_PLAYER_COLORS).find(([_, value]) => {
+        if ('gradient' in value && value.gradient) {
+          return value.gradient === preferredColorSource
+        }
+
+        return value.solid === preferredColorSource
+      }) || null
+    )
+  })()
+
+  return {
+    signatureCrestStyle,
+    signatureColorSwatchStyle,
+    signatureGlowStyle,
+    signatureLargeColorSwatchStyle,
+    preferredColorDisplayName,
+    premiumColorEntry,
+    signatureHex,
+  }
+}
+
+const buildRankVisuals = (profile: UserProfile) => {
+  const fallbackRankDetails = getConquestRank(profile.elo)
+  const backendRank = profile.rank
+
+  const rankDetails = {
+    name: backendRank?.name ?? fallbackRankDetails.name,
+    minRating: backendRank?.minRating ?? fallbackRankDetails.minRating,
+    color: backendRank?.color ?? fallbackRankDetails.color,
+    insignia: backendRank?.insignia ?? fallbackRankDetails.insignia,
+  }
+
+  const nextRankFromBackend = backendRank?.nextRank ?? null
+  const nextRankDetails = nextRankFromBackend
+    ? (CONQUEST_RANKS.find((rank) => rank.minRating === nextRankFromBackend.minRating) ?? {
+        name: nextRankFromBackend.name,
+        minRating: nextRankFromBackend.minRating,
+        color: rankDetails.color,
+        insignia: rankDetails.insignia,
+      })
+    : CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
+
+  const rawRankColor = rankDetails.color
+  const rankColorIsGradient = isGradientValue(rawRankColor)
+  const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
+  const fallbackRankHex = '#F59E0B'
+  const baseRankHex = extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
+  const rankAccentColor = ensureReadableOnDark(baseRankHex)
+  const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
+  const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
+
+  const rankGlowStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : {
+        backgroundImage: `radial-gradient(circle at 20% 20%, ${hexToRgba(rankAccentSoft, 0.45)} 0%, transparent 70%)`,
+      }
+
+  const rankHeaderAccentStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : {
+        backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentSoft, 0.35)} 0%, transparent 80%)`,
+      }
+
+  const rankProgressFill = rankColorIsGradient
+    ? rawRankColor
+    : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
+
+  const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
+    ? { backgroundImage: rawRankColor }
+    : {
+        backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})`,
+      }
+
+  const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
+  const nextRankTarget = nextRankDetails?.minRating ?? rankDetails.minRating
+  const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
+  const rankProgress = Math.min(
+    100,
+    Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
+  )
+  const ratingToNextRank = Math.max(0, (nextRankDetails?.minRating ?? profile.elo) - profile.elo)
+
+  return {
+    rankDetails,
+    nextRank: nextRankDetails ?? null,
+    rawRankColor,
+    rankColorIsGradient,
+    rankAccentColor,
+    rankAccentSoft,
+    rankAccentFaint,
+    rankGlowStyle,
+    rankHeaderAccentStyle,
+    rankProgressFill,
+    rankCallToActionStyle,
+    rankSurfaceBorder,
+    rankProgress,
+    ratingToNextRank,
+  }
+}
+
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
@@ -172,7 +322,7 @@ const ProfilePage: React.FC = () => {
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
   const requestControllerRef = useRef<AbortController | null>(null)
 
-  const isOwnProfile = currentUser && currentUser.username === username
+  const isOwnProfile = currentUser?.username === username
 
   const fetchProfile = useCallback(async () => {
     if (!username) {
@@ -317,148 +467,7 @@ const ProfilePage: React.FC = () => {
     return formatDate(dateString)
   }
 
-  const signatureVisuals = useMemo(() => {
-    const fallbackPlayerColor = PLAYER_COLORS[0]
-    const preferredColorSource =
-      (profile?.preferredColor as PlayerColor | undefined) ||
-      (settings?.game?.preferredColor as PlayerColor | undefined) ||
-      fallbackPlayerColor
-
-    const resolvedPreferredColor = getColorValue(preferredColorSource)
-    const signatureIsGradient = isGradientValue(resolvedPreferredColor)
-    const signatureHex = signatureIsGradient ? fallbackPlayerColor : resolvedPreferredColor
-    const signatureCrestStyle: React.CSSProperties = signatureIsGradient
-      ? { backgroundImage: resolvedPreferredColor }
-      : {
-          backgroundImage: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.85)} 0%, ${hexToRgba(
-            signatureHex,
-            0.55,
-          )} 60%, ${hexToRgba(signatureHex, 0.2)} 100%)`,
-        }
-    const signatureColorSwatchStyle: React.CSSProperties = signatureIsGradient
-      ? { backgroundImage: resolvedPreferredColor }
-      : { backgroundColor: signatureHex }
-    const signatureGlowStyle: React.CSSProperties = signatureIsGradient
-      ? { backgroundImage: resolvedPreferredColor }
-      : {
-          backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
-        }
-
-    const signatureLargeColorSwatchStyle: React.CSSProperties = {
-      ...signatureColorSwatchStyle,
-      boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
-    }
-
-    const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
-
-    const premiumColorEntry = (() => {
-      if (!preferredColorSource) return null
-
-      if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
-        const entry =
-          PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
-        return [preferredColorSource, entry] as const
-      }
-
-      return (
-        Object.entries(PREMIUM_PLAYER_COLORS).find(([_, value]) => {
-          if ('gradient' in value && value.gradient) {
-            return value.gradient === preferredColorSource
-          }
-
-          return value.solid === preferredColorSource
-        }) || null
-      )
-    })()
-
-    return {
-      signatureCrestStyle,
-      signatureColorSwatchStyle,
-      signatureGlowStyle,
-      signatureLargeColorSwatchStyle,
-      preferredColorDisplayName,
-      premiumColorEntry,
-      signatureHex,
-    }
-  }, [profile?.preferredColor, settings?.game?.preferredColor])
-
-  const rankVisuals = useMemo(() => {
-    if (!profile) {
-      return null
-    }
-
-    const fallbackRankDetails = getConquestRank(profile.elo)
-    const backendRank = profile.rank
-
-    const rankDetails = {
-      name: backendRank?.name ?? fallbackRankDetails.name,
-      minRating: backendRank?.minRating ?? fallbackRankDetails.minRating,
-      color: backendRank?.color ?? fallbackRankDetails.color,
-      insignia: backendRank?.insignia ?? fallbackRankDetails.insignia,
-    }
-
-    const nextRankFromBackend = backendRank?.nextRank ?? null
-    const nextRankDetails = nextRankFromBackend
-      ? (CONQUEST_RANKS.find((rank) => rank.minRating === nextRankFromBackend.minRating) ?? {
-          name: nextRankFromBackend.name,
-          minRating: nextRankFromBackend.minRating,
-          color: rankDetails.color,
-          insignia: rankDetails.insignia,
-        })
-      : CONQUEST_RANKS.find((rank) => rank.minRating > rankDetails.minRating)
-
-    const rawRankColor = rankDetails.color
-    const rankColorIsGradient = isGradientValue(rawRankColor)
-    const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
-    const fallbackRankHex = '#F59E0B'
-    const baseRankHex = extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
-    const rankAccentColor = ensureReadableOnDark(baseRankHex)
-    const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
-    const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
-    const rankGlowStyle: React.CSSProperties = rankColorIsGradient
-      ? { backgroundImage: rawRankColor }
-      : {
-          backgroundImage: `radial-gradient(circle at 20% 20%, ${hexToRgba(rankAccentSoft, 0.45)} 0%, transparent 70%)`,
-        }
-    const rankHeaderAccentStyle: React.CSSProperties = rankColorIsGradient
-      ? { backgroundImage: rawRankColor }
-      : {
-          backgroundImage: `linear-gradient(140deg, ${hexToRgba(rankAccentSoft, 0.35)} 0%, transparent 80%)`,
-        }
-    const rankProgressFill = rankColorIsGradient
-      ? rawRankColor
-      : `linear-gradient(90deg, ${hexToRgba(rankAccentColor, 0.85)}, ${hexToRgba(rankAccentSoft, 0.6)})`
-    const rankCallToActionStyle: React.CSSProperties = rankColorIsGradient
-      ? { backgroundImage: rawRankColor }
-      : {
-          backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})`,
-        }
-    const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
-    const nextRankTarget = nextRankDetails?.minRating ?? rankDetails.minRating
-    const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
-    const rankProgress = Math.min(
-      100,
-      Math.max(0, ((profile.elo - rankDetails.minRating) / rankProgressRange) * 100),
-    )
-    const ratingToNextRank = Math.max(0, (nextRankDetails?.minRating ?? profile.elo) - profile.elo)
-
-    return {
-      rankDetails,
-      nextRank: nextRankDetails ?? null,
-      rawRankColor,
-      rankColorIsGradient,
-      rankAccentColor,
-      rankAccentSoft,
-      rankAccentFaint,
-      rankGlowStyle,
-      rankHeaderAccentStyle,
-      rankProgressFill,
-      rankCallToActionStyle,
-      rankSurfaceBorder,
-      rankProgress,
-      ratingToNextRank,
-    }
-  }, [profile])
+  const signatureVisuals = buildSignatureVisuals(profile, settings)
 
   if (!username) {
     return <Navigate to="/" replace />
@@ -504,6 +513,8 @@ const ProfilePage: React.FC = () => {
     )
   }
 
+  const rankVisuals = buildRankVisuals(profile)
+
   const {
     signatureCrestStyle,
     signatureColorSwatchStyle,
@@ -513,10 +524,6 @@ const ProfilePage: React.FC = () => {
     premiumColorEntry,
     signatureHex,
   } = signatureVisuals
-
-  if (!rankVisuals) {
-    return null
-  }
 
   const {
     rankDetails,
