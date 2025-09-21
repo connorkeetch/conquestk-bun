@@ -1,9 +1,22 @@
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { chatService } from '../services/chatService'
+import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 
-export const setupChatHandlers = (io: Server, socket: Socket) => {
+type SocketWithUser = Socket<ClientToServerEvents, ServerToClientEvents> & {
+  userId?: string
+  username?: string
+}
+
+const hasUserContext = (
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
+): socket is SocketWithUser => 'userId' in socket
+
+export const setupChatHandlers = (
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  socket: SocketWithUser,
+) => {
   // Send a message
   socket.on(
     'chat:send',
@@ -15,7 +28,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       recipientId?: string
     }) => {
       try {
-        const userId = (socket as any).userId
+        const userId = socket.userId
         if (!userId) {
           socket.emit('chat:error', { error: 'Not authenticated' })
           return
@@ -64,9 +77,10 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
           // Send push notification for DM
           await sendDMNotification(data.recipientId, userId, senderInfo.username, data.message)
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error sending message:', error)
-        socket.emit('chat:error', { error: error.message || 'Failed to send message' })
+        const message = error instanceof Error ? error.message : 'Failed to send message'
+        socket.emit('chat:error', { error: message })
       }
     },
   )
@@ -81,7 +95,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       offset?: number
     }) => {
       try {
-        const userId = (socket as any).userId
+        const userId = socket.userId
         if (!userId) {
           socket.emit('chat:error', { error: 'Not authenticated' })
           return
@@ -100,7 +114,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
           messageType: data.messageType,
           messages,
         })
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error loading chat history:', error)
         socket.emit('chat:error', { error: 'Failed to load chat history' })
       }
@@ -110,7 +124,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Get unread counts
   socket.on('chat:get-unread', async () => {
     try {
-      const userId = (socket as any).userId
+      const userId = socket.userId
       if (!userId) {
         socket.emit('chat:error', { error: 'Not authenticated' })
         return
@@ -118,7 +132,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
 
       const unreadCounts = await chatService.getUnreadCounts(userId)
       socket.emit('chat:unread-counts', unreadCounts)
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error getting unread counts:', error)
       socket.emit('chat:error', { error: 'Failed to get unread counts' })
     }
@@ -129,7 +143,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
     'chat:mark-read',
     async (data: { conversationType: 'game' | 'dm'; conversationId: string }) => {
       try {
-        const userId = (socket as any).userId
+        const userId = socket.userId
         if (!userId) {
           socket.emit('chat:error', { error: 'Not authenticated' })
           return
@@ -144,7 +158,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
         // Send updated unread counts
         const unreadCounts = await chatService.getUnreadCounts(userId)
         socket.emit('chat:unread-counts', unreadCounts)
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error marking messages as read:', error)
       }
     },
@@ -153,7 +167,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Delete a message
   socket.on('chat:delete', async (data: { messageId: string }) => {
     try {
-      const userId = (socket as any).userId
+      const userId = socket.userId
       if (!userId) {
         socket.emit('chat:error', { error: 'Not authenticated' })
         return
@@ -166,7 +180,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       } else {
         socket.emit('chat:error', { error: 'Cannot delete this message' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error deleting message:', error)
       socket.emit('chat:error', { error: 'Failed to delete message' })
     }
@@ -175,7 +189,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Edit a message
   socket.on('chat:edit', async (data: { messageId: string; newMessage: string }) => {
     try {
-      const userId = (socket as any).userId
+      const userId = socket.userId
       if (!userId) {
         socket.emit('chat:error', { error: 'Not authenticated' })
         return
@@ -198,7 +212,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       } else {
         socket.emit('chat:error', { error: 'Cannot edit this message' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error editing message:', error)
       socket.emit('chat:error', { error: 'Failed to edit message' })
     }
@@ -213,7 +227,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
       isTyping: boolean
     }) => {
       try {
-        const userId = (socket as any).userId
+        const userId = socket.userId
         if (!userId) return
 
         const userInfo = await getUserInfo(userId)
@@ -235,7 +249,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
             conversationId: userId,
           })
         }
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('Error broadcasting typing indicator:', error)
       }
     },
@@ -244,7 +258,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Add reaction to message
   socket.on('chat:add-reaction', async (data: { messageId: string; emoji: string }) => {
     try {
-      const userId = (socket as any).userId
+      const userId = socket.userId
       if (!userId) {
         socket.emit('chat:error', { error: 'Not authenticated' })
         return
@@ -275,7 +289,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
             const userIds = [message.sender_id, message.recipient_id]
             userIds.forEach((uid) => {
               const userSocket = Array.from(io.sockets.sockets.values()).find(
-                (s) => (s as any).userId === uid,
+                (s): s is SocketWithUser => hasUserContext(s) && s.userId === uid,
               )
               if (userSocket) {
                 userSocket.emit('chat:reactions-updated', {
@@ -287,7 +301,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error adding reaction:', error)
       socket.emit('chat:error', { error: 'Failed to add reaction' })
     }
@@ -296,7 +310,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
   // Remove reaction from message
   socket.on('chat:remove-reaction', async (data: { messageId: string; emoji: string }) => {
     try {
-      const userId = (socket as any).userId
+      const userId = socket.userId
       if (!userId) {
         socket.emit('chat:error', { error: 'Not authenticated' })
         return
@@ -327,7 +341,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
             const userIds = [message.sender_id, message.recipient_id]
             userIds.forEach((uid) => {
               const userSocket = Array.from(io.sockets.sockets.values()).find(
-                (s) => (s as any).userId === uid,
+                (s): s is SocketWithUser => hasUserContext(s) && s.userId === uid,
               )
               if (userSocket) {
                 userSocket.emit('chat:reactions-updated', {
@@ -339,7 +353,7 @@ export const setupChatHandlers = (io: Server, socket: Socket) => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error removing reaction:', error)
       socket.emit('chat:error', { error: 'Failed to remove reaction' })
     }
