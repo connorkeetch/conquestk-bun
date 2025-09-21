@@ -1,15 +1,20 @@
 import type { GamePlayer, Territory } from '../types/game'
 
-export interface Continent {
+export interface ContinentBonusInput {
   id: string
   name: string
   territories: string[]
   bonusArmies: number
+  color?: string
+}
+
+export interface ContinentDefinition extends ContinentBonusInput {
   color: string
 }
 
-// Continent definitions with bonus armies
-export const CONTINENTS: Continent[] = [
+const FALLBACK_COLORS = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336', '#FFEB3B']
+
+const DEFAULT_CONTINENT_DEFINITIONS: ContinentDefinition[] = [
   {
     id: 'north_america',
     name: 'North America',
@@ -86,7 +91,7 @@ export const CONTINENTS: Continent[] = [
 ]
 
 export interface ContinentControl {
-  continent: Continent
+  continent: ContinentDefinition
   controlled: boolean
   controlledTerritories: number
   totalTerritories: number
@@ -99,23 +104,39 @@ export interface PlayerContinentStatus {
   totalBonusArmies: number
 }
 
-/**
- * Calculate which continents a player controls and their bonus armies
- */
+export const resolveContinentDefinitions = (
+  continentBonuses?: ContinentBonusInput[] | null,
+): ContinentDefinition[] => {
+  if (!continentBonuses || continentBonuses.length === 0) {
+    return DEFAULT_CONTINENT_DEFINITIONS
+  }
+
+  return continentBonuses.map((bonus, index) => ({
+    id: bonus.id,
+    name: bonus.name,
+    territories: [...bonus.territories],
+    bonusArmies: bonus.bonusArmies,
+    color: bonus.color ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+  }))
+}
+
 export function calculatePlayerContinentStatus(
   playerId: string,
   board: Territory[],
+  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
 ): PlayerContinentStatus {
-  const playerTerritories = board.filter((t) => t.ownerId === playerId).map((t) => t.id)
+  const playerTerritories = new Set(
+    board.filter((territory) => territory.ownerId === playerId).map((territory) => territory.id),
+  )
 
-  const controlledContinents: ContinentControl[] = CONTINENTS.map((continent) => {
-    const controlledTerritories = continent.territories.filter((terrId) =>
-      playerTerritories.includes(terrId),
+  const controlledContinents: ContinentControl[] = continentDefinitions.map((continent) => {
+    const controlledTerritories = continent.territories.filter((territoryId) =>
+      playerTerritories.has(territoryId),
     )
 
     const controlled = controlledTerritories.length === continent.territories.length
     const missingTerritories = continent.territories.filter(
-      (terrId) => !playerTerritories.includes(terrId),
+      (territoryId) => !playerTerritories.has(territoryId),
     )
 
     return {
@@ -128,8 +149,8 @@ export function calculatePlayerContinentStatus(
   })
 
   const totalBonusArmies = controlledContinents
-    .filter((cc) => cc.controlled)
-    .reduce((sum, cc) => sum + cc.continent.bonusArmies, 0)
+    .filter((continentControl) => continentControl.controlled)
+    .reduce((sum, continentControl) => sum + continentControl.continent.bonusArmies, 0)
 
   return {
     playerId,
@@ -138,40 +159,44 @@ export function calculatePlayerContinentStatus(
   }
 }
 
-/**
- * Calculate continent bonuses for all players
- */
 export function calculateAllPlayersContinentStatus(
   players: GamePlayer[],
   board: Territory[],
+  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
 ): PlayerContinentStatus[] {
-  return players.map((player) => calculatePlayerContinentStatus(player.id, board))
+  return players.map((player) =>
+    calculatePlayerContinentStatus(player.id, board, continentDefinitions),
+  )
 }
 
-/**
- * Get continent bonus armies for a specific player
- */
-export function getContinentBonusArmies(playerId: string, board: Territory[]): number {
-  return calculatePlayerContinentStatus(playerId, board).totalBonusArmies
+export function getContinentBonusArmies(
+  playerId: string,
+  board: Territory[],
+  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
+): number {
+  return calculatePlayerContinentStatus(playerId, board, continentDefinitions).totalBonusArmies
 }
 
-/**
- * Get continent control summary for UI display
- */
-export function getContinentControlSummary(playerId: string, board: Territory[]): string {
-  const status = calculatePlayerContinentStatus(playerId, board)
-  const controlled = status.controlledContinents.filter((cc) => cc.controlled)
+export function getContinentControlSummary(
+  playerId: string,
+  board: Territory[],
+  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
+): string {
+  const status = calculatePlayerContinentStatus(playerId, board, continentDefinitions)
+  const controlled = status.controlledContinents.filter((continent) => continent.controlled)
 
   if (controlled.length === 0) {
     return 'No continents controlled'
   }
 
-  return controlled.map((cc) => cc.continent.name).join(', ')
+  return controlled.map((continent) => continent.continent.name).join(', ')
 }
 
-/**
- * Find which continent a territory belongs to
- */
-export function getTerritoryContinent(territoryId: string): Continent | null {
-  return CONTINENTS.find((continent) => continent.territories.includes(territoryId)) || null
+export function getTerritoryContinent(
+  territoryId: string,
+  continentDefinitions: ContinentDefinition[] = DEFAULT_CONTINENT_DEFINITIONS,
+): ContinentDefinition | null {
+  return (
+    continentDefinitions.find((continent) => continent.territories.includes(territoryId)) ?? null
+  )
 }

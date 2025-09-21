@@ -317,50 +317,6 @@ const ProfilePage: React.FC = () => {
     return formatDate(dateString)
   }
 
-  if (!username) {
-    return <Navigate to="/" replace />
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center glass-box-xl shadow-2xl">
-          <div className="text-5xl mb-4 animate-pulse">🎲</div>
-          <div className="text-white text-lg font-medium">Loading profile...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center glass-box-xl shadow-2xl">
-          <div className="text-5xl mb-4">❌</div>
-          <div className="text-white text-lg mb-4 font-medium">{error}</div>
-          <button
-            type="button"
-            onClick={handleRefreshProfile}
-            className="px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
-        <div className="text-center glass-box-xl shadow-2xl">
-          <div className="text-5xl mb-4">❌</div>
-          <div className="text-white text-lg font-medium">Profile not found</div>
-        </div>
-      </div>
-    )
-  }
-
   const signatureVisuals = useMemo(() => {
     const fallbackPlayerColor = PLAYER_COLORS[0]
     const preferredColorSource =
@@ -503,6 +459,50 @@ const ProfilePage: React.FC = () => {
       ratingToNextRank,
     }
   }, [profile])
+
+  if (!username) {
+    return <Navigate to="/" replace />
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
+        <div className="text-center glass-box-xl shadow-2xl">
+          <div className="text-5xl mb-4 animate-pulse">🎲</div>
+          <div className="text-white text-lg font-medium">Loading profile...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
+        <div className="text-center glass-box-xl shadow-2xl">
+          <div className="text-5xl mb-4">❌</div>
+          <div className="text-white text-lg mb-4 font-medium">{error}</div>
+          <button
+            type="button"
+            onClick={handleRefreshProfile}
+            className="px-6 py-2 bg-gradient-to-r from-primary to-primary-soft hover:brightness-110 text-white rounded-lg font-medium transition-all hover:scale-105"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep flex items-center justify-center">
+        <div className="text-center glass-box-xl shadow-2xl">
+          <div className="text-5xl mb-4">❌</div>
+          <div className="text-white text-lg font-medium">Profile not found</div>
+        </div>
+      </div>
+    )
+  }
 
   const {
     signatureCrestStyle,

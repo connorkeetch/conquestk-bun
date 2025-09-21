@@ -529,14 +529,16 @@ export class GameEngine {
   }
 
   calculateBaseReinforcementArmies(gameState: GameState, playerId: string): number {
-    const playerTerritories = gameState.board.filter((t) => t.ownerId === playerId)
-    const territoryCount = playerTerritories.length
-    const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
+    const player = gameState.players.find((p) => p.id === playerId)
+    if (!player) {
+      return 0
+    }
 
-    // TODO: Add continent bonuses
-    // const continentBonuses = this.calculateContinentBonuses(playerId, gameState);
-
-    return baseArmies
+    return this.calculateReinforcementArmies(
+      player.territories,
+      gameState.board,
+      gameState.gameConfig,
+    )
   }
 
   advancePhase(gameState: GameState): GameState {

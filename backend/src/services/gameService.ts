@@ -99,16 +99,17 @@ export class GameService {
     return state as GameState
   }
 
-  async isCapitalTerritory(roomId: string, _territoryId: string): Promise<boolean> {
-    // This is a placeholder - in a real implementation, you'd check the game state
-    // or database to see if this territory is marked as a capital
+  async isCapitalTerritory(roomId: string, territoryId: string | number): Promise<boolean> {
     const rawState = await gameStateCache.getGameState<SerializedGameState>(roomId)
-    if (!rawState) return false
-    const _gameState = this.hydrateGameState(rawState)
+    if (!rawState) {
+      return false
+    }
 
-    // Check if the game has capitals enabled and if this territory is a capital
-    // This would need proper implementation based on your game state structure
-    return false
+    const gameState = this.hydrateGameState(rawState)
+    const normalizedId = typeof territoryId === 'number' ? territoryId.toString() : territoryId
+    const territory = gameState.board.find((entry) => entry.id === normalizedId)
+
+    return territory?.isCapital === true
   }
 
   async processGameAction(action: GameAction, userId: string): Promise<GameState> {

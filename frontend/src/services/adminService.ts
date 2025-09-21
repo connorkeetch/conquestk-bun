@@ -72,7 +72,7 @@ export interface SystemStatus {
 }
 
 class AdminService {
-  private baseUrl = '/api/admin'
+  private baseUrl = '/admin'
 
   // ============= ADMIN INFO =============
 
