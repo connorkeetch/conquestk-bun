@@ -137,12 +137,13 @@ _Last updated: September 21, 2025_
 
 ### D2. Player stats & header data
 - **Priority:** P1 (depends on A1/A3) • **Tags:** [fe][be]
-- **Status:** ⚠️ In progress (profile/header surfaces still display placeholders despite `player_stats` availability).
+- **Status:** ✅ Completed (December 2025)
 - **Problem:** Stats page is stubbed; header uses hard-coded level/win rate; advanced metrics show zeros.
 - **Acceptance criteria:**
   - Profile and Stats pages read real API data; header reflects actual values.
   - Advanced metrics (e.g., `best_territories`, `streaks`) compute once history exists.
   - If backend not ready, gate the page via feature flag instead of displaying placeholders.
+- _Progress (Dec 2025): Hooked `/profile` + `/profile/stats` responses into the profile Stats tab, dedicated /profile/stats page, and header menu so games played, wins, win rate, streaks, map/mode breakdown, and rank all read from live data; noted remaining backend enhancements (territory bests, timeline depth) for future iteration._
 
 ### D3. Audio cue mismatches
 - **Priority:** P1 • **Tags:** [fe]

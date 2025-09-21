@@ -1,46 +1,18 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import type { PlayerColor } from '../constants/colors'
-import type { RootState } from '../store'
 import {
-  PLAYER_COLORS,
-  PREMIUM_PLAYER_COLORS,
   getColorDisplayName,
   getColorValue,
+  PLAYER_COLORS,
+  type PlayerColor,
+  PREMIUM_PLAYER_COLORS,
 } from '../constants/colors'
 import { useAppSelector } from '../hooks/redux'
+import { type ProfileSummary, profileService } from '../services/profileService'
+import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
 import RankInsignia, { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
-
-interface UserProfile {
-  id: string
-  username: string
-  email?: string
-  emailVerified?: boolean
-  avatarUrl?: string
-  bio?: string
-  elo: number
-  joinDate: string
-  lastActive?: string
-  gamesPlayed: number
-  wins: number
-  losses: number
-  winRate: number
-  peakRating: number
-  preferredColor?: string
-  rank: {
-    name: string
-    color: string
-    insignia: string
-    rating: number
-    minRating?: number
-    nextRank?: {
-      name: string
-      minRating: number
-    } | null
-  }
-}
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
 
@@ -161,10 +133,7 @@ const extractFirstHexColor = (value: string): string | null => {
   return match ? `#${match[1]}` : null
 }
 
-const buildSignatureVisuals = (
-  profile: UserProfile | null,
-  settings: RootState['settings'],
-) => {
+const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootState['settings']) => {
   const fallbackPlayerColor = PLAYER_COLORS[0]
   const preferredColorSource =
     (profile?.preferredColor as PlayerColor | undefined) ||
@@ -205,7 +174,8 @@ const buildSignatureVisuals = (
     if (!preferredColorSource) return null
 
     if (preferredColorSource in PREMIUM_PLAYER_COLORS) {
-      const entry = PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
+      const entry =
+        PREMIUM_PLAYER_COLORS[preferredColorSource as keyof typeof PREMIUM_PLAYER_COLORS]
       return [preferredColorSource, entry] as const
     }
 
@@ -231,7 +201,7 @@ const buildSignatureVisuals = (
   }
 }
 
-const buildRankVisuals = (profile: UserProfile) => {
+const buildRankVisuals = (profile: ProfileSummary) => {
   const fallbackRankDetails = getConquestRank(profile.elo)
   const backendRank = profile.rank
 
@@ -314,7 +284,7 @@ const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<ProfileSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -340,22 +310,13 @@ const ProfilePage: React.FC = () => {
       setLoading(true)
       setError(null)
 
-      const apiUrl =
-        import.meta.env.VITE_API_URL ||
-        (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
-
-      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(username)}/profile`, {
+      const data = await profileService.getProfileByUsername(username, {
         signal: controller.signal,
       })
-
-      if (!response.ok) {
-        const errorData = (await response.json().catch(() => null)) as { error?: string } | null
-        setProfile(null)
-        setError(errorData?.error ?? 'Failed to load profile')
+      if (controller.signal.aborted) {
         return
       }
 
-      const data = (await response.json()) as UserProfile
       setProfile(data)
       setError(null)
     } catch (err: unknown) {
@@ -440,7 +401,7 @@ const ProfilePage: React.FC = () => {
       window.prompt('Copy this profile link:', shareUrl)
       setCopyState('copied')
       setActionFeedback({ type: 'success', message: 'Profile link ready to share.' })
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       setCopyState('error')
       setActionFeedback({ type: 'error', message: 'Unable to share profile link. Try again?' })
     }
@@ -988,7 +949,13 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'stats' && <UserStats />}
+          {activeTab === 'stats' && (
+            <UserStats
+              profileSummary={profile}
+              isOwnProfile={isOwnProfile}
+              username={profile?.username ?? username ?? undefined}
+            />
+          )}
 
           {activeTab === 'matches' && (
             <div className="relative glass-box-xl shadow-xl text-center">
