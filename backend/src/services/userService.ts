@@ -27,10 +27,8 @@ function isMissingColumnError(error: unknown): error is DatabaseError {
     return false
   }
 
-  const code =
-    typeof (error as { code?: unknown }).code === 'string'
-      ? (error as { code: string }).code
-      : undefined
+  const potentialCode = (error as { code?: unknown }).code
+  const code = typeof potentialCode === 'string' ? potentialCode : undefined
 
   return (
     error.message.toLowerCase().includes('column') ||

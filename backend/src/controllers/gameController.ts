@@ -31,7 +31,7 @@ export class GameController {
         teamMode,
         numberOfTeams,
         allowTeamPlay,
-      } = req.body
+      } = req.body as CreateRoomRequestBody
       const hostId = req.userId
 
       if (!hostId) {
@@ -66,7 +66,7 @@ export class GameController {
         hostId,
         maxPlayers: maxPlayers || 6,
         isPrivate: isPrivate || false,
-        mapId: mapId || null,
+        mapId: mapId ?? undefined,
         gameMode: gameMode || 'classic',
         allowTeamPlay:
           allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),
@@ -326,4 +326,14 @@ export class GameController {
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
+}
+type CreateRoomRequestBody = {
+  name: string
+  maxPlayers?: number
+  isPrivate?: boolean
+  mapId?: string | null
+  gameMode?: string
+  teamMode?: 'none' | 'teams' | 'auto_balance' | boolean
+  numberOfTeams?: number | string
+  allowTeamPlay?: boolean
 }
