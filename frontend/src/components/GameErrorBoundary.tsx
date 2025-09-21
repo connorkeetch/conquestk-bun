@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import ErrorBoundary from './ErrorBoundary'
 
 interface GameErrorBoundaryProps {
@@ -32,6 +33,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
 
         <div className="space-y-3">
           <button
+            type="button"
             onClick={resetError}
             className="w-full px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg transition-colors"
           >
@@ -39,6 +41,7 @@ const GameErrorFallback: React.FC<{ gameId?: string; resetError: () => void }> =
           </button>
 
           <button
+            type="button"
             onClick={handleLeaveGame}
             className="w-full px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
           >
@@ -56,16 +59,13 @@ export const GameErrorBoundary: React.FC<GameErrorBoundaryProps> = ({ children, 
   const [resetKey, setResetKey] = React.useState(0)
 
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    // Log game-specific errors
-    console.error('[GAME_ERROR]', {
+    logger.error('Game error boundary captured an error', {
       gameId,
       error: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
       timestamp: new Date().toISOString(),
     })
-
-    // Could send to analytics/monitoring service here
   }
 
   const resetError = () => {

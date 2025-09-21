@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { logger } from '@/utils/logger'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
 
 interface Territory {
@@ -66,8 +67,8 @@ export default function CustomMapDisplay({
           width: metadata?.width || 1280,
           height: metadata?.height || 720,
         })
-      } catch (err) {
-        console.error('Error loading map:', err)
+      } catch (error) {
+        logger.error('Failed to load custom map data', error)
         setError('Failed to load map')
       } finally {
         setLoading(false)
@@ -100,6 +101,10 @@ export default function CustomMapDisplay({
     )
   }
 
+  const handleTerritoryActivate = (territoryId: string) => {
+    onTerritoryClick?.(territoryId)
+  }
+
   return (
     <ResponsiveMapContainer
       mapWidth={mapData.width}
@@ -122,7 +127,7 @@ export default function CustomMapDisplay({
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
 
         return (
-          <div
+          <button
             key={territory.id}
             className={`absolute cursor-pointer transition-all ${isSelected ? 'z-20' : 'z-10'}`}
             style={{
@@ -130,11 +135,12 @@ export default function CustomMapDisplay({
               top: `${(territory.y / mapData.height) * 100}%`,
               transform: 'translate(-50%, -50%)',
             }}
-            onClick={() => onTerritoryClick?.(territory.id)}
+            type="button"
+            onClick={() => handleTerritoryActivate(territory.id)}
           >
             {/* Territory token */}
-            <div
-              className={`relative w-8 h-8 rounded-full border-2 ${
+            <span
+              className={`relative block w-8 h-8 rounded-full border-2 ${
                 isSelected ? 'border-yellow-400 border-4' : 'border-black'
               }`}
               style={{
@@ -146,17 +152,17 @@ export default function CustomMapDisplay({
             >
               {/* Army count */}
               {territory.armies && territory.armies > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <span className="absolute inset-0 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">{territory.armies}</span>
-                </div>
+                </span>
               )}
-            </div>
+            </span>
 
             {/* Territory name tooltip */}
-            <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+            <span className="absolute -bottom-6 left-1/2 block -translate-x-1/2 whitespace-nowrap bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
               {territory.name}
-            </div>
-          </div>
+            </span>
+          </button>
         )
       })}
     </ResponsiveMapContainer>
