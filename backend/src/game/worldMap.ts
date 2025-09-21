@@ -67,9 +67,7 @@ export class WorldMap {
     return this.territories.map((territory) => ({
       ...territory,
       adjacentTerritories: [...territory.adjacentTerritories],
-      coordinates: territory.coordinates
-        ? { ...territory.coordinates }
-        : undefined,
+      coordinates: territory.coordinates ? { ...territory.coordinates } : undefined,
     }))
   }
 

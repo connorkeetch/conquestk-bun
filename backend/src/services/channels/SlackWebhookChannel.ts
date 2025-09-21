@@ -1,6 +1,6 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
-import type { NotificationChannel } from '../NotificationDispatcher'
 import { logger } from '../../utils/logger'
+import type { NotificationChannel } from '../NotificationDispatcher'
 import { formatSlackWebhookPayload, type SlackWebhookPayload } from './slackFormatting'
 
 interface SlackWebhookChannelOptions {
@@ -68,8 +68,8 @@ export class SlackWebhookChannel implements NotificationChannel {
     const webhookUrl = process.env.SLACK_WEBHOOK_URL
     const additionalWebhookUrls = splitCsv(process.env.SLACK_WEBHOOK_URLS)
 
-    const webhookUrls = [webhookUrl, ...additionalWebhookUrls].filter(
-      (value): value is string => Boolean(value && value.trim().length > 0),
+    const webhookUrls = [webhookUrl, ...additionalWebhookUrls].filter((value): value is string =>
+      Boolean(value && value.trim().length > 0),
     )
 
     if (webhookUrls.length === 0) {
@@ -391,7 +391,7 @@ function redactWebhook(webhookUrl: string): string {
     const lastSegment = segments[segments.length - 1] ?? ''
     const redactedSuffix = lastSegment.slice(-4)
     return `${parsed.origin}/…${redactedSuffix}`
-  } catch (error) {
+  } catch (_error) {
     return 'slack-webhook'
   }
 }

@@ -2,6 +2,7 @@ import { logger } from '../utils/logger'
 import { getWorkerManagerInstance } from '../workers/workerManager'
 import { cdnService } from './cdnService'
 import { databaseClusterService } from './databaseClusterService'
+import type { QueueStats } from './queueService'
 import { redisClusterService } from './redisClusterService'
 
 interface SystemMetrics {
@@ -54,7 +55,26 @@ interface PerformanceAlert {
   message: string
   timestamp: number
   resolved: boolean
-  metrics?: Record<string, any>
+  metrics?: MetricDetails
+}
+
+type MetricValue = string | number | boolean | null | undefined
+type MetricDetails = Record<string, MetricValue | MetricValue[]>
+
+type WorkerQueueSnapshot = {
+  initialized: boolean
+  queues: Record<string, QueueStats>
+  timestamp: string
+}
+
+type HealthStatus = 'healthy' | 'warning' | 'critical'
+
+type HealthCheckDetails = {
+  monitoring: boolean
+  metricsCollected: number
+  currentMetrics: SystemMetrics | null
+  activeAlerts: number
+  criticalAlerts: number
 }
 
 interface PerformanceThresholds {
@@ -225,22 +245,22 @@ export class PerformanceMonitorService {
     }
   }
 
-  private calculateQueueMetrics(queueStats: any): SystemMetrics['queues'] {
+  private calculateQueueMetrics(queueStats: WorkerQueueSnapshot | null): SystemMetrics['queues'] {
     let totalJobs = 0
     let activeJobs = 0
     let waitingJobs = 0
     let failedJobs = 0
     let processedJobs = 0
 
-    if (queueStats.queues) {
-      Object.values(queueStats.queues).forEach((queue: any) => {
+    if (queueStats?.queues) {
+      for (const queue of Object.values(queueStats.queues)) {
         activeJobs += queue.active || 0
         waitingJobs += queue.waiting || 0
         failedJobs += queue.failed || 0
         processedJobs += queue.completed || 0
         totalJobs +=
           (queue.active || 0) + (queue.waiting || 0) + (queue.failed || 0) + (queue.completed || 0)
-      })
+      }
     }
 
     return {
@@ -331,7 +351,7 @@ export class PerformanceMonitorService {
     severity: PerformanceAlert['severity'],
     component: string,
     message: string,
-    metrics?: Record<string, any>,
+    metrics?: MetricDetails,
   ): PerformanceAlert {
     return {
       id: `${component}-${Date.now()}`,
@@ -428,7 +448,7 @@ export class PerformanceMonitorService {
     logger.info('⚙️ Performance thresholds updated', newThresholds)
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: HealthStatus; details: HealthCheckDetails }> {
     const current = this.getCurrentMetrics()
     const activeAlerts = this.getActiveAlerts()
     const criticalAlerts = activeAlerts.filter((a) => a.severity === 'critical')

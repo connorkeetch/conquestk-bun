@@ -109,7 +109,7 @@ router.get('/leaderboards/skill', async (req, res) => {
     const leaderboard = await eloService.getLeaderboard(limit, offset)
 
     res.json({
-      leaderboard: leaderboard.map((entry, index) => ({
+      leaderboard: leaderboard.map((entry, _index) => ({
         rank: entry.rank_position,
         userId: entry.user_id,
         username: entry.username,

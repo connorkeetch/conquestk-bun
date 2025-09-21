@@ -1,8 +1,46 @@
 import { query } from '../config/database'
 import type { User } from '../types/user'
 
+type CreateUserInput = {
+  username: string
+  email: string
+  password: string
+  email_verified?: boolean
+  verification_token?: string | null
+}
+
+type DatabaseError = Error & { code?: string }
+
+type PasswordResetTokenRow = {
+  id: string
+  user_id: string
+  token: string
+  expires_at: Date
+  used_at: Date | null
+  created_at: Date
+}
+
+type PasswordResetToken = PasswordResetTokenRow & { used: boolean }
+
+function isMissingColumnError(error: unknown): error is DatabaseError {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const code =
+    typeof (error as { code?: unknown }).code === 'string'
+      ? (error as { code: string }).code
+      : undefined
+
+  return (
+    error.message.toLowerCase().includes('column') ||
+    code === '42703' ||
+    code === 'ER_BAD_FIELD_ERROR'
+  )
+}
+
 export class UserService {
-  async create(userData: any): Promise<User> {
+  async create(userData: CreateUserInput): Promise<User> {
     // Try with email verification columns first
     try {
       const insertQuery = `
@@ -15,9 +53,9 @@ export class UserService {
         userData.email,
         userData.password,
         userData.email_verified === true,
-        userData.verification_token || null,
+        userData.verification_token ?? null,
         // userData.verification_sent_at || null, // Column doesn't exist in schema
-      ]
+      ] satisfies [string, string, string, boolean, string | null]
 
       await query(insertQuery, values)
 
@@ -29,13 +67,9 @@ export class UserService {
       }
 
       return result.rows[0] as User
-    } catch (error: any) {
+    } catch (error) {
       // If email verification columns don't exist, try basic insert
-      if (
-        error.message?.includes('column') ||
-        error.code === '42703' ||
-        error.code === 'ER_BAD_FIELD_ERROR'
-      ) {
+      if (isMissingColumnError(error)) {
         const basicQuery = `
           INSERT INTO users (username, email, password_hash)
           VALUES ($1, $2, $3)
@@ -145,13 +179,22 @@ export class UserService {
     await query(insertQuery, [data.user_id, data.token, data.expires_at])
   }
 
-  async findPasswordResetToken(token: string): Promise<any> {
+  async findPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
     const findQuery = `
       SELECT * FROM password_reset_tokens 
       WHERE token = $1
     `
     const result = await query(findQuery, [token])
-    return result.rows[0] || null
+    const row = result.rows[0] as PasswordResetTokenRow | undefined
+
+    if (!row) {
+      return null
+    }
+
+    return {
+      ...row,
+      used: row.used_at != null,
+    }
   }
 
   async markPasswordResetTokenUsed(token: string): Promise<void> {

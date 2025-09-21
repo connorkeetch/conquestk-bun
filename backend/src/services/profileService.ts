@@ -2,11 +2,11 @@ import type { QueryResultRow } from 'pg'
 import { getClient } from '../config/database'
 import type {
   Achievement,
+  AggregatedStatsSummary,
   GameHistoryEntry,
   ProfileResponse,
   ProfileUpdateRequest,
   StatsBreakdown,
-  AggregatedStatsSummary,
   UserAchievement,
   UserPreferences,
   UserProfile,

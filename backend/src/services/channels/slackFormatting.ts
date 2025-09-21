@@ -49,7 +49,12 @@ interface SlackButtonElement {
   style?: 'primary' | 'danger'
 }
 
-type SlackBlock = SlackHeaderBlock | SlackSectionBlock | SlackDividerBlock | SlackContextBlock | SlackActionsBlock
+type SlackBlock =
+  | SlackHeaderBlock
+  | SlackSectionBlock
+  | SlackDividerBlock
+  | SlackContextBlock
+  | SlackActionsBlock
 
 export interface SlackWebhookPayload {
   text: string
@@ -244,8 +249,8 @@ function formatContextValue(value: unknown): string {
   }
 
   try {
-    return '```' + JSON.stringify(value, null, 2) + '```'
-  } catch (error) {
+    return `\`\`\`${JSON.stringify(value, null, 2)}\`\`\``
+  } catch (_error) {
     return '`[unserializable]`'
   }
 }
@@ -280,7 +285,7 @@ function formatContextValueForText(value: unknown): string {
 
   try {
     return JSON.stringify(value)
-  } catch (error) {
+  } catch (_error) {
     return '[unserializable]'
   }
 }

@@ -12,6 +12,54 @@ import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 import { mapService } from './mapService'
 
+type JsonPrimitive = string | number | boolean | null
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
+
+type MapDraftRow = {
+  id: string
+  user_id: string
+  staging_image_id: string | null
+  parent_map_id: string | null
+  name: string | null
+  description: string | null
+  map_data: JsonValue | string | null
+  territories: JsonValue | string | null
+  continents: JsonValue | string | null
+  adjacencies: JsonValue | string | null
+  capital_assignments: JsonValue | string | null
+  thumbnail_url: string | null
+  image_url: string | null
+  image_width: number | null
+  image_height: number | null
+  validation_errors: JsonValue | string | null
+  tags: JsonValue | string | null
+  draft_status: string | null
+  validation_status: string | null
+  is_public: boolean | null
+  auto_saved_at: string | null
+  last_edited_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isRecordOfStringArray = (value: unknown): value is Record<string, string[]> =>
+  isRecord(value) &&
+  Object.values(value).every(
+    (entry) => Array.isArray(entry) && entry.every((id) => typeof id === 'string'),
+  )
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+
+const asNumber = (value: unknown): number | undefined =>
+  typeof value === 'number' ? value : undefined
+
+const asString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined
+
 export class MapWorkflowService {
   /**
    * Save a map draft for later editing
@@ -19,7 +67,7 @@ export class MapWorkflowService {
   async saveDraft(userId: string, draftData: Partial<MapDraft>): Promise<MapDraft> {
     try {
       const existingDraft = draftData.id
-        ? await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
+        ? await query<MapDraftRow>('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
             draftData.id,
             userId,
           ])
@@ -27,7 +75,7 @@ export class MapWorkflowService {
 
       if (existingDraft?.rows[0]) {
         // Update existing draft
-        const result = await query(
+        const result = await query<MapDraftRow>(
           `
           UPDATE map_drafts 
           SET name = $1, description = $2, map_data = $3, territories = $4, 
@@ -84,7 +132,7 @@ export class MapWorkflowService {
         throw new Error('Quota exceeded: Maximum 5 unpublished maps/images allowed')
       }
 
-      const result = await query(
+      const result = await query<MapDraftRow>(
         `
           INSERT INTO map_drafts (
             user_id, staging_image_id, parent_map_id, name, description, 
@@ -128,7 +176,7 @@ export class MapWorkflowService {
    */
   async getUserDrafts(userId: string): Promise<MapDraft[]> {
     try {
-      const result = await query(
+      const result = await query<MapDraftRow>(
         `
         SELECT * FROM map_drafts 
         WHERE user_id = $1 AND draft_status != 'submitted'
@@ -137,7 +185,7 @@ export class MapWorkflowService {
         [userId],
       )
 
-      return (result.rows || []).map((row: any) => this.formatDraftRow(row))
+      return (result.rows || []).map((row) => this.formatDraftRow(row))
     } catch (error) {
       logger.error('Error fetching user drafts:', error)
       throw error
@@ -146,10 +194,10 @@ export class MapWorkflowService {
 
   async getDraftById(draftId: string, userId: string): Promise<MapDraft | null> {
     try {
-      const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
-        draftId,
-        userId,
-      ])
+      const result = await query<MapDraftRow>(
+        'SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2',
+        [draftId, userId],
+      )
 
       const draft = result.rows?.[0]
       return draft ? this.formatDraftRow(draft) : null
@@ -161,10 +209,10 @@ export class MapWorkflowService {
 
   async publishDraft(draftId: string, userId: string): Promise<CustomMap> {
     try {
-      const result = await query('SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2', [
-        draftId,
-        userId,
-      ])
+      const result = await query<MapDraftRow>(
+        'SELECT * FROM map_drafts WHERE id = $1 AND user_id = $2',
+        [draftId, userId],
+      )
 
       const draftRow = result.rows?.[0]
       if (!draftRow) {
@@ -459,7 +507,7 @@ export class MapWorkflowService {
     }
   }
 
-  private safeJson<T>(value: any, fallback: T): T {
+  private safeJson<T>(value: unknown, fallback: T): T {
     if (value === null || value === undefined) return fallback
     if (typeof value === 'string') {
       try {
@@ -469,11 +517,39 @@ export class MapWorkflowService {
         return fallback
       }
     }
-    return value as T
+    if (isRecord(value) || Array.isArray(value)) {
+      return value as T
+    }
+    return fallback
   }
 
-  private formatDraftRow(row: any): MapDraft {
-    const mapData = this.safeJson<Record<string, any>>(row.map_data, {})
+  private formatDraftRow(row: MapDraftRow): MapDraft {
+    const mapData = this.safeJson<Record<string, unknown>>(row.map_data, {})
+    const mapDataTerritories = mapData.territories
+    const mapDataContinents = mapData.continents
+    const mapDataAdjacencies = mapData.adjacencies
+    const mapDataCapitalAssignments = mapData.capitalAssignments
+    const mapDataTags = mapData.tags
+    const fallbackImageWidth = asNumber(mapData.imageWidth)
+    const fallbackImageHeight = asNumber(mapData.imageHeight)
+    const territories = this.safeJson<unknown[]>(
+      row.territories,
+      Array.isArray(mapDataTerritories) ? mapDataTerritories : [],
+    )
+    const continents = this.safeJson<unknown[]>(
+      row.continents,
+      Array.isArray(mapDataContinents) ? mapDataContinents : [],
+    )
+    const adjacencies = this.safeJson<unknown[]>(
+      row.adjacencies,
+      Array.isArray(mapDataAdjacencies) ? mapDataAdjacencies : [],
+    )
+    const capitalAssignments = this.safeJson<Record<string, string[]>>(
+      row.capital_assignments,
+      isRecordOfStringArray(mapDataCapitalAssignments) ? mapDataCapitalAssignments : {},
+    )
+    const tags = this.safeJson<string[]>(row.tags, toStringArray(mapDataTags))
+    const validationErrors = this.safeJson<unknown[]>(row.validation_errors, [])
 
     return {
       id: row.id,
@@ -483,19 +559,19 @@ export class MapWorkflowService {
       name: row.name || 'Untitled Map',
       description: row.description || undefined,
       data: mapData,
-      territories: this.safeJson(row.territories, mapData.territories ?? []),
-      continents: this.safeJson(row.continents, mapData.continents ?? []),
-      adjacencies: this.safeJson(row.adjacencies, mapData.adjacencies ?? []),
-      capitalAssignments: this.safeJson(row.capital_assignments, mapData.capitalAssignments ?? {}),
+      territories,
+      continents,
+      adjacencies,
+      capitalAssignments,
       thumbnailUrl: row.thumbnail_url || undefined,
       imageUrl: row.image_url || undefined,
-      imageWidth: row.image_width || mapData.imageWidth,
-      imageHeight: row.image_height || mapData.imageHeight,
+      imageWidth: row.image_width ?? fallbackImageWidth,
+      imageHeight: row.image_height ?? fallbackImageHeight,
       draftStatus: row.draft_status || 'editing',
       validationStatus: row.validation_status || undefined,
-      validationErrors: this.safeJson(row.validation_errors, []),
+      validationErrors,
       isPublic: row.is_public ?? false,
-      tags: this.safeJson(row.tags, mapData.tags ?? []),
+      tags,
       autoSavedAt: row.auto_saved_at ? new Date(row.auto_saved_at) : undefined,
       lastEditedAt: row.last_edited_at ? new Date(row.last_edited_at) : undefined,
       createdAt: new Date(row.created_at),
@@ -526,45 +602,58 @@ export class MapWorkflowService {
 
   private async buildMapPayloadFromDraft(
     draft: MapDraft,
-  ): Promise<CreateMapRequest & { metadata?: any }> {
-    const data = typeof draft.data === 'object' && draft.data !== null ? draft.data : {}
+  ): Promise<CreateMapRequest & { metadata?: Record<string, unknown> }> {
+    const data: Record<string, unknown> =
+      typeof draft.data === 'object' && draft.data !== null
+        ? (draft.data as Record<string, unknown>)
+        : {}
+
+    const dataTerritories = data.territories
+    const dataContinents = data.continents
+    const dataAdjacencies = data.adjacencies
+    const dataCapitalAssignments = data.capitalAssignments
+    const dataTags = data.tags
+    const inferredTags = toStringArray(dataTags)
 
     const territories =
       Array.isArray(draft.territories) && draft.territories.length > 0
         ? draft.territories
-        : Array.isArray(data.territories)
-          ? data.territories
+        : Array.isArray(dataTerritories)
+          ? (dataTerritories as unknown[])
           : []
 
     const continents =
       Array.isArray(draft.continents) && draft.continents.length > 0
         ? draft.continents
-        : Array.isArray(data.continents)
-          ? data.continents
+        : Array.isArray(dataContinents)
+          ? (dataContinents as unknown[])
           : []
 
     const adjacencies =
       Array.isArray(draft.adjacencies) && draft.adjacencies.length > 0
         ? draft.adjacencies
-        : Array.isArray(data.adjacencies)
-          ? data.adjacencies
+        : Array.isArray(dataAdjacencies)
+          ? (dataAdjacencies as unknown[])
           : []
 
     const capitalAssignments =
       (draft.capitalAssignments && Object.keys(draft.capitalAssignments).length > 0
         ? draft.capitalAssignments
-        : data.capitalAssignments) || {}
+        : isRecordOfStringArray(dataCapitalAssignments)
+          ? dataCapitalAssignments
+          : undefined) || {}
 
     let imageUrl = draft.imageUrl
-    let imageWidth = draft.imageWidth || data.imageWidth || 800
-    let imageHeight = draft.imageHeight || data.imageHeight || 600
+    let imageWidth = draft.imageWidth || asNumber(data.imageWidth) || 800
+    let imageHeight = draft.imageHeight || asNumber(data.imageHeight) || 600
 
-    const imagePayload = data.image
+    const imagePayload = isRecord(data.image) ? (data.image as Record<string, unknown>) : null
+    const imagePayloadData = imagePayload ? asString(imagePayload.data) : undefined
 
-    if (imagePayload?.data) {
-      const stored = await storeBase64Image(imagePayload.data, {
-        mimeType: imagePayload.mimeType,
-        preferredFilename: imagePayload.filename,
+    if (imagePayload && imagePayloadData) {
+      const stored = await storeBase64Image(imagePayloadData, {
+        mimeType: asString(imagePayload.mimeType),
+        preferredFilename: asString(imagePayload.filename),
       })
       imageUrl = stored.relativeUrl
       imageWidth = stored.width
@@ -581,29 +670,31 @@ export class MapWorkflowService {
       }
     }
 
-    const minPlayers =
-      typeof data.minPlayers === 'number' ? data.minPlayers : (data.metadata?.minPlayers ?? 2)
-    const maxPlayers =
-      typeof data.maxPlayers === 'number' ? data.maxPlayers : (data.metadata?.maxPlayers ?? 6)
+    const metadataRecord = isRecord(data.metadata)
+      ? (data.metadata as Record<string, unknown>)
+      : undefined
+
+    const minPlayers = asNumber(data.minPlayers) ?? asNumber(metadataRecord?.minPlayers) ?? 2
+    const maxPlayers = asNumber(data.maxPlayers) ?? asNumber(metadataRecord?.maxPlayers) ?? 6
 
     const metadata = {
       territories,
       continents,
       adjacencies,
       capitalAssignments,
-      width: data.width || data.mapWidth || imageWidth || 1920,
-      height: data.height || data.mapHeight || imageHeight || 1080,
+      width: asNumber(data.width) ?? asNumber(data.mapWidth) ?? imageWidth ?? 1920,
+      height: asNumber(data.height) ?? asNumber(data.mapHeight) ?? imageHeight ?? 1080,
     }
 
     return {
-      name: draft.name || data.name || 'Untitled Map',
-      description: draft.description ?? data.description ?? undefined,
-      isPublic: Boolean(draft.isPublic || data.isPublic),
+      name: draft.name || asString(data.name) || 'Untitled Map',
+      description: draft.description ?? asString(data.description) ?? undefined,
+      isPublic: Boolean(draft.isPublic ?? data.isPublic),
       tags:
         Array.isArray(draft.tags) && draft.tags.length > 0
           ? draft.tags
-          : Array.isArray(data.tags)
-            ? data.tags
+          : inferredTags.length > 0
+            ? inferredTags
             : ['custom', 'user-created'],
       imageUrl: imageUrl ?? undefined,
       imageWidth,
@@ -705,7 +796,7 @@ export class MapWorkflowService {
     mapId: string,
     action: string,
     performedBy: string,
-    details?: any,
+    details?: JsonValue,
   ): Promise<void> {
     try {
       await query(

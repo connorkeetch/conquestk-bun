@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
 import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
-import { handleRouteError } from '../utils/routeErrorHandler'
 import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
 

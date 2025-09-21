@@ -138,10 +138,11 @@ export class ScalingService {
     this.setupWorkerMonitoring()
   }
 
-  private addWorkerMetrics(worker: any): void {
+  private addWorkerMetrics(worker: cluster.Worker): void {
+    const pid = worker.process?.pid ?? process.pid
     const metrics: WorkerMetrics = {
       id: worker.id,
-      pid: worker.process.pid!,
+      pid,
       uptime: 0,
       memoryUsage: process.memoryUsage(),
       cpuUsage: process.cpuUsage(),
@@ -184,11 +185,9 @@ export class ScalingService {
 
   private collectWorkerMetrics(): void {
     // Send health check to all workers
-    const clusterWorkers = cluster.workers as Record<string, any> | undefined
-    Object.values(clusterWorkers || {}).forEach((worker) => {
-      if (worker?.send) {
-        worker.send({ type: 'health-check' })
-      }
+    const clusterWorkers = cluster.workers ?? {}
+    Object.values(clusterWorkers).forEach((worker) => {
+      worker?.send?.({ type: 'health-check' })
     })
 
     this.updateScalingMetrics()
@@ -295,9 +294,9 @@ export class ScalingService {
         return false
       }
 
-      const clusterWorkers = cluster.workers as Record<string, any> | undefined
-      const worker = Object.values(clusterWorkers || {}).find(
-        (w) => w && w.id === leastBusyWorker.id,
+      const clusterWorkers = cluster.workers ?? {}
+      const worker = Object.values(clusterWorkers).find(
+        (candidate): candidate is cluster.Worker => candidate?.id === leastBusyWorker.id,
       )
 
       if (worker) {
@@ -346,16 +345,19 @@ export class ScalingService {
 
   private setupWorkerMonitoring(): void {
     // Listen for health check requests from master
-    process.on('message', (message: any) => {
-      if (message.type === 'health-check') {
-        process.send?.({
-          type: 'health-response',
-          metrics: {
-            memoryUsage: process.memoryUsage(),
-            cpuUsage: process.cpuUsage(),
-            uptime: process.uptime(),
-          },
-        })
+    process.on('message', (message: unknown) => {
+      if (typeof message === 'object' && message && 'type' in message) {
+        const typedMessage = message as { type?: string }
+        if (typedMessage.type === 'health-check') {
+          process.send?.({
+            type: 'health-response',
+            metrics: {
+              memoryUsage: process.memoryUsage(),
+              cpuUsage: process.cpuUsage(),
+              uptime: process.uptime(),
+            },
+          })
+        }
       }
     })
 
@@ -388,8 +390,8 @@ export class ScalingService {
       }
 
       // Gracefully shutdown all workers
-      const clusterWorkers = cluster.workers as Record<string, any> | undefined
-      Object.values(clusterWorkers || {}).forEach((worker) => {
+      const clusterWorkers = cluster.workers ?? {}
+      Object.values(clusterWorkers).forEach((worker) => {
         if (worker) {
           worker.disconnect()
         }
@@ -442,7 +444,7 @@ export class ScalingService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: string; details: Record<string, unknown> }> {
     const healthyWorkers = Array.from(this.workers.values()).filter(
       (worker) => worker.status === 'active' && Date.now() - worker.lastHealthCheck < 120000,
     )

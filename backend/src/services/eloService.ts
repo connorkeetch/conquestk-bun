@@ -1,6 +1,6 @@
 import type { PoolClient, QueryResultRow } from 'pg'
-import { query, transaction } from '../config/database'
 import type { DatabaseQueryResult } from '../config/database'
+import { query, transaction } from '../config/database'
 
 export interface PlayerRating {
   userId: string
@@ -59,7 +59,11 @@ export const SKILL_TIERS: SkillTier[] = [
 ]
 
 export class EloService {
-  private calculateKFactor(gamesPlayed: number, currentRating: number, numberOfPlayers: number): number {
+  private calculateKFactor(
+    gamesPlayed: number,
+    currentRating: number,
+    numberOfPlayers: number,
+  ): number {
     let baseK: number
     if (gamesPlayed < 30) {
       baseK = 32
@@ -120,7 +124,11 @@ export class EloService {
         .filter((p) => p.userId !== player.userId)
         .map((p) => p.currentRating)
 
-      const kFactor = this.calculateKFactor(player.gamesPlayed, player.currentRating, players.length)
+      const kFactor = this.calculateKFactor(
+        player.gamesPlayed,
+        player.currentRating,
+        players.length,
+      )
       const expectedScore = this.calculateExpectedScore(player.currentRating, opponentRatings)
       const actualScore = this.calculateActualScore(player.position, players.length)
       const ratingChange = Math.round(kFactor * (actualScore - expectedScore))
@@ -140,7 +148,11 @@ export class EloService {
     return changes
   }
 
-  async applyRatingChanges(gameId: string, changes: RatingChange[], client?: PoolClient): Promise<void> {
+  async applyRatingChanges(
+    gameId: string,
+    changes: RatingChange[],
+    client?: PoolClient,
+  ): Promise<void> {
     if (changes.length === 0) return
 
     const persist = async (dbClient: PoolClient) => {
@@ -229,11 +241,16 @@ export class EloService {
 
   getSkillTier(rating: number): SkillTier {
     return (
-      SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) || SKILL_TIERS[0]
+      SKILL_TIERS.find((tier) => rating >= tier.minRating && rating <= tier.maxRating) ||
+      SKILL_TIERS[0]
     )
   }
 
-  canJoinRankedGame(playerRating: number, gameAvgRating: number, maxSkillGap: number = 500): boolean {
+  canJoinRankedGame(
+    playerRating: number,
+    gameAvgRating: number,
+    maxSkillGap: number = 500,
+  ): boolean {
     return Math.abs(playerRating - gameAvgRating) <= maxSkillGap
   }
 
@@ -252,10 +269,7 @@ export class EloService {
     return result.rows
   }
 
-  async getLeaderboard(
-    limit: number = 100,
-    offset: number = 0,
-  ): Promise<LeaderboardRow[]> {
+  async getLeaderboard(limit: number = 100, offset: number = 0): Promise<LeaderboardRow[]> {
     const result = await query<LeaderboardRow>(
       `
         SELECT
