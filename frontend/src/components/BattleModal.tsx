@@ -43,42 +43,59 @@ export const BattleModal: React.FC<BattleModalProps> = ({
       // Play battle sounds
       audioService.playEffect('dice')
 
+      const timeouts: number[] = []
+
       // Play battle/attack sound after dice
-      setTimeout(() => {
-        audioService.playEffect('battle')
-      }, 500)
+      timeouts.push(
+        window.setTimeout(() => {
+          audioService.playEffect('battle')
+        }, 500),
+      )
 
       // Play outcome sound
-      setTimeout(() => {
-        if (battleResult.conquered) {
-          audioService.playEffect('fanfare')
-          audioService.playEffect('capture')
-        } else if (battleResult.defenderLosses > battleResult.attackerLosses) {
-          audioService.playEffect('attack')
-        }
-      }, 1000)
+      timeouts.push(
+        window.setTimeout(() => {
+          if (battleResult.conquered) {
+            audioService.playEffect('fanfare')
+            audioService.playEffect('capture')
+          } else if (battleResult.defenderLosses > battleResult.attackerLosses) {
+            audioService.playEffect('attack')
+          }
+        }, 1000),
+      )
 
-      // Auto-close after 3 seconds if no continue attack option
       if (!onContinueAttack) {
-        const timer = setTimeout(onClose, 3000)
-        return () => clearTimeout(timer)
+        timeouts.push(window.setTimeout(onClose, 3000))
+      }
+
+      return () => {
+        timeouts.forEach((timeoutId) => {
+          window.clearTimeout(timeoutId)
+        })
       }
     }
   }, [isOpen, battleResult, onClose, onContinueAttack])
 
   if (!isOpen || !battleResult) return null
 
-  const renderDice = (dice: number[], color: string) => (
+  const createDiceDescriptors = (dice: number[], role: 'attacker' | 'defender') =>
+    dice.map((value, index) => ({
+      id: `${battleResult.fromTerritory.id}-${battleResult.toTerritory.id}-${role}-${index}-${value}`,
+      value,
+      index,
+    }))
+
+  const renderDice = (dice: ReturnType<typeof createDiceDescriptors>, color: string) => (
     <div className="flex space-x-2">
-      {dice.map((value, index) => (
+      {dice.map((die) => (
         <div
-          key={index}
+          key={die.id}
           className={`w-12 h-12 ${color} border-2 border-gray-300 rounded-lg flex items-center justify-center text-white font-bold text-lg ${
             showAnimation ? 'animate-bounce' : ''
           }`}
-          style={{ animationDelay: `${index * 0.1}s` }}
+          style={{ animationDelay: `${die.index * 0.1}s` }}
         >
-          {value}
+          {die.value}
         </div>
       ))}
     </div>
@@ -100,7 +117,10 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             <div className="text-center">
               <h3 className="font-semibold text-red-600 mb-3">Attacker</h3>
               <p className="text-sm text-muted mb-2">{battleResult.fromTerritory.name}</p>
-              {renderDice(battleResult.attackerDice, 'bg-red-500')}
+              {renderDice(
+                createDiceDescriptors(battleResult.attackerDice, 'attacker'),
+                'bg-red-500',
+              )}
               <p className="mt-2 text-sm">
                 {battleResult.attackerLosses > 0 ? (
                   <span className="text-red-600 font-medium">
@@ -119,7 +139,10 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             <div className="text-center">
               <h3 className="font-semibold text-blue-600 mb-3">Defender</h3>
               <p className="text-sm text-muted mb-2">{battleResult.toTerritory.name}</p>
-              {renderDice(battleResult.defenderDice, 'bg-primary')}
+              {renderDice(
+                createDiceDescriptors(battleResult.defenderDice, 'defender'),
+                'bg-primary',
+              )}
               <p className="mt-2 text-sm">
                 {battleResult.defenderLosses > 0 ? (
                   <span className="text-red-600 font-medium">
@@ -164,6 +187,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
               battleResult.fromTerritory.armies > 1 &&
               !battleResult.conquered && (
                 <button
+                  type="button"
                   onClick={onContinueAttack}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded font-medium"
                 >
@@ -171,6 +195,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                 </button>
               )}
             <button
+              type="button"
               onClick={onClose}
               className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded font-medium"
             >

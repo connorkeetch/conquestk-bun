@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from 'react'
+import type { ReactNode } from 'react'
 import Footer from './Footer'
 import Header from './Header'
 
@@ -10,9 +10,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 relative">
-        {' '}
-        {/* NO background style! */}
-        {children} {/* NO wrapper div needed! */}
+        {/* Keep page content responsible for its own background styling */}
+        {children}
       </main>
       <Footer />
     </div>

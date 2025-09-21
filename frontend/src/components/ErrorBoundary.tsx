@@ -1,4 +1,5 @@
 import React from 'react'
+import { logger } from '@/utils/logger'
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -29,9 +30,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ERROR_BOUNDARY] React Error Boundary caught an error:', error)
-    console.error('[ERROR_BOUNDARY] Error info:', errorInfo)
-    console.error('[ERROR_BOUNDARY] Component stack:', errorInfo.componentStack)
+    logger.error('[ERROR_BOUNDARY] React error boundary captured an error', error, errorInfo)
+    logger.error('[ERROR_BOUNDARY] Component stack trace', errorInfo.componentStack)
 
     this.setState((prevState) => ({
       errorInfo,
@@ -82,6 +82,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     }))
   }
 
+  private navigateHome = () => {
+    if (typeof window !== 'undefined') {
+      window.location.assign('/')
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       // Use custom fallback if provided
@@ -126,6 +132,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
             <div className="space-x-3">
               <button
+                type="button"
                 onClick={this.resetErrorBoundary}
                 className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg transition-colors"
               >
@@ -134,7 +141,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
               {isFullPage && (
                 <button
-                  onClick={() => (window.location.href = '/')}
+                  type="button"
+                  onClick={this.navigateHome}
                   className="px-4 py-2 bg-gray-600 hover:bg-surface-2 text-white rounded-lg transition-colors"
                 >
                   Go Home
