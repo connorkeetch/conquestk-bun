@@ -1,6 +1,6 @@
 # 🧭 ConquestK Roadmap
 
-_Last updated: February 15, 2025_
+_Last updated: September 21, 2025_
 
 ## How to use this document
 - **Purpose:** capture the active product strategy so we are not maintaining scattered TODO files.
@@ -8,27 +8,29 @@ _Last updated: February 15, 2025_
 - **Updates:** refresh this file whenever we finish a milestone, change ownership, or reprioritise major workstreams.
 
 ## ✅ Recent milestones
-These initiatives shipped during the January 2025 cycle and no longer require tracking:
-- **VIP & Premium foundation:** database migrations, admin tooling, and UI badges for premium states.
-- **Theme system overhaul:** consolidated theme definitions with zero-flash loading, darker palettes, and updated documentation.
-- **Map pipeline improvements:** staging → draft → review workflow, quota enforcement, and capital assignment tooling.
-- **Auth improvements:** email verification, account management UX, and preference syncing.
-- **Continent bonuses:** reinforcement logic on both the backend game engine and frontend helpers now awards continent armies.
+Progress over the summer 2025 cycle that is now in production:
+- **Authoritative battle archival & rankings:** the battle worker now calls `applyBattleResult` end-to-end, persisting to `game_results`/`player_game_results`, updating ELO, and exposing battle metrics for alerting.
+- **Lifecycle state machine & ready-check:** lobby → initializing → active → completed transitions are enforced server-side, with ready-check broadcasts and automatic game archival on completion.
+- **Real-time delta streaming:** the frontend consumes live deltas over the canonical `game:<roomId>` channel, replacing fixture data and keeping the Redux store authoritative.
+- **Capitals & continent parity:** backend continent bonuses, capital assignments, and team logic now drive both reinforcement math and UI messaging for custom and classic maps.
+- **Web push notification foundation:** durable subscription storage, turn/game notifications, and service worker handling landed; approvals/DM fan-out remain on the backlog.
+- **Navigation & audio truthfulness:** tournament stubs were removed, and turn notification sound aliases keep legacy keys functioning without regressions.
 
-## 🔄 In progress (Q1 2025 focus)
+## 🔄 In progress (Fall 2025 focus)
 | Stream | Owner | Key deliverables |
 | --- | --- | --- |
-| **VIP gameplay gating** | Connor | Map browser badges, join-time checks, socket/API enforcement, unlock messaging. |
-| **Premium tier perks** | Connor | Tier-specific quotas, premium lobby options, extended analytics panels. |
-| **Design system phase 2** | Connor | Migrate legacy pages to the shared Tailwind component tokens, finish navigation/footer pass, document reusable patterns. |
-| **Bull worker activation** | Connor | Enable the existing Bull queue workers (Battle, GameAction, Cleanup), add monitoring, wire into deployment pipeline. |
+| **Map authoring security** | Connor | Lock down continent/territory/adjacency routes so only creators/collaborators mutate drafts; audit approval endpoints for proper authZ. |
+| **Play hub truthfulness** | Connor | Gate or reroute Quick Match/Ranked/AI cards until real flows exist, and surface links to the working lobby experience. |
+| **Chat source of truth** | Connor | Replace `localStorage` chat identity with authenticated Redux state and broadcast edit/delete events to every participant. |
+| **Player stats surfaces** | Connor | Wire profile + header metrics to the new `player_stats`, game history, and leaderboard data instead of placeholder values. |
+| **Worker safety hardening** | Connor | Finish Bull queue enablement by wiring modifier cleanup, dead-letter monitoring, and idempotent job handling before toggling queues on. |
 
 ## 🎯 Next-up backlog (ready for sprint planning)
-- **Audio polish:** replace placeholder SFX, lazy-load infrequent clips, add accessibility cues.
-- **Card trading phase:** complete infantry/cavalry/artillery set bonuses with wild cards and UI affordances.
-- **Statistics dashboard:** player overview page with win/loss ratios, map performance, and session history.
-- **Friends & lobby social features:** friend list, invites, and lobby chat groundwork.
-- **Documentation pass:** finish API reference outline and public contributing guide.
+- **Approval notifications:** extend the push/websocket system so creators/moderators get map workflow updates once authZ is enforced.
+- **Map asset lifecycle:** ship the background purge for soft-deleted thumbnails/uploads and expose admin recovery tooling.
+- **Audio polish:** prune duplicate legacy files, lazy-load infrequent SFX, and add accessibility cues for key moments.
+- **Analytics & telemetry:** implement the funnel/latency dashboards outlined in the go-live plan to monitor play completion and approval throughput.
+- **Documentation pass:** finish the public API reference outline and contributing guide once the above systems stabilize.
 
 ## 🔭 Future opportunities (longer-term)
 - **Advanced game modes:** Assassin, Zombie Apocalypse, King of the Hill, Sudden Death, Battle Royale.
@@ -37,9 +39,12 @@ These initiatives shipped during the January 2025 cycle and no longer require tr
 - **Theme experiments:** additional visual styles, accessibility presets, and a potential community theme creator.
 
 ## 🧹 Maintenance watchlist
-- **Codebase cleanup:** see [Codebase Cleanup Plan](./CODEBASE-CLEANUP.md) for specific file and script follow-ups.
-- **Performance roadmap:** Bull workers + Redis tuning remain prerequisites before scaling traffic; review after worker activation.
-- **Testing:** expand automated coverage for game actions and map editor flows prior to public launch.
+- **Codebase cleanup:** track duplicate audio directories, outdated deployment scripts, and backup artefacts in [Codebase Cleanup Plan](./CODEBASE-CLEANUP.md).
+- **Queue & cache monitoring:** Bull workers + Redis metrics must land before scaling traffic; revisit once worker safety tasks above finish.
+- **Automated coverage:** expand integration coverage for game actions, map editor auth, and socket join/broadcast flows prior to public launch.
+
+---
+For the detailed launch-blocker backlog, see [Go-Live Consolidated Backlog & Implementation Plan](./go_live_plan.md). Keep both documents in sync when priorities or statuses change.
 
 ---
 Need to add or change priorities? Start by updating the table above, then archive completed items into "Recent milestones" so the active backlog stays concise.
