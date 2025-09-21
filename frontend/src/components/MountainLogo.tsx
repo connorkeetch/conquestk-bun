@@ -1,27 +1,38 @@
+import { useId } from 'react'
+
 interface MountainLogoProps {
   width?: number
   height?: number
   className?: string
+  title?: string
 }
 
 export default function MountainLogo({
   width = 60,
   height = 60,
   className = '',
+  title = 'ConquestK mountain logo',
 }: MountainLogoProps) {
+  const baseId = useId()
+  const gradientId = `${baseId}-gradient`
+  const titleId = `${baseId}-title`
+
   return (
     <svg
       width={width}
       height={height}
       viewBox="0 0 60 60"
       xmlns="http://www.w3.org/2000/svg"
-      className={`${className}`}
+      className={className}
       style={{
         filter: `drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 2px var(--color-primary))`,
       }}
+      role="img"
+      aria-labelledby={titleId}
     >
+      <title id={titleId}>{title}</title>
       <defs>
-        <linearGradient id="loneGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="0%" y2="0%">
           <stop offset="0%" style={{ stopColor: '#1F2937' }} />
           <stop offset="70%" style={{ stopColor: '#4B5563' }} />
           <stop offset="100%" style={{ stopColor: '#9CA3AF' }} />
@@ -46,7 +57,7 @@ export default function MountainLogo({
            L 44 38
            L 52 52
            Z"
-        fill="url(#loneGrad)"
+        fill={`url(#${gradientId})`}
       />
 
       {/* Subtle ridge lines for texture */}

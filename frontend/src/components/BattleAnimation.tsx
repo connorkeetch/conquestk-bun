@@ -285,22 +285,24 @@ export const DiceRollAnimation: React.FC<DiceRollAnimationProps> = ({
 }
 
 // Victory celebration particles
+type Particle = {
+  id: string
+  x: number
+  y: number
+  rotation: number
+  color: string
+}
+
 export const VictoryParticles: React.FC<{ territoryId: string }> = ({ territoryId }) => {
-  const [particles, setParticles] = useState<
-    Array<{
-      id: number
-      x: number
-      y: number
-      rotation: number
-      color: string
-    }>
-  >([])
+  const [particles, setParticles] = useState<Particle[]>([])
 
   useEffect(() => {
     const colors = ['var(--color-secondary)', '#F97316', '#EC4899', '#06B6D4', '#8B5CF6']
 
-    const newParticles = Array.from({ length: 30 }, (_, i) => ({
-      id: i,
+    const generationTimestamp = Date.now()
+
+    const newParticles = Array.from({ length: 30 }, (_, index) => ({
+      id: `${territoryId}-${generationTimestamp}-${index}`,
       x: Math.random() * 100 - 50,
       y: -20 - Math.random() * 50,
       rotation: Math.random() * 360,
@@ -310,7 +312,7 @@ export const VictoryParticles: React.FC<{ territoryId: string }> = ({ territoryI
     setParticles(newParticles)
 
     // Animate falling
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       setParticles((prev) =>
         prev
           .map((p) => ({
@@ -323,12 +325,15 @@ export const VictoryParticles: React.FC<{ territoryId: string }> = ({ territoryI
     }, 50)
 
     // Cleanup after animation
-    setTimeout(() => {
-      clearInterval(interval)
+    const timeoutId = window.setTimeout(() => {
+      window.clearInterval(interval)
       setParticles([])
     }, 3000)
 
-    return () => clearInterval(interval)
+    return () => {
+      window.clearInterval(interval)
+      window.clearTimeout(timeoutId)
+    }
   }, [territoryId])
 
   return (
