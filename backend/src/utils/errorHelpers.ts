@@ -5,17 +5,17 @@ export type KnownError = Error & {
   hostname?: string
   status?: number
   statusCode?: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
-const isErrorObject = (value: any): value is Record<string, any> => {
+const isErrorObject = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null
 }
 
 /**
  * Normalize an any error into an Error instance while preserving useful metadata.
  */
-export const toKnownError = (value: any): KnownError => {
+export const toKnownError = (value: unknown): KnownError => {
   if (value instanceof Error) {
     return value as KnownError
   }
@@ -32,14 +32,14 @@ export const toKnownError = (value: any): KnownError => {
   return new Error(String(value)) as KnownError
 }
 
-export const getErrorMessage = (value: any): string => {
+export const getErrorMessage = (value: unknown): string => {
   return toKnownError(value).message
 }
 
-export const getErrorStack = (value: any): string | undefined => {
+export const getErrorStack = (value: unknown): string | undefined => {
   return toKnownError(value).stack
 }
 
-export const getErrorCode = (value: any): string | number | undefined => {
+export const getErrorCode = (value: unknown): string | number | undefined => {
   return toKnownError(value).code
 }

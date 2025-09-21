@@ -6,10 +6,7 @@ const isValidTeamId = (teamId: number | null | undefined): teamId is number =>
 export const isTeamModeEnabled = (gameState?: GameState | null): boolean =>
   Boolean(gameState?.gameConfig?.allowTeamPlay)
 
-export const getPlayerTeamId = (
-  gameState: GameState,
-  playerId?: string | null,
-): number | null => {
+export const getPlayerTeamId = (gameState: GameState, playerId?: string | null): number | null => {
   if (!playerId) {
     return null
   }

@@ -3,6 +3,9 @@
  * These are the core types that both frontend and backend use
  */
 
+import type { GameDelta } from './deltaUpdates'
+import type { BattleResult, GameAction, SerializedGameState } from './game'
+
 // ============================================
 // User & Authentication Types
 // ============================================
@@ -30,13 +33,7 @@ export interface SharedUser {
 // ============================================
 
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
-export type GameStatus =
-  | 'lobby'
-  | 'initializing'
-  | 'active'
-  | 'completed'
-  | 'paused'
-  | 'abandoned'
+export type GameStatus = 'lobby' | 'initializing' | 'active' | 'completed' | 'paused' | 'abandoned'
 export type PlayerColor =
   | 'red'
   | 'blue'
@@ -68,11 +65,11 @@ export interface ServerToClientEvents {
   }) => void
   'player-left': (data: { roomId: string; playerId: string }) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
-  'game-update': (gameState: any) => void
-  'game-delta': (delta: any) => void // Delta update for efficient real-time broadcasting
-  armiesDeployed: (result: { gameState: any }) => void
-  attackResult: (result: any) => void
-  territoriesFortified: (result: { gameState: any }) => void
+  'game-update': (gameState: SerializedGameState) => void
+  'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting
+  armiesDeployed: (result: { gameState: SerializedGameState }) => void
+  attackResult: (result: BattleResult) => void
+  territoriesFortified: (result: { gameState: SerializedGameState }) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string
@@ -136,7 +133,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   'join-room': (roomId: string) => void
   'leave-room': (roomId: string) => void
-  'game-action': (data: { roomId: string; action: any }) => void
+  'game-action': (data: { roomId: string; action: GameAction }) => void
   deployArmies: (data: { roomId: string; territoryId: string; armies: number }) => void
   attack: (data: {
     roomId: string
@@ -159,7 +156,7 @@ export interface ClientToServerEvents {
 // API Response Types
 // ============================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string

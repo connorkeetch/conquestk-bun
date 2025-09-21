@@ -13,9 +13,24 @@ interface LoadTestConfig {
     path: string
     method: 'GET' | 'POST' | 'PUT' | 'DELETE'
     weight: number // relative frequency
-    payload?: any
+    payload?: RequestPayload
     headers?: Record<string, string>
   }>
+}
+
+type RequestPayload = Record<string, unknown> | unknown[] | string | number | boolean | null
+
+interface ActiveTest {
+  metrics: BenchmarkResult['systemMetrics']
+  startTime: number
+}
+
+interface LoadWorkerResult {
+  totalRequests: number
+  successfulRequests: number
+  failedRequests: number
+  responseTimes: number[]
+  throughputBytes: number
 }
 
 interface GameScenarioConfig {
@@ -71,7 +86,7 @@ interface StressTestResult extends BenchmarkResult {
 }
 
 export class PerformanceTestingService {
-  private activeTests: Map<string, any> = new Map()
+  private activeTests: Map<string, ActiveTest> = new Map()
   private benchmarkHistory: BenchmarkResult[] = []
   private testScenarios: Map<string, LoadTestConfig> = new Map()
 
@@ -176,7 +191,7 @@ export class PerformanceTestingService {
       const testResults = await this.executeLoadTest(testId, config)
 
       // Stop metrics collection
-      const systemMetrics = await this.stopMetricsCollection(metricsCollector)
+      const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
 
       // Analyze results and identify bottlenecks
       const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
@@ -203,7 +218,7 @@ export class PerformanceTestingService {
       return benchmarkResult
     } catch (error) {
       this.activeTests.delete(testId)
-      await this.stopMetricsCollection(metricsCollector)
+      await this.stopMetricsCollection(metricsCollector, testId)
       throw error
     }
   }
@@ -223,7 +238,7 @@ export class PerformanceTestingService {
 
     try {
       const testResults = await this.executeGameScenario(testId, config)
-      const systemMetrics = await this.stopMetricsCollection(metricsCollector)
+      const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
       const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
 
       const benchmarkResult: BenchmarkResult = {
@@ -247,7 +262,7 @@ export class PerformanceTestingService {
       return benchmarkResult
     } catch (error) {
       this.activeTests.delete(testId)
-      await this.stopMetricsCollection(metricsCollector)
+      await this.stopMetricsCollection(metricsCollector, testId)
       throw error
     }
   }
@@ -266,7 +281,7 @@ export class PerformanceTestingService {
 
     let currentConcurrency = 10
     let breakingPoint: StressTestResult['breakingPoint'] | null = null
-    let testResults: any = null
+    let testResults: BenchmarkResult['results'] | null = null
 
     try {
       while (currentConcurrency <= maxConcurrency && !breakingPoint) {
@@ -347,7 +362,7 @@ export class PerformanceTestingService {
         }
       }
 
-      const systemMetrics = await this.stopMetricsCollection(metricsCollector)
+      const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
       const bottlenecks = this.analyzeBottlenecks(testResults, systemMetrics)
 
       const stressTestResult: StressTestResult = {
@@ -395,7 +410,7 @@ export class PerformanceTestingService {
       return stressTestResult
     } catch (error) {
       this.activeTests.delete(testId)
-      await this.stopMetricsCollection(metricsCollector)
+      await this.stopMetricsCollection(metricsCollector, testId)
       throw error
     }
   }
@@ -416,7 +431,7 @@ export class PerformanceTestingService {
     const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5001'
 
     // Create request workers
-    const workers = []
+    const workers: Array<Promise<LoadWorkerResult>> = []
     const requestsPerWorker = Math.ceil(config.concurrency / 10) // Max 10 workers
     const actualWorkers = Math.min(10, config.concurrency)
 
@@ -460,8 +475,8 @@ export class PerformanceTestingService {
     config: LoadTestConfig,
     baseUrl: string,
     requestCount: number,
-  ): Promise<any> {
-    const results = {
+  ): Promise<LoadWorkerResult> {
+    const results: LoadWorkerResult = {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
@@ -602,20 +617,23 @@ export class PerformanceTestingService {
 
   private async stopMetricsCollection(
     collector: NodeJS.Timeout,
+    testId?: string,
   ): Promise<BenchmarkResult['systemMetrics']> {
     clearInterval(collector)
 
-    // Return the last collected metrics
-    const testData = Array.from(this.activeTests.values())[0]
-    return (
-      testData?.metrics || {
-        cpuUsage: [],
-        memoryUsage: [],
-        dbConnections: [],
-        cacheHitRate: [],
-        activeWorkers: [],
-      }
-    )
+    const fallback: BenchmarkResult['systemMetrics'] = {
+      cpuUsage: [],
+      memoryUsage: [],
+      dbConnections: [],
+      cacheHitRate: [],
+      activeWorkers: [],
+    }
+
+    if (!testId) {
+      return fallback
+    }
+
+    return this.activeTests.get(testId)?.metrics ?? fallback
   }
 
   private analyzeBottlenecks(

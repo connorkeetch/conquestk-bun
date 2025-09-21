@@ -85,23 +85,27 @@ export class MigrationTracker {
       const hasVersion = columnCheck.rows.some((row) => row.column_name === 'version')
 
       if (hasFilename) {
-        const result = await query(`
+        const result = await query<{ filename: string }>(
+          `
           SELECT filename 
           FROM schema_migrations 
           WHERE status = 'completed' 
           ORDER BY executed_at ASC
-        `)
-        return result.rows.map((row: any) => row.filename)
+        `,
+        )
+        return result.rows.map((row) => row.filename)
       }
       if (hasVersion) {
         // Handle older schema_migrations table format
-        const result = await query(`
+        const result = await query<{ version: string }>(
+          `
           SELECT version 
           FROM schema_migrations 
           ORDER BY applied_at ASC
-        `)
+        `,
+        )
         // Convert version numbers to expected filename format
-        return result.rows.map((row: any) => {
+        return result.rows.map((row) => {
           const version = row.version
           // Map version to actual migration filenames
           if (version === '001' || version === '001_complete_schema') {
