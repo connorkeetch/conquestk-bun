@@ -103,11 +103,32 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 **Problem**: Missing VAPID keys causing crash
 **Solution**: Fixed in latest version - app now runs without notification keys
 
+### ❌ High database connection usage
+**Problem**: Connection pool nearing max utilization
+1. Call `getPoolMetrics()` to inspect `totalCount`, `idleCount`, and `waitingCount`.
+2. Look for long-running transactions or un-awaited queries that may hold connections open.
+3. Confirm new code paths release pooled clients inside `try/catch/finally` blocks.
+4. In staging/production, verify pool limits remain within the recommended 5-25 (prod) or 2-15 (dev) range.
+
+### ❌ Redis cache misses
+**Problem**: Cache hit rate drops below expectations
+1. Verify TTLs align with workload (1 hour active games, 24 hours inactive, 30 minutes templates, 2 hours map modifiers).
+2. Double-check cache keys match the `CacheService` prefix patterns and avoid typos.
+3. Inspect Redis memory usage/evictions to ensure the dataset fits within provisioned limits.
+4. Warm caches proactively if major deployments flush existing entries.
+
+### ❌ Socket.io performance degradation
+**Problem**: Clients receive large payloads or lag in real-time updates
+1. Confirm emitters are using `DeltaBuilder` helpers instead of full state broadcasts.
+2. Check browser dev tools to ensure the frontend still applies `applyDelta` reducers without warnings.
+3. Audit listeners for accidental legacy event usage and remove any redundant full-state fallbacks.
+4. Monitor network panel bandwidth per connection; expect ~60% lower usage versus the original full payload stream.
+
 ## 🆘 Getting Help
 
 1. **Run setup check**: `npm run setup`
 2. **Check browser console** for JavaScript errors
-3. **Check backend logs** in terminal for API errors  
+3. **Check backend logs** in terminal for API errors
 4. **Verify ports**: Backend (5001) and Frontend (5173) available
 5. **Test basic functionality**: Can you register/login and view games?
 6. **Memory search**: Use memory integration for troubleshooting context

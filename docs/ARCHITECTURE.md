@@ -10,12 +10,19 @@
 ### Key Components
 - **Frontend**: React 19.1/Vite 7.1 with Redux Toolkit state management
 - **Backend**: Express.js REST API + Socket.io for real-time (31+ services)
-- **Game Engine**: Complete Risk gameplay logic with turn phases  
+- **Game Engine**: Complete Risk gameplay logic with turn phases
 - **Map Editor**: Canvas-based territory creation with polygon drawing
 - **Database**: PostgreSQL-only comprehensive schema (20+ tables)
 - **Authentication**: JWT-based with secure user sessions + email verification
 - **Performance**: Enterprise scaling with Redis cluster, CDN, auto-scaling
 - **Workers**: Bull.js-based worker system (ready for integration)
+
+### Performance Architecture Highlights
+- **Delta-based Socket Broadcasting**: `DeltaBuilder` + `applyDelta` reducers stream only changed data to clients, trimming Socket.io bandwidth usage by roughly 60% compared to full state payloads.
+- **Redis-backed Game State**: `gameStateCache` replaces in-memory Maps and enforces TTLs (1 hour while active, 24 hours after completion) so concurrent servers stay in sync without memory leaks.
+- **Territory Modifier & Template Caching**: Dedicated Redis namespaces (`territoryModifierCache`, etc.) keep frequently accessed map metadata warm with TTLs tuned between 30 minutes and 2 hours.
+- **Bulk Database Operations**: Territory modifier writes and ELO updates use batched `INSERT` statements and `UPDATE ... CASE` blocks to eliminate N+1 patterns and reduce transaction overhead.
+- **Connection Pool Guardrails**: Production pools target 5-25 connections (2-15 in development) with `getPoolMetrics()` available for live utilization checks and log-based health tracing.
 
 ## 🗄️ Database Schema Overview
 
@@ -63,6 +70,15 @@
 - databaseClusterService, cdnService, performanceMonitorService
 - scalingService, performanceTestingService
 - redisClusterService, benchmarkUtils
+
+### Performance & Scaling Services Overview
+
+- **redisClusterService** provides cluster-aware caching with tiered TTLs, optional standalone fallback, and built-in metrics so cache usage and errors can be tracked across the fleet.【F:backend/src/services/redisClusterService.ts†L31-L198】
+- **databaseClusterService** manages primaries and replicas with multiple load-balancing strategies, automatic retry/failover, and continuous health monitoring of connection pools.【F:backend/src/services/databaseClusterService.ts†L65-L433】
+- **cdnService** orchestrates multi-provider delivery, applies asset optimization rules, and tracks cache performance while generating versioned CDN URLs for static content.【F:backend/src/services/cdnService.ts†L44-L213】
+- **scalingService** coordinates Node.js cluster workers, collecting metrics and scaling horizontally based on configurable CPU and memory thresholds with graceful shutdown handling.【F:backend/src/services/scalingService.ts†L37-L468】
+- **performanceMonitorService** aggregates system metrics from the database, Redis, CDN, queues, and game services, enforces alert thresholds, and exposes dashboards and health reports for operations.【F:backend/src/services/performanceMonitorService.ts†L81-L446】
+- **performanceTestingService** ships ready-made load, stress, and game-scenario benchmarks, capturing bottlenecks alongside grading helpers in `benchmarkUtils` to summarize results.【F:backend/src/services/performanceTestingService.ts†L73-L399】【F:backend/src/utils/benchmarkUtils.ts†L1-L200】
 
 **Game-Specific:**
 - capitalGameService, capitalGeneratorService, territoryModifierService

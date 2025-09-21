@@ -1,6 +1,6 @@
 # 🧼 Codebase Cleanup Plan
 
-_Last updated: February 15, 2025_
+_Last updated: September 21, 2025_
 
 This document tracks the non-functional tidy-up work that keeps the repository lean. Treat it as a living checklist—when you finish an item, move it to **Completed housekeeping** so the active list stays short.
 
@@ -9,25 +9,25 @@ This document tracks the non-functional tidy-up work that keeps the repository l
 | --- | --- | --- |
 | Legacy root clutter | ✅ | Screenshot, maps.mhtml, and other stray files have been removed from the repo. |
 | Sample/unused directories | ✅ | `logs/` and `tests-examples/` were deleted; keep an eye out if tooling recreates them locally. |
-| Audio asset organisation | ⚠️ | Main library now lives in `frontend/public/audio-files/`, but the legacy `frontend/public/audio files/` directory still exists and should be removed once references are confirmed. |
-| Archived migrations | 🟡 | `backend/migrations/archived/` remains for reference; delete only after production stability is confirmed. |
-| Backend maintenance scripts | 🟡 | Review `backend/scripts/backup-production.js` and the consolidated deploy scripts—decommission if Railway workflow supersedes them. |
-| Git hygiene | ⚠️ | `.gitignore` covers logs generically, but consider adding audio artefacts or enforcing a pre-commit file size check. |
+| Audio asset duplication | 🟡 | The legacy `frontend/public/audio files/` directory still ships duplicate MP3/WAV assets even though the code only references `audio-files/`. Safe to delete once builds/tests confirm no regressions. |
+| Backend deployment scripts | ⚠️ | `backend/scripts/deploy-consolidated-*.js` still reference `010_consolidated_schema.sql` and drop SQL backups into version control. Decide whether to archive or replace them with the current Railway flow. |
+| Production backup artefacts | ⚠️ | `backend/backups/production-backup-*.sql` is committed and `.gitignore` does not exclude the folder—move historical exports out of the repo and ignore future runs. |
+| Git hygiene | 🟡 | Large binary guards are still manual. Evaluate adding a pre-commit size check or Git LFS for anything over ~25 MB (the WAV variants noted in `audioService` are prime candidates). |
 
 ## Active tasks
-1. **Retire legacy audio directory**  
-   Verify no code paths still point to `/audio files/` (with a space) and remove the folder once safe. Update documentation and tests accordingly.
-2. **Audit backend scripts**  
-   Confirm whether the consolidated deployment scripts remain necessary after the Railway migration. Remove or document them if they are now redundant.
-3. **Decide fate of archived migrations**  
-   If we no longer rely on those SQL snapshots for reference, schedule their removal in a dedicated release so we can tag the state beforehand.
-4. **Strengthen large-file safeguards**  
-   Introduce either Git LFS for sizeable audio assets or a pre-commit hook that prevents >25 MB files from sneaking into the history.
+1. **Retire legacy audio directory**
+   Confirm via build/tests that nothing reads from `frontend/public/audio files/` and then delete the folder. Update any documentation that still references the space-in-name path.
+2. **Decommission outdated deployment scripts**
+   Either remove or rewrite `backend/scripts/deploy-consolidated-*.js` and the associated `backup:production` npm script so they no longer reference non-existent migrations or write to `backend/backups/`.
+3. **Stop committing database backups**
+   Delete the checked-in `.sql` export, add `backend/backups/` (or a new storage path) to `.gitignore`, and document a safer backup destination in `DEPLOYMENT.md`.
+4. **Strengthen large-file safeguards**
+   Introduce Git LFS or a lightweight pre-commit hook to block >25 MB media assets before they land—especially if we keep high-quality WAV masters alongside compressed MP3s.
 
 ## Completed housekeeping
 - Removed obsolete root artefacts (`Screenshot 2025-09-10 094449.png`, `maps.mhtml`, `test-audio.html`).
 - Deleted empty `logs/` and Playwright sample directories that crept in during scaffolding.
-- Normalised audio assets into `frontend/public/audio-files/` and pruned duplicate MP3/WAV variants.
+- Normalised audio assets into `frontend/public/audio-files/`; legacy duplicates remain only in the space-named directory pending removal.
 - Moved manual upload utilities into the `tests/` area (no longer sitting in the repository root).
 
 ## Notes for future updates

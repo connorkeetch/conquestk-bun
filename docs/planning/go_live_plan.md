@@ -1,5 +1,5 @@
 # Go-Live Consolidated Backlog & Implementation Plan
-_Last updated: September 20, 2025_
+_Last updated: September 21, 2025_
 
 ## Purpose & Conventions
 - **Doc purpose:** Merge every go-live finding into a single plan that unblocks launch, aligns public promises with reality, and lowers risk.
@@ -7,19 +7,19 @@ _Last updated: September 20, 2025_
 - **Workstream tags:** `[fe]` frontend, `[be]` backend, `[ws]` websockets/sockets, `[sec]` security, `[wrk]` workers/queues, `[ops]` infra & observability, `[doc]` docs/legal, `[ux]` UX/design.
 
 ## Executive Summary
-- Core gameplay state and rankings never persist; finished matches broadcast deltas only, so leaderboards, history, and post-game stats are impossible.
-- Map tooling lacks authorization (continents, territories, adjacency, versions, approvals) which lets any authenticated user mutate critical data.
-- Socket channels and the client loop are misaligned (channel naming mismatch, fixtures powering the board, no phase awareness), breaking real-time play.
-- Promised notifications are missing (no service worker, subscriptions live in memory, admin/creator fan-out stubbed, chat edits/deletes stay local).
-- Navigation and UX oversell features (dead routes, placeholder stats, hard-coded header metrics, "Tournaments" stub).
-- Workers will fail if enabled because modifier hooks are stubs and asset cleanup never runs.
-- Docs/marketing drift (ELO, spectator, PWA/offline, continent bonuses) needs either feature parity now or copy updates.
+- ✅ Core gameplay persistence, lifecycle transitions, and socket alignment are production-ready; remaining blockers concentrate on workflows and player-facing truthfulness.
+- Map tooling still lacks authorization (continents, territories, adjacency, approvals), enabling any authenticated user to mutate published content.
+- The Play hub advertises Quick Match/Ranked/AI routes that do not exist yet, and header/profile stats still surface placeholder data despite backend telemetry being available.
+- Chat and notification systems remain inconsistent: identity comes from `localStorage`, edits/deletes only echo locally, and map approval/DM fan-out is still TODO.
+- Bull/cleanup workers cannot be enabled safely until modifier cleanup, dead-letter handling, and queue health monitoring land.
+- Docs/marketing should be refreshed once the above items are complete to ensure feature parity messaging.
 
 > **Execution order:** Finish every `P0` before shipping (persistence, authorization, lifecycle + sockets, minimum notifications, truthful navigation), then tackle `P1` (stats wiring, chat consistency, map workflow polish, worker safety), followed by `P2`/`P3` items.
 
 ## Epic A — Core Game Lifecycle, Persistence & Rankings
 ### A1. Persist battle outcomes & game results (authoritative state)
 - **Priority:** P0 • **Tags:** [be][wrk][ws][ops]
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** `battleWorker` emits deltas but skips `applyBattleResult`; `GameService` leaves TODOs for archival/history/ELO, so restarts roll back ownership and end-of-game data never exists.
 - **Acceptance criteria:**
   - `applyBattleResult(...)` updates ownership/armies in cache and database atomically.
@@ -28,10 +28,11 @@ _Last updated: September 20, 2025_
   - Metrics exist (`battle_applied_total`, in-memory vs DB divergence gauge, alert on failed apply > _N_/min).
 - **Dependencies:** A3 lifecycle state machine, D2 observability/stats.
 - **Notes:** Replace SQLite-style `INSERT OR REPLACE` with `INSERT ... ON CONFLICT ... DO UPDATE`.
-- _Progress (Sep 2026): Worker apply now persists territory updates atomically, archives to new `game_results` + `player_game_results`, updates ELO/leaderboard via `ON CONFLICT`, and emits battle apply/failure metrics with alerting._
+- _Progress (Sep 2025): Worker apply now persists territory updates atomically, archives to new `game_results` + `player_game_results`, updates ELO/leaderboard via `ON CONFLICT`, and emits battle apply/failure metrics with alerting._
 
 ### A2. Replace fixtures with live server state
 - **Priority:** P0 • **Tags:** [fe][ws]
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** The play route renders from hard-coded `gameData`; the board pulls ownership from bundled JSON; room handler is a TODO.
 - **Acceptance criteria:**
   - Client subscribes to `game:<roomId>` (per A4) and renders authoritative state; no fixtures ship in production.
@@ -40,6 +41,7 @@ _Last updated: September 20, 2025_
 
 ### A3. Implement game start & lifecycle state machine
 - **Priority:** P0 • **Tags:** [be][ws]
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** `GameRoomService.createRoom` only inserts a lobby row; initialization, ready-check, lobby→active hand-off, and `currentGame` creation never occur.
 - **Acceptance criteria:**
   - Persisted lifecycle: `lobby → initializing → active → completed` with phase, turn, and timers.
@@ -48,6 +50,7 @@ _Last updated: September 20, 2025_
 
 ### A4. Fix Socket.IO channel naming & membership
 - **Priority:** P0 • **Tags:** [ws]
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Clients join `roomId` while workers emit to `game:<roomId>`, so players miss every update.
 - **Acceptance criteria:**
   - A single canonical channel (`game:<roomId>` or equivalent) shared by server, workers, and clients.
@@ -56,6 +59,7 @@ _Last updated: September 20, 2025_
 
 ### A5. Core rules parity (continent bonuses, teams, capitals)
 - **Priority:** P0 • **Tags:** [be][fe]
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Bonuses and team play remain TODOs; capital checks are stubbed; client helpers hard-code classic continents.
 - **Acceptance criteria:**
   - Backend calculates reinforcements with map metadata (no hard-coded constants).
@@ -69,6 +73,7 @@ _Last updated: September 20, 2025_
 ## Epic B — Security & Map Authoring Workflow
 ### B1. Enforce map ownership & permissions (incl. approval/versioning)
 - **Priority:** P0 • **Tags:** [be][sec]
+- **Status:** ⚠️ In progress (mutate routes still lack authZ; TODOs remain in `backend/src/routes/maps.ts`).
 - **Problem:** Continent/territory/adjacency/version routes allow any authenticated user to mutate any map; approval controller lacks authorization.
 - **Acceptance criteria:**
   - Permission model documented and enforced for creator, collaborator, admin.
@@ -77,6 +82,7 @@ _Last updated: September 20, 2025_
 
 ### B2. Creator & reviewer notifications (real fan-out)
 - **Priority:** P1 (upgrade pieces that block workflow sooner) • **Tags:** [be][ws][fe][ops]
+- **Status:** 🟡 In progress (durable subscriptions + service worker shipped; approval/DM fan-out pending).
 - **Problem:** Approval/rejection only logs; admin fan-out TODO; service worker missing; push subscriptions live in memory.
 - **Acceptance criteria:**
   - In-app notifications delivered via WebSocket fan-out for creators and moderators.
@@ -86,6 +92,7 @@ _Last updated: September 20, 2025_
 
 ### B3. Map staging asset lifecycle
 - **Priority:** P1 • **Tags:** [be][ops]
+- **Status:** ⏳ Not started (blocked behind B1/B2 hardening).
 - **Problem:** Deleting map images marks rows deleted but never removes files.
 - **Acceptance criteria:**
   - Soft-delete policy with background purge (bucket/API delete) and metrics.
@@ -94,6 +101,7 @@ _Last updated: September 20, 2025_
 ## Epic C — Chat & Social Consistency
 ### C1. Identity & state source of truth
 - **Priority:** P1 • **Tags:** [fe][be][ws]
+- **Status:** ⚠️ In progress (`chatSlice` still reads `localStorage`; needs authenticated Redux plumbing).
 - **Problem:** `chatSlice` reads `userId` from `localStorage`; auth never writes it; DM addressing breaks.
 - **Acceptance criteria:**
   - Chat derives identity from Redux auth state; `localStorage` reserved for auth session plumbing.
@@ -101,12 +109,14 @@ _Last updated: September 20, 2025_
 
 ### C2. Broadcast chat edits/deletes
 - **Priority:** P1 • **Tags:** [be][ws][fe]
+- **Status:** ⚠️ Open (server echoes edits/deletes to the issuing client only; missing room fan-out + reconciliation).
 - **Problem:** Edit/delete acknowledgements stream only to the issuing client.
 - **Acceptance criteria:**
   - Server emits edit/delete to all participants; frontend updates in-place and reconciles on reconnect.
 
 ### C3. DM push notifications (deferred)
 - **Priority:** P3 • **Tags:** [be][ops][fe]
+- **Status:** ⏳ Deferred (revisit after B2 and chat consistency work).
 - **Problem:** Rows store DM notifications but push is unimplemented.
 - **Acceptance criteria:**
   - When enabled, DM creates a queued push delivered via service worker with deep-link; honours user preferences.
@@ -114,12 +124,14 @@ _Last updated: September 20, 2025_
 ## Epic D — Navigation, Stats & UX Truthfulness
 ### D1. Repair Play hub routing
 - **Priority:** P0 • **Tags:** [fe]
+- **Status:** ⚠️ Open (`/play` still links to Quick Match/Ranked/AI stubs; needs gating or reroutes).
 - **Problem:** Hub advertises Quick Match/Ranked/vs AI but only `/play` exists.
 - **Acceptance criteria:**
   - Either ship working routes or hide cards behind feature flags; hub produces zero 404s.
 
 ### D2. Player stats & header data
 - **Priority:** P1 (depends on A1/A3) • **Tags:** [fe][be]
+- **Status:** ⚠️ In progress (profile/header surfaces still display placeholders despite `player_stats` availability).
 - **Problem:** Stats page is stubbed; header uses hard-coded level/win rate; advanced metrics show zeros.
 - **Acceptance criteria:**
   - Profile and Stats pages read real API data; header reflects actual values.
@@ -128,13 +140,15 @@ _Last updated: September 20, 2025_
 
 ### D3. Audio cue mismatches
 - **Priority:** P1 • **Tags:** [fe]
+- **Status:** ✅ Completed (March 2025)
 - **Problem:** `playEffect('turn')` vs `yourturn` mismatch.
 - **Acceptance criteria:**
   - Unified key map or aliasing, with a unit test preventing regressions.
-- _Progress (Mar 2026): Normalized the turn notification sound so both `turn` and `yourturn` funnel through the same AudioService key and added a regression test to guard against future mismatches._
+- _Progress (Mar 2025): Normalized the turn notification sound so both `turn` and `yourturn` funnel through the same AudioService key and added a regression test to guard against future mismatches._
 
 ### D4. Hide "Tournaments" and other "coming soon" surfaces
 - **Priority:** P2 • **Tags:** [fe]
+- **Status:** ✅ Completed (November 2025)
 - **Acceptance criteria:**
   - Feature-flag or remove until real data exists.
 - _Progress (Nov 2025): Removed all tournament links and "coming soon" tabs from navigation, home, dashboard, lobby, and the Community page so unactionable surfaces no longer appear in the UI._
@@ -142,6 +156,7 @@ _Last updated: September 20, 2025_
 ## Epic E — Workers, Queues & Cleanup
 ### E1. Enable Bull queues safely
 - **Priority:** P1 • **Tags:** [wrk][ops][be]
+- **Status:** ⚠️ Blocked (modifier cleanup + queue health/alerting still outstanding; see cleanup worker TODOs).
 - **Problem:** Cleanup worker references unimplemented territory modifier service; queues will crash at runtime.
 - **Acceptance criteria:**
   - Referenced services exist or hooks removed before enabling queues.
@@ -149,12 +164,14 @@ _Last updated: September 20, 2025_
 
 ### E2. Cleanup worker modifier service
 - **Priority:** P1 • **Tags:** [be][wrk]
+- **Status:** ⚠️ Blocked (cleanup worker still comments out `territoryModifierService.cleanupFinishedGameModifiers`).
 - **Acceptance criteria:**
   - Implement modifier service or drop the hook; add tests covering cleanup outcomes and idempotency.
 
 ## Epic F — Documentation, Legal & Product Copy
 ### F1. Align README, marketing, and architecture docs with reality
 - **Priority:** P2 (legal copy may escalate) • **Tags:** [doc]
+- **Status:** ⏳ Not started (queue behind gameplay & workflow fixes).
 - **Problem:** Docs/marketing claim ELO, spectator, PWA/offline, and continent bonuses are live; architecture still references polygon drawing.
 - **Acceptance criteria:**
   - Update or feature-flag claims; architecture documents the current map editor model.
@@ -162,12 +179,14 @@ _Last updated: September 20, 2025_
 
 ### F2. Security checklist re-run
 - **Priority:** P2 • **Tags:** [doc][sec]
+- **Status:** ⏳ Not started (schedule once map auth + chat parity land).
 - **Acceptance criteria:**
   - Post-change review covering rate limits, sanitation, authZ; document configuration and test evidence.
 
 ## Epic G — DevEx, CI/CD, Testing & Repo Hygiene
 ### G1. CI gating & coverage
 - **Priority:** P2 • **Tags:** [ops]
+- **Status:** ⏳ Not started (needs plan after worker + auth changes ship).
 - **Acceptance criteria:**
   - CI runs typecheck, lint, unit, integration, and smoke e2e jobs.
   - Known lint debt quarantined via baseline; pipeline fails on new issues.
@@ -175,11 +194,13 @@ _Last updated: September 20, 2025_
 
 ### G2. Large file safeguards & legacy cleanup
 - **Priority:** P2 • **Tags:** [ops]
+- **Status:** ⚠️ In progress (duplicate audio directories + backup artefacts tracked in cleanup plan).
 - **Acceptance criteria:**
   - Git LFS or hooks for audio/large assets; legacy audio directory retired; scripts audited; archived migrations decision recorded.
 
 ### G3. Minimal analytics & telemetry
 - **Priority:** P2 • **Tags:** [ops][fe][be]
+- **Status:** ⏳ Not started (dependent on live stats + worker instrumentation).
 - **Acceptance criteria:**
   - Emit funnel events (lobby→match start, battle resolved, match completed, approval decision).
   - Error logging carries correlation IDs across frontend↔backend↔workers; dashboards exist for play completion and approval throughput.

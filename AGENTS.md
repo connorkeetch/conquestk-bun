@@ -87,3 +87,6 @@
 - Map editor format: `docs/MAP-FORMAT.md`
 - Coding standards: `docs/CODING-STANDARDS.md`
 - Troubleshooting common issues: `docs/TROUBLESHOOTING.md`
+- Product roadmap & priorities: `docs/planning/ROADMAP.md` (align with the go-live backlog in the same folder).
+- Launch blocker backlog: `docs/planning/go_live_plan.md` (status badges indicate what is done vs. open).
+- Housekeeping tracker: `docs/planning/CODEBASE-CLEANUP.md` (duplicate audio directories, legacy deployment scripts, backup hygiene).
