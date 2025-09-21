@@ -277,13 +277,17 @@ REDIS_URL=redis://localhost:6379
     // Issues
     if (this.issues.length > 0) {
       this.log('\n❌ Issues Found:', 'error')
-      this.issues.forEach((issue) => this.log(`  • ${issue}`, 'error'))
+      this.issues.forEach((issue) => {
+        this.log(`  • ${issue}`, 'error')
+      })
     }
 
     // Fixes Applied
     if (this.fixes.length > 0) {
       this.log('\n🔧 Fixes Applied:', 'success')
-      this.fixes.forEach((fix) => this.log(`  • ${fix}`, 'success'))
+      this.fixes.forEach((fix) => {
+        this.log(`  • ${fix}`, 'success')
+      })
     }
 
     // Next Steps

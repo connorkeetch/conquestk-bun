@@ -54,14 +54,14 @@ export interface BattleResultDelta extends BaseDelta {
     attackerLosses: number
     defenderLosses: number
     gameEnded?: boolean
-    winner?: any
+    winner?: string
     eliminatedPlayers?: string[]
   }
 }
 
 export interface GameEndDelta extends BaseDelta {
   type: 'GAME_END'
-  winner: any
+  winner: string
   eliminatedPlayers: string[]
 }
 
@@ -81,8 +81,10 @@ export type GameDelta =
 /**
  * Delta builder utility for creating efficient updates
  */
-export class DeltaBuilder {
-  static territoryUpdate(
+type BattleResultPayload = BattleResultDelta['battleResult']
+
+export const DeltaBuilder = {
+  territoryUpdate(
     roomId: string,
     territoryId: string,
     changes: { armies?: number; ownerId?: string },
@@ -94,9 +96,9 @@ export class DeltaBuilder {
       changes,
       timestamp: Date.now(),
     }
-  }
+  },
 
-  static playerUpdate(
+  playerUpdate(
     roomId: string,
     playerId: string,
     changes: { armies?: number; territories?: string[]; isEliminated?: boolean },
@@ -108,9 +110,9 @@ export class DeltaBuilder {
       changes,
       timestamp: Date.now(),
     }
-  }
+  },
 
-  static phaseChange(
+  phaseChange(
     roomId: string,
     phase: string,
     currentPlayer: string,
@@ -126,18 +128,18 @@ export class DeltaBuilder {
       reinforcementArmies,
       timestamp: Date.now(),
     }
-  }
+  },
 
-  static battleResult(roomId: string, battleResult: any): BattleResultDelta {
+  battleResult(roomId: string, battleResult: BattleResultPayload): BattleResultDelta {
     return {
       type: 'BATTLE_RESULT',
       roomId,
       battleResult,
       timestamp: Date.now(),
     }
-  }
+  },
 
-  static gameEnd(roomId: string, winner: any, eliminatedPlayers: string[]): GameEndDelta {
+  gameEnd(roomId: string, winner: string, eliminatedPlayers: string[]): GameEndDelta {
     return {
       type: 'GAME_END',
       roomId,
@@ -145,5 +147,5 @@ export class DeltaBuilder {
       eliminatedPlayers,
       timestamp: Date.now(),
     }
-  }
-}
+  },
+} as const

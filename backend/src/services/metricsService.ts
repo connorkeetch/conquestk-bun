@@ -52,7 +52,7 @@ class CounterMetric {
 }
 
 class GaugeMetric extends CounterMetric {
-  set(labels: LabelValue = {}, value: number): void {
+  set(value: number, labels: LabelValue = {}): void {
     const key = this.serializeLabels(labels)
     this.values.set(key, value)
   }
@@ -92,7 +92,7 @@ class BattleMetrics {
 
   recordApply(gameId: string, status: BattleStatus, divergence: number) {
     this.battleApplyCounter.inc({ status })
-    this.battleStateDivergenceGauge.set({ gameId }, divergence)
+    this.battleStateDivergenceGauge.set(divergence, { gameId })
   }
 
   recordFailure(reason: string, metadata?: Record<string, unknown>) {

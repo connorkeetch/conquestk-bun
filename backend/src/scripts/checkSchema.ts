@@ -1,5 +1,4 @@
-import { existsSync } from 'node:fs'
-import { promises as fsPromises } from 'node:fs'
+import { existsSync, promises as fsPromises } from 'node:fs'
 import * as path from 'node:path'
 import * as dotenv from 'dotenv'
 
@@ -418,7 +417,7 @@ function sanitizeDefaultValue(value: string | null): string | null {
     return null
   }
 
-  return value.replace(/::[\w\s\.\[\]]+/g, '')
+  return value.replace(/::[[\]\w\s.]+/g, '')
 }
 
 function escapeMarkdown(value: string): string {
@@ -435,7 +434,7 @@ function formatRowCount(rowCount: number | null): string {
 
 function extractPostgresVersion(rawVersion: string): string {
   const match = /^PostgreSQL\s+([^\s]+)/i.exec(rawVersion)
-  if (match && match[1]) {
+  if (match?.[1]) {
     return `PostgreSQL ${match[1]}`
   }
   return rawVersion
@@ -543,7 +542,12 @@ async function getConstraintDetails(tableName: string): Promise<{
       uniqueByConstraint.set(row.constraint_name, columns)
     }
 
-    if (row.constraint_type === 'FOREIGN KEY' && row.column_name && row.foreign_table_name && row.foreign_column_name) {
+    if (
+      row.constraint_type === 'FOREIGN KEY' &&
+      row.column_name &&
+      row.foreign_table_name &&
+      row.foreign_column_name
+    ) {
       const existing = foreignByConstraint.get(row.constraint_name)
       if (existing) {
         existing.columns.push(row.column_name)
@@ -768,7 +772,9 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
   lines.push('')
   lines.push(`Generated on ${generatedAt.toISOString()}`)
   lines.push('')
-  lines.push('> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.')
+  lines.push(
+    '> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.',
+  )
   lines.push('')
   lines.push('## Overview')
   lines.push('')
@@ -786,7 +792,9 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
   lines.push('| Table | Columns | Rows |')
   lines.push('| --- | ---: | ---: |')
   for (const table of tables) {
-    lines.push(`| \`${table.name}\` | ${table.columns.length} | ${formatRowCount(table.rowCount)} |`)
+    lines.push(
+      `| \`${table.name}\` | ${table.columns.length} | ${formatRowCount(table.rowCount)} |`,
+    )
   }
 
   lines.push('')

@@ -105,8 +105,10 @@ export class RedisClusterService {
       this.metrics.errors++
     })
 
-    this.cluster.on('node error', (error: Error, node: any) => {
-      logger.warn(`⚠️ Redis node error (${node.host}:${node.port}):`, error)
+    this.cluster.on('node error', (error: Error, node: { host?: string; port?: number }) => {
+      const host = node.host ?? 'unknown-host'
+      const port = node.port ?? 0
+      logger.warn(`⚠️ Redis node error (${host}:${port}):`, error)
     })
 
     await this.cluster.connect()
@@ -141,7 +143,7 @@ export class RedisClusterService {
   // Advanced caching methods with automatic tier management
   async setWithTier(
     key: string,
-    value: any,
+    value: unknown,
     tier: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY' = 'STANDARD',
   ): Promise<boolean> {
     const client = this.getClient()
@@ -170,7 +172,7 @@ export class RedisClusterService {
     }
   }
 
-  async get<T = any>(key: string): Promise<T | null> {
+  async get<T = unknown>(key: string): Promise<T | null> {
     const client = this.getClient()
     if (!client) return null
 
@@ -198,7 +200,7 @@ export class RedisClusterService {
   }
 
   // Batch operations for efficiency
-  async mget<T = any>(keys: string[]): Promise<(T | null)[]> {
+  async mget<T = unknown>(keys: string[]): Promise<(T | null)[]> {
     const client = this.getClient()
     if (!client || keys.length === 0) return []
 
@@ -235,7 +237,7 @@ export class RedisClusterService {
   async mset(
     keyValuePairs: Array<{
       key: string
-      value: any
+      value: unknown
       tier?: 'CRITICAL' | 'STANDARD' | 'EXTENDED' | 'TEMPORARY'
     }>,
   ): Promise<boolean> {
@@ -338,7 +340,7 @@ export class RedisClusterService {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; details: any }> {
+  async healthCheck(): Promise<{ status: string; details: Record<string, unknown> }> {
     const client = this.getClient()
     if (!client) {
       return { status: 'unhealthy', details: { error: 'No Redis client available' } }

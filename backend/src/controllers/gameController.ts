@@ -52,7 +52,10 @@ export class GameController {
         normalizedTeamMode = 'teams'
       } else if (teamMode === false) {
         normalizedTeamMode = 'none'
-      } else if (allowTeamPlay || (typeof parsedNumberOfTeams === 'number' && parsedNumberOfTeams > 0)) {
+      } else if (
+        allowTeamPlay ||
+        (typeof parsedNumberOfTeams === 'number' && parsedNumberOfTeams > 0)
+      ) {
         normalizedTeamMode = 'teams'
       } else {
         normalizedTeamMode = 'none'

@@ -5,8 +5,8 @@ import { databaseClusterService } from '../services/databaseClusterService'
 import { performanceMonitorService } from '../services/performanceMonitorService'
 import { redisClusterService } from '../services/redisClusterService'
 import { getErrorMessage } from '../utils/errorHelpers'
-import { handleRouteError } from '../utils/routeErrorHandler'
 import { logger } from '../utils/logger'
+import { handleRouteError } from '../utils/routeErrorHandler'
 
 type ServiceHealthResult = {
   status: string

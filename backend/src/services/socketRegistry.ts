@@ -3,9 +3,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared
 
 let ioInstance: Server<ClientToServerEvents, ServerToClientEvents> | null = null
 
-export function registerSocketServer(
-  io: Server<ClientToServerEvents, ServerToClientEvents>,
-): void {
+export function registerSocketServer(io: Server<ClientToServerEvents, ServerToClientEvents>): void {
   ioInstance = io
 }
 
@@ -16,8 +14,6 @@ export function getSocketServer(): Server<ClientToServerEvents, ServerToClientEv
   return ioInstance
 }
 
-export function tryGetSocketServer():
-  | Server<ClientToServerEvents, ServerToClientEvents>
-  | null {
+export function tryGetSocketServer(): Server<ClientToServerEvents, ServerToClientEvents> | null {
   return ioInstance
 }

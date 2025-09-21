@@ -1,6 +1,6 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
-import { SlackWebhookChannel } from './channels/SlackWebhookChannel'
 import { logger } from '../utils/logger'
+import { SlackWebhookChannel } from './channels/SlackWebhookChannel'
 
 export type NotificationChannelName = 'webpush' | 'slack' | 'discord' | (string & {})
 
@@ -38,7 +38,8 @@ export class NotificationDispatcher {
     )
 
     this.externalNotificationsEnabled =
-      options.externalNotificationsEnabled ?? this.parseBoolean(process.env.ENABLE_EXTERNAL_NOTIFICATIONS)
+      options.externalNotificationsEnabled ??
+      this.parseBoolean(process.env.ENABLE_EXTERNAL_NOTIFICATIONS)
 
     options.channels?.forEach((channel) => {
       this.registerChannel(channel)
@@ -89,7 +90,9 @@ export class NotificationDispatcher {
         const result = await channel.send(event)
 
         if (result.ok) {
-          channelLogger.debug('Notification channel accepted event', { providerMessageId: result.id })
+          channelLogger.debug('Notification channel accepted event', {
+            providerMessageId: result.id,
+          })
         } else {
           channelLogger.warn('Notification channel reported failure', {
             error: result.error,
