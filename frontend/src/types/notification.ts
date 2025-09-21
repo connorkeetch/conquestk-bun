@@ -7,6 +7,11 @@ export type NotificationType =
   | 'achievement'
   | 'system'
   | 'chat_message'
+  | 'admin'
+  | 'map_submission'
+  | 'map_review'
+  | 'map_approved'
+  | 'map_rejected'
 
 export interface Notification {
   id: string
@@ -18,11 +23,13 @@ export interface Notification {
   actionUrl?: string
   actionLabel?: string
   icon?: string
-  metadata?: {
+  metadata?: Record<string, unknown> & {
     gameId?: string
     userId?: string
     achievementId?: string
     friendUsername?: string
+    mapId?: string
+    requestId?: string
   }
 }
 

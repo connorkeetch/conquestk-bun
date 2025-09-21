@@ -210,6 +210,30 @@ export class AdminService {
     return false
   }
 
+  async getActiveAdminUserIds(): Promise<string[]> {
+    const ids = new Set<string>()
+
+    const explicitAdmins = await query<{ id: string }>(
+      'SELECT id FROM users WHERE is_admin = TRUE',
+    )
+    explicitAdmins.rows.forEach((row) => {
+      if (row.id) ids.add(row.id)
+    })
+
+    const roleAdmins = await query<{ user_id: string }>(
+      `
+      SELECT DISTINCT user_id FROM user_admin_roles
+      WHERE (is_active IS NULL OR is_active = TRUE)
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+    `,
+    )
+    roleAdmins.rows.forEach((row) => {
+      if (row.user_id) ids.add(row.user_id)
+    })
+
+    return Array.from(ids)
+  }
+
   async getUserAdminInfo(userId: string): Promise<AdminUser[]> {
     const result = await query(
       `

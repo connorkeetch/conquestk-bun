@@ -1,5 +1,6 @@
 import type { QueryResultRow } from 'pg'
 import { query } from '../config/database.js'
+import notificationService from './notificationService'
 
 export interface MapVersion {
   id: string
@@ -303,6 +304,17 @@ export class MapApprovalService {
     `,
       [underReviewStatusId, request.versionId],
     )
+
+    const version = await MapApprovalService.getVersionById(request.versionId)
+    await notificationService.createInAppNotification(moderatorId, {
+      type: 'map_review',
+      title: 'Map assigned for review',
+      message: `"${version.name}" is ready for your review.`,
+      data: { mapId: version.mapId, versionId: version.id, requestId },
+      actionUrl: `/admin/maps/${version.mapId}/review`,
+      actionLabel: 'Open review',
+      sendPush: false,
+    })
   }
 
   // Review Criteria Management
@@ -381,6 +393,81 @@ export class MapApprovalService {
       moderatorFeedback,
       { reviewResults: results },
     )
+
+    const version = await MapApprovalService.getVersionById(request.versionId)
+    const mapInfo = await query<{ creator_id: string; name: string }>(
+      'SELECT creator_id, name FROM maps WHERE id = $1',
+      [version.mapId],
+    )
+
+    const creatorId = mapInfo.rows?.[0]?.creator_id
+    const mapName = mapInfo.rows?.[0]?.name ?? 'Your map'
+    const baseData = {
+      mapId: version.mapId,
+      versionId: version.id,
+      requestId,
+    }
+
+    if (creatorId) {
+      let type: string
+      let title: string
+      let message: string
+      let pushTitle: string
+      let pushBody: string
+
+      switch (decision) {
+        case 'approved':
+          type = 'map_approved'
+          title = 'Map approved'
+          message = `"${mapName}" has been approved.`
+          pushTitle = '✅ Map approved'
+          pushBody = `"${mapName}" is now approved.`
+          break
+        case 'rejected':
+          type = 'map_rejected'
+          title = 'Map rejected'
+          message = moderatorFeedback
+            ? `"${mapName}" was rejected: ${moderatorFeedback}`
+            : `"${mapName}" was rejected.`
+          pushTitle = '❗ Map review update'
+          pushBody = `"${mapName}" was rejected.`
+          break
+        case 'needs_changes':
+          type = 'map_review'
+          title = 'Map needs changes'
+          message = moderatorFeedback
+            ? `Review feedback for "${mapName}": ${moderatorFeedback}`
+            : `Reviewers requested changes for "${mapName}".`
+          pushTitle = 'ℹ️ Map review feedback'
+          pushBody = `"${mapName}" needs updates before approval.`
+          break
+        default:
+          type = 'map_review'
+          title = 'Map review updated'
+          message = `Review updated for "${mapName}".`
+          pushTitle = 'ℹ️ Map review updated'
+          pushBody = `Review updated for "${mapName}".`
+      }
+
+      await notificationService.createInAppNotification(creatorId, {
+        type,
+        title,
+        message,
+        data: { ...baseData, decision, moderatorFeedback },
+        actionUrl: `/maps/${version.mapId}`,
+        actionLabel: 'Review map',
+        sendPush: true,
+        pushPayload: {
+          title: pushTitle,
+          body: pushBody,
+          data: {
+            url: `/maps/${version.mapId}`,
+            decision,
+            ...baseData,
+          },
+        },
+      })
+    }
   }
 
   static async getReviewResults(requestId: string): Promise<MapReviewResult[]> {

@@ -14,7 +14,9 @@ import type {
 } from '../types/maps'
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
+import { adminService } from './adminService'
 import { mapService } from './mapService'
+import notificationService from './notificationService'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
@@ -285,11 +287,16 @@ export class MapWorkflowService {
       )
 
       // Create admin notification
+      const mapNameResult = await query<{ name: string }>('SELECT name FROM maps WHERE id = $1', [
+        mapId,
+      ])
+      const submittedMapName = mapNameResult.rows[0]?.name ?? 'Submitted map'
+
       await this.createAdminNotification({
         type: 'map_submission',
         title: 'New Map Submission',
-        message: `A new map has been submitted for review`,
-        data: { mapId, userId },
+        message: `"${submittedMapName}" was submitted for review`,
+        data: { mapId, userId, mapName: submittedMapName },
       })
 
       // Log the action
@@ -329,10 +336,28 @@ export class MapWorkflowService {
       await this.logMapAction(mapId, 'approved', adminId, notes ? { notes } : undefined)
 
       // Notify the map creator
-      const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = ?', [mapId])
-      if (mapInfo.rows?.[0]) {
-        // TODO: Send notification to user
-        logger.info(`Map ${mapInfo.rows[0].name} approved by admin ${adminId}`)
+      const mapInfo = await query<{ creator_id: string; name: string }>(
+        'SELECT creator_id, name FROM maps WHERE id = $1',
+        [mapId],
+      )
+      const creatorId = mapInfo.rows?.[0]?.creator_id
+      const mapName = mapInfo.rows?.[0]?.name ?? 'Your map'
+
+      if (creatorId) {
+        await notificationService.createInAppNotification(creatorId, {
+          type: 'map_approved',
+          title: 'Map approved',
+          message: `"${mapName}" has been approved and is ready for players.`,
+          data: { mapId },
+          actionUrl: `/maps/${mapId}`,
+          actionLabel: 'View map',
+          sendPush: true,
+          pushPayload: {
+            title: '✅ Map approved',
+            body: `"${mapName}" is now approved.`,
+            data: { url: `/maps/${mapId}` },
+          },
+        })
       }
     } catch (error) {
       logger.error('Error approving map:', error)
@@ -369,10 +394,28 @@ export class MapWorkflowService {
       await this.logMapAction(mapId, 'rejected', adminId, { reason })
 
       // Notify the map creator
-      const mapInfo = await query('SELECT creator_id, name FROM maps WHERE id = ?', [mapId])
-      if (mapInfo.rows?.[0]) {
-        // TODO: Send notification to user about rejection and reason
-        logger.info(`Map ${mapInfo.rows[0].name} rejected by admin ${adminId}: ${reason}`)
+      const mapInfo = await query<{ creator_id: string; name: string }>(
+        'SELECT creator_id, name FROM maps WHERE id = $1',
+        [mapId],
+      )
+      const creatorId = mapInfo.rows?.[0]?.creator_id
+      const mapName = mapInfo.rows?.[0]?.name ?? 'Your map'
+
+      if (creatorId) {
+        await notificationService.createInAppNotification(creatorId, {
+          type: 'map_rejected',
+          title: 'Map requires changes',
+          message: `"${mapName}" was rejected: ${reason}`,
+          data: { mapId, reason },
+          actionUrl: `/maps/${mapId}`,
+          actionLabel: 'View feedback',
+          sendPush: true,
+          pushPayload: {
+            title: '❗ Map review update',
+            body: `"${mapName}" needs changes: ${reason}`,
+            data: { url: `/maps/${mapId}` },
+          },
+        })
       }
     } catch (error) {
       logger.error('Error rejecting map:', error)
@@ -773,20 +816,50 @@ export class MapWorkflowService {
    */
   private async createAdminNotification(notification: Partial<AdminNotification>): Promise<void> {
     try {
-      await query(
+      const metadata = (notification.data ?? {}) as Record<string, unknown>
+
+      const result = await query<{ id: string; admin_id: string | null; created_at: Date }>(
         `
-        INSERT INTO admin_notifications (type, title, message, data)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO admin_notifications (admin_id, type, title, message, data)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, admin_id, created_at
       `,
         [
-          notification.type,
-          notification.title,
-          notification.message,
-          JSON.stringify(notification.data),
+          notification.adminId ?? null,
+          notification.type ?? 'admin',
+          notification.title ?? 'Admin notification',
+          notification.message ?? '',
+          JSON.stringify(metadata),
         ],
       )
 
-      // TODO: Send real-time notification via WebSocket to online admins
+      const adminNotification = result.rows[0]
+      if (!adminNotification) {
+        return
+      }
+
+      const recipients = notification.adminId
+        ? [notification.adminId]
+        : await adminService.getActiveAdminUserIds()
+
+      if (recipients.length > 0) {
+        await Promise.allSettled(
+          recipients.map((userId) =>
+            notificationService.createInAppNotification(userId, {
+              type: notification.type ?? 'admin',
+              title: notification.title ?? 'Admin notification',
+              message:
+                notification.message ?? 'You have a new admin notification.',
+              data: {
+                ...metadata,
+                adminNotificationId: adminNotification.id,
+              },
+              sendPush: false,
+            }),
+          ),
+        )
+      }
+
       logger.info('Admin notification created:', notification.title)
     } catch (error) {
       logger.error('Error creating admin notification:', error)

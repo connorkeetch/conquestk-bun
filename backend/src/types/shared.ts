@@ -93,6 +93,19 @@ export type PlayerColor =
 // Socket.io Event Types
 // ============================================
 
+export interface RealtimeNotification {
+  id: string
+  type: string
+  title: string
+  message: string
+  createdAt: string
+  read?: boolean
+  icon?: string
+  actionUrl?: string
+  actionLabel?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface ServerToClientEvents {
   'player-joined': (data: {
     roomId: string
@@ -148,6 +161,7 @@ export interface ServerToClientEvents {
     message: string
     timestamp: string
   }) => void
+  'notification:new': (payload: RealtimeNotification) => void
   'lifecycle:update': (data: {
     roomId: string
     status: GameStatus

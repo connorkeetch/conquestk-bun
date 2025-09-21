@@ -49,11 +49,29 @@ class NotificationService {
     this.notifyListeners()
   }
 
-  public addNotification(notification: Omit<Notification, 'id' | 'timestamp'>): void {
+  public addNotification(notification: {
+    id?: string
+    type: NotificationType | (string & {})
+    title: string
+    message: string
+    read?: boolean
+    actionUrl?: string
+    actionLabel?: string
+    icon?: string
+    metadata?: Notification['metadata']
+    timestamp?: Date
+  }): void {
     const newNotification: Notification = {
-      ...notification,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date(),
+      id: notification.id ?? Math.random().toString(36).substring(2, 11),
+      type: notification.type as NotificationType,
+      title: notification.title,
+      message: notification.message,
+      read: notification.read ?? false,
+      actionUrl: notification.actionUrl,
+      actionLabel: notification.actionLabel,
+      icon: notification.icon,
+      metadata: notification.metadata,
+      timestamp: notification.timestamp ?? new Date(),
     }
     this.notifications.unshift(newNotification)
     this.notifyListeners()
