@@ -495,20 +495,44 @@ export default function MapEditorTokens() {
         // Build connections from adjacency table
         const connectionsMap = new Map<string, Set<string>>()
         map.adjacencies.forEach((adj: any) => {
-          if (!connectionsMap.has(adj.territory_from)) {
-            connectionsMap.set(adj.territory_from, new Set())
+          const fromId =
+            adj.territory_from ||
+            adj.fromTerritoryId ||
+            adj.from_territory_id ||
+            adj.from ||
+            null
+          const toId =
+            adj.territory_to ||
+            adj.toTerritoryId ||
+            adj.to_territory_id ||
+            adj.to ||
+            null
+
+          if (!fromId || !toId) {
+            return
           }
-          if (!connectionsMap.has(adj.territory_to)) {
-            connectionsMap.set(adj.territory_to, new Set())
+
+          if (!connectionsMap.has(fromId)) {
+            connectionsMap.set(fromId, new Set())
           }
-          connectionsMap.get(adj.territory_from)?.add(adj.territory_to)
-          connectionsMap.get(adj.territory_to)?.add(adj.territory_from)
+          if (!connectionsMap.has(toId)) {
+            connectionsMap.set(toId, new Set())
+          }
+          connectionsMap.get(fromId)?.add(toId)
+          connectionsMap.get(toId)?.add(fromId)
         })
 
-        territories = territories.map((t) => ({
-          ...t,
-          connections: Array.from(connectionsMap.get(t.name) || []),
-        }))
+        territories = territories.map((t) => {
+          const connectionKey = t.id ?? t.name
+          const connections = connectionKey
+            ? Array.from(connectionsMap.get(connectionKey) ?? [])
+            : []
+
+          return {
+            ...t,
+            connections,
+          }
+        })
       }
 
       // Load map data into editor state

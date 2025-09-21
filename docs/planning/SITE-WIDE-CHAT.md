@@ -1,5 +1,23 @@
 # Unified Site-wide Messaging Plan
-_Last updated: September 20, 2025_
+_Last updated: February 21, 2025_
+
+## Status snapshot (February 21, 2025)
+- **Backend:** The legacy `chatService` still handles game, team, and DM flows end to end, including profanity filtering, DM privacy checks, link previews, and unread counter updates against `chat_messages`, `message_link_previews`, and `unread_message_counts`.
+- **Socket layer:** `setupChatHandlers` continues to broker `'chat:*'` events for send/history/read/edit/delete operations and emits per-room payloads instead of the planned `conversation.*` rooms.
+- **Frontend:** The in-game `ChatContainer` consumes the legacy socket events and keys Redux state by `conversationType:conversationId`, so nothing is normalized around conversation IDs yet.
+
+## Gap analysis & focus
+- Storage still relies on the existing `chat_messages` + `unread_message_counts` schema; the new `conversations` family of tables and ULID message identifiers have not been provisioned.
+- Socket namespaces/events remain under the legacy `'chat:*'` contract rather than the `/chat` namespace with `conversation.*` events outlined below.
+- Frontend UX is limited to contextual chat drawers; the global drawer and `/messages` workspace are untouched, and no new slices/selectors exist for conversation normalization.
+
+## Immediate next step (Phase 1 setup)
+_Action taken:_ Audited the live implementation and mapped divergences so the schema/services workstream can start with a clear baseline.
+
+_Next tasks:_
+1. Draft migration `025_conversations_schema.sql` that creates `conversations`, `conversation_members`, `conversation_messages`, and `message_read_receipts` with the indexes, constraints, and JSONB metadata described in Section 3.
+2. Add a reversible `user_messaging_settings` view that surfaces `dm_policy`, `allow_group_invites`, and `show_online_status` from `user_preferences` without breaking current preference readers.
+3. Confirm the current `user_blocks` structure (or introduce the missing table) and outline compatibility views/backfill helpers required before the `MESSAGING_V2` flag can write-through safely.
 
 ## 1) Objectives & Scope
 **Goals**
@@ -157,3 +175,6 @@ _Last updated: September 20, 2025_
 - **P3:** DM to a user with `dm_policy='no_one'` is rejected with `{ code: 'DM_POLICY' }`; block tests pass in CI.
 - **P5:** Drawer sends and receives in real time; unread badge increments/decrements correctly in multi-tab testing.
 - **P6:** `/messages` loads 1k-message threads with <200 ms incremental fetch and <60 ms Redux reduce time on a mid-spec laptop.
+
+## Progress log
+- **2025-02-21:** Catalogued the current backend service, socket handlers, and frontend chat container that power the legacy experience, then captured the schema/service tasks needed to kick off Phase 1 of the unified messaging rollout.
