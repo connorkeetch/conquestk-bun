@@ -1320,11 +1320,13 @@ router.post(
   requirePermission('content.create'),
   logAdminActivity('map_clone'),
   param('mapId').isUUID(),
+  body('assignedUserId').optional().isUUID().withMessage('Assigned user must be a valid UUID'),
   checkValidation,
   async (req: Request, res: Response) => {
     try {
       const { mapId } = req.params
       const adminUserId = req.userId
+      const assignedUserId = req.body.assignedUserId as string | undefined
 
       // Get the original map
       const originalMapResult = await dbQuery('SELECT * FROM maps WHERE id = $1', [mapId])
@@ -1336,6 +1338,16 @@ router.post(
 
       const originalMap = originalMapResult.rows[0]
       const clonedName = `${originalMap.name} (Copy)`
+
+      if (assignedUserId) {
+        const assignedUserCheck = await dbQuery('SELECT id FROM users WHERE id = $1', [
+          assignedUserId,
+        ])
+        if (assignedUserCheck.rows.length === 0) {
+          res.status(404).json({ error: 'Assigned user not found' })
+          return
+        }
+      }
 
       // Create the cloned map
       const cloneResult = await dbQuery(
@@ -1356,6 +1368,18 @@ router.post(
       )
 
       const clonedMap = cloneResult.rows[0]
+
+      if (assignedUserId) {
+        await dbQuery(
+          `
+          INSERT INTO map_collaborators (map_id, user_id, role, assigned_by)
+          VALUES ($1, $2, 'editor', $3)
+          ON CONFLICT (map_id, user_id)
+          DO UPDATE SET role = EXCLUDED.role, assigned_at = CURRENT_TIMESTAMP, assigned_by = EXCLUDED.assigned_by
+        `,
+          [clonedMap.id, assignedUserId, adminUserId],
+        )
+      }
 
       // Clone territories if they exist
       const territoriesResult = await dbQuery('SELECT * FROM map_territories WHERE map_id = $1', [
@@ -1412,7 +1436,12 @@ router.post(
         ],
       )
 
-      res.json({ message: 'Map cloned successfully', map: clonedMap, name: clonedName })
+      res.json({
+        message: 'Map cloned successfully',
+        map: clonedMap,
+        name: clonedName,
+        assignedTo: assignedUserId ?? adminUserId,
+      })
     } catch (error) {
       handleRouteError(error, req, 'Failed to clone map', 500, {
         mapId: req.params.mapId,

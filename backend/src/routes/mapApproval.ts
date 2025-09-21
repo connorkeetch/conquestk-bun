@@ -2,6 +2,11 @@ import express from 'express'
 import { requireAdmin } from '../middleware/adminAuth.js'
 import { authenticateToken } from '../middleware/auth.js'
 import MapApprovalService from '../services/mapApprovalService.js'
+import {
+  MapNotFoundError,
+  MapPermissionError,
+  mapPermissionService,
+} from '../services/mapPermissionService'
 import { getErrorMessage } from '../utils/errorHelpers.js'
 import { handleRouteError } from '../utils/routeErrorHandler'
 
@@ -57,11 +62,22 @@ router.post('/maps/:mapId/versions', async (req, res) => {
       return
     }
 
-    // TODO: Check if user has permission to create versions for this map
+    await mapPermissionService.assertCanEditMap(mapId, {
+      userId,
+      isAdmin: req.user?.isAdmin,
+    })
 
     const version = await MapApprovalService.createVersion(mapId, userId, versionData)
     res.status(201).json({ version })
   } catch (error) {
+    if (error instanceof MapPermissionError) {
+      res.status(403).json({ message: error.message })
+      return
+    }
+    if (error instanceof MapNotFoundError) {
+      res.status(404).json({ message: error.message })
+      return
+    }
     handleRouteError(error, req, 'Failed to create map version', 500, {
       mapId: req.params.mapId,
     })
@@ -73,12 +89,31 @@ router.post('/maps/:mapId/versions', async (req, res) => {
 router.put('/versions/:versionId/current', async (req, res) => {
   try {
     const { versionId } = req.params
+    const userId = req.userId
 
-    // TODO: Check if user has permission to change current version
+    if (!userId) {
+      res.status(401).json({ message: 'User not authenticated' })
+      return
+    }
+
+    const version = await MapApprovalService.getVersionById(versionId)
+
+    await mapPermissionService.assertCanEditMap(version.mapId, {
+      userId,
+      isAdmin: req.user?.isAdmin,
+    })
 
     await MapApprovalService.setCurrentVersion(versionId)
     res.json({ message: 'Current version updated' })
   } catch (error) {
+    if (error instanceof MapPermissionError) {
+      res.status(403).json({ message: error.message })
+      return
+    }
+    if (error instanceof MapNotFoundError) {
+      res.status(404).json({ message: error.message })
+      return
+    }
     handleRouteError(error, req, 'Failed to set current version', 500, {
       versionId: req.params.versionId,
     })

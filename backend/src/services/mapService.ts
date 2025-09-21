@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg'
 import { getClient, query } from '../config/database'
+import { mapPermissionService, MapNotFoundError } from './mapPermissionService'
 import type { ContinentBonus } from '../types/game'
 import type {
   ConnectionRequirements,
@@ -412,8 +413,15 @@ export class MapService {
     mapId: string,
     userId: string,
     capitalTerritories: Record<string, number[]>,
+    options: { isAdmin?: boolean } = {},
   ): Promise<boolean> {
     try {
+      await mapPermissionService.assertCanEditMap(
+        mapId,
+        { userId, isAdmin: options.isAdmin },
+        { allowCollaborator: true },
+      )
+
       // Validate capital territories
       const validationResult = await this.validateCapitalTerritories(mapId, capitalTerritories)
       if (!validationResult.valid) {
@@ -424,9 +432,9 @@ export class MapService {
         `
         UPDATE maps 
         SET capital_territories = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND creator_id = $3
+        WHERE id = $2
       `,
-        [JSON.stringify(capitalTerritories), mapId, userId],
+        [JSON.stringify(capitalTerritories), mapId],
       )
 
       return (result.rowCount ?? 0) > 0
@@ -507,14 +515,15 @@ export class MapService {
     mapId: string,
     userId: string,
     updates: UpdateMapRequest,
+    options: { isAdmin?: boolean; allowCollaborator?: boolean } = {},
   ): Promise<CustomMap | null> {
     const client = await getClient()
     try {
-      // Verify ownership
-      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = $1', [mapId])
-      if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].creator_id !== userId) {
-        throw new Error('Map not found or access denied')
-      }
+      await mapPermissionService.assertCanEditMap(
+        mapId,
+        { userId, isAdmin: options.isAdmin },
+        { allowCollaborator: options.allowCollaborator ?? true },
+      )
 
       const updateFields: string[] = []
       const updateValues: SqlValue[] = []
@@ -571,20 +580,26 @@ export class MapService {
     }
   }
 
-  async deleteMap(mapId: string, userId: string): Promise<boolean> {
+  async deleteMap(
+    mapId: string,
+    userId: string,
+    options: { isAdmin?: boolean } = {},
+  ): Promise<void> {
     const client = await getClient()
     try {
-      // Verify ownership
-      const ownerCheck = await client.query('SELECT creator_id FROM maps WHERE id = $1', [mapId])
-      if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].creator_id !== userId) {
-        return false
-      }
+      await mapPermissionService.assertCanEditMap(
+        mapId,
+        { userId, isAdmin: options.isAdmin },
+        { allowCollaborator: false },
+      )
 
       // Delete map (cascades to all related tables)
       const result = await client.query('DELETE FROM maps WHERE id = $1', [mapId])
       logger.info(`Deleted map ${mapId} by user ${userId}`)
 
-      return (result.rowCount || 0) > 0
+      if ((result.rowCount || 0) === 0) {
+        throw new MapNotFoundError()
+      }
     } finally {
       if (client.release) client.release()
     }

@@ -3,6 +3,16 @@
 
 export type MapStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
 
+export type MapCollaboratorRole = 'editor' | 'viewer' | 'owner' | 'reviewer'
+
+export interface MapCollaborator {
+  mapId: string
+  userId: string
+  role: MapCollaboratorRole
+  assignedBy?: string | null
+  assignedAt: Date
+}
+
 export interface CustomMap {
   id: string
   name: string
