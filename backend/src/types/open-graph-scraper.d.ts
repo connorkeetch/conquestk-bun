@@ -32,7 +32,5 @@ declare module 'open-graph-scraper' {
     errorDetails?: unknown
   }
 
-  export default function ogs(
-    options: OpenGraphScraperOptions,
-  ): Promise<OpenGraphScraperResponse>
+  export default function ogs(options: OpenGraphScraperOptions): Promise<OpenGraphScraperResponse>
 }

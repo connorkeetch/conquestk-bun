@@ -589,9 +589,18 @@ export class AdminService {
 
       if (result.rows.length > 0) {
         const { content_type, content_id } = result.rows[0]
+        let previousState: Record<string, unknown> | undefined
 
         // Update content to be public/approved
         if (content_type === 'map') {
+          const mapState = await client.query(
+            `SELECT status, is_public, reviewed_at, reviewed_by FROM maps WHERE id = $1`,
+            [content_id],
+          )
+          if (mapState.rows[0]) {
+            previousState = mapState.rows[0]
+          }
+
           await client.query(
             `UPDATE maps 
              SET is_public = TRUE, 
@@ -604,6 +613,16 @@ export class AdminService {
           )
         }
 
+        const afterState =
+          content_type === 'map'
+            ? {
+                status: 'approved',
+                is_public: true,
+                reviewed_by: adminUserId,
+                review_notes: notes,
+              }
+            : undefined
+
         await this.logAdminAction(
           adminUserId,
           'content_approved',
@@ -612,6 +631,8 @@ export class AdminService {
             contentType: content_type,
             contentId: content_id,
             notes,
+            before: previousState,
+            after: afterState,
           },
           content_type,
           content_id,
@@ -650,9 +671,18 @@ export class AdminService {
 
       if (result.rows.length > 0) {
         const { content_type, content_id } = result.rows[0]
+        let previousState: Record<string, unknown> | undefined
 
         // Update map status to rejected
         if (content_type === 'map') {
+          const mapState = await client.query(
+            `SELECT status, is_public, rejection_reason FROM maps WHERE id = $1`,
+            [content_id],
+          )
+          if (mapState.rows[0]) {
+            previousState = mapState.rows[0]
+          }
+
           await client.query(
             `UPDATE maps 
              SET status = 'rejected',
@@ -669,6 +699,15 @@ export class AdminService {
           contentType: content_type,
           contentId: content_id,
           reason,
+          before: previousState,
+          after:
+            content_type === 'map'
+              ? {
+                  status: 'rejected',
+                  rejection_reason: reason,
+                  reviewed_by: adminUserId,
+                }
+              : undefined,
         })
       }
 

@@ -11,6 +11,11 @@ import { getPool } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import { CapitalGeneratorService } from '../services/capitalGeneratorService'
 import { mapService } from '../services/mapService'
+import {
+  mapPermissionService,
+  MapPermissionError,
+  MapNotFoundError,
+} from '../services/mapPermissionService'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
@@ -757,6 +762,11 @@ router.put(
   validateUpdateMap,
   checkValidation,
   async (req: Request, res: Response) => {
+    const userId = req.userId
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     try {
       const updates: UpdateMapRequest = {
         name: req.body.name,
@@ -782,14 +792,19 @@ router.put(
         }
       }
 
-      const map = await mapService.updateMap(req.params.mapId, req.userId, updates)
-
-      if (!map) {
-        return res.status(404).json({ error: 'Map not found or access denied' })
-      }
+      const map = await mapService.updateMap(req.params.mapId, userId, updates, {
+        isAdmin: req.user?.isAdmin,
+        allowCollaborator: true,
+      })
 
       return res.json(map)
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to update map', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to update map' })
     }
@@ -803,15 +818,22 @@ router.delete(
   param('mapId').isUUID().withMessage('Invalid map ID'),
   checkValidation,
   async (req: Request, res: Response) => {
-    try {
-      const success = await mapService.deleteMap(req.params.mapId, req.userId)
+    const userId = req.userId
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
 
-      if (!success) {
-        return res.status(404).json({ error: 'Map not found or access denied' })
-      }
+    try {
+      await mapService.deleteMap(req.params.mapId, userId, { isAdmin: req.user?.isAdmin })
 
       return res.json({ message: 'Map deleted successfully' })
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to delete map', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to delete map' })
     }
@@ -886,8 +908,16 @@ router.post(
   validateCreateContinent,
   checkValidation,
   async (req: Request, res: Response) => {
+    const userId = req.userId
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     try {
-      // TODO: Verify user owns the map
+      await mapPermissionService.assertCanEditMap(
+        req.params.mapId,
+        { userId, isAdmin: req.user?.isAdmin },
+      )
       const continent = await mapService.createContinent(
         req.params.mapId,
         req.body.name,
@@ -897,6 +927,12 @@ router.post(
 
       res.status(201).json(continent)
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to create continent', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create continent' })
     }
@@ -910,8 +946,16 @@ router.post(
   validateCreateTerritory,
   checkValidation,
   async (req: Request, res: Response) => {
+    const userId = req.userId
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     try {
-      // TODO: Verify user owns the map
+      await mapPermissionService.assertCanEditMap(
+        req.params.mapId,
+        { userId, isAdmin: req.user?.isAdmin },
+      )
       const territory = await mapService.createTerritory({
         mapId: req.params.mapId,
         territoryId: req.body.territoryId,
@@ -926,6 +970,12 @@ router.post(
 
       res.status(201).json(territory)
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to create territory', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create territory' })
     }
@@ -939,8 +989,16 @@ router.post(
   validateCreateAdjacency,
   checkValidation,
   async (req: Request, res: Response) => {
+    const userId = req.userId
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     try {
-      // TODO: Verify user owns the territories
+      await mapPermissionService.assertCanEditTerritories(
+        [req.body.fromTerritoryId, req.body.toTerritoryId],
+        { userId, isAdmin: req.user?.isAdmin },
+      )
       const adjacency = await mapService.createAdjacency({
         fromTerritoryId: req.body.fromTerritoryId,
         toTerritoryId: req.body.toTerritoryId,
@@ -951,6 +1009,12 @@ router.post(
 
       res.status(201).json(adjacency)
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to create adjacency', 500, { mapId: req.params.mapId })
       res.status(500).json({ error: 'Failed to create adjacency' })
     }
@@ -994,16 +1058,14 @@ router.post(
     try {
       const mapId = req.params.mapId
       const userId = req.userId
-
-      // Verify user owns the map
-      const mapData = await mapService.getMapWithFullData(mapId)
-      if (!mapData) {
-        return res.status(404).json({ error: 'Map not found' })
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
       }
 
-      if (mapData.map.creatorId !== userId) {
-        return res.status(403).json({ error: 'You do not have permission to edit this map' })
-      }
+      await mapPermissionService.assertCanEditMap(mapId, {
+        userId,
+        isAdmin: req.user?.isAdmin,
+      })
 
       // Generate capitals using the service
       const capitalService = new CapitalGeneratorService(getPool())
@@ -1029,6 +1091,12 @@ router.post(
         metadata,
       })
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to generate capitals', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to generate capitals' })
     }
@@ -1049,17 +1117,15 @@ router.patch(
       const { mapId, playerCount } = req.params
       const { territoryIds } = req.body
       const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' })
+      }
       const playerCountNum = parseInt(playerCount, 10)
 
-      // Verify user owns the map
-      const mapData = await mapService.getMapWithFullData(mapId)
-      if (!mapData) {
-        return res.status(404).json({ error: 'Map not found' })
-      }
-
-      if (mapData.map.creatorId !== userId) {
-        return res.status(403).json({ error: 'You do not have permission to edit this map' })
-      }
+      await mapPermissionService.assertCanEditMap(mapId, {
+        userId,
+        isAdmin: req.user?.isAdmin,
+      })
 
       // Validate territory count matches player count
       if (territoryIds.length !== playerCountNum) {
@@ -1080,6 +1146,12 @@ router.patch(
         capitals: territoryIds,
       })
     } catch (error) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
       handleRouteError(error, req, 'Failed to update capitals', 500, { mapId: req.params.mapId })
       return res.status(500).json({ error: 'Failed to update capitals' })
     }
@@ -1103,8 +1175,20 @@ router.get(
 
       // Check access permissions
       const userId = req.userId
-      if (!mapData.map.isPublic && (!userId || userId !== mapData.map.creatorId)) {
-        return res.status(403).json({ error: 'Access denied' })
+      if (!mapData.map.isPublic) {
+        if (!userId) {
+          return res.status(403).json({ error: 'Access denied' })
+        }
+
+        const context = await mapPermissionService.getMapEditorContext(mapId, {
+          userId,
+          isAdmin: req.user?.isAdmin,
+        })
+
+        const canView = context.canEdit || context.collaboratorRole !== undefined
+        if (!canView) {
+          return res.status(403).json({ error: 'Access denied' })
+        }
       }
 
       // Get capital assignments from database
