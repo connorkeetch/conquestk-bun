@@ -25,13 +25,13 @@ export default function MapImageControls({
   const [customHeight, setCustomHeight] = useState(mapHeight)
 
   const handleScaleChange = (percent: number) => {
-    setScalePercent(percent)
-    onScaleImage(percent / 100)
+    const normalizedPercent = Number.isFinite(percent) ? percent : scalePercent
+    setScalePercent(normalizedPercent)
+    onScaleImage(normalizedPercent / 100)
   }
 
   const handlePresetScale = (percent: number) => {
-    setScalePercent(percent)
-    onScaleImage(percent / 100)
+    handleScaleChange(percent)
   }
 
   const handleFitToCanvas = () => {
@@ -68,6 +68,7 @@ export default function MapImageControls({
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-4 bg-surface-1 rounded-lg p-1">
         <button
+          type="button"
           onClick={() => setActiveTab('scale')}
           className={`flex-1 px-3 py-2 rounded ${
             activeTab === 'scale'
@@ -78,6 +79,7 @@ export default function MapImageControls({
           🔍 Scale Image
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('canvas')}
           className={`flex-1 px-3 py-2 rounded ${
             activeTab === 'canvas'
@@ -88,6 +90,7 @@ export default function MapImageControls({
           📐 Canvas Size
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('crop')}
           className={`flex-1 px-3 py-2 rounded ${
             activeTab === 'crop'
@@ -126,7 +129,7 @@ export default function MapImageControls({
               min="25"
               max="200"
               value={scalePercent}
-              onChange={(e) => handleScaleChange(parseInt(e.target.value))}
+              onChange={(e) => handleScaleChange(Number.parseInt(e.target.value, 10))}
               className="w-full"
             />
           </div>
@@ -134,24 +137,28 @@ export default function MapImageControls({
           {/* Quick scale buttons */}
           <div className="grid grid-cols-4 gap-2">
             <button
+              type="button"
               onClick={() => handlePresetScale(50)}
               className="px-2 py-1 bg-surface-1 hover:bg-violet rounded text-sm"
             >
               50%
             </button>
             <button
+              type="button"
               onClick={() => handlePresetScale(75)}
               className="px-2 py-1 bg-surface-1 hover:bg-violet rounded text-sm"
             >
               75%
             </button>
             <button
+              type="button"
               onClick={() => handlePresetScale(100)}
               className="px-2 py-1 bg-surface-1 hover:bg-violet rounded text-sm"
             >
               100%
             </button>
             <button
+              type="button"
               onClick={() => handlePresetScale(150)}
               className="px-2 py-1 bg-surface-1 hover:bg-violet rounded text-sm"
             >
@@ -162,12 +169,14 @@ export default function MapImageControls({
           {/* Percentage adjustment buttons */}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => handleScaleChange(Math.max(25, scalePercent - 10))}
               className="flex-1 px-3 py-2 bg-surface-1 hover:bg-red-600 rounded text-sm"
             >
               ➖ -10%
             </button>
             <button
+              type="button"
               onClick={() => handleScaleChange(Math.min(200, scalePercent + 10))}
               className="flex-1 px-3 py-2 bg-surface-1 hover:bg-green-600 rounded text-sm"
             >
@@ -178,12 +187,14 @@ export default function MapImageControls({
           {/* Fit options */}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={handleFitToCanvas}
               className="flex-1 px-3 py-2 bg-violet hover:brightness-110 rounded text-sm"
             >
               📦 Fit to Canvas
             </button>
             <button
+              type="button"
               onClick={handleFillCanvas}
               className="flex-1 px-3 py-2 bg-violet hover:brightness-110 rounded text-sm"
             >
@@ -229,6 +240,7 @@ export default function MapImageControls({
             {canvasPresets.map((preset) => (
               <button
                 key={preset.label}
+                type="button"
                 onClick={() => {
                   setCustomWidth(preset.width)
                   setCustomHeight(preset.height)
@@ -256,7 +268,7 @@ export default function MapImageControls({
               <input
                 type="number"
                 value={customWidth}
-                onChange={(e) => setCustomWidth(parseInt(e.target.value) || 800)}
+                onChange={(e) => setCustomWidth(Number.parseInt(e.target.value, 10) || 800)}
                 className="flex-1 px-2 py-1 bg-surface-1 rounded text-sm"
                 min="600"
                 max="1920"
@@ -266,7 +278,7 @@ export default function MapImageControls({
               <input
                 type="number"
                 value={customHeight}
-                onChange={(e) => setCustomHeight(parseInt(e.target.value) || 600)}
+                onChange={(e) => setCustomHeight(Number.parseInt(e.target.value, 10) || 600)}
                 className="flex-1 px-2 py-1 bg-surface-1 rounded text-sm"
                 min="400"
                 max="1080"
@@ -274,6 +286,7 @@ export default function MapImageControls({
               />
             </div>
             <button
+              type="button"
               onClick={() => onResizeCanvas(customWidth, customHeight)}
               className="w-full px-3 py-2 bg-violet hover:brightness-110 rounded text-sm"
             >
@@ -311,6 +324,7 @@ export default function MapImageControls({
           </div>
 
           <button
+            type="button"
             onClick={onCropImage}
             className="w-full px-4 py-3 bg-violet hover:brightness-110 rounded flex items-center justify-center gap-2"
           >

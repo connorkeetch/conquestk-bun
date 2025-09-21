@@ -1,4 +1,5 @@
 import type React from 'react'
+import { useId, useMemo } from 'react'
 
 interface SkeletonProps {
   className?: string
@@ -57,10 +58,15 @@ export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({
   className = '',
   children,
 }) => {
+  const baseId = useId()
+  const itemKeys = useMemo(() => {
+    return Array.from({ length: count }, (_, index) => `${baseId}-${index}`)
+  }, [baseId, count])
+
   return (
     <div className={className}>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i}>{children(i)}</div>
+      {itemKeys.map((key, index) => (
+        <div key={key}>{children(index)}</div>
       ))}
     </div>
   )

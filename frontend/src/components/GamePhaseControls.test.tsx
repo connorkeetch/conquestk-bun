@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type React from 'react'
 import { Provider } from 'react-redux'
+import type { Mock } from 'vitest'
 import { vi } from 'vitest'
 import authReducer from '../store/authSlice'
 import gameReducer from '../store/gameSlice'
@@ -15,9 +16,19 @@ vi.mock('../store/gameActions', () => ({
   executeFortify: vi.fn(() => ({ type: 'executeFortify' })),
 }))
 
+type GameSliceState = ReturnType<typeof gameReducer>
+type AuthSliceState = ReturnType<typeof authReducer>
+type RoomSliceState = ReturnType<typeof roomReducer>
+
+interface TestRootState {
+  game: GameSliceState
+  auth: AuthSliceState
+  room: RoomSliceState
+}
+
 describe('GamePhaseControls', () => {
-  let store: any
-  let mockOnEndTurn: any
+  let store: ReturnType<typeof createTestStore>
+  let mockOnEndTurn: Mock<[], void>
 
   const mockGameState = {
     roomId: 'test-room',
@@ -87,43 +98,48 @@ describe('GamePhaseControls', () => {
     email: 'player1@test.com',
   }
 
-  beforeEach(() => {
-    store = configureStore({
+  const createTestStore = () => {
+    const preloadedState: TestRootState = {
+      game: {
+        currentGame: mockGameState,
+        isLoading: false,
+        error: null,
+        selectedTerritory: null,
+        selectedTargetTerritory: null,
+        validTargets: [],
+        pendingAction: null,
+        territoryActionHistory: [],
+        battleResult: null,
+        reinforcementArmies: 5,
+      },
+      auth: {
+        user: mockUser,
+        token: 'mock-token',
+        isLoading: false,
+        error: null,
+        isAuthenticated: true,
+      },
+      room: {
+        currentRoom: null,
+        rooms: [],
+        isLoading: false,
+        error: null,
+      },
+    }
+
+    return configureStore<TestRootState>({
       reducer: {
         game: gameReducer,
         auth: authReducer,
         room: roomReducer,
       },
-      preloadedState: {
-        game: {
-          currentGame: mockGameState,
-          isLoading: false,
-          error: null,
-          selectedTerritory: null,
-          selectedTargetTerritory: null,
-          validTargets: [],
-          pendingAction: null,
-          territoryActionHistory: [],
-          battleResult: null,
-          reinforcementArmies: 5,
-        },
-        auth: {
-          user: mockUser,
-          token: 'mock-token',
-          isLoading: false,
-          error: null,
-          isAuthenticated: true,
-        },
-        room: {
-          currentRoom: null,
-          rooms: [],
-          isLoading: false,
-          error: null,
-        },
-      },
+      preloadedState,
     })
+  }
 
-    mockOnEndTurn = vi.fn()
+  beforeEach(() => {
+    store = createTestStore()
+    mockOnEndTurn = vi.fn<[], void>()
   })
 
   const renderWithProvider = (component: React.ReactElement) => {
