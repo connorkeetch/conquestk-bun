@@ -53,14 +53,14 @@ export interface BattleResultDelta extends BaseDelta {
     attackerLosses: number
     defenderLosses: number
     gameEnded?: boolean
-    winner?: any
+    winner?: string
     eliminatedPlayers?: string[]
   }
 }
 
 export interface GameEndDelta extends BaseDelta {
   type: 'GAME_END'
-  winner: any
+  winner: string
   eliminatedPlayers: string[]
 }
 

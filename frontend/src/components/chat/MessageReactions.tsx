@@ -36,6 +36,7 @@ export default function MessageReactions({
                 : 'bg-surface-2 text-gray-200 hover:bg-gray-600'
             }`}
             title={reaction.users.map((u) => u.username).join(', ')}
+            type="button"
           >
             <span>{reaction.emoji}</span>
             <span className="text-xs font-medium">{reaction.count}</span>

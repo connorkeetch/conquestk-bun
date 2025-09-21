@@ -47,6 +47,19 @@ export interface ChatMessage {
   link_previews?: LinkPreview[]
 }
 
+export interface MessageRouteInfo {
+  message_type: 'game' | 'team' | 'dm'
+  game_id: string | null
+  team_id: number | null
+  recipient_id: string | null
+  sender_id: string
+}
+
+export interface EditedMessageInfo extends MessageRouteInfo {
+  message: string
+  edited_at: Date
+}
+
 export interface SendMessageData {
   senderId: string
   message: string
@@ -455,27 +468,35 @@ class ChatService {
   /**
    * Delete a message (soft delete)
    */
-  async deleteMessage(messageId: string, userId: string): Promise<boolean> {
+  async deleteMessage(messageId: string, userId: string): Promise<MessageRouteInfo | null> {
     try {
-      const result = await query<{ id: string }>(
+      const result = await query<MessageRouteInfo & { id: string }>(
         `UPDATE chat_messages 
          SET deleted_at = CURRENT_TIMESTAMP 
          WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
-         RETURNING id`,
+         RETURNING id, message_type, game_id, team_id, recipient_id, sender_id`,
         [messageId, userId],
       )
 
-      return result.rows.length > 0
+      if (result.rows.length === 0) {
+        return null
+      }
+
+      return result.rows[0]
     } catch (error) {
       logger.error('Error deleting message:', error)
-      return false
+      return null
     }
   }
 
   /**
    * Edit a message
    */
-  async editMessage(messageId: string, userId: string, newMessage: string): Promise<boolean> {
+  async editMessage(
+    messageId: string,
+    userId: string,
+    newMessage: string,
+  ): Promise<EditedMessageInfo | null> {
     try {
       // Apply profanity filter if enabled
       let filteredMessage = newMessage
@@ -486,18 +507,22 @@ class ChatService {
         filteredMessage = filter.clean(newMessage)
       }
 
-      const result = await query<{ id: string }>(
+      const result = await query<EditedMessageInfo & { id: string }>(
         `UPDATE chat_messages 
          SET message = $1, edited_at = CURRENT_TIMESTAMP 
          WHERE id = $2 AND sender_id = $3 AND deleted_at IS NULL
-         RETURNING id`,
+         RETURNING id, message_type, game_id, team_id, recipient_id, sender_id, message, edited_at`,
         [filteredMessage, messageId, userId],
       )
 
-      return result.rows.length > 0
+      if (result.rows.length === 0) {
+        return null
+      }
+
+      return result.rows[0]
     } catch (error) {
       logger.error('Error editing message:', error)
-      return false
+      return null
     }
   }
 

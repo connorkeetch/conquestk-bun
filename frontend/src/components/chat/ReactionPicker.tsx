@@ -53,6 +53,7 @@ export default function ReactionPicker({ onReact, onClose, position }: ReactionP
             onClick={() => handleReaction(emoji)}
             className="w-10 h-10 flex items-center justify-center text-xl hover:bg-surface-2 rounded transition-colors"
             title={`React with ${emoji}`}
+            type="button"
           >
             {emoji}
           </button>

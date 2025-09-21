@@ -5,10 +5,12 @@ import { logger } from '../utils/logger'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
+import { createMapAssetWorker, MapAssetWorker } from './mapAssetWorker'
 
 export class WorkerManager {
   private isInitialized = false
   private io: Server<ClientToServerEvents, ServerToClientEvents>
+  private mapAssetWorker: MapAssetWorker | null = null
 
   constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
     this.io = io
@@ -27,12 +29,16 @@ export class WorkerManager {
       const gameActionWorker = createGameActionWorker(this.io)
       const battleWorker = createBattleWorker(this.io)
       const cleanupWorker = createCleanupWorker()
+      const mapAssetWorker = createMapAssetWorker()
 
       await Promise.all([
         gameActionWorker.initialize(),
         battleWorker.initialize(),
         cleanupWorker.initialize(),
+        mapAssetWorker.initialize(),
       ])
+
+      this.mapAssetWorker = mapAssetWorker
 
       this.isInitialized = true
       logger.info('✅ WorkerManager initialized successfully')
@@ -108,6 +114,8 @@ export class WorkerManager {
 
     try {
       await queueService.shutdown()
+      this.mapAssetWorker?.shutdown()
+      this.mapAssetWorker = null
       this.isInitialized = false
       logger.info('✅ WorkerManager shutdown complete')
     } catch (error) {

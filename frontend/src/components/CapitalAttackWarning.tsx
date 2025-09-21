@@ -46,12 +46,14 @@ const CapitalAttackWarning: React.FC<CapitalAttackWarningProps> = ({
           <button
             onClick={onCancel}
             className="flex-1 px-6 py-3 bg-surface-2 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+            type="button"
           >
             Cancel Attack
           </button>
           <button
             onClick={onConfirm}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg"
+            type="button"
           >
             ⚔️ Attack Capital
           </button>

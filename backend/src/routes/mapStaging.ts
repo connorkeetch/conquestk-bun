@@ -156,4 +156,83 @@ router.delete(
   },
 )
 
+router.post(
+  '/admin/images/:imageId/reclaim',
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.userId || req.user?.id
+      const { imageId } = req.params
+
+      if (!adminId) {
+        res.status(401).json({ error: 'Unauthorized' })
+        return
+      }
+
+      const image = await mapStagingService.reclaimStagingImage(adminId, imageId)
+      res.json({ success: true, image })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reclaim image'
+      handleRouteError(error, req, errorMessage, 400)
+      res.status(400).json({ error: errorMessage })
+    }
+  },
+)
+
+router.get(
+  '/admin/purge-runs',
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const runs = await mapStagingService.getRecentPurgeRuns()
+      res.json(runs)
+    } catch (error) {
+      handleRouteError(error, _req, 'Failed to fetch purge metrics')
+      res.status(500).json({ error: 'Failed to fetch purge metrics' })
+    }
+  },
+)
+
+router.post(
+  '/admin/purge',
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const batchSizeRaw = req.body?.batchSize
+      const minAgeMinutesRaw = req.body?.minAgeMinutes
+
+      const batchSize =
+        batchSizeRaw === undefined ? undefined : Number.parseInt(String(batchSizeRaw), 10)
+      const minAgeMinutes =
+        minAgeMinutesRaw === undefined
+          ? undefined
+          : Number.parseInt(String(minAgeMinutesRaw), 10)
+
+      if (batchSize !== undefined && (!Number.isFinite(batchSize) || batchSize <= 0)) {
+        res.status(400).json({ error: 'batchSize must be a positive number' })
+        return
+      }
+
+      if (minAgeMinutes !== undefined && (!Number.isFinite(minAgeMinutes) || minAgeMinutes < 0)) {
+        res.status(400).json({ error: 'minAgeMinutes must be zero or greater' })
+        return
+      }
+
+      const summary = await mapStagingService.purgeDeletedImages({
+        batchSize,
+        minAgeMinutes,
+      })
+
+      res.json({ success: true, summary })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to run purge'
+      handleRouteError(error, req, errorMessage, 400)
+      res.status(400).json({ error: errorMessage })
+    }
+  },
+)
+
 export default router

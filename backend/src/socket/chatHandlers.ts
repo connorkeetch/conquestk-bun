@@ -1,6 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { chatService } from '../services/chatService'
+import type { MessageRouteInfo } from '../services/chatService'
 import notificationService from '../services/notificationService'
 import type {
   ChatHistoryPayload,
@@ -25,6 +26,33 @@ export const setupChatHandlers = (
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   socket: SocketWithUser,
 ) => {
+  const emitToConversation = (
+    route: MessageRouteInfo,
+    event: keyof ServerToClientEvents,
+    payload: unknown,
+  ) => {
+    if (route.message_type === 'game' && route.game_id) {
+      ;(socket as any).emit(event, payload)
+      socket.to(`game:${route.game_id}`).emit(event as any, payload)
+      return
+    }
+
+    if (route.message_type === 'team' && route.game_id && route.team_id !== null) {
+      ;(socket as any).emit(event, payload)
+      socket.to(`team:${route.game_id}:${route.team_id}`).emit(event as any, payload)
+      return
+    }
+
+    if (route.message_type === 'dm') {
+      ;(socket as any).emit(event, payload)
+      socket.to(`user:${route.sender_id}`).emit(event as any, payload)
+
+      if (route.recipient_id) {
+        io.to(`user:${route.recipient_id}`).emit(event as any, payload)
+      }
+    }
+  }
+
   // Send a message
   socket.on(
     'chat:send',
@@ -185,8 +213,7 @@ export const setupChatHandlers = (
 
       const deleted = await chatService.deleteMessage(data.messageId, userId)
       if (deleted) {
-        socket.emit('chat:message-deleted', { messageId: data.messageId })
-        // TODO: Emit to other users in the conversation
+        emitToConversation(deleted, 'chat:message-deleted', { messageId: data.messageId })
       } else {
         socket.emit('chat:error', { error: 'Cannot delete this message' })
       }
@@ -213,12 +240,11 @@ export const setupChatHandlers = (
       const edited = await chatService.editMessage(data.messageId, userId, data.newMessage.trim())
 
       if (edited) {
-        socket.emit('chat:message-edited', {
+        emitToConversation(edited, 'chat:message-edited', {
           messageId: data.messageId,
-          newMessage: data.newMessage.trim(),
-          editedAt: new Date(),
+          newMessage: edited.message,
+          editedAt: edited.edited_at,
         })
-        // TODO: Emit to other users in the conversation
       } else {
         socket.emit('chat:error', { error: 'Cannot edit this message' })
       }

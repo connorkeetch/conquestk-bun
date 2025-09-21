@@ -131,6 +131,7 @@ export default function MessageInput({
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="p-2 hover:bg-gray-600 rounded-lg transition-colors text-xl"
               title="Add emoji"
+              type="button"
             >
               😊
             </button>
@@ -168,6 +169,7 @@ export default function MessageInput({
               ? 'bg-primary hover:bg-primary text-white'
               : 'bg-surface-2 text-muted cursor-not-allowed'
           }`}
+          type="button"
         >
           Send
         </button>

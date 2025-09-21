@@ -81,6 +81,8 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         totalActive: queueList.reduce((sum, queue) => sum + queue.active, 0),
         totalCompleted: queueList.reduce((sum, queue) => sum + queue.completed, 0),
         totalFailed: queueList.reduce((sum, queue) => sum + queue.failed, 0),
+        totalDeadLetter: queueList.reduce((sum, queue) => sum + queue.deadLetter, 0),
+        queuesWithWarnings: queueList.filter((queue) => queue.warnings.length > 0).length,
       },
     }
 

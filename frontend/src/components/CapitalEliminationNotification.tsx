@@ -82,6 +82,7 @@ const CapitalEliminationNotification: React.FC<CapitalEliminationNotificationPro
         <button
           onClick={onClose}
           className="absolute top-2 right-2 text-muted hover:text-muted transition-colors"
+          type="button"
         >
           ✕
         </button>

@@ -69,8 +69,11 @@ const chatSlice = createSlice({
     },
 
     // Add a new message
-    addMessage(state, action: PayloadAction<ChatMessage>) {
-      const message = action.payload
+    addMessage(
+      state,
+      action: PayloadAction<{ message: ChatMessage; currentUserId?: string | null }>,
+    ) {
+      const { message, currentUserId } = action.payload
       let conversationId: string
 
       // Determine conversation ID based on message type
@@ -79,27 +82,23 @@ const chatSlice = createSlice({
       } else if (message.message_type === 'team' && message.game_id && message.team_id) {
         conversationId = `team:${message.game_id}:${message.team_id}`
       } else if (message.message_type === 'dm') {
-        // For DMs, use the other user's ID as conversation ID
-        const currentUserId = localStorage.getItem('userId') // TODO: Get from auth state
-        conversationId = `dm:${message.sender_id === currentUserId ? message.recipient_id : message.sender_id}`
+        if (!currentUserId) {
+          return
+        }
+        const otherUserId = message.sender_id === currentUserId ? message.recipient_id : message.sender_id
+        if (!otherUserId) {
+          return
+        }
+        conversationId = `dm:${otherUserId}`
       } else {
         return // Invalid message type
       }
 
       // Initialize conversation if it doesn't exist
       if (!state.conversations[conversationId]) {
-        let conversationType: 'game' | 'team' | 'dm'
-        if (message.message_type === 'game') {
-          conversationType = 'game'
-        } else if (message.message_type === 'team') {
-          conversationType = 'team'
-        } else {
-          conversationType = 'dm'
-        }
-
         state.conversations[conversationId] = {
           id: conversationId,
-          type: conversationType,
+          type: message.message_type,
           messages: [],
           unreadCount: 0,
           isLoading: false,
@@ -132,7 +131,14 @@ const chatSlice = createSlice({
       const { conversationId, messages, hasMore } = action.payload
 
       if (!state.conversations[conversationId]) {
-        const type = conversationId.startsWith('game:') ? 'game' : 'dm'
+        let type: 'game' | 'team' | 'dm'
+        if (conversationId.startsWith('game:')) {
+          type = 'game'
+        } else if (conversationId.startsWith('team:')) {
+          type = 'team'
+        } else {
+          type = 'dm'
+        }
         state.conversations[conversationId] = {
           id: conversationId,
           type,
