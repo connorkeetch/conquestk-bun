@@ -30,7 +30,7 @@ interface MapStatsRow extends QueryResultRow {
   games_played: number
   games_won: number
   avg_duration: number | null
-  best_territories: number
+  best_territories: number | null
 }
 
 interface ModeStatsRow extends QueryResultRow {
@@ -150,58 +150,97 @@ export class ProfileService {
     const client = await getClient()
 
     try {
-      // Overall stats
+      // Overall stats from aggregated table
       const overallResult = await client.query('SELECT * FROM player_stats WHERE user_id = $1', [
         userId,
       ])
 
-      // Stats by map (using game_rooms + room_players)
-      const mapStatsResult = await client.query<MapStatsRow>(
+      // Extended stats sourced from completed game results
+      const bestResult = await client.query(
         `
-        SELECT 
-          m.name as map_name,
-          COUNT(*) as games_played,
-          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
-          AVG(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as avg_duration,
-          0 as best_territories  -- TODO: Get from game_states when needed
-        FROM game_rooms gr
-        JOIN room_players rp ON gr.id = rp.room_id  
-        JOIN maps m ON gr.map_id = m.id
-        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
-        GROUP BY m.name
+        SELECT
+          COALESCE(MAX(pgr.territories), 0) AS best_territories,
+          COALESCE(MAX(pgr.armies), 0) AS best_armies
+        FROM player_game_results pgr
+        WHERE pgr.user_id = $1
       `,
         [userId],
       )
 
-      // Stats by game mode (using game_rooms + room_players)
+      const cardStatsResult = await client.query(
+        `
+        SELECT
+          COUNT(*)::INTEGER AS trade_count,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN move_data ? 'cards' AND jsonb_typeof(move_data->'cards') = 'array'
+                  THEN jsonb_array_length(move_data->'cards')
+                WHEN move_data ? 'cardIds' AND jsonb_typeof(move_data->'cardIds') = 'array'
+                  THEN jsonb_array_length(move_data->'cardIds')
+                WHEN move_data ? 'cardCount' AND (move_data->>'cardCount') ~ '^[0-9]+$'
+                  THEN (move_data->>'cardCount')::INTEGER
+                ELSE 0
+              END
+            ),
+            0
+          )::INTEGER AS card_count
+        FROM game_moves
+        WHERE player_id = $1 AND move_type = 'trade_cards'
+      `,
+        [userId],
+      )
+
+      // Stats by map using completed results
+      const mapStatsResult = await client.query<MapStatsRow>(
+        `
+        SELECT
+          COALESCE(m.name, 'Unknown Map') AS map_name,
+          COUNT(*) AS games_played,
+          SUM(CASE WHEN pgr.is_winner THEN 1 ELSE 0 END) AS games_won,
+          AVG(COALESCE(gres.duration_seconds, 0)) / 60 AS avg_duration,
+          MAX(pgr.territories) AS best_territories
+        FROM player_game_results pgr
+        JOIN game_results gres ON pgr.room_id = gres.room_id
+        JOIN game_rooms gr ON pgr.room_id = gr.id
+        LEFT JOIN maps m ON gr.map_id = m.id
+        WHERE pgr.user_id = $1
+        GROUP BY COALESCE(m.name, 'Unknown Map')
+        ORDER BY games_played DESC
+      `,
+        [userId],
+      )
+
+      // Stats by game mode from completed results
       const modeStatsResult = await client.query<ModeStatsRow>(
         `
-        SELECT 
+        SELECT
           gr.game_mode,
-          COUNT(*) as games_played,
-          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
-          AVG(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as avg_duration
-        FROM game_rooms gr
-        JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended')
+          COUNT(*) AS games_played,
+          SUM(CASE WHEN pgr.is_winner THEN 1 ELSE 0 END) AS games_won,
+          AVG(COALESCE(gres.duration_seconds, 0)) / 60 AS avg_duration
+        FROM player_game_results pgr
+        JOIN game_results gres ON pgr.room_id = gres.room_id
+        JOIN game_rooms gr ON pgr.room_id = gr.id
+        WHERE pgr.user_id = $1
         GROUP BY gr.game_mode
       `,
         [userId],
       )
 
-      // Timeline data (last 30 days) (using game_rooms + room_players)
+      // Timeline data (last 90 days) using completed results
       const timelineResult = await client.query(
         `
-        SELECT 
-          DATE(gr.started_at) as date,
-          COUNT(*) as games_played,
-          SUM(CASE WHEN gr.winner_id = $1 THEN 1 ELSE 0 END) as games_won,
-          SUM(EXTRACT(EPOCH FROM (gr.ended_at - gr.started_at))/60) as playtime
-        FROM game_rooms gr
-        JOIN room_players rp ON gr.id = rp.room_id
-        WHERE rp.user_id = $1 AND gr.status IN ('finished', 'ended') 
-          AND gr.started_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(gr.started_at)
+        SELECT
+          DATE(gres.created_at) AS date,
+          COUNT(*) AS games_played,
+          SUM(CASE WHEN pgr.is_winner THEN 1 ELSE 0 END) AS games_won,
+          SUM(COALESCE(gres.duration_seconds, 0)) / 60 AS playtime
+        FROM player_game_results pgr
+        JOIN game_results gres ON pgr.room_id = gres.room_id
+        WHERE pgr.user_id = $1
+          AND gres.created_at >= NOW() - INTERVAL '90 days'
+        GROUP BY DATE(gres.created_at)
         ORDER BY date DESC
       `,
         [userId],
@@ -226,8 +265,18 @@ export class ProfileService {
         }
       })
 
+      const overallStats = overallResult.rows[0] || this.createDefaultStats(userId)
+      const bestStats = bestResult.rows[0] || { best_territories: 0, best_armies: 0 }
+      const cardStats = cardStatsResult.rows[0] || { trade_count: 0, card_count: 0 }
+
       return {
-        overall: overallResult.rows[0] || this.createDefaultStats(userId),
+        overall: {
+          ...overallStats,
+          best_territories: Number(bestStats.best_territories ?? 0),
+          best_armies: Number(bestStats.best_armies ?? 0),
+          card_trades: Number(cardStats.trade_count ?? 0),
+          cards_traded: Number(cardStats.card_count ?? 0),
+        },
         byMap,
         byGameMode,
         timeline: timelineResult.rows || [],

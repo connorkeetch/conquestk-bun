@@ -76,7 +76,8 @@ const Statistics: React.FC = () => {
               Your Battle Analytics
             </h1>
             <p className="text-muted text-sm">
-              Detailed breakdown of every ranked and casual match recorded under your account.
+              Detailed breakdown of every ranked and casual match, including 90-day trends,
+              territory highs, and card trade activity.
             </p>
           </div>
           {loading && (

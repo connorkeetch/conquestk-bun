@@ -39,6 +39,10 @@ export interface PlayerStatsOverview {
   currentWinStreak: number
   favoriteMapId?: string | null
   updatedAt?: string | null
+  bestTerritories?: number
+  bestArmies?: number
+  cardTrades?: number
+  cardsTraded?: number
 }
 
 export interface MapStatsSummary {
@@ -262,6 +266,10 @@ const normalizeStatsBreakdown = (payload: RawStatsBreakdown): PlayerStatsBreakdo
     ),
     favoriteMapId: pickNullableString(overallSource, ['favorite_map_id', 'favoriteMapId']),
     updatedAt: pickNullableString(overallSource, ['updated_at', 'updatedAt']),
+    bestTerritories: pickNumber(overallSource, ['best_territories', 'bestTerritories'], 0),
+    bestArmies: pickNumber(overallSource, ['best_armies', 'bestArmies'], 0),
+    cardTrades: pickNumber(overallSource, ['card_trades', 'cardTrades'], 0),
+    cardsTraded: pickNumber(overallSource, ['cards_traded', 'cardsTraded'], 0),
   }
 
   const byMapRaw = payload.byMap ?? payload.by_map ?? {}
