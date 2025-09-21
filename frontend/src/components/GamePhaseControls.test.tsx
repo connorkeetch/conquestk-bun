@@ -63,6 +63,22 @@ describe('GamePhaseControls', () => {
       },
     ],
     cards: [],
+    gameConfig: {
+      continentBonuses: [
+        {
+          id: 'north_america',
+          name: 'North America',
+          bonusArmies: 5,
+          territories: ['alaska'],
+        },
+        {
+          id: 'asia',
+          name: 'Asia',
+          bonusArmies: 7,
+          territories: ['siberia'],
+        },
+      ],
+    },
   }
 
   const mockUser = {

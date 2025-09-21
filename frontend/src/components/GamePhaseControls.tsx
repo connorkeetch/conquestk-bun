@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
 import {
@@ -14,7 +14,11 @@ import {
   setBattleResult,
   setPendingAction,
 } from '../store/gameSlice'
-import { calculatePlayerContinentStatus, getContinentBonusArmies } from '../utils/continentBonuses'
+import {
+  calculatePlayerContinentStatus,
+  getContinentBonusArmies,
+  resolveContinentDefinitions,
+} from '../utils/continentBonuses'
 import { BattleModal } from './BattleModal'
 
 interface GamePhaseControlsProps {
@@ -39,6 +43,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   const [reinforcementArmies, setReinforcementArmies] = useState(1)
   const [fortifyArmies, setFortifyArmies] = useState(1)
 
+  const continentDefinitions = useMemo(
+    () => resolveContinentDefinitions(gameState?.gameConfig?.continentBonuses),
+    [gameState?.gameConfig?.continentBonuses],
+  )
+
   if (!gameState || !currentUser) return null
 
   const isCurrentPlayerTurn = gameState.currentPlayer === currentUser.id
@@ -56,14 +65,18 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
 
     // Add continent bonuses
-    const continentBonuses = getContinentBonusArmies(currentPlayer.id, gameState.board)
+    const continentBonuses = getContinentBonusArmies(
+      currentPlayer.id,
+      gameState.board,
+      continentDefinitions,
+    )
 
     return baseArmies + continentBonuses
   }
 
   // Get detailed continent status for current player
   const currentPlayerContinentStatus = currentPlayer
-    ? calculatePlayerContinentStatus(currentPlayer.id, gameState.board)
+    ? calculatePlayerContinentStatus(currentPlayer.id, gameState.board, continentDefinitions)
     : null
 
   const selectedTerritoryData = selectedTerritory
@@ -155,6 +168,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   const continentBonuses = getContinentBonusArmies(
                     currentPlayer.id,
                     gameState.board,
+                    continentDefinitions,
                   )
 
                   return (

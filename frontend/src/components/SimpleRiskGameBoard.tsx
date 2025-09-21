@@ -103,7 +103,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
       return bonuses.map((bonus, index) => ({
         id: bonus.id,
         name: bonus.name,
-        bonus: bonus.bonusArmies,
+        bonusArmies: bonus.bonusArmies,
         color: fallbackColors[index % fallbackColors.length],
       }))
     }
@@ -111,7 +111,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     return Object.entries(FANTASY_CONTINENTS).map(([id, meta]) => ({
       id,
       name: meta.name,
-      bonus: meta.bonus,
+      bonusArmies: meta.bonus,
       color: meta.color,
     }))
   }, [gameState.gameConfig?.continentBonuses])
@@ -392,7 +392,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
                       <strong>Continent:</strong> {continentInfo?.name}
                       <span className="text-green-600 font-semibold">
                         {' '}
-                        (+{continentInfo?.bonus} bonus)
+                        (+{continentInfo?.bonusArmies} bonus)
                       </span>
                     </div>
                     {owner && (
@@ -430,7 +430,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
                 >
                   <div className="font-medium text-gray-800">{continent.name}</div>
                   <div className="text-sm text-green-600 font-semibold">
-                    +{continent.bonus} armies per turn
+                    +{continent.bonusArmies} armies per turn
                   </div>
                 </div>
               ))}

@@ -4,7 +4,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import { selectTargetTerritory, selectTerritory, setPendingAction } from '../store/gameSlice'
-import { CONTINENTS, calculateAllPlayersContinentStatus } from '../utils/continentBonuses'
+import {
+  calculateAllPlayersContinentStatus,
+  resolveContinentDefinitions,
+} from '../utils/continentBonuses'
 import CustomMapDisplay from './CustomMapDisplay'
 import { GamePhaseControls } from './GamePhaseControls'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
@@ -93,30 +96,15 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
   const currentPlayer = gameState.currentPlayer
   const currentPhase = gameState.phase
 
-  // Calculate continent control status for all players
-  const allPlayersContinentStatus = calculateAllPlayersContinentStatus(players, gameState.board)
+  const continentDefinitions = useMemo(
+    () => resolveContinentDefinitions(gameState.gameConfig?.continentBonuses),
+    [gameState.gameConfig?.continentBonuses],
+  )
 
-  const continentDefinitions = useMemo(() => {
-    const bonuses = gameState.gameConfig?.continentBonuses
-    if (bonuses && bonuses.length > 0) {
-      const fallbackColors = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336', '#FFEB3B']
-      return bonuses.map((bonus, index) => ({
-        id: bonus.id,
-        name: bonus.name,
-        bonus: bonus.bonusArmies,
-        color: fallbackColors[index % fallbackColors.length],
-        territories: bonus.territories,
-      }))
-    }
-
-    return CONTINENTS.map((continent) => ({
-      id: continent.id,
-      name: continent.name,
-      bonus: continent.bonusArmies,
-      color: continent.color,
-      territories: continent.territories,
-    }))
-  }, [gameState.gameConfig?.continentBonuses])
+  const allPlayersContinentStatus = useMemo(
+    () => calculateAllPlayersContinentStatus(players, gameState.board, continentDefinitions),
+    [players, gameState.board, continentDefinitions],
+  )
 
   const getTerritoryColor = useCallback(
     (territoryId: string): string => {
@@ -375,7 +363,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardPropsExtended> = ({
                         <span className="font-medium">{continent.name}</span>
                       </div>
                       <span className="text-sm font-semibold text-green-600">
-                        +{continent.bonus} armies
+                        +{continent.bonusArmies} armies
                       </span>
                     </div>
 

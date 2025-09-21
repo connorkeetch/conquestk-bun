@@ -67,8 +67,10 @@ _Last updated: September 21, 2025_
 - Capital mode implements `isCapitalTerritory`; eliminations trigger correctly.
 - Tests cover classic plus one custom map; frontend renders bonuses from server data only.
 - _Progress (Mar 2026): Lobby creation now supports explicit team counts, hosts can assign players per team,
-  and the engine enforces alliances for movement/combat with team-based victory checks. Shared
-  reinforcement balancing remains to be modelled._
+  and the engine enforces alliances for movement/combat with team-based victory checks. Reinforcement math
+  now pulls continent bonuses from map metadata for both backend workers and the client UI, and the capital
+  warning path (`isCapitalTerritory`) reflects cached game state. Team reinforcement pooling stays a follow-up
+  item (tracked separately)._
 
 ## Epic B — Security & Map Authoring Workflow
 ### B1. Enforce map ownership & permissions (incl. approval/versioning)
