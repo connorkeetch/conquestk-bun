@@ -22,19 +22,23 @@ describe('GameEngine', () => {
   const createConfig = (playerCount: number): GameConfiguration => ({
     movementType: 'classic_adjacent',
     allowTeamPlay: false,
+    teamMode: 'none',
+    numberOfTeams: null,
     maxPlayers: playerCount,
     mapId: 'classic',
     gameMode: 'standard',
   })
 
+  const createPlayers = (...ids: string[]) => ids.map((id) => ({ userId: id, username: id }))
+
   describe('initializeGame', () => {
     it('should create a valid initial game state', () => {
-      const playerIds = ['player1', 'player2', 'player3']
-      const gameState = gameEngine.initializeGame('room123', playerIds, createConfig(playerIds.length))
+      const players = createPlayers('player1', 'player2', 'player3')
+      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
 
       expect(gameState.roomId).toBe('room123')
       expect(gameState.players).toHaveLength(3)
-      expect(playerIds).toContain(gameState.currentPlayer)
+      expect(players.map((p) => p.userId)).toContain(gameState.currentPlayer)
       expect(gameState.phase).toBe('setup')
       expect(gameState.turn).toBe(1)
       expect(gameState.board).toBeDefined()
@@ -42,8 +46,8 @@ describe('GameEngine', () => {
     })
 
     it('should distribute territories among players', () => {
-      const playerIds = ['player1', 'player2']
-      const gameState = gameEngine.initializeGame('room123', playerIds, createConfig(playerIds.length))
+      const players = createPlayers('player1', 'player2')
+      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
 
       // Check that all territories have owners
       const unownedTerritories = gameState.board.filter((t) => !t.ownerId)
@@ -58,8 +62,8 @@ describe('GameEngine', () => {
     })
 
     it('should give each territory at least 1 army', () => {
-      const playerIds = ['player1', 'player2']
-      const gameState = gameEngine.initializeGame('room123', playerIds, createConfig(playerIds.length))
+      const players = createPlayers('player1', 'player2')
+      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
 
       const weakTerritories = gameState.board.filter((t) => t.armies < 1)
       expect(weakTerritories).toHaveLength(0)
@@ -70,7 +74,7 @@ describe('GameEngine', () => {
     it('should return minimum 3 armies', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
       const player = gameState.players.find((p) => p.id === 'player1')
@@ -85,7 +89,7 @@ describe('GameEngine', () => {
     it('should calculate armies based on territory count', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1'],
+        createPlayers('player1'),
         createConfig(1),
       )
       const player = gameState.players.find((p) => p.id === 'player1')
@@ -105,7 +109,7 @@ describe('GameEngine', () => {
     it('should advance from reinforcement to attack', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
       gameState.phase = 'reinforcement'
@@ -119,7 +123,7 @@ describe('GameEngine', () => {
     it('should advance from attack to fortify', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
       gameState.phase = 'attack'
@@ -133,7 +137,7 @@ describe('GameEngine', () => {
     it('should advance from fortify to next player reinforcement', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
       gameState.phase = 'fortify'
@@ -149,7 +153,7 @@ describe('GameEngine', () => {
     it('should increment turn when cycling back to first player', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
       gameState.phase = 'fortify'
@@ -169,7 +173,7 @@ describe('GameEngine', () => {
     beforeEach(() => {
       gameState = gameEngine.initializeGame(
         'room123',
-        ['player1', 'player2'],
+        createPlayers('player1', 'player2'),
         createConfig(2),
       )
     })

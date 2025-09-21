@@ -33,6 +33,9 @@ export interface GameRoom {
   currentTurnUserId?: string | null
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
+  allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance' | null
+  numberOfTeams?: number | null
   players?: Player[]
 }
 
@@ -44,4 +47,5 @@ export interface Player {
   readyAt?: string | null
   skill_rating?: number
   current_tier?: string | null
+  teamId?: number | null
 }

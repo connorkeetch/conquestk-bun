@@ -1,3 +1,4 @@
+import { transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
 import type {
   GameAction,
@@ -9,16 +10,14 @@ import type {
   SerializedGameState,
   Territory,
 } from '../types/game'
-import type { PoolClient } from 'pg'
 import { logger } from '../utils/logger'
-import { transaction } from '../config/database'
 import { gameStateCache } from './cacheService'
+import type { PlayerRating, RatingChange } from './eloService'
+import { eloService } from './eloService'
 import { mapService } from './mapService'
+import { battleMetrics } from './metricsService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
-import { battleMetrics } from './metricsService'
-import { eloService } from './eloService'
-import type { PlayerRating, RatingChange } from './eloService'
 
 type BattleWorkerResult = {
   attackerLosses: number
@@ -134,19 +133,43 @@ export class GameService {
 
   async initializeGame(
     roomId: string,
-    players: string[],
+    players: Array<{ userId: string; username?: string; teamId?: number | null }>,
     gameConfig?: Partial<GameConfiguration>,
   ): Promise<GameState> {
     // Default game configuration
     const defaultGameConfig = {
       movementType: 'classic_adjacent' as const,
       allowTeamPlay: false,
+      teamMode: 'none' as const,
+      numberOfTeams: null as number | null,
+      teamAssignments: undefined as Record<number, string[]> | undefined,
       maxPlayers: 6,
       mapId: 'classic',
       gameMode: 'standard',
     }
 
     const config: GameConfiguration = { ...defaultGameConfig, ...(gameConfig || {}) }
+
+    if (config.allowTeamPlay) {
+      if (!config.teamAssignments) {
+        const assignments: Record<number, string[]> = {}
+        for (const player of players) {
+          if (player.teamId && player.teamId > 0) {
+            if (!assignments[player.teamId]) {
+              assignments[player.teamId] = []
+            }
+            assignments[player.teamId].push(player.userId)
+          }
+        }
+
+        if (Object.keys(assignments).length > 0) {
+          config.teamAssignments = assignments
+        }
+      }
+    } else {
+      config.teamAssignments = undefined
+      config.numberOfTeams = null
+    }
 
     // Load continent bonuses for custom maps
     if (config.mapId && config.mapId !== 'classic') {
@@ -440,7 +463,10 @@ export class GameService {
     await gameStateCache.setGameState(gameId, this.serializeGameState(gameState))
   }
 
-  async applyBattleResult(gameId: string, payload: BattleWorkerResult): Promise<{ applied: boolean }> {
+  async applyBattleResult(
+    gameId: string,
+    payload: BattleWorkerResult,
+  ): Promise<{ applied: boolean }> {
     const {
       jobId,
       attackerLosses,
@@ -507,7 +533,7 @@ export class GameService {
     const playersAfterBattle = this.rebuildPlayersAfterBattle(gameState.players, updatedBoard)
     const activePlayers = playersAfterBattle.filter((player) => !player.isEliminated)
     const gameEnded = activePlayers.length <= 1
-    const winner = gameEnded ? activePlayers[0] ?? null : null
+    const winner = gameEnded ? (activePlayers[0] ?? null) : null
 
     const lastBattleResult = {
       attackerDice: dice.attacker,
@@ -526,11 +552,13 @@ export class GameService {
         armies: finalDefenderArmies,
         ownerId: territoryConquered
           ? attackerId
-          : defenderTerritory.ownerId ?? defenderId ?? attackerId,
+          : (defenderTerritory.ownerId ?? defenderId ?? attackerId),
       },
       gameEnded,
       winner,
-      eliminatedPlayers: playersAfterBattle.filter((player) => player.isEliminated).map((p) => p.id),
+      eliminatedPlayers: playersAfterBattle
+        .filter((player) => player.isEliminated)
+        .map((p) => p.id),
     }
 
     const updatedGameState: GameState = {
@@ -623,7 +651,7 @@ export class GameService {
             JSON.stringify(serializedState.board),
             JSON.stringify(playerStats),
             JSON.stringify(updatedLog),
-            gameEnded ? winner?.id ?? null : existingRow?.winner_id ?? null,
+            gameEnded ? (winner?.id ?? null) : (existingRow?.winner_id ?? null),
           ],
         )
 
@@ -687,18 +715,17 @@ export class GameService {
       {},
     )
 
-    return players.reduce<Record<string, { territories: number; armies: number; eliminated: boolean }>>(
-      (acc, player) => {
-        const metrics = boardByOwner[player.id] ?? { territories: 0, armies: 0 }
-        acc[player.id] = {
-          territories: metrics.territories,
-          armies: metrics.armies,
-          eliminated: player.isEliminated,
-        }
-        return acc
-      },
-      {},
-    )
+    return players.reduce<
+      Record<string, { territories: number; armies: number; eliminated: boolean }>
+    >((acc, player) => {
+      const metrics = boardByOwner[player.id] ?? { territories: 0, armies: 0 }
+      acc[player.id] = {
+        territories: metrics.territories,
+        armies: metrics.armies,
+        eliminated: player.isEliminated,
+      }
+      return acc
+    }, {})
   }
 
   private calculateTerritoryDivergence(
@@ -754,7 +781,10 @@ export class GameService {
 
   private buildPlayerRanking(
     players: GamePlayer[],
-    playerStatsSnapshot: Record<string, { territories: number; armies: number; eliminated: boolean }>,
+    playerStatsSnapshot: Record<
+      string,
+      { territories: number; armies: number; eliminated: boolean }
+    >,
     battleLog: BattleLogEntry[],
   ): PlayerRankingSummary[] {
     const eliminationOrder = this.buildEliminationOrder(battleLog)
@@ -803,7 +833,10 @@ export class GameService {
     gameId: string,
     serializedState: SerializedGameState,
     players: GamePlayer[],
-    playerStatsSnapshot: Record<string, { territories: number; armies: number; eliminated: boolean }>,
+    playerStatsSnapshot: Record<
+      string,
+      { territories: number; armies: number; eliminated: boolean }
+    >,
     battleLog: BattleLogEntry[],
   ): Promise<void> {
     const playerRankings = this.buildPlayerRanking(players, playerStatsSnapshot, battleLog)
@@ -934,7 +967,9 @@ export class GameService {
         const playerStatsValues: Array<string | number> = []
         playerRankings.forEach((ranking, index) => {
           const baseIndex = index * 4
-          playerStatsPlaceholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4})`)
+          playerStatsPlaceholders.push(
+            `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4})`,
+          )
           playerStatsValues.push(
             ranking.userId,
             1,

@@ -37,6 +37,7 @@ export interface GamePlayer {
   cards: Card[]
   isEliminated: boolean
   capitalTerritory?: string
+  teamId?: number | null
 }
 
 export interface Territory {
@@ -150,6 +151,9 @@ export interface BattleResult {
 export interface GameConfiguration {
   movementType: MovementType
   allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance'
+  numberOfTeams?: number | null
+  teamAssignments?: Record<number, string[]>
   maxPlayers: number
   mapId?: string
   gameMode?: string
