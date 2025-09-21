@@ -39,12 +39,12 @@ Progress over the summer 2025 cycle that is now in production:
 - **Theme experiments:** additional visual styles, accessibility presets, and a potential community theme creator.
 
 ## 🧹 Maintenance watchlist
-- **Codebase cleanup:** track duplicate audio directories, outdated deployment scripts, and backup artefacts in [Codebase Cleanup Plan](./CODEBASE-CLEANUP.md).
+- **Codebase cleanup:** track duplicate audio directories, outdated deployment scripts, and backup artefacts in [Codebase Cleanup Plan](./codebase-cleanup.md).
 - **Queue & cache monitoring:** Bull workers + Redis metrics must land before scaling traffic; revisit once worker safety tasks above finish.
 - **Automated coverage:** expand integration coverage for game actions, map editor auth, and socket join/broadcast flows prior to public launch.
 
 ---
-For the detailed launch-blocker backlog, see [Go-Live Consolidated Backlog & Implementation Plan](./go_live_plan.md). Keep both documents in sync when priorities or statuses change.
+For the detailed launch-blocker backlog, see [Go-Live Consolidated Backlog & Implementation Plan](./go-live-plan.md). Keep both documents in sync when priorities or statuses change.
 
 ---
 Need to add or change priorities? Start by updating the table above, then archive completed items into "Recent milestones" so the active backlog stays concise.

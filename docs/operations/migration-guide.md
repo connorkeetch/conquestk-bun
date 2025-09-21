@@ -16,8 +16,8 @@ cd backend && npm run migrate:status
 
 ### Update Schema Documentation
 ```bash
-# Regenerate the docs/DATABASE_SCHEMA.md catalog after applying migrations
-cd backend && npm run check:schema -- --skip-validation --export ../docs/DATABASE_SCHEMA.md
+# Regenerate the docs/operations/database-schema.md catalog after applying migrations
+cd backend && npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md
 ```
 
 ### Direct Database Access

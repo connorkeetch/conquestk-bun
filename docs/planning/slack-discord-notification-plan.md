@@ -138,8 +138,8 @@ Start with CLI/manual hooks and expand over time.
 - Restrict CLI usage to trusted CI or authenticated local developers.
 
 ## 📚 Documentation & Handoff
-- Update `docs/DEPLOYMENT.md` with setup steps, env vars, rotation, rate limits, and troubleshooting.
-- Update `docs/LOGGING-STANDARDS.md` with escalation paths and severity mapping.
+- Update `docs/reference/deployment.md` with setup steps, env vars, rotation, rate limits, and troubleshooting.
+- Update `docs/operations/logging-standards.md` with escalation paths and severity mapping.
 - Add README quickstart, CLI usage, and examples.
 - Extend `.env.example` with all relevant variables and commentary.
 
@@ -173,8 +173,8 @@ Start with CLI/manual hooks and expand over time.
 - `backend/src/services/channels/SlackWebhookChannel.ts`
 - `backend/src/services/channels/DiscordWebhookChannel.ts`
 - `backend/src/scripts/notify.ts`
-- `docs/DEPLOYMENT.md`
-- `docs/LOGGING-STANDARDS.md`
+- `docs/reference/deployment.md`
+- `docs/operations/logging-standards.md`
 - `.env.example`
 
 Next step: confirm Slack auth path (bot vs webhook) and prioritize the event list, then begin Phase 1.

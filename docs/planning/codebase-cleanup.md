@@ -20,7 +20,7 @@ This document tracks the non-functional tidy-up work that keeps the repository l
 2. **Decommission outdated deployment scripts**
    Either remove or rewrite `backend/scripts/deploy-consolidated-*.js` and the associated `backup:production` npm script so they no longer reference non-existent migrations or write to `backend/backups/`.
 3. **Stop committing database backups**
-   Delete the checked-in `.sql` export, add `backend/backups/` (or a new storage path) to `.gitignore`, and document a safer backup destination in `DEPLOYMENT.md`.
+   Delete the checked-in `.sql` export, add `backend/backups/` (or a new storage path) to `.gitignore`, and document a safer backup destination in `../reference/deployment.md`.
 4. **Strengthen large-file safeguards**
    Introduce Git LFS or a lightweight pre-commit hook to block >25 MB media assets before they land—especially if we keep high-quality WAV masters alongside compressed MP3s.
 

@@ -115,8 +115,12 @@ export class GameRoomService {
       return teamMode
     }
 
-    if (typeof teamMode === 'boolean') {
-      return teamMode ? 'teams' : 'none'
+    if (teamMode === true) {
+      return 'teams'
+    }
+
+    if (teamMode === false || teamMode === null) {
+      return 'none'
     }
 
     if (allowTeamPlay) {
@@ -142,26 +146,27 @@ export class GameRoomService {
     return normalized > 0 ? normalized : null
   }
 
-  private mapTeamMode(value: GameRoomRow['team_mode']): GameRoom['teamMode'] {
-    if (value === null || value === undefined) {
-      return 'none'
+  private mapTeamMode(value: GameRoomRow['team_mode']): 'none' | 'teams' | 'auto_balance' {
+    if (value === 'auto_balance' || value === 'teams' || value === 'none') {
+      return value
     }
 
     if (typeof value === 'string') {
-      if (value === 'teams' || value === 'auto_balance' || value === 'none') {
-        return value
-      }
       const normalized = value.toLowerCase()
       if (normalized === 'true') {
         return 'teams'
       }
-      if (normalized === 'false') {
-        return 'none'
+      if (normalized === 'auto_balance') {
+        return 'auto_balance'
       }
       return 'none'
     }
 
-    return value ? 'teams' : 'none'
+    if (value === true) {
+      return 'teams'
+    }
+
+    return 'none'
   }
 
   private normalizeStatus(status: string | null | undefined): GameLifecycleStatus {

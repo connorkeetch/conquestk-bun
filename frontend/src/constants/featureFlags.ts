@@ -2,7 +2,7 @@
  * Feature Flag Constants
  *
  * IMPORTANT: All new features MUST use feature flags!
- * See docs/ARCHITECTURE.md#feature-flag-system for details
+ * See docs/reference/architecture.md#feature-flag-system for details
  */
 
 export const FEATURE_FLAGS = {
