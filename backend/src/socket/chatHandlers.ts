@@ -1,6 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
 import { chatService } from '../services/chatService'
+import notificationService from '../services/notificationService'
 import type {
   ChatHistoryPayload,
   ChatMessagePayload,
@@ -387,21 +388,23 @@ async function sendDMNotification(
   senderUsername: string,
   message: string,
 ): Promise<void> {
-  // TODO: Implement push notification
-  // For now, just add to the notifications table
-  const { query } = require('../config/database')
-  const { v4: uuidv4 } = require('uuid')
+  const preview = message.length > 140 ? `${message.substring(0, 137)}...` : message
 
-  await query(
-    `INSERT INTO notifications (id, user_id, type, title, message, metadata, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-    [
-      uuidv4(),
-      recipientId,
-      'chat_message',
-      `New message from ${senderUsername}`,
-      message.substring(0, 100), // Truncate for notification
-      JSON.stringify({ senderId, senderUsername }),
-    ],
-  )
+  await notificationService.createInAppNotification(recipientId, {
+    type: 'chat_message',
+    title: `New message from ${senderUsername}`,
+    message: preview || 'You received a new message',
+    data: { senderId, senderUsername },
+    actionUrl: `/messages/${senderId}`,
+    actionLabel: 'Open chat',
+    sendPush: true,
+    pushPayload: {
+      title: `💬 ${senderUsername} sent a message`,
+      body: preview || 'Open ConquestK to read the message',
+      data: {
+        url: `/messages/${senderId}`,
+        senderId,
+      },
+    },
+  })
 }

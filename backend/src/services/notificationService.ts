@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import webpush from 'web-push'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { emitNotificationToUsers } from './realtimeNotificationService'
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
@@ -110,6 +111,24 @@ export interface PruneResult {
   totalRemoved: number
   remainingSubscriptions: number
   ranAt: string
+}
+
+export interface CreateInAppNotificationOptions {
+  type: string
+  title: string
+  message: string
+  data?: Record<string, unknown>
+  actionUrl?: string
+  actionLabel?: string
+  icon?: string
+  read?: boolean
+  sendPush?: boolean
+  pushPayload?: NotificationPayload
+}
+
+export interface InAppNotificationRecord {
+  id: string
+  createdAt: Date
 }
 
 const defaultPruneOptions: Required<PruneOptions> = {
@@ -570,6 +589,71 @@ class NotificationService {
     }
 
     return await this.sendToUser(userId, payload)
+  }
+
+  async createInAppNotification(
+    userId: string,
+    options: CreateInAppNotificationOptions,
+  ): Promise<InAppNotificationRecord> {
+    const id = randomUUID()
+    const createdAt = new Date()
+
+    const mergedData = {
+      ...(options.data ?? {}),
+      actionUrl: options.actionUrl,
+      actionLabel: options.actionLabel,
+      icon: options.icon,
+    }
+
+    await query(
+      `
+        INSERT INTO notifications (id, user_id, type, title, message, data, created_at, read_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        id,
+        userId,
+        options.type,
+        options.title,
+        options.message,
+        JSON.stringify(mergedData),
+        createdAt,
+        options.read ? createdAt : null,
+      ],
+    )
+
+    emitNotificationToUsers([
+      userId,
+    ], {
+      id,
+      type: options.type,
+      title: options.title,
+      message: options.message,
+      createdAt: createdAt.toISOString(),
+      read: options.read ?? false,
+      actionUrl: options.actionUrl,
+      actionLabel: options.actionLabel,
+      icon: options.icon,
+      metadata: options.data,
+    })
+
+    if (options.sendPush && this.isEnabled()) {
+      const payload: NotificationPayload =
+        options.pushPayload ??
+        ({
+          title: options.title,
+          body: options.message,
+          data: {
+            url: options.actionUrl,
+            type: options.type,
+            ...options.data,
+          },
+        } as NotificationPayload)
+
+      await this.sendToUser(userId, payload)
+    }
+
+    return { id, createdAt }
   }
 
   getVapidPublicKey(): string {

@@ -4,21 +4,28 @@ import { queueService } from '../services/queueService'
 import { setupSocketHandlers } from '../services/socketService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
-const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
+var mockDbQuery: jest.Mock
 
-jest.mock('../config/database', () => ({
-  query: mockDbQuery,
-}))
+jest.mock('../config/database', () => {
+  mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
+  return {
+    query: mockDbQuery,
+  }
+})
 
-const mockAddGameAction = jest.fn()
-const mockAddBattleSimulation = jest.fn()
+var mockAddGameAction: jest.Mock
+var mockAddBattleSimulation: jest.Mock
 
-jest.mock('../services/queueService', () => ({
-  queueService: {
-    addGameAction: mockAddGameAction,
-    addBattleSimulation: mockAddBattleSimulation,
-  },
-}))
+jest.mock('../services/queueService', () => {
+  mockAddGameAction = jest.fn()
+  mockAddBattleSimulation = jest.fn()
+  return {
+    queueService: {
+      addGameAction: mockAddGameAction,
+      addBattleSimulation: mockAddBattleSimulation,
+    },
+  }
+})
 
 const mockGameServiceInstance = {
   fortify: jest.fn(),
@@ -35,29 +42,41 @@ jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => mockGameServiceInstance),
 }))
 
-const mockIsPlayerInRoom = jest.fn()
-const mockGetPlayer = jest.fn()
+var mockIsPlayerInRoom: jest.Mock
+var mockGetPlayer: jest.Mock
 
-jest.mock('../services/gameRoomService', () => ({
-  GameRoomService: jest.fn(() => ({
-    isPlayerInRoom: mockIsPlayerInRoom,
-    getPlayer: mockGetPlayer,
-  })),
-}))
+jest.mock('../services/gameRoomService', () => {
+  mockIsPlayerInRoom = jest.fn()
+  mockGetPlayer = jest.fn()
+  return {
+    GameRoomService: jest.fn(() => ({
+      isPlayerInRoom: mockIsPlayerInRoom,
+      getPlayer: mockGetPlayer,
+    })),
+  }
+})
 
-const mockGetCachedState = jest.fn()
+var mockGetCachedState: jest.Mock
 
-jest.mock('../services/cacheService', () => ({
-  gameStateCache: {
-    getGameState: mockGetCachedState,
-  },
-}))
+jest.mock('../services/cacheService', () => {
+  mockGetCachedState = jest.fn()
+  return {
+    gameStateCache: {
+      getGameState: mockGetCachedState,
+    },
+  }
+})
 
-const mockRegisterSocketServer = jest.fn()
+var mockRegisterSocketServer: jest.Mock
 
-jest.mock('../services/socketRegistry', () => ({
-  registerSocketServer: mockRegisterSocketServer,
-}))
+jest.mock('../services/socketRegistry', () => {
+  mockRegisterSocketServer = jest.fn()
+  return {
+    __esModule: true,
+    registerSocketServer: mockRegisterSocketServer,
+    tryGetSocketServer: jest.fn(),
+  }
+})
 
 jest.mock('../socket/chatHandlers', () => ({
   setupChatHandlers: jest.fn(),

@@ -20,6 +20,7 @@ import {
 } from '../store/roomSlice'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
+import type { NotificationType } from '../types/notification'
 
 class SocketService {
   private socket: Socket | null = null
@@ -496,6 +497,26 @@ class SocketService {
       // Play error sound
       audioService.playEffect('error')
       store.dispatch(setError(error.message))
+    })
+
+    this.socket.on('notification:new', (payload) => {
+      notificationService.addNotification({
+        id: payload.id,
+        type: payload.type as NotificationType,
+        title: payload.title,
+        message: payload.message,
+        read: payload.read ?? false,
+        actionUrl: payload.actionUrl,
+        actionLabel: payload.actionLabel,
+        icon: payload.icon,
+        metadata: payload.metadata as Record<string, unknown>,
+        timestamp: new Date(payload.createdAt),
+      })
+
+      if (!(payload.read ?? false)) {
+        const effect = payload.type === 'chat_message' ? 'message' : 'swoosh'
+        audioService.playEffect(effect)
+      }
     })
 
     this.socket.on('chat-message', (_data) => {})
