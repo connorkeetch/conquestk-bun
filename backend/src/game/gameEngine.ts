@@ -19,9 +19,13 @@ export class GameEngine {
   private worldMap = new WorldMap()
   private gameModifiers: Map<string, GameTerritoryModifier> = new Map()
 
-  initializeGame(roomId: string, playerIds: string[], gameConfig: GameConfiguration): GameState {
+  initializeGame(
+    roomId: string,
+    playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
+    gameConfig: GameConfiguration,
+  ): GameState {
     const territories = this.worldMap.getTerritories()
-    const players = this.createPlayers(playerIds)
+    const players = this.createPlayers(playerConfigs)
 
     // Randomize player order
     this.randomizePlayerOrder(players)
@@ -103,7 +107,9 @@ export class GameEngine {
     }
   }
 
-  private createPlayers(playerIds: string[]): GamePlayer[] {
+  private createPlayers(
+    playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
+  ): GamePlayer[] {
     const colors = [
       'red',
       'blue',
@@ -119,14 +125,18 @@ export class GameEngine {
       'indigo',
     ]
 
-    return playerIds.map((id, index) => ({
-      id,
-      username: `Player ${index + 1}`,
+    return playerConfigs.map((player, index) => ({
+      id: player.userId,
+      username: player.username || `Player ${index + 1}`,
       color: colors[index % colors.length],
-      armies: this.calculateInitialArmies(playerIds.length),
+      armies: this.calculateInitialArmies(playerConfigs.length),
       territories: [],
       cards: [],
       isEliminated: false,
+      teamId:
+        typeof player.teamId === 'number' && !Number.isNaN(player.teamId) && player.teamId > 0
+          ? player.teamId
+          : null,
     }))
   }
 
@@ -572,6 +582,10 @@ export class GameEngine {
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
 
+    if (toTerritory && this.arePlayersTeammates(gameState, action.playerId, toTerritory.ownerId)) {
+      return false
+    }
+
     return !!(
       fromTerritory &&
       toTerritory &&
@@ -659,14 +673,52 @@ export class GameEngine {
     return dice
   }
 
+  private getPlayerTeam(gameState: GameState, playerId?: string | null): number | null {
+    if (!playerId) {
+      return null
+    }
+
+    const player = gameState.players.find((p) => p.id === playerId)
+    if (!player) {
+      return null
+    }
+
+    const { teamId } = player
+    return typeof teamId === 'number' && teamId > 0 ? teamId : null
+  }
+
+  private arePlayersTeammates(
+    gameState: GameState,
+    playerA: string,
+    playerB?: string | null,
+  ): boolean {
+    if (!gameState.gameConfig.allowTeamPlay) {
+      return false
+    }
+
+    if (!playerB || playerB === 'neutral') {
+      return false
+    }
+
+    const teamA = this.getPlayerTeam(gameState, playerA)
+    const teamB = this.getPlayerTeam(gameState, playerB)
+
+    if (!teamA || !teamB) {
+      return false
+    }
+
+    return teamA === teamB
+  }
+
   // Check if a territory can be moved to (owned by player or teammate)
   private canMoveTo(territory: Territory, playerId: string, gameState: GameState): boolean {
     if (territory.ownerId === playerId) return true
 
     // If team play is enabled, check if territory belongs to a teammate
     if (gameState.gameConfig.allowTeamPlay) {
-      // TODO: Implement team logic when team system is added
-      // For now, only allow movement to own territories
+      if (this.arePlayersTeammates(gameState, playerId, territory.ownerId)) {
+        return true
+      }
     }
 
     return false
@@ -829,8 +881,9 @@ export class GameEngine {
 
     // If team play is enabled, include teammate territories in pathfinding
     if (gameState.gameConfig.allowTeamPlay) {
-      // TODO: Implement team logic when team system is added
-      // For now, only use own territories
+      if (this.arePlayersTeammates(gameState, playerId, territory.ownerId)) {
+        return true
+      }
     }
 
     return false
@@ -891,6 +944,28 @@ export class GameEngine {
         gameEnded: true,
         winner: activePlayers[0] || null,
         eliminatedPlayers,
+      }
+    }
+
+    if (gameState.gameConfig.allowTeamPlay) {
+      const distinctTeams = new Set<string>()
+      for (const player of activePlayers) {
+        const teamId = this.getPlayerTeam(gameState, player.id)
+        if (teamId) {
+          distinctTeams.add(`team-${teamId}`)
+        } else {
+          distinctTeams.add(`player-${player.id}`)
+        }
+      }
+
+      if (distinctTeams.size === 1) {
+        const winner = activePlayers[0] || null
+        this.endGame(gameState, winner)
+        return {
+          gameEnded: true,
+          winner,
+          eliminatedPlayers,
+        }
       }
     }
 

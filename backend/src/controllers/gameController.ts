@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
-import { GameService } from '../services/gameService'
-import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameLifecycleService } from '../services/gameLifecycleService'
+import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
+import { GameService } from '../services/gameService'
 import type { AuthenticatedRequest } from '../types/express'
 import { logger } from '../utils/logger'
 
@@ -22,12 +22,35 @@ export class GameController {
 
   createRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { name, maxPlayers, isPrivate, mapId, gameMode, teamMode, numberOfTeams } = req.body
+      const {
+        name,
+        maxPlayers,
+        isPrivate,
+        mapId,
+        gameMode,
+        teamMode,
+        numberOfTeams,
+        allowTeamPlay,
+      } = req.body
       const hostId = req.userId
 
       if (!hostId) {
         return res.status(401).json({ message: 'Authentication required' })
       }
+
+      const parsedNumberOfTeams =
+        typeof numberOfTeams === 'number'
+          ? numberOfTeams
+          : typeof numberOfTeams === 'string'
+            ? Number.parseInt(numberOfTeams, 10)
+            : undefined
+
+      const normalizedTeamMode =
+        typeof teamMode === 'string'
+          ? teamMode
+          : allowTeamPlay || (typeof parsedNumberOfTeams === 'number' && parsedNumberOfTeams > 0)
+            ? 'teams'
+            : 'none'
 
       const roomData: CreateRoomData = {
         name,
@@ -36,8 +59,13 @@ export class GameController {
         isPrivate: isPrivate || false,
         mapId: mapId || null,
         gameMode: gameMode || 'classic',
-        teamMode: teamMode || false,
-        numberOfTeams: numberOfTeams || undefined,
+        allowTeamPlay:
+          allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),
+        teamMode: normalizedTeamMode,
+        numberOfTeams:
+          typeof parsedNumberOfTeams === 'number' && !Number.isNaN(parsedNumberOfTeams)
+            ? parsedNumberOfTeams
+            : undefined,
       }
 
       const room = await this.gameRoomService.createRoom(roomData)
@@ -64,9 +92,70 @@ export class GameController {
         error instanceof Error &&
         (error.message.includes('teams is not valid') ||
           error.message.includes('Invalid number of teams') ||
-          error.message.includes('Ranked games'))
+          error.message.includes('Ranked games') ||
+          error.message.includes('Team play'))
       ) {
         return res.status(400).json({ message: error.message })
+      }
+
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
+  updateTeamAssignment = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId } = req.params
+      const hostId = req.userId
+      const { playerId, teamId } = req.body as {
+        playerId?: string
+        teamId?: number | string | null
+      }
+
+      if (!hostId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
+
+      if (!playerId) {
+        return res.status(400).json({ message: 'playerId is required' })
+      }
+
+      const parsedTeamId =
+        teamId === null || teamId === undefined
+          ? null
+          : typeof teamId === 'number'
+            ? teamId
+            : Number.parseInt(teamId, 10)
+
+      if (parsedTeamId !== null && Number.isNaN(parsedTeamId)) {
+        return res.status(400).json({ message: 'teamId must be a number or null' })
+      }
+
+      const room = await this.gameRoomService.assignPlayerToTeam(
+        roomId,
+        hostId,
+        playerId,
+        parsedTeamId,
+      )
+
+      await this.lifecycleService.refreshLifecycle(roomId)
+
+      return res.json({ room })
+    } catch (error) {
+      logger.error('Update team assignment error:', error)
+
+      if (error instanceof Error) {
+        if (error.message === 'Room not found' || error.message.includes('not part')) {
+          return res.status(404).json({ message: error.message })
+        }
+
+        if (
+          error.message.includes('Only the host') ||
+          error.message.includes('Team play') ||
+          error.message.includes('Team must be') ||
+          error.message.includes('Team identifier')
+        ) {
+          return res.status(400).json({ message: error.message })
+        }
       }
 
       return res.status(500).json({ message: 'Internal server error' })

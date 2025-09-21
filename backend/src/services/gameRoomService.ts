@@ -8,8 +8,9 @@ export interface CreateRoomData {
   isPrivate: boolean
   mapId?: string
   gameMode?: string
-  teamMode?: boolean
-  numberOfTeams?: number
+  allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance' | boolean | null
+  numberOfTeams?: number | null
   isRanked?: boolean
 }
 
@@ -60,6 +61,7 @@ interface PlayerRow {
   joinedAt: Date | string | null
   isReady?: boolean | null
   readyAt?: Date | string | null
+  teamId?: number | null
 }
 
 interface GameRoomWithPlayersRow extends GameRoomRow {
@@ -69,7 +71,7 @@ interface GameRoomWithPlayersRow extends GameRoomRow {
 export class GameRoomService {
   private validateTeamConfiguration(
     maxPlayers: number,
-    teamMode: string,
+    teamMode: 'none' | 'teams' | 'auto_balance',
     numberOfTeams?: number | null,
   ): void {
     if (teamMode === 'none' || teamMode === 'auto_balance') {
@@ -103,6 +105,63 @@ export class GameRoomService {
     }
 
     return validOptions
+  }
+
+  private normalizeTeamMode(
+    teamMode: CreateRoomData['teamMode'],
+    allowTeamPlay?: boolean,
+  ): 'none' | 'teams' | 'auto_balance' {
+    if (teamMode === 'teams' || teamMode === 'auto_balance' || teamMode === 'none') {
+      return teamMode
+    }
+
+    if (typeof teamMode === 'boolean') {
+      return teamMode ? 'teams' : 'none'
+    }
+
+    if (allowTeamPlay) {
+      return 'teams'
+    }
+
+    return 'none'
+  }
+
+  private normalizeNumberOfTeams(
+    teamMode: 'none' | 'teams' | 'auto_balance',
+    requested: number | null | undefined,
+  ): number | null {
+    if (teamMode === 'none') {
+      return null
+    }
+
+    if (typeof requested !== 'number' || Number.isNaN(requested)) {
+      return null
+    }
+
+    const normalized = Math.trunc(requested)
+    return normalized > 0 ? normalized : null
+  }
+
+  private mapTeamMode(value: GameRoomRow['team_mode']): GameRoom['teamMode'] {
+    if (value === null || value === undefined) {
+      return 'none'
+    }
+
+    if (typeof value === 'string') {
+      if (value === 'teams' || value === 'auto_balance' || value === 'none') {
+        return value
+      }
+      const normalized = value.toLowerCase()
+      if (normalized === 'true') {
+        return 'teams'
+      }
+      if (normalized === 'false') {
+        return 'none'
+      }
+      return 'none'
+    }
+
+    return value ? 'teams' : 'none'
   }
 
   private normalizeStatus(status: string | null | undefined): GameLifecycleStatus {
@@ -203,6 +262,12 @@ export class GameRoomService {
         joinedAt: this.toDate(player.joinedAt) ?? new Date(),
         isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
         readyAt: this.toDate(player.readyAt) ?? null,
+        teamId:
+          typeof player.teamId === 'number'
+            ? player.teamId
+            : player.teamId === null
+              ? null
+              : undefined,
       }))
 
     return mapped.length > 0 ? mapped : undefined
@@ -231,8 +296,17 @@ export class GameRoomService {
       updatedAt: this.toDate(row.updated_at),
       mapId: (row.map_id ?? undefined) as string | undefined,
       gameMode: (row.game_mode ?? undefined) as string | undefined,
-      teamMode: row.team_mode ?? undefined,
-      numberOfTeams: row.number_of_teams ?? undefined,
+      allowTeamPlay:
+        typeof row.team_mode === 'boolean'
+          ? row.team_mode
+          : this.mapTeamMode(row.team_mode) !== 'none',
+      teamMode: this.mapTeamMode(row.team_mode),
+      numberOfTeams:
+        typeof row.number_of_teams === 'number'
+          ? row.number_of_teams
+          : row.number_of_teams === null
+            ? null
+            : undefined,
       currentPlayers: this.parseNullableNumber((row as Partial<ActiveGameRoomRow>).current_players),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
       hostSkillRating: this.parseNullableNumber(
@@ -279,6 +353,13 @@ export class GameRoomService {
       }
     }
 
+    const normalizedTeamMode = this.normalizeTeamMode(roomData.teamMode, roomData.allowTeamPlay)
+    const normalizedNumberOfTeams = this.normalizeNumberOfTeams(
+      normalizedTeamMode,
+      roomData.numberOfTeams ?? null,
+    )
+    const allowTeamPlay = normalizedTeamMode !== 'none'
+
     // Validate ranked game requirements
     if (roomData.isRanked) {
       if (roomData.maxPlayers < 3) {
@@ -287,17 +368,13 @@ export class GameRoomService {
       if (roomData.isPrivate) {
         throw new Error('Ranked games cannot be private')
       }
-      if (roomData.teamMode) {
+      if (allowTeamPlay) {
         throw new Error('Ranked games cannot have team play enabled')
       }
     }
 
-    // Determine team mode - convert string team mode to boolean
-    const teamMode = roomData.teamMode || false
-    const numberOfTeams = teamMode ? roomData.numberOfTeams || 2 : null
-
     // Validate team configuration
-    this.validateTeamConfiguration(roomData.maxPlayers, teamMode ? 'teams' : 'none', numberOfTeams)
+    this.validateTeamConfiguration(roomData.maxPlayers, normalizedTeamMode, normalizedNumberOfTeams)
 
     const insertQuery = `
       INSERT INTO game_rooms (
@@ -324,8 +401,8 @@ export class GameRoomService {
       roomData.isPrivate,
       roomData.mapId || null,
       roomData.gameMode || 'classic',
-      teamMode,
-      numberOfTeams,
+      allowTeamPlay,
+      normalizedNumberOfTeams,
       roomData.isRanked || false,
     ])
 
@@ -377,7 +454,8 @@ export class GameRoomService {
                  'current_tier', NULL,
                  'joinedAt', rp.joined_at,
                  'isReady', rp.is_ready,
-                 'readyAt', rp.ready_at
+                 'readyAt', rp.ready_at,
+                 'teamId', rp.team_id
                )
              ) as players
       FROM game_rooms gr
@@ -409,7 +487,7 @@ export class GameRoomService {
 
   async getPlayer(roomId: string, userId: string): Promise<Player | null> {
     const playerQuery = `
-      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at
+      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id
       FROM room_players rp
       LEFT JOIN users u ON rp.user_id = u.id
       WHERE rp.room_id = $1 AND rp.user_id = $2
@@ -422,10 +500,8 @@ export class GameRoomService {
       joined_at: Date | string | null
       is_ready: boolean | null
       ready_at: Date | string | null
-    }>(
-      playerQuery,
-      [roomId, userId],
-    )
+      team_id: number | null
+    }>(playerQuery, [roomId, userId])
 
     const row = result.rows[0]
     if (!row) {
@@ -438,6 +514,8 @@ export class GameRoomService {
       joinedAt: this.toDate(row.joined_at) ?? new Date(),
       isReady: typeof row.is_ready === 'boolean' ? row.is_ready : undefined,
       readyAt: this.toDate(row.ready_at) ?? null,
+      teamId:
+        typeof row.team_id === 'number' ? row.team_id : row.team_id === null ? null : undefined,
     }
   }
 
@@ -545,6 +623,91 @@ export class GameRoomService {
         client.release()
       }
     }
+  }
+
+  async assignPlayerToTeam(
+    roomId: string,
+    actingUserId: string,
+    targetUserId: string,
+    teamId: number | null | undefined,
+  ): Promise<GameRoom> {
+    const client = await getClient()
+
+    try {
+      await client.query('BEGIN')
+
+      const roomResult = await client.query<{
+        host_id: string
+        team_mode: boolean | string | null
+        number_of_teams: number | null
+      }>('SELECT host_id, team_mode, number_of_teams FROM game_rooms WHERE id = $1 FOR UPDATE', [
+        roomId,
+      ])
+
+      const roomRow = roomResult.rows[0]
+      if (!roomRow) {
+        throw new Error('Room not found')
+      }
+
+      if (roomRow.host_id !== actingUserId) {
+        throw new Error('Only the host can update team assignments')
+      }
+
+      const teamMode = this.mapTeamMode(roomRow.team_mode)
+      const totalTeams = this.normalizeNumberOfTeams(teamMode, roomRow.number_of_teams)
+
+      if (teamMode === 'none' || !totalTeams) {
+        throw new Error('Team play is not enabled for this room')
+      }
+
+      const membershipResult = await client.query(
+        'SELECT 1 FROM room_players WHERE room_id = $1 AND user_id = $2',
+        [roomId, targetUserId],
+      )
+
+      if (membershipResult.rowCount === 0) {
+        throw new Error('Player is not part of this room')
+      }
+
+      let normalizedTeamId: number | null
+      if (teamId === null || teamId === undefined) {
+        normalizedTeamId = null
+      } else {
+        const numericTeamId = Number(teamId)
+        if (Number.isNaN(numericTeamId)) {
+          throw new Error('Team identifier must be numeric')
+        }
+        const truncated = Math.trunc(numericTeamId)
+        normalizedTeamId = truncated >= 1 ? truncated : null
+      }
+
+      if (normalizedTeamId !== null) {
+        if (normalizedTeamId < 1 || normalizedTeamId > totalTeams) {
+          throw new Error(`Team must be between 1 and ${totalTeams}`)
+        }
+      }
+
+      await client.query(
+        'UPDATE room_players SET team_id = $3 WHERE room_id = $1 AND user_id = $2',
+        [roomId, targetUserId, normalizedTeamId],
+      )
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      if (client.release) {
+        client.release()
+      }
+    }
+
+    const updatedRoom = await this.getRoomById(roomId)
+    if (!updatedRoom) {
+      throw new Error('Failed to load room after updating team assignment')
+    }
+
+    return updatedRoom
   }
 
   async leaveRoom(roomId: string, userId: string): Promise<void> {

@@ -59,9 +59,12 @@ _Last updated: September 20, 2025_
 - **Problem:** Bonuses and team play remain TODOs; capital checks are stubbed; client helpers hard-code classic continents.
 - **Acceptance criteria:**
   - Backend calculates reinforcements with map metadata (no hard-coded constants).
-  - Team rules (reinforcement sharing, win conditions) exist or the UI disables team mode pre-launch.
-  - Capital mode implements `isCapitalTerritory`; eliminations trigger correctly.
-  - Tests cover classic plus one custom map; frontend renders bonuses from server data only.
+- Team rules (reinforcement sharing, win conditions) exist or the UI disables team mode pre-launch.
+- Capital mode implements `isCapitalTerritory`; eliminations trigger correctly.
+- Tests cover classic plus one custom map; frontend renders bonuses from server data only.
+- _Progress (Mar 2026): Lobby creation now supports explicit team counts, hosts can assign players per team,
+  and the engine enforces alliances for movement/combat with team-based victory checks. Shared
+  reinforcement balancing remains to be modelled._
 
 ## Epic B — Security & Map Authoring Workflow
 ### B1. Enforce map ownership & permissions (incl. approval/versioning)

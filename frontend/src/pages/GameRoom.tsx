@@ -1,26 +1,32 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
+import TeamAssignment from '../components/TeamAssignment'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
-import { socketService } from '../services/socketService'
 import { gameService } from '../services/gameService'
-import type { GameRoom as GameRoomType } from '../types/gameRoom'
+import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
+import { setCurrentRoom } from '../store/roomSlice'
+import type { GameRoom as GameRoomType } from '../types/gameRoom'
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { currentRoom } = useAppSelector((state) => state.room)
-  const { currentGame, isLoading: isGameLoading, error: gameError } = useAppSelector(
-    (state) => state.game,
-  )
+  const {
+    currentGame,
+    isLoading: isGameLoading,
+    error: gameError,
+  } = useAppSelector((state) => state.game)
   const { user } = useAppSelector((state) => state.auth)
   const [isMuted, setIsMuted] = useState(audioService.isMutedState())
   const [readySubmitting, setReadySubmitting] = useState(false)
   const [readyError, setReadyError] = useState<string | null>(null)
+  const [teamUpdating, setTeamUpdating] = useState(false)
+  const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
 
   const getStatusLabel = (status: GameRoomType['status']) => {
     switch (status) {
@@ -53,6 +59,34 @@ export default function GameRoom() {
     const ready = currentRoom?.players?.filter((player) => player.isReady).length ?? 0
     return { ready, total }
   }, [currentRoom?.players])
+
+  const isHost = currentRoom?.hostId === user?.id
+
+  const showTeamAssignment = useMemo(() => {
+    if (!currentRoom) {
+      return false
+    }
+
+    if (!currentRoom.allowTeamPlay) {
+      return false
+    }
+
+    if (currentRoom.teamMode !== 'teams') {
+      return false
+    }
+
+    return (currentRoom.numberOfTeams ?? 0) > 1
+  }, [currentRoom])
+
+  const lobbyTeamPlayers = useMemo(
+    () =>
+      (currentRoom?.players || []).map((player) => ({
+        id: player.userId,
+        username: player.username,
+        teamId: player.teamId ?? null,
+      })),
+    [currentRoom?.players],
+  )
 
   const canToggleReady = Boolean(
     currentRoom &&
@@ -99,14 +133,71 @@ export default function GameRoom() {
       setReadySubmitting(true)
       setReadyError(null)
       await gameService.setReadyState(roomId, !currentPlayer.isReady)
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message || error?.message || 'Failed to update ready status'
+    } catch (error: unknown) {
+      let message = 'Failed to update ready status'
+      if (typeof error === 'object' && error !== null) {
+        if ('response' in error) {
+          const apiError = error as { response?: { data?: { message?: string } } }
+          message = apiError.response?.data?.message ?? message
+        } else if (
+          'message' in error &&
+          typeof (error as { message?: unknown }).message === 'string'
+        ) {
+          message = (error as { message: string }).message
+        }
+      } else if (error instanceof Error) {
+        message = error.message
+      }
+
       setReadyError(message)
     } finally {
       setReadySubmitting(false)
     }
   }
+
+  const handleTeamChange = useCallback(
+    async (playerId: string, teamId: number) => {
+      if (!roomId || !isHost) {
+        return
+      }
+
+      const existingTeamId =
+        currentRoom?.players?.find((player) => player.userId === playerId)?.teamId ?? null
+
+      if (existingTeamId === teamId) {
+        return
+      }
+
+      try {
+        setTeamUpdating(true)
+        setTeamUpdateError(null)
+        const response = await gameService.assignPlayerTeam(roomId, playerId, teamId)
+        if (response?.room) {
+          dispatch(setCurrentRoom(response.room))
+        }
+      } catch (error: unknown) {
+        let message = 'Failed to update team assignment'
+        if (typeof error === 'object' && error !== null) {
+          if ('response' in error) {
+            const apiError = error as { response?: { data?: { message?: string } } }
+            message = apiError.response?.data?.message ?? message
+          } else if (
+            'message' in error &&
+            typeof (error as { message?: unknown }).message === 'string'
+          ) {
+            message = (error as { message: string }).message
+          }
+        } else if (error instanceof Error) {
+          message = error.message
+        }
+
+        setTeamUpdateError(message)
+      } finally {
+        setTeamUpdating(false)
+      }
+    },
+    [roomId, dispatch, isHost, currentRoom],
+  )
 
   if (!currentRoom) {
     return (
@@ -139,7 +230,9 @@ export default function GameRoom() {
           <h1 className="text-3xl font-bold">{currentRoom.name}</h1>
           <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-2">
             <span>Status: {getStatusLabel(currentRoom.status)}</span>
-            <span>• Ready {readySummary.ready}/{readySummary.total}</span>
+            <span>
+              • Ready {readySummary.ready}/{readySummary.total}
+            </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -147,6 +240,7 @@ export default function GameRoom() {
             <button
               onClick={handleToggleReady}
               disabled={readySubmitting}
+              type="button"
               className={`px-4 py-2 rounded ${
                 currentPlayer?.isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-primary'
               } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -161,12 +255,14 @@ export default function GameRoom() {
           <button
             onClick={handleToggleMute}
             className="bg-surface-2 hover:brightness-110 px-4 py-2 rounded flex items-center gap-2"
+            type="button"
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
           </button>
           <button
             onClick={handleLeaveRoom}
+            type="button"
             className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
           >
             Leave Room
@@ -196,7 +292,11 @@ export default function GameRoom() {
                   <h2 className="text-xl font-bold mb-4">Waiting for game to start...</h2>
                   <p>Need at least 2 players to begin</p>
                   <div className="mt-6">
-                    <RiskGameBoard onTerritoryClick={(_territoryId) => {}} />
+                    <RiskGameBoard
+                      onTerritoryClick={(_territoryId) => {
+                        /* noop */
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -218,9 +318,7 @@ export default function GameRoom() {
                 return (
                   <div key={player.userId} className="flex items-center gap-2 text-sm">
                     <div
-                      className={`w-3 h-3 rounded-full ${
-                        isReady ? 'bg-green-500' : 'bg-gray-600'
-                      }`}
+                      className={`w-3 h-3 rounded-full ${isReady ? 'bg-green-500' : 'bg-gray-600'}`}
                     ></div>
                     <span className={isCurrentUser ? 'font-bold' : ''}>{player.username}</span>
                     {player.userId === currentRoom.hostId && (
@@ -237,21 +335,48 @@ export default function GameRoom() {
             </div>
           </div>
 
+          {showTeamAssignment && currentRoom.numberOfTeams && currentRoom.numberOfTeams > 0 && (
+            <div className="bg-surface-1 rounded-lg p-4 space-y-3">
+              <TeamAssignment
+                players={lobbyTeamPlayers}
+                numberOfTeams={currentRoom.numberOfTeams}
+                isHost={Boolean(isHost) && !teamUpdating}
+                onTeamChange={handleTeamChange}
+              />
+              {teamUpdating && (
+                <p className="text-xs text-primary-soft">Updating team assignments...</p>
+              )}
+              {teamUpdateError && <p className="text-xs text-red-400">{teamUpdateError}</p>}
+            </div>
+          )}
+
           {/* Game Controls */}
           {currentGame && (
             <div className="bg-surface-1 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3">Game Controls</h3>
               <div className="space-y-2">
-                <button className="w-full bg-primary hover:brightness-110 px-3 py-2 rounded text-sm">
+                <button
+                  type="button"
+                  className="w-full bg-primary hover:brightness-110 px-3 py-2 rounded text-sm"
+                >
                   Deploy Armies
                 </button>
-                <button className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm">
+                <button
+                  type="button"
+                  className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm"
+                >
                   Attack
                 </button>
-                <button className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm">
+                <button
+                  type="button"
+                  className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm"
+                >
                   Fortify
                 </button>
-                <button className="w-full bg-surface-2 hover:brightness-110 px-3 py-2 rounded text-sm">
+                <button
+                  type="button"
+                  className="w-full bg-surface-2 hover:brightness-110 px-3 py-2 rounded text-sm"
+                >
                   End Turn
                 </button>
               </div>

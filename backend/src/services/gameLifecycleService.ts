@@ -1,6 +1,6 @@
 import { getClient, query } from '../config/database'
+import type { GameConfiguration, GamePhase, GameState } from '../types/game'
 import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom'
-import type { GamePhase, GameState } from '../types/game'
 import { logger } from '../utils/logger'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
@@ -11,6 +11,7 @@ interface ReadyPlayerRow {
   is_ready: boolean
   ready_at: Date | string | null
   joined_at: Date | string | null
+  team_id: number | null
 }
 
 export interface LifecycleSnapshot {
@@ -76,7 +77,7 @@ export class GameLifecycleService {
 
       const playersResult = await client.query<ReadyPlayerRow>(
         `
-        SELECT user_id, is_ready, ready_at, joined_at
+        SELECT user_id, is_ready, ready_at, joined_at, team_id
         FROM room_players
         WHERE room_id = $1
         ORDER BY joined_at ASC
@@ -132,7 +133,7 @@ export class GameLifecycleService {
 
     if (shouldStart) {
       try {
-        await this.startGame(roomId, players.map((player) => player.user_id), turnTimer)
+        await this.startGame(roomId, players, turnTimer)
       } catch (error) {
         logger.error('Failed to start game after ready-check', {
           roomId,
@@ -179,8 +180,41 @@ export class GameLifecycleService {
     }
   }
 
-  private async startGame(roomId: string, playerIds: string[], turnTimer: number) {
-    const gameState = await this.gameService.initializeGame(roomId, playerIds)
+  private async startGame(roomId: string, players: ReadyPlayerRow[], turnTimer: number) {
+    const room = await this.gameRoomService.getRoomById(roomId)
+
+    const teamAssignments: Record<number, string[]> = {}
+    const playerConfigs = players.map((player) => {
+      const matchingRoomPlayer = room?.players?.find((p) => p.userId === player.user_id)
+      const normalizedTeamId =
+        typeof player.team_id === 'number' && !Number.isNaN(player.team_id) ? player.team_id : null
+
+      if (normalizedTeamId) {
+        if (!teamAssignments[normalizedTeamId]) {
+          teamAssignments[normalizedTeamId] = []
+        }
+        teamAssignments[normalizedTeamId].push(player.user_id)
+      }
+
+      return {
+        userId: player.user_id,
+        username: matchingRoomPlayer?.username,
+        teamId: normalizedTeamId,
+      }
+    })
+
+    const configOverrides: Partial<GameConfiguration> = {}
+
+    if (room?.teamMode === 'teams' && room.numberOfTeams && room.numberOfTeams > 1) {
+      configOverrides.allowTeamPlay = true
+      configOverrides.teamMode = 'teams'
+      configOverrides.numberOfTeams = room.numberOfTeams
+      if (Object.keys(teamAssignments).length > 0) {
+        configOverrides.teamAssignments = teamAssignments
+      }
+    }
+
+    const gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
 
     await this.persistGameState(roomId, gameState)
 
@@ -225,9 +259,7 @@ export class GameLifecycleService {
       joinedAt: player.joinedAt instanceof Date ? player.joinedAt.toISOString() : player.joinedAt,
       isReady: Boolean(player.isReady),
       readyAt:
-        player.readyAt instanceof Date
-          ? player.readyAt.toISOString()
-          : player.readyAt ?? null,
+        player.readyAt instanceof Date ? player.readyAt.toISOString() : (player.readyAt ?? null),
     }))
 
     const payload = {
@@ -236,9 +268,7 @@ export class GameLifecycleService {
       lifecyclePhase: snapshot.room.lifecyclePhase ?? 'lobby',
       turnNumber: snapshot.room.turnNumber ?? 0,
       currentTurnUserId: snapshot.room.currentTurnUserId ?? null,
-      turnExpiresAt: snapshot.room.turnExpiresAt
-        ? snapshot.room.turnExpiresAt.toISOString()
-        : null,
+      turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
       readyCheckStartedAt: snapshot.room.readyCheckStartedAt
         ? snapshot.room.readyCheckStartedAt.toISOString()
         : null,
@@ -253,9 +283,7 @@ export class GameLifecycleService {
       lifecyclePhase: snapshot.room.lifecyclePhase,
       turnNumber: snapshot.room.turnNumber,
       currentTurnUserId: snapshot.room.currentTurnUserId,
-      turnExpiresAt: snapshot.room.turnExpiresAt
-        ? snapshot.room.turnExpiresAt.toISOString()
-        : null,
+      turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
       readyCheckStartedAt: snapshot.room.readyCheckStartedAt
         ? snapshot.room.readyCheckStartedAt.toISOString()
         : null,
@@ -277,7 +305,13 @@ export class GameLifecycleService {
           phase = EXCLUDED.phase,
           updated_at = NOW()
     `,
-      [roomId, JSON.stringify(serializable), gameState.turn, gameState.currentPlayer, gameState.phase],
+      [
+        roomId,
+        JSON.stringify(serializable),
+        gameState.turn,
+        gameState.currentPlayer,
+        gameState.phase,
+      ],
     )
   }
 
@@ -293,7 +327,7 @@ export class GameLifecycleService {
       territoryModifiers:
         gameState.territoryModifiers instanceof Map
           ? Object.fromEntries(gameState.territoryModifiers.entries())
-          : gameState.territoryModifiers ?? {},
+          : (gameState.territoryModifiers ?? {}),
     }
   }
 

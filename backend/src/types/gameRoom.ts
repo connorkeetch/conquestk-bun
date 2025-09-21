@@ -25,7 +25,8 @@ export interface GameRoom {
   updatedAt?: Date
   mapId?: string | null
   gameMode?: string | null
-  teamMode?: boolean | string | null
+  allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance' | null
   numberOfTeams?: number | null
   currentPlayers?: number
   hostUsername?: string
@@ -51,4 +52,5 @@ export interface Player {
   joinedAt: Date
   isReady?: boolean
   readyAt?: Date | null
+  teamId?: number | null
 }

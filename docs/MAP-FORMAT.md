@@ -1,237 +1,245 @@
-# 🗺️ Risk Game Map Data Format
+# 🗺️ Risk Game Map Data Reference
 
-This document defines the map data structure for the Risk game system, both for the current implementation and future map editor development.
+This document consolidates the previous *Map Format* and *Map Schema* guides into a single source of truth for how maps are modeled, edited, stored, and reviewed inside ConquestK.
 
-## 📊 Database Schema Overview
+## 1. System overview
 
-### Core Tables
+Maps flow through three layers that share a common data shape:
 
-#### 1. **maps** - Main map metadata
-```sql
-- id: TEXT PRIMARY KEY (UUID)
-- name: TEXT NOT NULL
-- description: TEXT
-- creator_id: TEXT (references users.id)
-- image_url: TEXT (background image path)
-- image_width: INTEGER (default 600)
-- image_height: INTEGER (default 450)
-- is_public: BOOLEAN
-- is_featured: BOOLEAN
-- tags: TEXT (JSON array)
-```
+1. **Draft & editor metadata** – JSON produced by the map editor (`/map-editor`) or imported from JSON files. Drafts live in `map_drafts` until they are published.
+2. **Published map records** – When a draft is published it becomes a row in `maps`, with related rows in `map_territories`, `map_continents`, and `territory_adjacencies`. The original editor JSON is persisted in `maps.metadata` for round-tripping.
+3. **Runtime game state** – Game rooms read from the published tables and expand each territory into the richer in-memory structures used by the engine.
 
-#### 2. **map_territories** - Territory definitions
-```sql
-- id: TEXT PRIMARY KEY (UUID)
-- map_id: TEXT (references maps.id)
-- territory_id: TEXT (unique within map)
-- name: TEXT NOT NULL
-- continent_id: TEXT (references map_continents.id)
-- boundary_coords: TEXT (JSON polygon coordinates)
-- army_position_x: INTEGER (army counter position)
-- army_position_y: INTEGER (army counter position)
-- ability_type_id: TEXT (special abilities)
-```
-
-#### 3. **map_continents** - Continent groupings
-```sql
-- id: TEXT PRIMARY KEY (UUID)
-- map_id: TEXT (references maps.id)
-- name: TEXT NOT NULL
-- bonus_armies: INTEGER (continent control bonus)
-- color: TEXT (hex color code)
-```
-
-#### 4. **territory_adjacencies** - Territory connections
-```sql
-- from_territory_id: TEXT
-- to_territory_id: TEXT
-- connection_type: TEXT ('land', 'sea', 'air', 'tunnel')
-- is_bidirectional: BOOLEAN (default TRUE)
-```
-
-## 🎮 Map Data Format Examples
-
-### Simple Map Structure
-```javascript
-{
-  id: "simple-world",
-  name: "Simple World",
-  description: "A basic world map with 6 territories",
-  image_width: 600,
-  image_height: 400,
-  territories: [
-    {
-      id: "north-america",
-      name: "North America",
-      continent: "americas",
-      boundary_coords: [[100,50],[200,50],[200,150],[100,150]],
-      army_position: { x: 150, y: 100 }
-    }
-    // ... more territories
-  ],
-  continents: [
-    {
-      id: "americas",
-      name: "Americas",
-      bonus_armies: 2,
-      color: "#4CAF50",
-      territories: ["north-america", "south-america"]
-    }
-    // ... more continents
-  ],
-  adjacencies: [
-    ["north-america", "south-america"],
-    ["north-america", "europe"]
-    // ... more connections
-  ]
-}
-```
-
-## 🎯 Current Implementation Status
-
-### ✅ **Working Features**
-- Database schema fully implemented
-- Test maps with territories and adjacencies
-- Continent bonus system
-- Territory special abilities framework
-- Map selection in game creation
-
-### ✅ **Map Editor (Implemented)**
-The Map Editor is now fully functional with a modern tabbed interface located at `/map-editor-tokens`.
-
-#### Interface Organization
-The editor uses a **tabbed navigation system** with contextual sidebar panels:
-
-**Main Tabs:**
-1. **📋 Properties** - Map metadata, validation checklist
-2. **🖼️ Image** - Background upload, processing, cropping
-3. **🎯 Territories** - Token placement, display settings, labels
-4. **🌍 Continents** - Continent management, bonus configuration
-5. **🔗 Connections** - Territory adjacency linking
-6. **👑 Capitals** - Player starting positions, auto-generation
-
-**Key Features:**
-- **Dynamic Sidebar**: Context-specific controls for each tab
-- **Visual Token Editor**: Drag-and-drop territory placement
-- **Token Customization**: Shape (hexagon/circle), size, grid overlay
-- **Label System**: Customizable territory labels with font/color options
-- **Connection Visualization**: Visual lines showing territory adjacencies
-- **Capital Assignment**: Auto-generate or manually assign starting positions
-- **Real-time Validation**: Instant feedback on map completeness
-- **Local & Server Storage**: Auto-save drafts, server persistence
-
-**Technical Details:**
-- Fixed token clickable area alignment (direct positioning, no transform)
-- Progressive disclosure UI pattern for better UX
-- Supports 2-12 player configurations
-- Image processing with compression and cropping
-- JSON import/export for map data
-
-## 📋 Map Creation Workflow
-
-### Using the Visual Map Editor
-1. **Navigate to `/map-editor-tokens`** - Access the editor interface
-2. **Properties Tab**: Set map name, description, player counts
-3. **Image Tab**: Upload background image (JPG/PNG, max 10MB)
-4. **Territories Tab**: Click to place tokens, drag to position
-5. **Continents Tab**: Create continents, assign territories, set bonuses
-6. **Connections Tab**: Click territories to link adjacencies
-7. **Capitals Tab**: Auto-generate or manually set starting positions
-8. **Save & Validate**: Check validation panel, save as draft or publish
-
-### For Developers Adding Maps
-1. **Prepare Data**: Create map object with territories, continents, adjacencies
-2. **Run Script**: Use `add-test-maps.js` as template
-3. **Validate**: Ensure proper foreign key relationships
-4. **Test**: Create game room and verify functionality
-
-## 🛠️ Technical Requirements
-
-### Map Images
-- **Format**: JPG, PNG, GIF, WebP
-- **Size**: Max 10MB
-- **Dimensions**: Recommended 600x400 to 1200x800
-- **Storage**: filesystem path `backend/uploads/maps/`, exposed at `/uploads/maps/...`
-- **Drafts**: Map editor drafts keep their background images alongside the draft metadata and move them into `/uploads/maps` when published
-
-### Draft → Publish Workflow
-- **Save Draft**: The Map Editor writes to `/api/workflow/drafts`, storing metadata (territories, continents, adjacencies, capitals) and the image payload
-- **Review Prep**: Publishing a draft promotes it into the `maps` table, persists the background image under `/uploads/maps`, and hydrates `map_continents`, `map_territories`, and `territory_adjacencies`
-- **Submission**: Published drafts immediately enter the approval queue (`status = pending_review`) and are hidden from the draft list
-- **Existing Maps**: Loading a live map creates a new draft linked via `parent_map_id`; publishing submits the updated version for review
-
-### Territory Boundaries
-- **Format**: JSON array of [x,y] coordinate pairs
-- **Shape**: Closed polygon (first and last points should match)
-- **Validation**: No overlapping territories, complete map coverage
-
-### Adjacency Rules
-- **Bidirectional**: Most connections work both ways
-- **Connection Types**: Land (default), sea, air, tunnel
-- **Validation**: Symmetric connections, no orphaned territories
-
-## 📝 Test Maps Available
-
-### 1. **Simple World** (`test-simple-world`)
-- 6 territories across 3 continents
-- Basic world geography
-- Good for learning the game
-
-### 2. **Mini Risk** (`test-mini-risk`)
-- 4 territories, 2 continents
-- Ultra-fast games (5-10 minutes)
-- Perfect for testing mechanics
-
-## 🔮 Future Enhancements
-
-### Advanced Features (v2.0)
-- **Conditional Connections**: Bridges, seasonal routes
-- **Multi-level Maps**: Underground/surface layers
-- **Dynamic Territories**: Changing boundaries mid-game
-- **Environmental Effects**: Weather, disasters
-- **Custom Victory Conditions**: Control specific territories
-
-### Map Editor Features (v1.5)
-- **Collaborative Editing**: Multiple creators
-- **Version Control**: Map updates and rollbacks
-- **Asset Library**: Reusable territory templates
-- **Automated Validation**: Balance checking
-- **Community Features**: Ratings, comments, favorites
-
-## 🎨 Design Guidelines
-
-### Visual Standards
-- **Clear Boundaries**: High contrast territory borders
-- **Readable Text**: Army positions don't overlap borders
-- **Color Accessibility**: Consider colorblind users
-- **Balanced Layout**: No tiny/huge territories
-
-### Gameplay Balance
-- **Territory Count**: 15-50 territories for good gameplay
-- **Continent Ratios**: Bonus should be ~1/3 of territory count
-- **Connectivity**: Average 2.5 connections per territory
-- **Chokepoints**: Strategic bottlenecks for interesting decisions
-
-## 📄 File Organization
-
-```
-project/
-├── docs/
-│   └── MAP-FORMAT.md       # This documentation
-├── add-test-maps.js        # Script to add test maps
-├── backend/
-│   ├── migrations/
-│   │   └── 001_extended_maps_schema.sql
-│   └── uploads/maps/       # Map background images
-└── frontend/
-    └── src/pages/
-        ├── MapEditorTokens.tsx  # Visual map editor with tabbed interface
-        ├── MapEditor.tsx        # Alternative editor (grid-based)
-        └── Maps.tsx             # Map browser
-```
+The sections below describe each part of this pipeline in detail.
 
 ---
 
-*Last updated: September 2025*
-*Status: Map Editor fully implemented with tabbed interface*
+## 2. Database schema summary
+
+The full, authoritative schema lives in [`docs/DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md). The most relevant tables are summarised here for quick reference.
+
+### 2.1 `maps`
+
+| Column | Notes |
+| --- | --- |
+| `id` (`uuid`) | Primary key for the map. |
+| `name`, `description` | Display metadata (name must be unique, ≥3 characters). |
+| `creator_id` | Authoring user; used for ownership & permissions. |
+| `status` | Workflow status (`draft`, `pending_review`, `approved`, `rejected`, `archived`). |
+| `image_url`, `image_width`, `image_height` | Background image path served by the backend plus its pixel dimensions. |
+| `is_public`, `is_featured`, `is_vip_only`, `min_premium_tier` | Visibility flags and gating controls. |
+| `min_players`, `max_players` | Recommended player counts (2–12 enforced). |
+| `tags` | Text array used for search filters. |
+| `capital_assignments`, `capital_territories`, `capital_metadata` | JSON blobs for capital placement metadata. `capital_territories` stores `{ territoryId: [playerCounts...] }`. |
+| `metadata` | The editor payload (territories, continents, adjacencies, dimensions, capitals). Keeps the JSON the editor understands. |
+| `rating_average`, `rating_count`, `play_count` | Aggregated engagement metrics. |
+| `created_at`, `updated_at`, `submitted_at`, `reviewed_at`, `reviewed_by`, `review_notes`, `rejection_reason` | Workflow bookkeeping fields. |
+
+### 2.2 `map_territories`
+
+Each row represents a single territory on a published map.
+
+| Column | Notes |
+| --- | --- |
+| `id` (`uuid`) | Unique identifier; reused as `territoryId` when the map is loaded. |
+| `map_id` | Foreign key → `maps.id`. |
+| `name` | Display label shown in the UI. |
+| `polygon_data` (`jsonb`) | Serialized geometry & display metadata. See [Section 4](#4-territory-serialization) for the exact shape. |
+| `continent` | Name of the continent this territory belongs to. |
+| `is_capital` | Boolean flag for capital territories. |
+| `capital_for_players` (`jsonb`) | Array of player counts where this territory is a valid capital. |
+| `created_at` | Timestamp. |
+
+### 2.3 `map_continents`
+
+| Column | Notes |
+| --- | --- |
+| `id` (`uuid`) | Unique identifier. |
+| `map_id` | Foreign key → `maps.id`. |
+| `name` | Display label. |
+| `bonus_troops` | Bonus armies awarded for continent control (≥0 enforced). |
+| `color` | Hex string used by the frontend. |
+| `requirements` (`jsonb`) | Reserved for advanced rule metadata. |
+| `created_at` | Timestamp. |
+
+### 2.4 `territory_adjacencies`
+
+Connections are stored as **directed edges**; the import pipeline writes both directions for bidirectional links.
+
+| Column | Notes |
+| --- | --- |
+| `id` (`uuid`) | Unique identifier. |
+| `map_id` | Foreign key → `maps.id`. |
+| `territory_from`, `territory_to` | Territory identifiers (by name/ID) that can interact. |
+
+### 2.5 Workflow-supporting tables
+
+| Table | Purpose |
+| --- | --- |
+| `map_images_staging` | Temporary storage for uploaded background images before publish. |
+| `map_drafts` | Autosaved editor state (metadata, territories, continents, adjacencies, capital assignments, and image metadata). |
+| `map_review_queue` | Queue of maps awaiting moderator action. |
+| `map_reviews` | Moderator decisions and optional ratings/comments. |
+| `map_submission_logs` | Audit log of workflow actions (submitted, approved, rejected, archived). |
+| `map_versions` | Historical snapshots whenever a map is edited. |
+
+---
+
+## 3. Map metadata & draft JSON schema
+
+The editor, draft service, and `maps.metadata` column all share the following structure (TypeScript reference: `MapMetadataPayload`).
+
+```jsonc
+{
+  "name": "Frozen Isles",
+  "description": "Compact 12-territory skirmish map",
+  "width": 1920,
+  "height": 1080,
+  "territories": [
+    {
+      "id": "frozen_wastes",
+      "name": "Frozen Wastes",
+      "continentId": "northern_lands",
+      "armyPosition": { "x": 150, "y": 80 },
+      "boundaryCoords": [
+        { "x": 120, "y": 60 },
+        { "x": 190, "y": 65 },
+        { "x": 200, "y": 120 }
+      ],
+      "connections": ["ice_peaks", "tundra_plains"],
+      "isCapital": false
+    },
+    {
+      "id": "ice_peaks",
+      "name": "Ice Peaks",
+      "continentId": "northern_lands",
+      "armyPosition": { "x": 300, "y": 80 },
+      "connections": ["frozen_wastes", "tundra_plains", "mountain_pass"]
+    }
+  ],
+  "continents": [
+    {
+      "id": "northern_lands",
+      "name": "Northern Lands",
+      "bonus": 3,
+      "color": "#4CAF50"
+    },
+    {
+      "id": "central_kingdoms",
+      "name": "Central Kingdoms",
+      "bonus": 4,
+      "color": "#2196F3"
+    }
+  ],
+  "adjacencies": [
+    { "from": "frozen_wastes", "to": "ice_peaks" },
+    { "from": "ice_peaks", "to": "mountain_pass", "connectionType": "land" },
+    { "from": "tundra_plains", "to": "forest_realm", "isBidirectional": true }
+  ],
+  "capitalAssignments": {
+    "2": ["frozen_wastes", "jade_peaks"],
+    "3": ["frozen_wastes", "mountain_pass", "trade_crossroads"]
+  },
+  "minPlayers": 2,
+  "maxPlayers": 6,
+  "image": {
+    "mimeType": "image/png",
+    "data": "data:image/png;base64,..."
+  }
+}
+```
+
+### Field notes
+
+- **IDs** – Territory and continent IDs should be stable, lowercase strings. These IDs are used when linking adjacencies and capital assignments.
+- **`boundaryCoords`** – Optional array of `{ x, y }` coordinates for polygonal boundaries. If omitted the editor stores the territory as a token with a centre point.
+- **`armyPosition`** – Required coordinate where army counts render. For polygonal territories this should be the centroid; for token territories it matches the token position.
+- **`connections`** – Convenience array used by the editor. When publishing, the workflow normalises these into `adjacencies` and writes entries to `territory_adjacencies`.
+- **`adjacencies`** – Explicit connections. Either supply this array *or* rely on each territory’s `connections`; both formats are accepted.
+- **`capitalAssignments`** – Maps a player count to an array of territory IDs that should be considered valid capitals for that configuration.
+- **`image`** – Optional data URL payload used when uploading a new background. If omitted, `imageUrl`/`imageWidth`/`imageHeight` fields from the draft are reused.
+
+Legacy static JSON files (e.g. [`frontend/src/data/territories-example.json`](../frontend/src/data/territories-example.json)) follow the same logical shape but omit some optional fields. They remain useful as fixtures for quick prototyping.
+
+---
+
+## 4. Territory serialization
+
+Published territories store their geometry inside `map_territories.polygon_data`. The workflow writes one of two shapes:
+
+```jsonc
+// Polygon territory
+{
+  "type": "polygon",
+  "points": [
+    { "x": 120, "y": 60 },
+    { "x": 190, "y": 65 },
+    { "x": 200, "y": 120 }
+  ],
+  "armyPosition": { "x": 150, "y": 90 },
+  "originalId": "frozen_wastes"
+}
+
+// Token territory (no polygon drawn)
+{
+  "type": "token",
+  "x": 600,
+  "y": 420,
+  "armyPosition": { "x": 600, "y": 420 },
+  "originalId": "mystic_isles"
+}
+```
+
+The server rehydrates `boundaryCoords` and `armyPosition` from this JSON when maps are requested via `/api/maps/:id`.
+
+---
+
+## 5. Map editor & workflow
+
+### 5.1 Editor entry points
+
+- **Primary editor**: `/map-editor` (token-first experience driven by `MapEditorTokens.tsx`).
+- **Legacy polygon editor**: `/map-editor-polygon` for direct canvas drawing. The new editor still stores polygonal outlines when you switch to polygon mode inside the territories tab.
+
+### 5.2 Editor modes
+
+The token editor is organised into tabs:
+
+1. **Properties** – Name, description, visibility, player counts, draft validation checklist.
+2. **Image** – Upload, crop, or replace the background image. Supports drag-and-drop with progress feedback.
+3. **Territories** – Create token or polygon territories, adjust army labels, and manage duplicate detection.
+4. **Continents** – Group territories and assign bonus values with color previews.
+5. **Connections** – Click-to-link territory adjacencies; displays warnings for isolated nodes.
+6. **Capitals** – Assign capital slots per player count and generate suggestions.
+
+Autosave runs after changes and writes to `map_drafts`. Drafts can be resumed from the Properties tab or the draft drawer.
+
+### 5.3 Publish & review
+
+1. **Save draft** – `/api/workflow/drafts` stores the metadata JSON, territories, continents, adjacencies, image info, and capital assignments.
+2. **Publish** – `/api/workflow/drafts/:id/publish` converts the draft into a new `maps` row, writes supporting rows, uploads the background image (if a new data URL was provided), and queues the map for review.
+3. **Approval** – Moderators act through `/api/workflow/admin/...` endpoints, updating `map_review_queue`, `map_reviews`, and the map’s status. Approved maps become selectable in the game lobby once `status = 'approved'`.
+
+Quota guardrails limit non-admin users to five unpublished items across drafts, staged images, and pending submissions.
+
+---
+
+## 6. Validation guidelines
+
+- **Connectivity** – Every territory must have at least one adjacency, and the published graph must be fully connected. The editor enforces this via `mapService.validateMapData`.
+- **Unique identifiers** – Territory and continent IDs must be unique within a map; adjacencies should reference the IDs exactly.
+- **Bidirectional links** – Provide both directions for undirected links (the editor handles this automatically when publishing).
+- **Player counts** – Only define capital assignments for player counts between 2 and 12. The workflow converts these into the stored `{ territoryId: [playerCounts] }` map.
+- **Images** – Recommended resolutions fall between 1200×800 and 2560×1440. Accepted file types follow the upload service (`image/png`, `image/jpeg`, `image/webp`, `image/gif`). Draft uploads larger than the quota are rejected server-side.
+
+---
+
+## 7. Developer tips
+
+- **Programmatic seeding** – When generating maps via scripts, build a `CreateMapRequest` payload (see `backend/src/services/mapWorkflowService.ts`) and call `mapService.createMap`. Populate `metadata` so the editor can round-trip the map later.
+- **Testing maps locally** – Authenticate, open `/map-editor`, create a draft, publish it, then launch a game from `/create-game` selecting your map (it will appear once approved or if you are the creator viewing unpublished drafts via admin tools).
+- **Admin review tooling** – `/admin/map-reviews` and `/admin/maps` surfaces queues driven by the workflow tables above.
+
+---
+
+*Last updated: February 2025.*

@@ -18,6 +18,7 @@ import { GameService } from './gameService'
 
 describe('GameService', () => {
   let gameService: GameService
+  const createPlayers = (ids: string[]) => ids.map((id) => ({ userId: id, username: id }))
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -37,7 +38,7 @@ describe('GameService', () => {
       const roomId = 'test-room'
       const players = ['player1', 'player2', 'player3']
 
-      const gameState = await gameService.initializeGame(roomId, players)
+      const gameState = await gameService.initializeGame(roomId, createPlayers(players))
 
       expect(gameState.roomId).toBe(roomId)
       expect(gameState.players).toHaveLength(3)
@@ -55,13 +56,13 @@ describe('GameService', () => {
       const roomId2 = 'test-room-2'
       const players2 = ['player1', 'player2']
 
-      const gameState2 = await gameService.initializeGame(roomId2, players2)
+      const gameState2 = await gameService.initializeGame(roomId2, createPlayers(players2))
       expect(gameState2.players).toHaveLength(2)
 
       const roomId6 = 'test-room-6'
       const players6 = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']
 
-      const gameState6 = await gameService.initializeGame(roomId6, players6)
+      const gameState6 = await gameService.initializeGame(roomId6, createPlayers(players6))
       expect(gameState6.players).toHaveLength(6)
     })
   })
@@ -76,7 +77,7 @@ describe('GameService', () => {
       const roomId = 'existing-room'
       const players = ['player1', 'player2']
 
-      await gameService.initializeGame(roomId, players)
+      await gameService.initializeGame(roomId, createPlayers(players))
       const retrievedGame = await gameService.getGameState(roomId)
 
       expect(retrievedGame).not.toBeNull()
@@ -89,7 +90,7 @@ describe('GameService', () => {
       const roomId = 'turn-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, players)
+      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
       const currentPlayer = initialState.currentPlayer
 
       const firstAdvance = await gameService.endTurn(roomId, currentPlayer)
@@ -105,7 +106,7 @@ describe('GameService', () => {
       const roomId = 'wrong-player-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, players)
+      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
       const currentPlayer = initialState.currentPlayer
       const otherPlayer = initialState.players.find((p) => p.id !== currentPlayer)!.id
 
@@ -122,7 +123,7 @@ describe('GameService', () => {
       const roomId = 'deploy-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, players)
+      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
       const currentPlayer = initialState.currentPlayer
       await gameService.endTurn(roomId, currentPlayer)
 
@@ -145,7 +146,7 @@ describe('GameService', () => {
       const roomId = 'wrong-phase-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, players)
+      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
       const currentPlayer = initialState.currentPlayer
       const territory = initialState.board.find((t) => t.ownerId === currentPlayer)
 
