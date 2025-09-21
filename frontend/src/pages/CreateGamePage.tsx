@@ -1,6 +1,6 @@
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
@@ -161,6 +161,10 @@ const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
+  const [searchParams] = useSearchParams()
+
+  const initialMode: 'casual' | 'ranked' =
+    searchParams.get('mode') === 'ranked' ? 'ranked' : 'casual'
 
   // Get preferred color from settings, default to first player color
   const preferredColor = settings.game?.preferredColor || PLAYER_COLORS[0]
@@ -188,8 +192,8 @@ const CreateGamePage: React.FC = () => {
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
   >('balanced')
-  const [isRanked, setIsRanked] = useState(false)
-  const [gameType, setGameType] = useState<'casual' | 'ranked'>('casual')
+  const [isRanked, setIsRanked] = useState(initialMode === 'ranked')
+  const [gameType, setGameType] = useState<'casual' | 'ranked'>(initialMode)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [useAutoName, setUseAutoName] = useState(true)
@@ -200,6 +204,33 @@ const CreateGamePage: React.FC = () => {
   // Maps state
   const [maps, setMaps] = useState<GameMap[]>([])
   const [mapsLoading, setMapsLoading] = useState(true)
+
+  const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
+  const modeParam = searchParams.get('mode')
+
+  useEffect(() => {
+    const normalizedMode =
+      modeParam === 'ranked' ? 'ranked' : modeParam === 'casual' ? 'casual' : null
+
+    if (!normalizedMode) {
+      lastAppliedModeRef.current = null
+      return
+    }
+
+    if (lastAppliedModeRef.current === normalizedMode) {
+      return
+    }
+
+    lastAppliedModeRef.current = normalizedMode
+
+    if (normalizedMode === 'ranked') {
+      setIsRanked(true)
+      setGameType('ranked')
+    } else {
+      setIsRanked(false)
+      setGameType('casual')
+    }
+  }, [modeParam])
 
   // Fetch available maps on component mount
   useEffect(() => {

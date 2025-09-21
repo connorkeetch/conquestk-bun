@@ -37,6 +37,7 @@ const Maps = lazy(() => import('./pages/Maps'))
 import NotFoundPage from './pages/NotFoundPage'
 
 const Play = lazy(() => import('./pages/Play'))
+const PlayModePage = lazy(() => import('./pages/PlayModePage'))
 const ProfilePage = lazy(() => import('./components/ProfilePage'))
 
 import ProfileRedirect from './components/ProfileRedirect'
@@ -46,6 +47,7 @@ import ResetPassword from './pages/ResetPassword'
 const Settings = lazy(() => import('./pages/Settings'))
 const Statistics = lazy(() => import('./pages/Statistics'))
 const TutorialPage = lazy(() => import('./pages/TutorialPage'))
+const ComingSoon = lazy(() => import('./pages/ComingSoon'))
 
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
@@ -673,6 +675,63 @@ function App() {
                   }
                 >
                   <Dashboard />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/play/casual"
+            element={
+              <AuthGuard>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <PlayModePage mode="casual" />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/play/ranked"
+            element={
+              <AuthGuard>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <PlayModePage mode="ranked" />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/play/ai"
+            element={
+              <AuthGuard>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <ComingSoon
+                    title="AI Opponents"
+                    description="Sharpen your tactics against adaptive bots. We're teaching them the art of conquest and will roll this out soon."
+                    icon="🤖"
+                    features={[
+                      'Multiple difficulty tiers',
+                      'Scenario-based training modes',
+                      'Achievements for solo victories',
+                    ]}
+                  />
                 </Suspense>
               </AuthGuard>
             }

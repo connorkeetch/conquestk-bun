@@ -149,18 +149,18 @@ const Dashboard: React.FC = () => {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Link
-          to="/play/quick-match"
+          to="/play/casual"
           className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">
-            <div className="text-3xl mb-3">🚀</div>
-            <h3 className="text-xl font-bold text-white mb-2">Quick Match</h3>
-            <p className="text-primary-soft text-sm">Find a game instantly</p>
+            <div className="text-3xl mb-3">🎮</div>
+            <h3 className="text-xl font-bold text-white mb-2">Casual Play</h3>
+            <p className="text-primary-soft text-sm">Find a relaxed match</p>
           </div>
         </Link>
 
         <Link
-          to="/play/create"
+          to="/create"
           className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
         >
           <div className="text-center">

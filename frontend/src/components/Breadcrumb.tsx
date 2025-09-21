@@ -48,7 +48,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
       games: { label: 'Games', icon: '🎯' },
       create: { label: 'Create Game', icon: '➕' },
       join: { label: 'Join Game', icon: '🚪' },
-      'quick-match': { label: 'Quick Match', icon: '⚡' },
+      casual: { label: 'Casual', icon: '🎮' },
       ranked: { label: 'Ranked', icon: '🏆' },
       browse: { label: 'Browse', icon: '🔍' },
       ai: { label: 'vs AI', icon: '🤖' },
