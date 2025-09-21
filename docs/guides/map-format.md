@@ -16,7 +16,7 @@ The sections below describe each part of this pipeline in detail.
 
 ## 2. Database schema summary
 
-The full, authoritative schema lives in [`docs/DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md). The most relevant tables are summarised here for quick reference.
+The full, authoritative schema lives in [`docs/operations/database-schema.md`](../operations/database-schema.md). The most relevant tables are summarised here for quick reference.
 
 ### 2.1 `maps`
 

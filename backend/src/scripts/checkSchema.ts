@@ -131,7 +131,7 @@ function parseCliOptions(): CliOptions {
         options.exportPath = next
         index += 1
       } else {
-        options.exportPath = '../docs/DATABASE_SCHEMA.md'
+        options.exportPath = '../docs/operations/database-schema.md'
       }
     } else if (arg === '--format') {
       const next = args[index + 1]
@@ -768,7 +768,7 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
   lines.push('')
   lines.push(`Generated on ${generatedAt.toISOString()}`)
   lines.push('')
-  lines.push('> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/DATABASE_SCHEMA.md`. Run the command after any migration changes to keep it current.')
+  lines.push('> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.')
   lines.push('')
   lines.push('## Overview')
   lines.push('')

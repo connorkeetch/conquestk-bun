@@ -45,12 +45,18 @@ export class GameController {
             ? Number.parseInt(numberOfTeams, 10)
             : undefined
 
-      const normalizedTeamMode =
-        typeof teamMode === 'string'
-          ? teamMode
-          : allowTeamPlay || (typeof parsedNumberOfTeams === 'number' && parsedNumberOfTeams > 0)
-            ? 'teams'
-            : 'none'
+      let normalizedTeamMode: 'none' | 'teams' | 'auto_balance'
+      if (teamMode === 'teams' || teamMode === 'auto_balance' || teamMode === 'none') {
+        normalizedTeamMode = teamMode
+      } else if (teamMode === true) {
+        normalizedTeamMode = 'teams'
+      } else if (teamMode === false) {
+        normalizedTeamMode = 'none'
+      } else if (allowTeamPlay || (typeof parsedNumberOfTeams === 'number' && parsedNumberOfTeams > 0)) {
+        normalizedTeamMode = 'teams'
+      } else {
+        normalizedTeamMode = 'none'
+      }
 
       const roomData: CreateRoomData = {
         name,

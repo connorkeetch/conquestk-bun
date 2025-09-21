@@ -2,7 +2,7 @@
 
 Generated on 2025-09-20T01:41:14.730Z
 
-> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/DATABASE_SCHEMA.md`. Run the command after any migration changes to keep it current.
+> This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
 ## Overview
 
@@ -2199,4 +2199,3 @@ Generated on 2025-09-20T01:41:14.730Z
 | `user_settings_user_id_fkey` | `user_settings` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_terms_acceptance_user_id_fkey` | `user_terms_acceptance` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `users_vip_granted_by_fkey` | `users` | `vip_granted_by` | `users` | `id` | NO ACTION | NO ACTION |
-

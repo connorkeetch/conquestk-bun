@@ -19,10 +19,10 @@ community-built maps, and rich administrative tooling.
 ## 🔗 Quick links
 
 - **Live game:** [conquestk.com](https://conquestk.com)
-- **Documentation index:** [docs/README.md](docs/README.md)
-- **Architecture overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Roadmap & follow-up tasks:** [docs/planning/ROADMAP.md](docs/planning/ROADMAP.md)
-- **Coding standards:** [docs/CODING-STANDARDS.md](docs/CODING-STANDARDS.md)
+- **Documentation index:** [docs/index.md](docs/index.md)
+- **Architecture overview:** [docs/reference/architecture.md](docs/reference/architecture.md)
+- **Roadmap & follow-up tasks:** [docs/planning/roadmap.md](docs/planning/roadmap.md)
+- **Coding standards:** [docs/guides/coding-standards.md](docs/guides/coding-standards.md)
 
 ---
 
@@ -126,21 +126,21 @@ risk-game/
   and backend bundles.
 - `npm start` runs migrations before booting the backend server. Ensure environment variables match
   your target deployment before running this command.
-- See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full promotion checklist.
+- See [docs/reference/deployment.md](docs/reference/deployment.md) for the full promotion checklist.
 
 ---
 
 ## 📚 Documentation
 
 All supporting guides, troubleshooting steps, and deep dives live in the `docs/` directory. Start
-with the [documentation index](docs/README.md) for a curated map of available resources.
+with the [documentation index](docs/index.md) for a curated map of available resources.
 
 ---
 
 ## 🤝 Contributing
 
 1. Fork the repository and create a feature branch.
-2. Follow the [coding standards](docs/CODING-STANDARDS.md) and ensure new work is typed.
+2. Follow the [coding standards](docs/guides/coding-standards.md) and ensure new work is typed.
 3. Update or add documentation when behaviour changes.
 4. Run `npm run lint` and the relevant test suites before opening a pull request.
 5. Submit a PR targeting the `main` branch with a clear summary of your change.

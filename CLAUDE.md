@@ -56,7 +56,7 @@ cd backend && npm run make-admin   # Make user admin (interactive)
 - Semantic variables: `--color-primary`, `--color-secondary`, `--color-accent`
 - Available themes: default, red, violet, blue, green, black, highcontrast, halloween
 - Theme switching: `document.setAttribute('data-theme', 'red')`
-- See `/docs/THEME-SYSTEM.md` for complete documentation
+- See `/docs/guides/theme-system.md` for complete documentation
 
 ### Key Files & Components
 ```
@@ -78,7 +78,7 @@ frontend/
 ## 🗺️ Map Editor
 The Map Editor (`/map-editor-tokens`) features a tabbed interface for creating custom maps:
 - Properties, Image, Territories, Continents, Connections, Capitals tabs
-- See `docs/MAP-FORMAT.md` for complete documentation
+- See `docs/guides/map-format.md` for complete documentation
 
 ## 🔴 Critical Development Rules
 
@@ -91,7 +91,7 @@ The Map Editor (`/map-editor-tokens`) features a tabbed interface for creating c
 7. **Database changes**: ALWAYS create a migration file
 8. **Migration naming**: Use format `XXX_description.sql`
 9. **Test migrations locally** before production
-10. **Follow docs/CODING-STANDARDS.md** - Apply all 10 core principles
+10. **Follow docs/guides/coding-standards.md** - Apply all 10 core principles
 
 ## 💾 Database Management
 
@@ -218,16 +218,16 @@ Follow these core principles (see CODING-STANDARDS.md):
 ## 📚 Documentation Structure
 - **README.md** - Project overview and quick start
 - **CLAUDE.md** - This file (AI assistant guide)
-- **docs/README.md** - Index of every guide inside `docs/`
-- **docs/planning/ROADMAP.md** - Active priorities and backlog
-- **docs/planning/CODEBASE-CLEANUP.md** - Technical-debt follow-ups
-- **docs/ARCHITECTURE.md** - System design and patterns
-- **docs/DEPLOYMENT.md** - Deployment procedures
-- **docs/CODING-STANDARDS.md** - Code quality standards
-- **docs/THEME-SYSTEM.md** - Theme architecture
-- **docs/MAP-FORMAT.md** - Map file specification
-- **docs/EMAIL-VERIFICATION.md** - Email system docs
-- **docs/TROUBLESHOOTING.md** - Common issues
+- **docs/index.md** - Index of every guide inside `docs/`
+- **docs/planning/roadmap.md** - Active priorities and backlog
+- **docs/planning/codebase-cleanup.md** - Technical-debt follow-ups
+- **docs/reference/architecture.md** - System design and patterns
+- **docs/reference/deployment.md** - Deployment procedures
+- **docs/guides/coding-standards.md** - Code quality standards
+- **docs/guides/theme-system.md** - Theme architecture
+- **docs/guides/map-format.md** - Map file specification
+- **docs/guides/email-verification.md** - Email system docs
+- **docs/operations/troubleshooting.md** - Common issues
 
 ## 🎯 Key Reminders
 - Create new files ONLY when architecturally necessary

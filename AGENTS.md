@@ -82,11 +82,11 @@
 - When the frontend runs on a different origin, set `PUBLIC_ASSET_BASE_URL` in `backend/.env` (e.g. `https://risk-game-production-9935.up.railway.app`) so map image URLs resolve correctly.
 
 ## Documentation pointers
-- Architectural overview: `docs/ARCHITECTURE.md`
-- Theme details: `docs/THEME-SYSTEM.md`
-- Map editor format: `docs/MAP-FORMAT.md`
-- Coding standards: `docs/CODING-STANDARDS.md`
-- Troubleshooting common issues: `docs/TROUBLESHOOTING.md`
-- Product roadmap & priorities: `docs/planning/ROADMAP.md` (align with the go-live backlog in the same folder).
-- Launch blocker backlog: `docs/planning/go_live_plan.md` (status badges indicate what is done vs. open).
-- Housekeeping tracker: `docs/planning/CODEBASE-CLEANUP.md` (duplicate audio directories, legacy deployment scripts, backup hygiene).
+- Architectural overview: `docs/reference/architecture.md`
+- Theme details: `docs/guides/theme-system.md`
+- Map editor format: `docs/guides/map-format.md`
+- Coding standards: `docs/guides/coding-standards.md`
+- Troubleshooting common issues: `docs/operations/troubleshooting.md`
+- Product roadmap & priorities: `docs/planning/roadmap.md` (align with the go-live backlog in the same folder).
+- Launch blocker backlog: `docs/planning/go-live-plan.md` (status badges indicate what is done vs. open).
+- Housekeeping tracker: `docs/planning/codebase-cleanup.md` (duplicate audio directories, legacy deployment scripts, backup hygiene).
