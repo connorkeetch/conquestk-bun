@@ -70,6 +70,7 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | violet | Purple (#7C3AED) | Purple theme with violet accents |
 | red | Red (#DC2626) | Crimson theme with red accents |
 | blue | Blue (#2563EB) | Ocean blue theme |
+| retrospace | Royal Blue (#0F4CDA) | Premium retro social profile blues with neon highlights |
 | green | Emerald (#059669) | Emerald green theme |
 | black | Gray (#1f2937) | Pure black with gray accents |
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
@@ -197,7 +198,7 @@ For UI display purposes only:
 ### 3. Update Valid Themes in themeLoader.ts
 Add to the validThemes array:
 ```javascript
-const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'green', 'black', 'highcontrast', 'halloween', 'mytheme'];
+const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'retrospace', 'green', 'black', 'highcontrast', 'halloween', 'mytheme'];
 ```
 
 ## Best Practices

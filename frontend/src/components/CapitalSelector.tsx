@@ -110,6 +110,7 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
         {territories.map((territory) => (
           <button
             key={territory.id}
+            type="button"
             onClick={() => toggleCapital(territory.id)}
             className={`p-2 rounded text-white text-sm transition-colors ${getDistanceColor(territory.id)}`}
             disabled={
@@ -127,6 +128,7 @@ const CapitalSelector: React.FC<CapitalSelectorProps> = ({
           Selected: {selectedCapitals.length} / {playerCount}
         </div>
         <button
+          type="button"
           onClick={handleConfirm}
           disabled={selectedCapitals.length !== playerCount || !!validationError}
           className="px-6 py-2 bg-primary hover:bg-primary disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"

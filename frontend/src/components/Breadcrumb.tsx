@@ -102,9 +102,10 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
       {breadcrumbItems.map((item, index) => {
         const isLast = index === breadcrumbItems.length - 1
         const linkPath = item.path || item.link // Support both properties
+        const fragmentKey = linkPath ?? `${item.label}-${index}`
 
         return (
-          <React.Fragment key={index}>
+          <React.Fragment key={fragmentKey}>
             {/* Breadcrumb Item */}
             <div className="flex items-center">
               {linkPath && !isLast ? (
@@ -131,7 +132,10 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                focusable="false"
               >
+                <title>Breadcrumb separator</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

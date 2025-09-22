@@ -65,6 +65,7 @@ export default function TermsModal({
           </div>
           {onDecline && (
             <button
+              type="button"
               onClick={handleDecline}
               className="rounded-lg p-2 text-muted transition-colors hover:bg-gray-200 hover:text-gray-600"
             >
@@ -81,12 +82,12 @@ export default function TermsModal({
             </p>
           </div>
 
-          {termsContent.sections.map((section, index) => (
-            <div key={index} className="mb-6">
+          {termsContent.sections.map((section, sectionIndex) => (
+            <div key={`${section.title}-${sectionIndex}`} className="mb-6">
               <h3 className="mb-3 text-lg font-semibold text-gray-900">{section.title}</h3>
               <ul className="space-y-2">
-                {section.items.map((item, itemIndex) => (
-                  <li key={itemIndex} className="flex items-start">
+                {section.items.map((item) => (
+                  <li key={`${section.title}-${item}`} className="flex items-start">
                     <span className="mr-2 mt-1 block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-400" />
                     <span className="text-sm text-gray-700">{item}</span>
                   </li>
@@ -128,6 +129,7 @@ export default function TermsModal({
 
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={handleAccept}
               disabled={!isAcceptChecked || !hasScrolledToBottom}
               className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
@@ -136,6 +138,7 @@ export default function TermsModal({
             </button>
             {onDecline && (
               <button
+                type="button"
                 onClick={handleDecline}
                 className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
               >

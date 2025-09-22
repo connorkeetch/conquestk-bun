@@ -390,7 +390,7 @@ const PLAYER_COLORS = [
 Zero-flash theme switching using pure CSS variables:
 - All themes defined in `app.css` using `[data-theme="name"]` selectors
 - Semantic variables (`--color-primary`, `--color-secondary`, `--color-accent`)
-- Available themes: default, red, violet, blue, green, black, highcontrast, halloween
+- Available themes: default, red, violet, blue, retrospace, green, black, highcontrast, halloween
 - Instant switching via `document.setAttribute('data-theme', themeName)`
 
 ### Settings Synchronization

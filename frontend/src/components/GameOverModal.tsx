@@ -154,6 +154,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <div className="flex flex-col sm:flex-row gap-3">
             {onNewGame && (
               <button
+                type="button"
                 onClick={onNewGame}
                 className="flex-1 bg-primary hover:brightness-110 text-white py-3 px-4 rounded-lg font-semibold transition-all"
               >
@@ -162,6 +163,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             )}
             {onBackToMenu && (
               <button
+                type="button"
                 onClick={onBackToMenu}
                 className="flex-1 bg-surface-2 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all"
               >
@@ -169,6 +171,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
               className="flex-1 bg-surface-1 hover:brightness-110 text-text py-3 px-4 rounded-lg font-semibold transition-all border border-border"
             >

@@ -23,6 +23,7 @@ Themes are applied via data-theme attribute on the root element.
 - red: Red primary with warm dark backgrounds
 - violet: Purple primary with violet-tinted backgrounds
 - blue: Blue primary with blue-tinted backgrounds
+- retrospace: Nostalgic social profile blues with neon accents
 - green: Green primary with green-tinted backgrounds
 - black: Pure black with gray accents
 - highcontrast: WCAG AAA compliant high contrast
@@ -249,6 +250,45 @@ This allows themes to work with any color scheme!
   --box-border: rgba(71, 85, 105, 0.5);
   --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
+}
+
+/* RetroSpace Theme - Nostalgic social profile blues */
+:root[data-theme="retrospace"] {
+  --color-primary: #0f4cda; /* Royal blue primary inspired by early social media */
+  --color-primary-soft: #4f83ff; /* Brighter hover blue */
+  --color-secondary: #f8fafc; /* Soft white secondary */
+  --color-accent: #ff80cc; /* Neon pink accent for profile flair */
+
+  --color-bg-deep: #020617; /* Midnight navy base */
+  --color-bg-alt: #061537; /* Alternative navy background */
+  --color-bg-void: #01030b; /* Deep vignette edge */
+  --color-surface-1: #0b1f4b; /* Card backgrounds with blue tint */
+  --color-surface-2: #102c63; /* Elevated surface */
+
+  --color-text: #f8fbff; /* Crisp white text */
+  --color-text-muted: #9cb3df; /* Muted periwinkle text */
+  --color-border: #3b4f86; /* Cool blue divider */
+
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #01030b 0% /* Deep midnight edge */,
+    rgba(12, 45, 107, 0.9) 45% /* Electric blue center glow */,
+    #040d1f 100% /* Fades back to deep navy */
+  );
+
+  --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - frosted blue glass */
+  --box-bg: rgba(12, 31, 74, 0.6);
+  --box-bg-solid: #102550;
+  --box-border: rgba(99, 132, 204, 0.45);
+  --box-shadow: 0 20px 45px rgba(4, 13, 31, 0.45);
+  --box-blur: 18px;
   --box-radius: 0.75rem;
   --box-padding: 1.5rem;
   --box-padding-sm: 0.75rem;
