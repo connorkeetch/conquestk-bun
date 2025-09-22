@@ -207,9 +207,7 @@ router.post(
       const batchSize =
         batchSizeRaw === undefined ? undefined : Number.parseInt(String(batchSizeRaw), 10)
       const minAgeMinutes =
-        minAgeMinutesRaw === undefined
-          ? undefined
-          : Number.parseInt(String(minAgeMinutesRaw), 10)
+        minAgeMinutesRaw === undefined ? undefined : Number.parseInt(String(minAgeMinutesRaw), 10)
 
       if (batchSize !== undefined && (!Number.isFinite(batchSize) || batchSize <= 0)) {
         res.status(400).json({ error: 'batchSize must be a positive number' })

@@ -1,5 +1,6 @@
+import { describe, expect, it, jest } from '@jest/globals'
 import type { NotificationEvent } from '@risk-game/shared/types/notifications'
-import { WebPushChannel } from './WebPushChannel'
+import { WebPushChannel, type WebPushService } from './WebPushChannel'
 
 jest.mock('../notificationService', () => ({
   __esModule: true,
@@ -25,11 +26,13 @@ const createMockService = () => {
   const isEnabledMock = jest.fn().mockReturnValue(true)
   const sendToUsersMock = jest.fn().mockResolvedValue(undefined)
 
+  const service: WebPushService = {
+    isEnabled: isEnabledMock,
+    sendToUsers: sendToUsersMock,
+  }
+
   return {
-    service: {
-      isEnabled: isEnabledMock,
-      sendToUsers: sendToUsersMock,
-    } as any,
+    service,
     isEnabledMock,
     sendToUsersMock,
   }

@@ -1,11 +1,9 @@
 import type { Response } from 'express'
 import mapWorkflowService from '../services/mapWorkflowService'
-import { UserService } from '../services/userService'
+import { MapNotFoundError, MapPermissionError } from '../services/mapPermissionService'
 import type { AuthenticatedRequest } from '../types/express'
 import type { MapDraft, MapStatus } from '../types/maps'
 import { handleRouteError } from '../utils/routeErrorHandler'
-
-const userService = new UserService()
 
 export class MapWorkflowController {
   /**
@@ -118,13 +116,21 @@ export class MapWorkflowController {
       }
       const { mapId } = req.params
 
-      await mapWorkflowService.submitForReview(mapId, userId)
+      await mapWorkflowService.submitForReview(mapId, userId, {
+        isAdmin: req.user?.isAdmin,
+      })
 
       return res.json({
         success: true,
         message: 'Map submitted for review successfully',
       })
     } catch (error: unknown) {
+      if (error instanceof MapPermissionError) {
+        return res.status(403).json({ error: error.message })
+      }
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to submit map for review', 500, {
         mapId: req.params.mapId,
       })
@@ -143,15 +149,6 @@ export class MapWorkflowController {
       const userId = req.userId
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' })
-      }
-
-      // Check if user is admin
-      const user = await userService.findById(userId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
       }
 
       const reviews = await mapWorkflowService.getPendingReviews()
@@ -181,22 +178,22 @@ export class MapWorkflowController {
       const { mapId } = req.params
       const { notes } = req.body as { notes?: string }
 
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
-
-      await mapWorkflowService.approveMap(mapId, adminId, notes ?? undefined)
+      await mapWorkflowService.approveMap(mapId, adminId, {
+        notes: notes ?? undefined,
+        auditContext: {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') ?? undefined,
+        },
+      })
 
       return res.json({
         success: true,
         message: 'Map approved successfully',
       })
     } catch (error: unknown) {
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to approve map', 500, {
         mapId: req.params.mapId,
       })
@@ -226,22 +223,22 @@ export class MapWorkflowController {
         })
       }
 
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
-
-      await mapWorkflowService.rejectMap(mapId, adminId, reason)
+      await mapWorkflowService.rejectMap(mapId, adminId, {
+        reason,
+        auditContext: {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') ?? undefined,
+        },
+      })
 
       return res.json({
         success: true,
         message: 'Map rejected',
       })
     } catch (error: unknown) {
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to reject map', 500, {
         mapId: req.params.mapId,
       })
@@ -262,15 +259,6 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { unreadOnly } = req.query
-
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
 
       const notifications = await mapWorkflowService.getAdminNotifications(
         adminId,
@@ -301,15 +289,6 @@ export class MapWorkflowController {
       }
       const { notificationId } = req.params
 
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
-
       await mapWorkflowService.markNotificationRead(notificationId, adminId)
 
       return res.json({
@@ -338,22 +317,21 @@ export class MapWorkflowController {
       }
       const { mapId } = req.params
 
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
-
-      await mapWorkflowService.archiveMap(mapId, adminId)
+      await mapWorkflowService.archiveMap(mapId, adminId, {
+        auditContext: {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') ?? undefined,
+        },
+      })
 
       return res.json({
         success: true,
         message: 'Map archived successfully',
       })
     } catch (error: unknown) {
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to archive map', 500, {
         mapId: req.params.mapId,
       })
@@ -375,22 +353,21 @@ export class MapWorkflowController {
       }
       const { mapId } = req.params
 
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
-
-      await mapWorkflowService.toggleMapFeatured(mapId, adminId)
+      const result = await mapWorkflowService.toggleFeatured(mapId, adminId, {
+        auditContext: {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') ?? undefined,
+        },
+      })
 
       return res.json({
         success: true,
-        message: 'Map featured status updated',
+        ...result,
       })
     } catch (error: unknown) {
+      if (error instanceof MapNotFoundError) {
+        return res.status(404).json({ error: error.message })
+      }
       handleRouteError(error, req, 'Failed to update map featured status', 500, {
         mapId: req.params.mapId,
       })
@@ -411,15 +388,6 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { status } = req.params
-
-      // Check if user is admin
-      const user = await userService.findById(adminId)
-      if (!user?.is_admin) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Admin access required',
-        })
-      }
 
       const validStatuses = ['draft', 'pending_review', 'approved', 'rejected', 'archived']
       if (!validStatuses.includes(status)) {
@@ -456,13 +424,6 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { mapId } = req.params
-
-      // Check if user is admin
-      const user = await userService.findById(userId)
-      if (!user?.is_admin) {
-        // Non-admins can only see their own map history
-        // TODO: Add check to verify user owns the map
-      }
 
       const history = await mapWorkflowService.getMapHistory(mapId)
 

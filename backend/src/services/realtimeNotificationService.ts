@@ -1,5 +1,4 @@
 import { tryGetSocketServer } from './socketRegistry'
-import type { ServerToClientEvents } from '../types/shared'
 
 export interface RealtimeNotificationPayload {
   id: string

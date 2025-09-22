@@ -380,7 +380,11 @@ export interface ServerToClientEvents {
   'chat:history': (payload: ChatHistoryPayload) => void
   'chat:unread-counts': (counts: ChatUnreadCount[]) => void
   'chat:message-deleted': (data: { messageId: string }) => void
-  'chat:message-edited': (data: { messageId: string; newMessage: string; editedAt: Date | string }) => void
+  'chat:message-edited': (data: {
+    messageId: string
+    newMessage: string
+    editedAt: Date | string
+  }) => void
   'chat:user-typing': (data: {
     userId: string
     username: string
@@ -483,7 +487,10 @@ export interface ClientToServerEvents {
     offset?: number
   }) => void
   'chat:get-unread': () => void
-  'chat:mark-read': (data: { conversationType: Extract<ChatConversationType, 'game' | 'dm'>; conversationId: string }) => void
+  'chat:mark-read': (data: {
+    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationId: string
+  }) => void
   'chat:delete': (data: { messageId: string }) => void
   'chat:edit': (data: { messageId: string; newMessage: string }) => void
   'chat:typing': (data: {

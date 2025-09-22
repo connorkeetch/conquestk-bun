@@ -1,5 +1,30 @@
 import DOMPurify from 'dompurify'
 
+type Nullable<T> = T | null | undefined
+
+type ProfileData = {
+  username?: string
+  bio?: string
+  location?: string
+  website?: string
+  [key: string]: unknown
+}
+
+type MapTerritory = {
+  name?: string
+  continent?: string
+  [key: string]: unknown
+}
+
+type MapData = {
+  name?: string
+  description?: string
+  creator?: string
+  territories?: MapTerritory[]
+  tags?: string[]
+  [key: string]: unknown
+}
+
 /**
  * Sanitize user-generated HTML content to prevent XSS attacks
  * @param dirty - Potentially unsafe HTML string
@@ -57,16 +82,16 @@ export function sanitizeChatMessage(message: string): string {
  * @param data - User profile object
  * @returns Sanitized profile data
  */
-export function sanitizeProfileData(data: any): any {
+export function sanitizeProfileData<T extends ProfileData>(data: Nullable<T>): Nullable<T> {
   if (!data) return data
 
-  const sanitized = { ...data }
+  const sanitized: T = { ...data }
 
   // Sanitize text fields
   if (sanitized.username) sanitized.username = sanitizeText(sanitized.username)
   if (sanitized.bio) sanitized.bio = sanitizeText(sanitized.bio)
   if (sanitized.location) sanitized.location = sanitizeText(sanitized.location)
-  if (sanitized.website) {
+  if (typeof sanitized.website === 'string' && sanitized.website.length > 0) {
     // Validate and sanitize URL
     try {
       const url = new URL(sanitized.website)
@@ -115,10 +140,10 @@ export function sanitizeGameName(name: string): string {
  * @param mapData - Map configuration object
  * @returns Sanitized map data
  */
-export function sanitizeMapData(mapData: any): any {
+export function sanitizeMapData<T extends MapData>(mapData: Nullable<T>): Nullable<T> {
   if (!mapData) return mapData
 
-  const sanitized = { ...mapData }
+  const sanitized: T = { ...mapData }
 
   // Sanitize string fields
   if (sanitized.name) sanitized.name = sanitizeText(sanitized.name)
@@ -126,17 +151,19 @@ export function sanitizeMapData(mapData: any): any {
   if (sanitized.creator) sanitized.creator = sanitizeText(sanitized.creator)
 
   // Sanitize territory names
-  if (sanitized.territories && Array.isArray(sanitized.territories)) {
-    sanitized.territories = sanitized.territories.map((territory: any) => ({
+  if (Array.isArray(sanitized.territories)) {
+    sanitized.territories = sanitized.territories.map((territory) => ({
       ...territory,
-      name: territory.name ? sanitizeText(territory.name) : '',
-      continent: territory.continent ? sanitizeText(territory.continent) : '',
-    }))
+      name: territory?.name ? sanitizeText(territory.name) : '',
+      continent: territory?.continent ? sanitizeText(territory.continent) : '',
+    })) as T['territories']
   }
 
   // Sanitize tags
-  if (sanitized.tags && Array.isArray(sanitized.tags)) {
-    sanitized.tags = sanitized.tags.map((tag: string) => sanitizeText(tag))
+  if (Array.isArray(sanitized.tags)) {
+    sanitized.tags = sanitized.tags
+      .filter((tag): tag is string => typeof tag === 'string')
+      .map((tag) => sanitizeText(tag)) as T['tags']
   }
 
   return sanitized

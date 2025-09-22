@@ -213,9 +213,7 @@ export class AdminService {
   async getActiveAdminUserIds(): Promise<string[]> {
     const ids = new Set<string>()
 
-    const explicitAdmins = await query<{ id: string }>(
-      'SELECT id FROM users WHERE is_admin = TRUE',
-    )
+    const explicitAdmins = await query<{ id: string }>('SELECT id FROM users WHERE is_admin = TRUE')
     explicitAdmins.rows.forEach((row) => {
       if (row.id) ids.add(row.id)
     })

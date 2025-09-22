@@ -54,9 +54,7 @@ export class MapStagingService {
   private readonly ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   private readonly NON_ADMIN_QUOTA = 5
   private readonly PURGE_BATCH_SIZE = Number(process.env.MAP_ASSET_PURGE_BATCH_SIZE ?? 100)
-  private readonly PURGE_MIN_AGE_MINUTES = Number(
-    process.env.MAP_ASSET_PURGE_MIN_AGE_MINUTES ?? 60,
-  )
+  private readonly PURGE_MIN_AGE_MINUTES = Number(process.env.MAP_ASSET_PURGE_MIN_AGE_MINUTES ?? 60)
   private readonly DELETION_ALERT_THRESHOLD = Number(
     process.env.MAP_ASSET_PURGE_ALERT_THRESHOLD ?? 3,
   )
@@ -379,15 +377,15 @@ export class MapStagingService {
     let bytesPurged = 0
 
     for (const row of rows) {
-      const ownerId = (row as unknown as { userId?: string; user_id?: string }).userId ??
+      const ownerId =
+        (row as unknown as { userId?: string; user_id?: string }).userId ??
         (row as unknown as { user_id?: string }).user_id ??
         row.userId
       const fileName = (row as unknown as { filename?: string }).filename ?? row.filename
       const fileSizeRaw =
         (row as unknown as { fileSize?: number }).fileSize ??
         (row as unknown as { file_size?: number | string }).file_size
-      const fileSize =
-        typeof fileSizeRaw === 'number' ? fileSizeRaw : Number(fileSizeRaw ?? 0)
+      const fileSize = typeof fileSizeRaw === 'number' ? fileSizeRaw : Number(fileSizeRaw ?? 0)
 
       const filePath = this.getAbsolutePath(fileName)
       const currentAttempts = row.deletion_attempts ?? 0
@@ -489,10 +487,9 @@ export class MapStagingService {
   }
 
   async reclaimStagingImage(adminId: string, imageId: string): Promise<StagingImage> {
-    const result = await query<StagingImage>(
-      'SELECT * FROM map_images_staging WHERE id = $1',
-      [imageId],
-    )
+    const result = await query<StagingImage>('SELECT * FROM map_images_staging WHERE id = $1', [
+      imageId,
+    ])
 
     const row = result.rows[0]
     if (!row) {

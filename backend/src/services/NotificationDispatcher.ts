@@ -1,8 +1,8 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
 import { logger } from '../utils/logger'
+import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel'
 import { SlackWebhookChannel } from './channels/SlackWebhookChannel'
 import { webPushChannel } from './channels/WebPushChannel'
-import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel'
 
 export type NotificationChannelName = 'webpush' | 'slack' | 'discord' | (string & {})
 

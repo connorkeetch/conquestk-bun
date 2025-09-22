@@ -67,11 +67,11 @@ Go Live is tentatively set for Oct 1, 2025
 - Team rules (reinforcement sharing, win conditions) exist or the UI disables team mode pre-launch.
 - Capital mode implements `isCapitalTerritory`; eliminations trigger correctly.
 - Tests cover classic plus one custom map; frontend renders bonuses from server data only.
-- _Progress (Mar 2026): Lobby creation now supports explicit team counts, hosts can assign players per team,
+- _Progress (September 2025): Lobby creation now supports explicit team counts, hosts can assign players per team,
   and the engine enforces alliances for movement/combat with team-based victory checks. Reinforcement math
   now pulls continent bonuses from map metadata for both backend workers and the client UI, and the capital
   warning path (`isCapitalTerritory`) reflects cached game state._
-- _Progress (Apr 2026): Reinforcement placements can now target any teammate-owned territory. Backend validation
+- _Progress (September 2025): Reinforcement placements can now target any teammate-owned territory. Backend validation
   and tests cover the new path, the board blocks enemy selections, and the reinforcement panel highlights
   team gifts. The pooling follow-up is closed out in favor of this direct placement flow._
 
@@ -114,7 +114,7 @@ Go Live is tentatively set for Oct 1, 2025
 - **Acceptance criteria:**
   - Chat derives identity from Redux auth state; `localStorage` reserved for auth session plumbing.
   - DM conversation IDs deterministic and auth-backed.
-- _Progress (Jan 2026): Redux-authenticated user IDs now drive chat identity, replacing the `localStorage` lookup and stabilizing DM conversation keys so both ends resolve to the same deterministic conversation ID._
+- _Progress (September 2025): Redux-authenticated user IDs now drive chat identity, replacing the `localStorage` lookup and stabilizing DM conversation keys so both ends resolve to the same deterministic conversation ID._
 
 ### C2. Broadcast chat edits/deletes
 - **Priority:** P1 • **Tags:** [be][ws][fe]
@@ -310,3 +310,33 @@ Go Live is tentatively set for Oct 1, 2025
 1. Create one issue per ticket from this plan.
 2. Link each PR to its ticket and check off DoD bullets.
 3. Keep this document as the single source of truth for go-live readiness and move completed items to release notes once delivered.
+
+## Status Snapshot (reviewed September 2025)
+
+### Done (✅)
+- A1. Persist battle outcomes & game results (authoritative state)
+- A2. Replace fixtures with live server state
+- A3. Implement game start & lifecycle state machine
+- A4. Fix Socket.IO channel naming & membership
+- A5. Core rules parity (continent bonuses, teams, capitals)
+- C1. Identity & state source of truth
+- C2. Broadcast chat edits/deletes
+- C3. DM push notifications (deferred)
+- D1. Repair Play hub routing
+- D2. Player stats & header data
+- D3. Audio cue mismatches
+- D4. Hide "Tournaments" and other "coming soon" surfaces
+- E1. Enable Bull queues safely
+- E2. Cleanup worker modifier service
+
+### In progress (⚠️ / 🟡)
+- B1. Enforce map ownership & permissions (incl. approval/versioning)
+- B2. Creator & reviewer notifications (real fan-out)
+- B3. Map staging asset lifecycle
+- G2. Large file safeguards & legacy cleanup
+
+### Not started (⏳)
+- F1. Align README, marketing, and architecture docs with reality
+- F2. Security checklist re-run
+- G1. CI gating & coverage
+- G3. Minimal analytics & telemetry

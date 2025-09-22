@@ -7,23 +7,15 @@
   },
   "steps": {
     "install": {
-      "commands": [
-        "npm install"
-      ]
+      "commands": ["npm install"]
     },
     "build": {
-      "inputs": [
-        { "step": "install" }
-      ],
-      "commands": [
-        "npm run build"
-      ]
+      "inputs": [{ "step": "install" }],
+      "commands": ["npm run build"]
     }
   },
   "deploy": {
-    "inputs": [
-      { "step": "build" }
-    ],
+    "inputs": [{ "step": "build" }],
     "startCommand": "npm run start"
   }
 }
