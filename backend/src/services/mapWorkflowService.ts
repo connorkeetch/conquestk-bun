@@ -24,6 +24,7 @@ import {
   buildMapWorkflowNotification,
   type MapWorkflowNotificationInput,
 } from './notifications/mapWorkflowNotifications'
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
@@ -53,6 +54,33 @@ type MapDraftRow = {
   last_edited_at: string | null
   created_at: string
   updated_at: string
+}
+
+type AuditContext = {
+  ipAddress?: string
+  userAgent?: string
+}
+
+type SubmitForReviewOptions = {
+  isAdmin?: boolean
+}
+
+type ApprovalOptions = {
+  notes?: string
+  auditContext?: AuditContext
+}
+
+type RejectionOptions = {
+  reason: string
+  auditContext?: AuditContext
+}
+
+type ArchiveOptions = {
+  auditContext?: AuditContext
+}
+
+type ToggleFeaturedOptions = {
+  auditContext?: AuditContext
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -285,17 +313,29 @@ export class MapWorkflowService {
   /**
    * Submit a map for review
    */
-  async submitForReview(mapId: string, userId: string): Promise<void> {
+  async submitForReview(
+    mapId: string,
+    userId: string,
+    options: SubmitForReviewOptions = {},
+  ): Promise<void> {
     try {
-      // Update map status
-      await query(
+      await mapPermissionService.assertCanEditMap(mapId, {
+        userId,
+        isAdmin: options.isAdmin,
+      })
+
+      const updateResult = await query(
         `
         UPDATE maps 
         SET status = 'pending_review', submitted_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND creator_id = ?
+        WHERE id = $1
       `,
-        [mapId, userId],
+        [mapId],
       )
+
+      if (updateResult.rowCount === 0) {
+        throw new MapNotFoundError()
+      }
 
       // Add to review queue
       await query(
@@ -333,30 +373,58 @@ export class MapWorkflowService {
   /**
    * Approve a map
    */
-  async approveMap(mapId: string, adminId: string, notes?: string): Promise<void> {
+  async approveMap(
+    mapId: string,
+    adminId: string,
+    options: ApprovalOptions = {},
+  ): Promise<void> {
+    const { notes, auditContext } = options
+
     try {
+      const beforeState = await this.getMapModerationSnapshot(mapId)
+      if (!beforeState) {
+        throw new MapNotFoundError()
+      }
+
       await query(
         `
         UPDATE maps 
         SET status = 'approved', 
             reviewed_at = CURRENT_TIMESTAMP,
-            reviewed_by = ?,
-            review_notes = ?
-        WHERE id = ?
+            reviewed_by = $1,
+            review_notes = $2
+        WHERE id = $3
       `,
-        [adminId, notes, mapId],
+        [adminId, notes ?? null, mapId],
       )
 
       await query(
         `
         UPDATE map_review_queue 
         SET status = 'approved', reviewed_at = CURRENT_TIMESTAMP
-        WHERE map_id = ?
+        WHERE map_id = $1
       `,
         [mapId],
       )
 
       await this.logMapAction(mapId, 'approved', adminId, notes ? { notes } : undefined)
+
+      const afterState = await this.getMapModerationSnapshot(mapId)
+
+      await adminService.logAdminAction(
+        adminId,
+        'map_approved',
+        {
+          mapId,
+          notes,
+          before: beforeState,
+          after: afterState,
+        },
+        'map',
+        mapId,
+        auditContext?.ipAddress,
+        auditContext?.userAgent,
+      )
 
       // Notify the map creator
       const mapInfo = await query<{ creator_id: string; name: string }>(
@@ -400,16 +468,31 @@ export class MapWorkflowService {
   /**
    * Reject a map with reason
    */
-  async rejectMap(mapId: string, adminId: string, reason: string): Promise<void> {
+  async rejectMap(
+    mapId: string,
+    adminId: string,
+    options: RejectionOptions,
+  ): Promise<void> {
+    const { reason, auditContext } = options
+
+    if (!reason) {
+      throw new Error('Rejection reason is required')
+    }
+
     try {
+      const beforeState = await this.getMapModerationSnapshot(mapId)
+      if (!beforeState) {
+        throw new MapNotFoundError()
+      }
+
       await query(
         `
         UPDATE maps 
         SET status = 'rejected', 
             reviewed_at = CURRENT_TIMESTAMP,
-            reviewed_by = ?,
-            rejection_reason = ?
-        WHERE id = ?
+            reviewed_by = $1,
+            rejection_reason = $2
+        WHERE id = $3
       `,
         [adminId, reason, mapId],
       )
@@ -418,12 +501,29 @@ export class MapWorkflowService {
         `
         UPDATE map_review_queue 
         SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP
-        WHERE map_id = ?
+        WHERE map_id = $1
       `,
         [mapId],
       )
 
       await this.logMapAction(mapId, 'rejected', adminId, { reason })
+
+      const afterState = await this.getMapModerationSnapshot(mapId)
+
+      await adminService.logAdminAction(
+        adminId,
+        'map_rejected',
+        {
+          mapId,
+          reason,
+          before: beforeState,
+          after: afterState,
+        },
+        'map',
+        mapId,
+        auditContext?.ipAddress,
+        auditContext?.userAgent,
+      )
 
       // Notify the map creator
       const mapInfo = await query<{ creator_id: string; name: string }>(
@@ -513,7 +613,7 @@ export class MapWorkflowService {
           [mapId, mapId],
         )
 
-        await this.submitForReview(mapId, userId)
+        await this.submitForReview(mapId, userId, { isAdmin })
       }
 
       await this.logMapAction(mapId, 'edited', userId)
@@ -810,18 +910,43 @@ export class MapWorkflowService {
   /**
    * Archive a map
    */
-  async archiveMap(mapId: string, adminId: string): Promise<void> {
+  async archiveMap(
+    mapId: string,
+    adminId: string,
+    options: ArchiveOptions = {},
+  ): Promise<void> {
     try {
+      const beforeState = await this.getMapModerationSnapshot(mapId)
+      if (!beforeState) {
+        throw new MapNotFoundError()
+      }
+
       await query(
         `
         UPDATE maps 
         SET status = 'archived', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $1
       `,
         [mapId],
       )
 
       await this.logMapAction(mapId, 'archived', adminId)
+
+      const afterState = await this.getMapModerationSnapshot(mapId)
+
+      await adminService.logAdminAction(
+        adminId,
+        'map_archived',
+        {
+          mapId,
+          before: beforeState,
+          after: afterState,
+        },
+        'map',
+        mapId,
+        options.auditContext?.ipAddress,
+        options.auditContext?.userAgent,
+      )
     } catch (error) {
       logger.error('Error archiving map:', error)
       throw error
@@ -831,21 +956,47 @@ export class MapWorkflowService {
   /**
    * Feature/unfeature a map
    */
-  async toggleMapFeatured(mapId: string, adminId: string): Promise<void> {
+  async toggleFeatured(
+    mapId: string,
+    adminId: string,
+    options: ToggleFeaturedOptions = {},
+  ): Promise<{ isFeatured: boolean }> {
     try {
       const result = await query('SELECT is_featured FROM maps WHERE id = $1', [mapId])
-      const isFeatured = result.rows?.[0]?.is_featured
+      const row = result.rows?.[0]
+      if (!row) {
+        throw new MapNotFoundError()
+      }
+
+      const isCurrentlyFeatured = Boolean(row.is_featured)
+      const nextFeatured = !isCurrentlyFeatured
 
       await query(
         `
         UPDATE maps 
-        SET is_featured = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        SET is_featured = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
       `,
-        [!isFeatured, mapId],
+        [nextFeatured, mapId],
       )
 
-      await this.logMapAction(mapId, isFeatured ? 'unfeatured' : 'featured', adminId)
+      await this.logMapAction(mapId, nextFeatured ? 'featured' : 'unfeatured', adminId)
+
+      await adminService.logAdminAction(
+        adminId,
+        nextFeatured ? 'map_featured' : 'map_unfeatured',
+        {
+          mapId,
+          before: { is_featured: isCurrentlyFeatured },
+          after: { is_featured: nextFeatured },
+        },
+        'map',
+        mapId,
+        options.auditContext?.ipAddress,
+        options.auditContext?.userAgent,
+      )
+
+      return { isFeatured: nextFeatured }
     } catch (error) {
       logger.error('Error toggling map featured status:', error)
       throw error
@@ -948,6 +1099,21 @@ export class MapWorkflowService {
     } catch (error) {
       logger.error('Error logging map action:', error)
     }
+  }
+
+  private async getMapModerationSnapshot(
+    mapId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const result = await query(
+      `
+      SELECT status, is_public, reviewed_at, reviewed_by, review_notes, rejection_reason, is_featured
+      FROM maps
+      WHERE id = $1
+    `,
+      [mapId],
+    )
+
+    return result.rows[0] ?? null
   }
 
   /**
