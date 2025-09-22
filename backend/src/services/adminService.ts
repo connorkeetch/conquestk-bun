@@ -782,16 +782,27 @@ export class AdminService {
     }
   }
 
-  async toggleFeatureFlag(flagName: string, enabled: boolean, adminUserId: string): Promise<void> {
-    const updatedFlag = await featureFlagService.updateFlag(
-      flagName,
-      { is_enabled: enabled },
-      adminUserId,
+  async toggleFeatureFlag(
+    flagName: string,
+    enabled: boolean,
+    adminUserId: string,
+  ): Promise<boolean> {
+    const result = await query(
+      `
+      UPDATE feature_flags
+      SET is_enabled = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE flag_name = $2
+      RETURNING id
+    `,
+      [enabled, flagName],
     )
 
-    if (!updatedFlag) {
-      throw new Error(`Feature flag "${flagName}" not found`)
+    if (result.rowCount === 0) {
+      return false
     }
+
+    featureFlagService.clearCache()
 
     await this.logAdminAction(
       adminUserId,
@@ -803,6 +814,8 @@ export class AdminService {
       'system',
       flagName,
     )
+
+    return true
   }
 
   // ============= LOGGING =============
