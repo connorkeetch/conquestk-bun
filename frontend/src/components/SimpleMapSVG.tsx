@@ -1,7 +1,21 @@
-import type React from 'react'
+import type { KeyboardEvent } from 'react'
+import { useId } from 'react'
+
+interface TerritoryDisplayInfo {
+  name?: string
+  armies?: number
+  ownerId?: string
+  armyPosition?: {
+    x: number
+    y: number
+  }
+  [key: string]: unknown
+}
+
+type TerritoryMap = Record<string, TerritoryDisplayInfo>
 
 interface SimpleMapSVGProps {
-  territories: { [key: string]: any }
+  territories: TerritoryMap
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
   getTerritoryColor: (territoryId: string) => string
@@ -23,6 +37,11 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
   validTargets,
   pendingAction,
 }) => {
+  const svgAssetId = useId()
+  const gradientId = `${svgAssetId}-gradient`
+  const shadowFilterId = `${svgAssetId}-shadow`
+  const svgTitleId = `${svgAssetId}-title`
+
   const getTerritoryStyles = (territoryId: string) => {
     const baseClasses = 'cursor-pointer transition-all duration-200'
     let extraClasses = ''
@@ -69,7 +88,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
   }
 
   // Simple geometric territory shapes for the fantasy map
-  const territoryPaths: { [key: string]: string } = {
+  const territoryPaths: Record<string, string> = {
     // Northern Lands (top row)
     frozen_wastes: 'M 50 50 L 200 40 L 220 100 L 180 120 L 80 110 Z',
     ice_peaks: 'M 220 40 L 380 50 L 400 110 L 350 130 L 240 120 L 220 100 Z',
@@ -93,16 +112,35 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
     mystic_isles: 'M 520 290 L 580 280 L 600 340 L 570 360 L 540 350 Z',
   }
 
+  const handleTerritoryActivate = (territoryId: string) => {
+    onTerritoryClick(territoryId)
+  }
+
+  const handleTerritoryKeyDown =
+    (territoryId: string) => (event: KeyboardEvent<SVGPathElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        handleTerritoryActivate(territoryId)
+      }
+    }
+
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-blue-100 to-green-100 rounded-lg overflow-hidden">
-      <svg viewBox="0 0 600 450" className="w-full h-full" style={{ maxHeight: '70vh' }}>
+      <svg
+        viewBox="0 0 600 450"
+        className="w-full h-full"
+        style={{ maxHeight: '70vh' }}
+        role="img"
+        aria-labelledby={svgTitleId}
+      >
+        <title id={svgTitleId}>Fantasy Realms strategic map</title>
         {/* Background elements for visual appeal */}
         <defs>
-          <radialGradient id="mountainGradient" cx="50%" cy="50%" r="50%">
+          <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#f0f0f0" />
             <stop offset="100%" stopColor="#d0d0d0" />
           </radialGradient>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={shadowFilterId} x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.3" />
           </filter>
         </defs>
@@ -111,11 +149,23 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
         {Object.keys(territories).map((territoryId) => {
           const styles = getTerritoryStyles(territoryId)
           const pathData = territoryPaths[territoryId]
+          const territoryDetails = territories[territoryId]
+          const territoryName = territoryDetails?.name ?? territoryId
 
           if (!pathData) return null
 
           return (
-            <g key={territoryId}>
+            /* biome-ignore lint/a11y/useSemanticElements: SVG groups require manual roles for keyboard accessibility */
+            <g
+              key={territoryId}
+              tabIndex={0}
+              role="button"
+              aria-label={`Select territory ${territoryName}`}
+              onClick={() => handleTerritoryActivate(territoryId)}
+              onKeyDown={handleTerritoryKeyDown(territoryId)}
+              onMouseEnter={() => onTerritoryHover(territoryId)}
+              onMouseLeave={() => onTerritoryHover(null)}
+            >
               <path
                 id={territoryId}
                 d={pathData}
@@ -123,10 +173,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
                 stroke={styles.stroke}
                 strokeWidth={styles.strokeWidth}
                 className={styles.className}
-                filter="url(#shadow)"
-                onClick={() => onTerritoryClick(territoryId)}
-                onMouseEnter={() => onTerritoryHover(territoryId)}
-                onMouseLeave={() => onTerritoryHover(null)}
+                filter={`url(#${shadowFilterId})`}
               />
 
               {/* Territory name label on hover */}
@@ -138,7 +185,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
                   className="fill-gray-800 text-sm font-semibold pointer-events-none"
                   style={{ textShadow: '1px 1px 2px white' }}
                 >
-                  {territories[territoryId]?.name}
+                  {territoryName}
                 </text>
               )}
             </g>

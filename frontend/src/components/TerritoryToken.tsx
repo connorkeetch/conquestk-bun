@@ -76,11 +76,11 @@ export default function TerritoryToken({
   }
 
   return (
-    <div
+    <button
+      type="button"
       style={getShapeStyle()}
       onClick={onClick}
       onMouseDown={onMouseDown}
-      role="button"
       aria-label={`Territory: ${armies} armies`}
     >
       <span
@@ -94,6 +94,6 @@ export default function TerritoryToken({
       >
         {armies}
       </span>
-    </div>
+    </button>
   )
 }

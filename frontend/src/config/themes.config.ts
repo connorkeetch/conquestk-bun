@@ -41,6 +41,12 @@ export const THEMES: ThemeDefinition[] = [
     description: 'Ocean blue theme',
   },
   {
+    id: 'retrospace',
+    name: 'RetroSpace',
+    displayColor: '#0F4CDA',
+    description: 'Premium throwback theme with midnight blues and neon profile highlights',
+  },
+  {
     id: 'green',
     name: 'Green',
     displayColor: '#059669',

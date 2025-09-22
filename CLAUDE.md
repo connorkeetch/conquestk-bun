@@ -54,7 +54,7 @@ cd backend && npm run make-admin   # Make user admin (interactive)
 **Pure CSS Variable System** - Zero-flash theme switching:
 - All themes defined in `app.css` using `[data-theme="name"]` selectors
 - Semantic variables: `--color-primary`, `--color-secondary`, `--color-accent`
-- Available themes: default, red, violet, blue, green, black, highcontrast, halloween
+- Available themes: default, red, violet, blue, retrospace, green, black, highcontrast, halloween
 - Theme switching: `document.setAttribute('data-theme', 'red')`
 - See `/docs/guides/theme-system.md` for complete documentation
 
