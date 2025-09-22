@@ -189,6 +189,8 @@ export class QueueService {
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
+        // Explicitly disable per-command timeouts for Bull-managed connections
+        commandTimeout: undefined,
       }
 
       // Initialize all queues using dedicated duplicates of the centralized Redis connection
