@@ -1,8 +1,37 @@
 -- Creates the unified conversation schema for site-wide messaging (Phase 1)
 -- Covers core tables, indexes, policy scaffolding, and messaging settings view
 
--- Ensure UUID helpers exist for default primary keys
+-- Ensure required extensions exist
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ULID generator (timestamp + randomness) for ordered message IDs
+CREATE OR REPLACE FUNCTION generate_ulid()
+RETURNS CHAR(26) AS $$
+DECLARE
+  timestamp_ms NUMERIC := floor(extract(epoch FROM clock_timestamp()) * 1000);
+  random_component BYTEA := gen_random_bytes(10);
+  base32_alphabet TEXT := '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  ulid_value NUMERIC;
+  encoded TEXT := '';
+  i INT;
+  remainder INT;
+BEGIN
+  ulid_value := timestamp_ms * power(2::numeric, 80);
+
+  FOR i IN 0..9 LOOP
+    ulid_value := ulid_value + get_byte(random_component, i) * power(2::numeric, (9 - i) * 8);
+  END LOOP;
+
+  FOR i IN 1..26 LOOP
+    remainder := mod(ulid_value, 32)::INT;
+    encoded := substr(base32_alphabet, remainder + 1, 1) || encoded;
+    ulid_value := floor(ulid_value / 32);
+  END LOOP;
+
+  RETURN encoded::CHAR(26);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 -- Conversation enumerations (created idempotently)
 DO $$
@@ -44,9 +73,8 @@ CREATE TRIGGER conversations_set_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Conversation messages table stores chat events with flexible metadata
 CREATE TABLE IF NOT EXISTS conversation_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id CHAR(26) PRIMARY KEY DEFAULT generate_ulid(),
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
   body TEXT NOT NULL,
@@ -78,7 +106,7 @@ CREATE TABLE IF NOT EXISTS conversation_members (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role conversation_member_role NOT NULL DEFAULT 'member',
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  last_read_message_id UUID,
+  last_read_message_id CHAR(26),
   last_read_at TIMESTAMPTZ,
   is_muted BOOLEAN NOT NULL DEFAULT FALSE,
   is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
@@ -99,7 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_conversation_members_conversation
 
 -- Read receipts table tracks per-message read state
 CREATE TABLE IF NOT EXISTS message_read_receipts (
-  message_id UUID NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
+  message_id CHAR(26) NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (message_id, user_id)
@@ -107,6 +135,18 @@ CREATE TABLE IF NOT EXISTS message_read_receipts (
 
 CREATE INDEX IF NOT EXISTS idx_message_read_receipts_user_read_at
   ON message_read_receipts (user_id, read_at DESC);
+
+-- User blocking table to enforce messaging policies
+CREATE TABLE IF NOT EXISTS user_blocks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  blocker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (blocker_id, blocked_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocker ON user_blocks (blocker_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks (blocked_id);
 
 -- Messaging preference scaffolding lives on user_preferences to ease rollout
 ALTER TABLE user_preferences
