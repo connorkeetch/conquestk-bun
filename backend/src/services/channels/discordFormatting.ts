@@ -132,7 +132,7 @@ function formatContextValue(value: unknown): string {
   }
 
   try {
-    return '```json\n' + JSON.stringify(value, null, 2).slice(0, MAX_FIELD_VALUE_LENGTH - 8) + '\n```'
+    return `\`\`\`json\n${JSON.stringify(value, null, 2).slice(0, MAX_FIELD_VALUE_LENGTH - 8)}\n\`\`\``
   } catch (_error) {
     return '`[unserializable]`'
   }

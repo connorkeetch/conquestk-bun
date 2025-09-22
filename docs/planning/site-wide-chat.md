@@ -1,23 +1,23 @@
 # Unified Site-wide Messaging Plan
-_Last updated: February 21, 2025_
+_Last updated: September 22, 2025_
 
-## Status snapshot (February 21, 2025)
-- **Backend:** The legacy `chatService` still handles game, team, and DM flows end to end, including profanity filtering, DM privacy checks, link previews, and unread counter updates against `chat_messages`, `message_link_previews`, and `unread_message_counts`.
+## Status snapshot (September 22, 2025)
+- **Backend:** Draft migration `backend/migrations/031_create_conversations_schema.sql` now lays down `conversations`, `conversation_members`, `conversation_messages`, `message_read_receipts`, and the `user_messaging_settings` view while legacy services continue to serve production traffic.
 - **Socket layer:** `setupChatHandlers` continues to broker `'chat:*'` events for send/history/read/edit/delete operations and emits per-room payloads instead of the planned `conversation.*` rooms.
 - **Frontend:** The in-game `ChatContainer` consumes the legacy socket events and keys Redux state by `conversationType:conversationId`, so nothing is normalized around conversation IDs yet.
 
 ## Gap analysis & focus
-- Storage still relies on the existing `chat_messages` + `unread_message_counts` schema; the new `conversations` family of tables and ULID message identifiers have not been provisioned.
+- Storage work is staged but not deployed: the new `conversations` family of tables exists in migration form, yet runtime still reads and writes the legacy `chat_messages` + `unread_message_counts` schema until we execute and backfill.
 - Socket namespaces/events remain under the legacy `'chat:*'` contract rather than the `/chat` namespace with `conversation.*` events outlined below.
 - Frontend UX is limited to contextual chat drawers; the global drawer and `/messages` workspace are untouched, and no new slices/selectors exist for conversation normalization.
 
 ## Immediate next step (Phase 1 setup)
-_Action taken:_ Audited the live implementation and mapped divergences so the schema/services workstream can start with a clear baseline.
+_Action taken:_ Audited the live implementation, captured the schema/services deltas, and drafted `031_create_conversations_schema.sql` with Phase-1 tables, indexes, and the `user_messaging_settings` view scaffolding.
 
 _Next tasks:_
-1. Draft migration `025_conversations_schema.sql` that creates `conversations`, `conversation_members`, `conversation_messages`, and `message_read_receipts` with the indexes, constraints, and JSONB metadata described in Section 3.
-2. Add a reversible `user_messaging_settings` view that surfaces `dm_policy`, `allow_group_invites`, and `show_online_status` from `user_preferences` without breaking current preference readers.
-3. Confirm the current `user_blocks` structure (or introduce the missing table) and outline compatibility views/backfill helpers required before the `MESSAGING_V2` flag can write-through safely.
+1. Decide on the production-ready ULID strategy (extension vs. custom function) and update the migration defaults before we run it in staging.
+2. Confirm the current `user_blocks` structure (or introduce the missing table) and outline compatibility views/backfill helpers required before the `MESSAGING_V2` flag can write-through safely.
+3. Sketch the `conversationService` read/write API surface that will sit behind `MESSAGING_V2`, including the interim dual-write to legacy tables while clients migrate.
 
 ## 1) Objectives & Scope
 **Goals**
@@ -178,3 +178,4 @@ _Next tasks:_
 
 ## Progress log
 - **2025-02-21:** Catalogued the current backend service, socket handlers, and frontend chat container that power the legacy experience, then captured the schema/service tasks needed to kick off Phase 1 of the unified messaging rollout.
+- **2025-09-22:** Drafted the Phase-1 database migration and preference view (`031_create_conversations_schema.sql`) so schema work can move into execution once ULID generation and blocklist compatibility decisions land.

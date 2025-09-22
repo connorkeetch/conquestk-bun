@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import notificationService from '../services/notificationService'
 
-var mockQuery: jest.Mock
+let mockQuery: jest.Mock
 
 jest.mock('../config/database', () => {
   mockQuery = jest.fn()
@@ -10,7 +10,7 @@ jest.mock('../config/database', () => {
   }
 })
 
-var emitNotificationToUsers: jest.Mock
+let emitNotificationToUsers: jest.Mock
 
 jest.mock('../services/realtimeNotificationService', () => {
   emitNotificationToUsers = jest.fn()

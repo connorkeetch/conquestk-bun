@@ -1,12 +1,12 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
 import { logger } from '../../utils/logger'
 import type { NotificationChannel } from '../NotificationDispatcher'
-import notificationService, {
-  type NotificationPayload,
-} from '../notificationService'
+import notificationService, { type NotificationPayload } from '../notificationService'
+
+export type WebPushService = Pick<typeof notificationService, 'isEnabled' | 'sendToUsers'>
 
 interface WebPushChannelOptions {
-  service?: typeof notificationService
+  service?: WebPushService
 }
 
 const channelLogger =
@@ -17,7 +17,7 @@ const MAX_ACTIONS = 2
 export class WebPushChannel implements NotificationChannel {
   readonly name = 'webpush' as const
 
-  private readonly service: typeof notificationService
+  private readonly service: WebPushService
 
   constructor(options: WebPushChannelOptions = {}) {
     this.service = options.service ?? notificationService
@@ -39,12 +39,17 @@ export class WebPushChannel implements NotificationChannel {
       }
     }
 
-    const userIds = event.recipients?.userIds?.filter((id) => typeof id === 'string' && id.trim().length > 0)
+    const userIds = event.recipients?.userIds?.filter(
+      (id) => typeof id === 'string' && id.trim().length > 0,
+    )
 
     if (!userIds || userIds.length === 0) {
-      channelLogger.debug('Skipping web push notification because no user recipients were provided', {
-        eventType: event.type,
-      })
+      channelLogger.debug(
+        'Skipping web push notification because no user recipients were provided',
+        {
+          eventType: event.type,
+        },
+      )
 
       return {
         channel: this.name,
@@ -104,12 +109,10 @@ export class WebPushChannel implements NotificationChannel {
       data.recipientUserIds = event.recipients.userIds
     }
 
-    const actions = event.cta
-      ?.slice(0, MAX_ACTIONS)
-      .map((cta, index) => ({
-        action: `cta-${index + 1}`,
-        title: cta.label,
-      }))
+    const actions = event.cta?.slice(0, MAX_ACTIONS).map((cta, index) => ({
+      action: `cta-${index + 1}`,
+      title: cta.label,
+    }))
 
     return {
       title: event.title,
