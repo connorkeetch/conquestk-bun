@@ -1,7 +1,14 @@
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { API_URL } from '../config'
-import { applyTheme, getStoredTheme, storeTheme, THEMES } from '../config/themes.config'
+import {
+  applyTheme,
+  getStoredTheme,
+  storeTheme,
+  THEMES,
+  PREMIUM_THEMES,
+  STANDARD_THEMES,
+} from '../config/themes.config'
 import {
   COLOR_DISPLAY_NAMES,
   COLOR_HEX_VALUES,
@@ -889,47 +896,104 @@ export default function Settings() {
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
                 <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
-                  {THEMES.map((theme) => (
-                    <button
-                      key={theme.id}
-                      onClick={() => {
-                        if (!isDisabled && setting.onChange) {
-                          setting.onChange(theme.id)
-                        }
-                        setIsThemeDropdownOpen(false)
-                      }}
-                      disabled={isDisabled}
-                      className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
-                    >
-                      {/* Color Circle */}
-                      <div
-                        className="w-6 h-6 rounded-full border-2 flex-shrink-0"
-                        style={{
-                          backgroundColor: theme.displayColor,
-                          borderColor: theme.id === 'light' ? '#e5e7eb' : theme.displayColor,
+                  <div className="p-2">
+                    <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
+                      Standard Themes
+                    </div>
+                    {STANDARD_THEMES.map((theme) => (
+                      <button
+                        key={theme.id}
+                        onClick={() => {
+                          if (!isDisabled && setting.onChange) {
+                            setting.onChange(theme.id)
+                          }
+                          setIsThemeDropdownOpen(false)
                         }}
-                      />
-                      {/* Theme Info */}
-                      <div className="flex items-center flex-grow">
-                        <span className="text-sm font-medium text-white">{theme.name}</span>
-                      </div>
+                        disabled={isDisabled}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
+                      >
+                        {/* Color Circle */}
+                        <div
+                          className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+                          style={{
+                            backgroundColor: theme.displayColor,
+                            borderColor: theme.id === 'light' ? '#e5e7eb' : theme.displayColor,
+                          }}
+                        />
+                        {/* Theme Info */}
+                        <div className="flex items-center flex-grow">
+                          <span className="text-sm font-medium text-white">{theme.name}</span>
+                        </div>
 
-                      {/* Selected Check */}
-                      {setting.defaultValue === theme.id && (
-                        <svg
-                          className="w-5 h-5 text-primary flex-shrink-0"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
+                        {/* Selected Check */}
+                        {setting.defaultValue === theme.id && (
+                          <svg
+                            className="w-5 h-5 text-primary flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {PREMIUM_THEMES.length > 0 && (
+                    <>
+                      <div className="border-t border-slate-700 my-1" />
+                      <div className="p-2">
+                        <div className="text-xs text-yellow-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
+                          <span>Premium Themes</span>
+                          <span>⭐</span>
+                        </div>
+                        {PREMIUM_THEMES.map((theme) => (
+                          <button
+                            key={theme.id}
+                            onClick={() => {
+                              if (!isDisabled && setting.onChange) {
+                                setting.onChange(theme.id)
+                              }
+                              setIsThemeDropdownOpen(false)
+                            }}
+                            disabled={isDisabled}
+                            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
+                          >
+                            {/* Color Circle */}
+                            <div
+                              className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+                              style={{
+                                backgroundColor: theme.displayColor,
+                                borderColor: theme.displayColor,
+                              }}
+                            />
+                            {/* Theme Info */}
+                            <div className="flex items-center flex-grow">
+                              <span className="text-sm font-medium text-white">{theme.name}</span>
+                            </div>
+
+                            {/* Selected Check */}
+                            {setting.defaultValue === theme.id && (
+                              <svg
+                                className="w-5 h-5 text-primary flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

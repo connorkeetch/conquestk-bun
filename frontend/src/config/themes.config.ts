@@ -6,6 +6,7 @@ export interface ThemeDefinition {
   name: string
   displayColor: string // Color for UI picker/preview
   description: string
+  isPremium?: boolean
 }
 
 export interface ThemeConfig {
@@ -41,22 +42,10 @@ export const THEMES: ThemeDefinition[] = [
     description: 'Ocean blue theme',
   },
   {
-    id: 'retrospace',
-    name: 'RetroSpace',
-    displayColor: '#0F4CDA',
-    description: 'Premium throwback theme with midnight blues and neon profile highlights',
-  },
-  {
     id: 'green',
     name: 'Green',
     displayColor: '#059669',
     description: 'Emerald green theme',
-  },
-  {
-    id: 'frontier',
-    name: '🤠 Frontier',
-    displayColor: '#C47E35',
-    description: 'Premium cowboy fantasy with saddle browns and turquoise accents',
   },
   {
     id: 'black',
@@ -71,24 +60,44 @@ export const THEMES: ThemeDefinition[] = [
     description: 'Accessibility-focused high contrast (WCAG AAA)',
   },
   {
+    id: 'retrospace',
+    name: 'RetroSpace',
+    displayColor: '#0F4CDA',
+    description: 'Premium throwback theme with midnight blues and neon profile highlights',
+    isPremium: true,
+  },
+  {
+    id: 'frontier',
+    name: 'Frontier',
+    displayColor: '#C47E35',
+    description: 'Premium cowboy fantasy with saddle browns and turquoise accents',
+    isPremium: true,
+  },
+  {
     id: 'halloween',
-    name: '🎃 Halloween',
+    name: 'Halloween',
     displayColor: '#FF6B35',
     description: 'Spooky seasonal theme with pumpkin orange and midnight purple',
+    isPremium: true,
   },
   {
     id: 'metal',
-    name: '🤘 Neon Forge',
+    name: 'Neon Forge',
     displayColor: '#F312AD',
     description: 'Premium heavy metal theme with neon magenta riffs and laser blues',
+    isPremium: true,
   },
   {
     id: 'cutlers-cheese',
-    name: "Cutler's Cheese 🧀",
+    name: "Cutler's Cheese",
     displayColor: '#F5B700',
     description: 'Premium cheddar couture with fondue glows and breadstick accents',
+    isPremium: true,
   },
 ]
+
+export const STANDARD_THEMES = THEMES.filter((theme) => !theme.isPremium)
+export const PREMIUM_THEMES = THEMES.filter((theme) => theme.isPremium)
 
 // Export configuration
 export const THEME_CONFIG: ThemeConfig = {
