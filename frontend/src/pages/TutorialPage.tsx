@@ -2,11 +2,14 @@ import { BookOpen, Gamepad2, Map, Settings, Shield, Trophy, Users, Zap } from 'l
 import type React from 'react'
 import { useState } from 'react'
 import { RANK_COLORS } from '../constants/colors'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'
   >('basics')
+  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -687,7 +690,8 @@ const TutorialPage: React.FC = () => {
                     <Users className="w-5 h-5 text-primary-soft mt-0.5" />
                     <span>
                       <strong>Game Visibility:</strong> Public (anyone can join), Private (invite
-                      code), or Tournament
+                      code)
+                      {tournamentsEnabled ? ', or Tournament' : ''}
                     </span>
                   </li>
                   <li className="flex items-start gap-2">

@@ -1,5 +1,70 @@
 import { Howl, Howler } from 'howler'
 
+const SOUND_EFFECTS = {
+  // Dice rolling sounds (rotate through multiple - reduced from 7 to 3)
+  dice: [
+    '/audio-files/11L-Dice_roll_sound_effe-1756344593515.mp3',
+    '/audio-files/11L-Dice_roll_sound_effe-1756344594793.mp3',
+    '/audio-files/11L-dice_rolling_on_tabl-1756342799425.mp3',
+  ],
+  // Turn notification sounds (rotate through multiple - reduced from 13 to 4)
+  yourturn: [
+    '/audio-files/11L-Bell_chime_for_turn_-1756343144511.mp3',
+    '/audio-files/11L-Bell_chime_for_turn_-1756343146159.mp3',
+    '/audio-files/11L-Turn_notification_so-1756344526253.mp3',
+    '/audio-files/11L-turn_notification_so-1756344686879.mp3',
+  ],
+  // Attack/Battle sounds (reduced duplicates)
+  attack: [
+    '/audio-files/11L-Cannon_fire_in_the_d-1756343009915.mp3',
+    '/audio-files/11L-Cannon_fire_in_the_d-1756343012115.mp3',
+  ],
+  battle: [
+    '/audio-files/11L-swords_clash-1756342861091.mp3',
+    '/audio-files/11L-swords_clash-1756342863185.mp3',
+  ],
+  // Victory/Achievement sounds
+  victory: [
+    '/audio-files/11L-Crowd_cheering_victo-1756343298068.mp3',
+    '/audio-files/11L-Triumphant_orchestra-1756343250021.mp3',
+  ],
+  fanfare: [
+    '/audio-files/11L-Trumpet_fanfare_shor-1756343177067.mp3',
+    '/audio-files/11L-Trumpet_fanfare_shor-1756343182421.mp3',
+  ],
+  // Game state sounds
+  gamestart: '/audio-files/11L-Bright_brass_bell_si-1756344484349.mp3',
+  capture: '/audio-files/11L-Stamp_hitting_paper_-1756343095784.mp3',
+  // Piece movement sounds (reduced from 3 to 2)
+  placetroop: [
+    '/audio-files/11L-Wooden_game_piece_be-1756343068801.mp3',
+    '/audio-files/11L-Wooden_game_piece_be-1756343070672.mp3',
+  ],
+  // UI sounds (reduced chat messages from 4 to 2)
+  message: [
+    '/audio-files/11L-Chat_message_notific-1756344550342.mp3',
+    '/audio-files/11L-Chat_message_notific-1756344552127.mp3',
+  ],
+  error: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
+  swoosh: '/audio-files/11L-Swoosh_sound_for_swi-1756344719043.mp3',
+  // Timer sounds
+  timer: '/audio-files/11L-Clock_ticking_countd-1756343124965.mp3',
+  timerslow: '/audio-files/11L-Slow_cinematic_clock-1756344723753.mp3',
+  // These are aliases for backwards compatibility
+  defeat: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
+  eliminated: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
+} as const
+
+type SoundEffectDefinitions = typeof SOUND_EFFECTS
+type SoundEffectKey = keyof SoundEffectDefinitions
+
+const EFFECT_ALIASES = {
+  turn: 'yourturn',
+} as const satisfies Record<string, SoundEffectKey>
+
+type EffectAlias = keyof typeof EFFECT_ALIASES
+type EffectName = SoundEffectKey | EffectAlias
+
 interface AudioPreferences {
   enabled: boolean
   masterVolume: number
@@ -30,67 +95,7 @@ class AudioService {
   private previousVolumes: AudioPreferences | null = null
 
   // Track which audio files are being used
-  private audioUsageTracker: Map<string, { lastUsed: Date; count: number }> = new Map()
-
-  // Sound effect definitions - mapped from actual audio files
-  private readonly SOUND_EFFECTS: Record<string, string | string[]> = {
-    // Dice rolling sounds (rotate through multiple - reduced from 7 to 3)
-    dice: [
-      '/audio-files/11L-Dice_roll_sound_effe-1756344593515.mp3',
-      '/audio-files/11L-Dice_roll_sound_effe-1756344594793.mp3',
-      '/audio-files/11L-dice_rolling_on_tabl-1756342799425.mp3',
-    ],
-    // Turn notification sounds (rotate through multiple - reduced from 13 to 4)
-    yourturn: [
-      '/audio-files/11L-Bell_chime_for_turn_-1756343144511.mp3',
-      '/audio-files/11L-Bell_chime_for_turn_-1756343146159.mp3',
-      '/audio-files/11L-Turn_notification_so-1756344526253.mp3',
-      '/audio-files/11L-turn_notification_so-1756344686879.mp3',
-    ],
-    // Attack/Battle sounds (reduced duplicates)
-    attack: [
-      '/audio-files/11L-Cannon_fire_in_the_d-1756343009915.mp3',
-      '/audio-files/11L-Cannon_fire_in_the_d-1756343012115.mp3',
-    ],
-    battle: [
-      '/audio-files/11L-swords_clash-1756342861091.mp3',
-      '/audio-files/11L-swords_clash-1756342863185.mp3',
-    ],
-    // Victory/Achievement sounds
-    victory: [
-      '/audio-files/11L-Crowd_cheering_victo-1756343298068.mp3',
-      '/audio-files/11L-Triumphant_orchestra-1756343250021.mp3',
-    ],
-    fanfare: [
-      '/audio-files/11L-Trumpet_fanfare_shor-1756343177067.mp3',
-      '/audio-files/11L-Trumpet_fanfare_shor-1756343182421.mp3',
-    ],
-    // Game state sounds
-    gamestart: '/audio-files/11L-Bright_brass_bell_si-1756344484349.mp3',
-    capture: '/audio-files/11L-Stamp_hitting_paper_-1756343095784.mp3',
-    // Piece movement sounds (reduced from 3 to 2)
-    placetroop: [
-      '/audio-files/11L-Wooden_game_piece_be-1756343068801.mp3',
-      '/audio-files/11L-Wooden_game_piece_be-1756343070672.mp3',
-    ],
-    // UI sounds (reduced chat messages from 4 to 2)
-    message: [
-      '/audio-files/11L-Chat_message_notific-1756344550342.mp3',
-      '/audio-files/11L-Chat_message_notific-1756344552127.mp3',
-    ],
-    error: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
-    swoosh: '/audio-files/11L-Swoosh_sound_for_swi-1756344719043.mp3',
-    // Timer sounds
-    timer: '/audio-files/11L-Clock_ticking_countd-1756343124965.mp3',
-    timerslow: '/audio-files/11L-Slow_cinematic_clock-1756344723753.mp3',
-    // These are aliases for backwards compatibility
-    defeat: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
-    eliminated: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
-  }
-
-  private readonly EFFECT_ALIASES: Record<string, string> = {
-    turn: 'yourturn',
-  }
+  private audioUsageTracker: Map<SoundEffectKey, { lastUsed: Date; count: number }> = new Map()
 
   // Background music tracks
   private readonly MUSIC_TRACKS = [
@@ -102,7 +107,7 @@ class AudioService {
   ]
 
   // Sound rotation indices for arrays
-  private soundIndices: Map<string, number> = new Map()
+  private soundIndices: Map<SoundEffectKey, number> = new Map()
 
   private constructor() {
     this.loadPreferences()
@@ -146,13 +151,14 @@ class AudioService {
 
   private preloadSounds(): void {
     // Preload sound effects
-    Object.entries(this.SOUND_EFFECTS).forEach(([name, pathOrPaths]) => {
+    Object.entries(SOUND_EFFECTS).forEach(([name, pathOrPaths]) => {
+      const effectName = name as SoundEffectKey
       const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths]
 
       // For arrays of sounds, preload all of them
       if (Array.isArray(pathOrPaths)) {
         paths.forEach((path, index) => {
-          const soundKey = `${name}_${index}`
+          const soundKey = `${effectName}_${index}`
           const howl = new Howl({
             src: [path],
             preload: true,
@@ -168,7 +174,7 @@ class AudioService {
           this.sounds.set(soundKey, { name: soundKey, howl, category: 'effect' })
         })
         // Initialize rotation index
-        this.soundIndices.set(name, 0)
+        this.soundIndices.set(effectName, 0)
       } else {
         // Single sound
         const howl = new Howl({
@@ -176,14 +182,14 @@ class AudioService {
           preload: true,
           volume: this.getEffectiveVolume('effect'),
           onloaderror: (id, error) => {
-            console.warn(`Failed to load sound effect ${name}:`, error)
-            this.sounds.set(name, { name, howl: null, category: 'effect' })
+            console.warn(`Failed to load sound effect ${effectName}:`, error)
+            this.sounds.set(effectName, { name: effectName, howl: null, category: 'effect' })
           },
           onload: () => {
-            console.log(`Loaded sound effect: ${name}`)
+            console.log(`Loaded sound effect: ${effectName}`)
           },
         })
-        this.sounds.set(name, { name, howl, category: 'effect' })
+        this.sounds.set(effectName, { name: effectName, howl, category: 'effect' })
       }
     })
   }
@@ -214,11 +220,17 @@ class AudioService {
   }
 
   // Public methods
-  public playEffect(effectName: string): void {
+  public playEffect(effectName: EffectName): void {
     if (!this.preferences.enabled || this.isMuted || !this.isTabFocused) return
 
     const resolvedEffectName = this.resolveEffectName(effectName)
-    const effectConfig = this.SOUND_EFFECTS[resolvedEffectName]
+
+    if (!resolvedEffectName) {
+      console.warn(`Sound effect '${effectName}' not found`)
+      return
+    }
+
+    const effectConfig = SOUND_EFFECTS[resolvedEffectName]
 
     if (!effectConfig) {
       console.warn(
@@ -257,13 +269,22 @@ class AudioService {
     }
   }
 
-  private resolveEffectName(effectName: string): string {
+  private resolveEffectName(effectName: EffectName): SoundEffectKey | null {
     const normalizedEffectName = effectName.toLowerCase()
-    return this.EFFECT_ALIASES[normalizedEffectName] || normalizedEffectName
+
+    if (normalizedEffectName in EFFECT_ALIASES) {
+      return EFFECT_ALIASES[normalizedEffectName as EffectAlias]
+    }
+
+    if (normalizedEffectName in SOUND_EFFECTS) {
+      return normalizedEffectName as SoundEffectKey
+    }
+
+    return null
   }
 
   // Track audio usage for debugging/analytics
-  private trackAudioUsage(audioName: string): void {
+  private trackAudioUsage(audioName: SoundEffectKey): void {
     const existing = this.audioUsageTracker.get(audioName)
     if (existing) {
       existing.lastUsed = new Date()
@@ -277,21 +298,21 @@ class AudioService {
   }
 
   // Get audio usage statistics
-  public getAudioUsageStats(): Map<string, { lastUsed: Date; count: number }> {
+  public getAudioUsageStats(): Map<SoundEffectKey, { lastUsed: Date; count: number }> {
     return new Map(this.audioUsageTracker)
   }
 
   // Get list of unused audio files (for debugging)
-  public getUnusedAudioFiles(): string[] {
-    const allSoundNames = new Set<string>()
+  public getUnusedAudioFiles(): SoundEffectKey[] {
+    const allSoundNames = new Set<SoundEffectKey>()
 
     // Add all defined sound effect names
-    Object.keys(this.SOUND_EFFECTS).forEach((name) => {
-      allSoundNames.add(name)
+    Object.keys(SOUND_EFFECTS).forEach((name) => {
+      allSoundNames.add(name as SoundEffectKey)
     })
 
     // Find which ones haven't been used
-    const unused: string[] = []
+    const unused: SoundEffectKey[] = []
     allSoundNames.forEach((name) => {
       if (!this.audioUsageTracker.has(name)) {
         unused.push(name)

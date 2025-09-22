@@ -1,6 +1,8 @@
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { FEATURE_FLAGS } from '../../constants/featureFlags'
+import { useFeatureFlag } from '../../hooks/useFeatureFlag'
 
 interface NavItem {
   path: string
@@ -21,104 +23,114 @@ const PrimaryNav: React.FC = () => {
   const location = useLocation()
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
 
   // Navigation items with dropdowns
-  const navItems: NavItem[] = [
-    {
-      path: '/dashboard',
-      label: 'Dashboard',
-      icon: '🏠',
-    },
-    {
-      path: '/play',
-      label: 'Play',
-      icon: '🎮',
-      dropdown: [
-        { path: '/play/casual', label: 'Casual', icon: '🎮', description: 'Find a relaxed match' },
-        { path: '/play/ranked', label: 'Ranked', icon: '🏆', description: 'Competitive play' },
-        {
-          path: '/create',
-          label: 'Create Lobby',
-          icon: '➕',
-          description: 'Host custom game',
-        },
-        {
-          path: '/lobby',
-          label: 'Browse Lobbies',
-          icon: '🔍',
-          description: 'Join existing games',
-        },
-        {
-          path: '/play/ai',
-          label: 'vs AI',
-          icon: '🤖',
-          description: 'Single player practice',
-          comingSoon: true,
-        },
-        { path: '/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
-      ],
-    },
-    {
-      path: '/maps',
-      label: 'Maps',
-      icon: '🗺️',
-      dropdown: [
-        {
-          path: '/maps/official',
-          label: 'Official Maps',
-          icon: '🌎',
-          description: 'Classic Risk territories',
-        },
-        {
-          path: '/maps/featured',
-          label: 'Featured',
-          icon: '⭐',
-          description: 'Community highlights',
-        },
-        { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
-        { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
-        { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
-        { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' },
-      ],
-    },
-    {
-      path: '/community',
-      label: 'Community',
-      icon: '👥',
-      dropdown: [
-        {
-          path: '/community/leaderboards',
-          label: 'Leaderboards',
-          icon: '🏆',
-          description: 'Top players',
-        },
-        {
-          path: '/community/friends',
-          label: 'Friends',
-          icon: '👫',
-          description: 'Friend management',
-        },
-        {
-          path: '/community/chat',
-          label: 'Chat Rooms',
-          icon: '💬',
-          description: 'General discussion',
-        },
-        {
-          path: '/community/news',
-          label: 'News',
-          icon: '📰',
-          description: 'Updates & announcements',
-        },
-        {
-          path: '/community/support',
-          label: 'Support',
-          icon: '🆘',
-          description: 'Help & feedback',
-        },
-      ],
-    },
-  ]
+  const navItems: NavItem[] = useMemo(() => {
+    const playDropdown: DropdownItem[] = [
+      { path: '/play/casual', label: 'Casual', icon: '🎮', description: 'Find a relaxed match' },
+      { path: '/play/ranked', label: 'Ranked', icon: '🏆', description: 'Competitive play' },
+      {
+        path: '/create',
+        label: 'Create Lobby',
+        icon: '➕',
+        description: 'Host custom game',
+      },
+      {
+        path: '/lobby',
+        label: 'Browse Lobbies',
+        icon: '🔍',
+        description: 'Join existing games',
+      },
+      { path: '/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
+    ]
+
+    if (aiEnabled) {
+      playDropdown.splice(4, 0, {
+        path: '/play/ai',
+        label: 'vs AI',
+        icon: '🤖',
+        description: 'Single player practice',
+        comingSoon: true,
+      })
+    }
+
+    const nav: NavItem[] = [
+      {
+        path: '/dashboard',
+        label: 'Dashboard',
+        icon: '🏠',
+      },
+      {
+        path: '/play',
+        label: 'Play',
+        icon: '🎮',
+        dropdown: playDropdown,
+      },
+      {
+        path: '/maps',
+        label: 'Maps',
+        icon: '🗺️',
+        dropdown: [
+          {
+            path: '/maps/official',
+            label: 'Official Maps',
+            icon: '🌎',
+            description: 'Classic Risk territories',
+          },
+          {
+            path: '/maps/featured',
+            label: 'Featured',
+            icon: '⭐',
+            description: 'Community highlights',
+          },
+          { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
+          { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
+          { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
+          { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' },
+        ],
+      },
+      {
+        path: '/community',
+        label: 'Community',
+        icon: '👥',
+        dropdown: [
+          {
+            path: '/community/leaderboards',
+            label: 'Leaderboards',
+            icon: '🏆',
+            description: 'Top players',
+          },
+          {
+            path: '/community/friends',
+            label: 'Friends',
+            icon: '👫',
+            description: 'Friend management',
+          },
+          {
+            path: '/community/chat',
+            label: 'Chat Rooms',
+            icon: '💬',
+            description: 'General discussion',
+          },
+          {
+            path: '/community/news',
+            label: 'News',
+            icon: '📰',
+            description: 'Updates & announcements',
+          },
+          {
+            path: '/community/support',
+            label: 'Support',
+            icon: '🆘',
+            description: 'Help & feedback',
+          },
+        ],
+      },
+    ]
+
+    return nav
+  }, [aiEnabled])
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -8,7 +8,9 @@ import {
   type PlayerColor,
   PREMIUM_PLAYER_COLORS,
 } from '../constants/colors'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
@@ -291,6 +293,7 @@ const ProfilePage: React.FC = () => {
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
   const requestControllerRef = useRef<AbortController | null>(null)
+  const profileExtrasEnabled = useFeatureFlag(FEATURE_FLAGS.PROFILE_EXTRAS)
 
   const isOwnProfile = currentUser?.username === username
 
@@ -503,12 +506,23 @@ const ProfilePage: React.FC = () => {
     ratingToNextRank,
   } = rankVisuals
 
+  useEffect(() => {
+    if (!profileExtrasEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
+      setActiveTab('overview')
+    }
+  }, [profileExtrasEnabled, activeTab])
+
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
     { id: 'stats', label: 'Statistics', icon: '📊', available: true },
-    { id: 'matches', label: 'Matches', icon: '🎮', available: false },
-    { id: 'achievements', label: 'Achievements', icon: '🏆', available: false },
   ]
+
+  if (profileExtrasEnabled) {
+    tabs.push(
+      { id: 'matches', label: 'Matches', icon: '🎮', available: true },
+      { id: 'achievements', label: 'Achievements', icon: '🏆', available: true },
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
@@ -819,33 +833,40 @@ const ProfilePage: React.FC = () => {
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-8 border-b border-border overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              type="button"
-              key={tab.id}
-              onClick={() => tab.available && setActiveTab(tab.id)}
-              disabled={!tab.available}
-              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap border-b-2 ${
-                activeTab === tab.id
-                  ? 'text-white'
-                  : tab.available
-                    ? 'text-muted hover:text-white'
-                    : 'text-muted/50 cursor-not-allowed'
-              }`}
-              style={
-                activeTab === tab.id
-                  ? {
-                      color: rankAccentColor,
-                      borderBottomColor: rankAccentColor,
-                    }
-                  : undefined
-              }
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-              {!tab.available && <span className="text-xs">(Soon)</span>}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const isPreviewTab = tab.id === 'matches' || tab.id === 'achievements'
+
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                onClick={() => tab.available && setActiveTab(tab.id)}
+                disabled={!tab.available}
+                className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap border-b-2 ${
+                  activeTab === tab.id
+                    ? 'text-white'
+                    : tab.available
+                      ? 'text-muted hover:text-white'
+                      : 'text-muted/50 cursor-not-allowed'
+                }`}
+                style={
+                  activeTab === tab.id
+                    ? {
+                        color: rankAccentColor,
+                        borderBottomColor: rankAccentColor,
+                      }
+                    : undefined
+                }
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                {!tab.available && <span className="text-xs">(Soon)</span>}
+                {tab.available && profileExtrasEnabled && isPreviewTab && (
+                  <span className="text-xs text-muted">(Preview)</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Tab Content */}
@@ -957,7 +978,7 @@ const ProfilePage: React.FC = () => {
             />
           )}
 
-          {activeTab === 'matches' && (
+          {profileExtrasEnabled && activeTab === 'matches' && (
             <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🎮</div>
               <h2 className="text-2xl font-bold text-white mb-2">Match History Coming Soon</h2>
@@ -967,7 +988,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'achievements' && (
+          {profileExtrasEnabled && activeTab === 'achievements' && (
             <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🏆</div>
               <h2 className="text-2xl font-bold text-white mb-2">Achievements Coming Soon</h2>

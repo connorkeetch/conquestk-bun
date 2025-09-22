@@ -12,6 +12,9 @@ export const FEATURE_FLAGS = {
 
   // UI Features
   HOLIDAY_THEMES: 'ui_holiday_themes',
+  MAP_POLYGON_EDITOR: 'ui_map_polygon_editor',
+  TOURNAMENT_SURFACES: 'ui_tournaments',
+  PROFILE_EXTRAS: 'ui_profile_extras',
 
   // Experimental Features
   AI_PLAYERS: 'experimental_ai_players',

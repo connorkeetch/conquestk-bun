@@ -2,6 +2,8 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppSelector } from '../hooks/redux'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 // import Breadcrumb from '../components/Breadcrumb';
 
@@ -33,6 +35,7 @@ interface UserStats {
 
 const Dashboard: React.FC = () => {
   const { user } = useAppSelector((state) => state.auth)
+  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [recentGames, setRecentGames] = useState<RecentGame[]>([])
   const [friendsActivity, setFriendsActivity] = useState<FriendActivity[]>([])
@@ -93,12 +96,12 @@ const Dashboard: React.FC = () => {
       {
         id: '3',
         username: 'ForestWarden',
-        activity: 'Joined a tournament',
+        activity: tournamentsEnabled ? 'Joined a tournament' : 'Joined a ranked match',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
         online: false,
       },
     ])
-  }, [])
+  }, [tournamentsEnabled])
 
   const getTimeAgo = (date: Date) => {
     const now = new Date()
