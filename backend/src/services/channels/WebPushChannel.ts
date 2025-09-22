@@ -42,14 +42,13 @@ export class WebPushChannel implements NotificationChannel {
     const userIds = event.recipients?.userIds?.filter((id) => typeof id === 'string' && id.trim().length > 0)
 
     if (!userIds || userIds.length === 0) {
-      channelLogger.debug('No user recipients specified for web push notification', {
+      channelLogger.debug('Skipping web push notification because no user recipients were provided', {
         eventType: event.type,
       })
 
       return {
         channel: this.name,
-        ok: false,
-        error: 'No user recipients specified',
+        ok: true,
       }
     }
 

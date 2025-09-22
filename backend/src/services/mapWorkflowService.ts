@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { query } from '../config/database'
 import type {
   AdminNotification,
@@ -18,6 +19,11 @@ import { adminService } from './adminService'
 import { mapService } from './mapService'
 import { mapStagingService } from './mapStagingService'
 import notificationService from './notificationService'
+import { notificationDispatcher } from './NotificationDispatcher'
+import {
+  buildMapWorkflowNotification,
+  type MapWorkflowNotificationInput,
+} from './notifications/mapWorkflowNotifications'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
@@ -376,6 +382,15 @@ export class MapWorkflowService {
           },
         })
       }
+
+      await this.dispatchMapWorkflowNotification({
+        status: 'approved',
+        mapId,
+        mapName,
+        adminUserId: adminId,
+        creatorUserId: creatorId ?? undefined,
+        notes,
+      })
     } catch (error) {
       logger.error('Error approving map:', error)
       throw error
@@ -434,6 +449,15 @@ export class MapWorkflowService {
           },
         })
       }
+
+      await this.dispatchMapWorkflowNotification({
+        status: 'rejected',
+        mapId,
+        mapName,
+        adminUserId: adminId,
+        creatorUserId: creatorId ?? undefined,
+        rejectionReason: reason,
+      })
     } catch (error) {
       logger.error('Error rejecting map:', error)
       throw error
@@ -825,6 +849,27 @@ export class MapWorkflowService {
     } catch (error) {
       logger.error('Error toggling map featured status:', error)
       throw error
+    }
+  }
+
+  /**
+   * Helper: Dispatch map workflow notification via external channels
+   */
+  private async dispatchMapWorkflowNotification(
+    input: MapWorkflowNotificationInput,
+  ): Promise<void> {
+    try {
+      const event = buildMapWorkflowNotification(input)
+      await notificationDispatcher.dispatch({
+        ...event,
+        id: randomUUID(),
+      })
+    } catch (error) {
+      logger.error('Error dispatching map workflow notification', {
+        error,
+        mapId: input.mapId,
+        status: input.status,
+      })
     }
   }
 

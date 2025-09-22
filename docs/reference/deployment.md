@@ -99,6 +99,26 @@ Configure UptimeRobot or similar:
 - 5-minute intervals
 - Alert on 2+ consecutive failures
 
+## 🔔 Notifications
+
+### Manual Dispatch CLI
+
+Use the backend utility to verify Slack/Discord/WebPush routing without shipping new code:
+
+```bash
+cd backend
+npm run notify -- \
+  --type map.workflow.approved \
+  --title "Map Approved" \
+  --body '"Aurora Isles" cleared review' \
+  --user <creator-user-id>
+```
+
+- Requires `DATABASE_URL`, Slack/Discord webhook env vars, and VAPID keys to be present.
+- Add `--role admin` (repeatable) to target all administrators without listing IDs.
+- Additional flags: `--severity <info|warning|critical>`, `--context key=value`, `--cta label=url`.
+- Use staging webhooks first; confirm payload formatting before enabling production secrets.
+
 ## 🔄 CI/CD Pipeline
 
 GitHub Actions (`.github/workflows/deploy.yml`) automatically:

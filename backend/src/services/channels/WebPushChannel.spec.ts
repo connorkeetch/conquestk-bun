@@ -48,7 +48,7 @@ describe('WebPushChannel', () => {
     expect(sendToUsersMock).not.toHaveBeenCalled()
   })
 
-  it('returns error when no user recipients are provided', async () => {
+  it('gracefully skips when no user recipients are provided', async () => {
     const { service, sendToUsersMock } = createMockService()
     const channel = new WebPushChannel({ service })
 
@@ -59,8 +59,7 @@ describe('WebPushChannel', () => {
 
     const result = await channel.send(eventWithoutRecipients)
 
-    expect(result.ok).toBe(false)
-    expect(result.error).toBe('No user recipients specified')
+    expect(result.ok).toBe(true)
     expect(sendToUsersMock).not.toHaveBeenCalled()
   })
 

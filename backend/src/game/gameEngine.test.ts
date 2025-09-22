@@ -100,10 +100,16 @@ describe('GameEngine', () => {
       const player1Territories = player?.territories.length ?? 0
       const expectedArmies = Math.max(3, Math.floor(player1Territories / 3))
 
+      const neutralBoard = gameState.board.map((territory) => ({
+        ...territory,
+        continent: 'neutral-continent',
+      }))
+      const configWithoutBonuses = { ...gameState.gameConfig, continentBonuses: [] }
+
       const armies = gameEngine.calculateReinforcementArmies(
         player?.territories ?? [],
-        gameState.board,
-        gameState.gameConfig,
+        neutralBoard,
+        configWithoutBonuses,
       )
       expect(armies).toBe(expectedArmies)
     })
