@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { API_URL } from '../config'
 import { applyTheme, getStoredTheme, storeTheme, THEMES } from '../config/themes.config'
 import {
@@ -37,6 +37,7 @@ function ColorDropdown({
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -58,19 +59,20 @@ function ColorDropdown({
       >
         {/* Color Hexagon */}
         <div className="relative">
-          <svg width="24" height="24" viewBox="0 0 24 24">
+          <svg width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby={titleId}>
+            <title id={titleId}>Selected color swatch</title>
             <polygon
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
                 fill:
-                  COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient')
+                  COLOR_HEX_VALUES[value]?.includes('gradient')
                     ? 'url(#gradient)'
                     : COLOR_HEX_VALUES[value],
                 stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
                 strokeWidth: '1.5',
               }}
             />
-            {COLOR_HEX_VALUES[value] && COLOR_HEX_VALUES[value].includes('gradient') && (
+            {COLOR_HEX_VALUES[value]?.includes('gradient') && (
               <defs>
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop
@@ -90,8 +92,14 @@ function ColorDropdown({
             )}
           </svg>
           {value === 'pulse' && (
-            <div className="absolute inset-0 animate-pulse">
-              <svg width="24" height="24" viewBox="0 0 24 24">
+            <div className="absolute inset-0 animate-pulse" aria-hidden="true">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <polygon
                   points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                   fill="none"
@@ -115,6 +123,9 @@ function ColorDropdown({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          role="img"
+          aria-hidden="true"
+          focusable="false"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -142,19 +153,26 @@ function ColorDropdown({
                   }`}
                 >
                   {/* Color Hexagon */}
-                  <svg width="20" height="20" viewBox="0 0 24 24">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    role="img"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
                     <polygon
                       points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                       style={{
                         fill:
-                          COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')
-                            ? 'url(#gradient-' + color + ')'
+                          COLOR_HEX_VALUES[color]?.includes('gradient')
+                            ? `url(#gradient-${color})`
                             : COLOR_HEX_VALUES[color],
                         stroke: isSelected ? '#ffffff' : '#ffffff30',
                         strokeWidth: '1.5',
                       }}
                     />
-                    {COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient') && (
+                    {COLOR_HEX_VALUES[color]?.includes('gradient') && (
                       <defs>
                         <linearGradient
                           id={`gradient-${color}`}
@@ -187,7 +205,14 @@ function ColorDropdown({
 
                   {/* Selected Check */}
                   {isSelected && (
-                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-4 h-4 text-green-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      role="img"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -224,20 +249,27 @@ function ColorDropdown({
                 >
                   {/* Color Hexagon */}
                   <div className="relative">
-                    <svg width="20" height="20" viewBox="0 0 24 24">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      role="img"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
                       <polygon
                         points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                         style={{
                           fill:
-                            COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient')
-                              ? 'url(#gradient-' + color + ')'
+                            COLOR_HEX_VALUES[color]?.includes('gradient')
+                              ? `url(#gradient-${color})`
                               : COLOR_HEX_VALUES[color],
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
                           filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
-                      {COLOR_HEX_VALUES[color] && COLOR_HEX_VALUES[color].includes('gradient') && (
+                      {COLOR_HEX_VALUES[color]?.includes('gradient') && (
                         <defs>
                           <linearGradient
                             id={`gradient-${color}`}
@@ -254,8 +286,14 @@ function ColorDropdown({
                       )}
                     </svg>
                     {color === 'pulse' && (
-                      <div className="absolute inset-0 animate-pulse">
-                        <svg width="20" height="20" viewBox="0 0 24 24">
+                      <div className="absolute inset-0 animate-pulse" aria-hidden="true">
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
                           <polygon
                             points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                             fill="none"
@@ -275,7 +313,14 @@ function ColorDropdown({
 
                   {/* Selected Check */}
                   {isSelected && (
-                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-4 h-4 text-green-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      role="img"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -1442,6 +1487,11 @@ export default function Settings() {
         key: 'gameEnded',
         label: 'Game Ended',
         description: "When a game you're in finishes",
+      },
+      {
+        key: 'directMessages',
+        label: 'Direct Messages',
+        description: 'When another player sends you a direct message',
       },
     ]
 

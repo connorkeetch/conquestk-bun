@@ -90,6 +90,12 @@ interface PushSubscriptionRow {
   failure_count: number
 }
 
+interface DMNotificationPreferenceRow {
+  notification_enabled: boolean | null
+  dm_notifications_browser: boolean | null
+  dm_notifications_email: boolean | null
+}
+
 type WebPushError = {
   statusCode?: number
 }
@@ -398,6 +404,33 @@ class NotificationService {
     )
   }
 
+  async shouldSendDMPush(userId: string): Promise<boolean> {
+    try {
+      const result = await query<DMNotificationPreferenceRow>(
+        `SELECT notification_enabled, dm_notifications_browser, dm_notifications_email
+         FROM user_preferences
+         WHERE user_id = $1`,
+        [userId],
+      )
+
+      if (result.rows.length === 0) {
+        return true
+      }
+
+      const prefs = result.rows[0]
+      const notificationsEnabled = prefs.notification_enabled ?? true
+      const dmBrowserEnabled = prefs.dm_notifications_browser ?? true
+
+      return notificationsEnabled && dmBrowserEnabled
+    } catch (error) {
+      logger.error('Failed to load DM notification preferences', {
+        userId,
+        error,
+      })
+      return true
+    }
+  }
+
   async notifyGameStart(gameId: string, playerIds: string[]): Promise<void> {
     const payload: NotificationPayload = {
       title: '🎮 Game Started!',
@@ -622,9 +655,7 @@ class NotificationService {
       ],
     )
 
-    emitNotificationToUsers([
-      userId,
-    ], {
+    emitNotificationToUsers([userId], {
       id,
       type: options.type,
       title: options.title,

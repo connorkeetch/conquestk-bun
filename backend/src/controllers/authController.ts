@@ -634,8 +634,17 @@ export class AuthController {
 
       // Upsert user preferences
       const updateQuery = `
-        INSERT INTO user_preferences (user_id, theme, notification_enabled, show_online_status, direct_messages, preferred_color)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO user_preferences (
+          user_id,
+          theme,
+          notification_enabled,
+          show_online_status,
+          direct_messages,
+          preferred_color,
+          dm_notifications_browser,
+          dm_notifications_email
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (user_id) 
         DO UPDATE SET 
           theme = COALESCE(EXCLUDED.theme, user_preferences.theme),
@@ -643,11 +652,20 @@ export class AuthController {
           show_online_status = COALESCE(EXCLUDED.show_online_status, user_preferences.show_online_status),
           direct_messages = COALESCE(EXCLUDED.direct_messages, user_preferences.direct_messages),
           preferred_color = COALESCE(EXCLUDED.preferred_color, user_preferences.preferred_color),
+          dm_notifications_browser = COALESCE(EXCLUDED.dm_notifications_browser, user_preferences.dm_notifications_browser),
+          dm_notifications_email = COALESCE(EXCLUDED.dm_notifications_email, user_preferences.dm_notifications_email),
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `
 
       // Prepare the data for storage - use defaults if null
+      const notifications = settings.notifications ?? {}
+      const dmNotificationPrefs = notifications.directMessages ?? {}
+      const dmBrowserPref =
+        typeof dmNotificationPrefs.browser === 'boolean' ? dmNotificationPrefs.browser : true
+      const dmEmailPref =
+        typeof dmNotificationPrefs.email === 'boolean' ? dmNotificationPrefs.email : false
+
       const result = await query(updateQuery, [
         userId,
         settings.theme || 'dark', // Default theme
@@ -655,6 +673,8 @@ export class AuthController {
         settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : true,
         settings.directMessages || 'friends',
         settings.preferredColor || '#DC2626',
+        dmBrowserPref,
+        dmEmailPref,
       ])
 
       logger.info('User settings updated:', { userId, settings: Object.keys(settings) })
