@@ -58,6 +58,8 @@ const {
   getConversationDetail,
   getUnreadSummary,
   markConversationRead,
+  leaveConversation,
+  removeConversationMember,
   sendMessage,
 } = require('../services/conversationService') as typeof import('../services/conversationService')
 
@@ -516,6 +518,146 @@ describe('conversationService', () => {
     expect(added[0].userId).toBe('new-user')
     expect(mockAssertCanInviteToGroup).toHaveBeenCalledWith('owner-1', 'new-user')
     expect(mockIo.to).toHaveBeenCalledWith('user:new-user')
+  })
+
+  it('allows owners to leave after promoting next member', async () => {
+    const joinedAt = new Date('2025-09-22T08:00:00Z')
+
+    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+      const clientQuery = jest.fn()
+      clientQuery
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 'owner-1', role: 'owner', joined_at: joinedAt, shadow_muted: false },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 'member-2', role: 'member', joined_at: joinedAt, shadow_muted: false },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      await handler({ query: clientQuery })
+    })
+
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-77',
+            kind: 'group',
+            title: 'Alliance',
+            created_by: 'owner-1',
+            created_at: joinedAt,
+            updated_at: joinedAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-77',
+            kind: 'group',
+            title: 'Alliance',
+            created_by: 'owner-1',
+            created_at: joinedAt,
+            updated_at: joinedAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { user_id: 'member-2', role: 'owner', joined_at: joinedAt, shadow_muted: false },
+        ],
+        rowCount: 1,
+      })
+
+    await leaveConversation('conv-77', 'owner-1')
+
+    expect(mockIo.to).toHaveBeenCalledWith('user:member-2')
+  })
+
+  it('allows admins to remove members', async () => {
+    const joinedAt = new Date('2025-09-22T09:00:00Z')
+
+    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+      const clientQuery = jest.fn()
+      clientQuery
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 'admin-1', role: 'admin', joined_at: joinedAt, shadow_muted: false },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 'member-3', role: 'member', joined_at: joinedAt, shadow_muted: false },
+          ],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      await handler({ query: clientQuery })
+    })
+
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-88',
+            kind: 'group',
+            title: 'War Room',
+            created_by: 'owner-2',
+            created_at: joinedAt,
+            updated_at: joinedAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-88',
+            kind: 'group',
+            title: 'War Room',
+            created_by: 'owner-2',
+            created_at: joinedAt,
+            updated_at: joinedAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { user_id: 'admin-1', role: 'admin', joined_at: joinedAt, shadow_muted: false },
+          { user_id: 'owner-2', role: 'owner', joined_at: joinedAt, shadow_muted: false },
+        ],
+        rowCount: 2,
+      })
+
+    await removeConversationMember({ actorId: 'admin-1', conversationId: 'conv-88', targetUserId: 'member-3' })
+
+    expect(mockIo.to).toHaveBeenCalledWith('user:owner-2')
   })
 
   it('propagates policy errors from ensureDirectConversation', async () => {

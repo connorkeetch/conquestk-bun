@@ -17,6 +17,8 @@ import {
   getConversationDetail,
   getUnreadSummary,
   markConversationRead,
+  leaveConversation,
+  removeConversationMember,
   sendMessage,
 } from '../services/conversationService'
 import { handleRouteError } from '../utils/routeErrorHandler'
@@ -208,6 +210,47 @@ router.post(
 
       handleRouteError(error, req, 'Failed to update conversation members')
       return res.status(500).json({ error: 'Failed to update conversation members' })
+    }
+  },
+)
+
+router.post('/conversations/:conversationId/leave', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params
+    await leaveConversation(conversationId, req.userId)
+    return res.status(200).json({ success: true })
+  } catch (error) {
+    if (error instanceof ConversationError) {
+      const status = mapConversationErrorToStatus(error)
+      return res.status(status).json({ error: error.message, code: error.code })
+    }
+
+    handleRouteError(error, req, 'Failed to leave conversation')
+    return res.status(500).json({ error: 'Failed to leave conversation' })
+  }
+})
+
+router.delete(
+  '/conversations/:conversationId/members/:memberId',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { conversationId, memberId } = req.params
+      await removeConversationMember({
+        actorId: req.userId,
+        conversationId,
+        targetUserId: memberId,
+      })
+
+      return res.status(200).json({ success: true })
+    } catch (error) {
+      if (error instanceof ConversationError) {
+        const status = mapConversationErrorToStatus(error)
+        return res.status(status).json({ error: error.message, code: error.code })
+      }
+
+      handleRouteError(error, req, 'Failed to remove conversation member')
+      return res.status(500).json({ error: 'Failed to remove conversation member' })
     }
   },
 )
