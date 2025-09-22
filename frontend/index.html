@@ -11,7 +11,20 @@
       // Load theme immediately to prevent flash
       ;(function () {
         try {
-          const validThemes = ['default', 'red', 'violet', 'blue', 'retrospace', 'green', 'frontier', 'black', 'highcontrast', 'halloween', 'metal']
+          const validThemes = [
+            'default',
+            'red',
+            'violet',
+            'blue',
+            'retrospace',
+            'green',
+            'frontier',
+            'black',
+            'highcontrast',
+            'halloween',
+            'metal',
+            'cutlers-cheese',
+          ]
           const storedTheme = localStorage.getItem('colorTheme') || 'default'
 
           // Validate and apply theme

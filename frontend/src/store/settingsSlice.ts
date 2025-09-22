@@ -8,10 +8,14 @@ export type ColorTheme =
   | 'violet'
   | 'red'
   | 'blue'
+  | 'retrospace'
   | 'green'
+  | 'frontier'
   | 'black'
+  | 'highcontrast'
   | 'halloween'
   | 'metal'
+  | 'cutlers-cheese'
 export type StyleTheme = 'modern' | 'cowboy' | 'myspace' | 'minimal' | 'gaming'
 export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy compatibility
 

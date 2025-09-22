@@ -77,6 +77,7 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
 | halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
 | metal | Magenta (#F312AD) | 🤘 Premium heavy metal theme with neon lights |
+| cutlers-cheese | Cheddar Gold (#F5B700) | 🧀 Premium dairy reverie with bubbling fondue ambience |
 
 ## How Theme Switching Works
 
@@ -200,7 +201,22 @@ For UI display purposes only:
 ### 3. Update Valid Themes in themeLoader.ts
 Add to the validThemes array:
 ```javascript
-const validThemes = ['default', 'dark', 'red', 'violet', 'blue', 'retrospace', 'green', 'black', 'highcontrast', 'halloween', 'mytheme'];
+const validThemes = [
+  'default',
+  'dark',
+  'red',
+  'violet',
+  'blue',
+  'retrospace',
+  'green',
+  'frontier',
+  'black',
+  'highcontrast',
+  'halloween',
+  'metal',
+  'cutlers-cheese',
+  'mytheme',
+];
 ```
 
 ## Best Practices

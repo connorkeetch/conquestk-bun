@@ -82,6 +82,12 @@ export const THEMES: ThemeDefinition[] = [
     displayColor: '#F312AD',
     description: 'Premium heavy metal theme with neon magenta riffs and laser blues',
   },
+  {
+    id: 'cutlers-cheese',
+    name: "Cutler's Cheese 🧀",
+    displayColor: '#F5B700',
+    description: 'Premium cheddar couture with fondue glows and breadstick accents',
+  },
 ]
 
 // Export configuration
