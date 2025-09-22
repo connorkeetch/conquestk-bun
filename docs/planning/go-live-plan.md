@@ -78,14 +78,14 @@ Go Live is tentatively set for Oct 1, 2025
 ## Epic B — Security & Map Authoring Workflow
 ### B1. Enforce map ownership & permissions (incl. approval/versioning)
 - **Priority:** P0 • **Tags:** [be][sec]
-- **Status:** ✅ Completed (March 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Continent/territory/adjacency/version routes allow any authenticated user to mutate any map; approval controller lacks authorization.
 - **Acceptance criteria:**
   - Permission model documented and enforced for creator, collaborator, admin.
   - Every mutate route returns 403 to non-owners; Supertest covers IDOR attempts.
   - Approval/rejection requires appropriate role and writes audit logs (actor, timestamp, before/after).
 - _Implementation notes (September 2025): Map collaborator roles (`editor`, `viewer`) now back the permission checks; creator/admin retain implicit edit rights and approvals capture before/after deltas in `admin_activity_logs`._
-- _Progress (March 2026): Map workflow + approval routes require `map_approval` admin permission, enforce `mapPermissionService` for submissions and history reads, log before/after snapshots to `admin_activity_logs`, and ship Supertests for owner vs intruder flows across REST surfaces._
+- _Progress (September 2025): Map workflow + approval routes require `map_approval` admin permission, enforce `mapPermissionService` for submissions and history reads, log before/after snapshots to `admin_activity_logs`, and ship Supertests for owner vs intruder flows across REST surfaces._
 
 ### B2. Creator & reviewer notifications (real fan-out)
 - **Priority:** P1 (upgrade pieces that block workflow sooner) • **Tags:** [be][ws][fe][ops]
