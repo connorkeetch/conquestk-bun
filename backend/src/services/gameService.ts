@@ -203,15 +203,17 @@ export class GameService {
     await gameStateCache.setGameState(roomId, this.serializeGameState(gameState))
 
     if (notificationService.isEnabled()) {
-      notificationService.notifyGameStart(
-        roomId,
-        players.map((player) => player.userId),
-      ).catch((error) => {
-        logger.warn('Failed to send game start push notifications', {
+      notificationService
+        .notifyGameStart(
           roomId,
-          error: error instanceof Error ? error.message : error,
+          players.map((player) => player.userId),
+        )
+        .catch((error) => {
+          logger.warn('Failed to send game start push notifications', {
+            roomId,
+            error: error instanceof Error ? error.message : error,
+          })
         })
-      })
     }
 
     logger.info(`Game initialized for room ${roomId} with ${players.length} players`)

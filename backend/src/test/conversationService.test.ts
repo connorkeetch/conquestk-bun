@@ -4,13 +4,17 @@ process.env.DATABASE_URL =
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 
 const mockQuery = jest.fn()
-const mockTransaction = jest.fn()
-
 jest.mock('../config/database', () => ({
   __esModule: true,
   query: mockQuery,
   transaction: jest.fn(),
 }))
+
+type MockTransactionClient = {
+  query: jest.Mock
+}
+
+type TransactionHandler<T = unknown> = (client: MockTransactionClient) => Promise<T>
 
 const mockAssertCanInviteToGroup = jest.fn()
 const mockAssertCanSendDirectMessage = jest.fn()
@@ -44,13 +48,12 @@ jest.mock('../services/socketRegistry', () => ({
 }))
 
 const databaseModule = require('../config/database') as { transaction: jest.Mock }
-databaseModule.transaction.mockImplementation(async (handler: (client: { query: jest.Mock }) => Promise<any>) => {
+databaseModule.transaction.mockImplementation(async (handler: TransactionHandler) => {
   const client = { query: jest.fn() }
   return handler(client)
 })
 
 const {
-  ConversationError,
   addMembersToConversation,
   createGroupConversation,
   ensureDirectConversation,
@@ -63,12 +66,14 @@ const {
   sendMessage,
 } = require('../services/conversationService') as typeof import('../services/conversationService')
 
-const socketRegistryModule = require('../services/socketRegistry') as { tryGetSocketServer: jest.Mock }
+const socketRegistryModule = require('../services/socketRegistry') as {
+  tryGetSocketServer: jest.Mock
+}
 
 const resetMocks = () => {
   mockQuery.mockReset()
   databaseModule.transaction.mockReset()
-  databaseModule.transaction.mockImplementation(async (handler: (client: { query: jest.Mock }) => Promise<any>) => {
+  databaseModule.transaction.mockImplementation(async (handler: TransactionHandler) => {
     const client = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }) }
     return handler(client)
   })
@@ -91,7 +96,7 @@ describe('conversationService', () => {
     const createdAt = new Date('2025-09-20T12:00:00Z')
     const updatedAt = new Date('2025-09-20T12:00:00Z')
 
-    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+    databaseModule.transaction.mockImplementationOnce(async (handler: TransactionHandler) => {
       const clientQuery = jest.fn()
       clientQuery
         .mockResolvedValueOnce({
@@ -196,15 +201,11 @@ describe('conversationService', () => {
         rowCount: 1,
       })
       .mockResolvedValueOnce({
-        rows: [
-          { role: 'member', shadow_muted: false },
-        ],
+        rows: [{ role: 'member', shadow_muted: false }],
         rowCount: 1,
       })
       .mockResolvedValueOnce({
-        rows: [
-          { user_id: 'recipient' },
-        ],
+        rows: [{ user_id: 'recipient' }],
         rowCount: 1,
       })
       .mockResolvedValueOnce({
@@ -243,7 +244,11 @@ describe('conversationService', () => {
       })
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })
 
-    const message = await sendMessage({ conversationId: 'conv-1', senderId: 'sender', body: 'Hello there' })
+    const message = await sendMessage({
+      conversationId: 'conv-1',
+      senderId: 'sender',
+      body: 'Hello there',
+    })
 
     expect(message.body).toBe('Hello there')
     expect(mockAssertCanSendDirectMessage).toHaveBeenCalledWith('sender', 'recipient')
@@ -452,9 +457,7 @@ describe('conversationService', () => {
         rowCount: 1,
       })
       .mockResolvedValueOnce({
-        rows: [
-          { role: 'admin', shadow_muted: false },
-        ],
+        rows: [{ role: 'admin', shadow_muted: false }],
         rowCount: 1,
       })
       .mockResolvedValueOnce({
@@ -503,7 +506,7 @@ describe('conversationService', () => {
         rowCount: 2,
       })
 
-    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+    databaseModule.transaction.mockImplementationOnce(async (handler: TransactionHandler) => {
       const clientQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 1 })
       return handler({ query: clientQuery })
     })
@@ -523,19 +526,15 @@ describe('conversationService', () => {
   it('allows owners to leave after promoting next member', async () => {
     const joinedAt = new Date('2025-09-22T08:00:00Z')
 
-    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+    databaseModule.transaction.mockImplementationOnce(async (handler: TransactionHandler) => {
       const clientQuery = jest.fn()
       clientQuery
         .mockResolvedValueOnce({
-          rows: [
-            { user_id: 'owner-1', role: 'owner', joined_at: joinedAt, shadow_muted: false },
-          ],
+          rows: [{ user_id: 'owner-1', role: 'owner', joined_at: joinedAt, shadow_muted: false }],
           rowCount: 1,
         })
         .mockResolvedValueOnce({
-          rows: [
-            { user_id: 'member-2', role: 'member', joined_at: joinedAt, shadow_muted: false },
-          ],
+          rows: [{ user_id: 'member-2', role: 'member', joined_at: joinedAt, shadow_muted: false }],
           rowCount: 1,
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 })
@@ -579,9 +578,7 @@ describe('conversationService', () => {
         rowCount: 1,
       })
       .mockResolvedValueOnce({
-        rows: [
-          { user_id: 'member-2', role: 'owner', joined_at: joinedAt, shadow_muted: false },
-        ],
+        rows: [{ user_id: 'member-2', role: 'owner', joined_at: joinedAt, shadow_muted: false }],
         rowCount: 1,
       })
 
@@ -593,19 +590,15 @@ describe('conversationService', () => {
   it('allows admins to remove members', async () => {
     const joinedAt = new Date('2025-09-22T09:00:00Z')
 
-    databaseModule.transaction.mockImplementationOnce(async (handler: any) => {
+    databaseModule.transaction.mockImplementationOnce(async (handler: TransactionHandler) => {
       const clientQuery = jest.fn()
       clientQuery
         .mockResolvedValueOnce({
-          rows: [
-            { user_id: 'admin-1', role: 'admin', joined_at: joinedAt, shadow_muted: false },
-          ],
+          rows: [{ user_id: 'admin-1', role: 'admin', joined_at: joinedAt, shadow_muted: false }],
           rowCount: 1,
         })
         .mockResolvedValueOnce({
-          rows: [
-            { user_id: 'member-3', role: 'member', joined_at: joinedAt, shadow_muted: false },
-          ],
+          rows: [{ user_id: 'member-3', role: 'member', joined_at: joinedAt, shadow_muted: false }],
           rowCount: 1,
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 })
@@ -655,7 +648,11 @@ describe('conversationService', () => {
         rowCount: 2,
       })
 
-    await removeConversationMember({ actorId: 'admin-1', conversationId: 'conv-88', targetUserId: 'member-3' })
+    await removeConversationMember({
+      actorId: 'admin-1',
+      conversationId: 'conv-88',
+      targetUserId: 'member-3',
+    })
 
     expect(mockIo.to).toHaveBeenCalledWith('user:owner-2')
   })
@@ -664,6 +661,8 @@ describe('conversationService', () => {
     const policyError = new MockMessagingPolicyError('DM_POLICY', 'not allowed')
     mockAssertCanStartDirectConversation.mockRejectedValue(policyError)
 
-    await expect(ensureDirectConversation('user-a', 'user-b')).rejects.toMatchObject({ code: 'DM_POLICY' })
+    await expect(ensureDirectConversation('user-a', 'user-b')).rejects.toMatchObject({
+      code: 'DM_POLICY',
+    })
   })
 })

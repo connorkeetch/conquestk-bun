@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { getPlayerColor, PLAYER_COLORS } from '../constants/colors'
+import type { Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import {
@@ -13,27 +13,15 @@ import {
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { GameOverModal } from './GameOverModal'
 import { GamePhaseControls } from './GamePhaseControls'
+import type { TerritoryDisplayMap } from './RiskGameBoard'
 import { SimpleMapSVG } from './SimpleMapSVG'
 import { TestMapSVG } from './TestMapSVG'
-
-interface TerritoryDisplay {
-  id: string
-  name: string
-  continent: string
-  adjacentTerritories: string[]
-  armyPosition: { x: number; y: number }
-  owner?: string
-  armies?: number
-}
 
 interface SimpleRiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
 }
 
-const FANTASY_CONTINENTS: Record<
-  string,
-  { name: string; bonus: number; color: string }
-> = {
+const FANTASY_CONTINENTS: Record<string, { name: string; bonus: number; color: string }> = {
   'northern-lands': { name: 'Northern Lands', bonus: 3, color: '#4CAF50' },
   'central-kingdoms': { name: 'Central Kingdoms', bonus: 4, color: '#2196F3' },
   'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
@@ -41,14 +29,12 @@ const FANTASY_CONTINENTS: Record<
 }
 
 // Helper function to convert Redux territories to display format
-const createTerritoryDisplayMap = (territories: any[]): { [key: string]: TerritoryDisplay } => {
-  const displayMap: { [key: string]: TerritoryDisplay } = {}
+const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDisplayMap => {
+  const displayMap: TerritoryDisplayMap = {}
 
   territories.forEach((territory) => {
     const coordinates = territory.coordinates
-    const armyPosition = coordinates
-      ? { x: coordinates.x, y: coordinates.y }
-      : { x: 0, y: 0 }
+    const armyPosition = coordinates ? { x: coordinates.x, y: coordinates.y } : { x: 0, y: 0 }
 
     displayMap[territory.id] = {
       id: territory.id,
@@ -56,7 +42,7 @@ const createTerritoryDisplayMap = (territories: any[]): { [key: string]: Territo
       continent: territory.continent ?? territory.continentId ?? 'unknown',
       adjacentTerritories: territory.adjacentTerritories,
       armyPosition,
-      owner: territory.ownerId,
+      owner: territory.ownerId ?? undefined,
       armies: territory.armies,
     }
   })
@@ -84,26 +70,15 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     }
   }, [gameState?.phase])
 
-  // Early return if no game state
-  if (!gameState) {
-    return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-br from-blue-50 to-green-50 rounded-lg">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">🏰 Fantasy Realms</h2>
-          <p className="text-gray-600 mb-2">No Game in Progress</p>
-          <p className="text-muted text-sm">Join a game room to start conquering the realms!</p>
-        </div>
-      </div>
-    )
-  }
+  const board = gameState?.board ?? []
+  const players = gameState?.players ?? []
+  const currentPlayer = gameState?.currentPlayer ?? ''
+  const currentPhase = gameState?.phase ?? 'reinforcement'
 
-  const territories = createTerritoryDisplayMap(gameState.board)
-  const players = gameState.players
-  const currentPlayer = gameState.currentPlayer
-  const currentPhase = gameState.phase
+  const territories = useMemo(() => createTerritoryDisplayMap(board), [board])
 
   const continentDefinitions = useMemo(() => {
-    const bonuses = gameState.gameConfig?.continentBonuses
+    const bonuses = gameState?.gameConfig?.continentBonuses
     if (bonuses && bonuses.length > 0) {
       const fallbackColors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#FFEB3B']
       return bonuses.map((bonus, index) => ({
@@ -120,7 +95,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
       bonusArmies: meta.bonus,
       color: meta.color,
     }))
-  }, [gameState.gameConfig?.continentBonuses])
+  }, [gameState?.gameConfig?.continentBonuses])
 
   const continentLookup = useMemo(
     () => Object.fromEntries(continentDefinitions.map((continent) => [continent.id, continent])),
@@ -131,7 +106,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     (territoryId: string): string => {
       const territory = territories[territoryId]
       if (!territory || !territory.owner) {
-        return '#E5E7EB' // Neutral gray
+        return '#E5E7EB'
       }
 
       const player = players.find((p) => p.id === territory.owner)
@@ -142,6 +117,10 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
 
   const handleTerritoryClick = useCallback(
     (territoryId: string) => {
+      if (!gameState) {
+        return
+      }
+
       const territory = territories[territoryId]
       if (!territory) {
         return
@@ -164,16 +143,13 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
         }
       }
 
-      // If clicking the same territory, deselect it
       if (selectedTerritory === territoryId) {
         dispatch(selectTerritory(null))
         return
       }
 
-      // If we have a selected territory and this is a valid target, select as target
       if (selectedTerritory && validTargets.includes(territoryId)) {
         dispatch(selectTargetTerritory(territoryId))
-        // Set pending action based on current phase
         if (currentPhase === 'reinforcement') {
           dispatch(setPendingAction('deploy'))
         } else if (currentPhase === 'attack') {
@@ -182,14 +158,22 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
           dispatch(setPendingAction('fortify'))
         }
       } else {
-        // Select this territory
         dispatch(selectTerritory(territoryId))
         dispatch(selectTargetTerritory(null))
       }
 
       onTerritoryClick?.(territoryId)
     },
-    [selectedTerritory, validTargets, currentPhase, dispatch, onTerritoryClick],
+    [
+      currentPhase,
+      currentPlayer,
+      dispatch,
+      gameState,
+      onTerritoryClick,
+      selectedTerritory,
+      territories,
+      validTargets,
+    ],
   )
 
   const handleEndTurn = useCallback(() => {
@@ -211,6 +195,19 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
   const handleBackToMenu = useCallback(() => {
     setShowGameOverModal(false)
   }, [])
+
+  // Early return if no game state
+  if (!gameState) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-blue-50 to-green-50 rounded-lg">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">🏰 Fantasy Realms</h2>
+          <p className="text-gray-600 mb-2">No Game in Progress</p>
+          <p className="text-muted text-sm">Join a game room to start conquering the realms!</p>
+        </div>
+      </div>
+    )
+  }
 
   const currentPlayerInfo = players.find((p) => p.id === currentPlayer)
 
@@ -406,7 +403,10 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
               </h3>
               {(() => {
                 const territoryId = hoveredTerritory || selectedTerritory
-                const territory = territories[territoryId!]
+                if (!territoryId) {
+                  return null
+                }
+                const territory = territories[territoryId]
                 const owner = players.find((p) => p.id === territory?.owner)
                 const continentKey = territory?.continent ?? ''
                 const continentInfo = continentLookup[continentKey]

@@ -10,7 +10,7 @@ export default function TermsPage() {
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="bg-surface-1/50 rounded-xl p-8 border border-gray-800">
           <h1 className="text-3xl font-bold text-white mb-2">Terms of Service</h1>
-          <p className="text-sm text-muted mb-8">Last Updated: December 28, 2024</p>
+          <p className="text-sm text-muted mb-8">Last Updated: January 5, 2026</p>
 
           <div className="prose prose-invert max-w-none space-y-6">
             <section>
@@ -23,11 +23,13 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-100 mb-3">2. Beta Version Notice</h2>
-              <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-4">
-                <p className="text-yellow-200">
-                  ⚠️ This is a beta version. Features may change, game data may be reset, and service
-                  may be interrupted without notice.
+              <h2 className="text-xl font-semibold text-gray-100 mb-3">2. Early Access Status</h2>
+              <div className="bg-sky-900/20 border border-sky-600/30 rounded-lg p-4 mb-4">
+                <p className="text-sky-100">
+                  ConquestK is preparing for public launch. Features may continue to evolve and
+                  maintenance windows may occur, but we do not plan to wipe player progress. If
+                  emergency fixes require disruptive changes, we will give advance notice whenever
+                  possible and outline the steps we are taking to preserve your account data.
                 </p>
               </div>
             </section>

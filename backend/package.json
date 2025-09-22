@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('\u2705 Copied migrations to dist/migrations'); } else { console.error('\u274c Warning: migrations directory not found'); }\"",
     "start": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/index.js",
     "test": "jest --passWithNoTests",

@@ -84,9 +84,19 @@ const PrimaryNav: React.FC = () => {
             icon: '⭐',
             description: 'Community highlights',
           },
-          { path: '/maps/trending', label: 'Trending', icon: '🔥', description: 'Popular this week' },
+          {
+            path: '/maps/trending',
+            label: 'Trending',
+            icon: '🔥',
+            description: 'Popular this week',
+          },
           { path: '/maps/recent', label: 'Recent', icon: '🆕', description: 'Newest uploads' },
-          { path: '/maps/my-maps', label: 'My Maps', icon: '💝', description: 'Created & favorites' },
+          {
+            path: '/maps/my-maps',
+            label: 'My Maps',
+            icon: '💝',
+            description: 'Created & favorites',
+          },
           { path: '/map-editor', label: 'Map Editor', icon: '✏️', description: 'Create new maps' },
         ],
       },
@@ -175,9 +185,12 @@ const PrimaryNav: React.FC = () => {
       {navItems.map((item) => (
         <div key={item.path} className="relative">
           {item.dropdown ? (
-            <div
+            <button
+              type="button"
               className={getNavItemClass(item.path)}
               onClick={(e) => handleNavItemClick(item, e)}
+              aria-haspopup="true"
+              aria-expanded={activeDropdown === item.path}
             >
               <span>{item.icon}</span>
               <span>{item.label}</span>
@@ -188,7 +201,9 @@ const PrimaryNav: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                role="img"
               >
+                <title>{`${item.label} menu`}</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -196,7 +211,7 @@ const PrimaryNav: React.FC = () => {
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
-            </div>
+            </button>
           ) : (
             <Link
               to={item.path}

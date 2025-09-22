@@ -5,6 +5,7 @@
   "main": "types/index.ts",
   "types": "types/index.ts",
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

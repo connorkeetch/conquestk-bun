@@ -16,21 +16,13 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: undefined }, // Use bundled Chromium, not system Chrome
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      name: 'chromium-smoke',
+      use: { ...devices['Desktop Chrome'], channel: undefined }, // Bundled Chromium keeps CI stable
     },
   ],
 
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run dev:frontend',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

@@ -2,25 +2,25 @@ import { type Request, type Response, Router } from 'express'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
 import {
+  addMembersToConversation,
+  ConversationError,
+  createGroupConversation,
+  ensureDirectConversation,
+  getConversationDetail,
+  getUnreadSummary,
+  leaveConversation,
+  listConversationsForUser,
+  listMessages,
+  markConversationRead,
+  removeConversationMember,
+  sendMessage,
+} from '../services/conversationService'
+import {
   createBlock,
   getBlockRecords,
   getBlocksForUser,
   removeBlock,
 } from '../services/userBlockService'
-import {
-  ConversationError,
-  addMembersToConversation,
-  createGroupConversation,
-  ensureDirectConversation,
-  listConversationsForUser,
-  listMessages,
-  getConversationDetail,
-  getUnreadSummary,
-  markConversationRead,
-  leaveConversation,
-  removeConversationMember,
-  sendMessage,
-} from '../services/conversationService'
 import { handleRouteError } from '../utils/routeErrorHandler'
 
 const router = Router()
@@ -214,21 +214,25 @@ router.post(
   },
 )
 
-router.post('/conversations/:conversationId/leave', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const { conversationId } = req.params
-    await leaveConversation(conversationId, req.userId)
-    return res.status(200).json({ success: true })
-  } catch (error) {
-    if (error instanceof ConversationError) {
-      const status = mapConversationErrorToStatus(error)
-      return res.status(status).json({ error: error.message, code: error.code })
-    }
+router.post(
+  '/conversations/:conversationId/leave',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { conversationId } = req.params
+      await leaveConversation(conversationId, req.userId)
+      return res.status(200).json({ success: true })
+    } catch (error) {
+      if (error instanceof ConversationError) {
+        const status = mapConversationErrorToStatus(error)
+        return res.status(status).json({ error: error.message, code: error.code })
+      }
 
-    handleRouteError(error, req, 'Failed to leave conversation')
-    return res.status(500).json({ error: 'Failed to leave conversation' })
-  }
-})
+      handleRouteError(error, req, 'Failed to leave conversation')
+      return res.status(500).json({ error: 'Failed to leave conversation' })
+    }
+  },
+)
 
 router.delete(
   '/conversations/:conversationId/members/:memberId',
@@ -255,7 +259,6 @@ router.delete(
   },
 )
 
-
 router.get(
   '/conversations/:conversationId',
   authenticateToken,
@@ -264,7 +267,8 @@ router.get(
       const { conversationId } = req.params
       const markReadParam = req.query.markRead
       const shouldMarkRead =
-        markReadParam === undefined || (Array.isArray(markReadParam) ? markReadParam[0] !== 'false' : markReadParam !== 'false')
+        markReadParam === undefined ||
+        (Array.isArray(markReadParam) ? markReadParam[0] !== 'false' : markReadParam !== 'false')
 
       if (shouldMarkRead) {
         await markConversationRead(conversationId, req.userId)

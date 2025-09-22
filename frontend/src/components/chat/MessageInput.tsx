@@ -49,7 +49,7 @@ export default function MessageInput({
         clearTimeout(typingTimeoutRef.current)
       }
     }
-  }, [message])
+  }, [message, isTyping, onTyping])
 
   const handleSend = () => {
     const trimmedMessage = message.trim()

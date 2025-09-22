@@ -36,9 +36,7 @@ export function buildPerformanceAlertNotification(
   return event
 }
 
-function mapAlertSeverity(
-  severity: PerformanceAlert['severity'],
-): NotificationEvent['severity'] {
+function mapAlertSeverity(severity: PerformanceAlert['severity']): NotificationEvent['severity'] {
   switch (severity) {
     case 'critical':
     case 'high':

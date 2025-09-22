@@ -1,26 +1,13 @@
 import type React from 'react'
-
-interface Territory {
-  id: string
-  name: string
-  continent: string
-  owner?: string
-  armies?: number
-  adjacentTerritories: string[]
-}
-
-interface Player {
-  id: string
-  username: string
-  color: string
-}
+import type { Player, TerritoryModifier } from '@/types/game'
+import type { TerritoryDisplayMap } from '../RiskGameBoard'
 
 interface TerritoryInfoPanelProps {
   hoveredTerritory: string | null
   selectedTerritory: string | null
-  territories: { [key: string]: Territory }
+  territories: TerritoryDisplayMap
   players: Player[]
-  territoryModifiers?: any
+  territoryModifiers?: Record<string, TerritoryModifier>
 }
 
 export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({

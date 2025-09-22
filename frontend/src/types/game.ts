@@ -14,7 +14,6 @@ import type {
   BattleResult as SharedBattleResult,
   Card as SharedCard,
   GameAction as SharedGameAction,
-  GameSettings as SharedGameSettings,
   GameState as SharedGameState,
   Player as SharedPlayer,
   Territory as SharedTerritory,

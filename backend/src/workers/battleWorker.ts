@@ -78,10 +78,7 @@ export class BattleWorker {
     const jobId = job.id !== undefined ? String(job.id) : `${gameId}:${Date.now()}`
     const idKey = idempotencyKey ?? jobId
 
-    const cached = await jobIdempotencyService.getProcessedJob<BattleResult>(
-      this.queue.name,
-      idKey,
-    )
+    const cached = await jobIdempotencyService.getProcessedJob<BattleResult>(this.queue.name, idKey)
     if (cached.exists && cached.value) {
       logger.info('♻️ Skipping already processed battle simulation job', {
         jobId,
@@ -225,7 +222,7 @@ export class BattleWorker {
             armies: finalDefenderArmies,
             ownerId: battleResult.territoryConquered
               ? attackerOwnerId
-              : defenderOwnerId ?? attackerOwnerId,
+              : (defenderOwnerId ?? attackerOwnerId),
           },
           conquered: battleResult.territoryConquered,
           attackerDice: battleResult.dice.attacker,

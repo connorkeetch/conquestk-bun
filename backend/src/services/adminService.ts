@@ -1,5 +1,6 @@
 import { getClient, query } from '../config/database'
 import { logger } from '../utils/logger'
+import { featureFlagService } from './featureFlagService'
 
 const domainPermissionMap: Record<string, string[]> = {
   users: ['users.*', 'user_management', 'system_admin'],
@@ -746,20 +747,25 @@ export class AdminService {
 
   async getFeatureFlags(): Promise<FeatureFlag[]> {
     try {
-      const result = await query(`
-        SELECT * FROM feature_flags ORDER BY flag_name
-      `)
+      const flags = await featureFlagService.listFlags()
 
-      return result.rows.map((row) => ({
-        id: row.id,
-        flagName: row.flag_name,
-        description: row.description,
-        isEnabled: row.is_enabled,
-        config: this.safeJsonParse(row.config, {}),
-        createdBy: row.created_by,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at),
-      }))
+      return flags.map((flag) => {
+        const targetCriteria =
+          typeof flag.target_criteria === 'string'
+            ? this.safeJsonParse(flag.target_criteria, {})
+            : flag.target_criteria || {}
+
+        return {
+          id: flag.id,
+          flagName: flag.flag_name,
+          description: flag.description,
+          isEnabled: flag.is_enabled,
+          config: targetCriteria,
+          createdBy: flag.created_by ?? 'system',
+          createdAt: new Date(flag.created_at),
+          updatedAt: new Date(flag.updated_at),
+        }
+      })
     } catch (error) {
       logger.warn('Error fetching feature flags:', error)
       // Return empty array if table doesn't exist or error occurs
@@ -777,14 +783,15 @@ export class AdminService {
   }
 
   async toggleFeatureFlag(flagName: string, enabled: boolean, adminUserId: string): Promise<void> {
-    await query(
-      `
-      UPDATE feature_flags 
-      SET is_enabled = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE flag_name = $2
-    `,
-      [enabled, flagName],
+    const updatedFlag = await featureFlagService.updateFlag(
+      flagName,
+      { is_enabled: enabled },
+      adminUserId,
     )
+
+    if (!updatedFlag) {
+      throw new Error(`Feature flag "${flagName}" not found`)
+    }
 
     await this.logAdminAction(
       adminUserId,

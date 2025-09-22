@@ -187,11 +187,12 @@ Go Live is tentatively set for Oct 1, 2025
 ## Epic F — Documentation, Legal & Product Copy
 ### F1. Align README, marketing, and architecture docs with reality
 - **Priority:** P2 (legal copy may escalate) • **Tags:** [doc]
-- **Status:** ⏳ Not started (queue behind gameplay & workflow fixes).
+- **Status:** ✅ Completed (January 2026).
 - **Problem:** Docs/marketing claim ELO, spectator, PWA/offline, and continent bonuses are live; architecture still references polygon drawing.
 - **Acceptance criteria:**
   - Update or feature-flag claims; architecture documents the current map editor model.
   - Terms of Service avoid "beta resets" unless true; privacy policy dates verified.
+- _Progress (January 2026): README go-live snapshot and launch caveats now reflect the real backlog (`README.md:29-127`); `docs/reference/architecture.md` documents the token-based editor, queue usage, and outstanding launch caveats; Terms now describe early-access expectations without threatening resets (`frontend/src/pages/TermsPage.tsx:10-41`); Privacy policy dates reviewed and refreshed (`frontend/src/pages/PrivacyPage.tsx:10-12`)._
 
 ### F2. Security checklist re-run
 - **Priority:** P2 • **Tags:** [doc][sec]
@@ -202,11 +203,12 @@ Go Live is tentatively set for Oct 1, 2025
 ## Epic G — DevEx, CI/CD, Testing & Repo Hygiene
 ### G1. CI gating & coverage
 - **Priority:** P2 • **Tags:** [ops]
-- **Status:** ⏳ Not started (needs plan after worker + auth changes ship).
+- **Status:** 🟡 In progress (typecheck/lint/unit/e2e gating online; deeper gameplay coverage pending).
 - **Acceptance criteria:**
   - CI runs typecheck, lint, unit, integration, and smoke e2e jobs.
   - Known lint debt quarantined via baseline; pipeline fails on new issues.
   - Add targeted tests for game actions, map editor, socket join/broadcast, and A1 persistence.
+- _Progress (January 2026): `CI & Deploy` workflow now separates typecheck, lint, unit, build, and Playwright smoke jobs on Node 22 (`.github/workflows/deploy.yml`), with a Chromium landing-page smoke test guarding basic routing (`tests/smoke.spec.ts`). Gameplay-focused integration coverage remains to be added._
 
 ### G2. Large file safeguards & legacy cleanup
 - **Priority:** P2 • **Tags:** [ops]

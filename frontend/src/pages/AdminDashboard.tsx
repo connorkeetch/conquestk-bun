@@ -412,22 +412,18 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     <label
-                      className={`relative inline-flex items-center ${
-                        updatingFlag === flag.flagName ? 'cursor-not-allowed' : 'cursor-pointer'
+                      className={`toggle ${
+                        updatingFlag === flag.flagName ? 'opacity-50 pointer-events-none' : ''
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={flag.isEnabled}
                         onChange={(e) => toggleFeatureFlag(flag.flagName, e.target.checked)}
-                        className="sr-only peer"
                         disabled={updatingFlag === flag.flagName}
+                        aria-label={`Toggle ${formatFlagName(flag.flagName)}`}
                       />
-                      <div
-                        className={`w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary ${
-                          updatingFlag === flag.flagName ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      ></div>
+                      <span className="slider"></span>
                     </label>
                   </div>
                 ))}

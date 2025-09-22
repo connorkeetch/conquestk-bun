@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals'
+
 const noop = jest.fn()
 
 const mockLogger = {

@@ -4,7 +4,7 @@ import { queueService } from '../services/queueService'
 import { setupSocketHandlers } from '../services/socketService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
-var mockDbQuery: jest.Mock
+let mockDbQuery: jest.Mock
 
 jest.mock('../config/database', () => {
   mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
@@ -13,8 +13,8 @@ jest.mock('../config/database', () => {
   }
 })
 
-var mockAddGameAction: jest.Mock
-var mockAddBattleSimulation: jest.Mock
+let mockAddGameAction: jest.Mock
+let mockAddBattleSimulation: jest.Mock
 
 jest.mock('../services/queueService', () => {
   mockAddGameAction = jest.fn()
@@ -42,8 +42,8 @@ jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => mockGameServiceInstance),
 }))
 
-var mockIsPlayerInRoom: jest.Mock
-var mockGetPlayer: jest.Mock
+let mockIsPlayerInRoom: jest.Mock
+let mockGetPlayer: jest.Mock
 
 jest.mock('../services/gameRoomService', () => {
   mockIsPlayerInRoom = jest.fn()
@@ -56,7 +56,7 @@ jest.mock('../services/gameRoomService', () => {
   }
 })
 
-var mockGetCachedState: jest.Mock
+let mockGetCachedState: jest.Mock
 
 jest.mock('../services/cacheService', () => {
   mockGetCachedState = jest.fn()
@@ -67,7 +67,7 @@ jest.mock('../services/cacheService', () => {
   }
 })
 
-var mockRegisterSocketServer: jest.Mock
+let mockRegisterSocketServer: jest.Mock
 
 jest.mock('../services/socketRegistry', () => {
   mockRegisterSocketServer = jest.fn()

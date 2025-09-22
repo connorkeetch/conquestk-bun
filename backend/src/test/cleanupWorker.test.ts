@@ -23,8 +23,7 @@ const mockCleanupFinishedGameModifiers = jest.fn()
 jest.mock('../services/territoryModifierService', () => ({
   __esModule: true,
   default: {
-    cleanupFinishedGameModifiers: (...args: unknown[]) =>
-      mockCleanupFinishedGameModifiers(...args),
+    cleanupFinishedGameModifiers: (...args: unknown[]) => mockCleanupFinishedGameModifiers(...args),
   },
 }))
 
@@ -113,9 +112,11 @@ describe('CleanupWorker', () => {
   const queue = { name: 'game-cleanup' } as unknown as Bull.Queue<GameCleanupJob>
 
   const invokeCleanup = (instance: CleanupWorker, cleanupJob: Bull.Job<GameCleanupJob>) =>
-    (instance as unknown as {
-      cleanupGame: (queuedJob: Bull.Job<GameCleanupJob>) => Promise<unknown>
-    }).cleanupGame(cleanupJob)
+    (
+      instance as unknown as {
+        cleanupGame: (queuedJob: Bull.Job<GameCleanupJob>) => Promise<unknown>
+      }
+    ).cleanupGame(cleanupJob)
 
   beforeEach(() => {
     mockCleanupFinishedGameModifiers.mockReset()
@@ -174,8 +175,14 @@ describe('CleanupWorker', () => {
       'game-1',
       expect.objectContaining({ endReason: 'finished', winner: 'player1' }),
     )
-    expect(mockGameService.updateEloRatings).toHaveBeenCalledWith('game-1', expect.objectContaining({}))
-    expect(mockGameService.recordGameHistory).toHaveBeenCalledWith('game-1', expect.objectContaining({}))
+    expect(mockGameService.updateEloRatings).toHaveBeenCalledWith(
+      'game-1',
+      expect.objectContaining({}),
+    )
+    expect(mockGameService.recordGameHistory).toHaveBeenCalledWith(
+      'game-1',
+      expect.objectContaining({}),
+    )
     expect(mockCacheService.deleteGameState).toHaveBeenCalledWith('game-1')
     expect(mockGameService.removeFromActiveGames).toHaveBeenCalledWith('game-1')
     expect(mockCleanupFinishedGameModifiers).toHaveBeenCalledWith(['game-1'])
@@ -189,7 +196,10 @@ describe('CleanupWorker', () => {
 
   it('skips work for jobs that already completed successfully', async () => {
     const cachedResult = { success: true, reason: 'finished', cleanedAt: new Date().toISOString() }
-    mockIdempotencyService.getProcessedJob.mockResolvedValueOnce({ exists: true, value: cachedResult })
+    mockIdempotencyService.getProcessedJob.mockResolvedValueOnce({
+      exists: true,
+      value: cachedResult,
+    })
 
     const result = await invokeCleanup(worker, job)
 

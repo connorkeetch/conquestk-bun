@@ -1,13 +1,13 @@
 import type { Server, Socket } from 'socket.io'
 import {
+  type ConversationMessageRecord,
+  type ConversationWithMembers,
   ensureDirectConversation,
   getConversationDetail,
   getUnreadSummary,
   listMessages as listConversationMessages,
   markConversationRead,
   sendMessage as sendConversationMessage,
-  type ConversationMessageRecord,
-  type ConversationWithMembers,
 } from '../services/conversationService'
 import notificationService from '../services/notificationService'
 import type {
@@ -65,7 +65,6 @@ export const setupChatHandlers = (
 
   const toChatMessagePayload = (
     message: ConversationMessageRecord,
-    conversation: ConversationWithMembers,
     senderUsername: string,
     partnerId: string,
   ): ChatMessagePayload => {
@@ -140,7 +139,7 @@ export const setupChatHandlers = (
       })
 
       const senderInfo = await getUserInfo(userId)
-      const payload = toChatMessagePayload(message, conversation, senderInfo.username, recipientId)
+      const payload = toChatMessagePayload(message, senderInfo.username, recipientId)
 
       socket.emit('chat:message', payload)
       io.to(`user:${recipientId}`).emit('chat:message', payload)
@@ -169,11 +168,7 @@ export const setupChatHandlers = (
       }
 
       const conversation = await ensureDmConversation(userId, partnerId)
-      const messages = await listConversationMessages(
-        conversation.id,
-        userId,
-        data.limit ?? 50,
-      )
+      const messages = await listConversationMessages(conversation.id, userId, data.limit ?? 50)
 
       const usernameCache = new Map<string, string>()
       const getUsername = async (id: string | null): Promise<string> => {
@@ -188,7 +183,7 @@ export const setupChatHandlers = (
       const historyMessages: ChatMessagePayload[] = []
       for (const message of messages) {
         const senderUsername = await getUsername(message.senderId)
-        historyMessages.push(toChatMessagePayload(message, conversation, senderUsername, partnerId))
+        historyMessages.push(toChatMessagePayload(message, senderUsername, partnerId))
       }
 
       const historyPayload: ChatHistoryPayload = {
@@ -266,19 +261,27 @@ export const setupChatHandlers = (
   })
 
   socket.on('chat:delete', () => {
-    socket.emit('chat:error', { error: 'Message deletion is not supported in the new chat system yet' })
+    socket.emit('chat:error', {
+      error: 'Message deletion is not supported in the new chat system yet',
+    })
   })
 
   socket.on('chat:edit', () => {
-    socket.emit('chat:error', { error: 'Message editing is not supported in the new chat system yet' })
+    socket.emit('chat:error', {
+      error: 'Message editing is not supported in the new chat system yet',
+    })
   })
 
   socket.on('chat:add-reaction', () => {
-    socket.emit('chat:error', { error: 'Message reactions are not supported in the new chat system yet' })
+    socket.emit('chat:error', {
+      error: 'Message reactions are not supported in the new chat system yet',
+    })
   })
 
   socket.on('chat:remove-reaction', () => {
-    socket.emit('chat:error', { error: 'Message reactions are not supported in the new chat system yet' })
+    socket.emit('chat:error', {
+      error: 'Message reactions are not supported in the new chat system yet',
+    })
   })
 }
 

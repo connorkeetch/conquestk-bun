@@ -16,15 +16,15 @@ import type {
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 import { adminService } from './adminService'
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
 import { mapService } from './mapService'
 import { mapStagingService } from './mapStagingService'
-import notificationService from './notificationService'
 import { notificationDispatcher } from './NotificationDispatcher'
+import notificationService from './notificationService'
 import {
   buildMapWorkflowNotification,
   type MapWorkflowNotificationInput,
 } from './notifications/mapWorkflowNotifications'
-import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
 
 type JsonPrimitive = string | number | boolean | null
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
@@ -269,8 +269,7 @@ export class MapWorkflowService {
         try {
           await mapStagingService.deleteStagingImage(draft.userId, draft.stagingImageId, true)
         } catch (assetError) {
-          const message =
-            assetError instanceof Error ? assetError.message : String(assetError)
+          const message = assetError instanceof Error ? assetError.message : String(assetError)
           logger.warn('Failed to queue staging image for purge after publish', {
             draftId,
             stagingImageId: draft.stagingImageId,
@@ -373,11 +372,7 @@ export class MapWorkflowService {
   /**
    * Approve a map
    */
-  async approveMap(
-    mapId: string,
-    adminId: string,
-    options: ApprovalOptions = {},
-  ): Promise<void> {
+  async approveMap(mapId: string, adminId: string, options: ApprovalOptions = {}): Promise<void> {
     const { notes, auditContext } = options
 
     try {
@@ -468,11 +463,7 @@ export class MapWorkflowService {
   /**
    * Reject a map with reason
    */
-  async rejectMap(
-    mapId: string,
-    adminId: string,
-    options: RejectionOptions,
-  ): Promise<void> {
+  async rejectMap(mapId: string, adminId: string, options: RejectionOptions): Promise<void> {
     const { reason, auditContext } = options
 
     if (!reason) {
@@ -910,11 +901,7 @@ export class MapWorkflowService {
   /**
    * Archive a map
    */
-  async archiveMap(
-    mapId: string,
-    adminId: string,
-    options: ArchiveOptions = {},
-  ): Promise<void> {
+  async archiveMap(mapId: string, adminId: string, options: ArchiveOptions = {}): Promise<void> {
     try {
       const beforeState = await this.getMapModerationSnapshot(mapId)
       if (!beforeState) {
@@ -1061,8 +1048,7 @@ export class MapWorkflowService {
             notificationService.createInAppNotification(userId, {
               type: notification.type ?? 'admin',
               title: notification.title ?? 'Admin notification',
-              message:
-                notification.message ?? 'You have a new admin notification.',
+              message: notification.message ?? 'You have a new admin notification.',
               data: {
                 ...metadata,
                 adminNotificationId: adminNotification.id,
@@ -1101,9 +1087,7 @@ export class MapWorkflowService {
     }
   }
 
-  private async getMapModerationSnapshot(
-    mapId: string,
-  ): Promise<Record<string, unknown> | null> {
+  private async getMapModerationSnapshot(mapId: string): Promise<Record<string, unknown> | null> {
     const result = await query(
       `
       SELECT status, is_public, reviewed_at, reviewed_by, review_notes, rejection_reason, is_featured
