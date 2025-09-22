@@ -177,14 +177,18 @@ export class QueueService {
 
       const redisClient = this.redis
 
+      const {
+        // Strip commandTimeout so Bull's blocking commands (e.g. BRPOP) don't trigger false timeouts
+        commandTimeout: _ignoredCommandTimeout,
+        ...redisClientOptions
+      } = redisClient.options as RedisOptions
+
       const baseRedisOptions: RedisOptions = {
-        ...(redisClient.options as RedisOptions),
+        ...redisClientOptions,
         // Ensure Bull queue connections inherit the same resilience tuning as our main client
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
-        // Bull relies on blocking Redis commands; disabling commandTimeout prevents false positives
-        commandTimeout: undefined,
       }
 
       // Initialize all queues using dedicated duplicates of the centralized Redis connection
