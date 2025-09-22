@@ -934,7 +934,12 @@ router.put(
       const { enabled } = req.body
       const adminUserId = req.userId
 
-      await adminService.toggleFeatureFlag(flagName, enabled, adminUserId)
+      const updated = await adminService.toggleFeatureFlag(flagName, enabled, adminUserId)
+
+      if (!updated) {
+        res.status(404).json({ error: 'Feature flag not found' })
+        return
+      }
 
       res.json({ message: 'Feature flag updated successfully' })
     } catch (error) {
