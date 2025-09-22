@@ -105,7 +105,7 @@ _Next tasks:_
 ## 6) Realtime (Socket.io)
 - **Namespace:** `/chat`.
 - **Rooms:** `conversation:{id}`; lazy join on conversation open, eager join on connect allowed for small conversation counts.
-- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `conversation.members.added`, `presence.update` (includes `userId`, `state`, `lastActive`).
+- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `conversation.members.added`, `conversation.message.new`, `presence.update` (includes `userId`, `state`, `lastActive`).
 - **Client → Server events:** `message.send`, `message.edit`, `message.delete`, `typing.start`, `typing.stop`, `receipt.read`, `conversation.create`, `conversation.members.update` (new `conversation:*` sockets still to be wired up; legacy `chat:*` remains active during transition).
 - **Compatibility:** keep emitting and handling legacy `chat:*` events until the rollout reaches the cleanup phase.
 

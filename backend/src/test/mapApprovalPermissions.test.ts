@@ -50,11 +50,9 @@ jest.mock('../middleware/adminAuth', () => ({
 
       res.status(403).json({ error: 'Insufficient permissions', required: permission })
     },
-  logAdminActivity: () => (
-    _req: express.Request,
-    _res: express.Response,
-    next: express.NextFunction,
-  ) => next(),
+  logAdminActivity:
+    () => (_req: express.Request, _res: express.Response, next: express.NextFunction) =>
+      next(),
 }))
 
 jest.mock('../services/mapPermissionService', () => {
@@ -85,7 +83,9 @@ jest.mock('../services/mapApprovalService.js', () => ({
     publishVersion: jest.fn(),
     archiveMap: jest.fn(),
     getMapModerationHistory: jest.fn().mockResolvedValue([]),
-    getApprovalStats: jest.fn().mockResolvedValue({ total_requests: 0, approved: 0, rejected: 0, pending: 0 }),
+    getApprovalStats: jest
+      .fn()
+      .mockResolvedValue({ total_requests: 0, approved: 0, rejected: 0, pending: 0 }),
   },
 }))
 

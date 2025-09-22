@@ -138,7 +138,7 @@ export async function getBlockRecords(options: {
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   try {
-    const result = await query(
+    const result = await query<UserBlockRow>(
       `
       SELECT *
       FROM user_blocks

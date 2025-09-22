@@ -61,10 +61,10 @@ const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
-import { FEATURE_FLAGS } from './constants/featureFlags'
 import { applyTheme, getStoredTheme } from './config/themes.config'
-import { checkAuth } from './store/authSlice'
+import { FEATURE_FLAGS } from './constants/featureFlags'
 import { useFeatureFlag } from './hooks/useFeatureFlag'
+import { checkAuth } from './store/authSlice'
 
 const AiComingSoonRoute = () => {
   const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
@@ -96,7 +96,6 @@ const AiComingSoonRoute = () => {
 }
 
 function App() {
-  console.log('[APP] App component rendering...')
   const dispatch = useAppDispatch()
   const { isLoading, token } = useAppSelector((state) => state.auth)
   const [initialCheckDone, setInitialCheckDone] = useState(false)
@@ -105,17 +104,13 @@ function App() {
   useFaviconBadge()
 
   useEffect(() => {
-    console.log('[APP] App useEffect running...')
-
     const initAuth = async () => {
       const token = localStorage.getItem('token')
-      console.log('[APP] Token exists:', !!token)
 
       if (token) {
         if (isTokenExpired(token, 30)) {
           localStorage.removeItem('token')
         } else {
-          console.log('[APP] Dispatching checkAuth...')
           await dispatch(checkAuth())
         }
       }
