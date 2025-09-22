@@ -464,9 +464,24 @@ if (isProductionLike) {
   // This MUST come before the catch-all route
   app.use(
     express.static(frontendPath, {
-      maxAge: '1d',
+      maxAge: 0,
       setHeaders: (res: Response, filePath: string) => {
         logger.debug(`📦 Serving static file: ${filePath}`)
+        const relativePath = path.relative(frontendPath, filePath)
+
+        // Enforce correct caching behaviour per asset type
+        if (relativePath === 'index.html') {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+          res.setHeader('Pragma', 'no-cache')
+          res.setHeader('Expires', '0')
+        } else if (relativePath === 'sw.js') {
+          res.setHeader('Cache-Control', 'no-cache')
+        } else if (relativePath.startsWith('assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=86400')
+        }
+
         // Set proper content types for assets
         if (filePath.endsWith('.js')) {
           res.setHeader('Content-Type', 'application/javascript; charset=UTF-8')

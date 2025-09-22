@@ -1,7 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import Bull from 'bull'
 import type Redis from 'ioredis'
 import type { RedisOptions } from 'ioredis'
-import { randomUUID } from 'node:crypto'
 import { getRedisClient } from '../config/redis'
 import type { GameAction } from '../types/game'
 import { logger } from '../utils/logger'
@@ -109,7 +109,16 @@ export class QueueService {
   private queues: Map<string, Bull.Queue> = new Map()
   private deadLetterQueues: Map<string, Bull.Queue> = new Map()
   private queueDisplayNames: Map<string, string> = new Map()
+  private queueErrorState: Map<
+    string,
+    {
+      message: string
+      lastLoggedAt: number
+      occurrences: number
+    }
+  > = new Map()
   private isInitialized = false
+  private readonly queueReadyTimeoutMs = Number(process.env.QUEUE_READY_TIMEOUT_MS ?? 15000)
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
@@ -196,6 +205,20 @@ export class QueueService {
         this.queueDisplayNames.set(queueKey, config.name)
 
         this.attachQueueEventHandlers(queueKey, queue, deadLetterQueue)
+
+        try {
+          await Promise.all([
+            this.waitForQueueReady(queue, config.name),
+            this.waitForQueueReady(deadLetterQueue, `${config.name}:dead-letter`),
+          ])
+        } catch (queueReadyError) {
+          const formatted = this.formatQueueError(queueReadyError)
+          logger.error('❌ Queue failed to become ready', {
+            queue: config.name,
+            ...formatted,
+          })
+          throw queueReadyError
+        }
 
         logger.info(`✅ Queue initialized: ${config.name}`)
       }
@@ -412,6 +435,93 @@ export class QueueService {
     }
   }
 
+  private formatQueueError(error: unknown): {
+    message: string
+    code?: string
+    name?: string
+    stack?: string
+    errno?: number | string
+    address?: string
+    port?: number
+  } {
+    if (error instanceof Error) {
+      const nodeError = error as NodeJS.ErrnoException & { address?: string; port?: number }
+      return {
+        message: nodeError.message,
+        code: nodeError.code ? String(nodeError.code) : undefined,
+        name: nodeError.name,
+        stack: nodeError.stack,
+        errno: nodeError.errno,
+        address: nodeError.address,
+        port: nodeError.port,
+      }
+    }
+
+    return {
+      message: typeof error === 'string' ? error : JSON.stringify(error),
+    }
+  }
+
+  private shouldLogQueueError(
+    queueName: string,
+    message: string,
+  ): {
+    logNow: boolean
+    occurrences: number
+    lastLoggedAt: number
+  } {
+    const now = Date.now()
+    const existing = this.queueErrorState.get(queueName)
+
+    if (!existing || existing.message !== message) {
+      this.queueErrorState.set(queueName, {
+        message,
+        lastLoggedAt: now,
+        occurrences: 1,
+      })
+
+      return { logNow: true, occurrences: 1, lastLoggedAt: now }
+    }
+
+    const occurrences = existing.occurrences + 1
+
+    // Only emit every 10th repeat within the quiet window to reduce log noise
+    const quietWindowMs = 30000
+    const shouldLogRepeat = occurrences % 10 === 0 || now - existing.lastLoggedAt > quietWindowMs
+
+    this.queueErrorState.set(queueName, {
+      message,
+      lastLoggedAt: shouldLogRepeat ? now : existing.lastLoggedAt,
+      occurrences,
+    })
+
+    return {
+      logNow: shouldLogRepeat,
+      occurrences,
+      lastLoggedAt: shouldLogRepeat ? now : existing.lastLoggedAt,
+    }
+  }
+
+  private async waitForQueueReady(queue: Bull.Queue, name: string): Promise<void> {
+    const waitUntilReady = (queue as { waitUntilReady?: () => Promise<unknown> }).waitUntilReady
+
+    const readinessPromise = (waitUntilReady ? waitUntilReady.call(queue) : queue.isReady()).then(() => undefined)
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Queue ${name} readiness timed out after ${this.queueReadyTimeoutMs}ms`))
+      }, this.queueReadyTimeoutMs)
+
+      readinessPromise
+        .finally(() => clearTimeout(timer))
+        .catch(() => {
+          // noop - rejection handled by outer await
+        })
+    })
+
+    await Promise.race([readinessPromise, timeoutPromise])
+  }
+
   private attachQueueEventHandlers(
     queueKey: QueueConfigKey,
     queue: Bull.Queue,
@@ -419,7 +529,8 @@ export class QueueService {
   ): void {
     queue.on('failed', async (job, error) => {
       const attemptsMade = job.attemptsMade ?? 0
-      const maxAttempts = typeof job.opts?.attempts === 'number' && job.opts.attempts > 0 ? job.opts.attempts : 1
+      const maxAttempts =
+        typeof job.opts?.attempts === 'number' && job.opts.attempts > 0 ? job.opts.attempts : 1
 
       if (attemptsMade >= maxAttempts) {
         try {
@@ -442,9 +553,22 @@ export class QueueService {
     })
 
     queue.on('error', (queueError) => {
+      const normalized = this.formatQueueError(queueError)
+      const { logNow, occurrences } = this.shouldLogQueueError(queue.name, normalized.message)
+
+      if (!logNow) {
+        logger.debug('Suppressed repetitive queue error', {
+          queue: queue.name,
+          message: normalized.message,
+          occurrences,
+        })
+        return
+      }
+
       logger.error('❌ Queue error detected', {
         queue: queue.name,
-        error: queueError instanceof Error ? queueError.message : queueError,
+        ...normalized,
+        occurrences,
       })
     })
   }
