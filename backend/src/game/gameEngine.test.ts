@@ -9,7 +9,7 @@ jest.mock('../config/database', () => ({
   })),
 }))
 
-import type { GameAction, GameConfiguration } from '../types/game'
+import type { GameAction, GameConfiguration, Territory } from '../types/game'
 import { GameEngine } from './gameEngine'
 
 describe('GameEngine', () => {
@@ -19,7 +19,10 @@ describe('GameEngine', () => {
     gameEngine = new GameEngine()
   })
 
-  const createConfig = (playerCount: number): GameConfiguration => ({
+  const createConfig = (
+    playerCount: number,
+    overrides: Partial<GameConfiguration> = {},
+  ): GameConfiguration => ({
     movementType: 'classic_adjacent',
     allowTeamPlay: false,
     teamMode: 'none',
@@ -27,6 +30,7 @@ describe('GameEngine', () => {
     maxPlayers: playerCount,
     mapId: 'classic',
     gameMode: 'standard',
+    ...overrides,
   })
 
   const createPlayers = (...ids: string[]) => ids.map((id) => ({ userId: id, username: id }))
@@ -90,7 +94,7 @@ describe('GameEngine', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
         createPlayers('player1'),
-        createConfig(1),
+        createConfig(1, { continentBonuses: [] }),
       )
       const player = gameState.players.find((p) => p.id === 'player1')
       const player1Territories = player?.territories.length ?? 0
@@ -102,6 +106,41 @@ describe('GameEngine', () => {
         gameState.gameConfig,
       )
       expect(armies).toBe(expectedArmies)
+    })
+
+    it('should include configured continent bonuses', () => {
+      const playerTerritories = Array.from({ length: 6 }, (_, index) => `territory-${index + 1}`)
+      const testContinentTerritories = playerTerritories.slice(0, 2)
+
+      const allTerritories: Territory[] = playerTerritories.map((territoryId, index) => ({
+        id: territoryId,
+        name: territoryId,
+        continent: index < testContinentTerritories.length ? 'test-continent' : 'other-continent',
+        ownerId: 'player1',
+        armies: 1,
+        adjacentTerritories: [],
+      }))
+
+      const bonusValue = 4
+      const config = createConfig(1, {
+        continentBonuses: [
+          {
+            id: 'test-continent',
+            name: 'Test Continent',
+            territories: testContinentTerritories,
+            bonusArmies: bonusValue,
+          },
+        ],
+      })
+
+      const baseArmies = Math.max(3, Math.floor(playerTerritories.length / 3))
+      const armies = gameEngine.calculateReinforcementArmies(
+        playerTerritories,
+        allTerritories,
+        config,
+      )
+
+      expect(armies).toBe(baseArmies + bonusValue)
     })
   })
 
