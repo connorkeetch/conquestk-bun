@@ -33,6 +33,119 @@ const Home: React.FC = () => {
     },
   ]
 
+  interface GameExperience {
+    icon: string
+    title: string
+    description: string
+    meta: string
+  }
+
+  const gameExperiences: GameExperience[] = [
+    {
+      icon: '🛡️',
+      title: 'Casual & Ranked War Rooms',
+      description:
+        'Jump into real-time matches with ready-checks, lifecycle enforcement, and authoritative battle history.',
+      meta: 'Powered by live delta streaming',
+    },
+    {
+      icon: '🗺️',
+      title: 'Custom Map Showdowns',
+      description:
+        'Host games on official or community maps with continent bonuses, capital rules, and team alliances.',
+      meta: 'Up to 12 commanders per battle',
+    },
+    {
+      icon: '🏗️',
+      title: 'Creator Playground',
+      description:
+        'Design, iterate, and publish new arenas in the map editor—territories, continents, and adjacencies included.',
+      meta: 'Review and approval workflow built-in',
+    },
+  ]
+
+  interface Highlight {
+    title: string
+    description: string
+    bullets: string[]
+  }
+
+  const highlights: Highlight[] = [
+    {
+      title: 'Competitive infrastructure',
+      description: 'Every match is tracked, ranked, and backed by the same systems we use internally.',
+      bullets: [
+        'Authoritative game archival captures every dice roll and territory swing.',
+        'ELO ladders, win streaks, and performance stats update the moment a battle ends.',
+        'Lifecycle engine enforces lobby → active → completed states with ready-checks.',
+      ],
+    },
+    {
+      title: 'Creator tools that scale',
+      description: 'Build worlds with the same workflows moderators use to review and ship official maps.',
+      bullets: [
+        'Advanced editor manages territories, continents, bonuses, and adjacency in one place.',
+        'Versioned drafts flow through review queues before they reach the live rotation.',
+        'Automated asset lifecycle keeps staging buckets tidy as maps evolve.',
+      ],
+    },
+    {
+      title: 'Player-first experience',
+      description: 'Stay connected from the moment a lobby opens to the final domination screen.',
+      bullets: [
+        'Turn notifications and push alerts keep your army ready to strike.',
+        'In-game chat, DMs, and moderation tools respect authenticated identities.',
+        'Theme system, audio cues, and accessibility presets keep the board readable for every commander.',
+      ],
+    },
+  ]
+
+  type RoadmapStatus = 'complete' | 'in-progress' | 'up-next'
+
+  interface RoadmapItem {
+    title: string
+    status: RoadmapStatus
+    description: string
+  }
+
+  const roadmap: RoadmapItem[] = [
+    {
+      title: 'Live multiplayer core',
+      status: 'complete',
+      description: 'Real-time delta streaming, lifecycle enforcement, and battle archival now power every match.',
+    },
+    {
+      title: 'Map authoring security',
+      status: 'in-progress',
+      description: 'Locking down collaborator permissions and approvals to protect community-created maps.',
+    },
+    {
+      title: 'Creator notifications',
+      status: 'in-progress',
+      description: 'Rolling out push + socket alerts so reviewers and authors get updates the moment decisions land.',
+    },
+    {
+      title: 'Advanced game modes',
+      status: 'up-next',
+      description: 'Assassin, Zombie Apocalypse, King of the Hill, and more once core workflows finish hardening.',
+    },
+  ]
+
+  const roadmapStatusStyles: Record<RoadmapStatus, { label: string; classes: string }> = {
+    complete: {
+      label: 'Shipped',
+      classes: 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30',
+    },
+    'in-progress': {
+      label: 'In progress',
+      classes: 'bg-sky-500/15 text-sky-300 border border-sky-400/30',
+    },
+    'up-next': {
+      label: 'Up next',
+      classes: 'bg-amber-500/15 text-amber-300 border border-amber-400/30',
+    },
+  }
+
   return (
     <div className="min-h-screen">
       {/* Optimized Hero Section */}
@@ -149,6 +262,113 @@ const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* Play Modes & Tools */}
+      <section className="relative z-10 section-spacing-sm">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+              <span className="text-white">Play your way</span>
+            </h2>
+            <p className="text-muted text-sm">
+              Whether you are climbing the ladder or hosting private wars, ConquestK has a room for you.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {gameExperiences.map((experience, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-white/10 bg-white/[.06] p-5 flex flex-col gap-4"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl" aria-hidden="true">
+                    {experience.icon}
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-medium text-white">{experience.title}</h3>
+                    <p className="mt-2 text-sm text-white/70">{experience.description}</p>
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  <p className="text-xs uppercase tracking-wide text-white/60 bg-white/5 border border-white/10 inline-flex px-3 py-1 rounded-full">
+                    {experience.meta}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Strategic Pillars */}
+      <section className="relative z-10 section-spacing-sm">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+              <span className="text-white">Why commanders stay</span>
+            </h2>
+            <p className="text-muted text-sm">
+              The platform is engineered for competitive clarity, creator freedom, and reliable operations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {highlights.map((highlight, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-white/10 bg-white/[.05] p-5 text-left"
+              >
+                <h3 className="text-lg font-medium text-white">{highlight.title}</h3>
+                <p className="mt-2 text-sm text-white/70">{highlight.description}</p>
+                <ul className="mt-4 space-y-3">
+                  {highlight.bullets.map((bullet, bulletIndex) => (
+                    <li key={bulletIndex} className="flex items-start gap-2 text-sm text-white/70">
+                      <span className="text-sky-300 mt-0.5" aria-hidden="true">
+                        ●
+                      </span>
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roadmap Snapshot */}
+      <section className="relative z-10 section-spacing-sm">
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+              <span className="text-white">Roadmap snapshot</span>
+            </h2>
+            <p className="text-muted text-sm">
+              We build in the open. Here is what just shipped, what is underway, and what is queued next.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {roadmap.map((item, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-white/10 bg-white/[.04] p-5 md:p-6 flex flex-col md:flex-row md:items-center md:gap-6"
+              >
+                <div className="flex items-center gap-3 mb-4 md:mb-0">
+                  <span className="text-white text-lg font-medium">{item.title}</span>
+                  <span
+                    className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full ${roadmapStatusStyles[item.status].classes}`}
+                  >
+                    {roadmapStatusStyles[item.status].label}
+                  </span>
+                </div>
+                <p className="text-sm text-white/70 md:flex-1">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How It Works - Streamlined */}
       <section className="relative z-10 section-spacing-sm">
         <div className="container mx-auto px-6 max-w-5xl">
@@ -188,6 +408,39 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Claim Victory</h3>
               <p className="text-white/70 text-sm">Adapt your strategy and conquer the world</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="relative z-10 section-spacing">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-slate-900/80 p-8 md:p-12 text-center">
+            <h2 className="text-3xl font-bold text-white">Ready to command your next war?</h2>
+            <p className="mt-4 text-white/80 text-base md:text-lg">
+              The beta is live today. Rally your allies, draft a new map, or drop into matchmaking and climb the ladder.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              {isAuthenticated ? (
+                <>
+                  <Link to="/lobby" className="btn-primary btn-lg w-full sm:w-auto">
+                    Resume the fight
+                  </Link>
+                  <Link to="/maps" className="btn-secondary btn-lg w-full sm:w-auto">
+                    Explore maps
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/register" className="btn-primary btn-lg w-full sm:w-auto">
+                    Join ConquestK
+                  </Link>
+                  <Link to="/learn" className="btn-secondary btn-lg w-full sm:w-auto">
+                    Learn more
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
