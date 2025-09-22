@@ -57,7 +57,6 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminMaps = lazy(() => import('./pages/AdminMaps'))
 const AdminGames = lazy(() => import('./pages/AdminGames'))
-const AdminSettings = lazy(() => import('./pages/AdminSettings'))
 const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -660,20 +659,6 @@ function App() {
                   }
                 >
                   <AdminGames />
-                </Suspense>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <Suspense
-                  fallback={
-                    <div className="p-6">
-                      <div className="text-white">Loading...</div>
-                    </div>
-                  }
-                >
-                  <AdminSettings />
                 </Suspense>
               }
             />

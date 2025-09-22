@@ -1,4 +1,4 @@
-import { Activity, Gamepad2, Map as MapIcon, Settings, Shield, Users } from 'lucide-react'
+import { Activity, Gamepad2, Map as MapIcon, Shield, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { logger } from '@/utils/logger'
@@ -53,12 +53,6 @@ const AdminLayout: React.FC = () => {
       path: '/admin/games',
       label: 'Games',
       icon: <Gamepad2 className="w-4 h-4" />,
-      exact: false,
-    },
-    {
-      path: '/admin/settings',
-      label: 'Settings',
-      icon: <Settings className="w-4 h-4" />,
       exact: false,
     },
   ]

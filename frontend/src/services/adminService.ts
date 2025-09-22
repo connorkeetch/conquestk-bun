@@ -190,6 +190,16 @@ class AdminService {
     })
   }
 
+  // ============= SYSTEM ACTIONS =============
+
+  async refreshCache(): Promise<void> {
+    await apiClient.post(`${this.baseUrl}/cache/refresh`)
+  }
+
+  async refreshLeaderboard(): Promise<void> {
+    await apiClient.post('/skills/leaderboards/refresh')
+  }
+
   // ============= SYSTEM STATUS =============
 
   async getSystemStatus(): Promise<SystemStatus> {

@@ -261,12 +261,10 @@ if (flags['gameplay_territory_modifiers']) {
 4. **Full Release** - 100% rollout, remove flag after 30 days stable
 
 ### Admin Management
-Feature flags are managed at `/admin/settings` with:
-- Search and filter by category/status
-- Bulk enable/disable operations
-- Audit log viewing
-- Rollout percentage controls
-- Target criteria editor
+Feature flags are managed on the main admin dashboard (`/admin`) with:
+- Status-aware toggles for each flag
+- Descriptions and last-updated metadata for quick context
+- A manual refresh button to pull the latest server state
 
 ### Developer Guidelines
 
