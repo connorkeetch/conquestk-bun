@@ -1,6 +1,7 @@
-import { Activity, Gamepad2, Map, Settings, Shield, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Activity, Gamepad2, Map as MapIcon, Settings, Shield, Users } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 
@@ -10,11 +11,7 @@ const AdminLayout: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    checkAdminStatus()
-  }, [])
-
-  const checkAdminStatus = async () => {
+  const checkAdminStatus = useCallback(async () => {
     try {
       const response = await api.get('/admin/status')
       setIsAdmin(response.data.isAdmin)
@@ -22,11 +19,16 @@ const AdminLayout: React.FC = () => {
         navigate('/')
       }
     } catch (error) {
+      logger.error('Failed to verify admin status', error)
       navigate('/')
     } finally {
       setLoading(false)
     }
-  }
+  }, [navigate])
+
+  useEffect(() => {
+    checkAdminStatus()
+  }, [checkAdminStatus])
 
   const navItems = [
     {
@@ -44,7 +46,7 @@ const AdminLayout: React.FC = () => {
     {
       path: '/admin/maps',
       label: 'Maps',
-      icon: <Map className="w-4 h-4" />,
+      icon: <MapIcon className="w-4 h-4" />,
       exact: false,
     },
     {
