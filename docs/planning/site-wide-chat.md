@@ -2,7 +2,7 @@
 _Last updated: September 22, 2025_
 
 ## Status snapshot (September 22, 2025)
-- **Backend:** `backend/migrations/031_create_conversations_schema.sql` now includes the ULID generator, `conversation_*` tables keyed by `CHAR(26)` ULIDs, the `user_messaging_settings` view, and a new `user_blocks` table scaffold while legacy services continue to serve production traffic.
+- **Backend:** `backend/migrations/031_create_conversations_schema.sql` now includes the ULID generator, `conversation_*` tables keyed by `CHAR(26)` ULIDs, the `user_messaging_settings` view, and a new `user_blocks` table scaffold. Fresh services (`messagingPolicyService`, expanded `conversationService`, `/api/messages` routes) enforce DM policy + blocks, create DMs/groups, and emit initial `conversation.*` socket events while the legacy stack continues to serve production traffic.
 - **Socket layer:** `setupChatHandlers` continues to broker `'chat:*'` events for send/history/read/edit/delete operations and emits per-room payloads instead of the planned `conversation.*` rooms.
 - **Frontend:** The in-game `ChatContainer` consumes the legacy socket events and keys Redux state by `conversationType:conversationId`, so nothing is normalized around conversation IDs yet.
 
@@ -15,9 +15,9 @@ _Last updated: September 22, 2025_
 _Action taken:_ Audited the live implementation, drafted `031_create_conversations_schema.sql`, then expanded it to add the `generate_ulid()` helper, swap message identifiers to ULIDs, and create the `user_blocks` table alongside the messaging settings view.
 
 _Next tasks:_
-1. Add a lightweight regression test (SQL or Jest) that exercises `generate_ulid()` for monotonicity and uniqueness before pushing to staging.
-2. Implement the `userBlockService` + REST endpoints so messaging policy checks have a real data source, enforcing the mutual stop + admin overrides described below.
-3. Break down the `conversationService` build into backend/socket tasks per the service outline below and start implementation sequencing (DM creation + message send land first).
+1. Add regression coverage (Jest) for `generate_ulid()`, `messagingPolicyService`, and the new conversation create/send paths before promoting to staging.
+2. Build the `/api/messages/conversations` reader endpoints plus unread aggregation so the frontend can hydrate the inbox without legacy tables.
+3. Wire `conversation.*` socket handlers on the server (and begin frontend listeners) while mirroring legacy `chat:*` events for compatibility.
 
 ## 1) Objectives & Scope
 **Goals**
@@ -74,15 +74,15 @@ _Next tasks:_
 
 ## 5) Backend Services & API
 ### Services
-- `conversationService.ts` — create DMs (deterministic sorted member pair), create group conversations, send messages (ULID IDs + optional metadata hooks), mark read (`last_read_message_id` + receipts), fetch history with keyset cursors, manage membership (invite/leave/kick/promote), and expose idempotent send via `clientMessageId` in `json_metadata`.
-- `messagingPolicyService.ts` — `canMessage`, `assertMember`, privacy policy evaluation (blocks via `user_blocks`, `dm_policy`, group invite rules). Leave stubs for future relationship checks (friends/clans).
+- `conversationService.ts` — create DMs and groups, send messages (ULID IDs + optional metadata hooks), mark read (`last_read_message_id` + receipts), manage membership (invite/leave/kick/promote), and emit early `conversation.*` socket events alongside idempotent send via `clientMessageId`.
+- `messagingPolicyService.ts` — central `assertCanStartDirectConversation`, `assertCanSendDirectMessage`, and `assertCanInviteToGroup` checks (blocks via `user_blocks`, `dm_policy`, group invite rules). Stubs remain for future relationship checks (friends/clans).
 - `userBlockService.ts` — create/remove blocks, audit trails for admins, and cached lookups (Redis) for policy checks.
 
 ### REST (Express, `/api/messages`)
-- `POST /conversations` — `{ kind, title?, memberIds[], gameId?, metadata? }` (creates DM/group after policy checks).
+- `POST /conversations` — `{ kind, title?, memberIds[], metadata? }` (currently limited to `kind='group'`; policy + limit checks gate invites).
 - `GET /conversations` — cursor pagination with filters (`unread`, `groups`, `kind:game|direct|group`).
 - `GET /conversations/:id` — metadata + latest unread state.
-- `POST /conversations/:id/members` — mutate membership via `add`, `remove`, and `roleChanges` arrays.
+- `POST /conversations/:id/members` — owner/admin can append members (`memberIds[]`), enforcing block/group invite policies and capacity caps.
 - `POST /conversations/:id/leave` — self-serve exit for non-owners.
 - `POST /conversations/:id/messages` — `body`, optional `replyToId`, optional `clientMessageId`, optional `metadata` blocks (link previews later).
 - `GET /conversations/:id/messages` — keyset pagination on `(created_at, id)` with `before` and `limit=50`.
@@ -105,8 +105,8 @@ _Next tasks:_
 ## 6) Realtime (Socket.io)
 - **Namespace:** `/chat`.
 - **Rooms:** `conversation:{id}`; lazy join on conversation open, eager join on connect allowed for small conversation counts.
-- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `presence.update` (includes `userId`, `state`, `lastActive`).
-- **Client → Server events:** `message.send`, `message.edit`, `message.delete`, `typing.start`, `typing.stop`, `receipt.read`, `conversation.create`, `conversation.members.update`.
+- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `conversation.members.added`, `presence.update` (includes `userId`, `state`, `lastActive`).
+- **Client → Server events:** `message.send`, `message.edit`, `message.delete`, `typing.start`, `typing.stop`, `receipt.read`, `conversation.create`, `conversation.members.update` (new `conversation:*` sockets still to be wired up; legacy `chat:*` remains active during transition).
 - **Compatibility:** keep emitting and handling legacy `chat:*` events until the rollout reaches the cleanup phase.
 
 ## 7) Privacy, Blocking, Moderation (server-enforced)
@@ -187,3 +187,5 @@ _Next tasks:_
 - **2025-02-21:** Catalogued the current backend service, socket handlers, and frontend chat container that power the legacy experience, then captured the schema/service tasks needed to kick off Phase 1 of the unified messaging rollout.
 - **2025-09-22:** Drafted the Phase-1 database migration and preference view (`031_create_conversations_schema.sql`) so schema work can move into execution once ULID generation and blocklist compatibility decisions land.
 - **2025-09-22:** Added the `generate_ulid()` helper, migrated message identifiers to ULIDs, and created the `user_blocks` table scaffold so policy enforcement has backing storage.
+- **2025-09-22:** Landed `messagingPolicyService`, group-capable `conversationService`, and initial `/api/messages/conversations` routes with `conversation.*` socket emissions to start phasing in the new messaging backend.
+- **2025-09-22:** Implemented backend scaffolding for blocks (`/api/messages/blocks*`) and bootstrapped `conversationService` with DM creation plus initial message send/list endpoints.

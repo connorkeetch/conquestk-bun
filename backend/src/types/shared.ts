@@ -41,6 +41,34 @@ export interface ChatUnreadCount {
   unread_count: number
 }
 
+export interface ConversationEventSummary {
+  id: string
+  kind: 'direct' | 'group' | 'game'
+  title: string | null
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+  isArchived: boolean
+  isReadOnly: boolean
+  gameId: string | null
+  metadata: Record<string, unknown>
+}
+
+export interface ConversationMemberEvent {
+  userId: string
+  role: 'owner' | 'admin' | 'member'
+}
+
+export interface ConversationCreatedPayload {
+  conversation: ConversationEventSummary
+  members: ConversationMemberEvent[]
+}
+
+export interface ConversationMembersAddedPayload {
+  conversationId: string
+  members: ConversationMemberEvent[]
+}
+
 export interface ChatReactionSummary {
   emoji: string
   users: Array<{ id: string; username: string }>
@@ -138,6 +166,8 @@ export interface ServerToClientEvents {
     conversationId: string
   }) => void
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
+  'conversation.created': (payload: ConversationCreatedPayload) => void
+  'conversation.members.added': (payload: ConversationMembersAddedPayload) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string
