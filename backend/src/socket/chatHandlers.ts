@@ -1,12 +1,18 @@
 import type { Server, Socket } from 'socket.io'
-import { query } from '../config/database'
-import type { MessageRouteInfo } from '../services/chatService'
-import { chatService } from '../services/chatService'
+import {
+  ensureDirectConversation,
+  getConversationDetail,
+  getUnreadSummary,
+  listMessages as listConversationMessages,
+  markConversationRead,
+  sendMessage as sendConversationMessage,
+  type ConversationMessageRecord,
+  type ConversationWithMembers,
+} from '../services/conversationService'
 import notificationService from '../services/notificationService'
 import type {
   ChatHistoryPayload,
   ChatMessagePayload,
-  ChatReactionSummary,
   ChatUnreadCount,
   ClientToServerEvents,
   ServerToClientEvents,
@@ -18,385 +24,261 @@ type SocketWithUser = Socket<ClientToServerEvents, ServerToClientEvents> & {
   username?: string
 }
 
-const hasUserContext = (
-  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
-): socket is SocketWithUser => 'userId' in socket
-
 export const setupChatHandlers = (
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   socket: SocketWithUser,
 ) => {
-  const emitToConversation = <K extends keyof ServerToClientEvents>(
-    route: MessageRouteInfo,
-    event: K,
-    ...args: Parameters<ServerToClientEvents[K]>
-  ) => {
-    if (route.message_type === 'game' && route.game_id) {
-      socket.emit(event, ...args)
-      socket.to(`game:${route.game_id}`).emit(event, ...args)
-      return
+  const requireUserId = (): string | null => {
+    const { userId } = socket
+    if (!userId) {
+      socket.emit('chat:error', { error: 'Not authenticated' })
+      return null
     }
+    return userId
+  }
 
-    if (route.message_type === 'team' && route.game_id && route.team_id !== null) {
-      socket.emit(event, ...args)
-      socket.to(`team:${route.game_id}:${route.team_id}`).emit(event, ...args)
-      return
-    }
+  const sendUnreadCounts = async (userId: string) => {
+    const summary = await getUnreadSummary(userId)
+    const counts: ChatUnreadCount[] = []
 
-    if (route.message_type === 'dm') {
-      socket.emit(event, ...args)
-      socket.to(`user:${route.sender_id}`).emit(event, ...args)
-
-      if (route.recipient_id) {
-        io.to(`user:${route.recipient_id}`).emit(event, ...args)
+    for (const entry of summary) {
+      try {
+        const detail = await getConversationDetail(entry.conversationId, userId)
+        if (detail.conversation.kind !== 'direct') continue
+        const partnerId = detail.conversation.memberIds.find((id) => id !== userId)
+        if (!partnerId) continue
+        counts.push({
+          conversation_type: 'dm',
+          conversation_id: partnerId,
+          unread_count: entry.unreadCount,
+        })
+      } catch (error) {
+        logger.warn('Failed to compute unread summary entry', {
+          conversationId: entry.conversationId,
+          error,
+        })
       }
+    }
+
+    socket.emit('chat:unread-counts', counts)
+  }
+
+  const toChatMessagePayload = (
+    message: ConversationMessageRecord,
+    conversation: ConversationWithMembers,
+    senderUsername: string,
+    partnerId: string,
+  ): ChatMessagePayload => {
+    const createdAt =
+      message.createdAt instanceof Date
+        ? message.createdAt.toISOString()
+        : new Date(message.createdAt).toISOString()
+    const editedAt = message.editedAt
+      ? message.editedAt instanceof Date
+        ? message.editedAt.toISOString()
+        : new Date(message.editedAt).toISOString()
+      : null
+    const deletedAt = message.deletedAt
+      ? message.deletedAt instanceof Date
+        ? message.deletedAt.toISOString()
+        : new Date(message.deletedAt).toISOString()
+      : null
+
+    return {
+      id: message.id,
+      sender_id: message.senderId ?? 'system',
+      sender_username: senderUsername,
+      message: message.body,
+      message_type: 'dm',
+      game_id: null,
+      team_id: null,
+      recipient_id: partnerId,
+      created_at: createdAt,
+      edited_at: editedAt,
+      deleted_at: deletedAt,
+      link_previews: [],
     }
   }
 
-  // Send a message
-  socket.on(
-    'chat:send',
-    async (data: {
-      message: string
-      messageType: 'game' | 'team' | 'dm'
-      gameId?: string
-      teamId?: number
-      recipientId?: string
-    }) => {
-      try {
-        const userId = socket.userId
-        if (!userId) {
-          socket.emit('chat:error', { error: 'Not authenticated' })
-          return
-        }
+  const ensureDmConversation = async (
+    userId: string,
+    partnerId: string,
+  ): Promise<ConversationWithMembers> => {
+    const conversation = await ensureDirectConversation(userId, partnerId)
+    await socket.join(`conversation:${conversation.id}`)
+    return conversation
+  }
 
-        // Basic validation
-        if (!data.message || data.message.trim().length === 0) {
-          socket.emit('chat:error', { error: 'Message cannot be empty' })
-          return
-        }
-
-        if (data.message.length > 500) {
-          socket.emit('chat:error', { error: 'Message too long (max 500 characters)' })
-          return
-        }
-
-        // Send the message
-        const message = await chatService.sendMessage({
-          senderId: userId,
-          message: data.message.trim(),
-          messageType: data.messageType,
-          gameId: data.gameId,
-          teamId: data.teamId,
-          recipientId: data.recipientId,
-        })
-
-        // Get sender username
-        const senderInfo = await getUserInfo(userId)
-        const messageWithSender: ChatMessagePayload = {
-          ...message,
-          sender_username: senderInfo.username,
-        }
-
-        // Emit to appropriate recipients
-        if (data.messageType === 'game' && data.gameId) {
-          // Emit to all players in the game room
-          io.to(`game:${data.gameId}`).emit('chat:message', messageWithSender)
-        } else if (data.messageType === 'team' && data.gameId && data.teamId) {
-          // Emit to team members
-          io.to(`team:${data.gameId}:${data.teamId}`).emit('chat:message', messageWithSender)
-        } else if (data.messageType === 'dm' && data.recipientId) {
-          // Emit to sender and recipient
-          socket.emit('chat:message', messageWithSender)
-          io.to(`user:${data.recipientId}`).emit('chat:message', messageWithSender)
-
-          // Send push notification for DM
-          await sendDMNotification(data.recipientId, userId, senderInfo.username, data.message)
-        }
-      } catch (error: unknown) {
-        logger.error('Error sending message:', error)
-        const message = error instanceof Error ? error.message : 'Failed to send message'
-        socket.emit('chat:error', { error: message })
-      }
-    },
-  )
-
-  // Load chat history
-  socket.on(
-    'chat:load-history',
-    async (data: {
-      messageType: 'game' | 'team' | 'dm'
-      conversationId: string
-      limit?: number
-      offset?: number
-    }) => {
-      try {
-        const userId = socket.userId
-        if (!userId) {
-          socket.emit('chat:error', { error: 'Not authenticated' })
-          return
-        }
-
-        const messages = await chatService.getChatHistory(
-          data.messageType,
-          data.conversationId,
-          userId,
-          data.limit || 50,
-          data.offset || 0,
-        )
-
-        const historyPayload: ChatHistoryPayload = {
-          conversationId: data.conversationId,
-          messageType: data.messageType,
-          messages,
-        }
-
-        socket.emit('chat:history', historyPayload)
-      } catch (error: unknown) {
-        logger.error('Error loading chat history:', error)
-        socket.emit('chat:error', { error: 'Failed to load chat history' })
-      }
-    },
-  )
-
-  // Get unread counts
-  socket.on('chat:get-unread', async () => {
+  socket.on('chat:send', async (data) => {
     try {
-      const userId = socket.userId
-      if (!userId) {
-        socket.emit('chat:error', { error: 'Not authenticated' })
+      const userId = requireUserId()
+      if (!userId) return
+
+      if (data.messageType !== 'dm') {
+        socket.emit('chat:error', { error: 'Legacy game/team chat is no longer supported' })
         return
       }
 
-      const unreadCounts = (await chatService.getUnreadCounts(userId)) as ChatUnreadCount[]
-      socket.emit('chat:unread-counts', unreadCounts)
-    } catch (error: unknown) {
-      logger.error('Error getting unread counts:', error)
-      socket.emit('chat:error', { error: 'Failed to get unread counts' })
-    }
-  })
-
-  // Mark messages as read
-  socket.on(
-    'chat:mark-read',
-    async (data: { conversationType: 'game' | 'dm'; conversationId: string }) => {
-      try {
-        const userId = socket.userId
-        if (!userId) {
-          socket.emit('chat:error', { error: 'Not authenticated' })
-          return
-        }
-
-        if (data.conversationType === 'dm') {
-          await chatService.markMessagesAsRead(userId, data.conversationId)
-        } else if (data.conversationType === 'game') {
-          await chatService.markGameMessagesAsRead(userId, data.conversationId)
-        }
-
-        // Send updated unread counts
-        const unreadCounts = await chatService.getUnreadCounts(userId)
-        socket.emit('chat:unread-counts', unreadCounts)
-      } catch (error: unknown) {
-        logger.error('Error marking messages as read:', error)
-      }
-    },
-  )
-
-  // Delete a message
-  socket.on('chat:delete', async (data: { messageId: string }) => {
-    try {
-      const userId = socket.userId
-      if (!userId) {
-        socket.emit('chat:error', { error: 'Not authenticated' })
+      const recipientId = data.recipientId
+      if (!recipientId) {
+        socket.emit('chat:error', { error: 'recipientId is required for DMs' })
         return
       }
 
-      const deleted = await chatService.deleteMessage(data.messageId, userId)
-      if (deleted) {
-        emitToConversation(deleted, 'chat:message-deleted', { messageId: data.messageId })
-      } else {
-        socket.emit('chat:error', { error: 'Cannot delete this message' })
-      }
-    } catch (error: unknown) {
-      logger.error('Error deleting message:', error)
-      socket.emit('chat:error', { error: 'Failed to delete message' })
-    }
-  })
-
-  // Edit a message
-  socket.on('chat:edit', async (data: { messageId: string; newMessage: string }) => {
-    try {
-      const userId = socket.userId
-      if (!userId) {
-        socket.emit('chat:error', { error: 'Not authenticated' })
-        return
-      }
-
-      if (!data.newMessage || data.newMessage.trim().length === 0) {
+      const trimmed = data.message?.trim()
+      if (!trimmed) {
         socket.emit('chat:error', { error: 'Message cannot be empty' })
         return
       }
 
-      const edited = await chatService.editMessage(data.messageId, userId, data.newMessage.trim())
+      const conversation = await ensureDmConversation(userId, recipientId)
 
-      if (edited) {
-        emitToConversation(edited, 'chat:message-edited', {
-          messageId: data.messageId,
-          newMessage: edited.message,
-          editedAt: edited.edited_at,
-        })
-      } else {
-        socket.emit('chat:error', { error: 'Cannot edit this message' })
-      }
-    } catch (error: unknown) {
-      logger.error('Error editing message:', error)
-      socket.emit('chat:error', { error: 'Failed to edit message' })
+      const message = await sendConversationMessage({
+        conversationId: conversation.id,
+        senderId: userId,
+        body: trimmed,
+      })
+
+      const senderInfo = await getUserInfo(userId)
+      const payload = toChatMessagePayload(message, conversation, senderInfo.username, recipientId)
+
+      socket.emit('chat:message', payload)
+      io.to(`user:${recipientId}`).emit('chat:message', payload)
+
+      await sendDMNotification(recipientId, userId, senderInfo.username, trimmed)
+    } catch (error) {
+      logger.error('Error sending DM message via socket', error)
+      socket.emit('chat:error', { error: 'Failed to send message' })
     }
   })
 
-  // Typing indicator
-  socket.on(
-    'chat:typing',
-    async (data: {
-      conversationType: 'game' | 'dm'
-      conversationId: string
-      isTyping: boolean
-    }) => {
-      try {
-        const userId = socket.userId
-        if (!userId) return
-
-        const userInfo = await getUserInfo(userId)
-
-        if (data.conversationType === 'game') {
-          socket.to(`game:${data.conversationId}`).emit('chat:user-typing', {
-            userId,
-            username: userInfo.username,
-            isTyping: data.isTyping,
-            conversationType: 'game',
-            conversationId: data.conversationId,
-          })
-        } else if (data.conversationType === 'dm') {
-          io.to(`user:${data.conversationId}`).emit('chat:user-typing', {
-            userId,
-            username: userInfo.username,
-            isTyping: data.isTyping,
-            conversationType: 'dm',
-            conversationId: userId,
-          })
-        }
-      } catch (error: unknown) {
-        logger.error('Error broadcasting typing indicator:', error)
-      }
-    },
-  )
-
-  // Add reaction to message
-  socket.on('chat:add-reaction', async (data: { messageId: string; emoji: string }) => {
+  socket.on('chat:load-history', async (data) => {
     try {
-      const userId = socket.userId
-      if (!userId) {
-        socket.emit('chat:error', { error: 'Not authenticated' })
+      const userId = requireUserId()
+      if (!userId) return
+
+      if (data.messageType !== 'dm') {
+        socket.emit('chat:error', { error: 'Legacy game/team chat history is not supported' })
         return
       }
 
-      const success = await chatService.addReaction(data.messageId, userId, data.emoji)
-
-      if (success) {
-        const reactions = (await chatService.getMessageReactions(
-          data.messageId,
-        )) as ChatReactionSummary[]
-
-        // Get the message to find the conversation
-        const messageResult = await query(
-          `SELECT message_type, game_id, sender_id, recipient_id FROM chat_messages WHERE id = $1`,
-          [data.messageId],
-        )
-
-        if (messageResult.rows.length > 0) {
-          const message = messageResult.rows[0]
-
-          // Broadcast to appropriate room/users
-          if (message.message_type === 'game' && message.game_id) {
-            io.to(`game:${message.game_id}`).emit('chat:reactions-updated', {
-              messageId: data.messageId,
-              reactions,
-            })
-          } else if (message.message_type === 'dm') {
-            // Send to both users in DM
-            const userIds = [message.sender_id, message.recipient_id]
-            userIds.forEach((uid) => {
-              const userSocket = Array.from(io.sockets.sockets.values()).find(
-                (s): s is SocketWithUser => hasUserContext(s) && s.userId === uid,
-              )
-              if (userSocket) {
-                userSocket.emit('chat:reactions-updated', {
-                  messageId: data.messageId,
-                  reactions,
-                })
-              }
-            })
-          }
-        }
+      const partnerId = data.conversationId
+      if (!partnerId) {
+        socket.emit('chat:error', { error: 'conversationId is required for DMs' })
+        return
       }
-    } catch (error: unknown) {
-      logger.error('Error adding reaction:', error)
-      socket.emit('chat:error', { error: 'Failed to add reaction' })
+
+      const conversation = await ensureDmConversation(userId, partnerId)
+      const messages = await listConversationMessages(
+        conversation.id,
+        userId,
+        data.limit ?? 50,
+      )
+
+      const usernameCache = new Map<string, string>()
+      const getUsername = async (id: string | null): Promise<string> => {
+        if (!id) return 'System'
+        if (!usernameCache.has(id)) {
+          const info = await getUserInfo(id)
+          usernameCache.set(id, info.username)
+        }
+        return usernameCache.get(id) ?? 'Unknown User'
+      }
+
+      const historyMessages: ChatMessagePayload[] = []
+      for (const message of messages) {
+        const senderUsername = await getUsername(message.senderId)
+        historyMessages.push(toChatMessagePayload(message, conversation, senderUsername, partnerId))
+      }
+
+      const historyPayload: ChatHistoryPayload = {
+        conversationId: partnerId,
+        messageType: 'dm',
+        messages: historyMessages,
+      }
+
+      socket.emit('chat:history', historyPayload)
+    } catch (error) {
+      logger.error('Error loading DM history via socket', error)
+      socket.emit('chat:error', { error: 'Failed to load chat history' })
     }
   })
 
-  // Remove reaction from message
-  socket.on('chat:remove-reaction', async (data: { messageId: string; emoji: string }) => {
+  socket.on('chat:get-unread', async () => {
     try {
-      const userId = socket.userId
-      if (!userId) {
-        socket.emit('chat:error', { error: 'Not authenticated' })
+      const userId = requireUserId()
+      if (!userId) return
+      await sendUnreadCounts(userId)
+    } catch (error) {
+      logger.error('Error fetching unread summary via socket', error)
+      socket.emit('chat:error', { error: 'Failed to get unread counts' })
+    }
+  })
+
+  socket.on('chat:mark-read', async (data) => {
+    try {
+      const userId = requireUserId()
+      if (!userId) return
+
+      if (data.conversationType !== 'dm') {
+        socket.emit('chat:error', { error: 'Legacy game/team mark-read is not supported' })
         return
       }
 
-      const success = await chatService.removeReaction(data.messageId, userId, data.emoji)
-
-      if (success) {
-        const reactions = (await chatService.getMessageReactions(
-          data.messageId,
-        )) as ChatReactionSummary[]
-
-        // Get the message to find the conversation
-        const messageResult = await query(
-          `SELECT message_type, game_id, sender_id, recipient_id FROM chat_messages WHERE id = $1`,
-          [data.messageId],
-        )
-
-        if (messageResult.rows.length > 0) {
-          const message = messageResult.rows[0]
-
-          // Broadcast to appropriate room/users
-          if (message.message_type === 'game' && message.game_id) {
-            io.to(`game:${message.game_id}`).emit('chat:reactions-updated', {
-              messageId: data.messageId,
-              reactions,
-            })
-          } else if (message.message_type === 'dm') {
-            // Send to both users in DM
-            const userIds = [message.sender_id, message.recipient_id]
-            userIds.forEach((uid) => {
-              const userSocket = Array.from(io.sockets.sockets.values()).find(
-                (s): s is SocketWithUser => hasUserContext(s) && s.userId === uid,
-              )
-              if (userSocket) {
-                userSocket.emit('chat:reactions-updated', {
-                  messageId: data.messageId,
-                  reactions,
-                })
-              }
-            })
-          }
-        }
+      const partnerId = data.conversationId
+      if (!partnerId) {
+        socket.emit('chat:error', { error: 'conversationId is required for DMs' })
+        return
       }
-    } catch (error: unknown) {
-      logger.error('Error removing reaction:', error)
-      socket.emit('chat:error', { error: 'Failed to remove reaction' })
+
+      const conversation = await ensureDmConversation(userId, partnerId)
+      await markConversationRead(conversation.id, userId)
+      await sendUnreadCounts(userId)
+    } catch (error) {
+      logger.error('Error marking DM conversation read via socket', error)
     }
+  })
+
+  socket.on('chat:typing', async (data) => {
+    try {
+      const userId = requireUserId()
+      if (!userId) return
+
+      if (data.conversationType !== 'dm') {
+        socket.emit('chat:error', { error: 'Legacy game/team typing is not supported' })
+        return
+      }
+
+      const partnerId = data.conversationId
+      if (!partnerId) return
+
+      const userInfo = await getUserInfo(userId)
+      io.to(`user:${partnerId}`).emit('chat:user-typing', {
+        userId,
+        username: userInfo.username,
+        isTyping: Boolean(data.isTyping),
+        conversationType: 'dm',
+        conversationId: userId,
+      })
+    } catch (error) {
+      logger.error('Error broadcasting typing indicator', error)
+    }
+  })
+
+  socket.on('chat:delete', () => {
+    socket.emit('chat:error', { error: 'Message deletion is not supported in the new chat system yet' })
+  })
+
+  socket.on('chat:edit', () => {
+    socket.emit('chat:error', { error: 'Message editing is not supported in the new chat system yet' })
+  })
+
+  socket.on('chat:add-reaction', () => {
+    socket.emit('chat:error', { error: 'Message reactions are not supported in the new chat system yet' })
+  })
+
+  socket.on('chat:remove-reaction', () => {
+    socket.emit('chat:error', { error: 'Message reactions are not supported in the new chat system yet' })
   })
 }
 

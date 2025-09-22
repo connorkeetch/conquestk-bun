@@ -193,4 +193,5 @@ _Next tasks:_
 - **2025-09-22:** Landed `messagingPolicyService`, group-capable `conversationService`, and initial `/api/messages/conversations` routes with `conversation.*` socket emissions to start phasing in the new messaging backend.
 - **2025-09-22:** Implemented backend scaffolding for blocks (`/api/messages/blocks*`) and bootstrapped `conversationService` with DM creation plus initial message send/list endpoints.
 - **2025-09-22:** Added conversation detail/unread endpoints, `conversation.message.new` events, regression suites, and a `backfillConversationReadState` script to prep read markers before rollout.
+- **2025-09-22:** Migrated Socket.io handlers to the V2 conversation service (DM flows now emit `conversation.*` events with legacy `chat:*` acting as thin shims).
 - **2025-09-22:** Added Jest coverage for messaging policies + conversation flows, introduced `/api/messages/conversations` listing with unread counts, and expanded socket typings to include `conversation.message.new`.
