@@ -1,11 +1,7 @@
 import { Router } from 'express'
 import { MapWorkflowController } from '../controllers/mapWorkflowController'
+import { logAdminActivity, requireAdmin, requirePermission } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
-import {
-  logAdminActivity,
-  requireAdmin,
-  requirePermission,
-} from '../middleware/adminAuth'
 import { standardLimiter } from '../middleware/rateLimiter'
 
 const router = Router()

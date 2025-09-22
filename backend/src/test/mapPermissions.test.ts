@@ -144,4 +144,19 @@ describe('Map permission enforcement', () => {
     expect(response.status).toBe(403)
     expect(response.body).toEqual({ error: 'You do not have permission to edit this map' })
   })
+
+  it('returns 403 when deleting a map without ownership', async () => {
+    const mapId = '77777777-7777-7777-7777-777777777777'
+
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ creator_id: 'actual-owner' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+
+    const response = await request(createApp())
+      .delete(`/api/maps/${mapId}`)
+      .set('x-test-user-id', 'unauthorized-user')
+
+    expect(response.status).toBe(403)
+    expect(response.body).toEqual({ error: 'You do not have permission to edit this map' })
+  })
 })

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { query } from '../config/database'
 import { logger } from './logger'
-import { type MigrationRecord, MigrationTracker } from './migrationTracker'
+import { type MigrationRecord, type MigrationStatus, MigrationTracker } from './migrationTracker'
 
 export class MigrationRunner {
   private migrationTracker: MigrationTracker
@@ -332,9 +332,7 @@ export class MigrationRunner {
             )
             await query(statement)
           } catch (error) {
-            // Check if it's an acceptable error (table exists, etc.)
-            const errorMessage = (error as any).message || ''
-            const errorCode = (error as any).code || ''
+            const { message: errorMessage, code: errorCode } = this.extractErrorDetails(error)
 
             if (this.isAcceptableError(errorMessage, statement)) {
               logger.debug(`  ⏭️  Skipped expected error: ${errorMessage}`)
@@ -541,7 +539,20 @@ export class MigrationRunner {
     }
   }
 
-  async getMigrationStatus(): Promise<any> {
+  private extractErrorDetails(error: unknown): { message: string; code: string } {
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      const codeValue = (error as { code?: unknown }).code
+      if (typeof codeValue === 'string') {
+        return { message, code: codeValue }
+      }
+    }
+
+    return { message, code: '' }
+  }
+
+  async getMigrationStatus(): Promise<MigrationStatus[]> {
     return await this.migrationTracker.getAllMigrationStatuses()
   }
 }

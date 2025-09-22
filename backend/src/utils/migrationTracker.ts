@@ -4,6 +4,13 @@ import { join } from 'node:path'
 import { query } from '../config/database'
 import { logger } from './logger'
 
+type MigrationStatusRow = {
+  filename: string
+  status: 'completed' | 'failed' | 'rolled_back' | null
+  executed_at: Date | null
+  execution_time_ms: number | null
+}
+
 export interface MigrationRecord {
   id?: number
   filename: string
@@ -23,6 +30,13 @@ export interface MigrationStatus {
 
 export class MigrationTracker {
   private trackingTableExists = false
+
+  private resolveStatus(status: MigrationStatusRow['status']): MigrationStatus['status'] {
+    if (status === 'completed' || status === 'failed' || status === 'rolled_back') {
+      return status
+    }
+    return 'pending'
+  }
 
   async createTrackingTable(): Promise<void> {
     try {
@@ -273,17 +287,19 @@ export class MigrationTracker {
     }
 
     try {
-      const result = await query(`
+      const result = await query<MigrationStatusRow>(
+        `
         SELECT filename, status, executed_at, execution_time_ms
         FROM schema_migrations 
         ORDER BY executed_at ASC
-      `)
+      `,
+      )
 
-      return result.rows.map((row: any) => ({
+      return result.rows.map((row) => ({
         filename: row.filename,
-        status: row.status,
-        executed_at: row.executed_at,
-        execution_time_ms: row.execution_time_ms,
+        status: this.resolveStatus(row.status),
+        executed_at: row.executed_at ?? undefined,
+        execution_time_ms: row.execution_time_ms ?? undefined,
       }))
     } catch (error) {
       logger.error('❌ Failed to get all migration statuses:', error)

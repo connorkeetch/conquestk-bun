@@ -1,8 +1,8 @@
 import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
 import { GameService } from '../services/gameService'
-import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import type { JobIdempotencyService } from '../services/jobIdempotencyService'
+import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
 import territoryModifierService from '../services/territoryModifierService'
 import type { GameState } from '../types/game'
@@ -105,12 +105,7 @@ export class CleanupWorker {
       if (!gameState) {
         logger.info('Cleanup skipped because game state already absent', { gameId })
         const result: CleanupResult = { success: true, alreadyClean: true }
-        await this.idempotencyService.markProcessedJob(
-          this.queue.name,
-          idKey,
-          result,
-          24 * 60 * 60,
-        )
+        await this.idempotencyService.markProcessedJob(this.queue.name, idKey, result, 24 * 60 * 60)
         return result
       }
 
@@ -143,12 +138,7 @@ export class CleanupWorker {
         reason,
         cleanedAt: new Date().toISOString(),
       }
-      await this.idempotencyService.markProcessedJob(
-        this.queue.name,
-        idKey,
-        result,
-        24 * 60 * 60,
-      )
+      await this.idempotencyService.markProcessedJob(this.queue.name, idKey, result, 24 * 60 * 60)
       return result
     } catch (error) {
       logger.error('❌ Failed to cleanup game', {
@@ -156,12 +146,14 @@ export class CleanupWorker {
         reason,
         error,
       })
-      await this.idempotencyService.clearProcessedJob(this.queue.name, idKey).catch((cleanupError) => {
-        logger.warn('Failed to clear idempotency state after cleanup failure', {
-          gameId,
-          error: cleanupError,
+      await this.idempotencyService
+        .clearProcessedJob(this.queue.name, idKey)
+        .catch((cleanupError) => {
+          logger.warn('Failed to clear idempotency state after cleanup failure', {
+            gameId,
+            error: cleanupError,
+          })
         })
-      })
       throw error
     }
   }
@@ -169,7 +161,7 @@ export class CleanupWorker {
   private async cleanupFinishedGame(gameId: string, gameState: CleanupGameState): Promise<void> {
     // Archive game results
     const duration = this.getGameDuration(gameState)
-    const winnerId = 'winner' in gameState ? gameState.winner ?? null : null
+    const winnerId = 'winner' in gameState ? (gameState.winner ?? null) : null
     await this.gameService.archiveGameResults(gameId, {
       winner: winnerId,
       endReason: 'finished',

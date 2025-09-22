@@ -8,7 +8,14 @@ export interface UserBlockRecord {
   createdAt: Date
 }
 
-const mapRow = (row: any): UserBlockRecord => ({
+type UserBlockRow = {
+  id: string
+  blocker_id: string
+  blocked_id: string
+  created_at: Date
+}
+
+const mapRow = (row: UserBlockRow): UserBlockRecord => ({
   id: row.id,
   blockerId: row.blocker_id,
   blockedId: row.blocked_id,
@@ -21,7 +28,7 @@ export async function createBlock(blockerId: string, blockedId: string): Promise
   }
 
   try {
-    const insertResult = await query(
+    const insertResult = await query<UserBlockRow>(
       `
       INSERT INTO user_blocks (blocker_id, blocked_id)
       VALUES ($1, $2)
@@ -36,7 +43,7 @@ export async function createBlock(blockerId: string, blockedId: string): Promise
       return mapRow(insertResult.rows[0])
     }
 
-    const existingResult = await query(
+    const existingResult = await query<UserBlockRow>(
       'SELECT * FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2',
       [blockerId, blockedId],
     )
@@ -54,7 +61,7 @@ export async function createBlock(blockerId: string, blockedId: string): Promise
 
 export async function removeBlock(blockerId: string, blockedId: string): Promise<boolean> {
   try {
-    const result = await query(
+    const result = await query<UserBlockRow>(
       'DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 RETURNING id',
       [blockerId, blockedId],
     )
@@ -67,7 +74,7 @@ export async function removeBlock(blockerId: string, blockedId: string): Promise
 
 export async function isBlocked(userA: string, userB: string): Promise<boolean> {
   try {
-    const result = await query(
+    const result = await query<UserBlockRow>(
       `
       SELECT 1
       FROM user_blocks
@@ -86,7 +93,7 @@ export async function isBlocked(userA: string, userB: string): Promise<boolean> 
 
 export async function getBlocksForUser(userId: string): Promise<UserBlockRecord[]> {
   try {
-    const result = await query(
+    const result = await query<UserBlockRow>(
       `
       SELECT *
       FROM user_blocks

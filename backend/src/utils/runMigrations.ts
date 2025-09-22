@@ -42,16 +42,20 @@ async function runMigrations() {
         for (const statement of statements) {
           try {
             await query(statement)
-          } catch (err: any) {
-            // Skip errors about duplicate columns or existing objects
-            if (
-              err.message?.includes('duplicate column') ||
-              err.message?.includes('already exists') ||
-              (err.message?.includes('syntax error') && statement.includes('IF NOT EXISTS'))
-            ) {
-            } else {
-              throw err
+          } catch (error) {
+            if (error instanceof Error) {
+              const message = error.message ?? ''
+              const isIgnorable =
+                message.includes('duplicate column') ||
+                message.includes('already exists') ||
+                (message.includes('syntax error') && statement.includes('IF NOT EXISTS'))
+
+              if (isIgnorable) {
+                continue
+              }
             }
+
+            throw error
           }
         }
 

@@ -1,6 +1,40 @@
 import { performanceTestingService } from '../services/performanceTestingService'
 import { logger } from '../utils/logger'
 
+type LoadTestResult = Awaited<ReturnType<typeof performanceTestingService.runLoadTest>>
+type LoadTestMetrics = LoadTestResult['results']
+type BenchmarkBottleneck = LoadTestResult['bottlenecks'][number]
+
+export interface PerformanceSnapshot {
+  avgResponseTime: number
+  requestsPerSecond: number
+  errorRate: number
+}
+
+export interface BenchmarkTestSummary {
+  testId: string
+  timestamp?: number
+  results: LoadTestMetrics
+  bottlenecks: BenchmarkBottleneck[]
+  error?: string
+}
+
+export interface PerformanceReport {
+  summary: {
+    totalTests: number
+    averageGrade: PerformanceGrade
+    bestPerforming: string
+    needsImprovement: string[]
+  }
+  trends: {
+    improving: string[]
+    degrading: string[]
+    stable: string[]
+  }
+  recommendations: string[]
+  error?: string
+}
+
 export interface BenchmarkThresholds {
   responseTime: {
     excellent: number
@@ -186,8 +220,8 @@ function scoreToGrade(score: number): PerformanceGrade {
 
 // Performance comparison utilities
 export function comparePerformance(
-  baseline: any,
-  current: any,
+  baseline: PerformanceSnapshot,
+  current: PerformanceSnapshot,
 ): {
   responseTime: { change: number; improvement: boolean }
   throughput: { change: number; improvement: boolean }
@@ -216,20 +250,7 @@ export function comparePerformance(
 }
 
 // Generate performance report
-export function generatePerformanceReport(testResults: any[]): {
-  summary: {
-    totalTests: number
-    averageGrade: PerformanceGrade
-    bestPerforming: string
-    needsImprovement: string[]
-  }
-  trends: {
-    improving: string[]
-    degrading: string[]
-    stable: string[]
-  }
-  recommendations: string[]
-} {
+export function generatePerformanceReport(testResults: BenchmarkTestSummary[]): PerformanceReport {
   if (testResults.length === 0) {
     return {
       summary: {
@@ -298,11 +319,7 @@ export function generatePerformanceReport(testResults: any[]): {
   }
 
   // Analyze trends (if we have enough data)
-  const trends: {
-    improving: string[]
-    degrading: string[]
-    stable: string[]
-  } = { improving: [], degrading: [], stable: [] }
+  const trends: PerformanceReport['trends'] = { improving: [], degrading: [], stable: [] }
   if (testGrades.length >= 4) {
     const firstHalf = testGrades.slice(0, Math.floor(testGrades.length / 2))
     const secondHalf = testGrades.slice(Math.floor(testGrades.length / 2))
@@ -384,20 +401,25 @@ export function generatePerformanceReport(testResults: any[]): {
 // Automated benchmark runner for CI/CD
 export async function runAutomatedBenchmarks(): Promise<{
   success: boolean
-  results: any[]
-  summary: any
+  results: BenchmarkTestSummary[]
+  summary: PerformanceReport
 }> {
   try {
     logger.info('🤖 Running automated performance benchmarks...')
 
     const criticalScenarios = ['api_health_check', 'api_standard_load', 'cache_performance']
 
-    const results = []
+    const results: BenchmarkTestSummary[] = []
 
     for (const scenario of criticalScenarios) {
       try {
         const result = await performanceTestingService.runLoadTest(scenario)
-        results.push(result)
+        results.push({
+          testId: result.testId,
+          timestamp: result.timestamp,
+          results: result.results,
+          bottlenecks: result.bottlenecks,
+        })
 
         logger.info(`✅ Automated benchmark completed: ${scenario}`, {
           avgResponseTime: result.results.avgResponseTime,
@@ -416,8 +438,11 @@ export async function runAutomatedBenchmarks(): Promise<{
             successfulRequests: 0,
             failedRequests: 1,
             avgResponseTime: 10000,
+            p95ResponseTime: 10000,
+            p99ResponseTime: 10000,
             requestsPerSecond: 0,
             errorsPerSecond: 1,
+            throughputMBps: 0,
           },
           bottlenecks: [
             {
@@ -427,7 +452,7 @@ export async function runAutomatedBenchmarks(): Promise<{
               recommendation: 'Investigate system health and connectivity',
             },
           ],
-          error: (error as Error).message,
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
@@ -447,13 +472,17 @@ export async function runAutomatedBenchmarks(): Promise<{
     }
   } catch (error) {
     logger.error('❌ Automated benchmarks failed:', error)
+    const failureReport = generatePerformanceReport([])
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    failureReport.error = errorMessage
+    failureReport.recommendations = [
+      'Fix system issues before running benchmarks',
+      ...failureReport.recommendations,
+    ]
     return {
       success: false,
       results: [],
-      summary: {
-        error: (error as Error).message,
-        recommendations: ['Fix system issues before running benchmarks'],
-      },
+      summary: failureReport,
     }
   }
 }
@@ -467,7 +496,7 @@ export interface SLAThresholds {
 }
 
 export function checkSLACompliance(
-  testResults: any[],
+  testResults: BenchmarkTestSummary[],
   slaThresholds: SLAThresholds,
 ): {
   compliant: boolean

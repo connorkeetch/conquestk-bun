@@ -2,7 +2,7 @@
  * Robust tag parser that handles multiple input formats
  * This handles the edge cases where FormData/multer corrupts JSON arrays
  */
-export function parseTags(tags: any): string[] {
+export function parseTags(tags: unknown): string[] {
   // If already an array, return it
   if (Array.isArray(tags)) {
     return tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim())
@@ -40,11 +40,11 @@ export function parseTags(tags: any): string[] {
 /**
  * Parse any field that might be JSON or a string
  */
-export function parseJsonField<T>(field: any, defaultValue: T): T {
+export function parseJsonField<T>(field: unknown, defaultValue: T): T {
   if (!field) return defaultValue
 
   // If it's already an object/array, return it
-  if (typeof field === 'object') {
+  if (typeof field === 'object' && field !== null) {
     return field as T
   }
 

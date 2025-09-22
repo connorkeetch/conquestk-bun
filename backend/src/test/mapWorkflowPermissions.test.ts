@@ -80,6 +80,7 @@ jest.mock('../services/mapPermissionService', () => {
     mapPermissionService: {
       ...actual.mapPermissionService,
       assertCanEditMap: jest.fn(),
+      getMapEditorContext: jest.fn(),
     },
   }
 })
@@ -108,7 +109,7 @@ const databaseModule = require('../config/database') as { query: jest.Mock }
 const queryMock = databaseModule.query
 
 const permissionsModule = require('../services/mapPermissionService') as {
-  mapPermissionService: { assertCanEditMap: jest.Mock }
+  mapPermissionService: { assertCanEditMap: jest.Mock; getMapEditorContext: jest.Mock }
   MapPermissionError: new (message?: string) => Error
 }
 
@@ -125,6 +126,10 @@ const notificationServiceModule = require('../services/notificationService').def
 
 const notificationDispatcherModule = require('../services/NotificationDispatcher') as {
   notificationDispatcher: { dispatch: jest.Mock }
+}
+
+const mapWorkflowServiceInstance = require('../services/mapWorkflowService').default as {
+  getMapHistory: (...args: unknown[]) => Promise<unknown>
 }
 
 const createApp = () => {
@@ -149,6 +154,7 @@ describe('Map workflow authorization', () => {
   beforeEach(() => {
     queryMock.mockReset()
     permissionsModule.mapPermissionService.assertCanEditMap.mockReset()
+    permissionsModule.mapPermissionService.getMapEditorContext.mockReset()
     adminServiceModule.adminService.logAdminAction.mockClear()
     adminServiceModule.adminService.getActiveAdminUserIds.mockResolvedValue([])
     notificationServiceModule.createInAppNotification.mockClear()
@@ -273,5 +279,48 @@ describe('Map workflow authorization', () => {
       expect.any(String),
     )
     expect(logActivityMock).toHaveBeenCalled()
+  })
+
+  it('denies map history access to users without edit permissions', async () => {
+    permissionsModule.mapPermissionService.getMapEditorContext.mockResolvedValueOnce({
+      mapId: '55555555-5555-5555-5555-555555555555',
+      exists: true,
+      canEdit: false,
+      isAdmin: false,
+      isCreator: false,
+    })
+
+    const response = await request(createApp())
+      .get('/api/workflow/maps/55555555-5555-5555-5555-555555555555/history')
+      .set('x-test-user-id', 'intruder')
+
+    expect(response.status).toBe(403)
+    expect(response.body).toEqual({
+      error: 'You do not have permission to view this map history',
+    })
+  })
+
+  it('returns map history for editors', async () => {
+    permissionsModule.mapPermissionService.getMapEditorContext.mockResolvedValueOnce({
+      mapId: '66666666-6666-6666-6666-666666666666',
+      exists: true,
+      canEdit: true,
+      isAdmin: false,
+      isCreator: true,
+    })
+
+    const historySpy = jest
+      .spyOn(mapWorkflowServiceInstance as any, 'getMapHistory')
+      .mockResolvedValueOnce([{ action: 'submitted' }])
+
+    const response = await request(createApp())
+      .get('/api/workflow/maps/66666666-6666-6666-6666-666666666666/history')
+      .set('x-test-user-id', 'owner-user')
+
+    expect(historySpy).toHaveBeenCalledWith('66666666-6666-6666-6666-666666666666')
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ success: true, history: [{ action: 'submitted' }] })
+
+    historySpy.mockRestore()
   })
 })

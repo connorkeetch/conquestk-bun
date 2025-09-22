@@ -1,6 +1,10 @@
 import type { Response } from 'express'
+import {
+  MapNotFoundError,
+  MapPermissionError,
+  mapPermissionService,
+} from '../services/mapPermissionService'
 import mapWorkflowService from '../services/mapWorkflowService'
-import { MapNotFoundError, MapPermissionError } from '../services/mapPermissionService'
 import type { AuthenticatedRequest } from '../types/express'
 import type { MapDraft, MapStatus } from '../types/maps'
 import { handleRouteError } from '../utils/routeErrorHandler'
@@ -424,6 +428,21 @@ export class MapWorkflowController {
         return res.status(401).json({ error: 'Authentication required' })
       }
       const { mapId } = req.params
+
+      const context = await mapPermissionService.getMapEditorContext(mapId, {
+        userId,
+        isAdmin: req.user?.isAdmin,
+      })
+
+      if (!context.exists) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+
+      if (!context.isAdmin && !context.canEdit) {
+        return res
+          .status(403)
+          .json({ error: 'You do not have permission to view this map history' })
+      }
 
       const history = await mapWorkflowService.getMapHistory(mapId)
 
