@@ -7,7 +7,7 @@ interface GameHeaderProps {
     id: string
     username: string
     color: string
-    troops: number
+    troops?: number
   }
 }
 
@@ -34,7 +34,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             ></div>
             <span className="font-semibold">{currentPlayerInfo.username}</span>
             <span className="text-sm opacity-75">
-              ({currentPlayerInfo.troops} troops to deploy)
+              ({currentPlayerInfo.troops ?? 0} troops to deploy)
             </span>
           </div>
         )}

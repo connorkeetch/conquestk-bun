@@ -1,7 +1,8 @@
 import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import type { Territory } from '@/types/game'
+import type { Territory, TerritoryModifier as RawTerritoryModifier } from '@/types/game'
+import type { TerritoryModifier as IconTerritoryModifier } from './TerritoryModifierIcon'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import {
@@ -31,13 +32,16 @@ export interface TerritoryDisplay {
   adjacentTerritories: string[]
   armyPosition: { x: number; y: number }
   owner?: string
+  ownerId?: string
   armies?: number
+  [key: string]: unknown
 }
 
 export type TerritoryDisplayMap = Record<string, TerritoryDisplay>
 
 interface RiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
+  mapId?: string
 }
 
 // Helper function to convert Redux territories to display format
@@ -55,11 +59,34 @@ const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDisplayMa
       adjacentTerritories: territory.adjacentTerritories,
       armyPosition,
       owner: territory.ownerId ?? undefined,
+      ownerId: territory.ownerId ?? undefined,
       armies: territory.armies,
     }
   })
 
   return displayMap
+
+}
+
+const normalizeModifier = (modifier: RawTerritoryModifier): IconTerritoryModifier => ({
+  name: modifier.name ?? modifier.type ?? 'Modifier',
+  icon: modifier.icon ?? '✨',
+  color: modifier.color ?? '#a855f7',
+  defense_bonus: modifier.defense_bonus ?? 0,
+  attack_bonus: modifier.attack_bonus ?? 0,
+  troop_generation_bonus: modifier.troop_generation_bonus ?? 0,
+  movement_restriction: modifier.movement_restriction ?? false,
+  supply_line_bonus: modifier.supply_line_bonus ?? false,
+})
+
+const normaliseModifierMap = (
+  modifiers: Map<string, RawTerritoryModifier> | Record<string, RawTerritoryModifier>,
+): Map<string, IconTerritoryModifier> => {
+  const entries =
+    modifiers instanceof Map
+      ? Array.from(modifiers.entries())
+      : Object.entries(modifiers)
+  return new Map(entries.map(([territoryId, modifier]) => [territoryId, normalizeModifier(modifier)]))
 }
 
 export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
@@ -187,6 +214,19 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   }
 
   const currentPlayerInfo = players.find((p) => p.id === currentPlayer)
+  const headerPlayerInfo = currentPlayerInfo
+    ? {
+        id: currentPlayerInfo.id,
+        username: currentPlayerInfo.username,
+        color: currentPlayerInfo.color,
+        troops: gameState?.reinforcementArmies ?? 0,
+      }
+    : undefined
+
+  const territoryModifierMap = useMemo(() => {
+    if (!gameState?.territoryModifiers) return null
+    return normaliseModifierMap(gameState.territoryModifiers)
+  }, [gameState?.territoryModifiers])
 
   return (
     <div className="flex flex-col h-full bg-blue-50 rounded-lg overflow-hidden">
@@ -194,7 +234,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
       <GameHeader
         currentPhase={currentPhase}
         turn={gameState.turn}
-        currentPlayerInfo={currentPlayerInfo}
+        currentPlayerInfo={headerPlayerInfo}
       />
 
       {/* Main Game Area */}
@@ -238,7 +278,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             {mapId === 'classic' &&
               Object.entries(territories).map(([territoryId, territory]) => {
                 if (!territory.armies) return null
-                const modifier = gameState.territoryModifiers?.[territoryId]
+                const modifier = territoryModifierMap?.get(territoryId)
 
                 return (
                   <div
@@ -268,9 +308,9 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
           </div>
 
           {/* Territory Modifiers Legend */}
-          {gameState.territoryModifiers && Object.keys(gameState.territoryModifiers).length > 0 && (
+          {territoryModifierMap && territoryModifierMap.size > 0 && (
             <TerritoryModifierLegend
-              modifiers={new Map(Object.entries(gameState.territoryModifiers))}
+              modifiers={territoryModifierMap}
               position="bottom-right"
               collapsible={true}
             />
@@ -359,7 +399,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
             selectedTerritory={selectedTerritory}
             territories={territories}
             players={players}
-            territoryModifiers={gameState.territoryModifiers}
+            territoryModifiers={territoryModifierMap ?? undefined}
           />
 
           {/* Continent Control Status */}

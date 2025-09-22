@@ -90,6 +90,7 @@ describe('gameSlice', () => {
       players: [
         {
           id: 'player1',
+          userId: 'player1',
           username: 'Player 1',
           color: 'red',
           armies: 0,
@@ -112,6 +113,10 @@ describe('gameSlice', () => {
         },
       ],
       cards: [],
+      gameConfig: {
+        movementType: 'classic_adjacent',
+        maxPlayers: 2,
+      },
     }
 
     it('should set game state', () => {
@@ -162,6 +167,7 @@ describe('gameSlice', () => {
         players: [
           {
             id: 'player1',
+            userId: 'player1',
             username: 'Player 1',
             color: 'red',
             armies: 0,
@@ -172,6 +178,7 @@ describe('gameSlice', () => {
           },
           {
             id: 'player2',
+            userId: 'player2',
             username: 'Player 2',
             color: 'blue',
             armies: 0,
@@ -230,6 +237,7 @@ describe('gameSlice', () => {
         players: [
           {
             id: 'player1',
+            userId: 'player1',
             username: 'Player 1',
             color: 'red',
             armies: 0,
@@ -239,6 +247,7 @@ describe('gameSlice', () => {
           },
           {
             id: 'player2',
+            userId: 'player2',
             username: 'Player 2',
             color: 'blue',
             armies: 0,
