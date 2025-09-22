@@ -70,6 +70,12 @@ export const THEMES: ThemeDefinition[] = [
     displayColor: '#FF6B35',
     description: 'Spooky seasonal theme with pumpkin orange and midnight purple',
   },
+  {
+    id: 'metal',
+    name: '🤘 Neon Forge',
+    displayColor: '#F312AD',
+    description: 'Premium heavy metal theme with neon magenta riffs and laser blues',
+  },
 ]
 
 // Export configuration
