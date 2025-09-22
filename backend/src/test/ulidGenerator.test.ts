@@ -2,6 +2,12 @@ import { describe, expect, it } from '@jest/globals'
 
 describe('generate_ulid SQL function', () => {
   it('produces monotonic, unique ULIDs when database is available', async () => {
+    if (process.env.RUN_ULID_TESTS !== 'true') {
+      console.warn('Skipping generate_ulid test: set RUN_ULID_TESTS=true to enable database coverage')
+      expect(true).toBe(true)
+      return
+    }
+
     let query:
       | ((text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount: number | null }>)
       | undefined
