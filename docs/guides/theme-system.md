@@ -72,6 +72,7 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | blue | Blue (#2563EB) | Ocean blue theme |
 | retrospace | Royal Blue (#0F4CDA) | Premium retro social profile blues with neon highlights |
 | green | Emerald (#059669) | Emerald green theme |
+| frontier | Saddle Brown (#C47E35) | 🤠 Premium cowboy theme with campfire glow |
 | black | Gray (#1f2937) | Pure black with gray accents |
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
 | halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
