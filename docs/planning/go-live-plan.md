@@ -177,9 +177,10 @@ _Last updated: September 21, 2025_
 
 ### E2. Cleanup worker modifier service
 - **Priority:** P1 • **Tags:** [be][wrk]
-- **Status:** ⚠️ Blocked (cleanup worker still comments out `territoryModifierService.cleanupFinishedGameModifiers`).
+- **Status:** ✅ Completed (January 2026)
 - **Acceptance criteria:**
   - Implement modifier service or drop the hook; add tests covering cleanup outcomes and idempotency.
+- _Progress (Jan 2026): Cleanup worker now invokes the modifier purge path with idempotency guards, and Jest coverage asserts finished-game cleanup touches territory modifiers, cache cleanup, and skips duplicate jobs._
 
 ## Epic F — Documentation, Legal & Product Copy
 ### F1. Align README, marketing, and architecture docs with reality
