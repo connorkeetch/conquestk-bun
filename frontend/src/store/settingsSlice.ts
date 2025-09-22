@@ -22,6 +22,21 @@ export interface NotificationPrefs {
   turnTimerWarning: { browser: boolean; email: boolean }
   gameInvites: { browser: boolean; email: boolean }
   gameEnded: { browser: boolean; email: boolean }
+  directMessages: { browser: boolean; email: boolean }
+}
+
+type ServerNotificationsPayload = {
+  enabled?: boolean
+} & Partial<Record<keyof NotificationPrefs, { browser?: boolean; email?: boolean }>>
+
+interface ServerSettingsPayload {
+  theme?: string
+  preferred_color?: string
+  show_online_status?: boolean
+  direct_messages?: string
+  dm_notifications_browser?: boolean
+  dm_notifications_email?: boolean
+  notifications?: ServerNotificationsPayload | string
 }
 
 // Settings state interface
@@ -75,6 +90,7 @@ const defaultSettings: SettingsState = {
     turnTimerWarning: { browser: true, email: false },
     gameInvites: { browser: true, email: true },
     gameEnded: { browser: true, email: false },
+    directMessages: { browser: true, email: false },
   },
 }
 
@@ -117,7 +133,9 @@ const loadSettings = (): SettingsState => {
 const saveSettings = (state: SettingsState) => {
   try {
     localStorage.setItem('userSettings', JSON.stringify(state))
-  } catch (_error) {}
+  } catch (_error) {
+    // Ignore storage errors (quota, privacy mode, etc.)
+  }
 }
 
 const settingsSlice = createSlice({
@@ -196,7 +214,7 @@ const settingsSlice = createSlice({
     },
 
     // Load settings from server (merge with current Redux state)
-    loadServerSettings: (state, action: PayloadAction<any>) => {
+    loadServerSettings: (state, action: PayloadAction<ServerSettingsPayload | undefined>) => {
       const serverSettings = action.payload
       if (!serverSettings) return
 
@@ -218,29 +236,46 @@ const settingsSlice = createSlice({
         state.privacy.directMessages = serverSettings.direct_messages as DMPermission
       }
 
-      if (serverSettings.notifications && typeof serverSettings.notifications === 'object') {
+      if (serverSettings.dm_notifications_browser !== undefined) {
+        state.notifications.directMessages.browser = Boolean(
+          serverSettings.dm_notifications_browser,
+        )
+      }
+
+      if (serverSettings.dm_notifications_email !== undefined) {
+        state.notifications.directMessages.email = Boolean(serverSettings.dm_notifications_email)
+      }
+
+      const notificationsFromServer = serverSettings.notifications
+      if (notificationsFromServer) {
         try {
           const notifications =
-            typeof serverSettings.notifications === 'string'
-              ? JSON.parse(serverSettings.notifications)
-              : serverSettings.notifications
+            typeof notificationsFromServer === 'string'
+              ? (JSON.parse(notificationsFromServer) as ServerNotificationsPayload)
+              : notificationsFromServer
 
           // Merge notification settings carefully
-          Object.keys(notifications).forEach((key) => {
-            if (key in state.notifications) {
-              state.notifications[key as keyof NotificationPrefs] = {
-                ...state.notifications[key as keyof NotificationPrefs],
-                ...notifications[key],
-              }
+          Object.entries(notifications).forEach(([key, value]) => {
+            if (key === 'enabled' || !(key in state.notifications)) {
+              return
+            }
+
+            const typedKey = key as keyof NotificationPrefs
+            if (typeof value !== 'object' || value === null) {
+              return
+            }
+
+            state.notifications[typedKey] = {
+              ...state.notifications[typedKey],
+              ...value,
             }
           })
-        } catch (error) {
-          console.warn('Failed to parse server notifications:', error)
+        } catch (_error) {
+          /* ignore malformed notification payloads */
         }
       }
 
       // Don't call saveSettings here - we don't want to overwrite localStorage with server data
-      console.log('✅ Server settings loaded into Redux')
     },
 
     // Color theme settings (new semantic theme system)

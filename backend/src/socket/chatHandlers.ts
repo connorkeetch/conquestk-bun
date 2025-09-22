@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import { query } from '../config/database'
-import { chatService } from '../services/chatService'
 import type { MessageRouteInfo } from '../services/chatService'
+import { chatService } from '../services/chatService'
 import notificationService from '../services/notificationService'
 import type {
   ChatHistoryPayload,
@@ -26,29 +26,29 @@ export const setupChatHandlers = (
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   socket: SocketWithUser,
 ) => {
-  const emitToConversation = (
+  const emitToConversation = <K extends keyof ServerToClientEvents>(
     route: MessageRouteInfo,
-    event: keyof ServerToClientEvents,
-    payload: unknown,
+    event: K,
+    ...args: Parameters<ServerToClientEvents[K]>
   ) => {
     if (route.message_type === 'game' && route.game_id) {
-      ;(socket as any).emit(event, payload)
-      socket.to(`game:${route.game_id}`).emit(event as any, payload)
+      socket.emit(event, ...args)
+      socket.to(`game:${route.game_id}`).emit(event, ...args)
       return
     }
 
     if (route.message_type === 'team' && route.game_id && route.team_id !== null) {
-      ;(socket as any).emit(event, payload)
-      socket.to(`team:${route.game_id}:${route.team_id}`).emit(event as any, payload)
+      socket.emit(event, ...args)
+      socket.to(`team:${route.game_id}:${route.team_id}`).emit(event, ...args)
       return
     }
 
     if (route.message_type === 'dm') {
-      ;(socket as any).emit(event, payload)
-      socket.to(`user:${route.sender_id}`).emit(event as any, payload)
+      socket.emit(event, ...args)
+      socket.to(`user:${route.sender_id}`).emit(event, ...args)
 
       if (route.recipient_id) {
-        io.to(`user:${route.recipient_id}`).emit(event as any, payload)
+        io.to(`user:${route.recipient_id}`).emit(event, ...args)
       }
     }
   }
@@ -415,6 +415,7 @@ async function sendDMNotification(
   message: string,
 ): Promise<void> {
   const preview = message.length > 140 ? `${message.substring(0, 137)}...` : message
+  const sendPush = await notificationService.shouldSendDMPush(recipientId)
 
   await notificationService.createInAppNotification(recipientId, {
     type: 'chat_message',
@@ -423,7 +424,7 @@ async function sendDMNotification(
     data: { senderId, senderUsername },
     actionUrl: `/messages/${senderId}`,
     actionLabel: 'Open chat',
-    sendPush: true,
+    sendPush,
     pushPayload: {
       title: `💬 ${senderUsername} sent a message`,
       body: preview || 'Open ConquestK to read the message',

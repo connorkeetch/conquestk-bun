@@ -125,10 +125,11 @@ _Last updated: September 21, 2025_
 
 ### C3. DM push notifications (deferred)
 - **Priority:** P3 • **Tags:** [be][ops][fe]
-- **Status:** ⏳ Deferred (revisit after B2 and chat consistency work).
+- **Status:** ✅ Completed (January 2026)
 - **Problem:** Rows store DM notifications but push is unimplemented.
 - **Acceptance criteria:**
   - When enabled, DM creates a queued push delivered via service worker with deep-link; honours user preferences.
+- _Progress (Jan 2026): DM notifications now respect per-user browser/email toggles in `user_preferences`, expose a toggle in Settings → Notifications, and only enqueue push payloads when the recipient has opted in; payloads deep-link to `/messages/{senderId}` via the existing service worker._
 
 ## Epic D — Navigation, Stats & UX Truthfulness
 ### D1. Repair Play hub routing

@@ -16,6 +16,7 @@ import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 import { adminService } from './adminService'
 import { mapService } from './mapService'
+import { mapStagingService } from './mapStagingService'
 import notificationService from './notificationService'
 
 type JsonPrimitive = string | number | boolean | null
@@ -230,6 +231,21 @@ export class MapWorkflowService {
 
       const createdMap = await mapService.createMap(userId, mapPayload)
 
+      if (draft.stagingImageId) {
+        try {
+          await mapStagingService.deleteStagingImage(draft.userId, draft.stagingImageId, true)
+        } catch (assetError) {
+          const message =
+            assetError instanceof Error ? assetError.message : String(assetError)
+          logger.warn('Failed to queue staging image for purge after publish', {
+            draftId,
+            stagingImageId: draft.stagingImageId,
+            userId: draft.userId,
+            error: message,
+          })
+        }
+      }
+
       await query(
         `
         UPDATE map_drafts
@@ -238,6 +254,7 @@ export class MapWorkflowService {
             image_url = $2,
             image_width = $3,
             image_height = $4,
+            staging_image_id = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $5
       `,

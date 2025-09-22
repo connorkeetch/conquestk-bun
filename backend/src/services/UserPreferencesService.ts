@@ -7,6 +7,8 @@ export interface UserPreferences {
   soundEnabled: boolean
   musicEnabled: boolean
   notificationEnabled: boolean
+  dmNotificationsBrowser?: boolean
+  dmNotificationsEmail?: boolean
   autoReady: boolean
   showTimer: boolean
   showArmyNumbers: boolean
@@ -49,6 +51,18 @@ export class UserPreferencesService {
         selectFields.push('notification_enabled as "notificationEnabled"')
       } else {
         selectFields.push('true as "notificationEnabled"')
+      }
+
+      if (existingColumns.includes('dm_notifications_browser')) {
+        selectFields.push('dm_notifications_browser as "dmNotificationsBrowser"')
+      } else {
+        selectFields.push('true as "dmNotificationsBrowser"')
+      }
+
+      if (existingColumns.includes('dm_notifications_email')) {
+        selectFields.push('dm_notifications_email as "dmNotificationsEmail"')
+      } else {
+        selectFields.push('false as "dmNotificationsEmail"')
       }
 
       if (existingColumns.includes('auto_ready')) {
@@ -125,6 +139,14 @@ export class UserPreferencesService {
       if (preferences.notificationEnabled !== undefined) {
         updates.push(`notification_enabled = $${paramIndex++}`)
         values.push(preferences.notificationEnabled)
+      }
+      if (preferences.dmNotificationsBrowser !== undefined) {
+        updates.push(`dm_notifications_browser = $${paramIndex++}`)
+        values.push(preferences.dmNotificationsBrowser)
+      }
+      if (preferences.dmNotificationsEmail !== undefined) {
+        updates.push(`dm_notifications_email = $${paramIndex++}`)
+        values.push(preferences.dmNotificationsEmail)
       }
       if (preferences.autoReady !== undefined) {
         updates.push(`auto_ready = $${paramIndex++}`)
@@ -211,6 +233,8 @@ export class UserPreferencesService {
         soundEnabled: true,
         musicEnabled: true,
         notificationEnabled: true,
+        dmNotificationsBrowser: true,
+        dmNotificationsEmail: false,
         autoReady: false,
         showTimer: true,
         showArmyNumbers: true,
@@ -222,15 +246,18 @@ export class UserPreferencesService {
       const result = await this.pool.query(
         `INSERT INTO user_preferences (
           user_id, theme, sound_enabled, music_enabled,
-          notification_enabled, auto_ready, show_timer,
+          notification_enabled, dm_notifications_browser, dm_notifications_email,
+          auto_ready, show_timer,
           show_army_numbers, animation_speed, language
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (user_id) DO UPDATE
         SET 
           theme = EXCLUDED.theme,
           sound_enabled = EXCLUDED.sound_enabled,
           music_enabled = EXCLUDED.music_enabled,
           notification_enabled = EXCLUDED.notification_enabled,
+          dm_notifications_browser = EXCLUDED.dm_notifications_browser,
+          dm_notifications_email = EXCLUDED.dm_notifications_email,
           auto_ready = EXCLUDED.auto_ready,
           show_timer = EXCLUDED.show_timer,
           show_army_numbers = EXCLUDED.show_army_numbers,
@@ -242,6 +269,8 @@ export class UserPreferencesService {
           sound_enabled as "soundEnabled",
           music_enabled as "musicEnabled",
           notification_enabled as "notificationEnabled",
+          dm_notifications_browser as "dmNotificationsBrowser",
+          dm_notifications_email as "dmNotificationsEmail",
           auto_ready as "autoReady",
           show_timer as "showTimer",
           show_army_numbers as "showArmyNumbers",
@@ -253,6 +282,8 @@ export class UserPreferencesService {
           defaults.soundEnabled,
           defaults.musicEnabled,
           defaults.notificationEnabled,
+          defaults.dmNotificationsBrowser,
+          defaults.dmNotificationsEmail,
           defaults.autoReady,
           defaults.showTimer,
           defaults.showArmyNumbers,

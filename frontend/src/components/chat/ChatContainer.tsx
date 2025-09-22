@@ -1,15 +1,21 @@
+import type {
+  ChatHistoryPayload,
+  ChatMessagePayload,
+  ChatUnreadCount,
+  ServerToClientEvents,
+} from '@shared/types'
 import { useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
 import {
   addMessage,
+  deleteMessage,
+  editMessage,
   loadChatHistory,
   markMessagesAsRead,
   setActiveConversation,
   setTypingUser,
   setUnreadCounts,
-  editMessage,
-  deleteMessage,
 } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
@@ -29,6 +35,8 @@ export default function ChatContainer({
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const historyRequestedRef = useRef(false)
+  const lastConversationKeyRef = useRef<string | null>(null)
 
   // Build conversation key
   const conversationKey = `${conversationType}:${conversationId}`
@@ -36,24 +44,27 @@ export default function ChatContainer({
   const messages = conversation?.messages || []
   const typingUsers = conversation?.typingUsers || []
 
-  // Scroll to bottom on new messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  })
 
   // Set up socket listeners and load history
   useEffect(() => {
     if (!socketService.getSocket() || !currentUserId) return
 
+    const conversationChanged = lastConversationKeyRef.current !== conversationKey
+    if (conversationChanged) {
+      historyRequestedRef.current = false
+      setIsLoadingHistory(false)
+      lastConversationKeyRef.current = conversationKey
+    }
+
     // Set active conversation
     dispatch(setActiveConversation(conversationKey))
 
     // Load chat history
-    if (!isLoadingHistory && messages.length === 0) {
+    if (!historyRequestedRef.current) {
+      historyRequestedRef.current = true
       setIsLoadingHistory(true)
       socketService.loadChatHistory({
         messageType: conversationType,
@@ -64,7 +75,7 @@ export default function ChatContainer({
     }
 
     // Socket event handlers
-    const handleMessage = (message: any) => {
+    const handleMessage = (message: ChatMessagePayload) => {
       // Only add messages for this conversation
       if (conversationType === 'game' && message.game_id === conversationId) {
         dispatch(addMessage({ message, currentUserId }))
@@ -87,7 +98,7 @@ export default function ChatContainer({
       }
     }
 
-    const handleHistory = (data: any) => {
+    const handleHistory = (data: ChatHistoryPayload) => {
       if (data.conversationId === conversationId && data.messageType === conversationType) {
         dispatch(
           loadChatHistory({
@@ -100,7 +111,7 @@ export default function ChatContainer({
       }
     }
 
-    const handleTyping = (data: any) => {
+    const handleTyping = (data: Parameters<ServerToClientEvents['chat:user-typing']>[0]) => {
       if (data.conversationType === conversationType && data.conversationId === conversationId) {
         dispatch(
           setTypingUser({
@@ -113,8 +124,8 @@ export default function ChatContainer({
       }
     }
 
-    const handleUnreadCounts = (counts: any[]) => {
-      const formattedCounts = counts.map((c: any) => ({
+    const handleUnreadCounts = (counts: ChatUnreadCount[]) => {
+      const formattedCounts = counts.map((c) => ({
         conversationType: c.conversation_type,
         conversationId: c.conversation_id,
         unreadCount: c.unread_count,
@@ -122,8 +133,11 @@ export default function ChatContainer({
       dispatch(setUnreadCounts(formattedCounts))
     }
 
-    const handleMessageEdited = (data: { messageId: string; newMessage: string; editedAt: string | Date }) => {
-      const editedAt = typeof data.editedAt === 'string' ? data.editedAt : new Date(data.editedAt).toISOString()
+    const handleMessageEdited = (
+      data: Parameters<ServerToClientEvents['chat:message-edited']>[0],
+    ) => {
+      const editedAt =
+        typeof data.editedAt === 'string' ? data.editedAt : new Date(data.editedAt).toISOString()
       dispatch(
         editMessage({
           messageId: data.messageId,
@@ -133,7 +147,9 @@ export default function ChatContainer({
       )
     }
 
-    const handleMessageDeleted = (data: { messageId: string }) => {
+    const handleMessageDeleted = (
+      data: Parameters<ServerToClientEvents['chat:message-deleted']>[0],
+    ) => {
       dispatch(deleteMessage(data.messageId))
     }
 
@@ -167,7 +183,7 @@ export default function ChatContainer({
       // Clear active conversation
       dispatch(setActiveConversation(null))
     }
-  }, [conversationType, conversationId, currentUserId, dispatch])
+  }, [conversationType, conversationId, conversationKey, currentUserId, dispatch])
 
   const sendMessage = (text: string) => {
     if (!socketService.getSocket() || !text.trim()) return
