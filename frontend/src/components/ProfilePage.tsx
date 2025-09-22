@@ -373,6 +373,12 @@ const ProfilePage: React.FC = () => {
     return () => window.clearTimeout(timeoutId)
   }, [actionFeedback])
 
+  useEffect(() => {
+    if (!profileExtrasEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
+      setActiveTab('overview')
+    }
+  }, [profileExtrasEnabled, activeTab])
+
   const handleRefreshProfile = useCallback(() => {
     setActionFeedback(null)
     setCopyState('idle')
@@ -505,12 +511,6 @@ const ProfilePage: React.FC = () => {
     rankProgress,
     ratingToNextRank,
   } = rankVisuals
-
-  useEffect(() => {
-    if (!profileExtrasEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
-      setActiveTab('overview')
-    }
-  }, [profileExtrasEnabled, activeTab])
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },

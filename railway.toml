@@ -1,5 +1,6 @@
 [build]
-builder = "nixpacks"
+builder = "railpack"
+buildEnvironment = "V3"
 buildCommand = "npm run build"
 
 [deploy]

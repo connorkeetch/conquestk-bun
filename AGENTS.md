@@ -1,92 +1,145 @@
-# AGENTS.md
+# AI Assistant Guide
 
-## Project overview
+## Audience & collaboration
+- Connor Keetch owns ConquestK and is the sole developer; he is a data engineer rather than a full-time application coder, so spell out reasoning, risks, and next steps in plain language.
+- Default to asynchronous-friendly updates: call out what changed, why it matters, and anything Connor should verify locally.
+- Always use Context7 MCP and its tools when you are writing complex code or are unsure about the best approach.
+- Keep this guide in lockstep with its twin (`AGENTS.md` and `CLAUDE.md`); whenever you change one, mirror the update and double-check for drift.
+
+## Project snapshot
 - ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
-- The public site is not live yet; assume all deployments are still in staging or local environments.
-- The repo expects Node.js 22+, npm 9+, PostgreSQL access (Railway in hosted envs), and Redis for socket scaling and sessions.
-- Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with components in `frontend/src/components`.
+- Local development expects Node.js 22.12+, npm 10+, access to PostgreSQL, and Redis for socket scaling and sessions.
+- Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with reusable components in `frontend/src/components`.
 
-## Team & collaboration
-- Connor Keetch owns the project and is the sole developer; communicate changes clearly and explain concepts with extra context for someone who isn’t a full-time coder.
+## Architecture & stack
+- Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
+- Backend: Node.js 22+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, Bull for background work.
+- Testing: Vitest on the frontend, Jest on the backend. Biome handles linting/formatting (2 spaces, single quotes in TS, double quotes in JSX).
 
-## Tooling expectations
-- Always use Context7 MCP and its tools whenever you are writing complex code or if you are unsure about the best approach.
+## Tooling requirements
+- Node.js `>=22.12.0` and npm `>=10.0.0` (enforced via `engines` across packages).
+- PostgreSQL reachable at `localhost:5432` (or the Railway connection string) and Redis at `localhost:6379` for local dev.
+- pnpm/yarn are unsupported; use npm workspaces starting from repository root.
 
 ## Quick start
-- Install deps: `npm install`
-- Prepare local database/seeds (optional for quick start): `npm run setup`
-- Run both servers: `npm run dev` (frontend on http://localhost:5173, backend on http://localhost:5001)
-- Need a faster boot? `npm run dev:quick` skips the environment guard
+```bash
+npm install          # install root + workspace dependencies
+npm run setup        # optional environment guard + sanity checks
+npm run dev          # PowerShell launcher: starts backend (5001) and frontend (5173)
+```
+If you are not on Windows, use `npm run dev:manual` or run `npm run dev:backend` and `npm run dev:frontend` in separate terminals. `npm run dev:quick` skips the environment guard during setup.
 
 ## Environments
-- Production: https://conquestk.com (main)
-- Staging: https://risk-game-production-9935.up.railway.app/ (dev)
+- Production: https://conquestk.com (main branch)
+- Staging: https://risk-game-production-9935.up.railway.app/ (dev branch)
 
-## Setup commands
-- Install deps: `npm install`
-- Prepare local database/seeds (optional for quick start): `npm run setup`
-- Start dev servers (frontend + backend): `npm run dev`
-- Quick dev without setup check: `npm run dev:quick`
-- Backend only: `npm run dev:backend`
-- Frontend only: `npm run dev:frontend`
+## Key commands
+```bash
+# Development
+npm run dev                 # start both servers (PowerShell wrapper)
+npm run dev:backend         # backend only
+npm run dev:frontend        # frontend only
+npm run dev:quick           # skip environment guard
 
-## Testing instructions
-- Run all tests: `npm test`
-- Backend Jest suite: `npm run test:backend`
-- Frontend Vitest suite: `npm run test:frontend`
-- Lint and format checks: `npm run lint` (Biomes), `npm run format`
-- Auto-fix linting issues: `npm run lint:fix`
-- If you touch SQL migrations, run `cd backend && npm run migrate` against a local database before finishing.
+# Testing
+npm test                    # run backend then frontend tests
+npm run test:backend        # Jest (backend)
+npm run test:frontend       # Vitest (frontend)
 
-## Code style
-- TypeScript everywhere with strict typings; avoid `any`.
-- JavaScript/TypeScript files use single quotes and no semicolons (Biome enforces).
-- JSX uses double quotes per project conventions.
-- Favor functional, compositional patterns and existing abstractions instead of introducing new ones.
-- Tailwind CSS v4 only for styling; no inline styles or external stylesheets unless they already exist.
-- Shared path alias `@/` resolves to each package's `src/`; keep imports consistent.
-- Legacy areas still contain `any` from earlier iterations. Whenever you are touching one of those files, plan to refactor the surface you modify to use real types instead of leaving new `any`s behind.
+# Code quality
+npm run lint                # Biome check
+npm run lint:fix            # auto-fix lint issues
+npm run format              # format with Biome
 
-## Database & admin utilities
-- Run migrations: `cd backend && npm run migrate`
-- Seed demo users: `cd backend && npm run seed:users`
-- Promote accounts: `cd backend && npm run make-admin`
-- Enforce owner + test users on any environment:
-  - `cd backend`
-  - `ENFORCE_DEPLOY_ACCOUNT_CHECK=true NODE_ENV=production DATABASE_URL="postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway" TS_NODE_TRANSPILE_ONLY=1 npx ts-node src/scripts/ensureDeployAccounts.ts`
-  - Script adapts to older schemas (missing `is_verified`, array permissions, etc.) and normalizes the `connorkeetch@gmail.com` owner plus twelve `test#@test.com` accounts (`Password123!`).
-- New migrations must follow `NNN_description.sql`, never modify existing files, and should be tested locally before PRs.
+# Build & production
+npm run build               # build frontend + backend
+npm start                   # run migrations then start backend in prod mode
 
-## Backend notes
-- Routes automatically mounted under `/api`; prefer adding to existing routers before creating new ones.
-- To access user context, use middleware from `backend/src/middleware/auth.ts`—manually decoding JWTs should be limited to read-only helpers.
-- Follow logging conventions using `backend/src/utils/logger.ts`.
-- Game engine lives in `backend/src/game/gameEngine.ts`; align new gameplay rules with socket handlers in `backend/src/socket/gameHandlers.ts`.
-
-## Frontend notes
-- Use hooks from `frontend/src/hooks` and Redux store slices under `frontend/src/store`.
-- API calls go through the Axios instance in `frontend/src/services/api.ts` or the game/map service helpers.
-- Maintain tailwind utility ordering consistent with project examples.
-- Theme switching relies on CSS variables in `frontend/src/app.css`; prefer toggling `data-theme` attributes over inline styles.
+# Database & admin
+cd backend && npm run migrate      # apply migrations
+cd backend && npm run seed:users   # seed demo/test users
+cd backend && npm run make-admin   # promote an account interactively
+```
 
 ## Release & PR expectations
-- Before committing: `npm run lint` and whichever test suites cover your change.
-- Keep commits focused; migrations require corresponding service/tests updates.
-- Document notable behaviour changes in `docs/` or inline comments sparingly (explain why, not what).
-- Run `npm run build` before release when you change bundling or production behaviour.
+- Run `npm run lint` and the relevant test suites before committing.
+- Run `npm run build` if you change bundling or production behaviour.
+- Keep commits focused and document notable behavioural changes inline (explain why, not what).
+
+## Code style & patterns
+- TypeScript everywhere with strict typings—avoid introducing new `any` types; if you touch legacy `any`, prefer refactoring it to real types.
+- Tailwind CSS v4 only; no inline styles or ad-hoc stylesheets unless a file already uses them.
+- JSX uses double quotes; TS/JS uses single quotes and no semicolons.
+- Use the shared path alias `@/` (mapped to each package’s `src/`) consistently across imports.
+- Prefer extending existing abstractions rather than inventing new patterns.
+
+## Backend notes
+- Routes are mounted under `/api`; add to existing routers before creating new ones.
+- Use `backend/src/middleware/auth.ts` for user context instead of decoding JWTs manually.
+- Follow logging conventions in `backend/src/utils/logger.ts`.
+- Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/socket/gameHandlers.ts`.
+- Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
+
+## Frontend notes
+- Pages are under `frontend/src/pages`; shared components live in `frontend/src/components`.
+- Hooks in `frontend/src/hooks` and slices in `frontend/src/store` provide canonical state logic—reuse them before adding new state containers.
+- API calls flow through `frontend/src/services/api.ts` or high-level game/map helpers.
+- Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
+- The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
+
+## Database & admin utilities
+- Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
+- Use `cd backend && npm run seed:users` to refresh demo users locally.
+- Promote or diagnose accounts with the scripts in `backend/src/scripts` (see `make-admin`, `diagnose-admin`, and `ensureDeployAccounts`).
+- The shared Railway connection string is `postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway`; treat it carefully even though the repo is private.
+
+## Testing strategy
+- Backend: Jest unit/integration tests alongside source files (`*.test.ts`).
+- Frontend: Vitest + React Testing Library for components and hooks (`*.test.tsx`).
+- Mock Socket.io connections in tests instead of hitting live servers.
+- Prioritise coverage for gameplay logic, services, and reducers when you touch them.
+
+## Common gotchas
+- Port conflicts on 5001 (backend) or 5173 (frontend) will block startup.
+- Ensure PostgreSQL and Redis are running before invoking background jobs or sockets.
+- Path aliases differ per package—check each `tsconfig.json` if imports fail.
+- Socket.io rooms namespace as `game:${gameId}`; keep emit/listen pairs consistent.
+- Frontend should use relative API URLs (`/api`) so deployments work across origins.
+- Email flows require `RESEND_API_KEY`; without it most email routes are disabled.
+
+## Documentation reference
+- `README.md` – project overview and onboarding.
+- `docs/reference/architecture.md` – system architecture and data flow.
+- `docs/reference/deployment.md` – deployment procedures.
+- `docs/guides/coding-standards.md` – code quality principles.
+- `docs/guides/theme-system.md` – theme architecture.
+- `docs/guides/map-format.md` – map editor format specification.
+- `docs/guides/email-verification.md` – email verification workflow.
+- `docs/operations/troubleshooting.md` – common operational fixes.
+- `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
+- `docs/planning/codebase-cleanup.md` – technical-debt backlog.
 
 ## Environment configuration
-- Required variables live in package-specific `.env` files; critical backend keys include `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `PORT`, and email settings when `EMAIL_ENABLED=true`.
-- Email via Resend needs `RESEND_API_KEY`, `EMAIL_FROM`, and `REQUIRE_EMAIL_VERIFICATION=true` in `backend/.env`.
-- Shared Railway Postgres (dev/staging) lives at `postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway`; private repo so credential can stay committed, but treat it carefully.
-- When the frontend runs on a different origin, set `PUBLIC_ASSET_BASE_URL` in `backend/.env` (e.g. `https://risk-game-production-9935.up.railway.app`) so map image URLs resolve correctly.
+### Core variables (`backend/.env`)
+```bash
+DATABASE_URL=postgresql://...
+JWT_SECRET=your_32_char_secret
+SESSION_SECRET=your_32_char_secret
+PORT=5001
+NODE_ENV=development
+```
 
-## Documentation pointers
-- Architectural overview: `docs/reference/architecture.md`
-- Theme details: `docs/guides/theme-system.md`
-- Map editor format: `docs/guides/map-format.md`
-- Coding standards: `docs/guides/coding-standards.md`
-- Troubleshooting common issues: `docs/operations/troubleshooting.md`
-- Product roadmap & priorities: `docs/planning/roadmap.md` (align with the go-live backlog in the same folder).
-- Launch blocker backlog: `docs/planning/go-live-plan.md` (status badges indicate what is done vs. open).
-- Housekeeping tracker: `docs/planning/codebase-cleanup.md` (duplicate audio directories, legacy deployment scripts, backup hygiene).
+### Email setup (Resend)
+```bash
+RESEND_API_KEY=re_YOUR_API_KEY_HERE
+EMAIL_FROM=noreply@updates.conquestk.com
+EMAIL_ENABLED=true
+REQUIRE_EMAIL_VERIFICATION=true
+```
+
+Set `PUBLIC_ASSET_BASE_URL` in `backend/.env` when the frontend runs on a different origin (e.g. staging) so map asset URLs resolve correctly.
+
+## Syncing this guide
+- `AGENTS.md` and `CLAUDE.md` carry the same content; review both after every edit.
+- When you update one, update the other in the same commit and skim the diff to confirm parity.
+- Call out in your summary that the guides stayed synchronized so Connor can trust the documentation.

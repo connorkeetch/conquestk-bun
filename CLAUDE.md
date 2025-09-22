@@ -1,237 +1,145 @@
-# CLAUDE.md - AI Assistant Guide
+# AI Assistant Guide
 
-This file provides essential guidance to Claude Code (claude.ai/code) when working with the ConquestK codebase.
+## Audience & collaboration
+- Connor Keetch owns ConquestK and is the sole developer; he is a data engineer rather than a full-time application coder, so spell out reasoning, risks, and next steps in plain language.
+- Default to asynchronous-friendly updates: call out what changed, why it matters, and anything Connor should verify locally.
+- Always use Context7 MCP and its tools when you are writing complex code or are unsure about the best approach.
+- Keep this guide in lockstep with its twin (`AGENTS.md` and `CLAUDE.md`); whenever you change one, mirror the update and double-check for drift.
 
-## 🚀 Quick Start
+## Project snapshot
+- ConquestK is a Risk-inspired strategy game with an Express/Node backend (`backend/`), a React 19 + Redux Toolkit frontend (`frontend/`), and shared types/utilities in `shared/`.
+- Local development expects Node.js 22.12+, npm 10+, access to PostgreSQL, and Redis for socket scaling and sessions.
+- Backend routes live under `backend/src/routes`, with services in `backend/src/services`. Frontend pages are in `frontend/src/pages` with reusable components in `frontend/src/components`.
+
+## Architecture & stack
+- Frontend: React 19, TypeScript, Redux Toolkit, Vite 7, Tailwind CSS v4, socket.io client.
+- Backend: Node.js 22+, Express 5, TypeScript, Socket.io, PostgreSQL (Railway-hosted), Redis, Bull for background work.
+- Testing: Vitest on the frontend, Jest on the backend. Biome handles linting/formatting (2 spaces, single quotes in TS, double quotes in JSX).
+
+## Tooling requirements
+- Node.js `>=22.12.0` and npm `>=10.0.0` (enforced via `engines` across packages).
+- PostgreSQL reachable at `localhost:5432` (or the Railway connection string) and Redis at `localhost:6379` for local dev.
+- pnpm/yarn are unsupported; use npm workspaces starting from repository root.
+
+## Quick start
 ```bash
-npm install        # Install dependencies
-npm run setup     # Configure environment and database
-npm run dev       # Start development servers
+npm install          # install root + workspace dependencies
+npm run setup        # optional environment guard + sanity checks
+npm run dev          # PowerShell launcher: starts backend (5001) and frontend (5173)
 ```
-Frontend: http://localhost:5173 | Backend: http://localhost:5001 
+If you are not on Windows, use `npm run dev:manual` or run `npm run dev:backend` and `npm run dev:frontend` in separate terminals. `npm run dev:quick` skips the environment guard during setup.
 
-### Live Environments
-- **Production**: [conquestk.com](https://conquestk.com) (main branch)
-- **Staging**: [risk-game-production-9935.up.railway.app](https://risk-game-production-9935.up.railway.app/) (dev branch)
+## Environments
+- Production: https://conquestk.com (main branch)
+- Staging: https://risk-game-production-9935.up.railway.app/ (dev branch)
 
-## ⚡ Essential Commands
+## Key commands
 ```bash
 # Development
-npm run dev                    # Start both frontend (5173) and backend (5001)
-npm run dev:frontend           # Frontend only
-npm run dev:backend            # Backend only
-npm run dev:quick              # Skip setup check (faster startup)
+npm run dev                 # start both servers (PowerShell wrapper)
+npm run dev:backend         # backend only
+npm run dev:frontend        # frontend only
+npm run dev:quick           # skip environment guard
 
 # Testing
-npm test                       # Run all tests (backend + frontend)
-npm run test:backend           # Jest backend tests only
-npm run test:frontend          # Vitest frontend tests only
+npm test                    # run backend then frontend tests
+npm run test:backend        # Jest (backend)
+npm run test:frontend       # Vitest (frontend)
 
-# Code Quality
-npm run lint                   # Biome check for issues
-npm run lint:fix               # Auto-fix linting issues
-npm run format                 # Format code with Biome
+# Code quality
+npm run lint                # Biome check
+npm run lint:fix            # auto-fix lint issues
+npm run format              # format with Biome
 
-# Build & Production
-npm run build                  # Build both frontend and backend
-npm start                      # Start production server
+# Build & production
+npm run build               # build frontend + backend
+npm start                   # run migrations then start backend in prod mode
 
-# Database & Admin
-cd backend && npm run migrate      # Run database migrations
-cd backend && npm run seed:users   # Seed test users
-cd backend && npm run make-admin   # Make user admin (interactive)
+# Database & admin
+cd backend && npm run migrate      # apply migrations
+cd backend && npm run seed:users   # seed demo/test users
+cd backend && npm run make-admin   # promote an account interactively
 ```
 
-## 🏗️ Architecture Overview
+## Release & PR expectations
+- Run `npm run lint` and the relevant test suites before committing.
+- Run `npm run build` if you change bundling or production behaviour.
+- Keep commits focused and document notable behavioural changes inline (explain why, not what).
 
-### Tech Stack
-- **Frontend**: React 19 + TypeScript + Redux Toolkit + Vite 7 + Tailwind CSS v4
-- **Backend**: Node.js + Express + TypeScript + Socket.io + PostgreSQL (Railway-hosted)
-- **Testing**: Jest (backend) + Vitest (frontend)
-- **Code Style**: Biome (2 spaces, single quotes JS, double quotes JSX)
+## Code style & patterns
+- TypeScript everywhere with strict typings—avoid introducing new `any` types; if you touch legacy `any`, prefer refactoring it to real types.
+- Tailwind CSS v4 only; no inline styles or ad-hoc stylesheets unless a file already uses them.
+- JSX uses double quotes; TS/JS uses single quotes and no semicolons.
+- Use the shared path alias `@/` (mapped to each package’s `src/`) consistently across imports.
+- Prefer extending existing abstractions rather than inventing new patterns.
 
-### 🎨 Theme Architecture
-**Pure CSS Variable System** - Zero-flash theme switching:
-- All themes defined in `app.css` using `[data-theme="name"]` selectors
-- Semantic variables: `--color-primary`, `--color-secondary`, `--color-accent`
-- Available themes: default, red, violet, blue, retrospace, green, black, highcontrast, halloween
-- Theme switching: `document.setAttribute('data-theme', 'red')`
-- See `/docs/guides/theme-system.md` for complete documentation
+## Backend notes
+- Routes are mounted under `/api`; add to existing routers before creating new ones.
+- Use `backend/src/middleware/auth.ts` for user context instead of decoding JWTs manually.
+- Follow logging conventions in `backend/src/utils/logger.ts`.
+- Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/socket/gameHandlers.ts`.
+- Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
 
-### Key Files & Components
-```
-backend/
-├── src/game/gameEngine.ts         # Core game logic, turn phases
-├── src/game/worldMap.ts           # Territory definitions and adjacencies  
-├── src/services/GameService.ts    # Game state management
-├── src/socket/gameHandlers.ts     # Real-time event handling
-└── migrations/                    # Database migrations
+## Frontend notes
+- Pages are under `frontend/src/pages`; shared components live in `frontend/src/components`.
+- Hooks in `frontend/src/hooks` and slices in `frontend/src/store` provide canonical state logic—reuse them before adding new state containers.
+- API calls flow through `frontend/src/services/api.ts` or high-level game/map helpers.
+- Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
+- The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
 
-frontend/
-├── src/pages/MapEditorTokens.tsx   # Map Editor with tabbed interface
-├── src/components/game/            # GameBoard, PhaseControls, DiceModal
-├── src/store/gameSlice.ts          # Redux game state
-├── src/services/socket.ts          # Socket.io client
-└── src/types/game.ts               # TypeScript game types
-```
+## Database & admin utilities
+- Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
+- Use `cd backend && npm run seed:users` to refresh demo users locally.
+- Promote or diagnose accounts with the scripts in `backend/src/scripts` (see `make-admin`, `diagnose-admin`, and `ensureDeployAccounts`).
+- The shared Railway connection string is `postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway`; treat it carefully even though the repo is private.
 
-## 🗺️ Map Editor
-The Map Editor (`/map-editor-tokens`) features a tabbed interface for creating custom maps:
-- Properties, Image, Territories, Continents, Connections, Capitals tabs
-- See `docs/guides/map-format.md` for complete documentation
+## Testing strategy
+- Backend: Jest unit/integration tests alongside source files (`*.test.ts`).
+- Frontend: Vitest + React Testing Library for components and hooks (`*.test.tsx`).
+- Mock Socket.io connections in tests instead of hitting live servers.
+- Prioritise coverage for gameplay logic, services, and reducers when you touch them.
 
-## 🔴 Critical Development Rules
+## Common gotchas
+- Port conflicts on 5001 (backend) or 5173 (frontend) will block startup.
+- Ensure PostgreSQL and Redis are running before invoking background jobs or sockets.
+- Path aliases differ per package—check each `tsconfig.json` if imports fail.
+- Socket.io rooms namespace as `game:${gameId}`; keep emit/listen pairs consistent.
+- Frontend should use relative API URLs (`/api`) so deployments work across origins.
+- Email flows require `RESEND_API_KEY`; without it most email routes are disabled.
 
-1. **ALWAYS use Tailwind CSS v4** - NO inline styles, NO regular CSS
-2. **Prefer editing existing files** over creating new ones
-3. **Path aliases**: Both Frontend and Backend use `@/` (maps to src/)
-4. **Error handling**: Always handle async errors properly
-5. **Socket events**: Validate all incoming data before processing
-6. **Type safety**: Avoid TypeScript `any` type
-7. **Database changes**: ALWAYS create a migration file
-8. **Migration naming**: Use format `XXX_description.sql`
-9. **Test migrations locally** before production
-10. **Follow docs/guides/coding-standards.md** - Apply all 10 core principles
+## Documentation reference
+- `README.md` – project overview and onboarding.
+- `docs/reference/architecture.md` – system architecture and data flow.
+- `docs/reference/deployment.md` – deployment procedures.
+- `docs/guides/coding-standards.md` – code quality principles.
+- `docs/guides/theme-system.md` – theme architecture.
+- `docs/guides/map-format.md` – map editor format specification.
+- `docs/guides/email-verification.md` – email verification workflow.
+- `docs/operations/troubleshooting.md` – common operational fixes.
+- `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
+- `docs/planning/codebase-cleanup.md` – technical-debt backlog.
 
-## 💾 Database Management
-
-### Migration Best Practices
-1. Check existing migrations in `backend/migrations/`
-2. Create new migration file with next number
-3. Use `CREATE TABLE IF NOT EXISTS` for safety
-4. Test locally with `cd backend && npm run migrate`
-5. Migrations auto-run on Railway deployment
-
-### Current Database Structure
-- **Core**: users, game_rooms, room_players, game_states, game_moves
-- **Maps**: maps, map_territories, custom_maps, map_submissions, map_reviews
-- **Stats**: player_stats, player_game_stats, game_history, game_analytics
-- **Social**: friendships, user_blocks, user_profiles, chat_messages
-- **Admin**: admin_roles, user_admin_roles, admin_activity_logs, user_bans
-
-## 🎮 Game Implementation Patterns
-
-### Adding a New Game Feature
-1. Update game engine in `backend/src/game/gameEngine.ts`
-2. Add Socket.io handler in `backend/src/socket/gameHandlers.ts`
-3. Update types in both backend and frontend `types/game.ts`
-4. Implement UI component in `frontend/src/components/`
-5. Add Redux state management in `frontend/src/store/gameSlice.ts`
-6. Write tests for both backend logic and frontend components
-
-### Socket.io Event Pattern
-```typescript
-// Client emit
-socket.emit('game:action', { gameId, action, data })
-
-// Server handler (gameHandlers.ts)
-socket.on('game:action', async (data) => {
-  // Validate
-  if (!validateAction(data)) return socket.emit('error', { message })
-  
-  // Update state
-  const newState = await gameService.processAction(data)
-  
-  // Broadcast
-  io.to(gameId).emit('game:state', newState)
-})
-
-// Client listener
-socket.on('game:state', (state) => {
-  dispatch(updateGameState(state))
-})
-```
-
-## 🎯 Current Project Status (January 2025)
-
-### ✅ Recently Completed
-- VIP & Premium System with database infrastructure
-- Admin Panel enhancements with inline editing
-- Theme System overhaul with zero-flash switching
-- Map Editor workflow with staging pipeline
-- Email verification system with Resend
-
-### 🔄 In Progress
-- VIP Maps implementation
-- Premium tier features
-- Worker system integration (Bull.js)
-- Audio system enhancements
-
-## 📁 Environment Configuration
-
-### Email Setup (Resend)
+## Environment configuration
+### Core variables (`backend/.env`)
 ```bash
-# Add to backend/.env:
+DATABASE_URL=postgresql://...
+JWT_SECRET=your_32_char_secret
+SESSION_SECRET=your_32_char_secret
+PORT=5001
+NODE_ENV=development
+```
+
+### Email setup (Resend)
+```bash
 RESEND_API_KEY=re_YOUR_API_KEY_HERE
 EMAIL_FROM=noreply@updates.conquestk.com
 EMAIL_ENABLED=true
 REQUIRE_EMAIL_VERIFICATION=true
 ```
 
-### Core Environment Variables
-```bash
-DATABASE_URL=postgresql://...      # Railway PostgreSQL
-JWT_SECRET=...                      # 32+ chars
-SESSION_SECRET=...                  # 32+ chars
-PORT=5001
-NODE_ENV=development
-```
+Set `PUBLIC_ASSET_BASE_URL` in `backend/.env` when the frontend runs on a different origin (e.g. staging) so map asset URLs resolve correctly.
 
-## 🛠️ Development Environment
-- **Node.js**: v22+ required
-- **npm**: v9+ required
-- **IDE**: VS Code on Windows (PowerShell for dev scripts)
-- **Linter**: Biome 2.2.2 (2 spaces, single quotes JS, double quotes JSX)
-
-## 🧪 Testing Strategy
-- **Unit Tests**: Core game logic, utility functions
-- **Integration Tests**: API endpoints, Socket.io handlers
-- **Component Tests**: React components with Redux
-- Test files alongside source (`*.test.ts`, `*.test.tsx`)
-- Mock Socket.io connections for frontend tests
-
-## 📏 Code Quality Standards
-Follow these core principles (see CODING-STANDARDS.md):
-1. Follow TypeScript/React best practices
-2. Document WHY, not WHAT
-3. Handle errors robustly
-4. Apply SOLID principles
-5. Write testable code (>70% coverage)
-6. Appropriate abstraction levels
-7. Use patterns wisely
-8. Avoid global state
-9. Refactor continuously
-10. Security first
-
-## 🚨 Common Gotchas
-- **Port conflicts**: Backend (5001) or frontend (5173)
-- **PostgreSQL connection**: Railway-hosted, check DATABASE_URL
-- **TypeScript paths**: Different tsconfig setups for frontend/backend
-- **Socket.io rooms**: Format `game:${gameId}`
-- **Redux DevTools**: Development mode only
-- **CORS**: Configured for localhost in dev, specific domains in production
-- **Windows paths**: Forward slashes in imports, backslashes for file system
-- **npm workspaces**: Root `npm install` installs all dependencies
-- **API URLs in production**: Frontend MUST use relative URLs (`/api`)
-- **Email verification**: Requires RESEND_API_KEY configured
-
-## 📚 Documentation Structure
-- **README.md** - Project overview and quick start
-- **CLAUDE.md** - This file (AI assistant guide)
-- **docs/index.md** - Index of every guide inside `docs/`
-- **docs/planning/roadmap.md** - Active priorities and backlog
-- **docs/planning/codebase-cleanup.md** - Technical-debt follow-ups
-- **docs/reference/architecture.md** - System design and patterns
-- **docs/reference/deployment.md** - Deployment procedures
-- **docs/guides/coding-standards.md** - Code quality standards
-- **docs/guides/theme-system.md** - Theme architecture
-- **docs/guides/map-format.md** - Map file specification
-- **docs/guides/email-verification.md** - Email system docs
-- **docs/operations/troubleshooting.md** - Common issues
-
-## 🎯 Key Reminders
-- Create new files ONLY when architecturally necessary
-- Always verify information before assuming
-- Check existing code patterns before implementing new features
-- Run linting and type checking before committing
-- Test thoroughly in development before deploying
+## Syncing this guide
+- `AGENTS.md` and `CLAUDE.md` carry the same content; review both after every edit.
+- When you update one, update the other in the same commit and skim the diff to confirm parity.
+- Call out in your summary that the guides stayed synchronized so Connor can trust the documentation.
