@@ -55,6 +55,9 @@ const {
   createGroupConversation,
   ensureDirectConversation,
   listConversationsForUser,
+  getConversationDetail,
+  getUnreadSummary,
+  markConversationRead,
   sendMessage,
 } = require('../services/conversationService') as typeof import('../services/conversationService')
 
@@ -309,6 +312,117 @@ describe('conversationService', () => {
     expect(result[0].conversation.id).toBe('conv-42')
     expect(result[0].membership.isPinned).toBe(true)
     expect(result[0].lastMessage?.body).toBe('Final rally call')
+  })
+
+  it('returns conversation detail with membership and unread count', async () => {
+    const joinedAt = new Date('2025-09-22T08:00:00Z')
+    const updatedAt = new Date('2025-09-22T09:00:00Z')
+
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            role: 'member',
+            shadow_muted: false,
+            joined_at: joinedAt,
+            last_read_message_id: null,
+            last_read_at: null,
+            is_muted: false,
+            is_pinned: false,
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'conv-99',
+            kind: 'group',
+            title: 'Alliance',
+            created_by: 'owner-1',
+            created_at: joinedAt,
+            updated_at: updatedAt,
+            is_archived: false,
+            is_read_only: false,
+            game_id: null,
+            metadata: {},
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            user_id: 'user-7',
+            role: 'member',
+            joined_at: joinedAt,
+            shadow_muted: false,
+          },
+          {
+            user_id: 'ally',
+            role: 'member',
+            joined_at: joinedAt,
+            shadow_muted: false,
+          },
+        ],
+        rowCount: 2,
+      })
+      .mockResolvedValueOnce({ rows: [{ count: 4 }], rowCount: 1 })
+
+    const detail = await getConversationDetail('conv-99', 'user-7')
+
+    expect(detail.conversation.id).toBe('conv-99')
+    expect(detail.membership.joinedAt).toEqual(joinedAt)
+    expect(detail.unreadCount).toBe(4)
+  })
+
+  it('summarizes unread counts by conversation', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { conversation_id: 'conv-1', unread_count: 0 },
+        { conversation_id: 'conv-2', unread_count: 5 },
+      ],
+      rowCount: 2,
+    })
+
+    const summary = await getUnreadSummary('user-42')
+
+    expect(summary).toEqual([
+      { conversationId: 'conv-1', unreadCount: 0 },
+      { conversationId: 'conv-2', unreadCount: 5 },
+    ])
+  })
+
+  it('marks conversations as read using the latest message timestamp', async () => {
+    const createdAt = new Date('2025-09-23T12:00:00Z')
+
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'msg-123',
+            conversation_id: 'conv-5',
+            sender_id: 'user-5',
+            body: 'latest message',
+            json_metadata: {},
+            created_at: createdAt,
+            updated_at: createdAt,
+            deleted_at: null,
+            edited_at: null,
+            shadow_muted: false,
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+
+    await markConversationRead('conv-5', 'user-9')
+
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('UPDATE conversation_members'),
+      ['conv-5', 'user-9', 'msg-123', createdAt],
+    )
   })
 
   it('adds members to an existing group conversation', async () => {

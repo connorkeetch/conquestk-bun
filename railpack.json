@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "caches": {
+    "npm-install": {
+      "directory": "/root/.npm",
+      "type": "shared"
+    }
+  },
+  "steps": {
+    "install": {
+      "commands": ["npm ci"],
+      "caches": ["npm-install"]
+    },
+    "build": {
+      "inputs": [{ "step": "install" }],
+      "commands": [
+        "npm run build",
+        "npm prune --workspaces --include-workspace-root --omit=dev",
+        "rm -rf node_modules frontend/node_modules",
+        "cd backend && npm ci --omit=dev"
+      ],
+      "caches": ["npm-install"]
+    }
+  },
+  "deploy": {
+    "startCommand": "npm start",
+    "inputs": [
+      {
+        "step": "build",
+        "include": [
+          "package.json",
+          ".nvmrc",
+          "backend/package.json",
+          "backend/package-lock.json",
+          "backend/dist",
+          "backend/public",
+          "backend/node_modules",
+          "backend/migrations"
+        ]
+      }
+    ]
+  }
+}
