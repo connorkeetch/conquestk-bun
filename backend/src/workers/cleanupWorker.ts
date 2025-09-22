@@ -2,6 +2,7 @@ import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
+import type { JobIdempotencyService } from '../services/jobIdempotencyService'
 import { type GameCleanupJob, queueService } from '../services/queueService'
 import territoryModifierService from '../services/territoryModifierService'
 import type { GameState } from '../types/game'
@@ -33,15 +34,24 @@ interface PlayerStatsSnapshot {
   eliminated: boolean
 }
 
+type CleanupWorkerDependencies = {
+  gameService?: GameService
+  cacheService?: CacheService
+  queue?: Bull.Queue<GameCleanupJob>
+  idempotencyService?: JobIdempotencyService
+}
+
 export class CleanupWorker {
   private queue: Bull.Queue<GameCleanupJob>
   private gameService: GameService
   private cacheService: CacheService
+  private idempotencyService: JobIdempotencyService
 
-  constructor() {
-    this.gameService = new GameService()
-    this.cacheService = new CacheService()
-    this.queue = queueService.getCleanupQueue()
+  constructor(dependencies: CleanupWorkerDependencies = {}) {
+    this.gameService = dependencies.gameService ?? new GameService()
+    this.cacheService = dependencies.cacheService ?? new CacheService()
+    this.queue = dependencies.queue ?? queueService.getCleanupQueue()
+    this.idempotencyService = dependencies.idempotencyService ?? jobIdempotencyService
   }
 
   async initialize(): Promise<void> {
@@ -75,7 +85,7 @@ export class CleanupWorker {
     const { gameId, reason, idempotencyKey } = job.data
     const idKey = idempotencyKey ?? (job.id !== undefined ? String(job.id) : gameId)
 
-    const existing = await jobIdempotencyService.getProcessedJob<CleanupResult>(
+    const existing = await this.idempotencyService.getProcessedJob<CleanupResult>(
       this.queue.name,
       idKey,
     )
@@ -95,7 +105,7 @@ export class CleanupWorker {
       if (!gameState) {
         logger.info('Cleanup skipped because game state already absent', { gameId })
         const result: CleanupResult = { success: true, alreadyClean: true }
-        await jobIdempotencyService.markProcessedJob(
+        await this.idempotencyService.markProcessedJob(
           this.queue.name,
           idKey,
           result,
@@ -133,7 +143,7 @@ export class CleanupWorker {
         reason,
         cleanedAt: new Date().toISOString(),
       }
-      await jobIdempotencyService.markProcessedJob(
+      await this.idempotencyService.markProcessedJob(
         this.queue.name,
         idKey,
         result,
@@ -146,7 +156,7 @@ export class CleanupWorker {
         reason,
         error,
       })
-      await jobIdempotencyService.clearProcessedJob(this.queue.name, idKey).catch((cleanupError) => {
+      await this.idempotencyService.clearProcessedJob(this.queue.name, idKey).catch((cleanupError) => {
         logger.warn('Failed to clear idempotency state after cleanup failure', {
           gameId,
           error: cleanupError,
