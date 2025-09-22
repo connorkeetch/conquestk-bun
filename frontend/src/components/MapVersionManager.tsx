@@ -1,6 +1,7 @@
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 
 interface MapVersion {
   id: string
@@ -29,6 +30,18 @@ interface VersionCreationData {
   tags: string[]
 }
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (typeof error === 'string') {
+    return error
+  }
+
+  return 'An unexpected error occurred while managing map versions.'
+}
+
 export const MapVersionManager: React.FC = () => {
   const { mapId } = useParams<{ mapId: string }>()
 
@@ -37,6 +50,16 @@ export const MapVersionManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
+  const versionIdBase = useId()
+  const fieldIds = useMemo(() => {
+    const baseId = versionIdBase
+    return {
+      versionType: `${baseId}-type`,
+      versionName: `${baseId}-name`,
+      description: `${baseId}-description`,
+      changelog: `${baseId}-changelog`,
+    }
+  }, [versionIdBase])
   const [newVersionData, setNewVersionData] = useState<VersionCreationData>({
     name: '',
     description: '',
@@ -60,8 +83,10 @@ export const MapVersionManager: React.FC = () => {
 
       const data = await response.json()
       setVersions(data.versions || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.error('Failed to load map versions', error)
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -103,8 +128,10 @@ export const MapVersionManager: React.FC = () => {
 
       // Reload versions
       await loadVersions()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.error('Failed to create map version', error)
+      setError(message)
     } finally {
       setCreating(false)
     }
@@ -124,8 +151,10 @@ export const MapVersionManager: React.FC = () => {
       }
 
       await loadVersions()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.error('Failed to set current map version', error)
+      setError(message)
     }
   }
 
@@ -148,8 +177,10 @@ export const MapVersionManager: React.FC = () => {
 
       await loadVersions()
       alert('Version submitted for approval! You will be notified once it has been reviewed.')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.error('Failed to submit map version for approval', error)
+      setError(message)
     }
   }
 
@@ -218,6 +249,7 @@ export const MapVersionManager: React.FC = () => {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setShowCreateModal(true)}
           className="bg-primary hover:bg-primary text-white px-4 py-2 rounded-lg font-medium"
         >
@@ -247,6 +279,7 @@ export const MapVersionManager: React.FC = () => {
               Create your first version to start managing your map's development.
             </p>
             <button
+              type="button"
               onClick={() => setShowCreateModal(true)}
               className="bg-primary hover:bg-primary text-white px-6 py-3 rounded-lg font-medium"
             >
@@ -317,6 +350,7 @@ export const MapVersionManager: React.FC = () => {
                       <div className="flex space-x-2">
                         {!version.isCurrent && version.statusName === 'published' && (
                           <button
+                            type="button"
                             onClick={() => handleSetCurrent(version.id)}
                             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                           >
@@ -325,13 +359,17 @@ export const MapVersionManager: React.FC = () => {
                         )}
                         {version.statusName === 'draft' && (
                           <button
+                            type="button"
                             onClick={() => handleSubmitForApproval(version.id)}
                             className="text-green-600 hover:text-green-800 text-sm font-medium"
                           >
                             Submit for Approval
                           </button>
                         )}
-                        <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                        <button
+                          type="button"
+                          className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                        >
                           View Details
                         </button>
                       </div>
@@ -352,8 +390,14 @@ export const MapVersionManager: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Version Type</label>
+                <label
+                  htmlFor={fieldIds.versionType}
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Version Type
+                </label>
                 <select
+                  id={fieldIds.versionType}
                   value={newVersionData.versionType}
                   onChange={(e) =>
                     setNewVersionData((prev) => ({
@@ -370,9 +414,15 @@ export const MapVersionManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Version Name</label>
+                <label
+                  htmlFor={fieldIds.versionName}
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Version Name
+                </label>
                 <input
                   type="text"
+                  id={fieldIds.versionName}
                   value={newVersionData.name}
                   onChange={(e) => setNewVersionData((prev) => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
@@ -382,10 +432,14 @@ export const MapVersionManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor={fieldIds.description}
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Description (optional)
                 </label>
                 <textarea
+                  id={fieldIds.description}
                   value={newVersionData.description}
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, description: e.target.value }))
@@ -397,8 +451,14 @@ export const MapVersionManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Changelog</label>
+                <label
+                  htmlFor={fieldIds.changelog}
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Changelog
+                </label>
                 <textarea
+                  id={fieldIds.changelog}
                   value={newVersionData.changelog}
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, changelog: e.target.value }))
@@ -412,6 +472,7 @@ export const MapVersionManager: React.FC = () => {
 
             <div className="flex justify-end space-x-3 mt-6">
               <button
+                type="button"
                 onClick={() => setShowCreateModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 disabled={creating}
@@ -419,6 +480,7 @@ export const MapVersionManager: React.FC = () => {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleCreateVersion}
                 disabled={creating || !newVersionData.name.trim()}
                 className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"

@@ -16,6 +16,10 @@ const RatingChangeAnimation: React.FC<RatingChangeAnimationProps> = ({
   const [isAnimating, setIsAnimating] = useState(false)
 
   useEffect(() => {
+    setIsVisible(true)
+    setIsAnimating(false)
+    void change
+
     // Start animation after a brief delay
     const animateTimer = setTimeout(() => {
       setIsAnimating(true)
