@@ -25,12 +25,8 @@ describe('DiscordWebhookChannel', () => {
   })
 
   it('sends payloads to configured webhook URLs', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 204,
-      text: async () => '',
-      headers: { get: () => null },
-    })
+    const fetchMock = jest.fn<typeof fetch>()
+    fetchMock.mockResolvedValue(new Response('', { status: 204 }))
 
     const channel = new DiscordWebhookChannel({
       webhookUrls: ['https://discord.com/api/webhooks/123/abc'],
@@ -44,7 +40,7 @@ describe('DiscordWebhookChannel', () => {
     expect(result.ok).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
-    const [url, init] = fetchMock.mock.calls[0]
+    const [url, init] = fetchMock.mock.calls[0] as Parameters<typeof fetch>
     expect(String(url)).toContain('thread_id=42')
     expect(init?.method).toBe('POST')
 
@@ -54,14 +50,13 @@ describe('DiscordWebhookChannel', () => {
   })
 
   it('opens circuit breaker after repeated failures', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: async () => 'oops',
-      headers: {
-        get: (key: string) => (key.toLowerCase() === 'retry-after' ? '1' : null),
-      },
-    })
+    const fetchMock = jest.fn<typeof fetch>()
+    fetchMock.mockResolvedValue(
+      new Response('oops', {
+        status: 500,
+        headers: { 'retry-after': '1' },
+      }),
+    )
 
     const channel = new DiscordWebhookChannel({
       webhookUrls: ['https://discord.com/api/webhooks/xyz/123'],

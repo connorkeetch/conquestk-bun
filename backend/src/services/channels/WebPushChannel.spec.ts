@@ -2,14 +2,6 @@ import { describe, expect, it, jest } from '@jest/globals'
 import type { NotificationEvent } from '@risk-game/shared/types/notifications'
 import { WebPushChannel, type WebPushService } from './WebPushChannel'
 
-jest.mock('../notificationService', () => ({
-  __esModule: true,
-  default: {
-    isEnabled: jest.fn().mockReturnValue(true),
-    sendToUsers: jest.fn().mockResolvedValue(undefined),
-  },
-}))
-
 const baseEvent: NotificationEvent = {
   id: 'event-1',
   type: 'map.approved',
@@ -23,8 +15,11 @@ const baseEvent: NotificationEvent = {
 }
 
 const createMockService = () => {
-  const isEnabledMock = jest.fn().mockReturnValue(true)
-  const sendToUsersMock = jest.fn().mockResolvedValue(undefined)
+  const isEnabledMock = jest.fn<WebPushService['isEnabled']>()
+  isEnabledMock.mockReturnValue(true)
+
+  const sendToUsersMock = jest.fn<WebPushService['sendToUsers']>()
+  sendToUsersMock.mockResolvedValue(undefined)
 
   const service: WebPushService = {
     isEnabled: isEnabledMock,
@@ -74,7 +69,9 @@ describe('WebPushChannel', () => {
 
     expect(result.ok).toBe(true)
     expect(sendToUsersMock).toHaveBeenCalledTimes(1)
-    const [userIds, payload] = sendToUsersMock.mock.calls[0]
+    const [userIds, payload] = sendToUsersMock.mock.calls[0] as Parameters<
+      WebPushService['sendToUsers']
+    >
     expect(userIds).toEqual(['user-123'])
     expect(payload.title).toBe(baseEvent.title)
     expect(payload.body).toContain('Asteroid Belt')
