@@ -53,6 +53,12 @@ export const THEMES: ThemeDefinition[] = [
     description: 'Emerald green theme',
   },
   {
+    id: 'frontier',
+    name: '🤠 Frontier',
+    displayColor: '#C47E35',
+    description: 'Premium cowboy fantasy with saddle browns and turquoise accents',
+  },
+  {
     id: 'black',
     name: 'Black',
     displayColor: '#1f2937',
