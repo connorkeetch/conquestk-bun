@@ -6,16 +6,17 @@ interface LinkPreviewProps {
 }
 
 export default function LinkPreviewComponent({ preview, isOwnMessage = false }: LinkPreviewProps) {
-  const handleClick = () => {
-    window.open(preview.url, '_blank', 'noopener,noreferrer')
-  }
+  const hostname = new URL(preview.url).hostname
 
   return (
-    <div
-      onClick={handleClick}
-      className={`mt-2 rounded-lg overflow-hidden cursor-pointer transition-opacity hover:opacity-90 ${
+    <a
+      href={preview.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`mt-2 rounded-lg overflow-hidden block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary ${
         isOwnMessage ? 'bg-primary' : 'bg-surface-1'
       }`}
+      title={preview.title ?? hostname}
     >
       {preview.image && (
         <div className="w-full h-40 overflow-hidden">
@@ -56,7 +57,14 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
             isOwnMessage ? 'text-blue-200' : 'text-muted'
           }`}
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <title>Open link</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -64,9 +72,9 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
               d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
             />
           </svg>
-          <span className="truncate">{preview.site_name || new URL(preview.url).hostname}</span>
+          <span className="truncate">{preview.site_name || hostname}</span>
         </div>
       </div>
-    </div>
+    </a>
   )
 }
