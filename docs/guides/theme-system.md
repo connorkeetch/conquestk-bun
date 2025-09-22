@@ -75,6 +75,7 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | black | Gray (#1f2937) | Pure black with gray accents |
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
 | halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
+| metal | Magenta (#F312AD) | 🤘 Premium heavy metal theme with neon lights |
 
 ## How Theme Switching Works
 

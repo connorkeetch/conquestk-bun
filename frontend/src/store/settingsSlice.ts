@@ -3,7 +3,15 @@ import type { PlayerColor } from '../constants/colors'
 import preferencesService from '../services/preferencesService'
 
 // Theme types - Extended for multi-theme support
-export type ColorTheme = 'violet' | 'red' | 'blue' | 'green' | 'black' | 'default'
+export type ColorTheme =
+  | 'default'
+  | 'violet'
+  | 'red'
+  | 'blue'
+  | 'green'
+  | 'black'
+  | 'halloween'
+  | 'metal'
 export type StyleTheme = 'modern' | 'cowboy' | 'myspace' | 'minimal' | 'gaming'
 export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy compatibility
 

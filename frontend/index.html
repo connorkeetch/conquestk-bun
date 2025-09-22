@@ -9,19 +9,19 @@
     <title>Conquest K</title>
     <script>
       // Load theme immediately to prevent flash
-      (function() {
+      ;(function () {
         try {
-          const validThemes = ['default', 'red', 'violet', 'blue', 'retrospace', 'green', 'black', 'highcontrast', 'halloween'];
-          const storedTheme = localStorage.getItem('colorTheme') || 'default';
-          
+          const validThemes = ['default', 'red', 'violet', 'blue', 'retrospace', 'green', 'black', 'highcontrast', 'halloween', 'metal']
+          const storedTheme = localStorage.getItem('colorTheme') || 'default'
+
           // Validate and apply theme
-          const theme = validThemes.includes(storedTheme) ? storedTheme : 'default';
-          document.documentElement.setAttribute('data-theme', theme);
+          const theme = validThemes.includes(storedTheme) ? storedTheme : 'default'
+          document.documentElement.setAttribute('data-theme', theme)
         } catch (e) {
           // Silently fail if localStorage is not available
-          document.documentElement.setAttribute('data-theme', 'default');
+          document.documentElement.setAttribute('data-theme', 'default')
         }
-      })();
+      })()
     </script>
   </head>
   <body>
@@ -30,13 +30,14 @@
     <script>
       // Register service worker for push notifications
       if ('serviceWorker' in navigator && 'PushManager' in window) {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('Service Worker registered:', registration);
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered:', registration)
           })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-          });
+          .catch((error) => {
+            console.error('Service Worker registration failed:', error)
+          })
       }
     </script>
   </body>

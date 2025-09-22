@@ -28,6 +28,7 @@ Themes are applied via data-theme attribute on the root element.
 - black: Pure black with gray accents
 - highcontrast: WCAG AAA compliant high contrast
 - halloween: Seasonal theme with orange/purple
+- metal: Premium heavy metal theme with neon stage lighting
 
 🔄 TO ADD A NEW THEME:
 1. Add :root[data-theme="yourtheme"] section below
@@ -413,6 +414,135 @@ This allows themes to work with any color scheme!
   --box-padding-sm: 0.75rem;
   --box-padding-lg: 1.5rem;
   --box-padding-xl: 2rem;
+}
+
+/* Metal Theme - Premium neon heavy metal experience */
+:root[data-theme="metal"] {
+  --color-primary: #f312ad; /* Neon magenta lead guitar */
+  --color-primary-soft: #ff4bc2; /* Brighter magenta for hover */
+  --color-secondary: #00f5ff; /* Electric cyan stage lights */
+  --color-accent: #a3ff12; /* Acid green laser beams */
+
+  --color-bg-deep: #03010a; /* Deep midnight purple */
+  --color-bg-alt: #050118; /* Amplifier shadow */
+  --color-bg-void: #010005; /* Backstage void */
+  --color-surface-1: #140720; /* Velvet drape surface */
+  --color-surface-2: #1f0b33; /* Amp stack casing */
+
+  --color-text: #fdf2f8; /* Spotlight white */
+  --color-text-muted: #c7a6d9; /* Vintage poster fade */
+  --color-border: #5b3c7d; /* Brushed metal edging */
+
+  --ck-bg-gradient: linear-gradient(
+    130deg,
+    #010005 0% /* Night sky */, 
+    rgba(63, 4, 94, 0.85) 30% /* Purple wash */, 
+    rgba(11, 93, 145, 0.6) 58% /* Cyan laser sweep */, 
+    rgba(243, 18, 173, 0.4) 82% /* Magenta solo spotlight */, 
+    #050014 100% /* Backdrop */
+  );
+
+  --ck-glow: color-mix(in srgb, var(--color-primary) 70%, var(--color-secondary) 30%);
+
+  --surface-glass: rgba(22, 7, 34, 0.7);
+  --surface-glass-light: rgba(12, 5, 26, 0.4);
+
+  --box-bg: rgba(20, 7, 32, 0.72);
+  --box-bg-solid: #160726;
+  --box-border: rgba(0, 245, 255, 0.28);
+  --box-shadow: 0 18px 60px rgba(8, 165, 255, 0.22);
+  --box-blur: 18px;
+  --box-radius: 0.8rem;
+  --box-padding: 1.6rem;
+  --box-padding-sm: 0.85rem;
+  --box-padding-lg: 1.75rem;
+  --box-padding-xl: 2.2rem;
+}
+
+@keyframes metal-light-pan {
+  0% {
+    background-position:
+      0% 40%,
+      100% 60%,
+      0 0,
+      0 0;
+  }
+  50% {
+    background-position:
+      45% 30%,
+      35% 70%,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      100% 50%,
+      0% 60%,
+      0 0,
+      0 0;
+  }
+}
+
+@keyframes metal-fog {
+  0% {
+    transform: translate3d(-3%, -5%, 0) scale(1);
+    opacity: 0.24;
+  }
+  50% {
+    transform: translate3d(4%, 2%, 0) scale(1.06);
+    opacity: 0.34;
+  }
+  100% {
+    transform: translate3d(-2%, 4%, 0) scale(1);
+    opacity: 0.24;
+  }
+}
+
+[data-theme="metal"] body::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(243, 18, 173, 0.28), transparent 58%),
+    radial-gradient(circle at 82% 72%, rgba(0, 245, 255, 0.25), transparent 62%),
+    radial-gradient(circle at 50% 88%, rgba(163, 255, 18, 0.18), transparent 60%);
+  filter: blur(70px);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 0;
+  animation: metal-fog 18s ease-in-out infinite;
+}
+
+[data-theme="metal"] body::after {
+  background-image:
+    linear-gradient(115deg, rgba(243, 18, 173, 0.28), transparent 65%),
+    linear-gradient(300deg, rgba(0, 245, 255, 0.22), transparent 70%),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    220px 220px,
+    220px 220px;
+  opacity: 0.58;
+  animation: metal-light-pan 16s linear infinite;
+  mix-blend-mode: screen;
+}
+
+[data-theme="metal"] a:hover {
+  color: var(--color-secondary);
+  text-shadow:
+    0 0 10px rgba(0, 245, 255, 0.45),
+    0 0 18px rgba(243, 18, 173, 0.4);
+}
+
+[data-theme="metal"] input:focus,
+[data-theme="metal"] textarea:focus,
+[data-theme="metal"] select:focus {
+  border-color: var(--color-secondary);
+  box-shadow:
+    0 0 0 3px rgba(0, 245, 255, 0.18),
+    0 0 18px rgba(243, 18, 173, 0.25);
 }
 
 /* Halloween theme - Spooky seasonal theme */
