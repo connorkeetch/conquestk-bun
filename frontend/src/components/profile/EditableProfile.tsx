@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 
 interface ProfileData {
@@ -29,12 +29,13 @@ const EditableProfile: React.FC = () => {
     new: '',
     confirm: '',
   })
+  const usernameFieldId = useId()
+  const emailFieldId = useId()
+  const currentPasswordId = useId()
+  const newPasswordId = useId()
+  const confirmPasswordId = useId()
 
-  useEffect(() => {
-    fetchProfile()
-  }, [fetchProfile])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken')
       const apiUrl =
@@ -46,19 +47,28 @@ const EditableProfile: React.FC = () => {
         },
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setProfile({
-          username: data.username,
-          email: data.email,
-        })
-        setEditedProfile({
-          username: data.username,
-          email: data.email,
-        })
+      if (!response.ok) {
+        setError('Failed to load profile')
+        return
       }
-    } catch (_error) {}
-  }
+
+      const data = await response.json()
+      setProfile({
+        username: data.username,
+        email: data.email,
+      })
+      setEditedProfile({
+        username: data.username,
+        email: data.email,
+      })
+    } catch (_error) {
+      setError('Failed to load profile')
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchProfile()
+  }, [fetchProfile])
 
   const checkUsernameAvailability = async (username: string) => {
     if (username === profile.username) {
@@ -89,6 +99,7 @@ const EditableProfile: React.FC = () => {
       const data = await response.json()
       setUsernameAvailable(data.available)
     } catch (_error) {
+      setUsernameAvailable(false)
     } finally {
       setCheckingUsername(false)
     }
@@ -233,10 +244,13 @@ const EditableProfile: React.FC = () => {
         <div className="space-y-6">
           {/* Username Field */}
           <div>
-            <label className="block text-sm font-medium text-muted mb-2">Username</label>
+            <label className="block text-sm font-medium text-muted mb-2" htmlFor={usernameFieldId}>
+              Username
+            </label>
             <div className="relative">
               <input
                 type="text"
+                id={usernameFieldId}
                 value={isEditing ? editedProfile.username : profile.username}
                 onChange={handleUsernameChange}
                 disabled={!isEditing}
@@ -265,9 +279,12 @@ const EditableProfile: React.FC = () => {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-muted mb-2">Email</label>
+            <label className="block text-sm font-medium text-muted mb-2" htmlFor={emailFieldId}>
+              Email
+            </label>
             <input
               type="email"
+              id={emailFieldId}
               value={isEditing ? editedProfile.email : profile.email}
               onChange={(e) => setEditedProfile((prev) => ({ ...prev, email: e.target.value }))}
               disabled={!isEditing}
@@ -284,12 +301,14 @@ const EditableProfile: React.FC = () => {
             {!isEditing ? (
               <>
                 <button
+                  type="button"
                   onClick={() => setIsEditing(true)}
                   className="px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Edit Profile
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowPasswordChange(!showPasswordChange)}
                   className="px-6 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
@@ -299,12 +318,14 @@ const EditableProfile: React.FC = () => {
             ) : (
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={handleCancel}
                   className="px-6 py-2 bg-surface-2 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving || checkingUsername || usernameAvailable === false}
                   className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
@@ -322,31 +343,45 @@ const EditableProfile: React.FC = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-muted mb-2">
+                <label
+                  className="block text-sm font-medium text-muted mb-2"
+                  htmlFor={currentPasswordId}
+                >
                   Current Password
                 </label>
                 <input
                   type="password"
+                  id={currentPasswordId}
                   value={passwords.current}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, current: e.target.value }))}
                   className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted mb-2">New Password</label>
+                <label
+                  className="block text-sm font-medium text-muted mb-2"
+                  htmlFor={newPasswordId}
+                >
+                  New Password
+                </label>
                 <input
                   type="password"
+                  id={newPasswordId}
                   value={passwords.new}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, new: e.target.value }))}
                   className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted mb-2">
+                <label
+                  className="block text-sm font-medium text-muted mb-2"
+                  htmlFor={confirmPasswordId}
+                >
                   Confirm New Password
                 </label>
                 <input
                   type="password"
+                  id={confirmPasswordId}
                   value={passwords.confirm}
                   onChange={(e) => setPasswords((prev) => ({ ...prev, confirm: e.target.value }))}
                   className="w-full px-4 py-2 bg-surface-1/50 border border-primary rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
@@ -354,6 +389,7 @@ const EditableProfile: React.FC = () => {
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowPasswordChange(false)
                     setPasswords({ current: '', new: '', confirm: '' })
@@ -364,6 +400,7 @@ const EditableProfile: React.FC = () => {
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handlePasswordChange}
                   disabled={saving || !passwords.current || !passwords.new || !passwords.confirm}
                   className="px-6 py-2 bg-primary hover:bg-primary disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"

@@ -16,7 +16,7 @@ const GameListPage: React.FC = () => {
       setError(null)
       const response = await gameService.getUserGames()
       setUserGames(response.games || [])
-    } catch (_err: any) {
+    } catch (_error: unknown) {
       setError('Failed to load your games')
     } finally {
       setLoading(false)
@@ -80,8 +80,7 @@ const GameListPage: React.FC = () => {
   }
 
   const activeGames = userGames.filter(
-    (game) =>
-      game.status === 'lobby' || game.status === 'initializing' || game.status === 'active',
+    (game) => game.status === 'lobby' || game.status === 'initializing' || game.status === 'active',
   )
   const completedGames = userGames.filter((game) => game.status === 'completed')
 
@@ -101,6 +100,7 @@ const GameListPage: React.FC = () => {
             🎮 New Game
           </Link>
           <button
+            type="button"
             onClick={loadUserGames}
             disabled={loading}
             className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -118,7 +118,11 @@ const GameListPage: React.FC = () => {
               <span className="text-red-400">❌</span>
               <span className="text-red-400">{error}</span>
             </div>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300"
+            >
               ×
             </button>
           </div>

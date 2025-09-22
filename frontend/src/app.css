@@ -354,7 +354,7 @@ This allows themes to work with any color scheme!
 
   --ck-bg-gradient: linear-gradient(
     135deg,
-    #060302 0% /* Dusk horizon */, 
+    #060302 0% /* Dusk horizon */,
     rgba(103, 55, 26, 0.55) 35% /* Canyon glow */,
     rgba(228, 166, 89, 0.3) 65% /* Dusty sunset */,
     #120b06 100% /* Campfire shadows */
@@ -898,7 +898,7 @@ body {
 }
 
 /* Default grid for most themes */
-body::after {
+:root body::after {
   content: "";
   position: fixed;
   top: 0;
@@ -1657,7 +1657,7 @@ kbd {
 .segmented-control button.segmented-active {
   background: var(--color-primary);
   color: white;
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -1665,7 +1665,7 @@ kbd {
 /* Theme-specific adjustments for better contrast */
 [data-theme="halloween"] .segmented-control button.segmented-active {
   background: var(--color-accent); /* Use blood red for Halloween */
-  box-shadow: 
+  box-shadow:
     0 2px 12px rgba(139, 21, 56, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }

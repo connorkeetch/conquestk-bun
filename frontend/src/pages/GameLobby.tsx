@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { socketService } from '../services/socketService'
@@ -9,6 +9,9 @@ export default function GameLobby() {
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
   const [isPrivate, setIsPrivate] = useState(false)
+  const roomNameId = useId()
+  const maxPlayersId = useId()
+  const privateRoomId = useId()
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -40,6 +43,7 @@ export default function GameLobby() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Game Lobby</h1>
         <button
+          type="button"
           onClick={() => setShowCreateRoom(true)}
           className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
         >
@@ -52,9 +56,12 @@ export default function GameLobby() {
           <h2 className="text-xl font-bold mb-4">Create New Room</h2>
           <form onSubmit={handleCreateRoom} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Room Name</label>
+              <label className="block text-sm font-medium mb-2" htmlFor={roomNameId}>
+                Room Name
+              </label>
               <input
                 type="text"
+                id={roomNameId}
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 required
@@ -62,8 +69,11 @@ export default function GameLobby() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Max Players</label>
+              <label className="block text-sm font-medium mb-2" htmlFor={maxPlayersId}>
+                Max Players
+              </label>
               <select
+                id={maxPlayersId}
                 value={maxPlayers}
                 onChange={(e) => setMaxPlayers(Number(e.target.value))}
                 className="w-full px-3 py-2 bg-surface-2 border border-border rounded text-white"
@@ -78,12 +88,12 @@ export default function GameLobby() {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                id="private"
+                id={privateRoomId}
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="mr-2"
               />
-              <label htmlFor="private" className="text-sm">
+              <label htmlFor={privateRoomId} className="text-sm">
                 Private Room
               </label>
             </div>
@@ -121,6 +131,7 @@ export default function GameLobby() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleJoinRoom(room.id)}
                   disabled={
                     room.status !== 'waiting' || (room.players?.length || 0) >= room.maxPlayers
