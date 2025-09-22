@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { logger } from '../utils/logger'
 import { getWorkerManagerInstance } from '../workers/workerManager'
+import { adminService } from './adminService'
 import { cdnService } from './cdnService'
 import { databaseClusterService } from './databaseClusterService'
-import type { QueueStats } from './queueService'
-import { redisClusterService } from './redisClusterService'
-import { adminService } from './adminService'
 import { notificationDispatcher } from './NotificationDispatcher'
 import { buildPerformanceAlertNotification } from './notifications/performanceAlerts'
+import type { QueueStats } from './queueService'
+import { redisClusterService } from './redisClusterService'
 
 interface SystemMetrics {
   timestamp: number

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { featureFlagService, type FeatureFlagKey } from '../services/featureFlagService'
+import { type FeatureFlagKey, featureFlagService } from '../services/featureFlagService'
 
 export const useFeatureFlag = (flagName: FeatureFlagKey): boolean => {
   const [isEnabled, setIsEnabled] = useState(() => featureFlagService.isEnabled(flagName))

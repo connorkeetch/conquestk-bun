@@ -1,7 +1,8 @@
 import type React from 'react'
+import type { TerritoryDisplayMap } from './RiskGameBoard'
 
 interface WorldMapSVGProps {
-  territories: { [key: string]: any }
+  territories: TerritoryDisplayMap
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
   getTerritoryColor: (territoryId: string) => string
@@ -23,6 +24,14 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
   validTargets,
   pendingAction,
 }) => {
+  const svgTitle = 'Classic World Map'
+
+  const handleKeyActivate = (territoryId: string, event: React.KeyboardEvent<SVGPathElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onTerritoryClick(territoryId)
+    }
+  }
   const getTerritoryStyles = (territoryId: string) => {
     const baseClasses = 'cursor-pointer transition-all duration-200'
     let extraClasses = ''
@@ -112,7 +121,8 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
   }
 
   return (
-    <svg viewBox="0 0 800 500" className="w-full h-full" style={{ maxHeight: '70vh' }}>
+    <svg viewBox="0 0 800 500" className="w-full h-full" style={{ maxHeight: '70vh' }} role="img">
+      <title>{svgTitle}</title>
       {Object.keys(territories).map((territoryId) => {
         const styles = getTerritoryStyles(territoryId)
         const pathData = territoryPaths[territoryId]
@@ -120,6 +130,7 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
         if (!pathData) return null
 
         return (
+          // biome-ignore lint/a11y/noStaticElementInteractions: SVG paths need direct interaction handlers
           <path
             key={territoryId}
             id={territoryId}
@@ -131,6 +142,9 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
             onClick={() => onTerritoryClick(territoryId)}
             onMouseEnter={() => onTerritoryHover(territoryId)}
             onMouseLeave={() => onTerritoryHover(null)}
+            onKeyDown={(event) => handleKeyActivate(territoryId, event)}
+            tabIndex={0}
+            aria-label={`Select territory ${territoryId}`}
           />
         )
       })}

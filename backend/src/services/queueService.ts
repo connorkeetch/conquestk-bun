@@ -183,6 +183,8 @@ export class QueueService {
         enableReadyCheck: false,
         lazyConnect: false,
         maxRetriesPerRequest: null,
+        // Bull relies on blocking Redis commands; disabling commandTimeout prevents false positives
+        commandTimeout: undefined,
       }
 
       // Initialize all queues using dedicated duplicates of the centralized Redis connection

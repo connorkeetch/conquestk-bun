@@ -15,6 +15,9 @@ interface FeatureFlag {
   target_criteria: Record<string, unknown>
   category: FeatureCategory
   dependencies: string[]
+  created_by?: string | null
+  created_at: Date | string
+  updated_at: Date | string
 }
 
 interface FeatureFlagAuditEntry {
@@ -270,6 +273,13 @@ export class FeatureFlagService {
       logger.error('❌ Error fetching feature flags', { error })
       return []
     }
+  }
+
+  /**
+   * Return raw feature flag records with caching applied
+   */
+  async listFlags(): Promise<FeatureFlag[]> {
+    return this.getAllFlags()
   }
 
   /**

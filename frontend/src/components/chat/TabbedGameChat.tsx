@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 import type { Player } from '../../types/game'
 import ChatContainer from './ChatContainer'
@@ -31,46 +31,47 @@ export default function TabbedGameChat({
   const unreadCounts = useAppSelector((state) => state.chat.conversations)
 
   // Build tabs
-  const tabs: ChatTab[] = []
+  const tabs = useMemo<ChatTab[]>(() => {
+    const builtTabs: ChatTab[] = []
 
-  // Game chat tab (always available)
-  tabs.push({
-    id: 'game',
-    label: '🎮 Game',
-    type: 'game',
-    conversationId: gameId,
-    badge: unreadCounts[`game:${gameId}`]?.unreadCount || 0,
-    enabled: true,
-  })
-
-  // Team chat tab (only if user is on a team)
-  if (userTeamId !== null && userTeamId !== undefined) {
-    tabs.push({
-      id: 'team',
-      label: '👥 Team',
-      type: 'team',
-      conversationId: `${gameId}:${userTeamId}`,
-      badge: unreadCounts[`team:${gameId}:${userTeamId}`]?.unreadCount || 0,
+    builtTabs.push({
+      id: 'game',
+      label: '🎮 Game',
+      type: 'game',
+      conversationId: gameId,
+      badge: unreadCounts[`game:${gameId}`]?.unreadCount || 0,
       enabled: true,
     })
-  }
 
-  // Player DM tabs (for other players in the game)
-  const otherPlayers = players.filter((p) => p.userId !== currentUserId)
-  otherPlayers.forEach((player) => {
-    // Show team indicator if they're on the same team
-    const isTeammate = userTeamId !== null && player.teamId === userTeamId
-    const teamIndicator = isTeammate ? ' 🤝' : ''
+    if (userTeamId !== null && userTeamId !== undefined) {
+      builtTabs.push({
+        id: 'team',
+        label: '👥 Team',
+        type: 'team',
+        conversationId: `${gameId}:${userTeamId}`,
+        badge: unreadCounts[`team:${gameId}:${userTeamId}`]?.unreadCount || 0,
+        enabled: true,
+      })
+    }
 
-    tabs.push({
-      id: `dm-${player.userId}`,
-      label: `💬 ${player.username}${teamIndicator}`,
-      type: 'dm',
-      conversationId: player.userId,
-      badge: unreadCounts[`dm:${player.userId}`]?.unreadCount || 0,
-      enabled: true,
-    })
-  })
+    players
+      .filter((player) => player.userId !== currentUserId)
+      .forEach((player) => {
+        const isTeammate = userTeamId !== null && player.teamId === userTeamId
+        const teamIndicator = isTeammate ? ' 🤝' : ''
+
+        builtTabs.push({
+          id: `dm-${player.userId}`,
+          label: `💬 ${player.username}${teamIndicator}`,
+          type: 'dm',
+          conversationId: player.userId,
+          badge: unreadCounts[`dm:${player.userId}`]?.unreadCount || 0,
+          enabled: true,
+        })
+      })
+
+    return builtTabs
+  }, [currentUserId, gameId, players, unreadCounts, userTeamId])
 
   // Make sure active tab is valid
   useEffect(() => {

@@ -1,27 +1,23 @@
 import { describe, expect, it } from '@jest/globals'
+import type { DatabaseQueryResult } from '../config/database'
+
+type UlidQueryResult = DatabaseQueryResult<{ id: string }>
+type UlidQuery = (text: string, params?: unknown[]) => Promise<UlidQueryResult>
 
 describe('generate_ulid SQL function', () => {
-  it('produces monotonic, unique ULIDs when database is available', async () => {
-    if (process.env.RUN_ULID_TESTS !== 'true') {
-      console.warn('Skipping generate_ulid test: set RUN_ULID_TESTS=true to enable database coverage')
-      expect(true).toBe(true)
-      return
-    }
+  const runUlidTest = process.env.RUN_ULID_TESTS === 'true' ? it : it.skip
 
-    let query:
-      | ((text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount: number | null }>)
-      | undefined
+  runUlidTest('produces monotonic, unique ULIDs when database is available', async () => {
+    let query: UlidQuery | undefined
 
     try {
       const databaseModule = await import('../config/database')
-      query = databaseModule.query
-    } catch (error) {
-      console.warn('Skipping generate_ulid test: database module unavailable', error)
+      query = databaseModule.query as UlidQuery
+    } catch (_error) {
       return
     }
 
     if (!query) {
-      console.warn('Skipping generate_ulid test: query function unavailable')
       return
     }
 
@@ -57,16 +53,13 @@ describe('generate_ulid SQL function', () => {
         END;
         $$ LANGUAGE plpgsql VOLATILE;
       `)
-    } catch (error) {
-      console.warn('Skipping generate_ulid test: unable to create helper function', error)
+    } catch (_error) {
       return
     }
 
-    const result = await query(
-      `SELECT generate_ulid() AS id FROM generate_series(1, 20)`,
-    )
+    const result = await query(`SELECT generate_ulid() AS id FROM generate_series(1, 20)`)
 
-    const ids = result.rows.map((row) => row.id as string)
+    const ids = result.rows.map((row) => row.id)
 
     expect(ids.length).toBeGreaterThan(0)
     expect(ids.every((id) => typeof id === 'string' && id.length === 26)).toBe(true)

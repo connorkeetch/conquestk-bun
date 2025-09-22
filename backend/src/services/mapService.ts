@@ -1,6 +1,5 @@
 import type { PoolClient } from 'pg'
 import { getClient, query } from '../config/database'
-import { mapPermissionService, MapNotFoundError } from './mapPermissionService'
 import type { ContinentBonus } from '../types/game'
 import type {
   ConnectionRequirements,
@@ -26,6 +25,7 @@ import type {
   UpdateMapRequest,
 } from '../types/maps'
 import { logger } from '../utils/logger'
+import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
 
 type SqlValue = string | number | boolean | string[] | null | Date
 

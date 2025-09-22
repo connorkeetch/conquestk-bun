@@ -2,9 +2,9 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import sharp from 'sharp'
 import { query } from '../config/database'
+import { logger } from '../utils/logger'
 import { adminService } from './adminService'
 import notificationService from './notificationService'
-import { logger } from '../utils/logger'
 
 export interface StagingImage {
   id: string

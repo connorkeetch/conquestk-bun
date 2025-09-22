@@ -1,7 +1,9 @@
 import type React from 'react'
+import { useId } from 'react'
+import type { TerritoryDisplayMap } from './RiskGameBoard'
 
 interface TestMapSVGProps {
-  territories: { [key: string]: any }
+  territories: TerritoryDisplayMap
   onTerritoryClick: (territoryId: string) => void
   onTerritoryHover: (territoryId: string | null) => void
   getTerritoryColor: (territoryId: string) => string
@@ -25,6 +27,15 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
   pendingAction,
   mapType = 'simple-world',
 }) => {
+  const patternId = useId()
+  const svgTitle = mapType === 'mini-risk' ? 'Mini Risk Map' : 'Simple World Map'
+
+  const handleKeyActivate = (territoryId: string, event: React.KeyboardEvent<SVGPathElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onTerritoryClick(territoryId)
+    }
+  }
   const getTerritoryStyles = (territoryId: string) => {
     const baseClasses = 'cursor-pointer transition-all duration-200'
     let extraClasses = ''
@@ -315,14 +326,15 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
     <div
       className={`relative w-full h-full bg-gradient-to-br ${bgGradient} rounded-lg overflow-hidden`}
     >
-      <svg viewBox={viewBox} className="w-full h-full" style={{ maxHeight: '70vh' }}>
+      <svg viewBox={viewBox} className="w-full h-full" style={{ maxHeight: '70vh' }} role="img">
+        <title>{svgTitle}</title>
         {/* Background pattern */}
         <defs>
-          <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+          <pattern id={patternId} width="50" height="50" patternUnits="userSpaceOnUse">
             <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e0e0e0" strokeWidth="0.5" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" opacity="0.3" />
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} opacity="0.3" />
 
         {/* Connection lines */}
         {renderConnectionLines()}
@@ -339,6 +351,7 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
           return (
             <g key={territoryId}>
               {/* Territory shape */}
+              {/* biome-ignore lint/a11y/noStaticElementInteractions: SVG paths need direct interaction handlers */}
               <path
                 d={territoryPaths[territoryId]}
                 fill={fillColor}
@@ -347,6 +360,9 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
                 onMouseEnter={() => onTerritoryHover(territoryId)}
                 onMouseLeave={() => onTerritoryHover(null)}
                 onClick={() => onTerritoryClick(territoryId)}
+                onKeyDown={(event) => handleKeyActivate(territoryId, event)}
+                tabIndex={0}
+                aria-label={`Select territory ${territory.name}`}
               />
 
               {/* Territory name */}

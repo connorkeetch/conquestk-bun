@@ -26,6 +26,15 @@ community-built maps, and rich administrative tooling.
 
 ---
 
+## 📈 Go-live snapshot
+
+- Tentative launch remains October 1, 2025; the canonical backlog lives in `docs/planning/go-live-plan.md`.
+- Core gameplay persistence, lifecycle transitions, sockets, map permissions, and truthful navigation all cleared their `P0` gates.
+- Remaining pre-launch work: creator/moderator notification fan-out, map asset purge tuning, a follow-up security checklist, CI coverage gates, large-file safeguards, and telemetry baselines.
+- Documentation has been updated to match the shipped feature set so beta notes and marketing copy stay truthful.
+
+---
+
 ## 🚀 Getting started
 
 ### Prerequisites
@@ -109,8 +118,13 @@ risk-game/
 ### Platform & community
 - Comprehensive admin dashboards for users, maps, and live games.
 - Email verification, password reset, and session management flows.
-- Progressive Web App support with push notifications and installable client.
+- Installable PWA shell with gameplay push notifications; map approval and DM push fan-out are wrapping up.
 - Leaderboards, profiles, and community pages surfaced directly in the UI.
+
+### Launch readiness
+- Creator/moderator push + in-app notifications (WebSocket + web push) are finalising fan-out logic.
+- Background purge workers are live but failure thresholds are still being tuned for asset cleanup.
+- Security checklist re-run, CI guardrails, large file protections, and telemetry dashboards remain on the polish backlog.
 
 ### Engineering & tooling
 - End-to-end TypeScript across backend, frontend, and shared packages.

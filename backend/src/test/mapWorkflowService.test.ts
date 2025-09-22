@@ -71,18 +71,14 @@ describe('mapWorkflowService.publishDraft', () => {
       updated_at: nowIso,
     }
 
-    mockQuery
-      .mockResolvedValueOnce({ rows: [draftRow] })
-      .mockResolvedValueOnce({ rows: [] })
+    mockQuery.mockResolvedValueOnce({ rows: [draftRow] }).mockResolvedValueOnce({ rows: [] })
 
     mockCreateMap.mockResolvedValue({
       id: 'map-123',
       name: 'Published Map',
     })
 
-    const submitSpy = jest
-      .spyOn(mapWorkflowService, 'submitForReview')
-      .mockResolvedValue(undefined)
+    const submitSpy = jest.spyOn(mapWorkflowService, 'submitForReview').mockResolvedValue(undefined)
 
     await mapWorkflowService.publishDraft('draft-1', 'user-1')
 
@@ -134,18 +130,14 @@ describe('mapWorkflowService.publishDraft', () => {
       updated_at: nowIso,
     }
 
-    mockQuery
-      .mockResolvedValueOnce({ rows: [draftRow] })
-      .mockResolvedValueOnce({ rows: [] })
+    mockQuery.mockResolvedValueOnce({ rows: [draftRow] }).mockResolvedValueOnce({ rows: [] })
 
     mockCreateMap.mockResolvedValue({
       id: 'map-456',
       name: 'Published Map',
     })
 
-    const submitSpy = jest
-      .spyOn(mapWorkflowService, 'submitForReview')
-      .mockResolvedValue(undefined)
+    const submitSpy = jest.spyOn(mapWorkflowService, 'submitForReview').mockResolvedValue(undefined)
 
     await mapWorkflowService.publishDraft('draft-2', 'user-1')
 

@@ -239,18 +239,17 @@ export class PerformanceTestingService {
     try {
       const testResults = await this.executeGameScenario(testId, config)
       const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
-      const finalResults =
-        testResults || {
-          totalRequests: 0,
-          successfulRequests: 0,
-          failedRequests: 0,
-          avgResponseTime: 0,
-          p95ResponseTime: 0,
-          p99ResponseTime: 0,
-          requestsPerSecond: 0,
-          errorsPerSecond: 0,
-          throughputMBps: 0,
-        }
+      const finalResults = testResults || {
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        avgResponseTime: 0,
+        p95ResponseTime: 0,
+        p99ResponseTime: 0,
+        requestsPerSecond: 0,
+        errorsPerSecond: 0,
+        throughputMBps: 0,
+      }
       const bottlenecks = this.analyzeBottlenecks(finalResults, systemMetrics)
 
       const benchmarkResult: BenchmarkResult = {
@@ -375,18 +374,17 @@ export class PerformanceTestingService {
       }
 
       const systemMetrics = await this.stopMetricsCollection(metricsCollector, testId)
-      const finalResults =
-        testResults || {
-          totalRequests: 0,
-          successfulRequests: 0,
-          failedRequests: 0,
-          avgResponseTime: 0,
-          p95ResponseTime: 0,
-          p99ResponseTime: 0,
-          requestsPerSecond: 0,
-          errorsPerSecond: 0,
-          throughputMBps: 0,
-        }
+      const finalResults = testResults || {
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        avgResponseTime: 0,
+        p95ResponseTime: 0,
+        p99ResponseTime: 0,
+        requestsPerSecond: 0,
+        errorsPerSecond: 0,
+        throughputMBps: 0,
+      }
       const bottlenecks = this.analyzeBottlenecks(finalResults, systemMetrics)
 
       const stressTestResult: StressTestResult = {

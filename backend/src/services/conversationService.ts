@@ -2,10 +2,10 @@ import type { PoolClient } from 'pg'
 import { query, transaction } from '../config/database'
 import { logger } from '../utils/logger'
 import {
-  MessagingPolicyError,
   assertCanInviteToGroup,
   assertCanSendDirectMessage,
   assertCanStartDirectConversation,
+  MessagingPolicyError,
 } from './messagingPolicyService'
 import { tryGetSocketServer } from './socketRegistry'
 
@@ -300,7 +300,10 @@ const normalizeMetadata = (metadata?: Record<string, unknown>): string => {
   try {
     return JSON.stringify(metadata)
   } catch (_error) {
-    throw new ConversationError('INVALID_METADATA', 'Conversation metadata must be JSON serializable')
+    throw new ConversationError(
+      'INVALID_METADATA',
+      'Conversation metadata must be JSON serializable',
+    )
   }
 }
 
@@ -318,7 +321,10 @@ export async function createGroupConversation(
   }
 
   if (uniqueMembers.size < 2) {
-    throw new ConversationError('NOT_ENOUGH_MEMBERS', 'Group conversations require at least two members')
+    throw new ConversationError(
+      'NOT_ENOUGH_MEMBERS',
+      'Group conversations require at least two members',
+    )
   }
 
   if (uniqueMembers.size > MAX_GROUP_MEMBERS) {
@@ -371,7 +377,9 @@ export async function addMembersToConversation(
 ): Promise<ConversationMemberRole[]> {
   const { actorId, conversationId } = options
   const requestedIds = Array.from(
-    new Set((options.memberIds ?? []).filter((id) => typeof id === 'string' && id && id !== actorId)),
+    new Set(
+      (options.memberIds ?? []).filter((id) => typeof id === 'string' && id && id !== actorId),
+    ),
   )
 
   if (requestedIds.length === 0) {
@@ -380,7 +388,10 @@ export async function addMembersToConversation(
 
   const conversation = await getConversationRow(conversationId)
   if (conversation.kind !== 'group') {
-    throw new ConversationError('INVALID_OPERATION', 'Members can only be added to group conversations')
+    throw new ConversationError(
+      'INVALID_OPERATION',
+      'Members can only be added to group conversations',
+    )
   }
 
   const actorMembership = await ensureMembership(conversationId, actorId)
@@ -429,13 +440,13 @@ export async function addMembersToConversation(
   return addedMemberRoles
 }
 
-export async function leaveConversation(
-  conversationId: string,
-  userId: string,
-): Promise<void> {
+export async function leaveConversation(conversationId: string, userId: string): Promise<void> {
   const conversation = await getConversationRow(conversationId)
   if (conversation.kind !== 'group') {
-    throw new ConversationError('INVALID_OPERATION', 'Leave is only supported for group conversations')
+    throw new ConversationError(
+      'INVALID_OPERATION',
+      'Leave is only supported for group conversations',
+    )
   }
 
   await transaction(async (client) => {
@@ -521,7 +532,10 @@ export async function removeConversationMember(
 
   const conversation = await getConversationRow(conversationId)
   if (conversation.kind !== 'group') {
-    throw new ConversationError('INVALID_OPERATION', 'Remove member is only supported for group conversations')
+    throw new ConversationError(
+      'INVALID_OPERATION',
+      'Remove member is only supported for group conversations',
+    )
   }
 
   await transaction(async (client) => {
@@ -964,11 +978,7 @@ export interface ConversationListOptions {
   offset?: number
 }
 
-
-export async function markConversationRead(
-  conversationId: string,
-  userId: string,
-): Promise<void> {
+export async function markConversationRead(conversationId: string, userId: string): Promise<void> {
   const latestResult = await query<ConversationMessageRow>(
     `
     SELECT id, created_at
@@ -997,7 +1007,6 @@ export async function markConversationRead(
   )
 }
 
-
 export interface ConversationDetailResult {
   conversation: ConversationWithMembers
   membership: ConversationMembershipInfo
@@ -1008,12 +1017,14 @@ export async function getConversationDetail(
   conversationId: string,
   userId: string,
 ): Promise<ConversationDetailResult> {
-  const membershipResult = await query<ConversationMembershipRow & {
-    last_read_message_id: string | null
-    last_read_at: Date | null
-    is_muted: boolean | null
-    is_pinned: boolean | null
-  }>(
+  const membershipResult = await query<
+    ConversationMembershipRow & {
+      last_read_message_id: string | null
+      last_read_at: Date | null
+      is_muted: boolean | null
+      is_pinned: boolean | null
+    }
+  >(
     `
     SELECT role, shadow_muted, joined_at, last_read_message_id, last_read_at, is_muted, is_pinned
     FROM conversation_members
@@ -1057,7 +1068,6 @@ export async function getConversationDetail(
     unreadCount: unreadResult.rows[0]?.count ?? 0,
   }
 }
-
 
 export interface UnreadSummaryEntry {
   conversationId: string
@@ -1142,7 +1152,9 @@ export async function listConversationsForUser(
 
     const membership: ConversationMembershipInfo = {
       role: row.member_role,
-      joinedAt: descriptor.memberRoles.find((member) => member.userId === userId)?.joinedAt ?? row.joined_at,
+      joinedAt:
+        descriptor.memberRoles.find((member) => member.userId === userId)?.joinedAt ??
+        row.joined_at,
       isMuted: row.is_muted ?? false,
       isPinned: row.is_pinned ?? false,
       shadowMuted: row.shadow_muted ?? false,

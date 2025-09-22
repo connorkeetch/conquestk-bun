@@ -40,7 +40,6 @@ BEGIN
     CREATE TYPE conversation_kind AS ENUM ('game', 'direct', 'group');
   END IF;
 END $$;
-$$;
 
 DO $$
 BEGIN
@@ -48,7 +47,6 @@ BEGIN
     CREATE TYPE conversation_member_role AS ENUM ('owner', 'admin', 'member');
   END IF;
 END $$;
-$$;
 
 -- Conversations table captures metadata for any chat surface
 CREATE TABLE IF NOT EXISTS conversations (
