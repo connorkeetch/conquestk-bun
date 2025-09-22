@@ -1,5 +1,6 @@
 import type React from 'react'
-import type { Player, TerritoryModifier } from '@/types/game'
+import type { Player } from '@/types/game'
+import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
 import type { TerritoryDisplayMap } from '../RiskGameBoard'
 
 interface TerritoryInfoPanelProps {
@@ -7,7 +8,7 @@ interface TerritoryInfoPanelProps {
   selectedTerritory: string | null
   territories: TerritoryDisplayMap
   players: Player[]
-  territoryModifiers?: Record<string, TerritoryModifier>
+  territoryModifiers?: Map<string, IconTerritoryModifier>
 }
 
 export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
@@ -29,7 +30,7 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
   }
 
   const owner = players.find((p) => p.id === territory.owner)
-  const modifier = territoryModifiers?.[territoryId]
+  const modifier = territoryModifiers?.get(territoryId)
 
   return (
     <div className="p-4 border-b border-gray-200">

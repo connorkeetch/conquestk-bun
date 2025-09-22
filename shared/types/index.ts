@@ -168,37 +168,73 @@ export interface Card {
 }
 
 export interface GameState {
-  id: string
   roomId: string
-  status: GameStatus
-  phase: GamePhase
-  currentPlayer: string
   players: Player[]
-  board: Territory[]
+  currentPlayer: string
+  phase: GamePhase
   turn: number
+  board: Territory[]
+  cards: Card[]
+  hasAttackedThisTurn?: boolean
+  lastBattleResult?: BattleResult
+  gameConfig: GameConfiguration
+  movementTracking?: Record<string, boolean>
+  territoryModifiers?: Record<string, GameTerritoryModifier>
+  capitalAssignments?: Record<string, string>
+  status?: GameStatus
   winner?: string
+  reinforcementArmies?: number
   startedAt?: Date | string
   endedAt?: Date | string
-  settings: GameSettings
   lastAction?: GameAction
-  reinforcementArmies?: number
-  capitalAssignments?: Record<string, string>
+  settings?: GameConfiguration // Legacy alias for older consumers
 }
 
-export interface GameSettings {
-  mapId: string
-  gameMode: 'classic' | 'capitals' | 'domination' | 'mission'
-  maxPlayers: number
-  turnTimer?: number
-  fogOfWar: 'off' | 'adjacent' | 'persistent'
-  movementSystem: 'classic' | 'sea_routes' | 'airports' | 'unlimited'
-  cardTradeMode: 'fixed' | 'progressive' | 'custom'
-  startingArmies?: number
-  isRanked: boolean
-  isPrivate: boolean
-  teamMode?: 'none' | 'teams' | 'auto_balance' // Team game settings
-  numberOfTeams?: number // Number of teams (2-4)
+export interface GameTerritoryModifier {
+  territory_id: string
+  defense_bonus: number
+  attack_bonus: number
+  troop_generation_bonus: number
+  movement_restriction: boolean
+  supply_line_bonus: boolean
+  icon: string
+  color: string
+  name: string
 }
+
+export interface GameConfiguration {
+  movementType: MovementType
+  allowTeamPlay?: boolean
+  teamMode?: 'none' | 'teams' | 'auto_balance'
+  numberOfTeams?: number | null
+  teamAssignments?: Record<number, string[]>
+  maxPlayers: number
+  mapId?: string
+  gameMode?: string
+  continentBonuses?: ContinentBonus[]
+  useTerritoryModifiers?: boolean
+  modifierDistribution?: ModifierDistribution
+  turnTimer?: number
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  cardTradeMode?: 'fixed' | 'progressive' | 'custom'
+  startingArmies?: number
+  isRanked?: boolean
+  isPrivate?: boolean
+  movementSystem?: string
+}
+
+export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
+
+export interface ContinentBonus {
+  id: string
+  name: string
+  bonusArmies: number
+  territories: string[]
+}
+
+export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' | 'custom'
+
+export type GameSettings = GameConfiguration
 
 export interface GameAction {
   type: 'deploy' | 'attack' | 'fortify' | 'end_turn' | 'trade_cards'
@@ -317,7 +353,7 @@ export interface GameRoom {
   hostUsername?: string
   mapId: string
   mapName?: string
-  settings: GameSettings
+  settings: GameConfiguration
   players: RoomPlayer[]
   status: 'waiting' | 'starting' | 'in_progress' | 'finished'
   createdAt: Date | string

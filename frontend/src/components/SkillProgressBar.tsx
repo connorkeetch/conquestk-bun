@@ -7,12 +7,16 @@ interface SkillProgressBarProps {
 }
 
 const SKILL_TIERS: SkillTier[] = [
-  { name: 'Bronze', minRating: 0, maxRating: 799, icon: '🥉', color: 'bg-orange-600' },
-  { name: 'Silver', minRating: 800, maxRating: 999, icon: '🥈', color: 'bg-gray-400' },
-  { name: 'Gold', minRating: 1000, maxRating: 1199, icon: '🥇', color: 'bg-yellow-500' },
-  { name: 'Platinum', minRating: 1200, maxRating: 1399, icon: '💎', color: 'bg-cyan-400' },
-  { name: 'Master', minRating: 1400, maxRating: 1599, icon: '👑', color: 'bg-purple-500' },
-  { name: 'Grandmaster', minRating: 1600, maxRating: 9999, icon: '⚔️', color: 'bg-red-600' },
+  { name: 'Chieftain', minRating: 0, maxRating: 599, icon: '🛡️', color: 'bg-amber-700' },
+  { name: 'Warlord', minRating: 600, maxRating: 799, icon: '⚔️', color: 'bg-red-600' },
+  { name: 'Raider King', minRating: 800, maxRating: 999, icon: '⚓', color: 'bg-blue-500' },
+  { name: 'Sultan', minRating: 1000, maxRating: 1199, icon: '☪️', color: 'bg-green-600' },
+  { name: 'Caesar', minRating: 1200, maxRating: 1399, icon: '🦅', color: 'bg-yellow-500' },
+  { name: 'Khan', minRating: 1400, maxRating: 1599, icon: '🏹', color: 'bg-orange-500' },
+  { name: 'Emperor', minRating: 1600, maxRating: 1799, icon: '👑', color: 'bg-purple-500' },
+  { name: 'The Great King', minRating: 1800, maxRating: 1999, icon: '☀️', color: 'bg-orange-400' },
+  { name: 'Overlord', minRating: 2000, maxRating: 2199, icon: '💀', color: 'bg-gray-600' },
+  { name: 'Worldbreaker', minRating: 2200, maxRating: 9999, icon: '☄️', color: 'bg-red-800' },
 ]
 
 const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, className = '' }) => {
@@ -30,14 +34,14 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, clas
   let pointsToNext = 0
   let pointsInCurrentTier = 0
 
-  if (nextTier && currentTier.name !== 'Grandmaster') {
+  if (nextTier && currentTier.name !== 'Worldbreaker') {
     pointsInCurrentTier = currentRating - currentTier.minRating
     const tierRange = nextTier.minRating - currentTier.minRating
     progress = (pointsInCurrentTier / tierRange) * 100
     pointsToNext = nextTier.minRating - currentRating
-  } else if (currentTier.name === 'Grandmaster') {
-    // For Grandmaster, show progress above 1600
-    progress = Math.min(100, ((currentRating - 1600) / 400) * 100)
+  } else if (currentTier.name === 'Worldbreaker') {
+    // For the top tier, show progress beyond threshold
+    progress = Math.min(100, ((currentRating - currentTier.minRating) / 400) * 100)
     pointsToNext = 0
   }
 
@@ -61,7 +65,7 @@ const SkillProgressBar: React.FC<SkillProgressBarProps> = ({ currentRating, clas
             <span className="text-2xl opacity-50">{nextTier.icon}</span>
           </div>
         )}
-        {!nextTier && currentTier.name === 'Grandmaster' && (
+        {!nextTier && currentTier.name === 'Worldbreaker' && (
           <div className="text-right">
             <p className="text-sm font-semibold text-red-600">Peak Rank</p>
             <p className="text-xs text-muted">Top Tier</p>

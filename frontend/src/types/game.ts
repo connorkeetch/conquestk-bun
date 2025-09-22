@@ -5,17 +5,20 @@
 
 import type {
   AttackAction,
+  BattleResult as SharedBattleResult,
+  Card as SharedCard,
+  ContinentBonus,
   DeployAction,
   EndTurnAction,
   FortifyAction,
+  GameConfiguration as SharedGameConfiguration,
   GamePhase,
-  GameStatus,
-  PlayerColor,
-  BattleResult as SharedBattleResult,
-  Card as SharedCard,
-  GameAction as SharedGameAction,
   GameState as SharedGameState,
+  GameStatus,
+  GameTerritoryModifier,
+  MovementType,
   Player as SharedPlayer,
+  PlayerColor,
   Territory as SharedTerritory,
   TerritoryAbility,
   TradeCardsAction,
@@ -37,10 +40,9 @@ export type {
 
 // Extend shared types with frontend-specific properties
 export interface GameState extends SharedGameState {
-  hasAttackedThisTurn?: boolean
-  lastBattleResult?: SharedBattleResult
-  movementTracking?: { [territoryId: string]: boolean }
-  territoryModifiers?: { [territoryId: string]: TerritoryModifier }
+  territoryModifiers?:
+    | Record<string, GameTerritoryModifier>
+    | { [territoryId: string]: TerritoryModifier }
 }
 
 export interface GamePlayer extends SharedPlayer {
@@ -61,34 +63,14 @@ export interface Card extends SharedCard {
   isSelected?: boolean
 }
 
-export interface GameAction extends SharedGameAction {
-  // Frontend might have optimistic update properties
-  optimisticId?: string
-  isPending?: boolean
-}
-
 // Frontend-specific types
-export interface TerritoryModifier {
-  type: 'fortress' | 'port' | 'airport' | 'capital'
-  name: string
-  description: string
-  icon: string
-  color: string
-  effectType: 'defense' | 'movement' | 'economy'
-  effectValue: number
+export type TerritoryModifier = GameTerritoryModifier & {
+  type?: string
 }
 
-export interface GameConfiguration {
-  mapType: 'world' | 'custom'
-  maxPlayers: number
-  turnTimer: boolean
-  turnTimeLimit: number // seconds
-  fogOfWar: 'off' | 'adjacent' | 'persistent'
-  cardTradeMode: 'fixed' | 'progressive' | 'random'
-  startingArmies: number
-  movementSystem: 'classic' | 'limited' | 'unlimited' | 'sequential'
-  capitalMode: boolean
-  territories: string[]
+export type GameConfiguration = SharedGameConfiguration & {
+  modifierDistribution?: string
+  movementSystem?: string
 }
 
 export interface AttackOptions {

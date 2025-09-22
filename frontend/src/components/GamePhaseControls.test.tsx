@@ -28,13 +28,14 @@ interface TestRootState {
 
 describe('GamePhaseControls', () => {
   let store: ReturnType<typeof createTestStore>
-  let mockOnEndTurn: Mock<[], void>
+  let mockOnEndTurn: Mock
 
   const mockGameState = {
     roomId: 'test-room',
     players: [
       {
         id: 'player1',
+        userId: 'player1',
         username: 'Player 1',
         color: 'red',
         armies: 5,
@@ -44,6 +45,7 @@ describe('GamePhaseControls', () => {
       },
       {
         id: 'player2',
+        userId: 'player2',
         username: 'Player 2',
         color: 'blue',
         armies: 3,
@@ -75,6 +77,8 @@ describe('GamePhaseControls', () => {
     ],
     cards: [],
     gameConfig: {
+      movementType: 'classic_adjacent',
+      maxPlayers: 2,
       continentBonuses: [
         {
           id: 'north_america',
@@ -118,6 +122,7 @@ describe('GamePhaseControls', () => {
         isLoading: false,
         error: null,
         isAuthenticated: true,
+        requiresEmailVerification: false,
       },
       room: {
         currentRoom: null,
@@ -139,7 +144,7 @@ describe('GamePhaseControls', () => {
 
   beforeEach(() => {
     store = createTestStore()
-    mockOnEndTurn = vi.fn<[], void>()
+    mockOnEndTurn = vi.fn()
   })
 
   const renderWithProvider = (component: React.ReactElement) => {
