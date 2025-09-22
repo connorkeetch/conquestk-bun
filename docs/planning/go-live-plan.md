@@ -208,7 +208,7 @@ Go Live is tentatively set for Oct 1, 2025
   - CI runs typecheck, lint, unit, integration, and smoke e2e jobs.
   - Known lint debt quarantined via baseline; pipeline fails on new issues.
   - Add targeted tests for game actions, map editor, socket join/broadcast, and A1 persistence.
-- _Progress (January 2026): `CI & Deploy` workflow now separates typecheck, lint, unit, build, and Playwright smoke jobs on Node 22 (`.github/workflows/deploy.yml`), with a Chromium landing-page smoke test guarding basic routing (`tests/smoke.spec.ts`). Gameplay-focused integration coverage remains to be added._
+- _Progress (January 2026): `CI & Deploy` workflow now separates typecheck, lint, unit, build, and Playwright smoke jobs on Node 22 (`.github/workflows/deploy.yml`), with a Chromium landing-page smoke test guarding basic routing (`tests/smoke.spec.ts`). Backend game action workers now have coverage for deploy vs attack flows (`backend/src/test/gameActionWorker.test.ts:1-210`). Additional map editor/frontend gameplay tests remain to be added._
 
 ### G2. Large file safeguards & legacy cleanup
 - **Priority:** P2 • **Tags:** [ops]

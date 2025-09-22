@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface ImageCropperEnhancedProps {
   imageUrl: string
@@ -31,7 +31,6 @@ export default function ImageCropperEnhanced({
   const [dragHandle, setDragHandle] = useState<DragHandle>(null)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, cropX: 0, cropY: 0, cropW: 0, cropH: 0 })
   const [scale, setScale] = useState(1)
-  const [mouseIntent, setMouseIntent] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     const img = new Image()
@@ -176,71 +175,74 @@ export default function ImageCropperEnhanced({
     ctx.setLineDash([])
   }, [image, cropArea, scale])
 
-  const getHandleAtPosition = (x: number, y: number): DragHandle => {
-    const scaledCrop = {
-      x: cropArea.x * scale,
-      y: cropArea.y * scale,
-      width: cropArea.width * scale,
-      height: cropArea.height * scale,
-    }
+  const getHandleAtPosition = useCallback(
+    (x: number, y: number): DragHandle => {
+      const scaledCrop = {
+        x: cropArea.x * scale,
+        y: cropArea.y * scale,
+        width: cropArea.width * scale,
+        height: cropArea.height * scale,
+      }
 
-    const handleSize = 15 // Slightly larger hit area
+      const handleSize = 15 // Slightly larger hit area
 
-    // Check corner handles
-    if (Math.abs(x - scaledCrop.x) < handleSize && Math.abs(y - scaledCrop.y) < handleSize)
-      return 'tl'
-    if (
-      Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
-      Math.abs(y - scaledCrop.y) < handleSize
-    )
-      return 'tr'
-    if (
-      Math.abs(x - scaledCrop.x) < handleSize &&
-      Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
-    )
-      return 'bl'
-    if (
-      Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
-      Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
-    )
-      return 'br'
+      // Check corner handles
+      if (Math.abs(x - scaledCrop.x) < handleSize && Math.abs(y - scaledCrop.y) < handleSize)
+        return 'tl'
+      if (
+        Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
+        Math.abs(y - scaledCrop.y) < handleSize
+      )
+        return 'tr'
+      if (
+        Math.abs(x - scaledCrop.x) < handleSize &&
+        Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
+      )
+        return 'bl'
+      if (
+        Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
+        Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
+      )
+        return 'br'
 
-    // Check side handles
-    if (
-      Math.abs(x - (scaledCrop.x + scaledCrop.width / 2)) < handleSize &&
-      Math.abs(y - scaledCrop.y) < handleSize
-    )
-      return 't'
-    if (
-      Math.abs(x - (scaledCrop.x + scaledCrop.width / 2)) < handleSize &&
-      Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
-    )
-      return 'b'
-    if (
-      Math.abs(x - scaledCrop.x) < handleSize &&
-      Math.abs(y - (scaledCrop.y + scaledCrop.height / 2)) < handleSize
-    )
-      return 'l'
-    if (
-      Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
-      Math.abs(y - (scaledCrop.y + scaledCrop.height / 2)) < handleSize
-    )
-      return 'r'
+      // Check side handles
+      if (
+        Math.abs(x - (scaledCrop.x + scaledCrop.width / 2)) < handleSize &&
+        Math.abs(y - scaledCrop.y) < handleSize
+      )
+        return 't'
+      if (
+        Math.abs(x - (scaledCrop.x + scaledCrop.width / 2)) < handleSize &&
+        Math.abs(y - (scaledCrop.y + scaledCrop.height)) < handleSize
+      )
+        return 'b'
+      if (
+        Math.abs(x - scaledCrop.x) < handleSize &&
+        Math.abs(y - (scaledCrop.y + scaledCrop.height / 2)) < handleSize
+      )
+        return 'l'
+      if (
+        Math.abs(x - (scaledCrop.x + scaledCrop.width)) < handleSize &&
+        Math.abs(y - (scaledCrop.y + scaledCrop.height / 2)) < handleSize
+      )
+        return 'r'
 
-    // Check if inside crop area for move
-    if (
-      x >= scaledCrop.x &&
-      x <= scaledCrop.x + scaledCrop.width &&
-      y >= scaledCrop.y &&
-      y <= scaledCrop.y + scaledCrop.height
-    ) {
-      return 'move'
-    }
+      // Check if inside crop area for move
+      if (
+        x >= scaledCrop.x &&
+        x <= scaledCrop.x + scaledCrop.width &&
+        y >= scaledCrop.y &&
+        y <= scaledCrop.y + scaledCrop.height
+      ) {
+        return 'move'
+      }
 
-    return null
-  }
+      return null
+    },
+    [cropArea, scale],
+  )
 
-  const getCursorForHandle = (handle: DragHandle): string => {
+  const getCursorForHandle = useCallback((handle: DragHandle): string => {
     switch (handle) {
       case 'tl':
         return 'nw-resize'
@@ -263,7 +265,7 @@ export default function ImageCropperEnhanced({
       default:
         return 'default'
     }
-  }
+  }, [])
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return
@@ -287,150 +289,157 @@ export default function ImageCropperEnhanced({
     }
   }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return
+  const handlePointerMove = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
 
-    const rect = canvasRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+      const rect = canvas.getBoundingClientRect()
+      const x = clientX - rect.left
+      const y = clientY - rect.top
 
-    // Update cursor based on handle
-    if (!isDragging) {
-      const handle = getHandleAtPosition(x, y)
-      canvasRef.current.style.cursor = getCursorForHandle(handle)
-    }
+      if (!isDragging) {
+        const handle = getHandleAtPosition(x, y)
+        canvas.style.cursor = getCursorForHandle(handle)
+        return
+      }
 
-    if (!isDragging || !image) return
+      if (!image) return
 
-    // Track mouse intent even when outside bounds
-    setMouseIntent({ x: e.clientX, y: e.clientY })
+      const deltaX = (clientX - dragStart.x) / scale
+      const deltaY = (clientY - dragStart.y) / scale
 
-    const deltaX = (e.clientX - dragStart.x) / scale
-    const deltaY = (e.clientY - dragStart.y) / scale
+      setCropArea((previous) => {
+        const updated = { ...previous }
 
-    const newCrop = { ...cropArea }
+        switch (dragHandle) {
+          case 'move':
+            updated.x = Math.max(
+              0,
+              Math.min(image.width - dragStart.cropW, dragStart.cropX + deltaX),
+            )
+            updated.y = Math.max(
+              0,
+              Math.min(image.height - dragStart.cropH, dragStart.cropY + deltaY),
+            )
+            break
 
-    switch (dragHandle) {
-      case 'move':
-        newCrop.x = Math.max(0, Math.min(image.width - dragStart.cropW, dragStart.cropX + deltaX))
-        newCrop.y = Math.max(0, Math.min(image.height - dragStart.cropH, dragStart.cropY + deltaY))
-        break
+          case 'tl':
+            updated.x = Math.max(
+              0,
+              Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
+            )
+            updated.y = Math.max(
+              0,
+              Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
+            )
+            updated.width = dragStart.cropW - (updated.x - dragStart.cropX)
+            updated.height = dragStart.cropH - (updated.y - dragStart.cropY)
+            break
 
-      case 'tl':
-        newCrop.x = Math.max(
-          0,
-          Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
-        )
-        newCrop.y = Math.max(
-          0,
-          Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
-        )
-        newCrop.width = dragStart.cropW - (newCrop.x - dragStart.cropX)
-        newCrop.height = dragStart.cropH - (newCrop.y - dragStart.cropY)
-        break
+          case 'tr':
+            updated.width = Math.max(
+              50,
+              Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
+            )
+            updated.y = Math.max(
+              0,
+              Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
+            )
+            updated.height = dragStart.cropH - (updated.y - dragStart.cropY)
+            break
 
-      case 'tr':
-        newCrop.width = Math.max(
-          50,
-          Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
-        )
-        newCrop.y = Math.max(
-          0,
-          Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
-        )
-        newCrop.height = dragStart.cropH - (newCrop.y - dragStart.cropY)
-        break
+          case 'bl':
+            updated.x = Math.max(
+              0,
+              Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
+            )
+            updated.width = dragStart.cropW - (updated.x - dragStart.cropX)
+            updated.height = Math.max(
+              50,
+              Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
+            )
+            break
 
-      case 'bl':
-        newCrop.x = Math.max(
-          0,
-          Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
-        )
-        newCrop.width = dragStart.cropW - (newCrop.x - dragStart.cropX)
-        newCrop.height = Math.max(
-          50,
-          Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
-        )
-        break
+          case 'br':
+            updated.width = Math.max(
+              50,
+              Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
+            )
+            updated.height = Math.max(
+              50,
+              Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
+            )
+            break
 
-      case 'br':
-        newCrop.width = Math.max(
-          50,
-          Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
-        )
-        newCrop.height = Math.max(
-          50,
-          Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
-        )
-        break
+          case 't':
+            updated.y = Math.max(
+              0,
+              Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
+            )
+            updated.height = dragStart.cropH - (updated.y - dragStart.cropY)
+            break
 
-      case 't':
-        newCrop.y = Math.max(
-          0,
-          Math.min(dragStart.cropY + dragStart.cropH - 50, dragStart.cropY + deltaY),
-        )
-        newCrop.height = dragStart.cropH - (newCrop.y - dragStart.cropY)
-        break
+          case 'b':
+            updated.height = Math.max(
+              50,
+              Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
+            )
+            break
 
-      case 'b':
-        newCrop.height = Math.max(
-          50,
-          Math.min(image.height - dragStart.cropY, dragStart.cropH + deltaY),
-        )
-        break
+          case 'l':
+            updated.x = Math.max(
+              0,
+              Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
+            )
+            updated.width = dragStart.cropW - (updated.x - dragStart.cropX)
+            break
 
-      case 'l':
-        newCrop.x = Math.max(
-          0,
-          Math.min(dragStart.cropX + dragStart.cropW - 50, dragStart.cropX + deltaX),
-        )
-        newCrop.width = dragStart.cropW - (newCrop.x - dragStart.cropX)
-        break
+          case 'r':
+            updated.width = Math.max(
+              50,
+              Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
+            )
+            break
 
-      case 'r':
-        newCrop.width = Math.max(
-          50,
-          Math.min(image.width - dragStart.cropX, dragStart.cropW + deltaX),
-        )
-        break
-    }
+          default:
+            break
+        }
 
-    setCropArea(newCrop)
-  }
+        return updated
+      })
+    },
+    [dragHandle, dragStart, getCursorForHandle, getHandleAtPosition, image, isDragging, scale],
+  )
 
-  const handleMouseUp = () => {
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      handlePointerMove(event.clientX, event.clientY)
+    },
+    [handlePointerMove],
+  )
+
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false)
     setDragHandle(null)
-  }
+  }, [])
 
   // Global mouse events to handle dragging outside canvas
   useEffect(() => {
     if (!isDragging) return
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!canvasRef.current || !image) return
-
-      const rect = canvasRef.current.getBoundingClientRect()
-      const syntheticEvent = {
-        clientX: e.clientX,
-        clientY: e.clientY,
-      } as React.MouseEvent<HTMLCanvasElement>
-
-      handleMouseMove(syntheticEvent)
-    }
-
-    const handleGlobalMouseUp = () => {
-      handleMouseUp()
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      handlePointerMove(event.clientX, event.clientY)
     }
 
     document.addEventListener('mousemove', handleGlobalMouseMove)
-    document.addEventListener('mouseup', handleGlobalMouseUp)
+    document.addEventListener('mouseup', handleMouseUp)
 
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove)
-      document.removeEventListener('mouseup', handleGlobalMouseUp)
+      document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging, dragHandle, dragStart, image, scale])
+  }, [handleMouseUp, handlePointerMove, isDragging])
 
   const handleCrop = () => {
     if (!image) return
@@ -503,12 +512,14 @@ export default function ImageCropperEnhanced({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={onCancel}
                 className="px-4 py-2 bg-surface-2 hover:brightness-110 rounded text-white"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleCrop}
                 className="px-4 py-2 bg-violet hover:brightness-110 rounded text-white"
               >
