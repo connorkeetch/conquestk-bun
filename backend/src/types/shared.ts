@@ -69,6 +69,15 @@ export interface ConversationMembersAddedPayload {
   members: ConversationMemberEvent[]
 }
 
+export interface ConversationMessageEventPayload {
+  conversationId: string
+  id: string
+  senderId: string | null
+  body: string
+  createdAt: string
+  metadata: Record<string, unknown>
+}
+
 export interface ChatReactionSummary {
   emoji: string
   users: Array<{ id: string; username: string }>
@@ -168,6 +177,7 @@ export interface ServerToClientEvents {
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
   'conversation.created': (payload: ConversationCreatedPayload) => void
   'conversation.members.added': (payload: ConversationMembersAddedPayload) => void
+  'conversation.message.new': (payload: ConversationMessageEventPayload) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string

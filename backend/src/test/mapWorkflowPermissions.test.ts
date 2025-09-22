@@ -63,14 +63,11 @@ jest.mock('../middleware/adminAuth', () => ({
 
       res.status(403).json({ error: 'Insufficient permissions', required: permission })
     },
-  logAdminActivity: () => (
-    _req: express.Request,
-    _res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    logActivityMock()
-    next()
-  },
+  logAdminActivity:
+    () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
+      logActivityMock()
+      next()
+    },
 }))
 
 jest.mock('../services/mapPermissionService', () => {
@@ -128,9 +125,10 @@ const notificationDispatcherModule = require('../services/NotificationDispatcher
   notificationDispatcher: { dispatch: jest.Mock }
 }
 
-const mapWorkflowServiceInstance = require('../services/mapWorkflowService').default as {
-  getMapHistory: (...args: unknown[]) => Promise<unknown>
-}
+type MapWorkflowServiceInstance = typeof import('../services/mapWorkflowService').default
+
+const mapWorkflowServiceInstance = require('../services/mapWorkflowService')
+  .default as MapWorkflowServiceInstance
 
 const createApp = () => {
   const app = express()
@@ -191,7 +189,9 @@ describe('Map workflow authorization', () => {
       .mockResolvedValueOnce({ rowCount: 1 }) // update maps
       .mockResolvedValueOnce({ rowCount: 1 }) // insert review queue
       .mockResolvedValueOnce({ rows: [{ name: 'Test Map' }] }) // select map name
-      .mockResolvedValueOnce({ rows: [{ id: 'notif-1', admin_id: null, created_at: new Date().toISOString() }] }) // insert admin notification
+      .mockResolvedValueOnce({
+        rows: [{ id: 'notif-1', admin_id: null, created_at: new Date().toISOString() }],
+      }) // insert admin notification
       .mockResolvedValue({ rowCount: 1 }) // fallback for logMapAction
 
     const response = await request(createApp())
@@ -310,7 +310,7 @@ describe('Map workflow authorization', () => {
     })
 
     const historySpy = jest
-      .spyOn(mapWorkflowServiceInstance as any, 'getMapHistory')
+      .spyOn(mapWorkflowServiceInstance, 'getMapHistory')
       .mockResolvedValueOnce([{ action: 'submitted' }])
 
     const response = await request(createApp())

@@ -1,6 +1,6 @@
 import { query } from '../config/database'
-import { isBlocked } from './userBlockService'
 import { logger } from '../utils/logger'
+import { isBlocked } from './userBlockService'
 
 export type DmPolicy = 'everyone' | 'friends_only' | 'no_one'
 
@@ -26,16 +26,20 @@ export class MessagingPolicyError extends Error {
   }
 }
 
-const mapSettingsRow = (row: any | null | undefined): MessagingSettings => {
+type MessagingSettingsRow = {
+  dm_policy: DmPolicy | null
+  allow_group_invites: boolean | null
+  show_online_status: boolean | null
+}
+
+const mapSettingsRow = (row: MessagingSettingsRow | null | undefined): MessagingSettings => {
   if (!row) {
     return { ...DEFAULT_SETTINGS }
   }
 
   return {
     dmPolicy:
-      row.dm_policy === 'friends_only' || row.dm_policy === 'no_one'
-        ? row.dm_policy
-        : 'everyone',
+      row.dm_policy === 'friends_only' || row.dm_policy === 'no_one' ? row.dm_policy : 'everyone',
     allowGroupInvites: row.allow_group_invites !== false,
     showOnlineStatus: row.show_online_status !== false,
   }
@@ -43,7 +47,7 @@ const mapSettingsRow = (row: any | null | undefined): MessagingSettings => {
 
 export async function getMessagingSettings(userId: string): Promise<MessagingSettings> {
   try {
-    const result = await query(
+    const result = await query<MessagingSettingsRow>(
       `SELECT dm_policy, allow_group_invites, show_online_status
        FROM user_messaging_settings
        WHERE user_id = $1`,

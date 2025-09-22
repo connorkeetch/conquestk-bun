@@ -52,6 +52,15 @@ export interface ConversationMessageRecord {
   shadowMuted: boolean
 }
 
+export interface ConversationMessageEventPayload {
+  conversationId: string
+  id: string
+  senderId: string | null
+  body: string
+  createdAt: string
+  metadata: Record<string, unknown>
+}
+
 export class ConversationError extends Error {
   code: string
 
@@ -106,6 +115,15 @@ type ConversationMemberRow = {
   role: 'owner' | 'admin' | 'member'
   joined_at: Date
   shadow_muted: boolean | null
+}
+
+type ConversationMembershipRow = {
+  role: 'owner' | 'admin' | 'member'
+  shadow_muted: boolean | null
+}
+
+type DirectMemberRow = {
+  user_id: string
 }
 
 const mapConversationRow = (row: ConversationRow): ConversationRecord => ({
@@ -414,7 +432,7 @@ const ensureMembership = async (
   conversationId: string,
   userId: string,
 ): Promise<{ role: string; shadowMuted: boolean }> => {
-  const membershipResult = await query(
+  const membershipResult = await query<ConversationMembershipRow>(
     `
     SELECT role, shadow_muted
     FROM conversation_members
@@ -432,9 +450,10 @@ const ensureMembership = async (
 }
 
 const getConversationRow = async (conversationId: string): Promise<ConversationRecord> => {
-  const result = await query(`SELECT ${CONVERSATION_COLUMNS} FROM conversations WHERE id = $1`, [
-    conversationId,
-  ])
+  const result = await query<ConversationRow>(
+    `SELECT ${CONVERSATION_COLUMNS} FROM conversations WHERE id = $1`,
+    [conversationId],
+  )
 
   if (result.rows.length === 0) {
     throw new ConversationError('NOT_FOUND', 'Conversation not found')
@@ -447,7 +466,7 @@ const getOtherDirectMember = async (
   conversationId: string,
   senderId: string,
 ): Promise<string | null> => {
-  const result = await query(
+  const result = await query<DirectMemberRow>(
     `
     SELECT user_id
     FROM conversation_members
@@ -538,6 +557,37 @@ const emitConversationMembersAddedEvent = (
   }
 }
 
+const emitConversationMessageEvent = (
+  descriptor: ConversationWithMembers,
+  message: ConversationMessageRecord,
+) => {
+  try {
+    const io = tryGetSocketServer()
+    if (!io) {
+      return
+    }
+
+    const payload: ConversationMessageEventPayload = {
+      conversationId: descriptor.id,
+      id: message.id,
+      senderId: message.senderId,
+      body: message.body,
+      createdAt: toIsoString(message.createdAt),
+      metadata: message.jsonMetadata ?? {},
+    }
+
+    io.to(`conversation:${descriptor.id}`).emit('conversation.message.new', payload)
+    for (const userId of descriptor.memberIds) {
+      io.to(`user:${userId}`).emit('conversation.message.new', payload)
+    }
+  } catch (error) {
+    logger.warn('Failed to emit conversation.message.new event', {
+      conversationId: descriptor.id,
+      error,
+    })
+  }
+}
+
 export interface SendMessageOptions {
   conversationId: string
   senderId: string
@@ -588,8 +638,10 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
     }
   }
 
+  const descriptor = await buildConversationDescriptor(conversation)
+
   if (clientMessageId) {
-    const existing = await query(
+    const existing = await query<ConversationMessageRow>(
       `
       SELECT *
       FROM conversation_messages
@@ -611,7 +663,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
     ...(clientMessageId ? { clientMessageId } : {}),
   }
 
-  const insertResult = await query(
+  const insertResult = await query<ConversationMessageRow>(
     `
     INSERT INTO conversation_messages (conversation_id, sender_id, body, json_metadata)
     VALUES ($1, $2, $3, $4::jsonb)
@@ -631,6 +683,8 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
   `,
     [message.id, conversationId, senderId],
   )
+
+  emitConversationMessageEvent(descriptor, message)
 
   return message
 }
@@ -657,7 +711,7 @@ export async function listMessages(
 
   params.push(limit)
 
-  const result = await query(
+  const result = await query<ConversationMessageRow>(
     `
     SELECT *
     FROM conversation_messages
@@ -672,10 +726,138 @@ export async function listMessages(
   return result.rows.map(mapMessageRow)
 }
 
+interface ConversationListRow extends ConversationRow {
+  member_role: 'owner' | 'admin' | 'member'
+  joined_at: Date
+  is_muted: boolean | null
+  is_pinned: boolean | null
+  shadow_muted: boolean | null
+  last_read_message_id: string | null
+  last_read_at: Date | null
+  unread_count: number | null
+  last_message_id: string | null
+  last_message_body: string | null
+  last_message_created_at: Date | null
+  last_message_sender_id: string | null
+  last_message_metadata: Record<string, unknown> | null
+}
+
+export interface ConversationMembershipInfo {
+  role: 'owner' | 'admin' | 'member'
+  joinedAt: Date
+  isMuted: boolean
+  isPinned: boolean
+  shadowMuted: boolean
+  lastReadMessageId: string | null
+  lastReadAt: Date | null
+}
+
+export interface ConversationListEntry {
+  conversation: ConversationWithMembers
+  membership: ConversationMembershipInfo
+  unreadCount: number
+  lastMessage?: {
+    id: string
+    body: string
+    senderId: string | null
+    createdAt: Date
+    metadata: Record<string, unknown>
+  }
+}
+
+export interface ConversationListOptions {
+  limit?: number
+  offset?: number
+}
+
+export async function listConversationsForUser(
+  userId: string,
+  options: ConversationListOptions = {},
+): Promise<ConversationListEntry[]> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100)
+  const offset = Math.max(options.offset ?? 0, 0)
+
+  const result = await query<ConversationListRow>(
+    `
+    SELECT
+      ${CONVERSATION_COLUMNS},
+      cm.role AS member_role,
+      cm.joined_at,
+      cm.is_muted,
+      cm.is_pinned,
+      cm.shadow_muted,
+      cm.last_read_message_id,
+      cm.last_read_at,
+      COALESCE(unread.unread_count, 0) AS unread_count,
+      last_message.id AS last_message_id,
+      last_message.body AS last_message_body,
+      last_message.created_at AS last_message_created_at,
+      last_message.sender_id AS last_message_sender_id,
+      last_message.json_metadata AS last_message_metadata
+    FROM conversation_members cm
+    JOIN conversations c ON c.id = cm.conversation_id
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*)::INT AS unread_count
+      FROM conversation_messages m
+      WHERE m.conversation_id = cm.conversation_id
+        AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
+    ) unread ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT m.id, m.body, m.created_at, m.sender_id, m.json_metadata
+      FROM conversation_messages m
+      WHERE m.conversation_id = cm.conversation_id
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    ) last_message ON TRUE
+    WHERE cm.user_id = $1
+    ORDER BY c.updated_at DESC
+    LIMIT $2 OFFSET $3
+  `,
+    [userId, limit, offset],
+  )
+
+  const entries: ConversationListEntry[] = []
+
+  for (const row of result.rows) {
+    const record = mapConversationRow(row)
+    const descriptor = await buildConversationDescriptor(record)
+
+    const membership: ConversationMembershipInfo = {
+      role: row.member_role,
+      joinedAt: row.joined_at,
+      isMuted: row.is_muted ?? false,
+      isPinned: row.is_pinned ?? false,
+      shadowMuted: row.shadow_muted ?? false,
+      lastReadMessageId: row.last_read_message_id ?? null,
+      lastReadAt: row.last_read_at ?? null,
+    }
+
+    const lastMessage = row.last_message_id
+      ? {
+          id: row.last_message_id,
+          body: row.last_message_body ?? '',
+          senderId: row.last_message_sender_id ?? null,
+          createdAt: row.last_message_created_at ?? new Date(0),
+          metadata: row.last_message_metadata ?? {},
+        }
+      : undefined
+
+    entries.push({
+      conversation: descriptor,
+      membership,
+      unreadCount: Number(row.unread_count ?? 0),
+      lastMessage,
+    })
+  }
+
+  return entries
+}
+
 export default {
   ensureDirectConversation,
   createGroupConversation,
   addMembersToConversation,
+  listConversationsForUser,
   sendMessage,
   listMessages,
 }

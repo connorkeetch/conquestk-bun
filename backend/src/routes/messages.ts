@@ -12,6 +12,7 @@ import {
   addMembersToConversation,
   createGroupConversation,
   ensureDirectConversation,
+  listConversationsForUser,
   listMessages,
   sendMessage,
 } from '../services/conversationService'
@@ -246,6 +247,32 @@ router.post(
     }
   },
 )
+
+router.get('/conversations', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { limit, offset } = req.query
+
+    const parsedLimit = limit ? Number(limit) : undefined
+    const parsedOffset = offset ? Number(offset) : undefined
+
+    if (
+      (parsedLimit !== undefined && (!Number.isFinite(parsedLimit) || parsedLimit <= 0)) ||
+      (parsedOffset !== undefined && (!Number.isFinite(parsedOffset) || parsedOffset < 0))
+    ) {
+      return res.status(400).json({ error: 'limit and offset must be positive numbers' })
+    }
+
+    const conversations = await listConversationsForUser(req.userId, {
+      limit: parsedLimit,
+      offset: parsedOffset,
+    })
+
+    return res.json({ conversations })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to list conversations')
+    return res.status(500).json({ error: 'Failed to list conversations' })
+  }
+})
 
 router.get(
   '/conversations/:conversationId/messages',
