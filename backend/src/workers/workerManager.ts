@@ -5,7 +5,7 @@ import { logger } from '../utils/logger'
 import { createBattleWorker } from './battleWorker'
 import { createCleanupWorker } from './cleanupWorker'
 import { createGameActionWorker } from './gameActionWorker'
-import { createMapAssetWorker, MapAssetWorker } from './mapAssetWorker'
+import { createMapAssetWorker, type MapAssetWorker } from './mapAssetWorker'
 
 export class WorkerManager {
   private isInitialized = false

@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
 import {
@@ -19,8 +19,8 @@ import {
   getContinentBonusArmies,
   resolveContinentDefinitions,
 } from '../utils/continentBonuses'
-import { BattleModal } from './BattleModal'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
+import { BattleModal } from './BattleModal'
 
 interface GamePhaseControlsProps {
   onEndTurn: () => void
@@ -43,6 +43,8 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
   const [reinforcementArmies, setReinforcementArmies] = useState(1)
   const [fortifyArmies, setFortifyArmies] = useState(1)
+  const deployInputId = useId()
+  const fortifyInputId = useId()
 
   const continentDefinitions = useMemo(
     () => resolveContinentDefinitions(gameState?.gameConfig?.continentBonuses),
@@ -148,6 +150,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
           {gameState.phase.charAt(0).toUpperCase() + gameState.phase.slice(1)} Phase
         </h3>
         <button
+          type="button"
           onClick={onEndTurn}
           className="bg-primary hover:bg-primary text-white px-4 py-2 rounded font-medium"
           disabled={!isCurrentPlayerTurn}
@@ -238,16 +241,20 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
-                  <label className="text-sm">Armies to deploy:</label>
+                  <label className="text-sm" htmlFor={deployInputId}>
+                    Armies to deploy:
+                  </label>
                   <input
                     type="number"
                     min="1"
                     max={calculateReinforcementArmies()}
                     value={reinforcementArmies}
+                    id={deployInputId}
                     onChange={(e) => setReinforcementArmies(parseInt(e.target.value, 10) || 1)}
                     className="w-20 px-2 py-1 border border-slate-600 bg-slate-700 text-white rounded text-center"
                   />
                   <button
+                    type="button"
                     onClick={handleDeploy}
                     className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
                   >
@@ -271,6 +278,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
           {!gameState.hasAttackedThisTurn && (
             <div className="bg-warning-soft border border-yellow-600/50 p-2 rounded">
               <button
+                type="button"
                 onClick={() => dispatch(goBackToReinforcement())}
                 className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm w-full"
               >
@@ -310,12 +318,14 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                 </p>
                 <div className="flex space-x-2">
                   <button
+                    type="button"
                     onClick={handleAttack}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                   >
                     Attack!
                   </button>
                   <button
+                    type="button"
                     onClick={handleClearSelection}
                     className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm"
                   >
@@ -402,22 +412,27 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                   <strong>{selectedTargetData?.name}</strong> ({selectedTargetData?.armies} armies)
                 </p>
                 <div className="flex items-center space-x-2">
-                  <label className="text-sm">Armies to move:</label>
+                  <label className="text-sm" htmlFor={fortifyInputId}>
+                    Armies to move:
+                  </label>
                   <input
                     type="number"
                     min="1"
                     max={(selectedTerritoryData?.armies || 1) - 1}
                     value={fortifyArmies}
+                    id={fortifyInputId}
                     onChange={(e) => setFortifyArmies(parseInt(e.target.value, 10) || 1)}
                     className="w-20 px-2 py-1 border border-slate-600 bg-slate-700 text-white rounded text-center"
                   />
                   <button
+                    type="button"
                     onClick={handleFortify}
                     className="bg-primary hover:bg-primary text-white px-3 py-1 rounded text-sm"
                   >
                     Move
                   </button>
                   <button
+                    type="button"
                     onClick={handleClearSelection}
                     className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm"
                   >

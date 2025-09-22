@@ -1,5 +1,6 @@
 import type { QueryResultRow } from 'pg'
 import { query } from '../config/database.js'
+import { adminService } from './adminService.js'
 import notificationService from './notificationService'
 
 export interface MapVersion {
@@ -64,6 +65,11 @@ export interface MapReviewResult {
 }
 
 type ModerationDetails = Record<string, unknown>
+
+type AuditContext = {
+  ipAddress?: string
+  userAgent?: string
+}
 
 interface MapModerationActionRow extends QueryResultRow {
   id: string
@@ -284,7 +290,15 @@ export class MapApprovalService {
     return result.rows as MapApprovalRequest[]
   }
 
-  static async assignReviewer(requestId: string, moderatorId: string): Promise<void> {
+  static async assignReviewer(
+    requestId: string,
+    actorId: string,
+    moderatorId: string,
+    auditContext?: AuditContext,
+  ): Promise<void> {
+    const requestBefore = await MapApprovalService.getApprovalRequestById(requestId)
+    const versionBefore = await MapApprovalService.getVersionById(requestBefore.versionId)
+
     await query(
       `
       UPDATE map_approval_requests 
@@ -294,27 +308,50 @@ export class MapApprovalService {
       [moderatorId, requestId],
     )
 
-    // Update version status to under_review
-    const request = await MapApprovalService.getApprovalRequestById(requestId)
     const underReviewStatusId = await MapApprovalService.getStatusId('under_review')
 
     await query(
       `
       UPDATE map_versions SET status_id = ? WHERE id = ?
     `,
-      [underReviewStatusId, request.versionId],
+      [underReviewStatusId, requestBefore.versionId],
     )
 
-    const version = await MapApprovalService.getVersionById(request.versionId)
+    const requestAfter = await MapApprovalService.getApprovalRequestById(requestId)
+    const versionAfter = await MapApprovalService.getVersionById(requestBefore.versionId)
+
     await notificationService.createInAppNotification(moderatorId, {
       type: 'map_review',
       title: 'Map assigned for review',
-      message: `"${version.name}" is ready for your review.`,
-      data: { mapId: version.mapId, versionId: version.id, requestId },
-      actionUrl: `/admin/maps/${version.mapId}/review`,
+      message: `"${versionAfter.name}" is ready for your review.`,
+      data: { mapId: versionAfter.mapId, versionId: versionAfter.id, requestId },
+      actionUrl: `/admin/maps/${versionAfter.mapId}/review`,
       actionLabel: 'Open review',
       sendPush: false,
     })
+
+    await adminService.logAdminAction(
+      actorId,
+      'map_reviewer_assigned',
+      {
+        requestId,
+        assignedModeratorId: moderatorId,
+        before: {
+          assignedModeratorId: requestBefore.assignedModeratorId,
+          reviewStartedAt: requestBefore.reviewStartedAt,
+          versionStatusId: versionBefore.statusId,
+        },
+        after: {
+          assignedModeratorId: requestAfter.assignedModeratorId,
+          reviewStartedAt: requestAfter.reviewStartedAt,
+          versionStatusId: versionAfter.statusId,
+        },
+      },
+      'map_version',
+      versionAfter.id,
+      auditContext?.ipAddress,
+      auditContext?.userAgent,
+    )
   }
 
   // Review Criteria Management
@@ -337,7 +374,12 @@ export class MapApprovalService {
     }[],
     decision: 'approved' | 'rejected' | 'needs_changes',
     moderatorFeedback?: string,
+    auditContext?: AuditContext,
   ): Promise<void> {
+    const requestBefore = await MapApprovalService.getApprovalRequestById(requestId)
+    const versionBefore = await MapApprovalService.getVersionById(requestBefore.versionId)
+    const mapSnapshotBefore = await MapApprovalService.fetchMapSnapshot(versionBefore.mapId)
+
     // Save individual criteria results
     for (const result of results) {
       await query(
@@ -468,6 +510,39 @@ export class MapApprovalService {
         },
       })
     }
+
+    const requestAfter = await MapApprovalService.getApprovalRequestById(requestId)
+    const versionAfter = await MapApprovalService.getVersionById(request.versionId)
+    const mapSnapshotAfter = await MapApprovalService.fetchMapSnapshot(versionAfter.mapId)
+
+    await adminService.logAdminAction(
+      moderatorId,
+      decision === 'approved'
+        ? 'map_review_approved'
+        : decision === 'rejected'
+          ? 'map_review_rejected'
+          : 'map_review_needs_changes',
+      {
+        requestId,
+        decision,
+        moderatorFeedback,
+        before: {
+          approvalRequest: requestBefore,
+          version: versionBefore,
+          map: mapSnapshotBefore,
+        },
+        after: {
+          approvalRequest: requestAfter,
+          version: versionAfter,
+          map: mapSnapshotAfter,
+        },
+        reviewResults: results,
+      },
+      'map',
+      versionAfter.mapId,
+      auditContext?.ipAddress,
+      auditContext?.userAgent,
+    )
   }
 
   static async getReviewResults(requestId: string): Promise<MapReviewResult[]> {
@@ -487,8 +562,13 @@ export class MapApprovalService {
   }
 
   // Publishing and Status Management
-  static async publishVersion(versionId: string, moderatorId: string): Promise<void> {
+  static async publishVersion(
+    versionId: string,
+    moderatorId: string,
+    auditContext?: AuditContext,
+  ): Promise<void> {
     const version = await MapApprovalService.getVersionById(versionId)
+    const mapSnapshotBefore = await MapApprovalService.fetchMapSnapshot(version.mapId)
     const approvedStatusId = await MapApprovalService.getStatusId('approved')
 
     if (version.statusId !== approvedStatusId) {
@@ -516,9 +596,38 @@ export class MapApprovalService {
       'publish',
       'Published to public',
     )
+
+    const versionAfter = await MapApprovalService.getVersionById(versionId)
+    const mapSnapshotAfter = await MapApprovalService.fetchMapSnapshot(version.mapId)
+
+    await adminService.logAdminAction(
+      moderatorId,
+      'map_review_published',
+      {
+        versionId,
+        before: {
+          version,
+          map: mapSnapshotBefore,
+        },
+        after: {
+          version: versionAfter,
+          map: mapSnapshotAfter,
+        },
+      },
+      'map',
+      version.mapId,
+      auditContext?.ipAddress,
+      auditContext?.userAgent,
+    )
   }
 
-  static async archiveMap(mapId: string, moderatorId: string, reason?: string): Promise<void> {
+  static async archiveMap(
+    mapId: string,
+    moderatorId: string,
+    reason?: string,
+    auditContext?: AuditContext,
+  ): Promise<void> {
+    const beforeSnapshot = await MapApprovalService.fetchMapSnapshot(mapId)
     const archivedStatusId = await MapApprovalService.getStatusId('archived')
 
     await query(
@@ -529,6 +638,23 @@ export class MapApprovalService {
     )
 
     await MapApprovalService.recordModerationAction(mapId, moderatorId, 'archive', reason)
+
+    const afterSnapshot = await MapApprovalService.fetchMapSnapshot(mapId)
+
+    await adminService.logAdminAction(
+      moderatorId,
+      'map_review_archived',
+      {
+        mapId,
+        reason,
+        before: beforeSnapshot,
+        after: afterSnapshot,
+      },
+      'map',
+      mapId,
+      auditContext?.ipAddress,
+      auditContext?.userAgent,
+    )
   }
 
   // Utility Methods
@@ -578,6 +704,28 @@ export class MapApprovalService {
     )
 
     return result.rows
+  }
+
+  private static async fetchMapSnapshot(mapId: string): Promise<Record<string, unknown> | null> {
+    const result = await query(
+      `
+      SELECT 
+        status_id,
+        status,
+        is_public,
+        reviewed_at,
+        reviewed_by,
+        review_notes,
+        rejection_reason,
+        is_featured,
+        updated_at
+      FROM maps
+      WHERE id = ?
+    `,
+      [mapId],
+    )
+
+    return result.rows[0] ?? null
   }
 
   // Statistics and Analytics

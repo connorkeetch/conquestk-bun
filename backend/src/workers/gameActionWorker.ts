@@ -66,7 +66,9 @@ export class GameActionWorker {
 
   private async processGameAction(job: Bull.Job<GameActionJob>): Promise<ProcessGameActionResult> {
     const { gameId, playerId, action, socketId, idempotencyKey } = job.data
-    const idKey = idempotencyKey ?? (job.id !== undefined ? String(job.id) : `${gameId}:${playerId}:${action.type}`)
+    const idKey =
+      idempotencyKey ??
+      (job.id !== undefined ? String(job.id) : `${gameId}:${playerId}:${action.type}`)
 
     const cached = await jobIdempotencyService.getProcessedJob<ProcessGameActionResult>(
       this.queue.name,

@@ -17,6 +17,7 @@ export default function MuteButton() {
 
   return (
     <button
+      type="button"
       onClick={handleToggleMute}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -35,7 +36,9 @@ export default function MuteButton() {
         strokeLinecap="round"
         strokeLinejoin="round"
         className={`transition-colors ${isMuted ? 'text-red-400' : 'text-green-400'}`}
+        aria-hidden="true"
       >
+        <title>{isMuted ? 'Audio muted' : 'Audio playing'}</title>
         {isMuted ? (
           <>
             {/* Muted Speaker */}

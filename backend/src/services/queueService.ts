@@ -6,6 +6,46 @@ import { getRedisClient } from '../config/redis'
 import type { GameAction } from '../types/game'
 import { logger } from '../utils/logger'
 
+type QueueInspectionOptions = {
+  excludeData?: boolean
+}
+
+interface WaitingJobSnapshot {
+  timestamp?: number
+}
+
+interface CompletedJobSnapshot {
+  finishedOn?: number
+  processedOn?: number
+}
+
+interface FailedJobSnapshot {
+  id?: string
+  failedReason?: string
+  finishedOn?: number
+  processedOn?: number
+  timestamp?: number
+}
+
+type InspectableQueue<JobData> = Bull.Queue<JobData> & {
+  getWaiting(
+    start?: number,
+    end?: number,
+    opts?: QueueInspectionOptions,
+  ): Promise<WaitingJobSnapshot[]>
+  getCompleted(
+    start?: number,
+    end?: number,
+    opts?: QueueInspectionOptions,
+  ): Promise<CompletedJobSnapshot[]>
+  getStalledCount(): Promise<number>
+  getFailed(
+    start?: number,
+    end?: number,
+    opts?: QueueInspectionOptions,
+  ): Promise<FailedJobSnapshot[]>
+}
+
 // Queue job types
 export interface GameActionJob {
   gameId: string
@@ -313,26 +353,15 @@ export class QueueService {
     const now = Date.now()
 
     for (const [key, queue] of this.queues) {
+      const inspectableQueue = queue as InspectableQueue<unknown>
       const [jobCounts, isPaused, waitingSamples, completedSamples, stalledCount, failedSamples] =
         await Promise.all([
           queue.getJobCounts(),
           queue.isPaused(),
-          (queue as any).getWaiting(0, 19, { excludeData: true }) as Promise<
-            Array<{ timestamp?: number }>
-          >,
-          (queue as any).getCompleted(0, 9, { excludeData: true }) as Promise<
-            Array<{ finishedOn?: number; processedOn?: number }>
-          >,
-          (queue as any).getStalledCount() as Promise<number>,
-          (queue as any).getFailed(0, 0, { excludeData: true }) as Promise<
-            Array<{
-              id?: string
-              failedReason?: string
-              finishedOn?: number
-              processedOn?: number
-              timestamp?: number
-            }>
-          >,
+          inspectableQueue.getWaiting(0, 19, { excludeData: true }),
+          inspectableQueue.getCompleted(0, 9, { excludeData: true }),
+          inspectableQueue.getStalledCount(),
+          inspectableQueue.getFailed(0, 0, { excludeData: true }),
         ])
 
       const deadLetterQueue = this.deadLetterQueues.get(key)
@@ -505,7 +534,9 @@ export class QueueService {
   private async waitForQueueReady(queue: Bull.Queue, name: string): Promise<void> {
     const waitUntilReady = (queue as { waitUntilReady?: () => Promise<unknown> }).waitUntilReady
 
-    const readinessPromise = (waitUntilReady ? waitUntilReady.call(queue) : queue.isReady()).then(() => undefined)
+    const readinessPromise = (waitUntilReady ? waitUntilReady.call(queue) : queue.isReady()).then(
+      () => undefined,
+    )
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       const timer = setTimeout(() => {

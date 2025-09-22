@@ -222,12 +222,14 @@ export default function ImageCropper({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={onCancel}
                 className="px-4 py-2 bg-surface-2 hover:bg-gray-600 rounded text-white"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleCrop}
                 className="px-4 py-2 bg-primary hover:bg-primary rounded text-white"
               >
