@@ -1,9 +1,13 @@
+import { randomUUID } from 'node:crypto'
 import { logger } from '../utils/logger'
 import { getWorkerManagerInstance } from '../workers/workerManager'
 import { cdnService } from './cdnService'
 import { databaseClusterService } from './databaseClusterService'
 import type { QueueStats } from './queueService'
 import { redisClusterService } from './redisClusterService'
+import { adminService } from './adminService'
+import { notificationDispatcher } from './NotificationDispatcher'
+import { buildPerformanceAlertNotification } from './notifications/performanceAlerts'
 
 interface SystemMetrics {
   timestamp: number
@@ -49,7 +53,7 @@ interface SystemMetrics {
   }
 }
 
-interface PerformanceAlert {
+export interface PerformanceAlert {
   id: string
   severity: 'low' | 'medium' | 'high' | 'critical'
   component: string
@@ -160,7 +164,9 @@ export class PerformanceMonitorService {
 
   private startAlertSystem(): void {
     // Check for alerts every 60 seconds
-    this.alertCheckInterval = setInterval(() => this.checkPerformanceAlerts(), 60000)
+    this.alertCheckInterval = setInterval(() => {
+      void this.checkPerformanceAlerts()
+    }, 60000)
 
     logger.info('🚨 Started alert system')
   }
@@ -290,7 +296,7 @@ export class PerformanceMonitorService {
     }
   }
 
-  private checkPerformanceAlerts(): void {
+  private async checkPerformanceAlerts(): Promise<void> {
     if (this.metrics.length === 0) return
 
     const latestMetrics = this.metrics[this.metrics.length - 1]
@@ -345,10 +351,11 @@ export class PerformanceMonitorService {
     }
 
     // Add new alerts
-    newAlerts.forEach((alert) => {
+    for (const alert of newAlerts) {
       this.alerts.push(alert)
       logger.warn(`🚨 Performance alert: ${alert.message}`, alert.metrics)
-    })
+      await this.dispatchPerformanceAlert(alert)
+    }
 
     // Clean up old alerts (keep last 24 hours)
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000
@@ -369,6 +376,22 @@ export class PerformanceMonitorService {
       timestamp: Date.now(),
       resolved: false,
       metrics,
+    }
+  }
+
+  private async dispatchPerformanceAlert(alert: PerformanceAlert): Promise<void> {
+    try {
+      const adminUserIds = await adminService.getActiveAdminUserIds()
+      const event = buildPerformanceAlertNotification(alert, adminUserIds)
+      await notificationDispatcher.dispatch({
+        ...event,
+        id: randomUUID(),
+      })
+    } catch (error) {
+      logger.error('Failed to dispatch performance alert notification', {
+        alertId: alert.id,
+        error,
+      })
     }
   }
 

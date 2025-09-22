@@ -173,6 +173,7 @@ Severity drives emoji/colour formatting (see `slackFormatting.ts`) and determine
 - **September 22, 2025:** Implemented the Slack webhook channel with rich block formatting, retries, jittered backoff, and a circuit breaker. Slack env vars now live in `.env.example`, and the dispatcher auto-registers the channel when webhooks are configured.
 - **May 9, 2026:** Completed Phase 0 follow-up by standardizing on Slack incoming webhooks for the initial rollout and prioritizing the incident + map workflow event backlog listed above. Ready to start Phase 1 foundations (WebPush wrapper, Discord webhook channel, dispatcher tests).
 - **May 12, 2026:** Shipped Phase 1 foundations by wrapping the existing web push service as a dispatcher channel, adding the Discord webhook channel with retries and circuit breaking, and backfilling Jest coverage around both providers.
+- **May 13, 2026:** Hooked dispatcher events into map approvals/rejections, performance incident alerts, and introduced `npm run notify` for manual validation so real workflow traffic now exercises Slack/Discord/WebPush routing.
 
 ## ⚠️ Risks & Mitigations
 - **Webhook leakage:** rely on secrets management, URL redaction, and rotation drills.
@@ -204,4 +205,4 @@ Severity drives emoji/colour formatting (see `slackFormatting.ts`) and determine
 - `docs/operations/logging-standards.md`
 - `.env.example`
 
-Next step: wire high-priority producers (map workflow approvals, incident pipeline, CLI send) into the dispatcher and prepare dark-launch validation before enabling the external channel flag.
+Next step: run a dark-launch rehearsal in staging, validate Slack/Discord noise levels, and decide when to flip `ENABLE_EXTERNAL_NOTIFICATIONS=true` for production.
