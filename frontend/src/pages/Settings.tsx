@@ -1058,15 +1058,6 @@ export default function Settings() {
             defaultValue: user?.email || '',
           },
           {
-            id: 'avatar',
-            label: 'Upload Avatar',
-            description: 'Change your profile picture',
-            type: 'button',
-            isWorking: false,
-            buttonText: '📁 Upload New Avatar',
-            buttonVariant: 'secondary',
-          },
-          {
             id: 'change-password',
             label: 'Change Password',
             description: 'Update your account password',
@@ -1667,31 +1658,10 @@ export default function Settings() {
             <h3 className="text-xl font-semibold mb-6 text-white">Account Information</h3>
             <div className="space-y-4">{settingsData.slice(0, 2).map(renderSetting)}</div>
           </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-white">Avatar</h3>
-            <div className="flex items-center gap-6 mb-8">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-3xl font-bold text-white">
-                {user?.username?.charAt(0).toUpperCase() || 'U'}
-              </div>
-              <div>
-                <div className="relative">
-                  <button className="btn-secondary opacity-50 cursor-not-allowed mb-3" disabled>
-                    📁 Upload New Avatar
-                  </button>
-                  <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
-                    Coming Soon
-                  </div>
-                </div>
-                <p className="text-sm text-muted">Recommended: 256x256px, JPG or PNG</p>
-              </div>
-            </div>
-          </div>
-
           <div>
             <h3 className="text-xl font-semibold mb-6 text-white">Security</h3>
             <div className="space-y-4">
-              {settingsData.slice(3).map((setting) => renderSetting(setting))}
+              {settingsData.slice(2).map((setting) => renderSetting(setting))}
             </div>
           </div>
         </div>
