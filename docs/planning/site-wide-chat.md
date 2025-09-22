@@ -15,9 +15,9 @@ _Last updated: September 22, 2025_
 _Action taken:_ Audited the live implementation, drafted `031_create_conversations_schema.sql`, then expanded it to add the `generate_ulid()` helper, swap message identifiers to ULIDs, and create the `user_blocks` table alongside the messaging settings view.
 
 _Next tasks:_
-1. Add regression coverage (Jest) for `generate_ulid()`, `messagingPolicyService`, and the new conversation create/send paths before promoting to staging.
-2. Build the `/api/messages/conversations` reader endpoints plus unread aggregation so the frontend can hydrate the inbox without legacy tables.
-3. Wire `conversation.*` socket handlers on the server (and begin frontend listeners) while mirroring legacy `chat:*` events for compatibility.
+1. Wire legacy `chatService` into dual-write mode (new conversations + `unread_message_counts` compatibility view) and add regression coverage before cutting clients over.
+2. Implement leave/remove member flows (`POST /conversations/:id/leave`, moderation endpoints) so group management stays feature-complete.
+3. Tackle frontend integration: hydrate the drawer from `/api/messages/conversations`, listen for `conversation.*` events, and expose unread summaries while legacy sockets remain in parallel.
 
 ## 1) Objectives & Scope
 **Goals**
@@ -62,6 +62,7 @@ _Next tasks:_
 - Game chat backfill: create one conversation per historical room with `kind='game'` and copy membership from `game_players` and historical senders. Copy messages into `conversation_messages`, preserving IDs when possible or mapping otherwise.
 - DM backfill: deterministically group by sorted sender/recipient pair, create `kind='direct'` conversations, and attach both members.
 - Read state: when `unread_message_counts.unread_count` is zero, set `last_read_message_id` to the latest conversation message; otherwise leave it null so clients compute unread counts.
+- Provide a scripted backfill (`npm run backfill:conversation-read`) that initializes `conversation_members.last_read_*` using latest message timestamps so unread counts start at zero before dual writes.
 - Update reactions and link preview foreign keys to reference `conversation_message_id`.
 - Maintain compatibility views for legacy unread counts during the rollout window.
 
@@ -81,12 +82,13 @@ _Next tasks:_
 ### REST (Express, `/api/messages`)
 - `POST /conversations` — `{ kind, title?, memberIds[], metadata? }` (currently limited to `kind='group'`; policy + limit checks gate invites).
 - `GET /conversations` — cursor pagination with filters (`unread`, `groups`, `kind:game|direct|group`).
-- `GET /conversations/:id` — metadata + latest unread state.
+- `GET /conversations/:id` — detailed metadata + membership state; defaults to clearing unread unless `markRead=false`.
+- `GET /conversations/unread` — condensed unread summary for badge/widgets.
 - `POST /conversations/:id/members` — owner/admin can append members (`memberIds[]`), enforcing block/group invite policies and capacity caps.
-- `POST /conversations/:id/leave` — self-serve exit for non-owners.
+- `POST /conversations/:id/leave` — self-serve exit for non-owners (planned).
 - `POST /conversations/:id/messages` — `body`, optional `replyToId`, optional `clientMessageId`, optional `metadata` blocks (link previews later).
 - `GET /conversations/:id/messages` — keyset pagination on `(created_at, id)` with `before` and `limit=50`.
-- `POST /conversations/:id/read` — `{ lastReadMessageId }` with receipts fan-out.
+- `POST /conversations/:id/read` — `{ lastReadMessageId }` with receipts fan-out (planned for explicit marking once sockets fully migrate).
 - `POST /typing` — `{ conversationId, state: 'start' | 'stop' }`.
 - `POST /dm` — `{ targetUserId }` returning existing or newly created DM conversation (idempotent).
 - `GET /search` — optional `q` and `conversationId` parameters; uses Postgres FTS or trigram search scoped to conversations the user can access.
@@ -189,3 +191,5 @@ _Next tasks:_
 - **2025-09-22:** Added the `generate_ulid()` helper, migrated message identifiers to ULIDs, and created the `user_blocks` table scaffold so policy enforcement has backing storage.
 - **2025-09-22:** Landed `messagingPolicyService`, group-capable `conversationService`, and initial `/api/messages/conversations` routes with `conversation.*` socket emissions to start phasing in the new messaging backend.
 - **2025-09-22:** Implemented backend scaffolding for blocks (`/api/messages/blocks*`) and bootstrapped `conversationService` with DM creation plus initial message send/list endpoints.
+- **2025-09-22:** Added conversation detail/unread endpoints, `conversation.message.new` events, regression suites, and a `backfillConversationReadState` script to prep read markers before rollout.
+- **2025-09-22:** Added Jest coverage for messaging policies + conversation flows, introduced `/api/messages/conversations` listing with unread counts, and expanded socket typings to include `conversation.message.new`.

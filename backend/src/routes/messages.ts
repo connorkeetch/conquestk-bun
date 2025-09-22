@@ -14,6 +14,9 @@ import {
   ensureDirectConversation,
   listConversationsForUser,
   listMessages,
+  getConversationDetail,
+  getUnreadSummary,
+  markConversationRead,
   sendMessage,
 } from '../services/conversationService'
 import { handleRouteError } from '../utils/routeErrorHandler'
@@ -208,6 +211,45 @@ router.post(
     }
   },
 )
+
+
+router.get(
+  '/conversations/:conversationId',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { conversationId } = req.params
+      const markReadParam = req.query.markRead
+      const shouldMarkRead =
+        markReadParam === undefined || (Array.isArray(markReadParam) ? markReadParam[0] !== 'false' : markReadParam !== 'false')
+
+      if (shouldMarkRead) {
+        await markConversationRead(conversationId, req.userId)
+      }
+
+      const detail = await getConversationDetail(conversationId, req.userId)
+      return res.json(detail)
+    } catch (error) {
+      if (error instanceof ConversationError) {
+        const status = mapConversationErrorToStatus(error)
+        return res.status(status).json({ error: error.message, code: error.code })
+      }
+
+      handleRouteError(error, req, 'Failed to load conversation detail')
+      return res.status(500).json({ error: 'Failed to load conversation detail' })
+    }
+  },
+)
+
+router.get('/conversations/unread', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const summary = await getUnreadSummary(req.userId)
+    return res.json({ conversations: summary })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to load unread summary')
+    return res.status(500).json({ error: 'Failed to load unread summary' })
+  }
+})
 
 router.post(
   '/conversations/:conversationId/messages',

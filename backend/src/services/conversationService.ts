@@ -120,6 +120,7 @@ type ConversationMemberRow = {
 type ConversationMembershipRow = {
   role: 'owner' | 'admin' | 'member'
   shadow_muted: boolean | null
+  joined_at: Date
 }
 
 type DirectMemberRow = {
@@ -770,6 +771,130 @@ export interface ConversationListOptions {
   offset?: number
 }
 
+
+export async function markConversationRead(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const latestResult = await query<ConversationMessageRow>(
+    `
+    SELECT id, created_at
+    FROM conversation_messages
+    WHERE conversation_id = $1
+    ORDER BY created_at DESC
+    LIMIT 1
+  `,
+    [conversationId],
+  )
+
+  const latestMessage = latestResult.rows[0] ?? null
+  const lastReadId = latestMessage?.id ?? null
+  const lastReadAt = latestMessage?.created_at ?? new Date()
+
+  await query(
+    `
+    UPDATE conversation_members
+    SET
+      last_read_message_id = $3,
+      last_read_at = $4,
+      updated_at = NOW()
+    WHERE conversation_id = $1 AND user_id = $2
+  `,
+    [conversationId, userId, lastReadId, lastReadAt],
+  )
+}
+
+
+export interface ConversationDetailResult {
+  conversation: ConversationWithMembers
+  membership: ConversationMembershipInfo
+  unreadCount: number
+}
+
+export async function getConversationDetail(
+  conversationId: string,
+  userId: string,
+): Promise<ConversationDetailResult> {
+  const membershipResult = await query<ConversationMembershipRow & {
+    last_read_message_id: string | null
+    last_read_at: Date | null
+    is_muted: boolean | null
+    is_pinned: boolean | null
+  }>(
+    `
+    SELECT role, shadow_muted, joined_at, last_read_message_id, last_read_at, is_muted, is_pinned
+    FROM conversation_members
+    WHERE conversation_id = $1 AND user_id = $2
+  `,
+    [conversationId, userId],
+  )
+
+  if (membershipResult.rows.length === 0) {
+    throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
+  }
+
+  const record = await getConversationRow(conversationId)
+  const descriptor = await buildConversationDescriptor(record)
+
+  const membershipRow = membershipResult.rows[0]
+
+  const unreadResult = await query<{ count: number }>(
+    `
+    SELECT COUNT(*)::INT AS count
+    FROM conversation_messages
+    WHERE conversation_id = $1
+      AND ($2::TIMESTAMPTZ IS NULL OR created_at > $2)
+  `,
+    [conversationId, membershipRow.last_read_at],
+  )
+
+  const membership: ConversationMembershipInfo = {
+    role: membershipRow.role,
+    joinedAt: membershipRow.joined_at,
+    isMuted: membershipRow.is_muted ?? false,
+    isPinned: membershipRow.is_pinned ?? false,
+    shadowMuted: membershipRow.shadow_muted ?? false,
+    lastReadMessageId: membershipRow.last_read_message_id ?? null,
+    lastReadAt: membershipRow.last_read_at ?? null,
+  }
+
+  return {
+    conversation: descriptor,
+    membership,
+    unreadCount: unreadResult.rows[0]?.count ?? 0,
+  }
+}
+
+
+export interface UnreadSummaryEntry {
+  conversationId: string
+  unreadCount: number
+}
+
+export async function getUnreadSummary(userId: string): Promise<UnreadSummaryEntry[]> {
+  const result = await query<{ conversation_id: string; unread_count: number }>(
+    `
+    SELECT
+      cm.conversation_id,
+      COALESCE(unread.unread_count, 0) AS unread_count
+    FROM conversation_members cm
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*)::INT AS unread_count
+      FROM conversation_messages m
+      WHERE m.conversation_id = cm.conversation_id
+        AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
+    ) unread ON TRUE
+    WHERE cm.user_id = $1
+  `,
+    [userId],
+  )
+
+  return result.rows.map((row) => ({
+    conversationId: row.conversation_id,
+    unreadCount: Number(row.unread_count ?? 0),
+  }))
+}
+
 export async function listConversationsForUser(
   userId: string,
   options: ConversationListOptions = {},
@@ -824,7 +949,7 @@ export async function listConversationsForUser(
 
     const membership: ConversationMembershipInfo = {
       role: row.member_role,
-      joinedAt: row.joined_at,
+      joinedAt: descriptor.memberRoles.find((member) => member.userId === userId)?.joinedAt ?? row.joined_at,
       isMuted: row.is_muted ?? false,
       isPinned: row.is_pinned ?? false,
       shadowMuted: row.shadow_muted ?? false,
@@ -857,7 +982,10 @@ export default {
   ensureDirectConversation,
   createGroupConversation,
   addMembersToConversation,
+  markConversationRead,
+  getConversationDetail,
   listConversationsForUser,
+  getUnreadSummary,
   sendMessage,
   listMessages,
 }

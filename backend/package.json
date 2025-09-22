@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('✅ Copied migrations to dist/migrations'); } else { console.error('❌ Warning: migrations directory not found'); }\"",
+    "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('\u2705 Copied migrations to dist/migrations'); } else { console.error('\u274c Warning: migrations directory not found'); }\"",
     "start": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/index.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
@@ -26,7 +26,8 @@
     "notify": "ts-node src/scripts/notify.ts",
     "backup:production": "node scripts/backup-production.js",
     "deploy:consolidated": "node scripts/deploy-consolidated-migration.js",
-    "deploy:consolidated:nodejs": "node scripts/deploy-consolidated-nodejs.js"
+    "deploy:consolidated:nodejs": "node scripts/deploy-consolidated-nodejs.js",
+    "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",
