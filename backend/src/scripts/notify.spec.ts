@@ -1,10 +1,14 @@
 import { describe, expect, it, jest } from '@jest/globals'
+import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
 
-const dispatchMock = jest.fn().mockResolvedValue([{ channel: 'slack', ok: true }])
+type DispatchFn = (event: NotificationEvent) => Promise<NotificationResult[]>
+
+const dispatchMock = jest.fn<DispatchFn>()
+dispatchMock.mockResolvedValue([{ channel: 'slack', ok: true }])
 
 jest.mock('../services/NotificationDispatcher', () => ({
   notificationDispatcher: {
-    dispatch: (...args: unknown[]) => dispatchMock(...args),
+    dispatch: (event: NotificationEvent) => dispatchMock(event),
   },
 }))
 
