@@ -1,5 +1,6 @@
 # Go-Live Consolidated Backlog & Implementation Plan
 _Last updated: September 21, 2025_
+Go Live is tentatively set for Oct 1, 2025
 
 ## Purpose & Conventions
 - **Doc purpose:** Merge every go-live finding into a single plan that unblocks launch, aligns public promises with reality, and lowers risk.
@@ -83,7 +84,7 @@ _Last updated: September 21, 2025_
   - Permission model documented and enforced for creator, collaborator, admin.
   - Every mutate route returns 403 to non-owners; Supertest covers IDOR attempts.
   - Approval/rejection requires appropriate role and writes audit logs (actor, timestamp, before/after).
-  - _Implementation notes (Mar 2025): Map collaborator roles (`editor`, `viewer`) now back the permission checks; creator/admin retain implicit edit rights and approvals capture before/after deltas in `admin_activity_logs`._
+  - _Implementation notes (September 2025): Map collaborator roles (`editor`, `viewer`) now back the permission checks; creator/admin retain implicit edit rights and approvals capture before/after deltas in `admin_activity_logs`._
 
 ### B2. Creator & reviewer notifications (real fan-out)
 - **Priority:** P1 (upgrade pieces that block workflow sooner) • **Tags:** [be][ws][fe][ops]
@@ -93,8 +94,8 @@ _Last updated: September 21, 2025_
   - In-app notifications delivered via WebSocket fan-out for creators and moderators.
   - Service worker registered; VAPID keys configured; durable subscription storage (database-backed).
   - Notification preferences exposed in profile. DM push stays deferred to C3.
-- _Progress (Feb 2025): Web push now persists in `web_push_subscriptions`, the service worker serves production-ready assets, and gameplay events (start/turn/end) trigger push notifications. Map approval/DM fan-out still pending._
-- _Progress (Mar 2025): DM sends and map review decisions now fan-out over WebSocket with matching push payloads; admin review queue emits live alerts to moderators._
+- _Progress (September 2025): Web push now persists in `web_push_subscriptions`, the service worker serves production-ready assets, and gameplay events (start/turn/end) trigger push notifications. Map approval/DM fan-out still pending._
+- _Progress (September 2025): DM sends and map review decisions now fan-out over WebSocket with matching push payloads; admin review queue emits live alerts to moderators._
 
 ### B3. Map staging asset lifecycle
 - **Priority:** P1 • **Tags:** [be][ops]
@@ -103,12 +104,12 @@ _Last updated: September 21, 2025_
 - **Acceptance criteria:**
   - Soft-delete policy with background purge (bucket/API delete) and metrics.
   - Admin reclaim tool exists; deletion failures retry and alert.
-- _Progress (Mar 2025): Staging images now purge automatically after retention, recording runs in `map_asset_purge_runs`; admins can reclaim before purge, trigger manual runs, and receive alerts when deletions repeatedly fail._
+- _Progress (September 2025): Staging images now purge automatically after retention, recording runs in `map_asset_purge_runs`; admins can reclaim before purge, trigger manual runs, and receive alerts when deletions repeatedly fail._
 
 ## Epic C — Chat & Social Consistency
 ### C1. Identity & state source of truth
 - **Priority:** P1 • **Tags:** [fe][be][ws]
-- **Status:** ✅ Completed (January 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** `chatSlice` reads `userId` from `localStorage`; auth never writes it; DM addressing breaks.
 - **Acceptance criteria:**
   - Chat derives identity from Redux auth state; `localStorage` reserved for auth session plumbing.
@@ -117,7 +118,7 @@ _Last updated: September 21, 2025_
 
 ### C2. Broadcast chat edits/deletes
 - **Priority:** P1 • **Tags:** [be][ws][fe]
-- **Status:** ✅ Completed (January 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Edit/delete acknowledgements stream only to the issuing client.
 - **Acceptance criteria:**
   - Server emits edit/delete to all participants; frontend updates in-place and reconciles on reconnect.
@@ -125,7 +126,7 @@ _Last updated: September 21, 2025_
 
 ### C3. DM push notifications (deferred)
 - **Priority:** P3 • **Tags:** [be][ops][fe]
-- **Status:** ✅ Completed (January 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Rows store DM notifications but push is unimplemented.
 - **Acceptance criteria:**
   - When enabled, DM creates a queued push delivered via service worker with deep-link; honours user preferences.
@@ -134,53 +135,53 @@ _Last updated: September 21, 2025_
 ## Epic D — Navigation, Stats & UX Truthfulness
 ### D1. Repair Play hub routing
 - **Priority:** P0 • **Tags:** [fe]
-- **Status:** ✅ Completed (December 2025)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Hub advertises Quick Match/Ranked/vs AI but only `/play` exists.
 - **Acceptance criteria:**
   - Either ship working routes or hide cards behind feature flags; hub produces zero 404s.
-- _Progress (Dec 2025): `/play` now links to working Casual and Ranked matchmaking pages, Create/Browse cards target existing lobby flows, and the AI tile leads to a Coming Soon screen so nothing throws 404s._
+- _Progress (September 2025): `/play` now links to working Casual and Ranked matchmaking pages, Create/Browse cards target existing lobby flows, and the AI tile leads to a Coming Soon screen so nothing throws 404s._
 
 ### D2. Player stats & header data
 - **Priority:** P1 (depends on A1/A3) • **Tags:** [fe][be]
-- **Status:** ✅ Completed (December 2025)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Stats page is stubbed; header uses hard-coded level/win rate; advanced metrics show zeros.
 - **Acceptance criteria:**
   - Profile and Stats pages read real API data; header reflects actual values.
   - Advanced metrics (e.g., `best_territories`, `streaks`) compute once history exists.
   - If backend not ready, gate the page via feature flag instead of displaying placeholders.
-- _Progress (Dec 2025): Hooked `/profile` + `/profile/stats` responses into the profile Stats tab, dedicated /profile/stats page, and header menu so games played, wins, win rate, streaks, map/mode breakdown, and rank all read from live data. New queries mine `player_game_results`, `game_results`, `game_moves`, and `player_stats` for territory highs, 90-day timelines, and card trade counts (no separate card tables exist today). Manual smoke checklist added for validating stats after a match._
+- _Progress (September 2025): Hooked `/profile` + `/profile/stats` responses into the profile Stats tab, dedicated /profile/stats page, and header menu so games played, wins, win rate, streaks, map/mode breakdown, and rank all read from live data. New queries mine `player_game_results`, `game_results`, `game_moves`, and `player_stats` for territory highs, 90-day timelines, and card trade counts (no separate card tables exist today). Manual smoke checklist added for validating stats after a match._
 
 ### D3. Audio cue mismatches
 - **Priority:** P1 • **Tags:** [fe]
-- **Status:** ✅ Completed (March 2025)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** `playEffect('turn')` vs `yourturn` mismatch.
 - **Acceptance criteria:**
   - Unified key map or aliasing, with a unit test preventing regressions.
-- _Progress (Feb 2026): Locked the AudioService effect map behind typed keys so legacy calls like `playEffect('turn')` always resolve to `yourturn`, and the regression test continues to assert the alias path._
+- _Progress (September 2025): Locked the AudioService effect map behind typed keys so legacy calls like `playEffect('turn')` always resolve to `yourturn`, and the regression test continues to assert the alias path._
 
 ### D4. Hide "Tournaments" and other "coming soon" surfaces
 - **Priority:** P2 • **Tags:** [fe]
-- **Status:** ✅ Completed (February 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Acceptance criteria:**
   - Feature-flag or remove until real data exists.
-- _Progress (Feb 2026): Tournament, AI, profile previews, and other "coming soon" panels now hide behind admin-controlled feature flags, with the flags surfaced in Admin Settings and defaulted off for production._
+- _Progress (September 2025): Tournament, AI, profile previews, and other "coming soon" panels now hide behind admin-controlled feature flags, with the flags surfaced in Admin Settings and defaulted off for production._
 
 ## Epic E — Workers, Queues & Cleanup
 ### E1. Enable Bull queues safely
 - **Priority:** P1 • **Tags:** [wrk][ops][be]
-- **Status:** ✅ Completed (January 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Problem:** Cleanup worker now wires through territory modifier cleanup, queue telemetry surfaces stalled/latency warnings, and failed jobs flow into a managed dead-letter queue with alerts.
 - **Acceptance criteria:**
   - Referenced services exist or hooks removed before enabling queues.
   - Health checks for stall/latency, dead-letter handling, and idempotent jobs.
-- _Progress (Jan 2026): Activated Bull queues behind idempotency guards so duplicate jobs short-circuit, promoted cleanup worker territory modifier purge, introduced per-queue latency/stall diagnostics in the health endpoint, and routed terminal failures into a dedicated DLQ with automatic retention cleanup._
+- _Progress (September 2025): Activated Bull queues behind idempotency guards so duplicate jobs short-circuit, promoted cleanup worker territory modifier purge, introduced per-queue latency/stall diagnostics in the health endpoint, and routed terminal failures into a dedicated DLQ with automatic retention cleanup._
 
 ### E2. Cleanup worker modifier service
 - **Priority:** P1 • **Tags:** [be][wrk]
-- **Status:** ✅ Completed (January 2026)
+- **Status:** ✅ Completed (September 2025)
 - **Acceptance criteria:**
   - Implement modifier service or drop the hook; add tests covering cleanup outcomes and idempotency.
-- _Progress (Jan 2026): Cleanup worker now invokes the modifier purge path with idempotency guards, and Jest coverage asserts finished-game cleanup touches territory modifiers, cache cleanup, and skips duplicate jobs._
+- _Progress (September 2025): Cleanup worker now invokes the modifier purge path with idempotency guards, and Jest coverage asserts finished-game cleanup touches territory modifiers, cache cleanup, and skips duplicate jobs._
 
 ## Epic F — Documentation, Legal & Product Copy
 ### F1. Align README, marketing, and architecture docs with reality
