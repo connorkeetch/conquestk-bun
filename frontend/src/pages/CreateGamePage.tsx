@@ -2,6 +2,7 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import api from '../services/api'
@@ -161,6 +162,7 @@ const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
+  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
   const [searchParams] = useSearchParams()
 
   const initialMode: 'casual' | 'ranked' =
@@ -587,6 +589,16 @@ const CreateGamePage: React.FC = () => {
                 >
                   🔒 Private
                 </button>
+                {tournamentsEnabled && (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 px-3 py-2 rounded-lg transition-colors text-sm bg-surface-2 text-muted cursor-not-allowed"
+                  >
+                    🏆 Tournament
+                    <p className="text-xs opacity-70 mt-0.5">Coming soon</p>
+                  </button>
+                )}
               </div>
             </div>
 

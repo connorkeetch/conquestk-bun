@@ -34,7 +34,7 @@ const AdminSettings: React.FC = () => {
 
   const handleToggleFlag = async (flagName: string, enabled: boolean) => {
     try {
-      await api.post(`/admin/feature-flags/${flagName}/toggle`, { enabled })
+      await api.put(`/admin/feature-flags/${flagName}`, { enabled })
       fetchFeatureFlags()
     } catch (error) {
       console.error('Failed to toggle feature flag:', error)

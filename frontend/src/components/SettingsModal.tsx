@@ -1,5 +1,7 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -18,6 +20,7 @@ type SettingsTab =
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
   const modalRef = useRef<HTMLDivElement>(null)
+  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
 
   // Handle keyboard shortcuts and escape key
   useEffect(() => {
@@ -446,16 +449,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   </label>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label className="text-sm font-medium text-muted">Tournament Updates</label>
-                    <p className="text-xs text-muted">Get notified about tournaments</p>
+                {tournamentsEnabled && (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="text-sm font-medium text-muted">Tournament Updates</label>
+                      <p className="text-xs text-muted">Get notified about tournaments</p>
+                    </div>
+                    <label className="toggle">
+                      <input type="checkbox" defaultChecked />
+                      <span className="slider"></span>
+                    </label>
                   </div>
-                  <label className="toggle">
-                    <input type="checkbox" defaultChecked />
-                    <span className="slider"></span>
-                  </label>
-                </div>
+                )}
               </div>
             </div>
           </div>

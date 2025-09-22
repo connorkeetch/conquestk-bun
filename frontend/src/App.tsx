@@ -62,8 +62,39 @@ const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
+import { FEATURE_FLAGS } from './constants/featureFlags'
 import { applyTheme, getStoredTheme } from './config/themes.config'
 import { checkAuth } from './store/authSlice'
+import { useFeatureFlag } from './hooks/useFeatureFlag'
+
+const AiComingSoonRoute = () => {
+  const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
+
+  if (!aiEnabled) {
+    return <Navigate to="/play" replace />
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="spinner"></div>
+        </div>
+      }
+    >
+      <ComingSoon
+        title="AI Opponents"
+        description="Sharpen your tactics against adaptive bots. We're teaching them the art of conquest and will roll this out soon."
+        icon="🤖"
+        features={[
+          'Multiple difficulty tiers',
+          'Scenario-based training modes',
+          'Achievements for solo victories',
+        ]}
+      />
+    </Suspense>
+  )
+}
 
 function App() {
   console.log('[APP] App component rendering...')
@@ -715,24 +746,7 @@ function App() {
             path="/play/ai"
             element={
               <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <ComingSoon
-                    title="AI Opponents"
-                    description="Sharpen your tactics against adaptive bots. We're teaching them the art of conquest and will roll this out soon."
-                    icon="🤖"
-                    features={[
-                      'Multiple difficulty tiers',
-                      'Scenario-based training modes',
-                      'Achievements for solo victories',
-                    ]}
-                  />
-                </Suspense>
+                <AiComingSoonRoute />
               </AuthGuard>
             }
           />

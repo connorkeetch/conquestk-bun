@@ -1,15 +1,25 @@
+import { FEATURE_FLAGS, type FeatureFlagName } from '../constants/featureFlags'
 import apiClient from './api'
 
-interface FeatureFlags {
-  gunts_prescriptions: boolean
-  [key: string]: boolean
-}
+export type FeatureFlagKey = FeatureFlagName | 'gunts_prescriptions'
+
+type FeatureFlags = Record<string, boolean>
+
+const DEFAULT_FLAGS: FeatureFlags = (() => {
+  const defaults: FeatureFlags = {
+    gunts_prescriptions: false,
+  }
+
+  Object.values(FEATURE_FLAGS).forEach((flagName) => {
+    defaults[flagName] = false
+  })
+
+  return defaults
+})()
 
 class FeatureFlagService {
   private static instance: FeatureFlagService
-  private flags: FeatureFlags = {
-    gunts_prescriptions: false,
-  }
+  private flags: FeatureFlags = { ...DEFAULT_FLAGS }
   private listeners: Set<(flags: FeatureFlags) => void> = new Set()
 
   private constructor() {
@@ -26,14 +36,18 @@ class FeatureFlagService {
   private async loadFlags(): Promise<void> {
     try {
       const response = await apiClient.get('/feature-flags')
-      this.flags = response.data.flags || {}
+      const fetchedFlags: FeatureFlags = response.data.flags || {}
+      this.flags = {
+        ...DEFAULT_FLAGS,
+        ...fetchedFlags,
+      }
       this.notifyListeners()
     } catch (error) {
       console.error('Failed to load feature flags:', error)
     }
   }
 
-  public isEnabled(flagName: keyof FeatureFlags): boolean {
+  public isEnabled(flagName: FeatureFlagKey): boolean {
     return this.flags[flagName] || false
   }
 

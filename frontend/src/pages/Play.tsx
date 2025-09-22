@@ -1,9 +1,13 @@
 import type React from 'react'
 import { Link } from 'react-router-dom'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 // import Breadcrumb from '../components/Breadcrumb';
 
 const Play: React.FC = () => {
+  const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
+
   const gameOptions = [
     {
       title: 'Casual',
@@ -33,14 +37,18 @@ const Play: React.FC = () => {
       path: '/lobby',
       color: 'from-indigo-600 to-blue-600',
     },
-    {
-      title: 'vs AI',
-      description: 'Solo practice matches (coming soon)',
-      icon: '🤖',
-      path: '/play/ai',
-      color: 'from-purple-600 to-pink-600',
-      comingSoon: true,
-    },
+    ...(aiEnabled
+      ? [
+          {
+            title: 'vs AI',
+            description: 'Solo practice matches (coming soon)',
+            icon: '🤖',
+            path: '/play/ai',
+            color: 'from-purple-600 to-pink-600',
+            comingSoon: true,
+          },
+        ]
+      : []),
     {
       title: 'Tutorial',
       description: 'Learn the ropes before you play',

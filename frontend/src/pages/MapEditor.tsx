@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import ImageCropper from '../components/ImageCropper'
 import TermsModal from '../components/TermsModal'
 import {
@@ -82,6 +84,7 @@ export default function MapEditor() {
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [termsContent, setTermsContent] = useState<any>(null)
   const [isCheckingTerms, setIsCheckingTerms] = useState(true)
+  const polygonEditorEnabled = useFeatureFlag(FEATURE_FLAGS.MAP_POLYGON_EDITOR)
 
   const [_territoryAbilities, setTerritoryAbilities] = useState<TerritoryAbilityType[]>([])
   const [_gameModes, setGameModes] = useState<GameMode[]>([])
@@ -1201,21 +1204,22 @@ export default function MapEditor() {
         />
       )}
 
-      {/* Coming Soon Overlay */}
-      <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">🚧 Coming Soon</h1>
-          <p className="text-xl text-muted mb-6">
-            The polygon-based map editor is currently under development
-          </p>
-          <button
-            onClick={() => (window.location.href = '/map-editor')}
-            className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
-          >
-            Return to Current Map Editor
-          </button>
+      {!polygonEditorEnabled && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-white mb-4">🚧 Coming Soon</h1>
+            <p className="text-xl text-muted mb-6">
+              The polygon-based map editor is currently under development
+            </p>
+            <button
+              onClick={() => (window.location.href = '/map-editor')}
+              className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
+            >
+              Return to Current Map Editor
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (

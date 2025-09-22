@@ -156,14 +156,14 @@ _Last updated: September 21, 2025_
 - **Problem:** `playEffect('turn')` vs `yourturn` mismatch.
 - **Acceptance criteria:**
   - Unified key map or aliasing, with a unit test preventing regressions.
-- _Progress (Mar 2025): Normalized the turn notification sound so both `turn` and `yourturn` funnel through the same AudioService key and added a regression test to guard against future mismatches._
+- _Progress (Feb 2026): Locked the AudioService effect map behind typed keys so legacy calls like `playEffect('turn')` always resolve to `yourturn`, and the regression test continues to assert the alias path._
 
 ### D4. Hide "Tournaments" and other "coming soon" surfaces
 - **Priority:** P2 • **Tags:** [fe]
-- **Status:** ✅ Completed (November 2025)
+- **Status:** ✅ Completed (February 2026)
 - **Acceptance criteria:**
   - Feature-flag or remove until real data exists.
-- _Progress (Nov 2025): Removed all tournament links and "coming soon" tabs from navigation, home, dashboard, lobby, and the Community page so unactionable surfaces no longer appear in the UI._
+- _Progress (Feb 2026): Tournament, AI, profile previews, and other "coming soon" panels now hide behind admin-controlled feature flags, with the flags surfaced in Admin Settings and defaulted off for production._
 
 ## Epic E — Workers, Queues & Cleanup
 ### E1. Enable Bull queues safely
