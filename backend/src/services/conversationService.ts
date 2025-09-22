@@ -429,13 +429,169 @@ export async function addMembersToConversation(
   return addedMemberRoles
 }
 
+export async function leaveConversation(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const conversation = await getConversationRow(conversationId)
+  if (conversation.kind !== 'group') {
+    throw new ConversationError('INVALID_OPERATION', 'Leave is only supported for group conversations')
+  }
+
+  await transaction(async (client) => {
+    const membershipResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, userId],
+    )
+
+    if (membershipResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'User is not a member of this conversation')
+    }
+
+    const membership = membershipResult.rows[0]
+
+    const othersResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id <> $2
+      ORDER BY role = 'admin' DESC, joined_at ASC
+      FOR UPDATE
+    `,
+      [conversationId, userId],
+    )
+
+    if (membership.role === 'owner' && othersResult.rows.length > 0) {
+      const nextOwner = othersResult.rows[0]
+      await client.query(
+        `
+        UPDATE conversation_members
+        SET role = 'owner', updated_at = NOW()
+        WHERE conversation_id = $1 AND user_id = $2
+      `,
+        [conversationId, nextOwner.user_id],
+      )
+    }
+
+    await client.query(
+      `
+      DELETE FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+    `,
+      [conversationId, userId],
+    )
+
+    if (membership.role === 'owner' && othersResult.rows.length === 0) {
+      await client.query(
+        `
+        UPDATE conversations
+        SET is_archived = TRUE, updated_at = NOW()
+        WHERE id = $1
+      `,
+        [conversationId],
+      )
+    } else {
+      await client.query(
+        `
+        UPDATE conversations
+        SET updated_at = NOW()
+        WHERE id = $1
+      `,
+        [conversationId],
+      )
+    }
+  })
+
+  const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId))
+  emitConversationMembersRemovedEvent(conversationId, [userId], descriptor.memberIds)
+}
+
+export async function removeConversationMember(
+  options: RemoveConversationMemberOptions,
+): Promise<void> {
+  const { actorId, conversationId, targetUserId } = options
+  if (actorId === targetUserId) {
+    throw new ConversationError('INVALID_OPERATION', 'Use the leave endpoint to remove yourself')
+  }
+
+  const conversation = await getConversationRow(conversationId)
+  if (conversation.kind !== 'group') {
+    throw new ConversationError('INVALID_OPERATION', 'Remove member is only supported for group conversations')
+  }
+
+  await transaction(async (client) => {
+    const actorResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, actorId],
+    )
+
+    if (actorResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'You are not a member of this conversation')
+    }
+
+    const actor = actorResult.rows[0]
+    if (actor.role !== 'owner' && actor.role !== 'admin') {
+      throw new ConversationError('FORBIDDEN', 'You do not have permission to remove members')
+    }
+
+    const targetResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, targetUserId],
+    )
+
+    if (targetResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'Target user is not part of this conversation')
+    }
+
+    const target = targetResult.rows[0]
+    if (target.role === 'owner') {
+      throw new ConversationError('FORBIDDEN', 'Cannot remove the conversation owner')
+    }
+
+    await client.query(
+      `
+      DELETE FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+    `,
+      [conversationId, targetUserId],
+    )
+
+    await client.query(
+      `
+      UPDATE conversations
+      SET updated_at = NOW()
+      WHERE id = $1
+    `,
+      [conversationId],
+    )
+  })
+
+  const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId))
+  emitConversationMembersRemovedEvent(conversationId, [targetUserId], descriptor.memberIds)
+}
+
 const ensureMembership = async (
   conversationId: string,
   userId: string,
-): Promise<{ role: string; shadowMuted: boolean }> => {
-  const membershipResult = await query<ConversationMembershipRow>(
+): Promise<{ role: string; shadowMuted: boolean; joinedAt: Date }> => {
+  const membershipResult = await query<ConversationMemberRow>(
     `
-    SELECT role, shadow_muted
+    SELECT user_id, role, joined_at, shadow_muted
     FROM conversation_members
     WHERE conversation_id = $1 AND user_id = $2
   `,
@@ -447,7 +603,7 @@ const ensureMembership = async (
   }
 
   const row = membershipResult.rows[0]
-  return { role: row.role, shadowMuted: row.shadow_muted ?? false }
+  return { role: row.role, shadowMuted: row.shadow_muted ?? false, joinedAt: row.joined_at }
 }
 
 const getConversationRow = async (conversationId: string): Promise<ConversationRecord> => {
@@ -558,6 +714,37 @@ const emitConversationMembersAddedEvent = (
   }
 }
 
+const emitConversationMembersRemovedEvent = (
+  conversationId: string,
+  removedUserIds: string[],
+  recipients: string[],
+) => {
+  if (removedUserIds.length === 0) {
+    return
+  }
+
+  try {
+    const io = tryGetSocketServer()
+    if (!io) {
+      return
+    }
+
+    const payload = {
+      conversationId,
+      members: removedUserIds.map((userId) => ({ userId })),
+    }
+
+    for (const userId of recipients) {
+      io.to(`user:${userId}`).emit('conversation.members.removed', payload)
+    }
+  } catch (error) {
+    logger.warn('Failed to emit conversation.members.removed event', {
+      conversationId,
+      error,
+    })
+  }
+}
+
 const emitConversationMessageEvent = (
   descriptor: ConversationWithMembers,
   message: ConversationMessageRecord,
@@ -608,6 +795,12 @@ export interface AddConversationMembersOptions {
   actorId: string
   conversationId: string
   memberIds: string[]
+}
+
+export interface RemoveConversationMemberOptions {
+  actorId: string
+  conversationId: string
+  targetUserId: string
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<ConversationMessageRecord> {
@@ -982,6 +1175,8 @@ export default {
   ensureDirectConversation,
   createGroupConversation,
   addMembersToConversation,
+  leaveConversation,
+  removeConversationMember,
   markConversationRead,
   getConversationDetail,
   listConversationsForUser,

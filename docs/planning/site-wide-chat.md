@@ -15,9 +15,9 @@ _Last updated: September 22, 2025_
 _Action taken:_ Audited the live implementation, drafted `031_create_conversations_schema.sql`, then expanded it to add the `generate_ulid()` helper, swap message identifiers to ULIDs, and create the `user_blocks` table alongside the messaging settings view.
 
 _Next tasks:_
-1. Wire legacy `chatService` into dual-write mode (new conversations + `unread_message_counts` compatibility view) and add regression coverage before cutting clients over.
-2. Implement leave/remove member flows (`POST /conversations/:id/leave`, moderation endpoints) so group management stays feature-complete.
-3. Tackle frontend integration: hydrate the drawer from `/api/messages/conversations`, listen for `conversation.*` events, and expose unread summaries while legacy sockets remain in parallel.
+1. Swap Socket.io handlers from legacy `chat:*` events to the new `conversation.*` contract (include typing/typing/read receipts parity).
+2. Finish group moderation (promote/demote roles, optional archival) and create audit logging before exposing admin controls.
+3. Tackle frontend integration: hydrate the drawer from `/api/messages/conversations`, listen for `conversation.*` events, and consume the unread summary to drive badges.
 
 ## 1) Objectives & Scope
 **Goals**
@@ -85,7 +85,8 @@ _Next tasks:_
 - `GET /conversations/:id` — detailed metadata + membership state; defaults to clearing unread unless `markRead=false`.
 - `GET /conversations/unread` — condensed unread summary for badge/widgets.
 - `POST /conversations/:id/members` — owner/admin can append members (`memberIds[]`), enforcing block/group invite policies and capacity caps.
-- `POST /conversations/:id/leave` — self-serve exit for non-owners (planned).
+- `POST /conversations/:id/leave` — self-serve exit with owner promotion/auto-archive when last member departs.
+- `DELETE /conversations/:id/members/:memberId` — owner/admin removal flow (owner protection enforced).
 - `POST /conversations/:id/messages` — `body`, optional `replyToId`, optional `clientMessageId`, optional `metadata` blocks (link previews later).
 - `GET /conversations/:id/messages` — keyset pagination on `(created_at, id)` with `before` and `limit=50`.
 - `POST /conversations/:id/read` — `{ lastReadMessageId }` with receipts fan-out (planned for explicit marking once sockets fully migrate).
@@ -107,7 +108,7 @@ _Next tasks:_
 ## 6) Realtime (Socket.io)
 - **Namespace:** `/chat`.
 - **Rooms:** `conversation:{id}`; lazy join on conversation open, eager join on connect allowed for small conversation counts.
-- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `conversation.members.added`, `conversation.message.new`, `presence.update` (includes `userId`, `state`, `lastActive`).
+- **Server → Client events:** `message.new`, `message.updated`, `message.deleted`, `receipt.read`, `typing.start`, `typing.stop`, `conversation.created`, `conversation.updated`, `conversation.members.changed`, `conversation.members.added`, `conversation.members.removed`, `conversation.message.new`, `presence.update` (includes `userId`, `state`, `lastActive`).
 - **Client → Server events:** `message.send`, `message.edit`, `message.delete`, `typing.start`, `typing.stop`, `receipt.read`, `conversation.create`, `conversation.members.update` (new `conversation:*` sockets still to be wired up; legacy `chat:*` remains active during transition).
 - **Compatibility:** keep emitting and handling legacy `chat:*` events until the rollout reaches the cleanup phase.
 
