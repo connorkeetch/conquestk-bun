@@ -1,5 +1,5 @@
 # Slack & Discord Notifications — Unified Plan
-_Last updated: September 20, 2025 (progress noted below)_
+_Last updated: May 9, 2026 (progress noted below)_
 
 ## 🎯 Objectives
 Provide a clear, incremental path to deliver automated notifications from ConquestK into Slack channels and Discord servers without disrupting existing workflows. Centralize channel delivery logic so future surfaces (email, SMS, in-game inbox, web push) plug in with minimal friction. Keep configuration environment-driven and secrets out of the codebase.
@@ -116,6 +116,31 @@ Start with CLI/manual hooks and expand over time.
 - **Phase 3 — Preferences & Admin UI (1–2 days):** add `/admin/settings/notifications` to show configured channels, last deliveries, and a Send Test button; toggle providers per environment; extend `user_preferences` for future per-user routing (disabled initially); update frontend settings copy to mention Slack/Discord feed.
 - **Phase 4 — Deployment, Monitoring, & Scale (1–2 days):** update docs and `.env.example`, add a health endpoint (`GET /api/notifications/status`), expose metrics (deliveries, failures, latency, breaker state), and optionally move to a queue if volume increases.
 
+## ✅ Phase 0 Wrap-Up — Decisions & Priorities
+
+### Slack authentication decision
+- **Stick with incoming webhooks for Phase 1.** The newly landed `SlackWebhookChannel` already covers retries, breaker logic, multi-channel fan-out, and keeps credential scope limited to a single webhook URL per environment. We do not yet need slash commands, modal interactions, or user DM routing that would justify provisioning and maintaining a full Slack bot with OAuth/token rotation. Revisit the bot path in Phase 3 when we explore admin UI toggles and richer interactions.
+- **Documented safeguards:** webhooks remain isolated per environment, URLs are redacted in logs, and the dispatcher only registers the channel when env vars are present. This keeps the rollout dark-launch friendly while we burn in the pipeline.
+
+### Phase 1 event priority stack
+Focus initial Slack/Discord delivery on the highest-signal events so we can validate reliability before broadening scope.
+
+| Priority | Event type | Severity | Slack destination | Discord destination | Notes |
+| --- | --- | --- | --- | --- | --- |
+| P0 | `ops.incident.threshold_exceeded` | critical | `#operations` (default webhook) | Primary operations webhook | Triggered when error-rate or latency alerts fire (hook into existing incident monitor once wired). Includes runbook link in CTA. |
+| P0 | `map.submission.pending` | warning | `#operations`, `#community` if configured | Moderator webhook (primary) | Fires when a creator submits a map; keeps reviewers aware of queue growth. Context block includes creator handle and map name. |
+| P0 | `map.submission.decision` (`approved`/`rejected`) | info / warning | `#operations` | Moderator webhook | Bundles approval metadata (reviewer, actions taken) so moderators share state. Rejection variant elevates to `warning` severity. |
+| P1 | `community.map.published` | info | `#community` webhook | Community announcements webhook | Public-facing announcement once a map hits production; links to map detail page. |
+| P1 | `ops.announcement.manual` | info | Channel passed via CLI flag or env default | Channel passed via CLI flag or env default | Covers ad-hoc maintenance posts via the upcoming `notify:test` CLI. |
+| P2 | `game.season.started` / `game.tournament.started` | info | `#community` | Community announcements webhook | Lower frequency hype events; defer wiring until foundations prove stable. |
+
+Severity drives emoji/colour formatting (see `slackFormatting.ts`) and determines default CTA styling. Discord embeds should mirror this mapping when we add the channel implementation in Phase 1.
+
+### Operational follow-ups
+- Align incident thresholds with `metricsService` once the dispatcher emits structured results so we can translate failures into alert noise budgets.
+- Confirm Discord webhook destinations with community leads before wiring to avoid cross-posting private moderator updates.
+- Extend the CLI spec to accept `--event` and `--severity` flags so manual sends align with the canonical schema above.
+
 ## 🧪 Testing Strategy
 - **Unit:** mock HTTP, verify formatting, headers, retries, and rate-limit handling plus breaker transitions.
 - **Integration:** end-to-end flow from event producers to a local webhook sink.
@@ -146,6 +171,8 @@ Start with CLI/manual hooks and expand over time.
 ## 📈 Progress Log
 - **September 20, 2025:** Added shared notification event/result types and introduced the `NotificationDispatcher` service skeleton. Dispatcher currently supports environment-driven channel gating, channel availability checks, and per-channel logging while we continue wiring producers and specific providers.
 - **September 22, 2025:** Implemented the Slack webhook channel with rich block formatting, retries, jittered backoff, and a circuit breaker. Slack env vars now live in `.env.example`, and the dispatcher auto-registers the channel when webhooks are configured.
+- **May 9, 2026:** Completed Phase 0 follow-up by standardizing on Slack incoming webhooks for the initial rollout and prioritizing the incident + map workflow event backlog listed above. Ready to start Phase 1 foundations (WebPush wrapper, Discord webhook channel, dispatcher tests).
+- **May 12, 2026:** Shipped Phase 1 foundations by wrapping the existing web push service as a dispatcher channel, adding the Discord webhook channel with retries and circuit breaking, and backfilling Jest coverage around both providers.
 
 ## ⚠️ Risks & Mitigations
 - **Webhook leakage:** rely on secrets management, URL redaction, and rotation drills.
@@ -177,4 +204,4 @@ Start with CLI/manual hooks and expand over time.
 - `docs/operations/logging-standards.md`
 - `.env.example`
 
-Next step: confirm Slack auth path (bot vs webhook) and prioritize the event list, then begin Phase 1.
+Next step: wire high-priority producers (map workflow approvals, incident pipeline, CLI send) into the dispatcher and prepare dark-launch validation before enabling the external channel flag.

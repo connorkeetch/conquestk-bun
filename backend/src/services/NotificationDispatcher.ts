@@ -1,6 +1,8 @@
 import type { NotificationEvent, NotificationResult } from '@risk-game/shared/types/notifications'
 import { logger } from '../utils/logger'
 import { SlackWebhookChannel } from './channels/SlackWebhookChannel'
+import { webPushChannel } from './channels/WebPushChannel'
+import { DiscordWebhookChannel, discordWebhookChannel } from './channels/DiscordWebhookChannel'
 
 export type NotificationChannelName = 'webpush' | 'slack' | 'discord' | (string & {})
 
@@ -183,11 +185,20 @@ export class NotificationDispatcher {
   }
 }
 
-const defaultChannels: NotificationChannel[] = []
+const defaultChannels: NotificationChannel[] = [webPushChannel]
 
 const slackChannel = SlackWebhookChannel.fromEnv()
 if (slackChannel) {
   defaultChannels.push(slackChannel)
+}
+
+if (discordWebhookChannel) {
+  defaultChannels.push(discordWebhookChannel)
+} else {
+  const fallbackDiscordChannel = DiscordWebhookChannel.fromEnv()
+  if (fallbackDiscordChannel) {
+    defaultChannels.push(fallbackDiscordChannel)
+  }
 }
 
 export const notificationDispatcher = new NotificationDispatcher({
