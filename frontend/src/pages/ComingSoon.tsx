@@ -33,8 +33,8 @@ const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon, featu
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-white mb-4">Planned Features:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center text-muted">
+              {features.map((feature) => (
+                <div key={feature} className="flex items-center text-muted">
                   <span className="text-green-400 mr-2">✓</span>
                   {feature}
                 </div>

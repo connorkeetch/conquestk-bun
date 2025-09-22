@@ -17,7 +17,9 @@ export const useFaviconBadge = () => {
       const notifications = notificationService.getNotifications()
       notifications
         .filter((n) => n.type === 'turn_reminder' && !n.read)
-        .forEach((n) => notificationService.markAsRead(n.id))
+        .forEach((n) => {
+          notificationService.markAsRead(n.id)
+        })
     }
 
     window.addEventListener('focus', handleFocus)
