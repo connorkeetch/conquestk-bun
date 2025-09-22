@@ -262,6 +262,24 @@ export default function ImageProcessor({
     onComplete(croppedDataUrl, { width: targetWidth, height: targetHeight })
   }
 
+  const parseTargetWidth = (value: string) => {
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed)) {
+      return 400
+    }
+
+    return Math.min(maxWidth, Math.max(400, parsed))
+  }
+
+  const parseTargetHeight = (value: string) => {
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed)) {
+      return 300
+    }
+
+    return Math.min(maxHeight, Math.max(300, parsed))
+  }
+
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-surface-1 rounded-lg max-w-4xl w-full">
@@ -279,9 +297,7 @@ export default function ImageProcessor({
             <input
               type="number"
               value={targetWidth}
-              onChange={(e) =>
-                setTargetWidth(Math.min(maxWidth, Math.max(400, parseInt(e.target.value) || 400)))
-              }
+              onChange={(e) => setTargetWidth(parseTargetWidth(e.target.value))}
               className="w-24 px-2 py-1 bg-gray-600 text-white rounded"
               min="400"
               max={maxWidth}
@@ -290,9 +306,7 @@ export default function ImageProcessor({
             <input
               type="number"
               value={targetHeight}
-              onChange={(e) =>
-                setTargetHeight(Math.min(maxHeight, Math.max(300, parseInt(e.target.value) || 300)))
-              }
+              onChange={(e) => setTargetHeight(parseTargetHeight(e.target.value))}
               className="w-24 px-2 py-1 bg-gray-600 text-white rounded"
               min="300"
               max={maxHeight}
@@ -335,12 +349,14 @@ export default function ImageProcessor({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={onCancel}
                 className="px-4 py-2 bg-surface-2 hover:bg-gray-600 rounded text-white"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleProcess}
                 className="px-4 py-2 bg-primary hover:bg-primary rounded text-white"
               >

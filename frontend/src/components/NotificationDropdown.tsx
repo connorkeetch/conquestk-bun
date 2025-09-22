@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { notificationService } from '../services/notificationService'
 import type { Notification } from '../types/notification'
 
@@ -8,6 +8,7 @@ export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Subscribe to notification updates
@@ -43,8 +44,9 @@ export default function NotificationDropdown() {
   const handleNotificationClick = (notification: Notification) => {
     notificationService.markAsRead(notification.id)
     if (notification.actionUrl) {
-      setIsOpen(false)
+      navigate(notification.actionUrl)
     }
+    setIsOpen(false)
   }
 
   const handleMarkAllRead = () => {
@@ -81,15 +83,20 @@ export default function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       {/* Notification Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
         aria-label="Notifications"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <svg
           width="20"
           height="20"
           viewBox="0 0 24 24"
           className="fill-white/70 hover:fill-white transition-colors"
+          aria-hidden="true"
+          focusable="false"
         >
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
         </svg>
@@ -111,6 +118,7 @@ export default function NotificationDropdown() {
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button
+                  type="button"
                   onClick={handleMarkAllRead}
                   className="text-xs text-primary-soft hover:text-primary-soft transition-colors"
                 >
@@ -119,6 +127,7 @@ export default function NotificationDropdown() {
               )}
               {notifications.length > 0 && (
                 <button
+                  type="button"
                   onClick={handleClearAll}
                   className="text-xs text-muted hover:text-muted transition-colors"
                 >
@@ -146,69 +155,61 @@ export default function NotificationDropdown() {
                     {group.notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`px-3 sm:px-4 py-2 sm:py-3 hover:bg-surface-1 transition-colors cursor-pointer border-l-2 ${
+                        className={`px-3 sm:px-4 py-2 sm:py-3 border-l-2 ${
                           notification.read
                             ? 'border-transparent'
                             : 'border-primary bg-primary-soft-bg'
                         }`}
-                        onClick={() => handleNotificationClick(notification)}
                       >
-                        <div className="flex gap-3">
-                          {/* Icon */}
-                          <div className="flex-shrink-0 text-2xl">
-                            {getNotificationIcon(notification)}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p
-                                  className={`text-sm font-medium ${
-                                    notification.read ? 'text-muted' : 'text-white'
-                                  }`}
-                                >
-                                  {notification.title}
-                                </p>
-                                <p className="text-xs text-muted mt-0.5">{notification.message}</p>
-
-                                {/* Action Button */}
-                                {notification.actionUrl && (
-                                  <Link
-                                    to={notification.actionUrl}
-                                    className="inline-block mt-2 px-3 py-1 bg-primary hover:bg-primary text-white text-xs rounded transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {notification.actionLabel || 'View'}
-                                  </Link>
-                                )}
-                              </div>
-
-                              {/* Time and Actions */}
-                              <div className="flex items-center gap-2 ml-2">
-                                <span className="text-xs text-muted">
-                                  {getRelativeTime(notification.timestamp)}
+                        <div className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            className="flex-1 text-left flex gap-3 rounded-lg px-2 py-1 hover:bg-surface-1 transition-colors"
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <span className="flex-shrink-0 text-2xl">
+                              {getNotificationIcon(notification)}
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <p
+                                className={`text-sm font-medium ${
+                                  notification.read ? 'text-muted' : 'text-white'
+                                }`}
+                              >
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-muted mt-0.5">{notification.message}</p>
+                              {notification.actionUrl && (
+                                <span className="inline-block mt-2 px-3 py-1 bg-primary text-white text-xs rounded">
+                                  {notification.actionLabel || 'View'}
                                 </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    notificationService.deleteNotification(notification.id)
-                                  }}
-                                  className="text-muted hover:text-red-400 transition-colors"
-                                  aria-label="Delete notification"
-                                >
-                                  <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 24 24"
-                                    className="fill-current"
-                                  >
-                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
+                              )}
+                            </span>
+                            <span className="text-xs text-muted ml-2 whitespace-nowrap">
+                              {getRelativeTime(notification.timestamp)}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              notificationService.deleteNotification(notification.id)
+                            }}
+                            className="text-muted hover:text-red-400 transition-colors"
+                            aria-label="Delete notification"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              className="fill-current"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <title>Delete notification</title>
+                              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     ))}

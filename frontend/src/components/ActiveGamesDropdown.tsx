@@ -1,6 +1,7 @@
 import { ChevronRight, Clock, Gamepad2, Trophy, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 import type { GameRoom } from '../types/gameRoom'
@@ -22,23 +23,24 @@ const ActiveGamesDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (user && isOpen) {
-      fetchGames()
-    }
-  }, [user, isOpen])
-
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.get('/game/my-games')
       setGames(response.data.games || [])
     } catch (error) {
+      logger.error('Failed to load active games', error)
       setGames([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (user && isOpen) {
+      fetchGames()
+    }
+  }, [user, isOpen, fetchGames])
 
   if (!user) return null
 
@@ -52,9 +54,12 @@ const ActiveGamesDropdown: React.FC = () => {
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 rounded-lg hover:bg-surface-1 transition-colors"
         title="My Games"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <Gamepad2 className="w-6 h-6 text-muted" />
         {totalActive > 0 && (
@@ -69,7 +74,14 @@ const ActiveGamesDropdown: React.FC = () => {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-transparent"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close active games menu"
+          >
+            <span className="sr-only">Close active games menu</span>
+          </button>
           <div className="absolute right-0 mt-2 w-80 bg-surface-1 border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-y-auto">
             {/* Header */}
             <div className="p-4 border-b border-border">
