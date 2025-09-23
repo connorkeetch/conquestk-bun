@@ -91,6 +91,34 @@ export interface AdminActivityLog {
   timestamp: string
 }
 
+export interface AdminGamePlayer {
+  id: string
+  username: string
+  color: string
+  status: 'waiting' | 'active' | 'eliminated' | 'disconnected'
+  territoriesCount: number
+  armiesCount: number
+}
+
+export interface AdminGame {
+  id: string
+  name: string
+  mapName: string
+  createdBy: string
+  createdByUsername: string
+  players: AdminGamePlayer[]
+  status: 'waiting' | 'active' | 'paused' | 'completed' | 'abandoned'
+  currentTurn?: string
+  currentTurnUsername?: string
+  phase: 'reinforcement' | 'attack' | 'fortify'
+  turnCount: number
+  createdAt: string
+  updatedAt: string
+  maxPlayers: number
+  isPrivate: boolean
+  lastActivity: string
+}
+
 export interface SystemStatus {
   timestamp: string
   database: {
@@ -223,7 +251,7 @@ class AdminService {
 
   async getGames(
     params: { limit?: number; offset?: number; status?: string; search?: string } = {},
-  ): Promise<{ games: Record<string, unknown>[]; total: number }> {
+  ): Promise<{ games: AdminGame[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/games`, { params })
     return response.data
   }

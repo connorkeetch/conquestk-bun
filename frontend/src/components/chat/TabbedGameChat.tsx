@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
-import type { Player } from '../../types/game'
 import ChatContainer from './ChatContainer'
+
+interface ChatPlayer {
+  userId: string
+  username: string
+  teamId?: number | null
+}
 
 interface TabbedGameChatProps {
   gameId: string
-  players: Player[]
+  players: ChatPlayer[]
   currentUserId: string
   userTeamId?: number | null
   className?: string
@@ -91,7 +96,9 @@ export default function TabbedGameChat({
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       {/* Tab Headers */}
       <div className="flex overflow-x-auto bg-surface-1 rounded-t-lg border-b border-border">
-        {tabs.map((tab) => (
+        {tabs.map((tab) => {
+          const badgeCount = tab.badge ?? 0
+          return (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -111,13 +118,13 @@ export default function TabbedGameChat({
             <span>{tab.label}</span>
 
             {/* Unread badge */}
-            {tab.badge > 0 && (
+            {badgeCount > 0 && (
               <span className="px-2 py-0.5 text-xs bg-red-600 text-white rounded-full">
-                {tab.badge > 99 ? '99+' : tab.badge}
+                {badgeCount > 99 ? '99+' : badgeCount}
               </span>
             )}
           </button>
-        ))}
+        )})}
       </div>
 
       {/* Chat Content */}

@@ -377,7 +377,7 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
               </text>
 
               {/* Army count circle */}
-              {territory.armies > 0 && (
+              {(territory.armies ?? 0) > 0 && (
                 <g className="pointer-events-none">
                   <circle
                     cx={armyPos.x}
@@ -395,7 +395,7 @@ export const TestMapSVG: React.FC<TestMapSVGProps> = ({
                     className="text-lg font-bold select-none"
                     fill="#333"
                   >
-                    {territory.armies}
+                    {territory.armies ?? 0}
                   </text>
                 </g>
               )}

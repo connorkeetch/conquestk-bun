@@ -17,7 +17,7 @@ interface User {
   elo: number
   isVip?: boolean
   isAdmin?: boolean
-  premiumTier?: 'free' | 'premium'
+  premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise'
   vipReason?: string
   vipGrantedAt?: string
   premiumExpiresAt?: string

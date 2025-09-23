@@ -181,6 +181,14 @@ export interface GameState {
   movementTracking?: Record<string, boolean>
   territoryModifiers?: Record<string, GameTerritoryModifier>
   capitalAssignments?: Record<string, string>
+  pendingCapitalAttack?: string | null
+  capitalElimination?: {
+    conqueror: string
+    eliminated: string
+    capitalTerritory: string
+    territoriesGained: number
+    troopsGained: number
+  }
   status?: GameStatus
   winner?: string
   reinforcementArmies?: number
@@ -425,7 +433,7 @@ export interface ServerToClientEvents {
     userId: string
     username: string
     isTyping: boolean
-    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationType: ChatConversationType
     conversationId: string
   }) => void
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
@@ -524,13 +532,13 @@ export interface ClientToServerEvents {
   }) => void
   'chat:get-unread': () => void
   'chat:mark-read': (data: {
-    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationType: ChatConversationType
     conversationId: string
   }) => void
   'chat:delete': (data: { messageId: string }) => void
   'chat:edit': (data: { messageId: string; newMessage: string }) => void
   'chat:typing': (data: {
-    conversationType: Extract<ChatConversationType, 'game' | 'dm'>
+    conversationType: ChatConversationType
     conversationId: string
     isTyping: boolean
   }) => void

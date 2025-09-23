@@ -60,11 +60,11 @@ const SOUND_EFFECTS = {
 type SoundEffectDefinitions = typeof SOUND_EFFECTS
 type SoundEffectKey = keyof SoundEffectDefinitions
 
-const EFFECT_ALIASES = {
-  turn: 'yourturn',
-} as const satisfies Record<string, SoundEffectKey>
+type EffectAlias = 'turn'
 
-type EffectAlias = keyof typeof EFFECT_ALIASES
+const EFFECT_ALIASES: Record<EffectAlias, SoundEffectKey> = {
+  turn: 'yourturn',
+} as const
 type EffectName = SoundEffectKey | EffectAlias
 
 interface AudioPreferences {
@@ -193,7 +193,7 @@ class AudioService {
             src: [path],
             preload: true,
             volume: this.getEffectiveVolume('effect'),
-            onloaderror: (_id, error) => {
+            onloaderror: (_id: number, error: unknown) => {
               logger.warn(`Failed to load sound effect ${soundKey}`, error)
               this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
             },
@@ -211,7 +211,7 @@ class AudioService {
           src: [paths[0]],
           preload: true,
           volume: this.getEffectiveVolume('effect'),
-          onloaderror: (_id, error) => {
+          onloaderror: (_id: number, error: unknown) => {
             logger.warn(`Failed to load sound effect ${effectName}`, error)
             this.sounds.set(effectName, { name: effectName, howl: null, category: 'effect' })
           },
@@ -380,7 +380,7 @@ class AudioService {
         this.musicTrackIndex = (this.musicTrackIndex + 1) % this.MUSIC_TRACKS.length
         this.playMusic(this.musicTrackIndex)
       },
-      onloaderror: (_id, error) => {
+      onloaderror: (_id: number, error: unknown) => {
         logger.error(`Failed to load music track ${trackPath}`, error)
         // Try next track
         this.musicTrackIndex = (this.musicTrackIndex + 1) % this.MUSIC_TRACKS.length

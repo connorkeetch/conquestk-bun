@@ -1,25 +1,7 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import audioService from '../services/audioService'
-
-interface BattleResult {
-  attackerDice: number[]
-  defenderDice: number[]
-  attackerLosses: number
-  defenderLosses: number
-  conquered: boolean
-  fromTerritory: {
-    id: string
-    name: string
-    armies: number
-  }
-  toTerritory: {
-    id: string
-    name: string
-    armies: number
-    ownerId: string
-  }
-}
+import type { BattleResult, BattleTerritorySnapshot } from '../types/game'
 
 interface BattleModalProps {
   isOpen: boolean
@@ -35,6 +17,26 @@ export const BattleModal: React.FC<BattleModalProps> = ({
   onContinueAttack,
 }) => {
   const [showAnimation, setShowAnimation] = useState(false)
+
+  const resolveTerritory = (
+    territory: BattleResult['fromTerritory'],
+  ): BattleTerritorySnapshot & { name: string; armies: number } => {
+    if (typeof territory === 'string') {
+      return {
+        id: territory,
+        name: territory,
+        armies: 0,
+        ownerId: null,
+      }
+    }
+
+    return {
+      id: territory.id,
+      name: territory.name ?? territory.id,
+      armies: territory.armies ?? 0,
+      ownerId: territory.ownerId ?? null,
+    }
+  }
 
   useEffect(() => {
     if (isOpen && battleResult) {
@@ -78,9 +80,12 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
   if (!isOpen || !battleResult) return null
 
+  const fromTerritory = resolveTerritory(battleResult.fromTerritory)
+  const toTerritory = resolveTerritory(battleResult.toTerritory)
+
   const createDiceDescriptors = (dice: number[], role: 'attacker' | 'defender') =>
     dice.map((value, index) => ({
-      id: `${battleResult.fromTerritory.id}-${battleResult.toTerritory.id}-${role}-${index}-${value}`,
+      id: `${fromTerritory.id}-${toTerritory.id}-${role}-${index}-${value}`,
       value,
       index,
     }))
@@ -108,7 +113,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Battle Results</h2>
             <p className="text-muted">
-              {battleResult.fromTerritory.name} vs {battleResult.toTerritory.name}
+              {fromTerritory.name} vs {toTerritory.name}
             </p>
           </div>
 
@@ -116,7 +121,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
             {/* Attacker */}
             <div className="text-center">
               <h3 className="font-semibold text-red-600 mb-3">Attacker</h3>
-              <p className="text-sm text-muted mb-2">{battleResult.fromTerritory.name}</p>
+              <p className="text-sm text-muted mb-2">{fromTerritory.name}</p>
               {renderDice(
                 createDiceDescriptors(battleResult.attackerDice, 'attacker'),
                 'bg-red-500',
@@ -131,14 +136,14 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                 )}
               </p>
               <p className="text-xs text-muted">
-                {battleResult.fromTerritory.armies} armies remaining
+                {fromTerritory.armies} armies remaining
               </p>
             </div>
 
             {/* Defender */}
             <div className="text-center">
               <h3 className="font-semibold text-blue-600 mb-3">Defender</h3>
-              <p className="text-sm text-muted mb-2">{battleResult.toTerritory.name}</p>
+              <p className="text-sm text-muted mb-2">{toTerritory.name}</p>
               {renderDice(
                 createDiceDescriptors(battleResult.defenderDice, 'defender'),
                 'bg-primary',
@@ -153,7 +158,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                 )}
               </p>
               <p className="text-xs text-muted">
-                {battleResult.toTerritory.armies} armies remaining
+                {toTerritory.armies} armies remaining
               </p>
             </div>
           </div>
@@ -164,7 +169,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
               <div className="text-center">
                 <h3 className="font-bold text-yellow-300 text-lg mb-1">Territory Conquered! 🎉</h3>
                 <p className="text-yellow-200 text-sm">
-                  {battleResult.toTerritory.name} is now under your control
+                  {toTerritory.name} is now under your control
                 </p>
               </div>
             </div>
@@ -184,7 +189,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
           {/* Action Buttons */}
           <div className="flex space-x-3">
             {onContinueAttack &&
-              battleResult.fromTerritory.armies > 1 &&
+              fromTerritory.armies > 1 &&
               !battleResult.conquered && (
                 <button
                   type="button"
@@ -199,7 +204,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
               onClick={onClose}
               className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded font-medium"
             >
-              {onContinueAttack && battleResult.fromTerritory.armies > 1 && !battleResult.conquered
+              {onContinueAttack && fromTerritory.armies > 1 && !battleResult.conquered
                 ? 'Stop Attacking'
                 : 'Close'}
             </button>

@@ -434,7 +434,7 @@ const ProfilePage: React.FC = () => {
     })
   }
 
-  const formatLastActive = (dateString?: string): string => {
+  const formatLastActive = (dateString?: string | null): string => {
     if (!dateString) return 'Never'
 
     const date = new Date(dateString)

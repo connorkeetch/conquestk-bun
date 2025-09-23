@@ -33,7 +33,21 @@ export type {
   FortifyAction,
   EndTurnAction,
   TradeCardsAction,
-  SharedBattleResult as BattleResult,
+}
+
+export interface BattleTerritorySnapshot {
+  id: string
+  name: string
+  armies: number
+  ownerId?: string | null
+}
+
+type BattleTerritoryRef = string | BattleTerritorySnapshot
+
+export interface BattleResult
+  extends Omit<SharedBattleResult, 'fromTerritory' | 'toTerritory'> {
+  fromTerritory: BattleTerritoryRef
+  toTerritory: BattleTerritoryRef
 }
 
 // Extend shared types with frontend-specific properties

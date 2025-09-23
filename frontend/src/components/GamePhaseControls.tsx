@@ -21,6 +21,7 @@ import {
 } from '../utils/continentBonuses'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { BattleModal } from './BattleModal'
+import type { BattleResult } from '../types/game'
 
 interface GamePhaseControlsProps {
   onEndTurn: () => void
@@ -96,6 +97,42 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     !!currentPlayer &&
     selectedTerritoryData.ownerId !== currentPlayer.id &&
     isFriendlyTerritoryOwner(gameState, selectedTerritoryData.ownerId, currentPlayer.id)
+
+  const resolveBattleTerritory = (
+    territory: BattleResult['fromTerritory'],
+  ): { id: string; name: string; armies: number; ownerId: string | null } => {
+    if (typeof territory === 'string') {
+      const territoryData = gameState.board.find((t) => t.id === territory)
+      return {
+        id: territory,
+        name: territoryData?.name ?? territory,
+        armies: territoryData?.armies ?? 0,
+        ownerId: territoryData?.ownerId ?? null,
+      }
+    }
+
+    const fallback = gameState.board.find((t) => t.id === territory.id)
+
+    return {
+      id: territory.id,
+      name: territory.name ?? fallback?.name ?? territory.id,
+      armies: territory.armies ?? fallback?.armies ?? 0,
+      ownerId: territory.ownerId ?? fallback?.ownerId ?? null,
+    }
+  }
+
+  type ResolvedBattleResult = Omit<BattleResult, 'fromTerritory' | 'toTerritory'> & {
+    fromTerritory: ReturnType<typeof resolveBattleTerritory>
+    toTerritory: ReturnType<typeof resolveBattleTerritory>
+  }
+
+  const resolvedBattleResult: ResolvedBattleResult | null = battleResult
+    ? {
+        ...battleResult,
+        fromTerritory: resolveBattleTerritory(battleResult.fromTerritory),
+        toTerritory: resolveBattleTerritory(battleResult.toTerritory),
+      }
+    : null
 
   const handleDeploy = () => {
     if (selectedTerritory && reinforcementArmies > 0) {
@@ -447,14 +484,15 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
 
       {/* Battle Modal */}
       <BattleModal
-        isOpen={!!battleResult}
-        battleResult={battleResult}
+        isOpen={!!resolvedBattleResult}
+        battleResult={resolvedBattleResult}
         onClose={() => dispatch(setBattleResult(null))}
         onContinueAttack={
           selectedTerritory &&
           selectedTargetTerritory &&
-          battleResult?.fromTerritory?.armies > 1 &&
-          !battleResult?.conquered
+          resolvedBattleResult &&
+          resolvedBattleResult.fromTerritory.armies > 1 &&
+          !resolvedBattleResult.conquered
             ? handleAttack
             : undefined
         }

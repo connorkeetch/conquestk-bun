@@ -23,4 +23,5 @@ export type AuthenticatedRequest<
 > = Request<P, ResBody, ReqBody, ReqQuery, Locals> & {
   userId?: string
   user?: RequestUser
+  sessionId?: string
 }

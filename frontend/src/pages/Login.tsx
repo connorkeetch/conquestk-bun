@@ -56,7 +56,6 @@ export default function Login() {
                   style={{
                     background: 'linear-gradient(135deg, #FBBF24, #F59E0B, #D97706)',
                     backgroundClip: 'text',
-                    textFillColor: 'transparent',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                   }}

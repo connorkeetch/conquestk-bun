@@ -1,6 +1,5 @@
 import type React from 'react'
 import { useCallback, useEffect, useId, useState } from 'react'
-import { useAppSelector } from '../../hooks/redux'
 
 interface ProfileData {
   username: string
@@ -8,7 +7,6 @@ interface ProfileData {
 }
 
 const EditableProfile: React.FC = () => {
-  const _user = useAppSelector((state) => state.auth.user)
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<ProfileData>({
     username: '',

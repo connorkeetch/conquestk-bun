@@ -326,7 +326,13 @@ export const AdminMapReview: React.FC = () => {
                     <select
                       id={statusInputId}
                       value={result?.status || 'pass'}
-                      onChange={(e) => updateReviewResult(criterion.id, 'status', e.target.value)}
+                      onChange={(e) =>
+                        updateReviewResult(
+                          criterion.id,
+                          'status',
+                          e.target.value as ReviewResult['status'],
+                        )
+                      }
                       className={`w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
                         result?.status ? getStatusColor(result.status) : 'border-gray-300'
                       }`}

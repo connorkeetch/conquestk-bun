@@ -1,40 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { adminService } from '../services/adminService'
-
-interface Game {
-  id: string
-  name: string
-  mapName: string
-  createdBy: string
-  createdByUsername: string
-  players: {
-    id: string
-    username: string
-    color: string
-    status: 'waiting' | 'active' | 'eliminated' | 'disconnected'
-    territoriesCount: number
-    armiesCount: number
-  }[]
-  status: 'waiting' | 'active' | 'paused' | 'completed' | 'abandoned'
-  currentTurn?: string
-  currentTurnUsername?: string
-  phase: 'reinforcement' | 'attack' | 'fortify'
-  turnCount: number
-  createdAt: string
-  updatedAt: string
-  maxPlayers: number
-  isPrivate: boolean
-  lastActivity: string
-}
+import { adminService, type AdminGame } from '../services/adminService'
 
 interface GameActionModal {
-  game: Game
+  game: AdminGame
   isOpen: boolean
   action: 'spectate' | 'force_end' | 'adjust_settings' | 'pause' | 'resume'
 }
 
 export default function AdminGames() {
-  const [games, setGames] = useState<Game[]>([])
+  const [games, setGames] = useState<AdminGame[]>([])
   const [totalGames, setTotalGames] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -123,7 +97,7 @@ export default function AdminGames() {
     }
   }
 
-  const openActionModal = (game: Game, action: GameActionModal['action']) => {
+  const openActionModal = (game: AdminGame, action: GameActionModal['action']) => {
     setActionModal({ game, isOpen: true, action })
     setActionNotes('')
   }

@@ -36,12 +36,13 @@ describe('AudioService effect aliases', () => {
   it('treats "turn" as an alias for the "yourturn" effect', async () => {
     const { default: audioService } = await import('./audioService')
 
-    audioService.playEffect('turn')
+    const alias = 'turn' as Parameters<typeof audioService.playEffect>[0]
+    audioService.playEffect(alias)
 
     const usageStats = audioService.getAudioUsageStats()
     const yourTurnUsage = usageStats.get('yourturn')
 
     expect(yourTurnUsage?.count).toBe(1)
-    expect(usageStats.has('turn')).toBe(false)
+    expect(Array.from(usageStats.keys())).not.toContain('turn')
   })
 })

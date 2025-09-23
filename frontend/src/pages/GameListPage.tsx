@@ -65,7 +65,10 @@ const GameListPage: React.FC = () => {
     }
   }
 
-  const formatTimeAgo = (dateString: string) => {
+  const formatTimeAgo = (dateString?: string | null) => {
+    if (!dateString) {
+      return 'Unknown'
+    }
     const date = new Date(dateString)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()

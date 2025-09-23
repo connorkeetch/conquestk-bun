@@ -5,7 +5,7 @@ export interface LinkPreview {
   title?: string
   description?: string
   image?: string
-  site_name?: string
+  siteName?: string
 }
 
 export interface ChatMessage {
@@ -205,7 +205,7 @@ const chatSlice = createSlice({
       state,
       action: PayloadAction<
         {
-          conversationType: 'game' | 'dm'
+          conversationType: 'game' | 'team' | 'dm'
           conversationId: string
           unreadCount: number
         }[]
@@ -223,7 +223,7 @@ const chatSlice = createSlice({
 
         if (conversationType === 'dm') {
           totalDMs += unreadCount
-        } else if (conversationType === 'game') {
+        } else {
           totalGames += unreadCount
         }
       })
@@ -236,6 +236,7 @@ const chatSlice = createSlice({
     markMessagesAsRead(state, action: PayloadAction<string>) {
       const conversationId = action.payload
       if (state.conversations[conversationId]) {
+        const previousUnread = state.conversations[conversationId].unreadCount
         state.conversations[conversationId].messages.forEach((msg) => {
           msg.is_read = true
         })
@@ -243,9 +244,9 @@ const chatSlice = createSlice({
 
         // Update total counts
         if (conversationId.startsWith('dm:')) {
-          state.totalUnreadDMs = Math.max(0, state.totalUnreadDMs - 1)
-        } else if (conversationId.startsWith('game:')) {
-          state.totalUnreadGames = Math.max(0, state.totalUnreadGames - 1)
+          state.totalUnreadDMs = Math.max(0, state.totalUnreadDMs - previousUnread)
+        } else if (conversationId.startsWith('game:') || conversationId.startsWith('team:')) {
+          state.totalUnreadGames = Math.max(0, state.totalUnreadGames - previousUnread)
         }
       }
     },

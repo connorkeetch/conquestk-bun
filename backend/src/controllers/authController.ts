@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { adminService } from '../services/adminService'
+import { authTrackingService } from '../services/authTrackingService'
 import emailService from '../services/emailService'
 import { UserService } from '../services/userService'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
@@ -125,7 +126,49 @@ export class AuthController {
         }
       }
 
-      const token = jwt.sign({ userId: user.id }, this.jwtSecret, {
+      const ipAddress = req.ip ?? null
+      const userAgent = req.get('user-agent') ?? null
+
+      const registrationSessionId = await authTrackingService.startUserSession({
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        sessionData: {
+          context: 'registration',
+        },
+      })
+
+      await authTrackingService.recordAuthEvent({
+        userId: user.id,
+        eventType: 'user_registration',
+        sessionId: registrationSessionId,
+        ipAddress,
+        userAgent,
+        metadata: {
+          source: 'registration',
+        },
+      })
+
+      await authTrackingService.recordAuthEvent({
+        userId: user.id,
+        eventType: 'user_login',
+        sessionId: registrationSessionId,
+        ipAddress,
+        userAgent,
+        metadata: {
+          source: 'registration',
+          autoLogin: true,
+        },
+      })
+
+      const tokenPayload: jwt.JwtPayload & { userId: string; sessionId?: string } = {
+        userId: user.id,
+      }
+      if (registrationSessionId) {
+        tokenPayload.sessionId = registrationSessionId
+      }
+
+      const token = jwt.sign(tokenPayload, this.jwtSecret, {
         expiresIn: this.tokenExpiration,
       })
 
@@ -208,11 +251,6 @@ export class AuthController {
       // Update last_login timestamp
       await this.userService.updateLastLogin(user.id)
 
-      // Generate token regardless of verification status
-      const token = jwt.sign({ userId: user.id }, this.jwtSecret, {
-        expiresIn: this.tokenExpiration,
-      })
-
       // Check email verification status
       const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
       const needsVerification = requireVerification && !user.email_verified
@@ -237,6 +275,42 @@ export class AuthController {
 
       const isAdmin = await adminService.isAdmin(user.id)
 
+      const ipAddress = req.ip ?? null
+      const userAgent = req.get('user-agent') ?? null
+
+      const loginSessionId = await authTrackingService.startUserSession({
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        sessionData: {
+          context: 'login',
+          method: isEmail ? 'email' : 'username',
+        },
+      })
+
+      await authTrackingService.recordAuthEvent({
+        userId: user.id,
+        eventType: 'user_login',
+        sessionId: loginSessionId,
+        ipAddress,
+        userAgent,
+        metadata: {
+          source: 'login',
+          method: isEmail ? 'email' : 'username',
+        },
+      })
+
+      const tokenPayload: jwt.JwtPayload & { userId: string; sessionId?: string } = {
+        userId: user.id,
+      }
+      if (loginSessionId) {
+        tokenPayload.sessionId = loginSessionId
+      }
+
+      const token = jwt.sign(tokenPayload, this.jwtSecret, {
+        expiresIn: this.tokenExpiration,
+      })
+
       return res.json({
         message: 'Login successful',
         token,
@@ -257,8 +331,35 @@ export class AuthController {
     }
   }
 
-  logout = async (_req: Request, res: Response) => {
-    return res.json({ message: 'Logout successful' })
+  logout = async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' })
+      }
+
+      const sessionId = req.sessionId ?? null
+      const ipAddress = req.ip ?? null
+      const userAgent = req.get('user-agent') ?? null
+
+      if (sessionId) {
+        await authTrackingService.endUserSession(sessionId)
+      }
+
+      await authTrackingService.recordAuthEvent({
+        userId,
+        eventType: 'user_logout',
+        sessionId,
+        ipAddress,
+        userAgent,
+      })
+
+      return res.json({ message: 'Logout successful' })
+    } catch (error) {
+      logger.error('Logout error:', toKnownError(error))
+      return res.status(500).json({ message: 'Internal server error' })
+    }
   }
 
   getProfile = async (req: Request, res: Response) => {

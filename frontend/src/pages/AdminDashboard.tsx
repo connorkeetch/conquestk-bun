@@ -255,7 +255,7 @@ export default function AdminDashboard() {
           <div>Error: {error}</div>
           <button
             type="button"
-            onClick={loadDashboardData}
+            onClick={() => void loadDashboardData()}
             className="mt-4 bg-primary hover:brightness-110 px-4 py-2 rounded"
           >
             Retry

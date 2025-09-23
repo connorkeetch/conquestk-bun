@@ -64,6 +64,7 @@ export const AdminMaps: React.FC = () => {
     minPlayers: 2,
     maxPlayers: 6,
     tags: [] as string[],
+    status: 'draft' as Map['status'],
     isFeatured: false,
     isPublic: true,
     isVipOnly: false,
@@ -566,8 +567,10 @@ export const AdminMaps: React.FC = () => {
                 </label>
                 <select
                   id={mapStatusId}
-                  value={editForm.status || 'draft'}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                value={editForm.status}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, status: e.target.value as Map['status'] })
+                }
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                 >
                   <option value="draft">Draft</option>
