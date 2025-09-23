@@ -6,7 +6,6 @@ import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } f
 import type {
   AdminDashboardStats,
   ApiResponse,
-  AuthUser,
   GameRoom,
   GameState,
   LoginResponse,

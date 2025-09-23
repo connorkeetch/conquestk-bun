@@ -474,10 +474,10 @@ export default function MapEditorTokens() {
   const loadMapForEditing = useCallback(async (mapId: string) => {
     try {
       // Try admin endpoint first for admin users
-      let response
+      let response: { data: unknown }
       try {
         response = await api.get(`/admin/maps/${mapId}`)
-      } catch (adminError) {
+      } catch (_adminError) {
         // Fallback to regular maps endpoint
         response = await api.get(`/maps/${mapId}`)
       }
