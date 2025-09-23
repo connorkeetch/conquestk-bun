@@ -880,6 +880,69 @@ export class MapService {
     return result.rows.map((row) => this.formatAdjacencyFromDb(row as AdjacencyRow))
   }
 
+  /**
+   * Validate that a map is playable:
+   * - at least 2 territories
+   * - all adjacencies reference valid territories
+   * - every territory has at least one connection
+   * - the undirected graph is fully connected
+   */
+  async validateMapPlayable(mapId: string): Promise<{ isValid: boolean; errors: string[] }> {
+    const errors: string[] = []
+    const territories = await this.getMapTerritories(mapId)
+    const adjacencies = await this.getMapAdjacencies(mapId)
+
+    if (territories.length < 2) {
+      errors.push('Map must have at least 2 territories')
+      return { isValid: false, errors }
+    }
+
+    const idSet = new Set(territories.map((t) => t.id))
+    const neighbors = new Map<string, Set<string>>()
+    for (const t of territories) neighbors.set(t.id, new Set())
+
+    for (const adj of adjacencies) {
+      if (!idSet.has(adj.fromTerritoryId)) {
+        errors.push(`Adjacency from unknown territory: ${adj.fromTerritoryId}`)
+        continue
+      }
+      if (!idSet.has(adj.toTerritoryId)) {
+        errors.push(`Adjacency to unknown territory: ${adj.toTerritoryId}`)
+        continue
+      }
+      neighbors.get(adj.fromTerritoryId)?.add(adj.toTerritoryId)
+      neighbors.get(adj.toTerritoryId)?.add(adj.fromTerritoryId) // treat as undirected for connectivity
+    }
+
+    // Each territory should have at least one neighbor
+    for (const [tid, set] of neighbors.entries()) {
+      if (set.size === 0) {
+        const name = territories.find((t) => t.id === tid)?.name || tid
+        errors.push(`Territory has no connections: ${name}`)
+      }
+    }
+
+    // BFS connectivity check
+    const start = territories[0]?.id
+    if (start) {
+      const visited = new Set<string>()
+      const queue: string[] = [start]
+      while (queue.length) {
+        const cur = queue.shift()!
+        if (visited.has(cur)) continue
+        visited.add(cur)
+        for (const nxt of neighbors.get(cur) ?? []) {
+          if (!visited.has(nxt)) queue.push(nxt)
+        }
+      }
+      if (visited.size !== territories.length) {
+        errors.push('Map is not fully connected; some territories are unreachable')
+      }
+    }
+
+    return { isValid: errors.length === 0, errors }
+  }
+
   // ============= GAME MODE OPERATIONS =============
 
   async getGameModes(): Promise<GameMode[]> {

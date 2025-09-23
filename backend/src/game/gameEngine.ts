@@ -13,20 +13,21 @@ import type {
   ProcessActionResult,
   Territory,
 } from '../types/game'
-import { WorldMap } from './worldMap'
 import type { ContinentBonus } from '../types/game'
 
 export class GameEngine {
-  private worldMap = new WorldMap()
   private gameModifiers: Map<string, GameTerritoryModifier> = new Map()
 
   initializeGame(
     roomId: string,
     playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
     gameConfig: GameConfiguration,
-    mapOverrides?: { territories?: Territory[]; continentBonuses?: ContinentBonus[] },
+    mapOverrides: { territories: Territory[]; continentBonuses: ContinentBonus[] },
   ): GameState {
-    const baseTerritories = mapOverrides?.territories ?? this.worldMap.getTerritories()
+    if (!mapOverrides || !Array.isArray(mapOverrides.territories)) {
+      throw new Error('Map data not provided to GameEngine')
+    }
+    const baseTerritories = mapOverrides.territories
     // Ensure we operate on a fresh copy
     const territories = baseTerritories.map((t) => ({
       id: t.id,
@@ -55,9 +56,7 @@ export class GameEngine {
       continentBonuses:
         gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
           ? gameConfig.continentBonuses
-          : mapOverrides?.continentBonuses && mapOverrides.continentBonuses.length > 0
-            ? mapOverrides.continentBonuses
-            : this.worldMap.getContinentBonuses(),
+          : mapOverrides.continentBonuses,
     }
 
     return {

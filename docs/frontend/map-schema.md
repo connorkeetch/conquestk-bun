@@ -4,7 +4,7 @@
 Maps should be named: `territories-[mapname].json`
 
 Examples:
-- `shared/maps/territories-classic.json` - Classic Risk world map fallback bundled with the backend
+// All maps are stored in the database and served via `/api/maps`
 
 ## Map Structure
 
@@ -52,11 +52,7 @@ Each map JSON file should follow this schema:
 
 ## Current Maps
 
-### territories-classic.json
-- Classic Risk world map
-- 6 continents (North America, South America, Europe, Africa, Asia, Australia)
-- 42 territories
-- Used by: RiskGameBoard component
+// Classic JSON fallback removed. Use DB maps exclusively.
 
 ### Database-backed Maps
 - Primary source of truth

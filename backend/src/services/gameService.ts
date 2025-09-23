@@ -147,7 +147,6 @@ export class GameService {
       numberOfTeams: null as number | null,
       teamAssignments: undefined as Record<number, string[]> | undefined,
       maxPlayers: 6,
-      mapId: 'classic',
       gameMode: 'standard',
     }
 
@@ -174,32 +173,35 @@ export class GameService {
       config.numberOfTeams = null
     }
 
-    // Load map data from DB when a custom map is selected
-    let overrides: { territories?: Territory[]; continentBonuses?: ContinentBonus[] } | undefined
-    if (config.mapId && config.mapId !== 'classic') {
-      try {
-        const loaded = await loadMapForEngine(config.mapId)
-        overrides = { territories: loaded.territories, continentBonuses: loaded.continentBonuses }
-        // Ensure continent bonuses are present in config (for UI and calculations)
-        if (!config.continentBonuses || config.continentBonuses.length === 0) {
-          config.continentBonuses = loaded.continentBonuses
-        }
-      } catch (error) {
-        logger.warn('Falling back to classic map due to DB map load failure', {
-          mapId: config.mapId,
-          error: error instanceof Error ? error.message : error,
-        })
-      }
+    if (!config.mapId) {
+      throw new Error('No map selected for game')
     }
 
-    const gameState = this.gameEngine.initializeGame(roomId, players, config, overrides)
+    // Validate map before loading into engine
+    const validation = await mapService.validateMapPlayable(config.mapId)
+    if (!validation.isValid) {
+      const msg = `Selected map failed validation: ${validation.errors.join('; ')}`
+      logger.warn(msg, { mapId: config.mapId })
+      throw new Error(msg)
+    }
+
+    const loaded = await loadMapForEngine(config.mapId)
+    // Ensure continent bonuses are present in config (for UI and calculations)
+    if (!config.continentBonuses || config.continentBonuses.length === 0) {
+      config.continentBonuses = loaded.continentBonuses
+    }
+
+    const gameState = this.gameEngine.initializeGame(roomId, players, config, {
+      territories: loaded.territories,
+      continentBonuses: loaded.continentBonuses,
+    })
 
     // Initialize territory modifiers if enabled
     if (config.useTerritoryModifiers) {
       const territoryIds = gameState.board.map((t) => t.id)
       await territoryModifierService.initializeGameModifiers(
         roomId,
-        config.mapId || 'classic',
+        config.mapId,
         config.modifierDistribution || 'balanced',
         territoryIds,
       )
