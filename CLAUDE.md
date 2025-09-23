@@ -77,6 +77,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - Routes are mounted under `/api`; add to existing routers before creating new ones.
 - Use `backend/src/middleware/auth.ts` for user context instead of decoding JWTs manually.
 - Follow logging conventions in `backend/src/utils/logger.ts`.
+- Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/socket/gameHandlers.ts`.
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
 
@@ -86,6 +87,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - API calls flow through `frontend/src/services/api.ts` or high-level game/map helpers.
 - Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
 - The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
+- Resolve CDN assets through `resolveAssetPath` (`frontend/src/utils/assets.ts`) so updating `VITE_ASSET_BASE_URL` swaps environments without touching call sites.
 
 ## Database & admin utilities
 - Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
@@ -138,6 +140,18 @@ REQUIRE_EMAIL_VERIFICATION=true
 ```
 
 Set `PUBLIC_ASSET_BASE_URL` in `backend/.env` when the frontend runs on a different origin (e.g. staging) so map asset URLs resolve correctly.
+
+### Asset storage (Cloudflare R2)
+```bash
+ASSET_BUCKET=conquestk
+ASSET_ENDPOINT=https://84ad0307fb40b859de005c18c9c76f2a.r2.cloudflarestorage.com
+ASSET_ACCESS_KEY_ID=...
+ASSET_SECRET_ACCESS_KEY=...
+ASSET_REGION=auto
+PUBLIC_ASSET_BASE_URL=https://assets.conquestk.com
+VITE_ASSET_BASE_URL=https://assets.conquestk.com
+```
+If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**` and assets resolve from `/uploads/...`.
 
 ## Syncing this guide
 - `AGENTS.md` and `CLAUDE.md` carry the same content; review both after every edit.

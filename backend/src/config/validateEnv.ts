@@ -159,6 +159,39 @@ const ENV_VARIABLES: EnvVariable[] = [
     description: 'Admin email for notifications',
     validator: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
   },
+
+  // Asset storage (Cloudflare R2 / S3-compatible)
+  {
+    name: 'ASSET_BUCKET',
+    required: false,
+    description: 'S3 bucket name for asset storage (e.g. Cloudflare R2)',
+  },
+  {
+    name: 'ASSET_ENDPOINT',
+    required: false,
+    description: 'Custom endpoint for the S3-compatible storage',
+  },
+  {
+    name: 'ASSET_ACCESS_KEY_ID',
+    required: false,
+    description: 'Access key for the asset storage bucket',
+  },
+  {
+    name: 'ASSET_SECRET_ACCESS_KEY',
+    required: false,
+    description: 'Secret key for the asset storage bucket',
+  },
+  {
+    name: 'ASSET_REGION',
+    required: false,
+    defaultValue: 'auto',
+    description: 'Region/placement hint for the S3-compatible storage',
+  },
+  {
+    name: 'PUBLIC_ASSET_BASE_URL',
+    required: false,
+    description: 'Public base URL for serving uploaded assets',
+  },
 ]
 
 export function validateEnvironmentVariables(): void {
@@ -230,6 +263,26 @@ export function validateEnvironmentVariables(): void {
         warnings.push(`⚠️  Weak value for ${envVar.name} - please use a strong secret`)
       }
     }
+  }
+
+  const assetKeys = [
+    'ASSET_BUCKET',
+    'ASSET_ENDPOINT',
+    'ASSET_ACCESS_KEY_ID',
+    'ASSET_SECRET_ACCESS_KEY',
+  ]
+
+  const providedAssetKeys = assetKeys.filter((key) => process.env[key])
+  if (providedAssetKeys.length > 0 && providedAssetKeys.length < assetKeys.length) {
+    errors.push(
+      'Asset storage configuration is incomplete. Provide ASSET_BUCKET, ASSET_ENDPOINT, ASSET_ACCESS_KEY_ID, and ASSET_SECRET_ACCESS_KEY, or remove them to fall back to local storage.',
+    )
+  }
+
+  if (providedAssetKeys.length === assetKeys.length && !process.env.PUBLIC_ASSET_BASE_URL) {
+    warnings.push(
+      'PUBLIC_ASSET_BASE_URL is recommended when remote asset storage is configured to ensure URLs resolve correctly.',
+    )
   }
 
   // Check for other production/staging-specific warnings

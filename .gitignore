@@ -179,3 +179,7 @@ tests/*.spec.ts
 *.download
 *.downloaded
 *.partial
+
+# Python virtual environments
+.venv/
+.venv-*/

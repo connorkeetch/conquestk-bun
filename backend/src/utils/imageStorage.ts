@@ -1,8 +1,7 @@
-import { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
 import sizeOf from 'image-size'
+import { getPublicAssetUrl, uploadAsset } from './assetStorage'
 import { logger } from './logger'
-import { getMapUploadsDir } from './mapUploads'
 
 interface StoreImageOptions {
   mimeType?: string
@@ -15,6 +14,7 @@ export interface StoredImageInfo {
   relativeUrl: string
   width: number
   height: number
+  storageKey: string
 }
 
 const mimeToExtension = (mimeType: string | undefined): string => {
@@ -36,6 +36,20 @@ export const storeBase64Image = async (
   options: StoreImageOptions = {},
 ): Promise<StoredImageInfo> => {
   const buffer = Buffer.from(base64Data, 'base64')
+  return storeImageBuffer(buffer, options)
+}
+
+const buildStorageKey = (filename: string, subdirectory?: string): string => {
+  const segments = ['maps']
+  if (subdirectory) segments.push(subdirectory)
+  segments.push(filename)
+  return segments.join('/')
+}
+
+export const storeImageBuffer = async (
+  buffer: Buffer,
+  options: StoreImageOptions = {},
+): Promise<StoredImageInfo> => {
   const extension = options.preferredFilename
     ? path.extname(options.preferredFilename) || mimeToExtension(options.mimeType)
     : mimeToExtension(options.mimeType)
@@ -44,13 +58,14 @@ export const storeBase64Image = async (
     ? `${Date.now()}-${Math.random().toString(36).substring(7)}-${options.preferredFilename.replace(/\s+/g, '-')}`
     : `map-${Date.now()}-${Math.random().toString(36).substring(7)}${extension}`
 
-  const rootDir = getMapUploadsDir()
-  const targetDir = options.subdirectory ? path.join(rootDir, options.subdirectory) : rootDir
+  const storageKey = buildStorageKey(uniqueFilename, options.subdirectory)
 
-  await fsPromises.mkdir(targetDir, { recursive: true })
-
-  const filepath = path.join(targetDir, uniqueFilename)
-  await fsPromises.writeFile(filepath, buffer)
+  await uploadAsset({
+    key: storageKey,
+    body: buffer,
+    contentType: options.mimeType,
+    cacheControl: 'public, max-age=31536000, immutable',
+  })
 
   let width = 800
   let height = 600
@@ -62,12 +77,13 @@ export const storeBase64Image = async (
     logger.warn('Failed to read image dimensions', dimensionError)
   }
 
-  const relativeUrl = `/uploads/maps${options.subdirectory ? `/${options.subdirectory}` : ''}/${uniqueFilename}`
+  const relativeUrl = getPublicAssetUrl(storageKey)
 
   return {
     filename: uniqueFilename,
     relativeUrl,
     width,
     height,
+    storageKey,
   }
 }

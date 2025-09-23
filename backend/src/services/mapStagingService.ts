@@ -1,7 +1,7 @@
-import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import sharp from 'sharp'
 import { query } from '../config/database'
+import { assetExists, deleteAsset, uploadAsset } from '../utils/assetStorage'
 import { logger } from '../utils/logger'
 import { adminService } from './adminService'
 import notificationService from './notificationService'
@@ -49,7 +49,6 @@ interface UserQuotaSummary {
 }
 
 export class MapStagingService {
-  private readonly UPLOADS_DIR: string
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
   private readonly ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   private readonly NON_ADMIN_QUOTA = 5
@@ -59,22 +58,8 @@ export class MapStagingService {
     process.env.MAP_ASSET_PURGE_ALERT_THRESHOLD ?? 3,
   )
 
-  constructor() {
-    const configuredDir = process.env.MAP_UPLOADS_DIR
-    this.UPLOADS_DIR = configuredDir
-      ? path.resolve(configuredDir)
-      : path.join(__dirname, '../../uploads/maps/staging')
-
-    // Ensure uploads directory exists
-    this.ensureUploadsDirectory()
-  }
-
-  private async ensureUploadsDirectory() {
-    try {
-      await fs.mkdir(this.UPLOADS_DIR, { recursive: true })
-    } catch (error) {
-      logger.error('Error creating uploads directory:', error)
-    }
+  private buildStorageKey(filename: string): string {
+    return `maps/staging/${filename}`
   }
 
   /**
@@ -150,8 +135,6 @@ export class MapStagingService {
       const randomString = Math.random().toString(36).substring(7)
       const extension = path.extname(file.originalname)
       const filename = `map-${timestamp}-${randomString}${extension}`
-      const filepath = path.join(this.UPLOADS_DIR, filename)
-
       // Process image with sharp
       const metadata = await sharp(file.buffer).metadata()
 
@@ -167,8 +150,13 @@ export class MapStagingService {
           .toBuffer()
       }
 
-      // Save to disk
-      await fs.writeFile(filepath, processedBuffer)
+      const storageKey = this.buildStorageKey(filename)
+      const uploadResult = await uploadAsset({
+        key: storageKey,
+        body: processedBuffer,
+        contentType: file.mimetype,
+        cacheControl: 'public, max-age=3600',
+      })
 
       // Create database entry
       const result = await query(
@@ -181,7 +169,7 @@ export class MapStagingService {
           userId,
           filename,
           file.originalname,
-          `/uploads/maps/staging/${filename}`,
+          uploadResult.url,
           processedBuffer.length,
           metadata.width,
           metadata.height,
@@ -232,38 +220,6 @@ export class MapStagingService {
       return result.rows as StagingImage[]
     } catch (error) {
       logger.error('Error fetching all staging images:', error)
-      throw error
-    }
-  }
-
-  private getAbsolutePath(filename: string): string {
-    if (path.isAbsolute(filename)) {
-      return filename
-    }
-    return path.join(this.UPLOADS_DIR, filename)
-  }
-
-  private async deleteFileIfExists(filePath: string): Promise<void> {
-    try {
-      await fs.access(filePath)
-      await fs.unlink(filePath)
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-        // File already removed - treat as success
-        return
-      }
-      throw error
-    }
-  }
-
-  private async fileExists(filePath: string): Promise<boolean> {
-    try {
-      await fs.access(filePath)
-      return true
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-        return false
-      }
       throw error
     }
   }
@@ -387,9 +343,9 @@ export class MapStagingService {
         (row as unknown as { file_size?: number | string }).file_size
       const fileSize = typeof fileSizeRaw === 'number' ? fileSizeRaw : Number(fileSizeRaw ?? 0)
 
-      const filePath = this.getAbsolutePath(fileName)
       const currentAttempts = row.deletion_attempts ?? 0
       const nextAttempts = currentAttempts + 1
+      const storageKey = this.buildStorageKey(fileName)
 
       if (dryRun) {
         purgedCount += 1
@@ -398,7 +354,7 @@ export class MapStagingService {
       }
 
       try {
-        await this.deleteFileIfExists(filePath)
+        await deleteAsset(storageKey)
 
         purgedCount += 1
         bytesPurged += fileSize
@@ -502,8 +458,8 @@ export class MapStagingService {
     }
 
     const fileName = (row as unknown as { filename?: string }).filename ?? row.filename
-    const filePath = this.getAbsolutePath(fileName)
-    const exists = await this.fileExists(filePath)
+    const storageKey = this.buildStorageKey(fileName)
+    const exists = await assetExists(storageKey)
     if (!exists) {
       throw new Error('The original file has already been purged and cannot be reclaimed')
     }
