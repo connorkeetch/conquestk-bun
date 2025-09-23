@@ -23,6 +23,10 @@ export interface User {
   adminRoles: string[]
   createdAt: string
   lastLogin?: string
+  emailVerified?: boolean
+  isBetaUser?: boolean
+  preferredLanguage?: string | null
+  timezone?: string | null
 }
 
 export interface ContentApprovalItem {

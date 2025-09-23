@@ -109,6 +109,10 @@ export interface AdminUserSummary {
   premiumExpiresAt?: Date | string | null
   gamesPlayed: number
   elo: number
+  emailVerified: boolean
+  isBetaUser: boolean
+  preferredLanguage?: string | null
+  timezone?: string | null
 }
 
 export interface ContentApprovalQueueItem {
@@ -141,6 +145,10 @@ type AdminUserQueryRow = {
   premiumExpiresAt: Date | string | null
   gamesPlayed: string | number | null
   elo: string | number | null
+  isBetaUser: boolean | null
+  emailVerified: boolean | null
+  preferredLanguage: string | null
+  timezone: string | null
 }
 
 type ContentApprovalRow = {
@@ -322,6 +330,10 @@ export class AdminService {
         u.vip_granted_at as "vipGrantedAt",
         u.premium_tier as "premiumTier",
         u.premium_expires_at as "premiumExpiresAt",
+        u.is_beta_user as "isBetaUser",
+        u.email_verified as "emailVerified",
+        u.preferred_language as "preferredLanguage",
+        u.timezone as "timezone",
         COALESCE(ps.games_played, 0) as "gamesPlayed",
         COALESCE(u.skill_rating, 1000) as "elo",
         COALESCE(uas.status, 'active') as status,
@@ -336,6 +348,7 @@ export class AdminService {
       GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, 
                u.is_admin, u.is_vip, u.vip_reason, u.vip_granted_at, 
                u.premium_tier, u.premium_expires_at,
+               u.is_beta_user, u.email_verified, u.preferred_language, u.timezone,
                ps.games_played,
                u.skill_rating,
                uas.status, uas.reason
@@ -363,6 +376,10 @@ export class AdminService {
       premiumExpiresAt: row.premiumExpiresAt,
       gamesPlayed: Number.parseInt(String(row.gamesPlayed ?? '0'), 10),
       elo: Number.parseInt(String(row.elo ?? '1000'), 10),
+      emailVerified: Boolean(row.emailVerified),
+      isBetaUser: Boolean(row.isBetaUser),
+      preferredLanguage: row.preferredLanguage,
+      timezone: row.timezone,
     }))
 
     return { users, total }
