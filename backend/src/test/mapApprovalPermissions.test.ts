@@ -67,7 +67,8 @@ jest.mock(
       (permission: string) =>
       (req: express.Request, res: express.Response, next: express.NextFunction) => {
         const permissionsHeader = req.headers['x-test-permissions']
-        const permissions = typeof permissionsHeader === 'string' ? permissionsHeader.split(',') : []
+        const permissions =
+          typeof permissionsHeader === 'string' ? permissionsHeader.split(',') : []
 
         if (permissions.includes(permission) || permissions.includes('*')) {
           next()

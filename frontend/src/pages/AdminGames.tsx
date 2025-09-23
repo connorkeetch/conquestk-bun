@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { adminService } from '../services/adminService'
 
 interface Game {
@@ -53,7 +53,7 @@ export default function AdminGames() {
   const [actionNotes, setActionNotes] = useState('')
   const actionNotesId = 'admin-games-action-notes'
 
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -74,11 +74,11 @@ export default function AdminGames() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, limit, statusFilter, searchTerm])
 
   useEffect(() => {
-    loadGames()
-  }, [currentPage, searchTerm, statusFilter])
+    void loadGames()
+  }, [loadGames])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
