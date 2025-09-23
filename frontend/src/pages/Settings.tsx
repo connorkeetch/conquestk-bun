@@ -25,6 +25,7 @@ import preferencesService from '../services/preferencesService'
 import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,
+  type ColorTheme,
   type DMPermission,
   type NotificationPrefs,
   resetSettings,
@@ -92,18 +93,9 @@ function ColorDropdown({
             {COLOR_HEX_VALUES[value]?.includes('gradient') && (
               <defs>
                 <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop
-                    offset="0%"
-                    style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }}
-                  />
-                  <stop
-                    offset="50%"
-                    style={{ stopColor: value === 'rainbow' ? '#00ff00' : '#00ffff' }}
-                  />
-                  <stop
-                    offset="100%"
-                    style={{ stopColor: value === 'rainbow' ? '#0000ff' : '#ffff00' }}
-                  />
+                      <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
+                      <stop offset="50%" style={{ stopColor: '#00ffff' }} />
+                      <stop offset="100%" style={{ stopColor: '#ffff00' }} />
                 </linearGradient>
               </defs>
             )}
@@ -192,18 +184,9 @@ function ColorDropdown({
                           x2="100%"
                           y2="100%"
                         >
-                          <stop
-                            offset="0%"
-                            style={{ stopColor: color === 'rainbow' ? '#ff0000' : '#ff00ff' }}
-                          />
-                          <stop
-                            offset="50%"
-                            style={{ stopColor: color === 'rainbow' ? '#00ff00' : '#00ffff' }}
-                          />
-                          <stop
-                            offset="100%"
-                            style={{ stopColor: color === 'rainbow' ? '#0000ff' : '#ffff00' }}
-                          />
+                          <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
+                          <stop offset="50%" style={{ stopColor: '#00ffff' }} />
+                          <stop offset="100%" style={{ stopColor: '#ffff00' }} />
                         </linearGradient>
                       </defs>
                     )}
@@ -346,6 +329,22 @@ function ColorDropdown({
         </div>
       )}
     </div>
+  )
+}
+
+const isDMPermissionValue = (value: unknown): value is DMPermission =>
+  value === 'everyone' || value === 'friends' || value === 'nobody'
+
+const isNotificationPrefs = (value: unknown): value is NotificationPrefs => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const prefs = value as Partial<NotificationPrefs>
+  return (
+    typeof prefs.turnNotifications === 'object' && prefs.turnNotifications !== null &&
+    typeof prefs.gameInvites === 'object' && prefs.gameInvites !== null &&
+    typeof prefs.directMessages === 'object' && prefs.directMessages !== null
   )
 }
 
@@ -534,6 +533,10 @@ export default function Settings() {
     try {
       // For theme specifically, use the preferences API
       if (settingKey === 'theme') {
+        if (typeof value !== 'string') {
+          return
+        }
+
         const success = await preferencesService.updateTheme(value)
         if (success) {
           logger.info('Theme persisted to database', value)
@@ -547,16 +550,32 @@ export default function Settings() {
       // Map Redux setting keys to server setting keys
       switch (settingKey) {
         case 'preferredColor':
-          settingsToSave.preferredColor = value
+          if (typeof value === 'string') {
+            settingsToSave.preferredColor = value
+          } else {
+            return
+          }
           break
         case 'showOnlineStatus':
-          settingsToSave.showOnlineStatus = value
+          if (typeof value === 'boolean') {
+            settingsToSave.showOnlineStatus = value
+          } else {
+            return
+          }
           break
         case 'directMessages':
-          settingsToSave.directMessages = value
+          if (isDMPermissionValue(value)) {
+            settingsToSave.directMessages = value
+          } else {
+            return
+          }
           break
         case 'notifications':
-          settingsToSave.notifications = value
+          if (isNotificationPrefs(value)) {
+            settingsToSave.notifications = value
+          } else {
+            return
+          }
           break
         default:
           // Don't persist other settings (like audio settings)
@@ -613,7 +632,7 @@ export default function Settings() {
             <label className="toggle">
               <input
                 type="checkbox"
-                checked={setting.defaultValue}
+                checked={Boolean(setting.defaultValue)}
                 disabled={isDisabled}
                 onChange={(e) => {
                   if (!isDisabled && setting.onChange) {
@@ -633,7 +652,7 @@ export default function Settings() {
                 isDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               disabled={isDisabled}
-              value={setting.defaultValue}
+              value={typeof setting.defaultValue === 'string' ? setting.defaultValue : ''}
               onChange={(e) => {
                 if (!isDisabled && setting.onChange) {
                   setting.onChange(e.target.value)
@@ -655,7 +674,7 @@ export default function Settings() {
                 type="range"
                 min="0"
                 max="100"
-                value={setting.defaultValue}
+                value={typeof setting.defaultValue === 'number' ? setting.defaultValue : 0}
                 disabled={isDisabled}
                 onChange={(e) => {
                   if (!isDisabled && setting.onChange) {
@@ -664,7 +683,9 @@ export default function Settings() {
                 }}
                 className={`w-full ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
-              <div className="text-xs text-muted text-center mt-1">{setting.defaultValue}%</div>
+              <div className="text-xs text-muted text-center mt-1">
+                {typeof setting.defaultValue === 'number' ? setting.defaultValue : 0}%
+              </div>
             </div>
           )
 
@@ -702,7 +723,9 @@ export default function Settings() {
               {!isEditing ? (
                 <>
                   <span className="text-muted text-sm">
-                    {fieldValues[setting.id] || setting.defaultValue || 'Not set'}
+                    {fieldValues[setting.id] ||
+                      (typeof setting.defaultValue === 'string' ? setting.defaultValue : '') ||
+                      'Not set'}
                   </span>
                   {!isDisabled && (
                     <button
@@ -711,7 +734,8 @@ export default function Settings() {
                         setEditingField(setting.id)
                         setFieldValues((prev) => ({
                           ...prev,
-                          [setting.id]: setting.defaultValue || '',
+                          [setting.id]:
+                            typeof setting.defaultValue === 'string' ? setting.defaultValue : '',
                         }))
                         // Reset username availability when starting to edit
                         if (isUsername) {
@@ -1176,9 +1200,14 @@ export default function Settings() {
             type: 'custom',
             isWorking: true,
             defaultValue: settings.game?.preferredColor || '#DC2626',
-            onChange: async (value: PlayerColor) => {
-              dispatch(setPreferredColor(value))
-              await persistSetting('preferredColor', value)
+            onChange: (value) => {
+              if (typeof value !== 'string') {
+                return
+              }
+
+              const color = value as PlayerColor
+              dispatch(setPreferredColor(color))
+              void persistSetting('preferredColor', color)
             },
           },
         ]
@@ -1192,7 +1221,11 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: audioPrefs.enabled,
-            onChange: (value: boolean) => {
+            onChange: (value) => {
+              if (typeof value !== 'boolean') {
+                return
+              }
+
               audioService.setEnabled(value)
               setAudioPrefs(audioService.getPreferences())
             },
@@ -1204,7 +1237,11 @@ export default function Settings() {
             type: 'range',
             isWorking: true,
             defaultValue: audioPrefs.masterVolume,
-            onChange: (value: number) => {
+            onChange: (value) => {
+              if (typeof value !== 'number') {
+                return
+              }
+
               audioService.setVolume('master', value)
               setAudioPrefs(audioService.getPreferences())
             },
@@ -1216,7 +1253,11 @@ export default function Settings() {
             type: 'range',
             isWorking: true,
             defaultValue: audioPrefs.effectsVolume,
-            onChange: (value: number) => {
+            onChange: (value) => {
+              if (typeof value !== 'number') {
+                return
+              }
+
               audioService.setVolume('effects', value)
               setAudioPrefs(audioService.getPreferences())
             },
@@ -1228,7 +1269,11 @@ export default function Settings() {
             type: 'range',
             isWorking: true,
             defaultValue: audioPrefs.musicVolume,
-            onChange: (value: number) => {
+            onChange: (value) => {
+              if (typeof value !== 'number') {
+                return
+              }
+
               audioService.setVolume('music', value)
               setAudioPrefs(audioService.getPreferences())
             },
@@ -1264,17 +1309,17 @@ export default function Settings() {
             type: 'color-theme-selector',
             isWorking: true,
             defaultValue: currentColorTheme,
-            onChange: async (value: string) => {
-              // Update local state for immediate UI feedback
-              setCurrentColorTheme(value)
-              // Apply theme immediately through centralized system
-              applyTheme(value)
-              // Store theme preference through centralized system
-              storeTheme(value)
-              // Dispatch Redux action
-              dispatch(setColorTheme(value))
-              // Persist to server
-              await persistSetting('theme', value)
+            onChange: (value) => {
+              if (typeof value !== 'string') {
+                return
+              }
+
+              const theme = value as ColorTheme
+              setCurrentColorTheme(theme)
+              applyTheme(theme)
+              storeTheme(theme)
+              dispatch(setColorTheme(theme))
+              void persistSetting('theme', theme)
             },
           },
           {
@@ -1316,41 +1361,51 @@ export default function Settings() {
             disabled,
             disabledReason,
             statusMessage: pushStatusMessage ?? undefined,
-            onChange: async (value: boolean) => {
-              setPushStatusMessage(null)
-              setPushOperationInFlight(true)
-              try {
-                if (value) {
-                  const result = await pushNotificationService.subscribe()
-                  setNotificationStatus(pushNotificationService.getPermissionStatus())
-                  setPushBackendEnabled(pushNotificationService.isBackendEnabled())
-                  if (result.success) {
-                    setIsSubscribed(true)
-                  } else {
-                    setIsSubscribed(false)
-                    setPushStatusMessage(result.message || 'Unable to enable push notifications')
-                  }
-                } else {
-                  const result = await pushNotificationService.unsubscribe()
-                  setNotificationStatus(pushNotificationService.getPermissionStatus())
-                  setPushBackendEnabled(pushNotificationService.isBackendEnabled())
-                  if (result.success) {
-                    setIsSubscribed(false)
-                  } else {
-                    setIsSubscribed(true)
-                    setPushStatusMessage(result.message || 'Unable to disable push notifications')
-                  }
-                }
-              } catch (error) {
-                logger.error('Push notification toggle failed', error)
-                const message =
-                  error instanceof Error ? error.message : 'Unexpected push notification error'
-                setPushStatusMessage(message)
-                setIsSubscribed(pushNotificationService.isEnabled())
-                setNotificationStatus(pushNotificationService.getPermissionStatus())
-              } finally {
-                setPushOperationInFlight(false)
+            onChange: (value) => {
+              if (typeof value !== 'boolean') {
+                return
               }
+
+              void (async () => {
+                setPushStatusMessage(null)
+                setPushOperationInFlight(true)
+                try {
+                  if (value) {
+                    const result = await pushNotificationService.subscribe()
+                    setNotificationStatus(pushNotificationService.getPermissionStatus())
+                    setPushBackendEnabled(pushNotificationService.isBackendEnabled())
+                    if (result.success) {
+                      setIsSubscribed(true)
+                    } else {
+                      setIsSubscribed(false)
+                      setPushStatusMessage(
+                        result.message || 'Unable to enable push notifications',
+                      )
+                    }
+                  } else {
+                    const result = await pushNotificationService.unsubscribe()
+                    setNotificationStatus(pushNotificationService.getPermissionStatus())
+                    setPushBackendEnabled(pushNotificationService.isBackendEnabled())
+                    if (result.success) {
+                      setIsSubscribed(false)
+                    } else {
+                      setIsSubscribed(true)
+                      setPushStatusMessage(
+                        result.message || 'Unable to disable push notifications',
+                      )
+                    }
+                  }
+                } catch (error) {
+                  logger.error('Push notification toggle failed', error)
+                  const message =
+                    error instanceof Error ? error.message : 'Unexpected push notification error'
+                  setPushStatusMessage(message)
+                  setIsSubscribed(pushNotificationService.isEnabled())
+                  setNotificationStatus(pushNotificationService.getPermissionStatus())
+                } finally {
+                  setPushOperationInFlight(false)
+                }
+              })()
             },
           },
           {
@@ -1433,9 +1488,13 @@ export default function Settings() {
             type: 'toggle',
             isWorking: true,
             defaultValue: settings.privacy?.showOnlineStatus ?? true,
-            onChange: async (value: boolean) => {
+            onChange: (value) => {
+              if (typeof value !== 'boolean') {
+                return
+              }
+
               dispatch(setShowOnlineStatus(value))
-              await persistSetting('showOnlineStatus', value)
+              void persistSetting('showOnlineStatus', value)
             },
           },
           {
@@ -1445,9 +1504,13 @@ export default function Settings() {
             type: 'select',
             isWorking: true,
             defaultValue: settings.privacy?.directMessages ?? 'friends',
-            onChange: async (value: DMPermission) => {
+            onChange: (value) => {
+              if (!isDMPermissionValue(value)) {
+                return
+              }
+
               dispatch(setDirectMessages(value))
-              await persistSetting('directMessages', value)
+              void persistSetting('directMessages', value)
             },
             options: [
               { value: 'everyone', label: 'Everyone' },
@@ -1590,7 +1653,7 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={settings.notifications?.[notification.key]?.browser ?? false}
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const newPref = {
                           type: notification.key,
                           channel: 'browser' as const,
@@ -1598,13 +1661,12 @@ export default function Settings() {
                         }
                         dispatch(setNotificationPref(newPref))
 
-                        // Persist notification preferences
                         const updatedNotifications = { ...settings.notifications }
                         if (!updatedNotifications[notification.key]) {
                           updatedNotifications[notification.key] = { browser: false, email: false }
                         }
                         updatedNotifications[notification.key].browser = e.target.checked
-                        await persistSetting('notifications', updatedNotifications)
+                        void persistSetting('notifications', updatedNotifications)
                       }}
                     />
                     <span className="slider"></span>
@@ -1615,7 +1677,7 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={settings.notifications?.[notification.key]?.email ?? false}
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const newPref = {
                           type: notification.key,
                           channel: 'email' as const,
@@ -1623,13 +1685,12 @@ export default function Settings() {
                         }
                         dispatch(setNotificationPref(newPref))
 
-                        // Persist notification preferences
                         const updatedNotifications = { ...settings.notifications }
                         if (!updatedNotifications[notification.key]) {
                           updatedNotifications[notification.key] = { browser: false, email: false }
                         }
                         updatedNotifications[notification.key].email = e.target.checked
-                        await persistSetting('notifications', updatedNotifications)
+                        void persistSetting('notifications', updatedNotifications)
                       }}
                     />
                     <span className="slider"></span>

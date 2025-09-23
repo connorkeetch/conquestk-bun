@@ -113,7 +113,9 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
       setError(null)
 
       const response = await gameService.getPublicGames()
-      const rawRooms = Array.isArray(response.rooms) ? response.rooms : []
+      const rawRooms = Array.isArray(response.rooms)
+        ? (response.rooms as Array<GameRoom & { is_ranked?: boolean; current_players?: number }>)
+        : []
       const normalized = rawRooms.map((room) => normalizeRoom(room))
       setRooms(normalized)
     } catch (err) {

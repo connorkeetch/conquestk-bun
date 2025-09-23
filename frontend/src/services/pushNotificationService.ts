@@ -111,9 +111,10 @@ class PushNotificationService {
       }
 
       const convertedVapidKey = this.urlBase64ToUint8Array(vapidKey)
+      const applicationServerKey = convertedVapidKey.buffer as ArrayBuffer
       const newSubscription = await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey,
+        applicationServerKey,
       })
 
       this.subscription = newSubscription
@@ -165,9 +166,16 @@ class PushNotificationService {
       body: 'This is a test notification!',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      vibrate: [100, 50, 100],
       tag: 'test-notification',
     })
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate?.([100, 50, 100])
+      } catch (_error) {
+        // ignore vibration errors
+      }
+    }
 
     notification.onclick = () => {
       window.focus()

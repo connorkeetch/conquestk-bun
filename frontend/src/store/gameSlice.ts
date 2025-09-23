@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { gameService } from '../services/gameService'
-import type { GameDelta } from '../types/deltaUpdates'
+import type { BattleResultDelta, GameDelta } from '../types/deltaUpdates'
 import type { BattleResult, GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
@@ -114,6 +114,37 @@ const calculateValidTargets = (
 
     default:
       return []
+  }
+}
+
+const adaptBattleResult = (
+  result: BattleResultDelta['battleResult'],
+  gameState: GameState,
+): BattleResult => {
+  const fromDetails = gameState.board.find((territory) => territory.id === result.fromTerritory.id)
+  const toDetails = gameState.board.find((territory) => territory.id === result.toTerritory.id)
+
+  return {
+    attackerDice: result.attackerDice,
+    defenderDice: result.defenderDice,
+    attackerLosses: result.attackerLosses,
+    defenderLosses: result.defenderLosses,
+    conquered: result.conquered,
+    fromTerritory: {
+      id: result.fromTerritory.id,
+      name: fromDetails?.name ?? result.fromTerritory.id,
+      armies: result.fromTerritory.armies,
+      ownerId: fromDetails?.ownerId ?? null,
+    },
+    toTerritory: {
+      id: result.toTerritory.id,
+      name: toDetails?.name ?? result.toTerritory.id,
+      armies: result.toTerritory.armies,
+      ownerId: toDetails?.ownerId ?? result.toTerritory.ownerId ?? null,
+    },
+    capitalElimination: result.capitalElimination,
+    gameEnded: result.gameEnded,
+    gameState: result.gameState as GameState | undefined,
   }
 }
 
@@ -323,7 +354,9 @@ const gameSlice = createSlice({
         }
 
         case 'BATTLE_RESULT': {
-          state.battleResult = delta.battleResult
+          if (state.currentGame) {
+            state.battleResult = adaptBattleResult(delta.battleResult, state.currentGame)
+          }
           // Territory updates are handled by separate TERRITORY_UPDATE deltas
           break
         }

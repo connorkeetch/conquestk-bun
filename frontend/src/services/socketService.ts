@@ -1,3 +1,4 @@
+import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
 import {
@@ -18,12 +19,16 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
+import type { BattleResult, GameState } from '../types/game'
+import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
 
+type RoomLifecyclePayload = Parameters<typeof applyLifecycleUpdate>[0]
+
 class SocketService {
-  private socket: Socket | null = null
+  private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
 
   connect() {
     if (this.socket?.connected) {
@@ -38,7 +43,7 @@ class SocketService {
       import.meta.env.VITE_SOCKET_URL ||
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
-    this.socket = io(socketUrl, {
+    this.socket = io<ServerToClientEvents, ClientToServerEvents>(socketUrl, {
       auth: {
         token,
       },
@@ -62,8 +67,8 @@ class SocketService {
     this.socket?.emit('leave-room', roomId)
   }
 
-  sendGameAction(action: unknown) {
-    this.socket?.emit('game-action', action)
+  sendGameAction(data: Parameters<ClientToServerEvents['game-action']>[0]) {
+    this.socket?.emit('game-action', data)
   }
 
   // Game-specific emit methods
@@ -92,15 +97,15 @@ class SocketService {
   }
 
   // Chat methods
-  sendChatMessage(data: unknown) {
+  sendChatMessage(data: Parameters<ClientToServerEvents['chat:send']>[0]) {
     this.socket?.emit('chat:send', data)
   }
 
-  loadChatHistory(data: unknown) {
+  loadChatHistory(data: Parameters<ClientToServerEvents['chat:load-history']>[0]) {
     this.socket?.emit('chat:load-history', data)
   }
 
-  markChatAsRead(data: unknown) {
+  markChatAsRead(data: Parameters<ClientToServerEvents['chat:mark-read']>[0]) {
     this.socket?.emit('chat:mark-read', data)
   }
 
@@ -108,16 +113,16 @@ class SocketService {
     this.socket?.emit('chat:get-unread')
   }
 
-  sendTypingIndicator(data: unknown) {
+  sendTypingIndicator(data: Parameters<ClientToServerEvents['chat:typing']>[0]) {
     this.socket?.emit('chat:typing', data)
   }
 
   // Generic on/off for chat events
-  on(event: string, handler: (...args: unknown[]) => void) {
+  on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
     this.socket?.on(event, handler)
   }
 
-  off(event: string, handler: (...args: unknown[]) => void) {
+  off<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
     this.socket?.off(event, handler)
   }
 
@@ -137,54 +142,59 @@ class SocketService {
     })
 
     this.socket.on('player-joined', (data) => {
-      if (!data?.roomId || !data?.player) {
+      const payload = data as Parameters<ServerToClientEvents['player-joined']>[0]
+
+      if (!payload?.roomId || !payload?.player) {
         return
       }
 
       store.dispatch(
         addPlayerToRoom({
-          roomId: data.roomId,
-          player: data.player,
+          roomId: payload.roomId,
+          player: payload.player,
         }),
       )
     })
 
     this.socket.on('player-left', (data) => {
-      if (!data?.roomId || !data?.playerId) {
+      const payload = data as Parameters<ServerToClientEvents['player-left']>[0]
+
+      if (!payload?.roomId || !payload?.playerId) {
         return
       }
 
       store.dispatch(
         removePlayerFromRoom({
-          roomId: data.roomId,
-          playerId: data.playerId,
+          roomId: payload.roomId,
+          playerId: payload.playerId,
         }),
       )
     })
 
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
+      const payload = delta as GameDelta
       const currentUserId = store.getState().auth.user?.id
 
       // Handle turn notifications for phase changes
-      if (delta.type === 'PHASE_CHANGE' && delta.currentPlayer === currentUserId) {
+      if (payload.type === 'PHASE_CHANGE' && payload.currentPlayer === currentUserId) {
         notificationService.addNotification({
           type: 'turn_reminder',
           title: "It's your turn!",
-          message: `It's your turn - ${delta.phase} phase`,
+          message: `It's your turn - ${payload.phase} phase`,
           read: false,
-          actionUrl: `/game/${delta.roomId}`,
+          actionUrl: `/game/${payload.roomId}`,
           actionLabel: 'Go to game',
           metadata: {
-            gameId: delta.roomId,
+            gameId: payload.roomId,
           },
         })
         audioService.playEffect('turn')
       }
 
       // Handle battle result audio
-      if (delta.type === 'BATTLE_RESULT') {
-        if (delta.battleResult.conquered) {
+      if (payload.type === 'BATTLE_RESULT') {
+        if (payload.battleResult.conquered) {
           audioService.playEffect('victory')
         } else {
           audioService.playEffect('defeat')
@@ -192,11 +202,12 @@ class SocketService {
       }
 
       // Apply delta to Redux store
-      store.dispatch(applyDelta(delta))
+      store.dispatch(applyDelta(payload))
     })
 
     // Legacy game-update handler - kept for backward compatibility during transition
     this.socket.on('game-update', (gameState) => {
+      const typedGameState = gameState as GameState
       const previousState = store.getState().game.currentGame
       const currentUserId = store.getState().auth.user?.id
 
@@ -204,19 +215,19 @@ class SocketService {
       if (
         currentUserId &&
         previousState?.currentPlayer !== currentUserId &&
-        gameState.currentPlayer === currentUserId &&
-        gameState.phase !== 'ended'
+        typedGameState.currentPlayer === currentUserId &&
+        typedGameState.phase !== 'finished'
       ) {
         // Add a turn reminder notification
         notificationService.addNotification({
           type: 'turn_reminder',
           title: "It's your turn!",
-          message: `It's your turn in ${gameState.roomId || 'the game'}`,
+          message: `It's your turn in ${typedGameState.roomId || 'the game'}`,
           read: false,
-          actionUrl: `/game/${gameState.roomId}`,
+          actionUrl: `/game/${typedGameState.roomId}`,
           actionLabel: 'Go to game',
           metadata: {
-            gameId: gameState.roomId,
+            gameId: typedGameState.roomId,
           },
         })
 
@@ -224,33 +235,40 @@ class SocketService {
         audioService.playEffect('turn')
       }
 
-      store.dispatch(setGameState(gameState))
+      store.dispatch(setGameState(typedGameState))
     })
 
     this.socket.on('lifecycle:update', (lifecycle) => {
-      if (!lifecycle?.roomId || !lifecycle?.status) {
+      const payload = lifecycle as Parameters<ServerToClientEvents['lifecycle:update']>[0]
+
+      if (!payload?.roomId || !payload?.status) {
         return
       }
 
       const previousRoom = store.getState().room.currentRoom
-      if (previousRoom?.id === lifecycle.roomId) {
-        if (previousRoom.status === 'lobby' && lifecycle.status === 'active') {
-          audioService.playEffect('gamestart')
-          audioService.playMusic()
-        }
+      if (
+        previousRoom &&
+        previousRoom.id === payload.roomId &&
+        previousRoom.status === 'lobby' &&
+        payload.status === 'active'
+      ) {
+        audioService.playEffect('gamestart')
+        audioService.playMusic()
       }
 
-      store.dispatch(applyLifecycleUpdate(lifecycle))
+      store.dispatch(applyLifecycleUpdate(payload))
     })
 
     this.socket.on('room-update', (roomData) => {
-      if (!roomData) {
+      const payload = roomData as Record<string, unknown>
+
+      if (!payload) {
         return
       }
 
       const previousRoom = store.getState().room.currentRoom
 
-      const status = (roomData.status ?? previousRoom?.status ?? 'lobby') as
+      const status = (payload.status ?? previousRoom?.status ?? 'lobby') as
         | 'lobby'
         | 'initializing'
         | 'active'
@@ -258,51 +276,83 @@ class SocketService {
         | 'paused'
         | 'abandoned'
 
-      if (previousRoom?.id === roomData.id) {
-        if (previousRoom.status === 'lobby' && status === 'active') {
-          audioService.playEffect('gamestart')
-          audioService.playMusic()
-        }
+      if (
+        previousRoom &&
+        previousRoom.id === (payload.id as string | undefined) &&
+        previousRoom.status === 'lobby' &&
+        status === 'active'
+      ) {
+        audioService.playEffect('gamestart')
+        audioService.playMusic()
       }
 
-      const lifecyclePayload = {
-        roomId: roomData.id ?? roomData.roomId,
-        status: status,
-        lifecyclePhase: roomData.lifecyclePhase,
-        turnNumber: roomData.turnNumber,
-        currentTurnUserId: roomData.currentTurnUserId ?? null,
-        turnExpiresAt: roomData.turnExpiresAt ?? null,
-        readyCheckStartedAt: roomData.readyCheckStartedAt ?? null,
-        players: roomData.players,
+      const roomId =
+        (typeof payload.id === 'string' ? payload.id : undefined) ??
+        (typeof payload.roomId === 'string' ? payload.roomId : undefined)
+
+      if (!roomId) {
+        return
+      }
+
+      const lifecyclePayload: RoomLifecyclePayload = {
+        roomId,
+        status,
+        lifecyclePhase: payload.lifecyclePhase as GameRoom['lifecyclePhase'] | undefined,
+        turnNumber: typeof payload.turnNumber === 'number' ? payload.turnNumber : undefined,
+        currentTurnUserId:
+          typeof payload.currentTurnUserId === 'string'
+            ? payload.currentTurnUserId
+            : payload.currentTurnUserId === null
+              ? null
+              : undefined,
+        turnExpiresAt:
+          typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
+        readyCheckStartedAt:
+          typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
+        players: Array.isArray(payload.players)
+          ? (payload.players as RoomPlayer[])
+          : undefined,
       }
 
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
-      store.dispatch(
-        updateRoom({
-          id: lifecyclePayload.roomId,
-          status: lifecyclePayload.status,
-          lifecyclePhase: lifecyclePayload.lifecyclePhase,
-          turnNumber: lifecyclePayload.turnNumber,
-          currentTurnUserId: lifecyclePayload.currentTurnUserId,
-          turnExpiresAt: lifecyclePayload.turnExpiresAt,
-          readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt,
-          players: lifecyclePayload.players,
-        }),
-      )
+      const roomUpdate: Partial<GameRoom> = {
+        id: roomId,
+        status,
+        lifecyclePhase: lifecyclePayload.lifecyclePhase,
+        turnNumber: lifecyclePayload.turnNumber,
+        currentTurnUserId: lifecyclePayload.currentTurnUserId ?? undefined,
+        turnExpiresAt: lifecyclePayload.turnExpiresAt ?? undefined,
+        readyCheckStartedAt: lifecyclePayload.readyCheckStartedAt ?? undefined,
+        players: lifecyclePayload.players,
+      }
+
+      store.dispatch(updateRoom(roomUpdate))
     })
 
     // Game-specific event listeners
-    this.socket.on('territoryUpdated', (data) => {
+    this.socket.on('territoryUpdated', (data: unknown) => {
+      const payload = data as { territoryId?: string; armies?: number; ownerId?: string }
+      if (!payload?.territoryId) {
+        return
+      }
+
       store.dispatch(
         updateTerritory({
-          territoryId: data.territoryId,
-          armies: data.armies,
-          ownerId: data.ownerId,
+          territoryId: payload.territoryId,
+          armies: payload.armies,
+          ownerId: payload.ownerId,
         }),
       )
     })
 
-    this.socket.on('gamePhaseChanged', (data) => {
+    this.socket.on('gamePhaseChanged', (data: unknown) => {
+      const payload = data as {
+        roomId?: string
+        phase?: GameState['phase']
+        currentPlayer?: string
+        reinforcementArmies?: number
+      }
+
       const previousState = store.getState().game.currentGame
       const currentUserId = store.getState().auth.user?.id
 
@@ -312,17 +362,17 @@ class SocketService {
       // Check if it's now the current user's turn (player changed)
       if (
         currentUserId &&
-        data.currentPlayer &&
+        payload.currentPlayer &&
         previousState?.currentPlayer !== currentUserId &&
-        data.currentPlayer === currentUserId &&
-        data.phase !== 'ended'
+        payload.currentPlayer === currentUserId &&
+        payload.phase !== 'finished'
       ) {
         // Add a turn reminder notification
         const roomId = store.getState().room.currentRoom?.id
         notificationService.addNotification({
           type: 'turn_reminder',
           title: "It's your turn!",
-          message: `It's your turn in the game - ${data.phase} phase`,
+          message: `It's your turn in the game - ${payload.phase} phase`,
           read: false,
           actionUrl: roomId ? `/game/${roomId}` : '/play',
           actionLabel: 'Go to game',
@@ -337,8 +387,8 @@ class SocketService {
 
       store.dispatch(
         updateGameState({
-          phase: data.phase,
-          currentPlayer: data.currentPlayer,
+          phase: payload.phase ?? previousState?.phase ?? 'reinforcement',
+          currentPlayer: payload.currentPlayer ?? previousState?.currentPlayer ?? '',
         }),
       )
 
@@ -348,18 +398,19 @@ class SocketService {
       store.dispatch(setPendingAction(null))
     })
 
-    this.socket.on('playerTurnChanged', (data) => {
+    this.socket.on('playerTurnChanged', (data: unknown) => {
+      const payload = data as { currentPlayer?: string; turn?: number }
       const currentUserId = store.getState().auth.user?.id
 
       // Play sound if it's now the current user's turn
-      if (data.currentPlayer === currentUserId) {
+      if (payload.currentPlayer && payload.currentPlayer === currentUserId) {
         audioService.playEffect('turn')
       }
 
       store.dispatch(
         updateGameState({
-          currentPlayer: data.currentPlayer,
-          turn: data.turn,
+          currentPlayer: payload.currentPlayer ?? store.getState().game.currentGame?.currentPlayer ?? '',
+          turn: payload.turn ?? store.getState().game.currentGame?.turn ?? 0,
         }),
       )
 
@@ -369,81 +420,107 @@ class SocketService {
       store.dispatch(setPendingAction(null))
     })
 
-    this.socket.on('armiesDeployed', (data) => {
+    this.socket.on('armiesDeployed', (data: unknown) => {
+      const payload = data as { territoryId?: string; armies?: number }
       // Play troop placement sound
       audioService.playEffect('placetroop')
 
-      store.dispatch(
-        updateTerritory({
-          territoryId: data.territoryId,
-          armies: data.armies,
-        }),
-      )
+      if (payload.territoryId) {
+        store.dispatch(
+          updateTerritory({
+            territoryId: payload.territoryId,
+            armies: payload.armies,
+          }),
+        )
+      }
     })
 
-    this.socket.on('attackResult', (data) => {
+    this.socket.on('attackResult', (data: unknown) => {
+      const payload = data as Record<string, unknown>
+      const fromTerritory = payload.fromTerritory as { id: string; armies: number }
+      const toTerritory = payload.toTerritory as { id: string; armies: number; ownerId?: string }
+      const attackerLosses = Number(payload.attackerLosses ?? 0)
+      const defenderLosses = Number(payload.defenderLosses ?? 0)
+      const attackerDice = (payload.attackerDice as number[]) ?? []
+      const defenderDice = (payload.defenderDice as number[]) ?? []
+      const conquered = Boolean(payload.conquered)
+
       // Play dice sound for battle
       audioService.playEffect('dice')
 
       // Update both attacking and defending territories
       store.dispatch(
         updateTerritory({
-          territoryId: data.fromTerritory.id,
-          armies: data.fromTerritory.armies,
+          territoryId: fromTerritory.id,
+          armies: fromTerritory.armies,
         }),
       )
 
       store.dispatch(
         updateTerritory({
-          territoryId: data.toTerritory.id,
-          armies: data.toTerritory.armies,
-          ownerId: data.toTerritory.ownerId, // In case territory was conquered
+          territoryId: toTerritory.id,
+          armies: toTerritory.armies,
+          ownerId: toTerritory.ownerId,
         }),
       )
 
       // Play victory/defeat sound based on outcome
       const currentUserId = store.getState().auth.user?.id
-      const attackerId = data.attackerId
-      const conquered = data.conquered
+      const attackerId = payload.attackerId as string | undefined
+      const defenderId = payload.defenderId as string | undefined
 
       if (currentUserId === attackerId) {
         // Current user is attacking
         if (conquered) {
           audioService.playEffect('capture')
-        } else if (data.attackerLosses < data.defenderLosses) {
+        } else if (attackerLosses < defenderLosses) {
           audioService.playEffect('victory')
         } else {
           audioService.playEffect('defeat')
         }
-      } else if (currentUserId === data.defenderId) {
+      } else if (currentUserId === defenderId) {
         // Current user is defending
         if (conquered) {
           audioService.playEffect('defeat')
-        } else if (data.defenderLosses < data.attackerLosses) {
+        } else if (defenderLosses < attackerLosses) {
           audioService.playEffect('victory')
         } else {
           audioService.playEffect('defeat')
         }
       }
 
+      const battleResult: BattleResult = {
+        attackerDice,
+        defenderDice,
+        attackerLosses,
+        defenderLosses,
+        conquered,
+        fromTerritory: fromTerritory.id,
+        toTerritory: toTerritory.id,
+        capitalElimination: payload.capitalElimination as BattleResult['capitalElimination'],
+        gameEnded: payload.gameEnded as boolean | undefined,
+        gameState: payload.gameState as GameState | undefined,
+      }
+
       // Show battle results
-      store.dispatch(setBattleResult(data))
+      store.dispatch(setBattleResult(battleResult))
 
       // Clear target selection after attack
       store.dispatch(selectTargetTerritory(null))
     })
 
-    this.socket.on('phaseChanged', (data) => {
+    this.socket.on('phaseChanged', (data: unknown) => {
+      const payload = data as Parameters<ServerToClientEvents['phaseChanged']>[0]
       store.dispatch(
         updateGameState({
-          phase: data.phase,
-          currentPlayer: data.currentPlayer,
+          phase: payload.phase,
+          currentPlayer: payload.currentPlayer,
         }),
       )
 
       // Set reinforcement armies when entering reinforcement phase
-      if (data.phase === 'reinforcement' && data.reinforcementArmies) {
-        store.dispatch(setReinforcementArmies(data.reinforcementArmies))
+      if (payload.phase === 'reinforcement' && payload.reinforcementArmies) {
+        store.dispatch(setReinforcementArmies(payload.reinforcementArmies))
       }
 
       // Clear selections when phase changes
@@ -452,33 +529,35 @@ class SocketService {
       store.dispatch(setPendingAction(null))
     })
 
-    this.socket.on('territoriesFortified', (data) => {
-      store.dispatch(
-        updateTerritory({
-          territoryId: data.fromTerritoryId,
-          armies: data.fromArmies,
-        }),
-      )
+    this.socket.on('territoriesFortified', (data: unknown) => {
+      const payload = data as Parameters<ServerToClientEvents['territoriesFortified']>[0]
+      const from = (payload as { fromTerritoryId?: string; fromArmies?: number }) ?? {}
+      const to = (payload as { toTerritoryId?: string; toArmies?: number }) ?? {}
 
-      store.dispatch(
-        updateTerritory({
-          territoryId: data.toTerritoryId,
-          armies: data.toArmies,
-        }),
-      )
+      if (from.fromTerritoryId) {
+        store.dispatch(
+          updateTerritory({ territoryId: from.fromTerritoryId, armies: from.fromArmies }),
+        )
+      }
+
+      if (to.toTerritoryId) {
+        store.dispatch(updateTerritory({ territoryId: to.toTerritoryId, armies: to.toArmies }))
+      }
     })
 
     // Capital-specific events
-    this.socket.on('capitalAttackCheck', (data) => {
+    this.socket.on('capitalAttackCheck', (data: unknown) => {
+      const payload = data as Parameters<ServerToClientEvents['capitalAttackCheck']>[0]
       // Store this result for when player clicks attack
       store.dispatch(
         updateGameState({
-          pendingCapitalAttack: data.isCapital ? data.territoryId : null,
+          pendingCapitalAttack: payload.isCapital ? payload.territoryId : null,
         }),
       )
     })
 
-    this.socket.on('capitalElimination', (data) => {
+    this.socket.on('capitalElimination', (data: unknown) => {
+      const payload = data as Parameters<ServerToClientEvents['capitalElimination']>[0]
       // Play dramatic fanfare for capital elimination
       audioService.playEffect('fanfare')
       audioService.playEffect('victory')
@@ -487,38 +566,40 @@ class SocketService {
       store.dispatch(
         updateGameState({
           capitalElimination: {
-            conqueror: data.conqueror,
-            eliminated: data.eliminated,
-            capitalTerritory: data.capitalTerritory,
-            territoriesGained: data.territoriesGained,
-            troopsGained: data.troopsGained,
+            conqueror: payload.conqueror,
+            eliminated: payload.eliminated,
+            capitalTerritory: payload.capitalTerritory,
+            territoriesGained: payload.territoriesGained,
+            troopsGained: payload.troopsGained,
           },
         }),
       )
     })
 
-    this.socket.on('gameError', (error) => {
+    this.socket.on('gameError', (error: unknown) => {
+      const payload = error as Parameters<ServerToClientEvents['gameError']>[0]
       // Play error sound
       audioService.playEffect('error')
-      store.dispatch(setError(error.message))
+      store.dispatch(setError(payload.message))
     })
 
-    this.socket.on('notification:new', (payload) => {
+    this.socket.on('notification:new', (payload: unknown) => {
+      const data = payload as Parameters<ServerToClientEvents['notification:new']>[0]
       notificationService.addNotification({
-        id: payload.id,
-        type: payload.type as NotificationType,
-        title: payload.title,
-        message: payload.message,
-        read: payload.read ?? false,
-        actionUrl: payload.actionUrl,
-        actionLabel: payload.actionLabel,
-        icon: payload.icon,
-        metadata: payload.metadata as Record<string, unknown>,
-        timestamp: new Date(payload.createdAt),
+        id: data.id,
+        type: data.type as NotificationType,
+        title: data.title,
+        message: data.message,
+        read: data.read ?? false,
+        actionUrl: data.actionUrl,
+        actionLabel: data.actionLabel,
+        icon: data.icon,
+        metadata: data.metadata as Record<string, unknown>,
+        timestamp: new Date(data.createdAt),
       })
 
-      if (!(payload.read ?? false)) {
-        const effect = payload.type === 'chat_message' ? 'message' : 'swoosh'
+      if (!(data.read ?? false)) {
+        const effect = data.type === 'chat_message' ? 'message' : 'swoosh'
         audioService.playEffect(effect)
       }
     })

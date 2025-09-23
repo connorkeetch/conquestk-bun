@@ -379,7 +379,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - `events_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
 
 **Check constraints:**
-- `events_type_check`: CHECK (event_type::text = ANY (ARRAY['user_login'::character varying, 'user_logout'::character varying, 'game_start'::character varying, 'game_end'::character varying, 'game_move'::character varying, 'page_view'::character varying, 'button_click'::character varying, 'feature_use'::character varying, 'error_occurred'::character varying, 'purchase_initiated'::character varying, 'purchase_completed'::character varying, 'achievement_unlocked'::character varying]::text[]))
+- `events_type_check`: CHECK (event_type::text = ANY (ARRAY['user_login'::character varying, 'user_logout'::character varying, 'user_registration'::character varying, 'game_start'::character varying, 'game_end'::character varying, 'game_move'::character varying, 'page_view'::character varying, 'button_click'::character varying, 'feature_use'::character varying, 'error_occurred'::character varying, 'purchase_initiated'::character varying, 'purchase_completed'::character varying, 'achievement_unlocked'::character varying]::text[]))
 
 **Indexes:**
 - `events_pkey`: CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)
@@ -1967,6 +1967,9 @@ Generated on 2025-09-20T01:41:14.730Z
 
 **Check constraints:**
 - `user_sessions_duration_positive`: CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
+
+**Notes:**
+- Backend login/registration flows create sessions and update `ended_at`/`duration_seconds` when users log out.
 
 **Indexes:**
 - `idx_user_sessions_device_info_gin`: CREATE INDEX idx_user_sessions_device_info_gin ON public.user_sessions USING gin (device_info)

@@ -33,17 +33,6 @@ export const TerritoryModifierLegend: React.FC<TerritoryModifierLegendProps> = (
     'bottom-right': 'bottom-4 right-4',
   }
 
-  const _getBonusDisplay = (value: number, type: string, color: string) => {
-    if (value === 0) return null
-    const sign = value > 0 ? '+' : ''
-    return (
-      <span className={`text-${color}-400`}>
-        {type} {sign}
-        {value}
-      </span>
-    )
-  }
-
   return (
     <div className={`absolute ${positionClasses[position]} z-20`}>
       <div className="bg-surface-1/90 backdrop-blur-sm border border-border rounded-lg shadow-xl">

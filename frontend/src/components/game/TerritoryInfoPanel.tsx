@@ -56,7 +56,7 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
         {modifier && (
           <div>
             <span className="font-medium">Modifier:</span>{' '}
-            <span className="text-purple-600">{modifier.type}</span>
+            <span className="text-purple-600">{modifier.name}</span>
           </div>
         )}
         <div>

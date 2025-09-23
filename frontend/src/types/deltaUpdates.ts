@@ -2,6 +2,8 @@
  * Frontend delta update types (matching backend)
  */
 
+import type { GamePhase } from './game'
+
 export interface BaseDelta {
   type: string
   roomId: string
@@ -29,7 +31,7 @@ export interface PlayerUpdateDelta extends BaseDelta {
 
 export interface PhaseChangeDelta extends BaseDelta {
   type: 'PHASE_CHANGE'
-  phase: string
+  phase: GamePhase
   currentPlayer: string
   turn?: number
   reinforcementArmies?: number
@@ -45,7 +47,7 @@ export interface BattleResultDelta extends BaseDelta {
     toTerritory: {
       id: string
       armies: number
-      ownerId: string
+      ownerId?: string | null
     }
     conquered: boolean
     attackerDice: number[]
@@ -55,6 +57,14 @@ export interface BattleResultDelta extends BaseDelta {
     gameEnded?: boolean
     winner?: string
     eliminatedPlayers?: string[]
+    capitalElimination?: {
+      conqueror: string
+      eliminated: string
+      capitalTerritory: string
+      territoriesGained: number
+      troopsGained: number
+    }
+    gameState?: unknown
   }
 }
 

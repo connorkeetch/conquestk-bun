@@ -134,7 +134,7 @@ export default function GameLobby() {
                   type="button"
                   onClick={() => handleJoinRoom(room.id)}
                   disabled={
-                    room.status !== 'waiting' || (room.players?.length || 0) >= room.maxPlayers
+                    room.status !== 'lobby' || (room.players?.length || 0) >= room.maxPlayers
                   }
                   className="bg-primary hover:bg-primary disabled:bg-gray-600 px-4 py-2 rounded"
                 >

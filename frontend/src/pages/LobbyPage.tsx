@@ -251,8 +251,6 @@ const LobbyPage: React.FC = () => {
   }
 
   const isLobbyStatus = (status: GameRoom['status']) => status === 'lobby'
-  const _isInProgressStatus = (status: GameRoom['status']) => status === 'active'
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -479,8 +477,9 @@ const LobbyPage: React.FC = () => {
               <div className="grid gap-4">
                 {(() => {
                   const filteredGames = publicGames.filter((game) => {
+                    const currentPlayers = game.currentPlayers ?? game.playerCount ?? 0
                     // Apply filters
-                    if (!filters.showFull && game.currentPlayers >= game.maxPlayers) return false
+                    if (!filters.showFull && currentPlayers >= game.maxPlayers) return false
                     if (!filters.showInProgress && !isLobbyStatus(game.status)) return false
                     if (
                       game.maxPlayers < filters.minPlayers ||
@@ -516,51 +515,51 @@ const LobbyPage: React.FC = () => {
                     )
                   }
 
-                  return filteredGames.map((game) => (
-                    <div
-                      key={game.id}
-                      className="bg-surface-1 border border-border rounded-lg p-4 hover:border-border transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white">{game.name}</h3>
-                          <div className="flex items-center space-x-4 text-sm text-muted">
-                            <span>
-                              {game.currentPlayers}/{game.maxPlayers} players
-                            </span>
-                            {game.mapName && <span>• {game.mapName}</span>}
-                            <span className={getGameStatusColor(game.status)}>
-                              • {getStatusLabel(game.status)}
-                            </span>
-                            <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                  return filteredGames.map((game) => {
+                    const currentPlayers = game.currentPlayers ?? game.playerCount ?? 0
+                    const isLobby = isLobbyStatus(game.status)
+                    const isFull = currentPlayers >= game.maxPlayers
+
+                    return (
+                      <div
+                        key={game.id}
+                        className="bg-surface-1 border border-border rounded-lg p-4 hover:border-border transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-white">{game.name}</h3>
+                            <div className="flex items-center space-x-4 text-sm text-muted">
+                              <span>
+                                {currentPlayers}/{game.maxPlayers} players
+                              </span>
+                              {game.mapName && <span>• {game.mapName}</span>}
+                              <span className={getGameStatusColor(game.status)}>
+                                • {getStatusLabel(game.status)}
+                              </span>
+                              <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            {game.hostUsername && (
+                              <div className="text-sm text-muted">by {game.hostUsername}</div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleJoinGame(game.id)}
+                              disabled={isFull || !isLobby}
+                              className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
+                                isFull || !isLobby
+                                  ? 'bg-surface-2 text-muted opacity-50 cursor-not-allowed'
+                                  : 'bg-primary hover:brightness-110 text-white'
+                              }`}
+                            >
+                              {isFull ? '🚫 Full' : !isLobby ? '👁️ Spectate' : '🎮 Join Game'}
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          {game.hostUsername && (
-                            <div className="text-sm text-muted">by {game.hostUsername}</div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleJoinGame(game.id)}
-                            disabled={
-                              game.currentPlayers >= game.maxPlayers || !isLobbyStatus(game.status)
-                            }
-                            className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
-                              game.currentPlayers >= game.maxPlayers || !isLobbyStatus(game.status)
-                                ? 'bg-surface-2 text-muted opacity-50 cursor-not-allowed'
-                                : 'bg-primary hover:brightness-110 text-white'
-                            }`}
-                          >
-                            {game.currentPlayers >= game.maxPlayers
-                              ? '🚫 Full'
-                              : !isLobbyStatus(game.status)
-                                ? '👁️ Spectate'
-                                : '🎮 Join Game'}
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 })()}
               </div>
             )}

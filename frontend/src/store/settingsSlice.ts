@@ -28,6 +28,26 @@ export interface ThemeSettings {
 
 export type DMPermission = 'everyone' | 'friends' | 'nobody'
 
+const THEME_VALUES: Theme[] = [
+  'dark',
+  'light',
+  'high-contrast',
+  'default',
+  'violet',
+  'red',
+  'blue',
+  'retrospace',
+  'green',
+  'frontier',
+  'black',
+  'highcontrast',
+  'halloween',
+  'metal',
+  'cutlers-cheese',
+]
+
+const isThemeValue = (value: string): value is Theme => THEME_VALUES.includes(value as Theme)
+
 // Notification settings
 export interface NotificationPrefs {
   turnNotifications: { browser: boolean; email: boolean }
@@ -231,7 +251,7 @@ const settingsSlice = createSlice({
       if (!serverSettings) return
 
       // Map server settings to Redux state (only if they exist)
-      if (serverSettings.theme) {
+      if (serverSettings.theme && isThemeValue(serverSettings.theme)) {
         state.display.theme = serverSettings.theme
         document.documentElement.setAttribute('data-theme', serverSettings.theme)
       }

@@ -9,7 +9,7 @@ const authController = new AuthController()
 
 router.post('/register', authLimiter, validateAuth, authController.register)
 router.post('/login', authLimiter, loginSlowDown, validateAuth, authController.login)
-router.post('/logout', authController.logout)
+router.post('/logout', authenticateToken, authController.logout)
 router.get('/me', authenticateToken, authController.getProfile)
 router.post('/verify-email/:token', authController.verifyEmail)
 router.post('/resend-verification', authLimiter, authController.resendVerification)

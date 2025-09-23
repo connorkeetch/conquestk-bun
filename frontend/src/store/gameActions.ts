@@ -2,6 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { socketService } from '../services/socketService'
 import type { GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
+import type { AppDispatch } from './index'
 import {
   addTerritoryAction,
   selectTargetTerritory,
@@ -31,22 +32,29 @@ export const handleTerritoryClick = createAsyncThunk(
     }
 
     // Handle based on current game phase
+    const typedDispatch = dispatch as AppDispatch
+
     switch (currentGame.phase) {
       case 'reinforcement':
-        return dispatch(handleReinforcementClick({ territoryId, territory, selectedTerritory }))
+        await typedDispatch(
+          handleReinforcementClick({ territoryId, territory, selectedTerritory }),
+        )
+        return
 
       case 'attack':
-        return dispatch(
+        await typedDispatch(
           handleAttackClick({ territoryId, territory, selectedTerritory, validTargets }),
         )
+        return
 
       case 'fortify':
-        return dispatch(
+        await typedDispatch(
           handleFortifyClick({ territoryId, territory, selectedTerritory, validTargets }),
         )
+        return
 
       default:
-        dispatch(selectTerritory(territoryId))
+        typedDispatch(selectTerritory(territoryId))
     }
   },
 )
@@ -59,6 +67,7 @@ export const handleReinforcementClick = createAsyncThunk<
 >(
   'game/handleReinforcementClick',
   async ({ territoryId, territory, selectedTerritory }, { dispatch, getState }) => {
+    const typedDispatch = dispatch as AppDispatch
     const currentState = getState()
     const currentPlayerId = currentState.auth.user?.id
     const currentGame = currentState.game.currentGame
@@ -68,9 +77,10 @@ export const handleReinforcementClick = createAsyncThunk<
       return
     }
 
-    const friendly = territory
-      ? isFriendlyTerritoryOwner(currentGame, territory.ownerId, currentPlayerId)
-      : false
+    const friendly =
+      territory && territory.ownerId
+        ? isFriendlyTerritoryOwner(currentGame, territory.ownerId, currentPlayerId)
+        : false
 
     if (!friendly) {
       const errorMessage = currentGame.gameConfig?.allowTeamPlay
@@ -83,12 +93,13 @@ export const handleReinforcementClick = createAsyncThunk<
 
     if (selectedTerritory === territoryId) {
       // Deploy a single army for quick-placement UX
-      return dispatch(deployArmies({ territoryId, armies: 1 }))
+      await typedDispatch(deployArmies({ territoryId, armies: 1 }))
+      return
     }
 
     // Select territory for deployment
-    dispatch(selectTerritory(territoryId))
-    dispatch(setPendingAction('deploy'))
+    typedDispatch(selectTerritory(territoryId))
+    typedDispatch(setPendingAction('deploy'))
   },
 )
 
@@ -105,40 +116,45 @@ export const handleAttackClick = createAsyncThunk<
 >(
   'game/handleAttackClick',
   async ({ territoryId, territory, selectedTerritory, validTargets }, { dispatch, getState }) => {
+    const typedDispatch = dispatch as AppDispatch
     const currentPlayerId = getState().auth.user?.id
 
     if (!selectedTerritory) {
       // Select attacking territory
-      if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
-        dispatch(selectTerritory(territoryId))
-        dispatch(setPendingAction('attack'))
-      } else if (territory?.ownerId === currentPlayerId) {
-        dispatch(setError('Need at least 2 armies to attack'))
+      if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
+        typedDispatch(selectTerritory(territoryId))
+        typedDispatch(setPendingAction('attack'))
+      } else if (territory && territory.ownerId === currentPlayerId) {
+        typedDispatch(setError('Need at least 2 armies to attack'))
       } else {
-        dispatch(setError('Select your own territory to attack from'))
+        typedDispatch(setError('Select your own territory to attack from'))
       }
+      return
     }
 
     if (validTargets.includes(territoryId)) {
-      // Select target territory or execute attack
-      if (territory?.ownerId !== currentPlayerId) {
-        // Execute attack
-        return dispatch(
+      if (!selectedTerritory) {
+        return
+      }
+
+      if (!territory || territory.ownerId !== currentPlayerId) {
+        await typedDispatch(
           executeAttack({
             fromTerritoryId: selectedTerritory,
             toTerritoryId: territoryId,
           }),
         )
+        return
       }
       return
     }
 
     // Invalid target, select new attacking territory if it's owned by player
-    if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
-      dispatch(selectTerritory(territoryId))
+    if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
+      typedDispatch(selectTerritory(territoryId))
     } else {
-      dispatch(selectTerritory(null))
-      dispatch(setPendingAction(null))
+      typedDispatch(selectTerritory(null))
+      typedDispatch(setPendingAction(null))
     }
   },
 )
@@ -156,36 +172,42 @@ export const handleFortifyClick = createAsyncThunk<
 >(
   'game/handleFortifyClick',
   async ({ territoryId, territory, selectedTerritory, validTargets }, { dispatch, getState }) => {
+    const typedDispatch = dispatch as AppDispatch
     const currentPlayerId = getState().auth.user?.id
 
     if (!selectedTerritory) {
       // Select source territory for fortification
-      if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
-        dispatch(selectTerritory(territoryId))
-        dispatch(setPendingAction('fortify'))
-      } else if (territory?.ownerId === currentPlayerId) {
-        dispatch(setError('Need at least 2 armies to fortify'))
+      if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
+        typedDispatch(selectTerritory(territoryId))
+        typedDispatch(setPendingAction('fortify'))
+      } else if (territory && territory.ownerId === currentPlayerId) {
+        typedDispatch(setError('Need at least 2 armies to fortify'))
       } else {
-        dispatch(setError('Select your own territory to fortify from'))
+        typedDispatch(setError('Select your own territory to fortify from'))
       }
+      return
     } else {
       // Select target territory or execute fortification
       if (validTargets.includes(territoryId)) {
+        if (!selectedTerritory) {
+          return
+        }
         // Execute fortification
-        return dispatch(
+        await typedDispatch(
           executeFortify({
             fromTerritoryId: selectedTerritory,
             toTerritoryId: territoryId,
-            armies: 1, // Default to moving 1 army, can be made configurable
+            armies: 1,
           }),
         )
+        return
       }
       // Invalid target, select new source territory if it's owned by player
-      if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
-        dispatch(selectTerritory(territoryId))
+      if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
+        typedDispatch(selectTerritory(territoryId))
       } else {
-        dispatch(selectTerritory(null))
-        dispatch(setPendingAction(null))
+        typedDispatch(selectTerritory(null))
+        typedDispatch(setPendingAction(null))
       }
     }
   },

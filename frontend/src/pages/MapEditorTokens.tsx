@@ -121,6 +121,122 @@ interface LegacyAdjacencyRecord {
   to?: string
 }
 
+interface MapApiResponse {
+  id?: string
+  name?: string
+  description?: string
+  territories?: LegacyTerritoryRecord[]
+  metadata?: {
+    territories?: Territory[]
+    continents?: Continent[]
+    adjacencies?: Array<{ from: string; to: string[] }>
+    width?: number
+    height?: number
+  }
+  continents?: Continent[]
+  adjacencies?: LegacyAdjacencyRecord[]
+  territory_connections?: Record<string, string[]>
+  imageUrl?: string
+  image_url?: string
+  imageWidth?: number
+  imageHeight?: number
+  min_players?: number
+  max_players?: number
+  minPlayers?: number
+  maxPlayers?: number
+}
+
+const isString = (value: unknown): value is string => typeof value === 'string'
+
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+
+const normalizeTerritoryRecord = (record: LegacyTerritoryRecord): Territory => ({
+  id: record.id || uuidv4(),
+  name: record.name ?? 'Unnamed Territory',
+  x: isNumber(record.center_x) ? record.center_x : 0,
+  y: isNumber(record.center_y) ? record.center_y : 0,
+  continentId: record.continent ?? null,
+  armies: 1,
+  connections: [] as string[],
+})
+
+const normalizeTerritory = (input: unknown): Territory | null => {
+  if (typeof input !== 'object' || input === null) {
+    return null
+  }
+
+  const territory = input as Record<string, unknown>
+  const id = isString(territory.id) ? territory.id : uuidv4()
+  const name = isString(territory.name) ? territory.name : 'Unnamed Territory'
+  const x = isNumber(territory.x) ? territory.x : 0
+  const y = isNumber(territory.y) ? territory.y : 0
+  const continentId = isString(territory.continentId) ? territory.continentId : null
+  const armies = isNumber(territory.armies) ? territory.armies : 1
+  const isCapital = typeof territory.isCapital === 'boolean' ? territory.isCapital : false
+  const connections = toStringArray(territory.connections)
+
+  return {
+    id,
+    name,
+    x,
+    y,
+    continentId,
+    armies,
+    isCapital,
+    connections,
+  }
+}
+
+const normalizeTerritories = (input: unknown): Territory[] => {
+  if (!Array.isArray(input)) {
+    return []
+  }
+
+  return input
+    .map((item) => normalizeTerritory(item))
+    .filter((item): item is Territory => item !== null)
+}
+
+const normalizeContinents = (input: unknown): Continent[] => {
+  if (!Array.isArray(input)) {
+    return []
+  }
+
+  return input
+    .map((item) => {
+      if (typeof item !== 'object' || item === null) {
+        return null
+      }
+
+      const continent = item as Record<string, unknown>
+      const id = isString(continent.id) ? continent.id : uuidv4()
+      const name = isString(continent.name) ? continent.name : 'Unnamed Continent'
+      const color = isString(continent.color) ? continent.color : '#3B82F6'
+      const bonus = isNumber(continent.bonus) ? continent.bonus : 0
+
+      return {
+        id,
+        name,
+        color,
+        bonus,
+      }
+    })
+    .filter((item): item is Continent => item !== null)
+}
+
+const extractMapId = (map: unknown): string | null => {
+  if (typeof map !== 'object' || map === null) {
+    return null
+  }
+
+  const record = map as Record<string, unknown>
+  const id = record.id
+  return isString(id) ? id : null
+}
+
 // LocalStorage key for auto-save
 const AUTOSAVE_KEY = 'map-editor-draft'
 const AUTOSAVE_INTERVAL = 10000 // Auto-save every 10 seconds
@@ -482,38 +598,32 @@ export default function MapEditorTokens() {
         response = await api.get(`/maps/${mapId}`)
       }
 
-      const map = response.data
+      const map = response.data as MapApiResponse
 
       // Handle territories from different sources
       let territories: Territory[] = []
       let continents: Continent[] = []
 
-      if (map.territories && Array.isArray(map.territories)) {
-        // From admin endpoint - raw territories from database
-        territories = (map.territories as LegacyTerritoryRecord[]).map((t) => ({
-          id: t.id || uuidv4(),
-          name: t.name ?? 'Unnamed Territory',
-          x: t.center_x ?? 0,
-          y: t.center_y ?? 0,
-          continentId: t.continent ?? null,
-          armies: 1,
-          connections: [],
-        }))
-      } else if (map.metadata?.territories) {
-        // From regular endpoint - metadata format
-        territories = map.metadata.territories
+      if (Array.isArray(map.territories)) {
+        territories = (map.territories as LegacyTerritoryRecord[]).map((record) =>
+          normalizeTerritoryRecord(record),
+        )
+      } else {
+        territories = normalizeTerritories(map.metadata?.territories)
       }
 
-      if (map.metadata?.continents) {
-        continents = map.metadata.continents
+      if (Array.isArray(map.continents)) {
+        continents = normalizeContinents(map.continents)
+      } else {
+        continents = normalizeContinents(map.metadata?.continents)
       }
 
       // Handle adjacencies
       if (map.adjacencies && Array.isArray(map.adjacencies)) {
         // Build connections from adjacency table
-        const connectionsMap = new Map<string, Set<string>>()(
-          map.adjacencies as LegacyAdjacencyRecord[],
-        ).forEach((adj) => {
+        const connectionsMap = new Map<string, Set<string>>()
+
+        ;(map.adjacencies as LegacyAdjacencyRecord[]).forEach((adj) => {
           const fromId =
             adj.territory_from || adj.fromTerritoryId || adj.from_territory_id || adj.from || null
           const toId =
@@ -544,24 +654,71 @@ export default function MapEditorTokens() {
             connections,
           }
         })
+      } else if (map.territory_connections && typeof map.territory_connections === 'object') {
+        territories = territories.map((territory) => {
+          const directConnections =
+            map.territory_connections &&
+            ((map.territory_connections as Record<string, unknown>)[territory.id] ??
+              (map.territory_connections as Record<string, unknown>)[territory.name])
+
+          const connections = toStringArray(directConnections)
+
+          return {
+            ...territory,
+            connections: connections.length > 0 ? connections : territory.connections,
+          }
+        })
       }
 
       // Load map data into editor state
-      setState((prev) => ({
-        ...prev,
-        name: map.name,
-        description: map.description || '',
-        minPlayers: map.min_players || 2,
-        maxPlayers: map.max_players || 12,
-        imageUrl: map.image_url,
-        territories,
-        continents,
-        mapWidth: map.metadata?.width || 1920,
-        mapHeight: map.metadata?.height || 1080,
-      }))
+      setState((prev) => {
+        const minPlayers = isNumber(map.min_players)
+          ? map.min_players
+          : isNumber(map.minPlayers)
+            ? map.minPlayers
+            : prev.minPlayers
+
+        const maxPlayers = isNumber(map.max_players)
+          ? map.max_players
+          : isNumber(map.maxPlayers)
+            ? map.maxPlayers
+            : prev.maxPlayers
+
+        const imageUrl = isString(map.image_url)
+          ? map.image_url
+          : isString(map.imageUrl)
+            ? map.imageUrl
+            : prev.imageUrl
+
+        const mapWidth = isNumber(map.metadata?.width)
+          ? map.metadata?.width
+          : isNumber(map.imageWidth)
+            ? map.imageWidth
+            : prev.mapWidth
+
+        const mapHeight = isNumber(map.metadata?.height)
+          ? map.metadata?.height
+          : isNumber(map.imageHeight)
+            ? map.imageHeight
+            : prev.mapHeight
+
+        return {
+          ...prev,
+          name: isString(map.name) ? map.name : prev.name,
+          description: isString(map.description) ? map.description : '',
+          minPlayers,
+          maxPlayers,
+          imageUrl,
+          territories,
+          continents,
+          mapWidth,
+          mapHeight,
+        }
+      })
 
       // If we have an image URL, set dimensions
-      if (map.image_url) {
+      const imageSource = map.image_url ?? map.imageUrl
+      if (imageSource) {
         const img = new Image()
         img.onload = () => {
           setState((prev) => ({
@@ -570,7 +727,7 @@ export default function MapEditorTokens() {
             imageHeight: img.height,
           }))
         }
-        img.src = map.image_url
+        img.src = imageSource
       }
 
       setDraftId(null)
@@ -593,16 +750,17 @@ export default function MapEditorTokens() {
       }
 
       const draftData = (draft.data ?? {}) as Record<string, unknown>
-      let territories: Territory[] = Array.isArray(draft.territories)
-        ? (draft.territories as Territory[])
-        : Array.isArray(draftData.territories)
-          ? (draftData.territories as Territory[])
-          : []
+      let territories: Territory[]
+      if (Array.isArray(draft.territories)) {
+        territories = normalizeTerritories(draft.territories)
+      } else {
+        territories = normalizeTerritories(draftData.territories)
+      }
 
       if (Array.isArray(draft.adjacencies) && draft.adjacencies.length > 0) {
-        const adjacencyMap = new Map<string, Set<string>>()(
-          draft.adjacencies as LegacyAdjacencyRecord[],
-        ).forEach((adj) => {
+        const adjacencyMap = new Map<string, Set<string>>()
+
+        ;(draft.adjacencies as LegacyAdjacencyRecord[]).forEach((adj) => {
           const from = adj.from || adj.fromTerritoryId || adj.territory_from
           const to = adj.to || adj.toTerritoryId || adj.territory_to
           if (!from || !to) return
@@ -625,10 +783,8 @@ export default function MapEditorTokens() {
       }
 
       const continents: Continent[] = Array.isArray(draft.continents)
-        ? (draft.continents as Continent[])
-        : Array.isArray(draftData.continents)
-          ? (draftData.continents as Continent[])
-          : []
+        ? normalizeContinents(draft.continents)
+        : normalizeContinents(draftData.continents)
 
       const imagePayload = (draftData.image ?? {}) as DraftImagePayload | undefined
 
@@ -639,7 +795,7 @@ export default function MapEditorTokens() {
 
       setState((prev) => ({
         ...prev,
-        name: draft.name || prev.name,
+        name: draft.name ?? prev.name,
         description: draft.description || '',
         minPlayers:
           typeof draftData.minPlayers === 'number' ? draftData.minPlayers : prev.minPlayers,
@@ -661,7 +817,13 @@ export default function MapEditorTokens() {
       setCapitalAssignments(draft.capitalAssignments || {})
       setDraftId(draft.id)
       setDraftStatus(draft.draftStatus || 'editing')
-      setPublishedMapId(draft.parentMapId || draftData.parentMapId || null)
+      const parentMapId =
+        typeof draft.parentMapId === 'string'
+          ? draft.parentMapId
+          : typeof draftData.parentMapId === 'string'
+            ? (draftData.parentMapId as string)
+            : null
+      setPublishedMapId(parentMapId)
       setLastSaved(draft.updatedAt ? new Date(draft.updatedAt) : new Date())
       setShowDraftsList(false)
     } catch (error: unknown) {
@@ -1082,10 +1244,10 @@ export default function MapEditorTokens() {
       if (!confirmed) return
 
       const response = await mapWorkflowApi.publishDraft(draftId)
-      const publishedMap = response?.map
+      const publishedMapId = extractMapId(response?.map)
 
-      if (publishedMap?.id) {
-        setPublishedMapId(publishedMap.id)
+      if (publishedMapId) {
+        setPublishedMapId(publishedMapId)
       }
 
       setDraftStatus('submitted')
@@ -3052,7 +3214,6 @@ export default function MapEditorTokens() {
           }}
           maxWidth={2000}
           maxHeight={1500}
-          maxFileSize={10}
         />
       )}
 

@@ -1,4 +1,5 @@
 import type {
+  ChatConversationType,
   ChatHistoryPayload,
   ChatMessagePayload,
   ChatUnreadCount,
@@ -17,6 +18,7 @@ import {
   setTypingUser,
   setUnreadCounts,
 } from '../../store/chatSlice'
+import type { ChatMessage, LinkPreview } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
 
@@ -37,6 +39,42 @@ export default function ChatContainer({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const historyRequestedRef = useRef(false)
   const lastConversationKeyRef = useRef<string | null>(null)
+
+  const normalizeTimestamp = (value?: string | Date | null) => {
+    if (!value) return undefined
+    return typeof value === 'string' ? value : value.toISOString()
+  }
+
+  const adaptLinkPreview = (
+    preview: NonNullable<ChatMessagePayload['link_previews']>[number],
+  ): LinkPreview => ({
+    url: preview.url,
+    title: preview.title,
+    description: preview.description,
+    image: preview.image,
+    siteName:
+      preview.siteName ??
+      ((): string | undefined => {
+        const legacy = preview as { site_name?: unknown }
+        return typeof legacy.site_name === 'string' ? legacy.site_name : undefined
+      })(),
+  })
+
+  const adaptChatMessage = (payload: ChatMessagePayload): ChatMessage => ({
+    id: payload.id,
+    sender_id: payload.sender_id,
+    sender_username: payload.sender_username,
+    message: payload.message,
+    message_type: payload.message_type,
+    game_id: payload.game_id ?? undefined,
+    team_id: payload.team_id ?? undefined,
+    recipient_id: payload.recipient_id ?? undefined,
+    created_at: normalizeTimestamp(payload.created_at) ?? new Date().toISOString(),
+    edited_at: normalizeTimestamp(payload.edited_at),
+    deleted_at: normalizeTimestamp(payload.deleted_at),
+    is_read: false,
+    link_previews: payload.link_previews?.map(adaptLinkPreview),
+  })
 
   // Build conversation key
   const conversationKey = `${conversationType}:${conversationId}`
@@ -78,7 +116,7 @@ export default function ChatContainer({
     const handleMessage = (message: ChatMessagePayload) => {
       // Only add messages for this conversation
       if (conversationType === 'game' && message.game_id === conversationId) {
-        dispatch(addMessage({ message, currentUserId }))
+        dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
       } else if (conversationType === 'team') {
         const [gameId, teamId] = conversationId.split(':')
         if (
@@ -86,14 +124,14 @@ export default function ChatContainer({
           message.game_id === gameId &&
           message.team_id === parseInt(teamId, 10)
         ) {
-          dispatch(addMessage({ message, currentUserId }))
+          dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
         }
       } else if (conversationType === 'dm') {
         const isDMForUs =
           (message.sender_id === currentUserId && message.recipient_id === conversationId) ||
           (message.sender_id === conversationId && message.recipient_id === currentUserId)
         if (isDMForUs) {
-          dispatch(addMessage({ message, currentUserId }))
+          dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
         }
       }
     }
@@ -103,7 +141,7 @@ export default function ChatContainer({
         dispatch(
           loadChatHistory({
             conversationId: conversationKey,
-            messages: data.messages,
+            messages: data.messages.map(adaptChatMessage),
             hasMore: data.messages.length === 50,
           }),
         )
@@ -111,7 +149,9 @@ export default function ChatContainer({
       }
     }
 
-    const handleTyping = (data: Parameters<ServerToClientEvents['chat:user-typing']>[0]) => {
+    const handleTyping = (
+      data: Parameters<ServerToClientEvents['chat:user-typing']>[0],
+    ) => {
       if (data.conversationType === conversationType && data.conversationId === conversationId) {
         dispatch(
           setTypingUser({
@@ -126,7 +166,7 @@ export default function ChatContainer({
 
     const handleUnreadCounts = (counts: ChatUnreadCount[]) => {
       const formattedCounts = counts.map((c) => ({
-        conversationType: c.conversation_type,
+        conversationType: c.conversation_type as ChatConversationType,
         conversationId: c.conversation_id,
         unreadCount: c.unread_count,
       }))

@@ -1,4 +1,4 @@
-import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
+import EmojiPicker, { Theme, type EmojiClickData } from 'emoji-picker-react'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 
 interface MessageInputProps {
@@ -113,7 +113,7 @@ export default function MessageInput({
         <div className="absolute bottom-full left-0 mb-2 z-50">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
-            theme="dark"
+            theme={Theme.DARK}
             height={350}
             width={300}
             searchDisabled={false}

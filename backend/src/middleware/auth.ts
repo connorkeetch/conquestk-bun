@@ -7,6 +7,7 @@ import { logger } from '../utils/logger'
 
 type AuthTokenPayload = jwt.JwtPayload & {
   userId: string
+  sessionId?: string
 }
 
 // Extend Request interface
@@ -14,6 +15,7 @@ declare module 'express-serve-static-core' {
   interface Request {
     userId: string
     user?: RequestUser
+    sessionId?: string
   }
 }
 
@@ -44,6 +46,11 @@ export const authenticateToken: RequestHandler = async (
 
     const payload = decoded as AuthTokenPayload
     req.userId = payload.userId
+    if (payload.sessionId && typeof payload.sessionId === 'string') {
+      req.sessionId = payload.sessionId
+    } else {
+      req.sessionId = undefined
+    }
 
     // Optionally fetch user details for req.user
     try {

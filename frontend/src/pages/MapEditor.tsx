@@ -88,7 +88,9 @@ export default function MapEditor() {
 
   // Terms acceptance state
   const [showTermsModal, setShowTermsModal] = useState(false)
-  const [termsContent, setTermsContent] = useState<TermsCheckResponse['termsContent']>(null)
+  const [termsContent, setTermsContent] = useState<TermsCheckResponse['termsContent'] | null>(
+    null,
+  )
   const [isCheckingTerms, setIsCheckingTerms] = useState(true)
   const polygonEditorEnabled = useFeatureFlag(FEATURE_FLAGS.MAP_POLYGON_EDITOR)
 
@@ -584,7 +586,6 @@ export default function MapEditor() {
       const img = new Image()
 
       img.onload = () => {
-        const _isSvg = file.type === 'image/svg+xml'
 
         // Minimum size requirements
         const MIN_WIDTH = 400
@@ -1102,8 +1103,6 @@ export default function MapEditor() {
     }
     reader.readAsText(file)
   }
-
-  const _selectedTerritoryData = state.territories.find((t) => t.id === state.selectedTerritory)
 
   const handleUseFullImage = () => {
     if (!tempImageUrl) return

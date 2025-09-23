@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
-import type { GameState } from '../types/game'
+import type { GameState, PlayerColor } from '../types/game'
 import gameReducer, {
   selectTargetTerritory,
   selectTerritory,
@@ -88,14 +88,14 @@ describe('gameSlice', () => {
   })
 
   describe('game state management', () => {
-    const mockGameState = {
+    const mockGameState: GameState = {
       roomId: 'test-room',
       players: [
         {
           id: 'player1',
           userId: 'player1',
           username: 'Player 1',
-          color: 'red',
+          color: 'red' as PlayerColor,
           armies: 0,
           territories: [],
           cards: [],

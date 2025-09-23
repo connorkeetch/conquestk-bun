@@ -55,10 +55,10 @@ const deriveSummary = (
   const currentWinStreak = stats?.overall.currentWinStreak ?? 0
   const eliminations = stats?.overall.totalEliminations ?? 0
   const territoriesConquered = stats?.overall.territoriesConquered ?? 0
-  const bestTerritories = stats?.overall.bestTerritories ?? stats?.overall.best_territories ?? 0
-  const bestArmies = stats?.overall.bestArmies ?? stats?.overall.best_armies ?? 0
-  const cardTrades = stats?.overall.cardTrades ?? stats?.overall.card_trades ?? 0
-  const cardsTraded = stats?.overall.cardsTraded ?? stats?.overall.cards_traded ?? 0
+  const bestTerritories = stats?.overall.bestTerritories ?? 0
+  const bestArmies = stats?.overall.bestArmies ?? 0
+  const cardTrades = stats?.overall.cardTrades ?? 0
+  const cardsTraded = stats?.overall.cardsTraded ?? 0
 
   return {
     gamesPlayed,

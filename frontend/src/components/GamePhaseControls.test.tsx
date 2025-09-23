@@ -5,9 +5,13 @@ import { Provider } from 'react-redux'
 import type { Mock } from 'vitest'
 import { vi } from 'vitest'
 import authReducer from '../store/authSlice'
-import gameReducer from '../store/gameSlice'
+import gameReducer, {
+  setGameState,
+  setReinforcementArmies,
+} from '../store/gameSlice'
 import roomReducer from '../store/roomSlice'
 import { GamePhaseControls } from './GamePhaseControls'
+import type { GameState, PlayerColor } from '../types/game'
 
 // Mock the game actions
 vi.mock('../store/gameActions', () => ({
@@ -16,28 +20,18 @@ vi.mock('../store/gameActions', () => ({
   executeFortify: vi.fn(() => ({ type: 'executeFortify' })),
 }))
 
-type GameSliceState = ReturnType<typeof gameReducer>
-type AuthSliceState = ReturnType<typeof authReducer>
-type RoomSliceState = ReturnType<typeof roomReducer>
-
-interface TestRootState {
-  game: GameSliceState
-  auth: AuthSliceState
-  room: RoomSliceState
-}
-
 describe('GamePhaseControls', () => {
   let store: ReturnType<typeof createTestStore>
   let mockOnEndTurn: Mock
 
-  const mockGameState = {
+  const mockGameState: GameState = {
     roomId: 'test-room',
     players: [
       {
         id: 'player1',
         userId: 'player1',
         username: 'Player 1',
-        color: 'red',
+        color: 'red' as PlayerColor,
         armies: 5,
         territories: ['alaska'],
         cards: [],
@@ -47,7 +41,7 @@ describe('GamePhaseControls', () => {
         id: 'player2',
         userId: 'player2',
         username: 'Player 2',
-        color: 'blue',
+        color: 'blue' as PlayerColor,
         armies: 3,
         territories: ['siberia'],
         cards: [],
@@ -102,45 +96,36 @@ describe('GamePhaseControls', () => {
     email: 'player1@test.com',
   }
 
-  const createTestStore = () => {
-    const preloadedState: TestRootState = {
-      game: {
-        currentGame: mockGameState,
-        isLoading: false,
-        error: null,
-        selectedTerritory: null,
-        selectedTargetTerritory: null,
-        validTargets: [],
-        pendingAction: null,
-        territoryActionHistory: [],
-        battleResult: null,
-        reinforcementArmies: 5,
-      },
-      auth: {
-        user: mockUser,
-        token: 'mock-token',
-        isLoading: false,
-        error: null,
-        isAuthenticated: true,
-        requiresEmailVerification: false,
-      },
-      room: {
-        currentRoom: null,
-        rooms: [],
-        isLoading: false,
-        error: null,
-      },
-    }
 
-    return configureStore<TestRootState>({
-      reducer: {
-        game: gameReducer,
-        auth: authReducer,
-        room: roomReducer,
+const createTestStore = (options: { withGameState?: boolean } = {}) => {
+  const testStore = configureStore({
+    reducer: {
+      game: gameReducer,
+      auth: authReducer,
+      room: roomReducer,
+    },
+  })
+
+  testStore.dispatch(
+    {
+      type: 'auth/login/fulfilled',
+      payload: {
+        user: {
+          ...mockUser,
+          emailVerified: true,
+        },
+        token: 'mock-token',
       },
-      preloadedState,
-    })
+    },
+  )
+
+  if (options.withGameState !== false) {
+    testStore.dispatch(setGameState(mockGameState))
+    testStore.dispatch(setReinforcementArmies(5))
   }
+
+  return testStore
+}
 
   beforeEach(() => {
     store = createTestStore()
