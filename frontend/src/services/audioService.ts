@@ -192,7 +192,7 @@ class AudioService {
             src: [path],
             preload: true,
             volume: this.getEffectiveVolume('effect'),
-            onloaderror: (id, error) => {
+            onloaderror: (_id, error) => {
               logger.warn(`Failed to load sound effect ${soundKey}`, error)
               this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
             },
@@ -210,7 +210,7 @@ class AudioService {
           src: [paths[0]],
           preload: true,
           volume: this.getEffectiveVolume('effect'),
-          onloaderror: (id, error) => {
+          onloaderror: (_id, error) => {
             logger.warn(`Failed to load sound effect ${effectName}`, error)
             this.sounds.set(effectName, { name: effectName, howl: null, category: 'effect' })
           },
@@ -379,7 +379,7 @@ class AudioService {
         this.musicTrackIndex = (this.musicTrackIndex + 1) % this.MUSIC_TRACKS.length
         this.playMusic(this.musicTrackIndex)
       },
-      onloaderror: (id, error) => {
+      onloaderror: (_id, error) => {
         logger.error(`Failed to load music track ${trackPath}`, error)
         // Try next track
         this.musicTrackIndex = (this.musicTrackIndex + 1) % this.MUSIC_TRACKS.length
@@ -454,17 +454,17 @@ class AudioService {
   }
 
   public setVolume(type: 'master' | 'effects' | 'music', value: number): void {
-    value = Math.max(0, Math.min(100, value))
+    const clamped = Math.max(0, Math.min(100, value))
 
     switch (type) {
       case 'master':
-        this.preferences.masterVolume = value
+        this.preferences.masterVolume = clamped
         break
       case 'effects':
-        this.preferences.effectsVolume = value
+        this.preferences.effectsVolume = clamped
         break
       case 'music':
-        this.preferences.musicVolume = value
+        this.preferences.musicVolume = clamped
         break
     }
 

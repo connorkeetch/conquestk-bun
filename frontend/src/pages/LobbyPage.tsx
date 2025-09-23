@@ -131,7 +131,9 @@ const LobbyPage: React.FC = () => {
       try {
         const response = await authService.getProfile()
         setEmailVerified(response.user?.emailVerified)
-      } catch (_error) {}
+      } catch (error) {
+        logger.error('Failed to fetch profile for verification status', error)
+      }
     }
 
     if (user) {

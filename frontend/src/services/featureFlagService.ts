@@ -66,7 +66,9 @@ class FeatureFlagService {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener(this.getFlags()))
+    for (const listener of this.listeners) {
+      listener(this.getFlags())
+    }
   }
 }
 

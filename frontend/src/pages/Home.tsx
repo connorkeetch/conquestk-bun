@@ -242,9 +242,9 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
               <div
-                key={index}
+                key={feature.title}
                 className="group min-h-[96px] rounded-xl border border-white/10 bg-white/[.05] p-5
                          hover:bg-white/[.07] hover:-translate-y-0.5 transition will-change-transform"
               >
@@ -282,9 +282,9 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {gameExperiences.map((experience, index) => (
+            {gameExperiences.map((experience) => (
               <div
-                key={index}
+                key={experience.title}
                 className="rounded-xl border border-white/10 bg-white/[.06] p-5 flex flex-col gap-4"
               >
                 <div className="flex items-start gap-3">
@@ -321,16 +321,19 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {highlights.map((highlight, index) => (
+            {highlights.map((highlight) => (
               <div
-                key={index}
+                key={highlight.title}
                 className="rounded-xl border border-white/10 bg-white/[.05] p-5 text-left"
               >
                 <h3 className="text-lg font-medium text-white">{highlight.title}</h3>
                 <p className="mt-2 text-sm text-white/70">{highlight.description}</p>
                 <ul className="mt-4 space-y-3">
-                  {highlight.bullets.map((bullet, bulletIndex) => (
-                    <li key={bulletIndex} className="flex items-start gap-2 text-sm text-white/70">
+                  {highlight.bullets.map((bullet) => (
+                    <li
+                      key={`${highlight.title}-${bullet}`}
+                      className="flex items-start gap-2 text-sm text-white/70"
+                    >
                       <span className="text-sky-300 mt-0.5" aria-hidden="true">
                         ●
                       </span>
@@ -358,9 +361,9 @@ const Home: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {roadmap.map((item, index) => (
+            {roadmap.map((item) => (
               <div
-                key={index}
+                key={item.title}
                 className="rounded-xl border border-white/10 bg-white/[.04] p-5 md:p-6 flex flex-col md:flex-row md:items-center md:gap-6"
               >
                 <div className="flex items-center gap-3 mb-4 md:mb-0">

@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { logger } from '@/utils/logger'
 import { API_URL } from '../config'
 import {
@@ -46,6 +46,7 @@ function ColorDropdown({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const gradientId = useId()
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -82,7 +83,7 @@ function ColorDropdown({
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
                 fill: COLOR_HEX_VALUES[value]?.includes('gradient')
-                  ? 'url(#gradient)'
+                  ? `url(#${gradientId})`
                   : COLOR_HEX_VALUES[value],
                 stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
                 strokeWidth: '1.5',
@@ -90,7 +91,7 @@ function ColorDropdown({
             />
             {COLOR_HEX_VALUES[value]?.includes('gradient') && (
               <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop
                     offset="0%"
                     style={{ stopColor: value === 'rainbow' ? '#ff0000' : '#ff00ff' }}
@@ -850,10 +851,7 @@ export default function Settings() {
           if (setting.id === 'preferred-color') {
             const currentColor = setting.defaultValue as PlayerColor
             return (
-              <ColorDropdown
-                value={currentColor}
-                onChange={(color) => setting.onChange && setting.onChange(color)}
-              />
+              <ColorDropdown value={currentColor} onChange={(color) => setting.onChange?.(color)} />
             )
           }
           return null
@@ -1110,7 +1108,7 @@ export default function Settings() {
                 } else {
                   alert(data.message || 'Failed to change password')
                 }
-              } catch (error) {
+              } catch (_error) {
                 alert('Error changing password')
               }
             },
@@ -1160,7 +1158,7 @@ export default function Settings() {
                   const data = await response.json()
                   alert(data.message || 'Failed to delete account')
                 }
-              } catch (error) {
+              } catch (_error) {
                 alert('Error deleting account')
               }
             },

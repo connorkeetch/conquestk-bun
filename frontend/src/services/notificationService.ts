@@ -35,7 +35,9 @@ class NotificationService {
   }
 
   public markAllAsRead(): void {
-    this.notifications.forEach((n) => (n.read = true))
+    for (const n of this.notifications) {
+      n.read = true
+    }
     this.notifyListeners()
   }
 
@@ -83,7 +85,9 @@ class NotificationService {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener(this.getNotifications()))
+    for (const listener of this.listeners) {
+      listener(this.getNotifications())
+    }
   }
 
   // Group notifications by date for display
