@@ -148,7 +148,8 @@ interface MapApiResponse {
 
 const isString = (value: unknown): value is string => typeof value === 'string'
 
-const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+const isNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value)
 
 const toStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []

@@ -44,8 +44,7 @@ export interface BattleTerritorySnapshot {
 
 type BattleTerritoryRef = string | BattleTerritorySnapshot
 
-export interface BattleResult
-  extends Omit<SharedBattleResult, 'fromTerritory' | 'toTerritory'> {
+export interface BattleResult extends Omit<SharedBattleResult, 'fromTerritory' | 'toTerritory'> {
   fromTerritory: BattleTerritoryRef
   toTerritory: BattleTerritoryRef
 }

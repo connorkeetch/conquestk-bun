@@ -64,13 +64,7 @@ class AuthTrackingService {
         `INSERT INTO user_sessions (user_id, ip_address, user_agent, device_info, session_data)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [
-          userId,
-          ipAddress ?? null,
-          userAgent ?? null,
-          deviceInfo ?? {},
-          sessionData ?? {},
-        ],
+        [userId, ipAddress ?? null, userAgent ?? null, deviceInfo ?? {}, sessionData ?? {}],
       )
 
       return result.rows[0]?.id ?? null

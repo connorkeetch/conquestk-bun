@@ -99,11 +99,11 @@ export default function TabbedGameChat({
         {tabs.map((tab) => {
           const badgeCount = tab.badge ?? 0
           return (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            disabled={!tab.enabled}
-            className={`
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              disabled={!tab.enabled}
+              className={`
               flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap
               transition-all relative
               ${
@@ -113,18 +113,19 @@ export default function TabbedGameChat({
               }
               ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}
-            type="button"
-          >
-            <span>{tab.label}</span>
+              type="button"
+            >
+              <span>{tab.label}</span>
 
-            {/* Unread badge */}
-            {badgeCount > 0 && (
-              <span className="px-2 py-0.5 text-xs bg-red-600 text-white rounded-full">
-                {badgeCount > 99 ? '99+' : badgeCount}
-              </span>
-            )}
-          </button>
-        )})}
+              {/* Unread badge */}
+              {badgeCount > 0 && (
+                <span className="px-2 py-0.5 text-xs bg-red-600 text-white rounded-full">
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Chat Content */}

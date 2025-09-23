@@ -3,12 +3,7 @@
   "build": {
     "builder": "RAILPACK",
     "buildEnvironment": "V3",
-    "watchPatterns": [
-      "backend/**",
-      "shared/**",
-      "backend/railpack.json",
-      "railway.json"
-    ]
+    "watchPatterns": ["backend/**", "shared/**", "backend/railpack.json", "railway.json"]
   },
   "deploy": {
     "numReplicas": 1,

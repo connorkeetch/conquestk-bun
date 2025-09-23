@@ -1,4 +1,4 @@
-import EmojiPicker, { Theme, type EmojiClickData } from 'emoji-picker-react'
+import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 
 interface MessageInputProps {

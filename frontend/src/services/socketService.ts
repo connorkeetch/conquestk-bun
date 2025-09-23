@@ -305,13 +305,10 @@ class SocketService {
             : payload.currentTurnUserId === null
               ? null
               : undefined,
-        turnExpiresAt:
-          typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
+        turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
-        players: Array.isArray(payload.players)
-          ? (payload.players as RoomPlayer[])
-          : undefined,
+        players: Array.isArray(payload.players) ? (payload.players as RoomPlayer[]) : undefined,
       }
 
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
@@ -409,7 +406,8 @@ class SocketService {
 
       store.dispatch(
         updateGameState({
-          currentPlayer: payload.currentPlayer ?? store.getState().game.currentGame?.currentPlayer ?? '',
+          currentPlayer:
+            payload.currentPlayer ?? store.getState().game.currentGame?.currentPlayer ?? '',
           turn: payload.turn ?? store.getState().game.currentGame?.turn ?? 0,
         }),
       )
