@@ -55,6 +55,7 @@ import VerifyEmailToken from './pages/VerifyEmailToken'
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const AdminContent = lazy(() => import('./pages/AdminContent'))
 const AdminMaps = lazy(() => import('./pages/AdminMaps'))
 const AdminGames = lazy(() => import('./pages/AdminGames'))
 const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
@@ -626,6 +627,20 @@ function App() {
                   }
                 >
                   <AdminUsers />
+                </Suspense>
+              }
+            />
+            <Route
+              path="content"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="p-6">
+                      <div className="text-white">Loading...</div>
+                    </div>
+                  }
+                >
+                  <AdminContent />
                 </Suspense>
               }
             />

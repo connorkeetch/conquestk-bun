@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { adminService, type FeatureFlag } from '../services/adminService'
+import { Link } from 'react-router-dom'
+import { type AdminActivityLog, adminService, type FeatureFlag } from '../services/adminService'
 
 interface SystemStatus {
   timestamp: string
@@ -38,7 +39,9 @@ export default function AdminDashboard() {
   const [refreshingFlags, setRefreshingFlags] = useState(false)
   const [updatingFlag, setUpdatingFlag] = useState<string | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
-  const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
+  const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([])
+  const [activityError, setActivityError] = useState<string | null>(null)
+  const [loadingActivity, setLoadingActivity] = useState(false)
   const [editingFlag, setEditingFlag] = useState<FeatureFlag | null>(null)
   const [editDescription, setEditDescription] = useState('')
   const [editAccessLevel, setEditAccessLevel] = useState<FeatureFlag['accessLevel']>('disabled')
@@ -49,36 +52,54 @@ export default function AdminDashboard() {
   const [editReason, setEditReason] = useState('')
   const [savingFlag, setSavingFlag] = useState(false)
 
-  const loadDashboardData = useCallback(async (options: { showLoader?: boolean } = {}) => {
-    const { showLoader = true } = options
+  const fetchActivityLogs = useCallback(async () => {
     try {
-      if (showLoader) {
-        setLoading(true)
-      }
-      setError(null)
-
-      const [statusData, adminData, featureFlagData] = await Promise.all([
-        adminService.getSystemStatus(),
-        adminService.getAdminInfo(),
-        adminService.getFeatureFlags(),
-      ])
-
-      setSystemStatus(statusData)
-      setAdminInfo(adminData)
-      setFeatureFlags(featureFlagData ?? [])
+      setLoadingActivity(true)
+      setActivityError(null)
+      const logs = await adminService.getAdminActivityLogs({ limit: 6 })
+      setActivityLogs(logs)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load dashboard data'
-      if (showLoader) {
-        setError(message)
-      } else {
-        alert(`Failed to refresh dashboard data: ${message}`)
-      }
+      const message = err instanceof Error ? err.message : 'Failed to load activity logs'
+      setActivityError(message)
     } finally {
-      if (showLoader) {
-        setLoading(false)
-      }
+      setLoadingActivity(false)
     }
   }, [])
+
+  const loadDashboardData = useCallback(
+    async (options: { showLoader?: boolean } = {}) => {
+      const { showLoader = true } = options
+      try {
+        if (showLoader) {
+          setLoading(true)
+        }
+        setError(null)
+
+        const [statusData, adminData, featureFlagData] = await Promise.all([
+          adminService.getSystemStatus(),
+          adminService.getAdminInfo(),
+          adminService.getFeatureFlags(),
+        ])
+
+        setSystemStatus(statusData)
+        setAdminInfo(adminData)
+        setFeatureFlags(featureFlagData ?? [])
+        await fetchActivityLogs()
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard data'
+        if (showLoader) {
+          setError(message)
+        } else {
+          toast.error(`Failed to refresh dashboard data: ${message}`)
+        }
+      } finally {
+        if (showLoader) {
+          setLoading(false)
+        }
+      }
+    },
+    [fetchActivityLogs],
+  )
 
   useEffect(() => {
     void loadDashboardData()
@@ -92,7 +113,7 @@ export default function AdminDashboard() {
         await loadDashboardData({ showLoader: false })
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error'
-        alert(`Failed to toggle feature flag: ${message}`)
+        toast.error(`Failed to toggle feature flag: ${message}`)
       } finally {
         setUpdatingFlag(null)
       }
@@ -117,25 +138,12 @@ export default function AdminDashboard() {
     try {
       setCacheClearing(true)
       await adminService.refreshCache()
-      alert('Cache cleared successfully')
+      toast.success('Cache cleared successfully')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error'
-      alert(`Failed to clear cache: ${message}`)
+      toast.error(`Failed to clear cache: ${message}`)
     } finally {
       setCacheClearing(false)
-    }
-  }, [])
-
-  const handleRefreshLeaderboard = useCallback(async () => {
-    try {
-      setLeaderboardRefreshing(true)
-      await adminService.refreshLeaderboard()
-      alert('Leaderboard cache refreshed successfully')
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      alert(`Failed to refresh leaderboard cache: ${message}`)
-    } finally {
-      setLeaderboardRefreshing(false)
     }
   }, [])
 
@@ -184,6 +192,50 @@ export default function AdminDashboard() {
     return []
   }, [featureFlags, systemStatus])
 
+  const featureFlagSummary = useMemo(
+    () =>
+      sortedFeatureFlags.reduce(
+        (acc, flag) => {
+          if (flag.isEnabled) acc.active += 1
+          if (flag.accessLevel === 'beta') acc.beta += 1
+          if (flag.accessLevel === 'internal') acc.internal += 1
+          return acc
+        },
+        { active: 0, beta: 0, internal: 0 },
+      ),
+    [sortedFeatureFlags],
+  )
+
+  const adminToolLinks = useMemo(
+    () => [
+      {
+        to: '/admin/users',
+        icon: '👥',
+        label: 'User Management',
+        description: 'Manage user accounts, roles, and permissions',
+      },
+      {
+        to: '/admin/content',
+        icon: '🧾',
+        label: 'Content Moderation',
+        description: 'Review and approve user-generated content',
+      },
+      {
+        to: '/admin/maps',
+        icon: '🗺️',
+        label: 'Map Library',
+        description: 'Curate submitted maps and manage map reviews',
+      },
+      {
+        to: '/admin/games',
+        icon: '🎮',
+        label: 'Game Management',
+        description: 'Monitor live games and intervene when needed',
+      },
+    ],
+    [],
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -214,6 +266,9 @@ export default function AdminDashboard() {
   }
 
   const databaseStats = systemStatus?.database
+  const adminRoles = adminInfo?.adminRoles ?? []
+  const adminRoleLabel =
+    adminRoles.length > 0 ? adminRoles.map((role) => role.roleName).join(', ') : 'Admin'
 
   const openEditModal = (flag: FeatureFlag) => {
     setEditingFlag(flag)
@@ -281,9 +336,7 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">🛡️ Admin Dashboard</h1>
-          <div className="text-muted">
-            Welcome back, {adminInfo?.adminRoles.map((r) => r.roleName).join(', ')} admin
-          </div>
+          <div className="text-muted">Welcome back, {adminRoleLabel}</div>
         </div>
 
         {/* Quick Stats */}
@@ -361,108 +414,81 @@ export default function AdminDashboard() {
             <div className="glass-box-lg">
               <h2 className="text-xl font-bold mb-4">🛠️ Admin Tools</h2>
               <div className="space-y-3">
-                <a
-                  href="/admin/users"
-                  className="block glass-box-sm hover:brightness-110 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">User Management</div>
-                      <div className="text-sm text-muted">
-                        Manage user accounts, roles, and permissions
+                {adminToolLinks.map((tool) => (
+                  <Link
+                    key={tool.to}
+                    to={tool.to}
+                    className="block glass-box-sm hover:brightness-110 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-white">{tool.label}</div>
+                        <div className="text-sm text-muted">{tool.description}</div>
                       </div>
+                      <div className="text-2xl">{tool.icon}</div>
                     </div>
-                    <div className="text-2xl">👥</div>
-                  </div>
-                </a>
-
-                <a
-                  href="/admin/content"
-                  className="block glass-box-sm hover:brightness-110 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Content Moderation</div>
-                      <div className="text-sm text-muted">
-                        Review and approve user-generated content
-                      </div>
-                    </div>
-                    <div className="text-2xl">🔍</div>
-                  </div>
-                </a>
-
-                <a
-                  href="/admin/games"
-                  className="block glass-box-sm hover:brightness-110 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Game Management</div>
-                      <div className="text-sm text-muted">Monitor and manage active games</div>
-                    </div>
-                    <div className="text-2xl">🎮</div>
-                  </div>
-                </a>
-
-                <a
-                  href="/admin/logs"
-                  className="block glass-box-sm hover:brightness-110 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Activity Logs</div>
-                      <div className="text-sm text-muted">View admin and user activity logs</div>
-                    </div>
-                    <div className="text-2xl">📊</div>
-                  </div>
-                </a>
-              </div>
-            </div>
-
-            {/* System Actions */}
-            <div className="glass-box-lg">
-              <h2 className="text-xl font-bold mb-4">⚙️ System Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  </Link>
+                ))}
                 <button
                   type="button"
                   onClick={handleClearCache}
                   disabled={cacheClearing}
-                  className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors text-left disabled:opacity-50"
+                  className="w-full text-left glass-box-sm hover:brightness-110 transition-all disabled:opacity-60"
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">🔄</span>
-                    <span className="font-medium text-white">Clear Server Cache</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-white">Clear Server Cache</div>
+                      <div className="text-sm text-muted">
+                        {cacheClearing
+                          ? 'Clearing cache...'
+                          : 'Refresh all cached data on the server'}
+                      </div>
+                    </div>
+                    <div className="text-2xl">🔄</div>
                   </div>
-                  <p className="text-sm text-muted">
-                    {cacheClearing ? 'Clearing cache...' : 'Refresh all cached data on the server'}
-                  </p>
                 </button>
+              </div>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleRefreshLeaderboard}
-                  disabled={leaderboardRefreshing}
-                  className="p-4 bg-surface-1 rounded-lg hover:bg-surface-2/50 transition-colors text-left disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">🏆</span>
-                    <span className="font-medium text-white">Refresh Leaderboard</span>
+            {/* Operational Focus */}
+            <div className="glass-box-lg">
+              <h2 className="text-xl font-bold mb-4">📌 Operational Focus</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
+                  <div className="text-xs text-muted uppercase tracking-wide">
+                    Pending content approvals
                   </div>
-                  <p className="text-sm text-muted">
-                    {leaderboardRefreshing
-                      ? 'Refreshing leaderboard...'
-                      : 'Rebuild cached rankings for the skills leaderboard'}
-                  </p>
-                </button>
-
-                <div className="p-4 bg-surface-1 rounded-lg border border-surface-1/40 text-left">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">🛠️</span>
-                    <span className="font-medium text-white">More Tools Coming Soon</span>
+                  <div className="text-2xl font-semibold text-yellow-400 mt-2">
+                    {formatCount(databaseStats?.pendingApprovals)}
                   </div>
-                  <p className="text-sm text-muted">
-                    Have a recurring task? Surface it here so future admins have a one-click action.
+                  <p className="text-xs text-muted mt-2">Items waiting for moderator decisions</p>
+                </div>
+                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
+                  <div className="text-xs text-muted uppercase tracking-wide">
+                    Maps awaiting review
+                  </div>
+                  <div className="text-2xl font-semibold text-orange-400 mt-2">
+                    {formatCount(databaseStats?.mapsPendingReview)}
+                  </div>
+                  <p className="text-xs text-muted mt-2">Community maps queued for approval</p>
+                </div>
+                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
+                  <div className="text-xs text-muted uppercase tracking-wide">
+                    Enabled feature flags
+                  </div>
+                  <div className="text-2xl font-semibold text-green-400 mt-2">
+                    {featureFlagSummary.active}
+                  </div>
+                  <p className="text-xs text-muted mt-2">
+                    Beta: {featureFlagSummary.beta} · Internal: {featureFlagSummary.internal}
                   </p>
+                </div>
+                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
+                  <div className="text-xs text-muted uppercase tracking-wide">Last sync</div>
+                  <div className="text-2xl font-semibold text-primary-soft mt-2">
+                    {systemStatus ? new Date(systemStatus.timestamp).toLocaleString() : '—'}
+                  </div>
+                  <p className="text-xs text-muted mt-2">Latest data pulled from live services</p>
                 </div>
               </div>
             </div>
@@ -546,72 +572,127 @@ export default function AdminDashboard() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-surface-2 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4">🧭 System Configuration</h2>
-            <div className="space-y-3 text-sm text-muted">
-              <p>
-                Operational settings like game defaults and email verification are managed through
-                environment variables and feature flags rather than fixed values.
-              </p>
-              <p>
-                Use the create game flow to set lobby-specific rules. Update environment configs if
-                you need global behaviour changes.
-              </p>
-            </div>
+          <div className="glass-box-lg">
+            <h2 className="text-xl font-bold mb-4">🛡️ Admin Access</h2>
+            {adminRoles.length > 0 ? (
+              <div className="space-y-4">
+                {adminRoles.map((role) => {
+                  const permissions = role.permissions.filter(
+                    (permission) => permission.trim().length > 0,
+                  )
+                  return (
+                    <div
+                      key={role.roleId}
+                      className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-white">{role.roleName}</div>
+                          <div className="text-xs text-muted mt-1">
+                            {permissions.length > 0
+                              ? 'Role capabilities'
+                              : 'No explicit permissions assigned'}
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted whitespace-nowrap">#{role.roleId}</span>
+                      </div>
+                      {permissions.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {permissions.map((permission) => (
+                            <span
+                              key={permission}
+                              className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40"
+                            >
+                              {permission}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-sm text-muted">
+                You don't have any delegated admin roles yet. Reach out if this looks wrong.
+              </div>
+            )}
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4">🌍 Environment Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted">Environment:</span>
-                <span className="text-white ml-2">Production</span>
-              </div>
-              <div>
-                <span className="text-muted">Node Version:</span>
-                <span className="text-white ml-2">v20.x</span>
-              </div>
-              <div>
-                <span className="text-muted">Database:</span>
-                <span className="text-white ml-2">PostgreSQL</span>
-              </div>
-              <div>
-                <span className="text-muted">Deployment:</span>
-                <span className="text-white ml-2">Railway</span>
-              </div>
-              <div>
-                <span className="text-muted">Frontend URL:</span>
-                <span className="text-white ml-2">conquestk.com</span>
-              </div>
-              <div>
-                <span className="text-muted">API URL:</span>
-                <span className="text-white ml-2">conquestk.com/api</span>
-              </div>
+          <div className="glass-box-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">📋 Recent Admin Activity</h2>
+              <button
+                type="button"
+                onClick={() => void fetchActivityLogs()}
+                className="px-3 py-1 bg-surface-2 border border-border text-sm rounded hover:bg-surface-2/80 transition-colors disabled:opacity-60"
+                disabled={loadingActivity}
+              >
+                {loadingActivity ? 'Loading...' : 'Refresh'}
+              </button>
             </div>
-          </div>
-        </div>
+            {loadingActivity ? (
+              <div className="py-8 text-center text-muted">Loading recent changes...</div>
+            ) : activityError ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="text-sm text-red-400">Failed to load activity logs</div>
+                <div className="text-xs text-muted">{activityError}</div>
+                <button
+                  type="button"
+                  onClick={() => void fetchActivityLogs()}
+                  className="px-3 py-2 bg-primary text-white text-sm rounded hover:brightness-110"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : activityLogs.length === 0 ? (
+              <div className="py-8 text-center text-muted">No admin actions recorded yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {activityLogs.map((log) => {
+                  const detailEntries = Object.entries(log.actionDetails ?? {})
+                    .filter(([_, value]) => typeof value === 'string' || typeof value === 'number')
+                    .slice(0, 2)
 
-        {/* Recent Activity */}
-        <div className="mt-8 bg-surface-2 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">📈 System Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-3xl mb-2">💿</div>
-              <div className="text-sm text-muted">Database</div>
-              <div className="text-lg font-medium text-green-400">Connected</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl mb-2">🔧</div>
-              <div className="text-sm text-muted">System</div>
-              <div className="text-lg font-medium text-green-400">Operational</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl mb-2">⏰</div>
-              <div className="text-sm text-muted">Last Updated</div>
-              <div className="text-lg font-medium">
-                {systemStatus && new Date(systemStatus.timestamp).toLocaleTimeString()}
+                  return (
+                    <div
+                      key={log.id}
+                      className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-white">
+                            {adminService.formatActionType(log.actionType)}
+                          </div>
+                          <div className="text-xs text-muted mt-1">
+                            {new Date(log.timestamp).toLocaleString()} · {log.adminUsername}
+                          </div>
+                        </div>
+                        {log.targetType && (
+                          <span className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40">
+                            {log.targetType}
+                          </span>
+                        )}
+                      </div>
+                      {(log.targetId || detailEntries.length > 0) && (
+                        <div className="text-xs text-muted mt-3 space-y-1">
+                          {log.targetId && (
+                            <div>
+                              Target ID: <span className="text-white">{log.targetId}</span>
+                            </div>
+                          )}
+                          {detailEntries.map(([key, value]) => (
+                            <div key={key}>
+                              {key}: <span className="text-white">{String(value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
