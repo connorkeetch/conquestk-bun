@@ -312,6 +312,14 @@ export class FeatureFlagService {
         updateFields.push(`access_level = $${paramCount++}`)
         values.push(updates.access_level)
       }
+      if (updates.description !== undefined) {
+        updateFields.push(`description = $${paramCount++}`)
+        values.push(updates.description)
+      }
+      if (updates.category !== undefined) {
+        updateFields.push(`category = $${paramCount++}`)
+        values.push(updates.category)
+      }
       if (updates.rollout_percentage !== undefined) {
         updateFields.push(`rollout_percentage = $${paramCount++}`)
         values.push(updates.rollout_percentage)
@@ -319,6 +327,10 @@ export class FeatureFlagService {
       if (updates.target_criteria !== undefined) {
         updateFields.push(`target_criteria = $${paramCount++}`)
         values.push(JSON.stringify(updates.target_criteria))
+      }
+      if (updates.dependencies !== undefined) {
+        updateFields.push(`dependencies = $${paramCount++}`)
+        values.push(JSON.stringify(updates.dependencies))
       }
 
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
@@ -379,6 +391,38 @@ export class FeatureFlagService {
         enabled,
         error,
       })
+    }
+  }
+
+  async clearUserOverride(userId: string, flagName: string): Promise<void> {
+    try {
+      await query('DELETE FROM user_feature_flags WHERE user_id = $1 AND flag_name = $2', [
+        userId,
+        flagName,
+      ])
+    } catch (error) {
+      logger.error('❌ Error clearing user override', {
+        userId,
+        flagName,
+        error,
+      })
+    }
+  }
+
+  async listUserOverrides(userId: string): Promise<Map<string, boolean>> {
+    try {
+      const result = await query<{ flag_name: string; is_enabled: boolean }>(
+        'SELECT flag_name, is_enabled FROM user_feature_flags WHERE user_id = $1',
+        [userId],
+      )
+
+      return new Map(result.rows.map((row) => [row.flag_name, row.is_enabled]))
+    } catch (error) {
+      logger.error('❌ Error fetching user overrides', {
+        userId,
+        error,
+      })
+      return new Map()
     }
   }
 

@@ -41,9 +41,36 @@ export interface FeatureFlag {
   flagName: string
   description?: string
   isEnabled: boolean
-  config: any
+  config: Record<string, unknown>
+  accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
+  category: string | null
+  rolloutPercentage: number
+  dependencies: string[]
   createdBy: string
   createdAt: string
+  updatedAt: string
+}
+
+export interface FeatureFlagSettingsUpdate {
+  description?: string | null
+  accessLevel?: FeatureFlag['accessLevel']
+  category?: string | null
+  rolloutPercentage?: number
+  config?: Record<string, unknown>
+  dependencies?: string[]
+  reason?: string
+}
+
+export interface UserFeatureFlagAssignment {
+  flagName: string
+  description?: string | null
+  isEnabled: boolean
+  accessLevel: FeatureFlag['accessLevel']
+  category?: string | null
+  rolloutPercentage: number
+  config: Record<string, unknown>
+  userOverride: boolean | null
+  effectiveValue: boolean | null
   updatedAt: string
 }
 
@@ -52,7 +79,7 @@ export interface AdminActivityLog {
   adminUserId: string
   adminUsername: string
   actionType: string
-  actionDetails: any
+  actionDetails: Record<string, unknown>
   targetType?: string
   targetId?: string
   ipAddress?: string
@@ -154,6 +181,31 @@ class AdminService {
     })
   }
 
+  async updateFeatureFlagSettings(
+    flagName: string,
+    updates: FeatureFlagSettingsUpdate,
+  ): Promise<FeatureFlag> {
+    const response = await apiClient.patch(`${this.baseUrl}/feature-flags/${flagName}`, updates)
+    return response.data.flag
+  }
+
+  async getUserFeatureFlags(userId: string): Promise<UserFeatureFlagAssignment[]> {
+    const response = await apiClient.get(`${this.baseUrl}/users/${userId}/feature-flags`)
+    return response.data
+  }
+
+  async setUserFeatureFlagOverride(
+    userId: string,
+    flagName: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await apiClient.put(`${this.baseUrl}/users/${userId}/feature-flags/${flagName}`, { enabled })
+  }
+
+  async clearUserFeatureFlagOverride(userId: string, flagName: string): Promise<void> {
+    await apiClient.delete(`${this.baseUrl}/users/${userId}/feature-flags/${flagName}`)
+  }
+
   // ============= ACTIVITY LOGS =============
 
   async getAdminActivityLogs(
@@ -167,7 +219,7 @@ class AdminService {
 
   async getGames(
     params: { limit?: number; offset?: number; status?: string; search?: string } = {},
-  ): Promise<{ games: any[]; total: number }> {
+  ): Promise<{ games: Record<string, unknown>[]; total: number }> {
     const response = await apiClient.get(`${this.baseUrl}/games`, { params })
     return response.data
   }
