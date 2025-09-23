@@ -1110,20 +1110,36 @@ router.get(
       const dbStats = await dbQuery(`
         SELECT 
           (SELECT COUNT(*) FROM users) as user_count,
+          (SELECT COUNT(*) FROM users WHERE email_verified = TRUE) as verified_users,
+          (SELECT COUNT(*) FROM users WHERE is_beta_user = TRUE) as beta_users,
+          (SELECT COUNT(*) FROM users WHERE is_vip = TRUE) as vip_users,
+          (SELECT COUNT(*) FROM users WHERE premium_tier IS NOT NULL AND premium_tier <> 'free') as premium_users,
           (SELECT COUNT(*) FROM maps) as map_count,
+          (SELECT COUNT(*) FROM maps WHERE status = 'pending_review') as maps_pending_review,
+          (SELECT COUNT(*) FROM maps WHERE is_public = TRUE) as public_maps,
           (SELECT COUNT(*) FROM game_rooms WHERE status IN ('in_progress', 'starting')) as active_games,
           (SELECT COUNT(*) FROM content_approval_queue WHERE status = 'pending') as pending_approvals
       `)
 
       const featureFlags = await adminService.getFeatureFlags()
 
+      const statsRow = dbStats.rows[0] ?? {}
+      const parseCount = (value: unknown) =>
+        parseInt((value as string | number | undefined)?.toString() ?? '0', 10)
+
       res.json({
         timestamp: new Date().toISOString(),
         database: {
-          userCount: parseInt(dbStats.rows[0].user_count || '0', 10),
-          mapCount: parseInt(dbStats.rows[0].map_count || '0', 10),
-          activeGames: parseInt(dbStats.rows[0].active_games || '0', 10),
-          pendingApprovals: parseInt(dbStats.rows[0].pending_approvals || '0', 10),
+          userCount: parseCount(statsRow.user_count),
+          verifiedUsers: parseCount(statsRow.verified_users),
+          betaUsers: parseCount(statsRow.beta_users),
+          vipUsers: parseCount(statsRow.vip_users),
+          premiumUsers: parseCount(statsRow.premium_users),
+          mapCount: parseCount(statsRow.map_count),
+          mapsPendingReview: parseCount(statsRow.maps_pending_review),
+          publicMaps: parseCount(statsRow.public_maps),
+          activeGames: parseCount(statsRow.active_games),
+          pendingApprovals: parseCount(statsRow.pending_approvals),
         },
         featureFlags: featureFlags.reduce(
           (acc, flag) => {

@@ -6,7 +6,13 @@ interface SystemStatus {
   timestamp: string
   database: {
     userCount: number
+    verifiedUsers?: number
+    betaUsers?: number
+    vipUsers?: number
+    premiumUsers?: number
     mapCount: number
+    mapsPendingReview?: number
+    publicMaps?: number
     activeGames: number
     pendingApprovals: number
   }
@@ -148,6 +154,8 @@ export default function AdminDashboard() {
 
     return isEnabled ? 'Enabled' : 'Disabled'
   }
+
+  const formatCount = (value?: number) => (value != null ? value.toLocaleString() : '0')
 
   const sortedFeatureFlags = useMemo(() => {
     if (featureFlags.length > 0) {
@@ -292,6 +300,14 @@ export default function AdminDashboard() {
               </div>
               <div className="text-3xl">👥</div>
             </div>
+            <div className="mt-3 text-xs text-muted space-y-1">
+              <div>Verified: {formatCount(databaseStats?.verifiedUsers)}</div>
+              <div>Beta testers: {formatCount(databaseStats?.betaUsers)}</div>
+              <div>
+                VIP: {formatCount(databaseStats?.vipUsers)} · Premium:{' '}
+                {formatCount(databaseStats?.premiumUsers)}
+              </div>
+            </div>
           </div>
 
           <div className="glass-box">
@@ -303,6 +319,10 @@ export default function AdminDashboard() {
                 <div className="text-sm text-muted">Custom Maps</div>
               </div>
               <div className="text-3xl">🗺️</div>
+            </div>
+            <div className="mt-3 text-xs text-muted space-y-1">
+              <div>Public: {formatCount(databaseStats?.publicMaps)}</div>
+              <div>Pending review: {formatCount(databaseStats?.mapsPendingReview)}</div>
             </div>
           </div>
 

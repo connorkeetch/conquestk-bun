@@ -21,6 +21,10 @@ interface User {
   vipReason?: string
   vipGrantedAt?: string
   premiumExpiresAt?: string
+  isBetaUser?: boolean
+  emailVerified?: boolean
+  preferredLanguage?: string
+  timezone?: string
 }
 
 type UserActionType = 'ban' | 'unban' | 'vip' | 'admin'
@@ -521,8 +525,10 @@ const AdminUsers: React.FC = () => {
                 <th className="px-4 py-3 text-left">Username</th>
                 <th className="px-4 py-3 text-left">Email</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Verified</th>
                 <th className="px-4 py-3 text-left">Admin</th>
                 <th className="px-4 py-3 text-left">VIP</th>
+                <th className="px-4 py-3 text-left">Beta</th>
                 <th className="px-4 py-3 text-left">Premium</th>
                 <th className="px-4 py-3 text-left">Games</th>
                 <th className="px-4 py-3 text-left">ELO</th>
@@ -533,7 +539,7 @@ const AdminUsers: React.FC = () => {
             <tbody>
               {isRefreshing && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-4 text-center text-sm text-muted">
+                  <td colSpan={12} className="px-4 py-4 text-center text-sm text-muted">
                     Updating results...
                   </td>
                 </tr>
@@ -556,6 +562,15 @@ const AdminUsers: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
+                    {user.emailVerified ? (
+                      <span className="px-2 py-1 rounded text-xs bg-blue-600 text-white">Yes</span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
+                        No
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     {user.isAdmin ? (
                       <span className="px-2 py-1 rounded text-xs bg-red-600 text-white">Yes</span>
                     ) : (
@@ -575,6 +590,17 @@ const AdminUsers: React.FC = () => {
                     ) : (
                       <span className="px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
                         No
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {user.isBetaUser ? (
+                      <span className="px-2 py-1 rounded text-xs bg-sky-600 text-white">
+                        Tester
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
+                        Standard
                       </span>
                     )}
                   </td>
@@ -670,6 +696,38 @@ const AdminUsers: React.FC = () => {
                     <span className="text-muted">ELO Rating:</span>
                     <span className="text-white ml-2">{selectedUser.elo || 1000}</span>
                   </div>
+                  <div>
+                    <span className="text-muted">Email Verified:</span>
+                    <span
+                      className={`ml-2 font-medium ${
+                        selectedUser.emailVerified ? 'text-green-400' : 'text-red-300'
+                      }`}
+                    >
+                      {selectedUser.emailVerified ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Beta Tester:</span>
+                    <span
+                      className={`ml-2 font-medium ${
+                        selectedUser.isBetaUser ? 'text-sky-400' : 'text-gray-400'
+                      }`}
+                    >
+                      {selectedUser.isBetaUser ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Language:</span>
+                    <span className="text-white ml-2">
+                      {selectedUser.preferredLanguage
+                        ? selectedUser.preferredLanguage.toUpperCase()
+                        : 'Default'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">Timezone:</span>
+                    <span className="text-white ml-2">{selectedUser.timezone || 'Not set'}</span>
+                  </div>
                 </div>
               </div>
 
@@ -718,6 +776,27 @@ const AdminUsers: React.FC = () => {
                         )}
                       </div>
                     )}
+                  </div>
+
+                  {/* Beta Status */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-white">Beta Access</div>
+                        <div className="text-xs text-muted">
+                          Determines eligibility for beta-limited features and experiments.
+                        </div>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded text-sm font-medium border ${
+                          selectedUser.isBetaUser
+                            ? 'bg-sky-600/20 text-sky-400 border-sky-600'
+                            : 'bg-gray-600/20 text-gray-400 border-gray-600'
+                        }`}
+                      >
+                        {selectedUser.isBetaUser ? 'Beta tester' : 'Standard user'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Admin Status */}
