@@ -2,9 +2,11 @@ import Favico from 'favico.js'
 import type { Notification } from '../types/notification'
 import { notificationService } from './notificationService'
 
+type FavicoInstance = { badge: (val: number | string) => void; reset: () => void }
+
 class FaviconBadgeService {
   private static instance: FaviconBadgeService
-  private favico: any // Favico.js doesn't have TypeScript types
+  private favico: FavicoInstance // Favico.js doesn't have TypeScript types
   private currentBadgeCount: number = 0
   private unsubscribe: (() => void) | null = null
 
@@ -15,7 +17,7 @@ class FaviconBadgeService {
       position: 'up',
       bgColor: '#ef4444', // Tailwind red-500
       textColor: '#ffffff',
-    })
+    }) as unknown as FavicoInstance
 
     // Subscribe to notification changes
     this.subscribeToNotifications()

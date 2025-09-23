@@ -26,7 +26,7 @@ class SocketService {
   private socket: Socket | null = null
 
   connect() {
-    if (this.socket && this.socket.connected) {
+    if (this.socket?.connected) {
       return
     }
 
@@ -128,9 +128,13 @@ class SocketService {
   private setupEventListeners() {
     if (!this.socket) return
 
-    this.socket.on('connect', () => {})
+    this.socket.on('connect', () => {
+      // connection established
+    })
 
-    this.socket.on('disconnect', () => {})
+    this.socket.on('disconnect', () => {
+      // connection closed
+    })
 
     this.socket.on('player-joined', (data) => {
       if (!data?.roomId || !data?.player) {
@@ -519,7 +523,9 @@ class SocketService {
       }
     })
 
-    this.socket.on('chat-message', (_data) => {})
+    this.socket.on('chat-message', (_data) => {
+      // chat message handled elsewhere via dedicated listeners
+    })
 
     this.socket.on('error', (_error) => {
       // Play error sound for connection errors

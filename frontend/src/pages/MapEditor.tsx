@@ -1398,11 +1398,11 @@ export default function MapEditor() {
               type="file"
               accept=".json"
               onChange={importMapJSON}
-              id="json-import"
+              id={imageScaleId + '-json-import'}
               className="hidden"
             />
             <label
-              htmlFor="json-import"
+              htmlFor={imageScaleId + '-json-import'}
               className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium cursor-pointer inline-block"
             >
               📤 Import JSON
@@ -1701,12 +1701,12 @@ export default function MapEditor() {
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="isPublic"
+                    id={mapNameId + '-isPublic'}
                     checked={isPublic}
                     onChange={(e) => setIsPublic(e.target.checked)}
                     className="rounded text-primary bg-slate-700 border-slate-600 focus:ring-primary"
                   />
-                  <label htmlFor="isPublic" className="text-sm text-slate-200">
+                  <label htmlFor={mapNameId + '-isPublic'} className="text-sm text-slate-200">
                     Make Public
                   </label>
                 </div>

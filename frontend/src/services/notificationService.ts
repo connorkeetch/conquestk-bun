@@ -116,7 +116,7 @@ class NotificationService {
       if (!groups.has(dateKey)) {
         groups.set(dateKey, [])
       }
-      groups.get(dateKey)!.push(notification)
+      groups.get(dateKey)?.push(notification)
     })
 
     return Array.from(groups.entries()).map(([date, notifications]) => ({
