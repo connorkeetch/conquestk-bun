@@ -117,6 +117,13 @@ export default function MapEditor() {
   const [notifications, setNotifications] = useState<EditorNotification[]>([])
   const notificationTimeoutsRef = useRef<Map<string, number>>(new Map())
 
+  // Server validation state
+  const [serverValidation, setServerValidation] = useState<{
+    isValid: boolean | null
+    errors: string[]
+  }>({ isValid: null, errors: [] })
+  const [isServerValidating, setIsServerValidating] = useState(false)
+
   const createNotificationId = useCallback(() => {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
       return crypto.randomUUID()
@@ -1025,16 +1032,23 @@ export default function MapEditor() {
         addNotification('Please save the map first to run server validation.', 'warning')
         return
       }
+      setIsServerValidating(true)
       const result = await mapService.validateMapServer(id)
+      setServerValidation({ isValid: result.isValid, errors: result.errors || [] })
       if (result.isValid) {
         addNotification('✅ Server validation passed! Your map is ready to use.', 'success')
-      } else {
-        result.errors.forEach((message) => addNotification(message, 'warning'))
-        addNotification('Server validation found issues that need attention.', 'error')
+      } else if (Array.isArray(result.errors)) {
+        // Keep a brief toast summary; details are shown in the panel
+        addNotification(
+          `Server validation found ${result.errors.length} issue${result.errors.length === 1 ? '' : 's'}. See panel for details.`,
+          'error',
+        )
       }
     } catch (error) {
       logger.error('Server validation error', error)
       addNotification('Failed to run server validation. Please try again.', 'error')
+    } finally {
+      setIsServerValidating(false)
     }
   }
 
@@ -1471,6 +1485,32 @@ export default function MapEditor() {
 
           {/* Tools Panel */}
           <div className="space-y-4">
+            {/* Server Validation Panel */}
+            <div className="bg-surface-1 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold">Validation (Server)</h3>
+                <button
+                  type="button"
+                  onClick={validateMapOnServer}
+                  disabled={isServerValidating}
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    isServerValidating ? 'bg-gray-600 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600'
+                  }`}
+                >
+                  {isServerValidating ? 'Running…' : 'Run Validation'}
+                </button>
+              </div>
+              {serverValidation.isValid === null && serverValidation.errors.length === 0 ? (
+                <p className="text-sm text-muted">Run validation to see results here.</p>
+              ) : serverValidation.isValid ? (
+                <div className="text-sm p-2 rounded border border-emerald-500 bg-emerald-900/30 text-emerald-200">
+                  ✅ No issues found. Your map looks playable.
+                </div>
+              ) : (
+                <ServerValidationList errors={serverValidation.errors} />
+              )}
+            </div>
+
             {/* Map Setup */}
             <div className="bg-slate-800 rounded-lg p-4">
               <h3 className="text-lg font-bold mb-3 text-slate-100">🗺️ Map Setup</h3>
@@ -2006,6 +2046,56 @@ export default function MapEditor() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Helper component to present server validation errors grouped by type
+function ServerValidationList({ errors }: { errors: string[] }) {
+  // Basic grouping by message patterns for readability
+  const groups: Record<string, { title: string; items: string[] }> = {
+    missingConnections: { title: 'Territories With No Connections', items: [] },
+    connectivity: { title: 'Connectivity Issues', items: [] },
+    badAdjacency: { title: 'Invalid Adjacencies', items: [] },
+    size: { title: 'Map Size Issues', items: [] },
+    other: { title: 'Other', items: [] },
+  }
+
+  for (const e of errors) {
+    const msg = String(e)
+    if (msg.toLowerCase().includes('no connections')) {
+      groups.missingConnections.items.push(msg)
+    } else if (msg.toLowerCase().includes('not fully connected') || msg.toLowerCase().includes('unreachable')) {
+      groups.connectivity.items.push(msg)
+    } else if (msg.startsWith('Adjacency from unknown') || msg.startsWith('Adjacency to unknown')) {
+      groups.badAdjacency.items.push(msg)
+    } else if (msg.toLowerCase().includes('at least 2 territories')) {
+      groups.size.items.push(msg)
+    } else {
+      groups.other.items.push(msg)
+    }
+  }
+
+  const ordered = Object.values(groups).filter((g) => g.items.length > 0)
+
+  return (
+    <div className="space-y-3">
+      {ordered.length === 0 ? (
+        <div className="text-sm p-2 rounded border border-emerald-500 bg-emerald-900/30 text-emerald-200">
+          ✅ No issues found. Your map looks playable.
+        </div>
+      ) : (
+        ordered.map((group) => (
+          <div key={group.title} className="text-sm">
+            <div className="font-semibold text-amber-300 mb-1">{group.title}</div>
+            <ul className="list-disc pl-5 space-y-1 text-amber-100">
+              {group.items.map((item, idx) => (
+                <li key={`${group.title}-${idx}`}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </div>
   )
 }
