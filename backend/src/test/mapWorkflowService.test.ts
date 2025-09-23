@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 let mockQuery: jest.Mock
 const mockCreateMap = jest.fn()
 const mockDeleteStagingImage = jest.fn()
+const mockCreateInAppNotification = jest.fn()
+const mockLogAdminAction = jest.fn()
+const mockNotificationDispatch = jest.fn()
 
 jest.mock('../config/database', () => {
   mockQuery = jest.fn()
@@ -26,9 +29,88 @@ jest.mock('../services/mapStagingService', () => ({
 jest.mock('../services/notificationService', () => ({
   __esModule: true,
   default: {
-    createInAppNotification: jest.fn(),
+    createInAppNotification: (...args: unknown[]) => mockCreateInAppNotification(...args),
   },
 }))
+
+jest.mock('../services/adminService', () => ({
+  adminService: {
+    logAdminAction: (...args: unknown[]) => mockLogAdminAction(...args),
+  },
+}))
+
+jest.mock('../services/NotificationDispatcher', () => ({
+  notificationDispatcher: {
+    dispatch: (...args: unknown[]) => mockNotificationDispatch(...args),
+  },
+}))
+
+describe('mapWorkflowService.approveMap', () => {
+  let mapWorkflowService: typeof import('../services/mapWorkflowService').default
+
+  beforeEach(() => {
+    jest.resetModules()
+    mockQuery = jest.fn()
+    mockCreateMap.mockReset()
+    mockDeleteStagingImage.mockReset()
+    mockCreateInAppNotification.mockReset()
+    mockCreateInAppNotification.mockResolvedValue(undefined)
+    mockLogAdminAction.mockReset()
+    mockLogAdminAction.mockResolvedValue(undefined)
+    mockNotificationDispatch.mockReset()
+    mockNotificationDispatch.mockResolvedValue(undefined)
+
+    ;({ default: mapWorkflowService } = require('../services/mapWorkflowService'))
+  })
+
+  it('marks approved maps as public and notifies the creator', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'pending_review', is_public: false }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ status: 'approved', is_public: true }] })
+      .mockResolvedValueOnce({ rows: [{ creator_id: 'creator-1', name: 'Galactic Fronts' }] })
+
+    await mapWorkflowService.approveMap('map-1', 'admin-1', { notes: 'looks good' })
+
+    expect(mockQuery).toHaveBeenCalledTimes(6)
+    const updateSql = mockQuery.mock.calls[1]?.[0] as string
+    expect(updateSql).toContain("SET status = 'approved'")
+    expect(updateSql).toContain('is_public = TRUE')
+
+    expect(mockLogAdminAction).toHaveBeenCalledWith(
+      'admin-1',
+      'map_approved',
+      expect.objectContaining({
+        mapId: 'map-1',
+        before: expect.objectContaining({ is_public: false }),
+        after: expect.objectContaining({ is_public: true }),
+      }),
+      'map',
+      'map-1',
+      undefined,
+      undefined,
+    )
+
+    expect(mockCreateInAppNotification).toHaveBeenCalledWith(
+      'creator-1',
+      expect.objectContaining({
+        type: 'map_approved',
+        data: { mapId: 'map-1' },
+      }),
+    )
+
+    expect(mockNotificationDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          status: 'approved',
+          mapId: 'map-1',
+        }),
+      }),
+    )
+  })
+})
 
 describe('mapWorkflowService.publishDraft', () => {
   const nowIso = new Date().toISOString()
@@ -39,6 +121,12 @@ describe('mapWorkflowService.publishDraft', () => {
     mockQuery = jest.fn()
     mockCreateMap.mockReset()
     mockDeleteStagingImage.mockReset()
+    mockCreateInAppNotification.mockReset()
+    mockCreateInAppNotification.mockResolvedValue(undefined)
+    mockLogAdminAction.mockReset()
+    mockLogAdminAction.mockResolvedValue(undefined)
+    mockNotificationDispatch.mockReset()
+    mockNotificationDispatch.mockResolvedValue(undefined)
 
     ;({ default: mapWorkflowService } = require('../services/mapWorkflowService'))
   })
