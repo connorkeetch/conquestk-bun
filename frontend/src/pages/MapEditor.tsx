@@ -235,7 +235,9 @@ export default function MapEditor() {
       ])
       setTerritoryAbilities(abilities)
       setGameModes(modes)
-    } catch (_error) {}
+    } catch (_error) {
+      // Silently ignore metadata loading failures in editor; non-blocking
+    }
   }
 
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -1648,7 +1650,7 @@ export default function MapEditor() {
                       min="50"
                       max="150"
                       value={state.imageScale * 100}
-                      onChange={(e) => handleScaleChange(parseInt(e.target.value) / 100)}
+                      onChange={(e) => handleScaleChange(parseInt(e.target.value, 10) / 100)}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-slate-400 mt-1">

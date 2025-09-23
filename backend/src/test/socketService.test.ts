@@ -4,6 +4,34 @@ import { queueService } from '../services/queueService'
 import { setupSocketHandlers } from '../services/socketService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
+type QueueServiceMocks = {
+  addGameAction: jest.Mock
+  addBattleSimulation: jest.Mock
+}
+
+type GameRoomServiceMocks = {
+  mockIsPlayerInRoom: jest.Mock
+  mockGetPlayer: jest.Mock
+  GameRoomService: jest.Mock
+}
+
+type CacheServiceMocks = {
+  mockGetCachedState: jest.Mock
+}
+
+type SocketRegistryMocks = {
+  mockRegisterSocketServer: jest.Mock
+}
+
+type TestGlobals = typeof globalThis & {
+  __queueServiceMocks?: QueueServiceMocks
+  __gameRoomServiceMocks?: GameRoomServiceMocks
+  __cacheServiceMocks?: CacheServiceMocks
+  __socketRegistryMocks?: SocketRegistryMocks
+}
+
+const testGlobals = globalThis as TestGlobals
+
 const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 
 jest.mock('../config/database', () => ({
@@ -11,20 +39,24 @@ jest.mock('../config/database', () => ({
 }))
 
 jest.mock('../services/queueService', () => {
-  const mocks = {
+  const mocks: QueueServiceMocks = {
     addGameAction: jest.fn(),
     addBattleSimulation: jest.fn(),
   }
-  ;(globalThis as any).__queueServiceMocks = mocks
+  testGlobals.__queueServiceMocks = mocks
   return {
     queueService: mocks,
   }
 })
 
-const queueServiceMocks = (globalThis as any).__queueServiceMocks as {
-  addGameAction: jest.Mock
-  addBattleSimulation: jest.Mock
+const getQueueServiceMocks = (): QueueServiceMocks => {
+  if (!testGlobals.__queueServiceMocks) {
+    throw new Error('Queue service mocks not initialised')
+  }
+  return testGlobals.__queueServiceMocks
 }
+
+const queueServiceMocks = getQueueServiceMocks()
 
 const mockGameServiceInstance = {
   fortify: jest.fn(),
@@ -48,7 +80,7 @@ jest.mock('../services/gameRoomService', () => {
     isPlayerInRoom: mockIsPlayerInRoom,
     getPlayer: mockGetPlayer,
   }))
-  ;(globalThis as any).__gameRoomServiceMocks = {
+  testGlobals.__gameRoomServiceMocks = {
     mockIsPlayerInRoom,
     mockGetPlayer,
     GameRoomService,
@@ -58,14 +90,18 @@ jest.mock('../services/gameRoomService', () => {
   }
 })
 
-const { mockIsPlayerInRoom, mockGetPlayer } = (globalThis as any).__gameRoomServiceMocks as {
-  mockIsPlayerInRoom: jest.Mock
-  mockGetPlayer: jest.Mock
+const getGameRoomServiceMocks = (): GameRoomServiceMocks => {
+  if (!testGlobals.__gameRoomServiceMocks) {
+    throw new Error('Game room service mocks not initialised')
+  }
+  return testGlobals.__gameRoomServiceMocks
 }
+
+const { mockIsPlayerInRoom, mockGetPlayer } = getGameRoomServiceMocks()
 
 jest.mock('../services/cacheService', () => {
   const mockGetCachedState = jest.fn()
-  ;(globalThis as any).__cacheServiceMocks = {
+  testGlobals.__cacheServiceMocks = {
     mockGetCachedState,
   }
   return {
@@ -75,13 +111,18 @@ jest.mock('../services/cacheService', () => {
   }
 })
 
-const { mockGetCachedState } = (globalThis as any).__cacheServiceMocks as {
-  mockGetCachedState: jest.Mock
+const getCacheServiceMocks = (): CacheServiceMocks => {
+  if (!testGlobals.__cacheServiceMocks) {
+    throw new Error('Cache service mocks not initialised')
+  }
+  return testGlobals.__cacheServiceMocks
 }
+
+const { mockGetCachedState } = getCacheServiceMocks()
 
 jest.mock('../services/socketRegistry', () => {
   const mockRegisterSocketServer = jest.fn()
-  ;(globalThis as any).__socketRegistryMocks = {
+  testGlobals.__socketRegistryMocks = {
     mockRegisterSocketServer,
   }
   return {
@@ -91,9 +132,14 @@ jest.mock('../services/socketRegistry', () => {
   }
 })
 
-const { mockRegisterSocketServer } = (globalThis as any).__socketRegistryMocks as {
-  mockRegisterSocketServer: jest.Mock
+const getSocketRegistryMocks = (): SocketRegistryMocks => {
+  if (!testGlobals.__socketRegistryMocks) {
+    throw new Error('Socket registry mocks not initialised')
+  }
+  return testGlobals.__socketRegistryMocks
 }
+
+const { mockRegisterSocketServer } = getSocketRegistryMocks()
 
 jest.mock('../socket/chatHandlers', () => ({
   setupChatHandlers: jest.fn(),

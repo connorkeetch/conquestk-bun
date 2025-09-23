@@ -284,9 +284,9 @@ const Maps: React.FC = () => {
                 {/* Tags */}
                 {map.tags && map.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {map.tags.slice(0, 3).map((tag, index) => (
+                    {map.tags.slice(0, 3).map((tag) => (
                       <span
-                        key={index}
+                        key={`${map.id}-${tag}`}
                         className="bg-surface-2 text-xs px-2 py-1 rounded text-muted"
                       >
                         {tag}

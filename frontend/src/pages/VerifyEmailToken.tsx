@@ -45,7 +45,7 @@ export default function VerifyEmailToken() {
           setStatus('error')
           setMessage(data.message || 'Verification failed')
         }
-      } catch (error) {
+      } catch (_error) {
         setStatus('error')
         setMessage('An error occurred during verification')
       }

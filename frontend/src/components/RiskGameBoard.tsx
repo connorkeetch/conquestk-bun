@@ -201,6 +201,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     setHoveredTerritory(territoryId)
   }, [])
 
+  const territoryModifierMap = useMemo(() => {
+    if (!gameState?.territoryModifiers) return null
+    return normaliseModifierMap(gameState.territoryModifiers)
+  }, [gameState?.territoryModifiers])
+
   if (!gameState) {
     return (
       <div className="flex items-center justify-center h-full bg-blue-50 rounded-lg">
@@ -221,11 +226,6 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         troops: gameState?.reinforcementArmies ?? 0,
       }
     : undefined
-
-  const territoryModifierMap = useMemo(() => {
-    if (!gameState?.territoryModifiers) return null
-    return normaliseModifierMap(gameState.territoryModifiers)
-  }, [gameState?.territoryModifiers])
 
   return (
     <div className="flex flex-col h-full bg-blue-50 rounded-lg overflow-hidden">

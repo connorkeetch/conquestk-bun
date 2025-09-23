@@ -1,4 +1,13 @@
-import { BookOpen, Gamepad2, Map, Settings, Shield, Trophy, Users, Zap } from 'lucide-react'
+import {
+  BookOpen,
+  Gamepad2,
+  Map as MapIcon,
+  Settings,
+  Shield,
+  Trophy,
+  Users,
+  Zap,
+} from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 import { RANK_COLORS } from '../constants/colors'
@@ -59,7 +68,7 @@ const TutorialPage: React.FC = () => {
           onClick={() => setActiveTab('editor')}
           className={`tab ${activeTab === 'editor' ? 'tab-active' : ''}`}
         >
-          <Map className="w-4 h-4" />
+          <MapIcon className="w-4 h-4" />
           Map Editor
         </button>
         <button

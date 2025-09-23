@@ -826,7 +826,6 @@ const ProfilePage: React.FC = () => {
                 key={tab.id}
                 onClick={() => tab.available && setActiveTab(tab.id)}
                 disabled={!tab.available}
-                aria-selected={activeTab === tab.id}
                 className={`relative px-5 py-3 font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft ${
                   activeTab === tab.id
                     ? 'text-white bg-gradient-to-r from-primary to-primary-soft border-primary/60 shadow-lg'

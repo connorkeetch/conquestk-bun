@@ -331,7 +331,8 @@ export const mapService = {
       const queue = [territories[0].id]
 
       while (queue.length > 0) {
-        const current = queue.shift()!
+        const current = queue.shift()
+        if (!current) break
         if (visited.has(current)) continue
 
         visited.add(current)

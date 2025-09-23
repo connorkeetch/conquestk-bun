@@ -10,7 +10,7 @@ import type {
   GameRoom,
   GameState,
   LoginResponse,
-  Map,
+  Map as GameMap,
   Notification,
   PaginatedResponse,
   RegisterResponse,
@@ -194,22 +194,22 @@ class TypedApiClient {
     creatorId?: string
     page?: number
     limit?: number
-  }): Promise<PaginatedResponse<Map>> {
-    return this.request<PaginatedResponse<Map>>('get', '/maps', undefined, {
+  }): Promise<PaginatedResponse<GameMap>> {
+    return this.request<PaginatedResponse<GameMap>>('get', '/maps', undefined, {
       params,
     })
   }
 
-  async getMap(mapId: string): Promise<Map> {
-    return this.request<Map>('get', `/maps/${mapId}`)
+  async getMap(mapId: string): Promise<GameMap> {
+    return this.request<GameMap>('get', `/maps/${mapId}`)
   }
 
-  async createMap(mapData: Partial<Map>): Promise<Map> {
-    return this.request<Map>('post', '/maps', mapData)
+  async createMap(mapData: Partial<GameMap>): Promise<GameMap> {
+    return this.request<GameMap>('post', '/maps', mapData)
   }
 
-  async updateMap(mapId: string, updates: Partial<Map>): Promise<Map> {
-    return this.request<Map>('patch', `/maps/${mapId}`, updates)
+  async updateMap(mapId: string, updates: Partial<GameMap>): Promise<GameMap> {
+    return this.request<GameMap>('patch', `/maps/${mapId}`, updates)
   }
 
   async deleteMap(mapId: string): Promise<void> {
