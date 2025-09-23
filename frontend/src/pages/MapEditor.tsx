@@ -476,23 +476,7 @@ export default function MapEditor() {
       redrawTerritories(ctx)
       drawAdjacencies(ctx)
     }
-  }, [
-    state.imageUrl,
-    state.territories,
-    state.continents,
-    state.selectedTerritory,
-    state.isDrawing,
-    state.currentPolygon,
-    state.adjacencies,
-    state.selectedTool,
-    state.firstSelectedTerritory,
-    state.imageScale,
-    state.imageWidth,
-    state.imageHeight,
-    drawGrid,
-    redrawTerritories,
-    drawAdjacencies,
-  ])
+  }, [state.imageUrl, drawGrid, redrawTerritories, drawAdjacencies])
 
   // Canvas handlers will be defined after all helper functions
 
@@ -1022,7 +1006,9 @@ export default function MapEditor() {
     if (issues.length === 0) {
       addNotification('✅ Map validation passed! Your map is ready to use.', 'success')
     } else {
-      issues.forEach((message) => addNotification(message, 'warning'))
+      for (const message of issues) {
+        addNotification(message, 'warning')
+      }
       addNotification('Map validation found issues that need attention.', 'error')
     }
   }
@@ -1264,7 +1250,7 @@ export default function MapEditor() {
             </p>
             <button
               type="button"
-              onClick={() => (window.location.href = '/map-editor')}
+              onClick={() => window.location.assign('/map-editor')}
               className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
             >
               Return to Current Map Editor
@@ -1398,11 +1384,11 @@ export default function MapEditor() {
               type="file"
               accept=".json"
               onChange={importMapJSON}
-              id={imageScaleId + '-json-import'}
+              id={`${imageScaleId}-json-import`}
               className="hidden"
             />
             <label
-              htmlFor={imageScaleId + '-json-import'}
+              htmlFor={`${imageScaleId}-json-import`}
               className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium cursor-pointer inline-block"
             >
               📤 Import JSON
@@ -1701,12 +1687,12 @@ export default function MapEditor() {
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id={mapNameId + '-isPublic'}
+                    id={`${mapNameId}-isPublic`}
                     checked={isPublic}
                     onChange={(e) => setIsPublic(e.target.checked)}
                     className="rounded text-primary bg-slate-700 border-slate-600 focus:ring-primary"
                   />
-                  <label htmlFor={mapNameId + '-isPublic'} className="text-sm text-slate-200">
+                  <label htmlFor={`${mapNameId}-isPublic`} className="text-sm text-slate-200">
                     Make Public
                   </label>
                 </div>

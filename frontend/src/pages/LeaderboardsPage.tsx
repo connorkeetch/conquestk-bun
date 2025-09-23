@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import SkillTierBadge from '../components/SkillTierBadge'
@@ -28,11 +28,7 @@ const LeaderboardsPage: React.FC = () => {
 
   const ITEMS_PER_PAGE = 50
 
-  useEffect(() => {
-    fetchLeaderboard()
-  }, [tierFilter, currentPage])
-
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
@@ -57,7 +53,11 @@ const LeaderboardsPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [ITEMS_PER_PAGE, currentPage, tierFilter])
+
+  useEffect(() => {
+    void fetchLeaderboard()
+  }, [fetchLeaderboard])
 
   const getTrendIcon = (trend?: 'up' | 'down' | 'stable') => {
     switch (trend) {

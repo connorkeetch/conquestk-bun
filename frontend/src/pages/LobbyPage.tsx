@@ -251,7 +251,7 @@ const LobbyPage: React.FC = () => {
   }
 
   const isLobbyStatus = (status: GameRoom['status']) => status === 'lobby'
-  const isInProgressStatus = (status: GameRoom['status']) => status === 'active'
+  const _isInProgressStatus = (status: GameRoom['status']) => status === 'active'
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
