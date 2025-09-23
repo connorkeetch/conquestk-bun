@@ -165,10 +165,20 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
         backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
       }
 
-  const signatureLargeColorSwatchStyle: React.CSSProperties = {
-    ...signatureColorSwatchStyle,
-    boxShadow: `0 12px 35px ${hexToRgba(signatureHex, 0.35)}`,
-  }
+  const heroGradientOverlay = 'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
+
+  const heroBackgroundStyle: React.CSSProperties = signatureIsGradient
+    ? {
+        backgroundImage: `${heroGradientOverlay}, ${resolvedPreferredColor}`,
+      }
+    : {
+        backgroundImage: `linear-gradient(155deg, ${hexToRgba(signatureHex, 0.88)} 0%, ${hexToRgba(
+          mixColors(signatureHex, '#0f1117', 0.4),
+          0.92,
+        )} 55%, ${hexToRgba(mixColors(signatureHex, '#090b12', 0.7), 0.95)} 100%)`,
+      }
+
+  const heroBorderColor = hexToRgba(ensureReadableOnDark(signatureHex), 0.45)
 
   const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
 
@@ -196,7 +206,8 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
     signatureCrestStyle,
     signatureColorSwatchStyle,
     signatureGlowStyle,
-    signatureLargeColorSwatchStyle,
+    heroBackgroundStyle,
+    heroBorderColor,
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
@@ -255,7 +266,6 @@ const buildRankVisuals = (profile: ProfileSummary) => {
         backgroundImage: `linear-gradient(90deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.7)})`,
       }
 
-  const rankSurfaceBorder = hexToRgba(rankAccentColor, 0.35)
   const nextRankTarget = nextRankDetails?.minRating ?? rankDetails.minRating
   const rankProgressRange = Math.max(nextRankTarget - rankDetails.minRating, 1)
   const rankProgress = Math.min(
@@ -276,7 +286,6 @@ const buildRankVisuals = (profile: ProfileSummary) => {
     rankHeaderAccentStyle,
     rankProgressFill,
     rankCallToActionStyle,
-    rankSurfaceBorder,
     rankProgress,
     ratingToNextRank,
   }
@@ -489,7 +498,8 @@ const ProfilePage: React.FC = () => {
     signatureCrestStyle,
     signatureColorSwatchStyle,
     signatureGlowStyle,
-    signatureLargeColorSwatchStyle,
+    heroBackgroundStyle,
+    heroBorderColor,
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
@@ -507,7 +517,6 @@ const ProfilePage: React.FC = () => {
     rankHeaderAccentStyle,
     rankProgressFill,
     rankCallToActionStyle,
-    rankSurfaceBorder,
     rankProgress,
     ratingToNextRank,
   } = rankVisuals
@@ -544,18 +553,17 @@ const ProfilePage: React.FC = () => {
         )}
 
         {/* Profile Header Card with glass effect */}
-        <div className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden">
+        <div
+          className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden border"
+          style={{ ...heroBackgroundStyle, borderColor: heroBorderColor }}
+        >
           <div
-            className="absolute inset-0 opacity-75 mix-blend-screen pointer-events-none"
-            style={rankGlowStyle}
+            className="absolute inset-0 opacity-80 pointer-events-none"
+            style={signatureGlowStyle}
           />
           <div
-            className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-40 pointer-events-none"
-            style={{ background: hexToRgba(rankAccentSoft, 0.45) }}
-          />
-          <div
-            className="absolute inset-0 opacity-35 pointer-events-none"
-            style={rankHeaderAccentStyle}
+            className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-35 pointer-events-none"
+            style={{ background: hexToRgba(signatureHex, 0.4) }}
           />
           <div className="absolute top-4 right-4 flex flex-col items-end gap-2 text-sm">
             <div className="flex flex-wrap justify-end gap-2">
@@ -643,7 +651,7 @@ const ProfilePage: React.FC = () => {
                   }}
                 />
                 <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
-                  {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : 'Signature Color'}
+                  {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : preferredColorDisplayName}
                 </span>
               </div>
             </div>
@@ -707,11 +715,6 @@ const ProfilePage: React.FC = () => {
                   <span className="text-lg">🌠</span>
                   Peak {profile.peakRating}
                 </span>
-                <span className="hidden sm:inline text-white/30">•</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-lg">🎨</span>
-                  {preferredColorDisplayName}
-                </span>
               </div>
 
               {/* Bio */}
@@ -737,29 +740,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Identity highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="relative glass-box-sm p-5 overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-35 pointer-events-none"
-              style={signatureGlowStyle}
-            />
-            <div className="relative flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.45em] text-muted">Signature Color</p>
-                <p className="text-lg font-semibold text-white">{preferredColorDisplayName}</p>
-              </div>
-              <div
-                className="w-14 h-14 rounded-xl border border-white/10"
-                style={signatureLargeColorSwatchStyle}
-              />
-            </div>
-            <p className="relative text-xs text-muted mt-4 leading-relaxed">
-              {premiumColorEntry
-                ? premiumColorEntry[1].description
-                : 'This hue personalizes your armies, UI highlights, and profile energy.'}
-            </p>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="relative glass-box-sm p-5 overflow-hidden">
             <div
               className="absolute inset-0 opacity-30 pointer-events-none"
@@ -842,21 +823,14 @@ const ProfilePage: React.FC = () => {
                 key={tab.id}
                 onClick={() => tab.available && setActiveTab(tab.id)}
                 disabled={!tab.available}
-                className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 whitespace-nowrap border-b-2 ${
+                aria-selected={activeTab === tab.id}
+                className={`relative px-5 py-3 font-medium rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft ${
                   activeTab === tab.id
-                    ? 'text-white'
+                    ? 'text-white bg-gradient-to-r from-primary to-primary-soft border-primary/60 shadow-lg'
                     : tab.available
-                      ? 'text-muted hover:text-white'
-                      : 'text-muted/50 cursor-not-allowed'
+                      ? 'text-muted border-transparent hover:text-white hover:bg-surface-2/70 hover:border-border'
+                      : 'text-muted/50 border-transparent cursor-not-allowed'
                 }`}
-                style={
-                  activeTab === tab.id
-                    ? {
-                        color: rankAccentColor,
-                        borderBottomColor: rankAccentColor,
-                      }
-                    : undefined
-                }
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -875,50 +849,30 @@ const ProfilePage: React.FC = () => {
             <div className="space-y-6">
               {/* Stats Grid with enhanced cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div
-                  className="group relative glass-box-sm transition-all hover:scale-105 hover:shadow-xl overflow-hidden"
-                  style={{ borderColor: rankSurfaceBorder }}
-                >
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={rankGlowStyle}
-                  />
-                  <div className="relative text-center">
-                    <div className="text-2xl mb-2">🎮</div>
-                    <div className="text-2xl font-bold" style={{ color: rankAccentColor }}>
-                      {profile.gamesPlayed}
-                    </div>
-                    <div className="text-muted text-sm">Games Played</div>
-                  </div>
+                <div className="relative glass-box-sm border border-white/10 bg-surface-2/70 text-center transition-transform hover:-translate-y-1 hover:shadow-xl">
+                  <div className="text-2xl mb-2">🎮</div>
+                  <div className="text-2xl font-bold text-white">{profile.gamesPlayed}</div>
+                  <div className="text-muted text-sm">Games Played</div>
                 </div>
 
-                <div className="group relative glass-box-sm hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative text-center">
-                    <div className="text-2xl mb-2">✅</div>
-                    <div className="text-2xl font-bold text-green-400">{profile.wins}</div>
-                    <div className="text-muted text-sm">Wins</div>
-                  </div>
+                <div className="relative glass-box-sm border border-white/10 bg-surface-2/70 text-center transition-transform hover:-translate-y-1 hover:shadow-xl">
+                  <div className="text-2xl mb-2">✅</div>
+                  <div className="text-2xl font-bold text-green-400">{profile.wins}</div>
+                  <div className="text-muted text-sm">Wins</div>
                 </div>
 
-                <div className="group relative glass-box-sm hover:border-red-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative text-center">
-                    <div className="text-2xl mb-2">❌</div>
-                    <div className="text-2xl font-bold text-red-400">{profile.losses}</div>
-                    <div className="text-muted text-sm">Losses</div>
-                  </div>
+                <div className="relative glass-box-sm border border-white/10 bg-surface-2/70 text-center transition-transform hover:-translate-y-1 hover:shadow-xl">
+                  <div className="text-2xl mb-2">❌</div>
+                  <div className="text-2xl font-bold text-red-400">{profile.losses}</div>
+                  <div className="text-muted text-sm">Losses</div>
                 </div>
 
-                <div className="group relative glass-box-sm hover:border-yellow-500/50 transition-all hover:scale-105 hover:shadow-lg overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative text-center">
-                    <div className="text-2xl mb-2">📊</div>
-                    <div className="text-2xl font-bold text-yellow-400">
-                      {profile.gamesPlayed > 0 ? `${profile.winRate.toFixed(1)}%` : 'N/A'}
-                    </div>
-                    <div className="text-muted text-sm">Win Rate</div>
+                <div className="relative glass-box-sm border border-white/10 bg-surface-2/70 text-center transition-transform hover:-translate-y-1 hover:shadow-xl">
+                  <div className="text-2xl mb-2">📊</div>
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {profile.gamesPlayed > 0 ? `${profile.winRate.toFixed(1)}%` : 'N/A'}
                   </div>
+                  <div className="text-muted text-sm">Win Rate</div>
                 </div>
               </div>
 
