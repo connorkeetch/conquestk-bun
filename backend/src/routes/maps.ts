@@ -857,6 +857,8 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
     // Add status information to user's own maps
     const pool = await getPool()
     const mapIds = result.maps.map((m) => m.id)
+    let statusMap: Map<string, string> | null = null
+
     if (mapIds.length > 0) {
       const statusQuery = `
         SELECT id, status 
@@ -864,15 +866,19 @@ router.get('/my-maps', authenticateToken, async (req: Request, res: Response) =>
         WHERE id = ANY($1)
       `
       const statusResult = await pool.query(statusQuery, [mapIds])
-      const statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]))
-
-      result.maps = result.maps.map((map) => ({
-        ...map,
-        status: statusMap.get(map.id) || 'draft',
-      }))
+      statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]))
     }
 
-    return res.json(result.maps)
+    const maps = result.maps.map((map) => {
+      const resolvedImageUrl = resolveAssetUrl(req, map.imageUrl)
+      return {
+        ...map,
+        imageUrl: resolvedImageUrl || map.imageUrl,
+        status: statusMap?.get(map.id) || map.status || 'draft',
+      }
+    })
+
+    return res.json(maps)
   } catch (error) {
     handleRouteError(error, req, 'Failed to fetch user maps')
     return res.status(500).json({ error: 'Failed to fetch user maps' })

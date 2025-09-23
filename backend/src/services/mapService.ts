@@ -609,21 +609,30 @@ export class MapService {
     const whereConditions: string[] = []
     const queryParams: SqlValue[] = []
 
-    if (filters.isPublic !== false) {
-      whereConditions.push('is_public = TRUE')
+    const addParam = (value: SqlValue) => {
+      queryParams.push(value)
+      return `$${queryParams.length}`
+    }
+
+    if (typeof filters.isPublic === 'boolean') {
+      const placeholder = addParam(filters.isPublic)
+      whereConditions.push(`is_public = ${placeholder}`)
     }
 
     if (filters.search) {
-      whereConditions.push('(name LIKE ? OR description LIKE ?)')
       // Escape special regex characters in search terms (Node.js 24+ RegExp.escape not yet in TypeScript)
       const escapedSearch = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const searchTerm = `%${escapedSearch}%`
-      queryParams.push(searchTerm, searchTerm)
+      const namePlaceholder = addParam(searchTerm)
+      const descriptionPlaceholder = addParam(searchTerm)
+      whereConditions.push(
+        `(name ILIKE ${namePlaceholder} OR description ILIKE ${descriptionPlaceholder})`,
+      )
     }
 
     if (filters.creator) {
-      whereConditions.push('creator_id = ?')
-      queryParams.push(filters.creator)
+      const placeholder = addParam(filters.creator)
+      whereConditions.push(`creator_id = ${placeholder}`)
     }
 
     if (filters.isFeatured) {
@@ -631,24 +640,26 @@ export class MapService {
     }
 
     if (filters.status) {
-      whereConditions.push('status = ?')
-      queryParams.push(filters.status)
+      const placeholder = addParam(filters.status)
+      whereConditions.push(`status = ${placeholder}`)
     }
 
     if (filters.minRating) {
-      whereConditions.push('rating_average >= ?')
-      queryParams.push(filters.minRating)
+      const placeholder = addParam(filters.minRating)
+      whereConditions.push(`rating_average >= ${placeholder}`)
     }
 
     if (filters.tags && filters.tags.length > 0) {
-      // Simple tag matching - in production you might want better JSON querying
-      const tagConditions = filters.tags.map(() => 'tags LIKE ?').join(' AND ')
+      // Simple tag matching that works for both JSONB and text[] storage
+      const tagConditions = filters.tags
+        .map((tag) => {
+          const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const placeholder = addParam(`%"${escapedTag}"%`)
+          return `tags::text ILIKE ${placeholder}`
+        })
+        .join(' AND ')
+
       whereConditions.push(`(${tagConditions})`)
-      filters.tags.forEach((tag) => {
-        // Escape special regex characters in tag matching (Node.js 24+ RegExp.escape not yet in TypeScript)
-        const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        queryParams.push(`%"${escapedTag}"%`)
-      })
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
@@ -657,19 +668,20 @@ export class MapService {
     const offset = filters.offset || 0
 
     // Get total count
-    const countResult = await query(
-      `SELECT COUNT(*) as total FROM maps ${whereClause}`,
-      queryParams,
-    )
+    const countResult = await query(`SELECT COUNT(*) as total FROM maps ${whereClause}`, [
+      ...queryParams,
+    ])
     const total = countResult.rows[0].total
 
     // Get maps with pagination
-    queryParams.push(limit, offset)
+    const baseParamCount = queryParams.length
+    const limitPlaceholder = `$${baseParamCount + 1}`
+    const offsetPlaceholder = `$${baseParamCount + 2}`
     const mapsResult = await query(
       `
-      SELECT * FROM maps ${whereClause} ${orderBy} LIMIT ? OFFSET ?
+      SELECT * FROM maps ${whereClause} ${orderBy} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
     `,
-      queryParams,
+      [...queryParams, limit, offset],
     )
 
     const maps = mapsResult.rows.map((row) => this.formatMapFromDb(row as MapDbRow))
