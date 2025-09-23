@@ -385,6 +385,7 @@ export class MapWorkflowService {
         `
         UPDATE maps 
         SET status = 'approved', 
+            is_public = TRUE,
             reviewed_at = CURRENT_TIMESTAMP,
             reviewed_by = $1,
             review_notes = $2
