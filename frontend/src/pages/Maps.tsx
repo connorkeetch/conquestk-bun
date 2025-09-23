@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
@@ -34,14 +34,7 @@ const Maps: React.FC = () => {
   const [showMyMaps, setShowMyMaps] = useState(false)
   const { user } = useAppSelector((state) => state.auth)
 
-  useEffect(() => {
-    fetchMaps()
-    if (user) {
-      fetchMyMaps()
-    }
-  }, [sortBy, filterTag, user])
-
-  const fetchMaps = async () => {
+  const fetchMaps = useCallback(async () => {
     try {
       setLoading(true)
       // Fetch approved public maps
@@ -61,9 +54,8 @@ const Maps: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
-
-  const fetchMyMaps = async () => {
+  }, [sortBy, filterTag])
+  const fetchMyMaps = useCallback(async () => {
     try {
       // Fetch user's own maps (all statuses)
       const response = await api.get('/maps/my-maps')
@@ -72,7 +64,14 @@ const Maps: React.FC = () => {
       logger.error('Failed to fetch my maps', error)
       setMyMaps([])
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void fetchMaps()
+    if (user) {
+      void fetchMyMaps()
+    }
+  }, [fetchMaps, fetchMyMaps, user])
 
   const mapsToShow = showMyMaps ? myMaps : maps
   let filteredMaps = mapsToShow.filter(
