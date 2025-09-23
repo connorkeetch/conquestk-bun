@@ -1,8 +1,0 @@
-[build]
-cmd = "cd backend && npm ci && npm run build && npm prune --omit=dev"
-
-[start]
-cmd = "cd backend && node dist/index.js"
-
-[variables]
-NODE_VERSION = "22.12.0"
