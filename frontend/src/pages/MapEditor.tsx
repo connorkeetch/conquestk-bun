@@ -184,6 +184,9 @@ export default function MapEditor() {
     }
   }, [])
 
+  // Define callbacks before effects
+  // (moved earlier above)
+
   // Check terms acceptance on mount
   useEffect(() => {
     checkTermsAcceptance()
