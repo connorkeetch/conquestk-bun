@@ -27,6 +27,7 @@
         "EMAIL_FROM": "noreply@conquestk.com",
         "FRONTEND_URL": "https://conquestk.com",
         "CORS_ORIGIN": "https://conquestk.com",
+        "VAPID_EMAIL": "mailto:admin@conquestk.com",
         "REQUIRE_EMAIL_VERIFICATION": "true"
       }
     },
@@ -42,6 +43,7 @@
         "FRONTEND_URL": "https://dev.conquestk.com",
         "CORS_ORIGIN": "https://dev.conquestk.com",
         "REQUIRE_EMAIL_VERIFICATION": "false",
+        "VAPID_EMAIL": "mailto:admin@conquestk.com",
         "LOG_LEVEL": "debug"
       }
     }
