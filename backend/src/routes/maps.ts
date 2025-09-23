@@ -492,6 +492,71 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
+// Get user's maps (both routes for compatibility)
+router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      creator: req.userId,
+      isPublic: undefined, // Show both public and private
+      sortBy: req.query.sortBy as string,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+    }
+
+    const result = await mapService.searchMaps(filters)
+
+    // Add status information to user's own maps
+    const pool = await getPool()
+    const mapIds = result.maps.map((m) => m.id)
+    let statusMap: Map<string, string> | null = null
+
+    if (mapIds.length > 0) {
+      const statusQuery = `
+        SELECT id, status 
+        FROM maps 
+        WHERE id = ANY($1)
+      `
+      const statusResult = await pool.query(statusQuery, [mapIds])
+      statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]))
+    }
+
+    const maps = result.maps.map((map) => {
+      const resolvedImageUrl = resolveAssetUrl(req, map.imageUrl)
+      return {
+        ...map,
+        imageUrl: resolvedImageUrl || map.imageUrl,
+        status: statusMap?.get(map.id) || map.status || 'draft',
+      }
+    })
+
+    return res.json(maps)
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to fetch user maps')
+    return res.status(500).json({ error: 'Failed to fetch user maps' })
+  }
+})
+
+// Legacy route for compatibility
+router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      creator: req.userId,
+      isPublic: undefined, // Show both public and private
+      sortBy: req.query.sortBy as string,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+    }
+
+    const result = await mapService.searchMaps(filters)
+    return res.json(result)
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to fetch user maps')
+    return res.status(500).json({ error: 'Failed to fetch user maps' })
+  }
+})
+
 // Get specific map details
 router.get(
   '/:mapId',
@@ -839,71 +904,6 @@ router.delete(
     }
   },
 )
-
-// Get user's maps (both routes for compatibility)
-router.get('/my-maps', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const filters = {
-      creator: req.userId,
-      isPublic: undefined, // Show both public and private
-      sortBy: req.query.sortBy as string,
-      sortOrder: req.query.sortOrder as 'asc' | 'desc',
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
-      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
-    }
-
-    const result = await mapService.searchMaps(filters)
-
-    // Add status information to user's own maps
-    const pool = await getPool()
-    const mapIds = result.maps.map((m) => m.id)
-    let statusMap: Map<string, string> | null = null
-
-    if (mapIds.length > 0) {
-      const statusQuery = `
-        SELECT id, status 
-        FROM maps 
-        WHERE id = ANY($1)
-      `
-      const statusResult = await pool.query(statusQuery, [mapIds])
-      statusMap = new Map(statusResult.rows.map((r) => [r.id, r.status]))
-    }
-
-    const maps = result.maps.map((map) => {
-      const resolvedImageUrl = resolveAssetUrl(req, map.imageUrl)
-      return {
-        ...map,
-        imageUrl: resolvedImageUrl || map.imageUrl,
-        status: statusMap?.get(map.id) || map.status || 'draft',
-      }
-    })
-
-    return res.json(maps)
-  } catch (error) {
-    handleRouteError(error, req, 'Failed to fetch user maps')
-    return res.status(500).json({ error: 'Failed to fetch user maps' })
-  }
-})
-
-// Legacy route for compatibility
-router.get('/my/maps', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const filters = {
-      creator: req.userId,
-      isPublic: undefined, // Show both public and private
-      sortBy: req.query.sortBy as string,
-      sortOrder: req.query.sortOrder as 'asc' | 'desc',
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
-      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
-    }
-
-    const result = await mapService.searchMaps(filters)
-    return res.json(result)
-  } catch (error) {
-    handleRouteError(error, req, 'Failed to fetch user maps')
-    return res.status(500).json({ error: 'Failed to fetch user maps' })
-  }
-})
 
 // ============= TERRITORY MANAGEMENT =============
 
