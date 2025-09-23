@@ -118,7 +118,33 @@ export default function MapEditor() {
   const notificationTimeoutsRef = useRef<Map<string, number>>(new Map())
 
   // Callbacks declared before effects that use them
-  // (moved earlier above)
+  const checkTermsAcceptance = useCallback(async () => {
+    try {
+      const response = await termsService.checkTermsAcceptance('map_editor')
+      if (!response.hasAccepted) {
+        setTermsContent(response.termsContent)
+        setShowTermsModal(true)
+      }
+    } catch (error) {
+      logger.error('Error checking terms', error)
+      // If terms check fails, allow access but log the error
+    } finally {
+      setIsCheckingTerms(false)
+    }
+  }, [])
+
+  const loadMetadata = useCallback(async () => {
+    try {
+      const [abilities, modes] = await Promise.all([
+        mapService.getTerritoryAbilityTypes(),
+        mapService.getGameModes(),
+      ])
+      setTerritoryAbilities(abilities)
+      setGameModes(modes)
+    } catch (_error) {
+      // Silently ignore metadata loading failures in editor; non-blocking
+    }
+  }, [])
 
   // Server validation state
   const [serverValidation, setServerValidation] = useState<{
@@ -202,22 +228,6 @@ export default function MapEditor() {
     }
   }, [showTermsModal, isCheckingTerms, loadMetadata])
 
-  const checkTermsAcceptance = useCallback(async () => {
-    try {
-      const response = await termsService.checkTermsAcceptance('map_editor')
-
-      if (!response.hasAccepted) {
-        setTermsContent(response.termsContent)
-        setShowTermsModal(true)
-      }
-    } catch (error) {
-      logger.error('Error checking terms', error)
-      // If terms check fails, allow access but log the error
-    } finally {
-      setIsCheckingTerms(false)
-    }
-  }, [])
-
   const handleAcceptTerms = async () => {
     try {
       await termsService.acceptTerms('map_editor')
@@ -233,18 +243,7 @@ export default function MapEditor() {
     navigate('/') // Navigate back to home if terms are declined
   }
 
-  const loadMetadata = useCallback(async () => {
-    try {
-      const [abilities, modes] = await Promise.all([
-        mapService.getTerritoryAbilityTypes(),
-        mapService.getGameModes(),
-      ])
-      setTerritoryAbilities(abilities)
-      setGameModes(modes)
-    } catch (_error) {
-      // Silently ignore metadata loading failures in editor; non-blocking
-    }
-  }, [])
+  // (loadMetadata defined earlier)
 
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     const canvas = ctx.canvas
@@ -585,7 +584,7 @@ export default function MapEditor() {
       const img = new Image()
 
       img.onload = () => {
-        const isSvg = file.type === 'image/svg+xml'
+        const _isSvg = file.type === 'image/svg+xml'
 
         // Minimum size requirements
         const MIN_WIDTH = 400
@@ -1097,7 +1096,7 @@ export default function MapEditor() {
         }))
 
         addNotification('Map data imported successfully!', 'success')
-      } catch (error) {
+      } catch (_error) {
         addNotification('Failed to import map data. Please check the file format.', 'error')
       }
     }
@@ -1514,14 +1513,13 @@ export default function MapEditor() {
                 {/* Background Image Upload */}
                 <div>
                   <p className="block text-sm font-medium mb-2">Background Image</p>
-                  <div
+                  <section
                     className={`bg-surface-2 rounded-lg p-3 border-2 border-dashed transition-colors ${
                       isDragOver ? 'border-primary bg-blue-900/20' : 'border-border'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    role="region"
                     aria-label="Map image dropzone"
                   >
                     <div className="text-center">
@@ -1623,7 +1621,7 @@ export default function MapEditor() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </section>
                   <div className="mt-1 text-xs text-slate-400">
                     💡 Start by uploading a map image, then draw territories on top
                   </div>
