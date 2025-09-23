@@ -5,13 +5,10 @@ import { Provider } from 'react-redux'
 import type { Mock } from 'vitest'
 import { vi } from 'vitest'
 import authReducer from '../store/authSlice'
-import gameReducer, {
-  setGameState,
-  setReinforcementArmies,
-} from '../store/gameSlice'
+import gameReducer, { setGameState, setReinforcementArmies } from '../store/gameSlice'
 import roomReducer from '../store/roomSlice'
-import { GamePhaseControls } from './GamePhaseControls'
 import type { GameState, PlayerColor } from '../types/game'
+import { GamePhaseControls } from './GamePhaseControls'
 
 // Mock the game actions
 vi.mock('../store/gameActions', () => ({
@@ -96,18 +93,16 @@ describe('GamePhaseControls', () => {
     email: 'player1@test.com',
   }
 
+  const createTestStore = (options: { withGameState?: boolean } = {}) => {
+    const testStore = configureStore({
+      reducer: {
+        game: gameReducer,
+        auth: authReducer,
+        room: roomReducer,
+      },
+    })
 
-const createTestStore = (options: { withGameState?: boolean } = {}) => {
-  const testStore = configureStore({
-    reducer: {
-      game: gameReducer,
-      auth: authReducer,
-      room: roomReducer,
-    },
-  })
-
-  testStore.dispatch(
-    {
+    testStore.dispatch({
       type: 'auth/login/fulfilled',
       payload: {
         user: {
@@ -116,16 +111,15 @@ const createTestStore = (options: { withGameState?: boolean } = {}) => {
         },
         token: 'mock-token',
       },
-    },
-  )
+    })
 
-  if (options.withGameState !== false) {
-    testStore.dispatch(setGameState(mockGameState))
-    testStore.dispatch(setReinforcementArmies(5))
+    if (options.withGameState !== false) {
+      testStore.dispatch(setGameState(mockGameState))
+      testStore.dispatch(setReinforcementArmies(5))
+    }
+
+    return testStore
   }
-
-  return testStore
-}
 
   beforeEach(() => {
     store = createTestStore()

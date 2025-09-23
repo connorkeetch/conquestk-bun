@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { adminService, type AdminGame } from '../services/adminService'
+import { type AdminGame, adminService } from '../services/adminService'
 
 interface GameActionModal {
   game: AdminGame

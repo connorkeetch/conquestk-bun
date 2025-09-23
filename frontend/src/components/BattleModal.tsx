@@ -135,9 +135,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   <span className="text-green-600 font-medium">No losses</span>
                 )}
               </p>
-              <p className="text-xs text-muted">
-                {fromTerritory.armies} armies remaining
-              </p>
+              <p className="text-xs text-muted">{fromTerritory.armies} armies remaining</p>
             </div>
 
             {/* Defender */}
@@ -157,9 +155,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
                   <span className="text-green-600 font-medium">No losses</span>
                 )}
               </p>
-              <p className="text-xs text-muted">
-                {toTerritory.armies} armies remaining
-              </p>
+              <p className="text-xs text-muted">{toTerritory.armies} armies remaining</p>
             </div>
           </div>
 
@@ -188,17 +184,15 @@ export const BattleModal: React.FC<BattleModalProps> = ({
 
           {/* Action Buttons */}
           <div className="flex space-x-3">
-            {onContinueAttack &&
-              fromTerritory.armies > 1 &&
-              !battleResult.conquered && (
-                <button
-                  type="button"
-                  onClick={onContinueAttack}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded font-medium"
-                >
-                  Continue Attack
-                </button>
-              )}
+            {onContinueAttack && fromTerritory.armies > 1 && !battleResult.conquered && (
+              <button
+                type="button"
+                onClick={onContinueAttack}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded font-medium"
+              >
+                Continue Attack
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

@@ -24,8 +24,8 @@ import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
 import pushNotificationService from '../services/pushNotificationService'
 import {
-  clearCache,
   type ColorTheme,
+  clearCache,
   type DMPermission,
   type NotificationPrefs,
   resetSettings,
@@ -93,9 +93,9 @@ function ColorDropdown({
             {COLOR_HEX_VALUES[value]?.includes('gradient') && (
               <defs>
                 <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
-                      <stop offset="50%" style={{ stopColor: '#00ffff' }} />
-                      <stop offset="100%" style={{ stopColor: '#ffff00' }} />
+                  <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
+                  <stop offset="50%" style={{ stopColor: '#00ffff' }} />
+                  <stop offset="100%" style={{ stopColor: '#ffff00' }} />
                 </linearGradient>
               </defs>
             )}
@@ -342,9 +342,12 @@ const isNotificationPrefs = (value: unknown): value is NotificationPrefs => {
 
   const prefs = value as Partial<NotificationPrefs>
   return (
-    typeof prefs.turnNotifications === 'object' && prefs.turnNotifications !== null &&
-    typeof prefs.gameInvites === 'object' && prefs.gameInvites !== null &&
-    typeof prefs.directMessages === 'object' && prefs.directMessages !== null
+    typeof prefs.turnNotifications === 'object' &&
+    prefs.turnNotifications !== null &&
+    typeof prefs.gameInvites === 'object' &&
+    prefs.gameInvites !== null &&
+    typeof prefs.directMessages === 'object' &&
+    prefs.directMessages !== null
   )
 }
 
@@ -1378,9 +1381,7 @@ export default function Settings() {
                       setIsSubscribed(true)
                     } else {
                       setIsSubscribed(false)
-                      setPushStatusMessage(
-                        result.message || 'Unable to enable push notifications',
-                      )
+                      setPushStatusMessage(result.message || 'Unable to enable push notifications')
                     }
                   } else {
                     const result = await pushNotificationService.unsubscribe()
@@ -1390,9 +1391,7 @@ export default function Settings() {
                       setIsSubscribed(false)
                     } else {
                       setIsSubscribed(true)
-                      setPushStatusMessage(
-                        result.message || 'Unable to disable push notifications',
-                      )
+                      setPushStatusMessage(result.message || 'Unable to disable push notifications')
                     }
                   }
                 } catch (error) {

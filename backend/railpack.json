@@ -12,19 +12,12 @@
   },
   "steps": {
     "install": {
-      "commands": [
-        "npm ci"
-      ],
+      "commands": ["npm ci"],
       "caches": ["npm-install"]
     },
     "build": {
-      "inputs": [
-        { "step": "install" }
-      ],
-      "commands": [
-        "npm run build",
-        "npm prune --omit=dev"
-      ],
+      "inputs": [{ "step": "install" }],
+      "commands": ["npm run build", "npm prune --omit=dev"],
       "caches": ["npm-install"]
     }
   },

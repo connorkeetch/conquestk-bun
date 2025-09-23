@@ -567,10 +567,10 @@ export const AdminMaps: React.FC = () => {
                 </label>
                 <select
                   id={mapStatusId}
-                value={editForm.status}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, status: e.target.value as Map['status'] })
-                }
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, status: e.target.value as Map['status'] })
+                  }
                   className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
                 >
                   <option value="draft">Draft</option>

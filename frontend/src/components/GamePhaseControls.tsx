@@ -14,6 +14,7 @@ import {
   setBattleResult,
   setPendingAction,
 } from '../store/gameSlice'
+import type { BattleResult } from '../types/game'
 import {
   calculatePlayerContinentStatus,
   getContinentBonusArmies,
@@ -21,7 +22,6 @@ import {
 } from '../utils/continentBonuses'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { BattleModal } from './BattleModal'
-import type { BattleResult } from '../types/game'
 
 interface GamePhaseControlsProps {
   onEndTurn: () => void

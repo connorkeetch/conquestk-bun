@@ -2,7 +2,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { socketService } from '../services/socketService'
 import type { GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
-import type { AppDispatch } from './index'
 import {
   addTerritoryAction,
   selectTargetTerritory,
@@ -10,7 +9,7 @@ import {
   setError,
   setPendingAction,
 } from './gameSlice'
-import type { RootState } from './index'
+import type { AppDispatch, RootState } from './index'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -36,9 +35,7 @@ export const handleTerritoryClick = createAsyncThunk(
 
     switch (currentGame.phase) {
       case 'reinforcement':
-        await typedDispatch(
-          handleReinforcementClick({ territoryId, territory, selectedTerritory }),
-        )
+        await typedDispatch(handleReinforcementClick({ territoryId, territory, selectedTerritory }))
         return
 
       case 'attack':
@@ -77,10 +74,9 @@ export const handleReinforcementClick = createAsyncThunk<
       return
     }
 
-    const friendly =
-      territory && territory.ownerId
-        ? isFriendlyTerritoryOwner(currentGame, territory.ownerId, currentPlayerId)
-        : false
+    const friendly = territory?.ownerId
+      ? isFriendlyTerritoryOwner(currentGame, territory.ownerId, currentPlayerId)
+      : false
 
     if (!friendly) {
       const errorMessage = currentGame.gameConfig?.allowTeamPlay
@@ -186,29 +182,28 @@ export const handleFortifyClick = createAsyncThunk<
         typedDispatch(setError('Select your own territory to fortify from'))
       }
       return
-    } else {
-      // Select target territory or execute fortification
-      if (validTargets.includes(territoryId)) {
-        if (!selectedTerritory) {
-          return
-        }
-        // Execute fortification
-        await typedDispatch(
-          executeFortify({
-            fromTerritoryId: selectedTerritory,
-            toTerritoryId: territoryId,
-            armies: 1,
-          }),
-        )
+    }
+    // Select target territory or execute fortification
+    if (validTargets.includes(territoryId)) {
+      if (!selectedTerritory) {
         return
       }
-      // Invalid target, select new source territory if it's owned by player
-      if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
-        typedDispatch(selectTerritory(territoryId))
-      } else {
-        typedDispatch(selectTerritory(null))
-        typedDispatch(setPendingAction(null))
-      }
+      // Execute fortification
+      await typedDispatch(
+        executeFortify({
+          fromTerritoryId: selectedTerritory,
+          toTerritoryId: territoryId,
+          armies: 1,
+        }),
+      )
+      return
+    }
+    // Invalid target, select new source territory if it's owned by player
+    if (territory && territory.ownerId === currentPlayerId && territory.armies > 1) {
+      typedDispatch(selectTerritory(territoryId))
+    } else {
+      typedDispatch(selectTerritory(null))
+      typedDispatch(setPendingAction(null))
     }
   },
 )

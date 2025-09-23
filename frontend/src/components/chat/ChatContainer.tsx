@@ -5,9 +5,10 @@ import type {
   ChatUnreadCount,
   ServerToClientEvents,
 } from '@shared/types'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
+import type { ChatMessage, LinkPreview } from '../../store/chatSlice'
 import {
   addMessage,
   deleteMessage,
@@ -18,7 +19,6 @@ import {
   setTypingUser,
   setUnreadCounts,
 } from '../../store/chatSlice'
-import type { ChatMessage, LinkPreview } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
 
@@ -40,41 +40,45 @@ export default function ChatContainer({
   const historyRequestedRef = useRef(false)
   const lastConversationKeyRef = useRef<string | null>(null)
 
-  const normalizeTimestamp = (value?: string | Date | null) => {
+  const normalizeTimestamp = useCallback((value?: string | Date | null) => {
     if (!value) return undefined
     return typeof value === 'string' ? value : value.toISOString()
-  }
+  }, [])
 
-  const adaptLinkPreview = (
-    preview: NonNullable<ChatMessagePayload['link_previews']>[number],
-  ): LinkPreview => ({
-    url: preview.url,
-    title: preview.title,
-    description: preview.description,
-    image: preview.image,
-    siteName:
-      preview.siteName ??
-      ((): string | undefined => {
-        const legacy = preview as { site_name?: unknown }
-        return typeof legacy.site_name === 'string' ? legacy.site_name : undefined
-      })(),
-  })
+  const adaptLinkPreview = useCallback(
+    (preview: NonNullable<ChatMessagePayload['link_previews']>[number]): LinkPreview => ({
+      url: preview.url,
+      title: preview.title,
+      description: preview.description,
+      image: preview.image,
+      siteName:
+        preview.siteName ??
+        ((): string | undefined => {
+          const legacy = preview as { site_name?: unknown }
+          return typeof legacy.site_name === 'string' ? legacy.site_name : undefined
+        })(),
+    }),
+    [],
+  )
 
-  const adaptChatMessage = (payload: ChatMessagePayload): ChatMessage => ({
-    id: payload.id,
-    sender_id: payload.sender_id,
-    sender_username: payload.sender_username,
-    message: payload.message,
-    message_type: payload.message_type,
-    game_id: payload.game_id ?? undefined,
-    team_id: payload.team_id ?? undefined,
-    recipient_id: payload.recipient_id ?? undefined,
-    created_at: normalizeTimestamp(payload.created_at) ?? new Date().toISOString(),
-    edited_at: normalizeTimestamp(payload.edited_at),
-    deleted_at: normalizeTimestamp(payload.deleted_at),
-    is_read: false,
-    link_previews: payload.link_previews?.map(adaptLinkPreview),
-  })
+  const adaptChatMessage = useCallback(
+    (payload: ChatMessagePayload): ChatMessage => ({
+      id: payload.id,
+      sender_id: payload.sender_id,
+      sender_username: payload.sender_username,
+      message: payload.message,
+      message_type: payload.message_type,
+      game_id: payload.game_id ?? undefined,
+      team_id: payload.team_id ?? undefined,
+      recipient_id: payload.recipient_id ?? undefined,
+      created_at: normalizeTimestamp(payload.created_at) ?? new Date().toISOString(),
+      edited_at: normalizeTimestamp(payload.edited_at),
+      deleted_at: normalizeTimestamp(payload.deleted_at),
+      is_read: false,
+      link_previews: payload.link_previews?.map(adaptLinkPreview),
+    }),
+    [adaptLinkPreview, normalizeTimestamp],
+  )
 
   // Build conversation key
   const conversationKey = `${conversationType}:${conversationId}`
@@ -149,9 +153,7 @@ export default function ChatContainer({
       }
     }
 
-    const handleTyping = (
-      data: Parameters<ServerToClientEvents['chat:user-typing']>[0],
-    ) => {
+    const handleTyping = (data: Parameters<ServerToClientEvents['chat:user-typing']>[0]) => {
       if (data.conversationType === conversationType && data.conversationId === conversationId) {
         dispatch(
           setTypingUser({
@@ -223,7 +225,7 @@ export default function ChatContainer({
       // Clear active conversation
       dispatch(setActiveConversation(null))
     }
-  }, [conversationType, conversationId, conversationKey, currentUserId, dispatch])
+  }, [conversationType, conversationId, conversationKey, currentUserId, dispatch, adaptChatMessage])
 
   const sendMessage = (text: string) => {
     if (!socketService.getSocket() || !text.trim()) return
