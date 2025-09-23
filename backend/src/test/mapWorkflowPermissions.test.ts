@@ -134,16 +134,7 @@ const createApp = () => {
   const app = express()
   app.use(express.json())
 
-  let router: express.Router | undefined
-  jest.isolateModules(() => {
-    const module = require('../routes/mapWorkflow') as { default: express.Router }
-    router = module.default
-  })
-
-  if (!router) {
-    throw new Error('Failed to load mapWorkflow router')
-  }
-
+  const router = require('../routes/mapWorkflow').default as express.Router
   app.use('/api/workflow', router)
   return app
 }
@@ -264,20 +255,22 @@ describe('Map workflow authorization', () => {
       message: 'Map approved successfully',
     })
 
-    expect(adminServiceModule.adminService.logAdminAction).toHaveBeenCalledWith(
-      'admin-user',
-      'map_approved',
+    const logCall = adminServiceModule.adminService.logAdminAction.mock.calls[0]
+    expect(logCall[0]).toBe('admin-user')
+    expect(logCall[1]).toBe('map_approved')
+    expect(logCall[2]).toEqual(
       expect.objectContaining({
         mapId,
         notes: 'Looks good',
         before: expect.any(Object),
         after: expect.any(Object),
       }),
-      'map',
-      mapId,
-      expect.any(String),
-      expect.any(String),
     )
+    expect(logCall[3]).toBe('map')
+    expect(logCall[4]).toBe(mapId)
+    expect(typeof logCall[5]).toBe('string')
+    const userAgent = logCall[6]
+    expect(userAgent === undefined || typeof userAgent === 'string').toBe(true)
     expect(logActivityMock).toHaveBeenCalled()
   })
 

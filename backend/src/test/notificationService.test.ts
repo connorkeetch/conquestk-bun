@@ -1,28 +1,24 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
 import notificationService from '../services/notificationService'
 
-let mockQuery: jest.Mock
+const mockQuery = jest.fn()
 
-jest.mock('../config/database', () => {
-  mockQuery = jest.fn()
-  return {
-    query: (...args: unknown[]) => mockQuery(...args),
-  }
-})
+jest.mock('../config/database', () => ({
+  query: (...args: unknown[]) => mockQuery(...args),
+}))
 
-let emitNotificationToUsers: jest.Mock
+const emitNotificationToUsers = jest.fn()
 
-jest.mock('../services/realtimeNotificationService', () => {
-  emitNotificationToUsers = jest.fn()
-  return {
-    emitNotificationToUsers: (...args: unknown[]) => emitNotificationToUsers(...args),
-  }
-})
+jest.mock('../services/realtimeNotificationService', () => ({
+  emitNotificationToUsers: (...args: unknown[]) => emitNotificationToUsers(...args),
+}))
 
 describe('notificationService.createInAppNotification', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockQuery.mockReset()
     mockQuery.mockResolvedValue({ rows: [], rowCount: 0 })
+    emitNotificationToUsers.mockReset()
   })
 
   it('stores notification and emits realtime payload', async () => {

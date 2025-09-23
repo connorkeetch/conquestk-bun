@@ -9,15 +9,11 @@ jest.mock('../config/database', () => ({
   })),
 }))
 
-import type { GameAction, GameConfiguration, Territory } from '../types/game'
+import type { ContinentBonus, GameAction, GameConfiguration, Territory } from '../types/game'
 import { GameEngine } from './gameEngine'
 
 describe('GameEngine', () => {
   let gameEngine: GameEngine
-
-  beforeEach(() => {
-    gameEngine = new GameEngine()
-  })
 
   const createConfig = (
     playerCount: number,
@@ -35,10 +31,96 @@ describe('GameEngine', () => {
 
   const createPlayers = (...ids: string[]) => ids.map((id) => ({ userId: id, username: id }))
 
+  const sampleTerritories: Territory[] = [
+    {
+      id: 'territory-1',
+      name: 'Territory 1',
+      continent: 'continent-1',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-2', 'territory-3'],
+      isCapital: false,
+    },
+    {
+      id: 'territory-2',
+      name: 'Territory 2',
+      continent: 'continent-1',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-1', 'territory-3'],
+      isCapital: false,
+    },
+    {
+      id: 'territory-3',
+      name: 'Territory 3',
+      continent: 'continent-1',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-1', 'territory-2', 'territory-4'],
+      isCapital: false,
+    },
+    {
+      id: 'territory-4',
+      name: 'Territory 4',
+      continent: 'continent-2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-3', 'territory-5'],
+      isCapital: false,
+    },
+    {
+      id: 'territory-5',
+      name: 'Territory 5',
+      continent: 'continent-2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-4', 'territory-6'],
+      isCapital: false,
+    },
+    {
+      id: 'territory-6',
+      name: 'Territory 6',
+      continent: 'continent-2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['territory-5', 'territory-4'],
+      isCapital: false,
+    },
+  ]
+
+  const continentBonuses: ContinentBonus[] = [
+    {
+      id: 'continent-1',
+      name: 'North',
+      bonusArmies: 5,
+      territories: ['territory-1', 'territory-2', 'territory-3'],
+    },
+    {
+      id: 'continent-2',
+      name: 'South',
+      bonusArmies: 3,
+      territories: ['territory-4', 'territory-5', 'territory-6'],
+    },
+  ]
+
+  const mapOverrides = {
+    territories: sampleTerritories,
+    continentBonuses,
+  }
+
+  beforeEach(() => {
+    gameEngine = new GameEngine()
+  })
+
   describe('initializeGame', () => {
     it('should create a valid initial game state', () => {
       const players = createPlayers('player1', 'player2', 'player3')
-      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
 
       expect(gameState.roomId).toBe('room123')
       expect(gameState.players).toHaveLength(3)
@@ -51,13 +133,16 @@ describe('GameEngine', () => {
 
     it('should distribute territories among players', () => {
       const players = createPlayers('player1', 'player2')
-      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
 
-      // Check that all territories have owners
       const unownedTerritories = gameState.board.filter((t) => !t.ownerId)
       expect(unownedTerritories).toHaveLength(0)
 
-      // Check that both players have territories
       const player1Territories = gameState.board.filter((t) => t.ownerId === 'player1')
       const player2Territories = gameState.board.filter((t) => t.ownerId === 'player2')
 
@@ -67,7 +152,12 @@ describe('GameEngine', () => {
 
     it('should give each territory at least 1 army', () => {
       const players = createPlayers('player1', 'player2')
-      const gameState = gameEngine.initializeGame('room123', players, createConfig(players.length))
+      const gameState = gameEngine.initializeGame(
+        'room123',
+        players,
+        createConfig(players.length),
+        mapOverrides,
+      )
 
       const weakTerritories = gameState.board.filter((t) => t.armies < 1)
       expect(weakTerritories).toHaveLength(0)
@@ -80,6 +170,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
       const player = gameState.players.find((p) => p.id === 'player1')
       const armies = gameEngine.calculateReinforcementArmies(
@@ -95,6 +186,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1'),
         createConfig(1, { continentBonuses: [] }),
+        mapOverrides,
       )
       const player = gameState.players.find((p) => p.id === 'player1')
       const player1Territories = player?.territories.length ?? 0
@@ -156,6 +248,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
       gameState.phase = 'reinforcement'
       const currentPlayer = gameState.currentPlayer
@@ -170,6 +263,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
       gameState.phase = 'attack'
       const currentPlayer = gameState.currentPlayer
@@ -184,6 +278,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
       gameState.phase = 'fortify'
       const currentPlayer = gameState.currentPlayer
@@ -200,6 +295,7 @@ describe('GameEngine', () => {
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
       gameState.phase = 'fortify'
       gameState.currentPlayer = gameState.players[gameState.players.length - 1].id
@@ -213,20 +309,21 @@ describe('GameEngine', () => {
   })
 
   describe('validateAction', () => {
-    let gameState: any
+    let gameState: ReturnType<GameEngine['initializeGame']>
 
     beforeEach(() => {
       gameState = gameEngine.initializeGame(
         'room123',
         createPlayers('player1', 'player2'),
         createConfig(2),
+        mapOverrides,
       )
     })
 
     it('should validate deploy action', () => {
       gameState.phase = 'reinforcement'
       const currentPlayerId = gameState.currentPlayer
-      const territory = gameState.board.find((t: any) => t.ownerId === currentPlayerId)
+      const territory = gameState.board.find((t) => t.ownerId === currentPlayerId)
       if (!territory) {
         throw new Error(`No territory found for ${currentPlayerId}`)
       }
@@ -245,11 +342,11 @@ describe('GameEngine', () => {
     it('should reject deploy to enemy territory', () => {
       gameState.phase = 'reinforcement'
       const currentPlayerId = gameState.currentPlayer
-      const opponent = gameState.players.find((p: any) => p.id !== currentPlayerId)
+      const opponent = gameState.players.find((p) => p.id !== currentPlayerId)
       if (!opponent) {
         throw new Error('No opponent player found')
       }
-      const territory = gameState.board.find((t: any) => t.ownerId === opponent.id)
+      const territory = gameState.board.find((t) => t.ownerId === opponent.id)
       if (!territory) {
         throw new Error(`No territory found for ${opponent.id}`)
       }

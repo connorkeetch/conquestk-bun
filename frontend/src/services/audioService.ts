@@ -94,6 +94,7 @@ class AudioService {
   private isTabFocused: boolean = true
   private isMuted: boolean = false
   private previousVolumes: AudioPreferences | null = null
+  private readonly audioEnabled: boolean
 
   // Track which audio files are being used
   private audioUsageTracker: Map<SoundEffectKey, { lastUsed: Date; count: number }> = new Map()
@@ -111,9 +112,36 @@ class AudioService {
   private soundIndices: Map<SoundEffectKey, number> = new Map()
 
   private constructor() {
+    this.audioEnabled = this.shouldEnableAudio()
     this.loadPreferences()
-    this.setupVisibilityListener()
-    this.preloadSounds()
+    if (this.audioEnabled) {
+      this.setupVisibilityListener()
+      this.preloadSounds()
+    } else {
+      logger.debug('Audio disabled for current environment; skipping preload')
+    }
+  }
+
+  private shouldEnableAudio(): boolean {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return false
+    }
+
+    try {
+      const mode = (import.meta as { env?: { MODE?: string } }).env?.MODE
+      if (mode === 'test') {
+        return false
+      }
+    } catch (_error) {
+      // Ignore access errors; fall back to other checks
+    }
+
+    const howlerAny = Howler as unknown as { noAudio?: boolean }
+    if (typeof howlerAny?.noAudio === 'boolean' && howlerAny.noAudio) {
+      return false
+    }
+
+    return true
   }
 
   public static getInstance(): AudioService {
@@ -205,6 +233,10 @@ class AudioService {
   }
 
   private applyVolumes(): void {
+    if (!this.audioEnabled) {
+      return
+    }
+
     Howler.volume(this.preferences.masterVolume / 100)
 
     // Update all loaded sounds
@@ -222,8 +254,6 @@ class AudioService {
 
   // Public methods
   public playEffect(effectName: EffectName): void {
-    if (!this.preferences.enabled || this.isMuted || !this.isTabFocused) return
-
     const resolvedEffectName = this.resolveEffectName(effectName)
 
     if (!resolvedEffectName) {
@@ -242,6 +272,10 @@ class AudioService {
 
     // Track usage
     this.trackAudioUsage(resolvedEffectName)
+
+    if (!this.audioEnabled || !this.preferences.enabled || this.isMuted || !this.isTabFocused) {
+      return
+    }
 
     if (Array.isArray(effectConfig)) {
       // Get current index and rotate
@@ -324,7 +358,7 @@ class AudioService {
   }
 
   public playMusic(trackIndex?: number): void {
-    if (!this.preferences.enabled || this.isMuted) return
+    if (!this.audioEnabled || !this.preferences.enabled || this.isMuted) return
 
     // Stop current music if playing
     this.stopMusic(true)
@@ -473,6 +507,9 @@ class AudioService {
   }
 
   public testMusic(): void {
+    if (!this.audioEnabled) {
+      return
+    }
     this.playMusic(0)
     setTimeout(() => {
       this.stopMusic()
@@ -481,6 +518,9 @@ class AudioService {
 
   // Battle intensity system
   public playBattleMusic(): void {
+    if (!this.audioEnabled) {
+      return
+    }
     // For now, just play a random track
     // In future, could have specific battle tracks
     const battleTrack = Math.floor(Math.random() * this.MUSIC_TRACKS.length)
@@ -488,6 +528,10 @@ class AudioService {
   }
 
   public playVictoryFanfare(): void {
+    if (!this.audioEnabled) {
+      this.playEffect('victory')
+      return
+    }
     this.stopMusic(true)
     this.playEffect('victory')
     // Resume normal music after fanfare
@@ -497,12 +541,19 @@ class AudioService {
   }
 
   public playDefeatMusic(): void {
+    if (!this.audioEnabled) {
+      this.playEffect('eliminated')
+      return
+    }
     this.stopMusic(true)
     this.playEffect('eliminated')
   }
 
   // Check if running on mobile and respect silent mode
   public checkMobileSilentMode(): boolean {
+    if (!this.audioEnabled) {
+      return false
+    }
     // This is a simplified check - in production, you'd want more robust detection
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 

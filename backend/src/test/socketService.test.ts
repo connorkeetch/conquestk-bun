@@ -4,28 +4,27 @@ import { queueService } from '../services/queueService'
 import { setupSocketHandlers } from '../services/socketService'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 
-let mockDbQuery: jest.Mock
+const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 
-jest.mock('../config/database', () => {
-  mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
-  return {
-    query: mockDbQuery,
-  }
-})
-
-let mockAddGameAction: jest.Mock
-let mockAddBattleSimulation: jest.Mock
+jest.mock('../config/database', () => ({
+  query: (...args: unknown[]) => mockDbQuery(...args),
+}))
 
 jest.mock('../services/queueService', () => {
-  mockAddGameAction = jest.fn()
-  mockAddBattleSimulation = jest.fn()
+  const mocks = {
+    addGameAction: jest.fn(),
+    addBattleSimulation: jest.fn(),
+  }
+  ;(globalThis as any).__queueServiceMocks = mocks
   return {
-    queueService: {
-      addGameAction: mockAddGameAction,
-      addBattleSimulation: mockAddBattleSimulation,
-    },
+    queueService: mocks,
   }
 })
+
+const queueServiceMocks = (globalThis as any).__queueServiceMocks as {
+  addGameAction: jest.Mock
+  addBattleSimulation: jest.Mock
+}
 
 const mockGameServiceInstance = {
   fortify: jest.fn(),
@@ -42,24 +41,33 @@ jest.mock('../services/gameService', () => ({
   GameService: jest.fn(() => mockGameServiceInstance),
 }))
 
-let mockIsPlayerInRoom: jest.Mock
-let mockGetPlayer: jest.Mock
-
 jest.mock('../services/gameRoomService', () => {
-  mockIsPlayerInRoom = jest.fn()
-  mockGetPlayer = jest.fn()
+  const mockIsPlayerInRoom = jest.fn()
+  const mockGetPlayer = jest.fn()
+  const GameRoomService = jest.fn(() => ({
+    isPlayerInRoom: mockIsPlayerInRoom,
+    getPlayer: mockGetPlayer,
+  }))
+  ;(globalThis as any).__gameRoomServiceMocks = {
+    mockIsPlayerInRoom,
+    mockGetPlayer,
+    GameRoomService,
+  }
   return {
-    GameRoomService: jest.fn(() => ({
-      isPlayerInRoom: mockIsPlayerInRoom,
-      getPlayer: mockGetPlayer,
-    })),
+    GameRoomService,
   }
 })
 
-let mockGetCachedState: jest.Mock
+const { mockIsPlayerInRoom, mockGetPlayer } = (globalThis as any).__gameRoomServiceMocks as {
+  mockIsPlayerInRoom: jest.Mock
+  mockGetPlayer: jest.Mock
+}
 
 jest.mock('../services/cacheService', () => {
-  mockGetCachedState = jest.fn()
+  const mockGetCachedState = jest.fn()
+  ;(globalThis as any).__cacheServiceMocks = {
+    mockGetCachedState,
+  }
   return {
     gameStateCache: {
       getGameState: mockGetCachedState,
@@ -67,16 +75,25 @@ jest.mock('../services/cacheService', () => {
   }
 })
 
-let mockRegisterSocketServer: jest.Mock
+const { mockGetCachedState } = (globalThis as any).__cacheServiceMocks as {
+  mockGetCachedState: jest.Mock
+}
 
 jest.mock('../services/socketRegistry', () => {
-  mockRegisterSocketServer = jest.fn()
+  const mockRegisterSocketServer = jest.fn()
+  ;(globalThis as any).__socketRegistryMocks = {
+    mockRegisterSocketServer,
+  }
   return {
     __esModule: true,
     registerSocketServer: mockRegisterSocketServer,
     tryGetSocketServer: jest.fn(),
   }
 })
+
+const { mockRegisterSocketServer } = (globalThis as any).__socketRegistryMocks as {
+  mockRegisterSocketServer: jest.Mock
+}
 
 jest.mock('../socket/chatHandlers', () => ({
   setupChatHandlers: jest.fn(),
@@ -129,14 +146,21 @@ describe('socketService event handlers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockDbQuery.mockReset()
     mockDbQuery.mockResolvedValue({ rows: [], rowCount: 0 })
+    queueServiceMocks.addGameAction.mockReset()
+    queueServiceMocks.addBattleSimulation.mockReset()
+    mockGetCachedState.mockReset()
     mockGetCachedState.mockResolvedValue(null)
+    mockIsPlayerInRoom.mockReset()
     mockIsPlayerInRoom.mockResolvedValue(true)
+    mockGetPlayer.mockReset()
     mockGetPlayer.mockResolvedValue({
       userId: 'user-1',
       username: 'User One',
       joinedAt: new Date('2024-01-01T00:00:00Z'),
     })
+    mockRegisterSocketServer.mockReset()
 
     mockGameServiceInstance.fortify.mockReset()
     mockGameServiceInstance.fortify.mockResolvedValue({
@@ -181,7 +205,7 @@ describe('socketService event handlers', () => {
   }
 
   it('queues attack actions with normalized payload', async () => {
-    mockAddGameAction.mockResolvedValue({ id: 'job-123' })
+    queueServiceMocks.addGameAction.mockResolvedValue({ id: 'job-123' })
 
     const { socket } = initialiseHandlers()
     const attackHandler = getSocketHandler(socket, 'attack')
@@ -266,7 +290,7 @@ describe('socketService event handlers', () => {
   })
 
   it('falls back gracefully when game action queue is unavailable', async () => {
-    mockAddGameAction.mockResolvedValue(null)
+    queueServiceMocks.addGameAction.mockResolvedValue(null)
 
     const { socket, io } = initialiseHandlers()
     const attackHandler = getSocketHandler(socket, 'attack')
@@ -284,7 +308,7 @@ describe('socketService event handlers', () => {
   })
 
   it('emits error event when queue call fails', async () => {
-    mockAddGameAction.mockRejectedValue(new Error('queue offline'))
+    queueServiceMocks.addGameAction.mockRejectedValue(new Error('queue offline'))
 
     const { socket } = initialiseHandlers()
     const attackHandler = getSocketHandler(socket, 'attack')
