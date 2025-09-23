@@ -1,3 +1,4 @@
+import { validate as uuidValidate } from 'uuid'
 import { getClient, query } from '../config/database'
 import { logger } from '../utils/logger'
 import { featureFlagService } from './featureFlagService'
@@ -829,6 +830,13 @@ export class AdminService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {
+    const targetIdIsValidUuid = Boolean(targetId && uuidValidate(targetId))
+    const normalizedTargetId = targetIdIsValidUuid ? targetId : null
+    const actionPayload =
+      targetId && !targetIdIsValidUuid
+        ? { ...actionDetails, targetIdentifier: targetId }
+        : actionDetails
+
     await query(
       `
       INSERT INTO admin_activity_logs 
@@ -838,9 +846,9 @@ export class AdminService {
       [
         adminUserId,
         actionType,
-        JSON.stringify(actionDetails),
+        JSON.stringify(actionPayload),
         targetType,
-        targetId,
+        normalizedTargetId,
         ipAddress,
         userAgent,
       ],
