@@ -1,5 +1,5 @@
 [build]
-cmd = "cd backend && npm ci && npm run build"
+cmd = "cd backend && npm ci && npm run build && npm prune --omit=dev"
 
 [start]
 cmd = "cd backend && node dist/index.js"
