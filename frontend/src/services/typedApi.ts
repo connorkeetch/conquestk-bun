@@ -6,10 +6,10 @@ import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } f
 import type {
   AdminDashboardStats,
   ApiResponse,
+  Map as GameMap,
   GameRoom,
   GameState,
   LoginResponse,
-  Map as GameMap,
   Notification,
   PaginatedResponse,
   RegisterResponse,

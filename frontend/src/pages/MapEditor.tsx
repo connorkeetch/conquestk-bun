@@ -196,7 +196,7 @@ export default function MapEditor() {
     }
   }, [showTermsModal, isCheckingTerms, loadMetadata])
 
-  const checkTermsAcceptance = async () => {
+  const checkTermsAcceptance = useCallback(async () => {
     try {
       const response = await termsService.checkTermsAcceptance('map_editor')
 
@@ -210,7 +210,7 @@ export default function MapEditor() {
     } finally {
       setIsCheckingTerms(false)
     }
-  }
+  }, [])
 
   const handleAcceptTerms = async () => {
     try {
@@ -227,7 +227,7 @@ export default function MapEditor() {
     navigate('/') // Navigate back to home if terms are declined
   }
 
-  const loadMetadata = async () => {
+  const loadMetadata = useCallback(async () => {
     try {
       const [abilities, modes] = await Promise.all([
         mapService.getTerritoryAbilityTypes(),
@@ -238,7 +238,7 @@ export default function MapEditor() {
     } catch (_error) {
       // Silently ignore metadata loading failures in editor; non-blocking
     }
-  }
+  }, [])
 
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     const canvas = ctx.canvas
@@ -1515,13 +1515,8 @@ export default function MapEditor() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        fileInputRef.current?.click()
-                      }
-                    }}
+                    role="region"
+                    aria-label="Map image dropzone"
                   >
                     <div className="text-center">
                       {/* Upload Error Display */}
@@ -1963,18 +1958,12 @@ export default function MapEditor() {
                             : 'bg-surface-2 hover:bg-gray-600 border-border'
                         }`}
                       >
-                        <div
+                        <button
+                          type="button"
                           onClick={() =>
                             setState((prev) => ({ ...prev, selectedTerritory: territory.id }))
                           }
-                          className="cursor-pointer"
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              setState((prev) => ({ ...prev, selectedTerritory: territory.id }))
-                            }
-                          }}
+                          className="cursor-pointer w-full text-left"
                         >
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{territory.name}</div>
@@ -1989,7 +1978,7 @@ export default function MapEditor() {
                           <div className="text-xs opacity-75">
                             {continent ? continent.name : 'No continent'}
                           </div>
-                        </div>
+                        </button>
 
                         {/* Continent reassignment dropdown */}
                         {state.selectedTerritory === territory.id && (
