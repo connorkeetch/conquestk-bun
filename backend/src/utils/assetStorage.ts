@@ -39,14 +39,19 @@ const getS3Client = (): S3Client => {
     throw new Error('S3 client requested but asset storage is not configured for remote uploads')
   }
 
+  if (!remoteConfig) {
+    throw new Error('Remote asset storage requested but configuration is missing')
+  }
+
   if (!s3Client) {
+    const config = remoteConfig
     s3Client = new S3Client({
       region,
-      endpoint: remoteConfig.endpoint,
+      endpoint: config.endpoint,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: remoteConfig.accessKeyId,
-        secretAccessKey: remoteConfig.secretAccessKey,
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
       },
     })
   }
