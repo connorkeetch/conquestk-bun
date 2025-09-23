@@ -1,10 +1,6 @@
-import { promises as fsPromises } from 'node:fs'
-import type { FileHandle } from 'node:fs/promises'
-import path from 'node:path'
 import type { NextFunction, Request, Response } from 'express'
 import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
-import sizeOf from 'image-size'
 import jwt, { type JwtPayload } from 'jsonwebtoken'
 import multer from 'multer'
 import { getPool } from '../config/database'
@@ -17,93 +13,19 @@ import {
 } from '../services/mapPermissionService'
 import { mapService } from '../services/mapService'
 import type { CreateMapRequest, MapMetadataPayload, UpdateMapRequest } from '../types/maps'
-import { storeBase64Image } from '../utils/imageStorage'
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
-import { getMapUploadsDir } from '../utils/mapUploads'
 import { handleRouteError } from '../utils/routeErrorHandler'
 import { parseJsonField, parseTags } from '../utils/tagParser'
 import { resolveAssetUrl } from '../utils/url'
-
-// Ensure uploads directory exists in a location aligned with express.static
-const mapUploadsDir = getMapUploadsDir()
 
 const router = Router()
 
 type QueryParam = string | number | boolean | string[] | null
 
-// File resource management using Node.js 24's explicit resource management pattern
-class FileResource {
-  private fileHandle: FileHandle | null = null
-
-  constructor(private path: string) {}
-
-  async open() {
-    this.fileHandle = await fsPromises.open(this.path, 'r')
-    return this
-  }
-
-  async readBuffer(): Promise<Buffer> {
-    if (!this.fileHandle) throw new Error('File not opened')
-    const stats = await this.fileHandle.stat()
-    const buffer = Buffer.allocUnsafe(stats.size)
-    await this.fileHandle.read(buffer, 0, stats.size, 0)
-    return buffer
-  }
-
-  // Explicit resource management - implement Symbol.dispose for 'using' keyword
-  async [Symbol.dispose](): Promise<void> {
-    if (this.fileHandle) {
-      await this.fileHandle.close()
-      this.fileHandle = null
-    }
-  }
-
-  // For backwards compatibility
-  async close(): Promise<void> {
-    await this[Symbol.dispose]()
-  }
-}
-
-type DisposableResource = {
-  [Symbol.dispose](): Promise<void> | void
-}
-
-// Safe file reading with automatic resource cleanup
-async function readFileWithResourceManagement(filePath: string): Promise<Buffer> {
-  // Use Node.js 24's explicit resource management when available
-  if (typeof Symbol.dispose !== 'undefined') {
-    try {
-      const fileResource = await new FileResource(filePath).open()
-      await using _resource = fileResource as DisposableResource
-      return await fileResource.readBuffer()
-    } catch (_error) {
-      // Fallback to manual resource management
-      const fileResource = await new FileResource(filePath).open()
-      try {
-        return await fileResource.readBuffer()
-      } finally {
-        await fileResource.close()
-      }
-    }
-  } else {
-    // Fallback for older Node.js versions
-    return await fsPromises.readFile(filePath)
-  }
-}
-
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, mapUploadsDir)
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-    cb(null, `map-${uniqueSuffix}${path.extname(file.originalname)}`)
-  },
-})
-
+// Configure multer for image uploads (memory storage to support direct CDN uploads)
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB default, configurable
     files: 1, // Only allow 1 file per upload
@@ -813,19 +735,21 @@ router.post(
       }
 
       if (req.file) {
-        mapData.imageUrl = `/uploads/maps/${req.file.filename}`
-
         try {
-          // Get image dimensions using resource management
-          const fileBuffer = await readFileWithResourceManagement(req.file.path)
-          const dimensions = sizeOf(fileBuffer)
-          mapData.imageWidth = dimensions.width || 800
-          mapData.imageHeight = dimensions.height || 600
-        } catch (dimensionError) {
-          logger.warn('Failed to get image dimensions:', dimensionError)
-          // Use default dimensions if we can't read the image
-          mapData.imageWidth = 800
-          mapData.imageHeight = 600
+          const stored = await storeImageBuffer(req.file.buffer, {
+            mimeType: req.file.mimetype,
+            preferredFilename: req.file.originalname,
+          })
+
+          mapData.imageUrl = stored.relativeUrl
+          mapData.imageWidth = stored.width
+          mapData.imageHeight = stored.height
+        } catch (uploadError) {
+          logger.error('Failed to process uploaded image:', uploadError)
+          return res.status(400).json({
+            error: 'Failed to process image',
+            message: 'The uploaded image could not be processed',
+          })
         }
       }
 
@@ -878,19 +802,21 @@ router.put(
       }
 
       if (req.file) {
-        updates.imageUrl = `/uploads/maps/${req.file.filename}`
-
         try {
-          // Get image dimensions using resource management
-          const fileBuffer = await readFileWithResourceManagement(req.file.path)
-          const dimensions = sizeOf(fileBuffer)
-          updates.imageWidth = dimensions.width || 800
-          updates.imageHeight = dimensions.height || 600
-        } catch (dimensionError) {
-          logger.warn('Failed to get image dimensions:', dimensionError)
-          // Use default dimensions if we can't read the image
-          updates.imageWidth = 800
-          updates.imageHeight = 600
+          const stored = await storeImageBuffer(req.file.buffer, {
+            mimeType: req.file.mimetype,
+            preferredFilename: req.file.originalname,
+          })
+
+          updates.imageUrl = stored.relativeUrl
+          updates.imageWidth = stored.width
+          updates.imageHeight = stored.height
+        } catch (uploadError) {
+          logger.error('Failed to process uploaded image for update:', uploadError)
+          return res.status(400).json({
+            error: 'Failed to process image',
+            message: 'The uploaded image could not be processed',
+          })
         }
       }
 

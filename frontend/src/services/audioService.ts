@@ -1,59 +1,60 @@
 import { Howl, Howler } from 'howler'
+import { resolveAssetPath } from '@/utils/assets'
 import { logger } from '@/utils/logger'
+
+const sfx = (file: string) => resolveAssetPath(`static/audio/sfx/${file}`)
+const music = (file: string) => resolveAssetPath(`static/audio/music/${file}`)
 
 const SOUND_EFFECTS = {
   // Dice rolling sounds (rotate through multiple - reduced from 7 to 3)
   dice: [
-    '/audio-files/11L-Dice_roll_sound_effe-1756344593515.mp3',
-    '/audio-files/11L-Dice_roll_sound_effe-1756344594793.mp3',
-    '/audio-files/11L-dice_rolling_on_tabl-1756342799425.mp3',
+    sfx('11L-Dice_roll_sound_effe-1756344593515.mp3'),
+    sfx('11L-Dice_roll_sound_effe-1756344594793.mp3'),
+    sfx('11L-dice_rolling_on_tabl-1756342799425.mp3'),
   ],
   // Turn notification sounds (rotate through multiple - reduced from 13 to 4)
   yourturn: [
-    '/audio-files/11L-Bell_chime_for_turn_-1756343144511.mp3',
-    '/audio-files/11L-Bell_chime_for_turn_-1756343146159.mp3',
-    '/audio-files/11L-Turn_notification_so-1756344526253.mp3',
-    '/audio-files/11L-turn_notification_so-1756344686879.mp3',
+    sfx('11L-Bell_chime_for_turn_-1756343144511.mp3'),
+    sfx('11L-Bell_chime_for_turn_-1756343146159.mp3'),
+    sfx('11L-Turn_notification_so-1756344526253.mp3'),
+    sfx('11L-turn_notification_so-1756344686879.mp3'),
   ],
   // Attack/Battle sounds (reduced duplicates)
   attack: [
-    '/audio-files/11L-Cannon_fire_in_the_d-1756343009915.mp3',
-    '/audio-files/11L-Cannon_fire_in_the_d-1756343012115.mp3',
+    sfx('11L-Cannon_fire_in_the_d-1756343009915.mp3'),
+    sfx('11L-Cannon_fire_in_the_d-1756343012115.mp3'),
   ],
-  battle: [
-    '/audio-files/11L-swords_clash-1756342861091.mp3',
-    '/audio-files/11L-swords_clash-1756342863185.mp3',
-  ],
+  battle: [sfx('11L-swords_clash-1756342861091.mp3'), sfx('11L-swords_clash-1756342863185.mp3')],
   // Victory/Achievement sounds
   victory: [
-    '/audio-files/11L-Crowd_cheering_victo-1756343298068.mp3',
-    '/audio-files/11L-Triumphant_orchestra-1756343250021.mp3',
+    sfx('11L-Crowd_cheering_victo-1756343298068.mp3'),
+    sfx('11L-Triumphant_orchestra-1756343250021.mp3'),
   ],
   fanfare: [
-    '/audio-files/11L-Trumpet_fanfare_shor-1756343177067.mp3',
-    '/audio-files/11L-Trumpet_fanfare_shor-1756343182421.mp3',
+    sfx('11L-Trumpet_fanfare_shor-1756343177067.mp3'),
+    sfx('11L-Trumpet_fanfare_shor-1756343182421.mp3'),
   ],
   // Game state sounds
-  gamestart: '/audio-files/11L-Bright_brass_bell_si-1756344484349.mp3',
-  capture: '/audio-files/11L-Stamp_hitting_paper_-1756343095784.mp3',
+  gamestart: sfx('11L-Bright_brass_bell_si-1756344484349.mp3'),
+  capture: sfx('11L-Stamp_hitting_paper_-1756343095784.mp3'),
   // Piece movement sounds (reduced from 3 to 2)
   placetroop: [
-    '/audio-files/11L-Wooden_game_piece_be-1756343068801.mp3',
-    '/audio-files/11L-Wooden_game_piece_be-1756343070672.mp3',
+    sfx('11L-Wooden_game_piece_be-1756343068801.mp3'),
+    sfx('11L-Wooden_game_piece_be-1756343070672.mp3'),
   ],
   // UI sounds (reduced chat messages from 4 to 2)
   message: [
-    '/audio-files/11L-Chat_message_notific-1756344550342.mp3',
-    '/audio-files/11L-Chat_message_notific-1756344552127.mp3',
+    sfx('11L-Chat_message_notific-1756344550342.mp3'),
+    sfx('11L-Chat_message_notific-1756344552127.mp3'),
   ],
-  error: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
-  swoosh: '/audio-files/11L-Swoosh_sound_for_swi-1756344719043.mp3',
+  error: sfx('11L-Errorinvalid_move_so-1756344569392.mp3'),
+  swoosh: sfx('11L-Swoosh_sound_for_swi-1756344719043.mp3'),
   // Timer sounds
-  timer: '/audio-files/11L-Clock_ticking_countd-1756343124965.mp3',
-  timerslow: '/audio-files/11L-Slow_cinematic_clock-1756344723753.mp3',
+  timer: sfx('11L-Clock_ticking_countd-1756343124965.mp3'),
+  timerslow: sfx('11L-Slow_cinematic_clock-1756344723753.mp3'),
   // These are aliases for backwards compatibility
-  defeat: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
-  eliminated: '/audio-files/11L-Errorinvalid_move_so-1756344569392.mp3',
+  defeat: sfx('11L-Errorinvalid_move_so-1756344569392.mp3'),
+  eliminated: sfx('11L-Errorinvalid_move_so-1756344569392.mp3'),
 } as const
 
 type SoundEffectDefinitions = typeof SOUND_EFFECTS
@@ -101,11 +102,11 @@ class AudioService {
 
   // Background music tracks
   private readonly MUSIC_TRACKS = [
-    '/audio-files/Conquer the World.mp3',
+    music('Conquer the World.mp3'),
     // High-quality WAV versions available (v1: 63MB, v2: 42MB, v3: 44MB):
-    // '/audio-files/Conquer the World v1.wav',  // Original version
-    // '/audio-files/Conquer the World v2.wav',  // Alternative mix
-    // '/audio-files/Conquer the World v3.wav',  // Another variation
+    // music('Conquer the World v1.wav'),  // Original version
+    // music('Conquer the World v2.wav'),  // Alternative mix
+    // music('Conquer the World v3.wav'),  // Another variation
   ]
 
   // Sound rotation indices for arrays

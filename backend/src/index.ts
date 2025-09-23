@@ -201,6 +201,29 @@ initializeRedis()
 
 const PORT = process.env.PORT || 5001
 
+const assetBaseUrl = process.env.PUBLIC_ASSET_BASE_URL?.trim()
+let assetOrigin: string | undefined
+if (assetBaseUrl) {
+  try {
+    assetOrigin = new URL(assetBaseUrl).origin
+  } catch (error) {
+    logger?.warn?.('Invalid PUBLIC_ASSET_BASE_URL provided; falling back to self-hosted assets', {
+      value: assetBaseUrl,
+      error,
+    })
+  }
+}
+
+const imgSources = ["'self'", 'data:', 'blob:']
+const mediaSources = ["'self'", 'blob:']
+const fontSources = ["'self'", 'data:']
+
+if (assetOrigin) {
+  imgSources.push(assetOrigin)
+  mediaSources.push(assetOrigin)
+  fontSources.push(assetOrigin)
+}
+
 // Security middleware
 app.use(
   helmet({
@@ -209,11 +232,11 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
+        imgSrc: imgSources,
         connectSrc: ["'self'", 'wss:', 'ws:'],
-        fontSrc: ["'self'"],
+        fontSrc: fontSources,
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
+        mediaSrc: mediaSources,
         frameSrc: ["'none'"],
       },
     },

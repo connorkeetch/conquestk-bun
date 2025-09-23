@@ -1,5 +1,6 @@
 import type React from 'react'
 import { Link } from 'react-router-dom'
+import { resolveAssetPath } from '@/utils/assets'
 import { useAppSelector } from '../hooks/redux'
 
 interface Feature {
@@ -11,6 +12,8 @@ interface Feature {
 
 const Home: React.FC = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth)
+
+  const heroBackground = resolveAssetPath('static/images/world-map-hero.jpg')
 
   const features: Feature[] = [
     {
@@ -205,7 +208,7 @@ const Home: React.FC = () => {
                       shadow-[inset_0_1px_0_0_rgba(255,255,255,.06)]
                       flex items-center justify-center overflow-hidden"
             style={{
-              backgroundImage: `url('/world-map-hero.jpg')`,
+              backgroundImage: `url('${heroBackground}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
