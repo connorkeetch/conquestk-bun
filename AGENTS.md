@@ -87,7 +87,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - API calls flow through `frontend/src/services/api.ts` or high-level game/map helpers.
 - Theme switching relies on CSS variables in `frontend/src/app.css`; toggle the `data-theme` attribute instead of inline styles.
 - The map editor UI lives in `frontend/src/pages/MapEditorTokens.tsx` with detailed format docs in `docs/guides/map-format.md`.
-- Resolve CDN assets through `resolveAssetPath` (`frontend/src/utils/assets.ts`) so updating `VITE_ASSET_BASE_URL` swaps environments without touching call sites.
+- Resolve CDN assets through `resolveAssetPath` (`frontend/src/utils/assets.ts`); set `VITE_ASSET_BASE_URL` in every environment (including local dev) because the repo no longer ships audio or hero media.
 
 ## Database & admin utilities
 - Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
@@ -151,7 +151,7 @@ ASSET_REGION=auto
 PUBLIC_ASSET_BASE_URL=https://assets.conquestk.com
 VITE_ASSET_BASE_URL=https://assets.conquestk.com
 ```
-If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**` and assets resolve from `/uploads/...`.
+If the `ASSET_*` variables are omitted locally, uploads fall back to `backend/uploads/**`. Static audio/background assets still require `VITE_ASSET_BASE_URL` to point at the CDN.
 
 ## Syncing this guide
 - `AGENTS.md` and `CLAUDE.md` carry the same content; review both after every edit.

@@ -154,6 +154,9 @@ tests/*.spec.ts
 !frontend/public/**/*.gif
 !frontend/public/**/*.svg
 !frontend/public/**/*.ico
+
+# Prevent reintroducing large local media now served from R2
+frontend/public/audio-files/
 !frontend/src/assets/**/*.png
 !frontend/src/assets/**/*.jpg
 !frontend/src/assets/**/*.jpeg
