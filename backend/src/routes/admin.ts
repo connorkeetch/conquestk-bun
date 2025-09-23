@@ -951,6 +951,127 @@ router.put(
   },
 )
 
+router.patch(
+  '/feature-flags/:flagName',
+  requirePermission('system.admin'),
+  logAdminActivity('feature_flag_update'),
+  param('flagName').isString(),
+  body('description').optional().isString(),
+  body('accessLevel').optional().isIn(['disabled', 'internal', 'beta', 'public']),
+  body('category').optional().isString(),
+  body('rolloutPercentage').optional().isInt({ min: 0, max: 100 }),
+  body('config').optional().isObject(),
+  body('dependencies').optional().isArray(),
+  body('dependencies.*').optional().isString(),
+  body('reason').optional().isString(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { flagName } = req.params
+      const {
+        description,
+        accessLevel,
+        category,
+        rolloutPercentage,
+        config,
+        dependencies,
+        reason,
+      } = req.body
+
+      const updated = await adminService.updateFeatureFlagSettings(
+        flagName,
+        {
+          description,
+          accessLevel,
+          category,
+          rolloutPercentage,
+          config,
+          dependencies,
+        },
+        req.userId,
+        reason,
+      )
+
+      if (!updated) {
+        res.status(404).json({ error: 'Feature flag not found' })
+        return
+      }
+
+      res.json({ message: 'Feature flag updated successfully', flag: updated })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to update feature flag', 500, {
+        flagName: req.params.flagName,
+      })
+      res.status(500).json({ error: 'Failed to update feature flag' })
+    }
+  },
+)
+
+router.get(
+  '/users/:userId/feature-flags',
+  requirePermission('users.view'),
+  param('userId').isUUID(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const assignments = await adminService.getUserFeatureFlagAssignments(req.params.userId)
+      res.json(assignments)
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to fetch user feature flags', 500, {
+        targetUserId: req.params.userId,
+      })
+      res.status(500).json({ error: 'Failed to fetch user feature flags' })
+    }
+  },
+)
+
+router.put(
+  '/users/:userId/feature-flags/:flagName',
+  requirePermission('users.edit'),
+  logAdminActivity('feature_flag_user_override_set'),
+  param('userId').isUUID(),
+  param('flagName').isString(),
+  body('enabled').isBoolean(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId, flagName } = req.params
+      const { enabled } = req.body
+
+      await adminService.setUserFeatureFlagOverride(userId, flagName, enabled, req.userId)
+      res.json({ message: 'Feature flag override updated' })
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to set user feature flag override', 500, {
+        targetUserId: req.params.userId,
+        flagName: req.params.flagName,
+      })
+      res.status(500).json({ error: 'Failed to set feature flag override' })
+    }
+  },
+)
+
+router.delete(
+  '/users/:userId/feature-flags/:flagName',
+  requirePermission('users.edit'),
+  logAdminActivity('feature_flag_user_override_cleared'),
+  param('userId').isUUID(),
+  param('flagName').isString(),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId, flagName } = req.params
+      await adminService.clearUserFeatureFlagOverride(userId, flagName, req.userId)
+      res.status(204).send()
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to clear user feature flag override', 500, {
+        targetUserId: req.params.userId,
+        flagName: req.params.flagName,
+      })
+      res.status(500).json({ error: 'Failed to clear feature flag override' })
+    }
+  },
+)
+
 // ============= ACTIVITY LOGS =============
 
 // Get admin activity logs

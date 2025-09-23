@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { adminService, type UserFeatureFlagAssignment } from '../services/adminService'
 import api from '../services/api'
 
 interface User {
@@ -56,6 +57,10 @@ const AdminUsers: React.FC = () => {
   const [actionSubmitting, setActionSubmitting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const actionNotesId = useId()
+  const [userFeatureFlags, setUserFeatureFlags] = useState<UserFeatureFlagAssignment[]>([])
+  const [userFlagsLoading, setUserFlagsLoading] = useState(false)
+  const [userFlagsError, setUserFlagsError] = useState<string | null>(null)
+  const [userFlagUpdating, setUserFlagUpdating] = useState<string | null>(null)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -75,6 +80,21 @@ const AdminUsers: React.FC = () => {
       setLoading(false)
     }
   }, [searchQuery])
+
+  const loadUserFeatureFlags = useCallback(async (userId: string) => {
+    try {
+      setUserFlagsLoading(true)
+      setUserFlagsError(null)
+      const flags = await adminService.getUserFeatureFlags(userId)
+      setUserFeatureFlags(flags)
+    } catch (err) {
+      const message = getErrorMessage(err)
+      setUserFlagsError(message)
+      setUserFeatureFlags([])
+    } finally {
+      setUserFlagsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     void loadUsers()
@@ -294,11 +314,15 @@ const AdminUsers: React.FC = () => {
   const openUserModal = (user: User) => {
     setSelectedUser(user)
     setShowUserModal(true)
+    void loadUserFeatureFlags(user.id)
   }
 
   const closeUserModal = () => {
     setSelectedUser(null)
     setShowUserModal(false)
+    setUserFeatureFlags([])
+    setUserFlagsError(null)
+    setUserFlagUpdating(null)
   }
 
   const filteredUsers = useMemo(() => {
@@ -309,6 +333,31 @@ const AdminUsers: React.FC = () => {
       return true
     })
   }, [users, filterType])
+
+  const handleUserFlagOverrideChange = useCallback(
+    async (userId: string, flagName: string, nextValue: 'inherit' | 'enable' | 'disable') => {
+      try {
+        setUserFlagUpdating(flagName)
+
+        if (nextValue === 'inherit') {
+          await adminService.clearUserFeatureFlagOverride(userId, flagName)
+          toast.success(`Cleared override for ${flagName}`)
+        } else {
+          await adminService.setUserFeatureFlagOverride(userId, flagName, nextValue === 'enable')
+          toast.success(`Set override for ${flagName}`)
+        }
+
+        await loadUserFeatureFlags(userId)
+      } catch (err) {
+        const message = getErrorMessage(err)
+        toast.error(message)
+        setUserFlagsError(message)
+      } finally {
+        setUserFlagUpdating(null)
+      }
+    },
+    [loadUserFeatureFlags],
+  )
 
   const isInitialLoading = loading && users.length === 0
   const isRefreshing = loading && users.length > 0
@@ -745,6 +794,129 @@ const AdminUsers: React.FC = () => {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Feature Flags */}
+              <div className="bg-surface-2 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-medium text-white">Feature Flag Overrides</h4>
+                    <p className="text-xs text-muted">
+                      Force-enable or disable experiments for this user without changing global
+                      scope.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => selectedUser && void loadUserFeatureFlags(selectedUser.id)}
+                    disabled={userFlagsLoading}
+                    className="px-3 py-1 text-xs rounded bg-surface-1 border border-border text-white hover:bg-surface-1/80 transition-colors disabled:opacity-60"
+                  >
+                    {userFlagsLoading ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+
+                {userFlagsError && (
+                  <div className="text-sm text-red-400 mb-3">{userFlagsError}</div>
+                )}
+
+                {userFlagsLoading && userFeatureFlags.length === 0 ? (
+                  <div className="text-sm text-muted">Loading feature flags...</div>
+                ) : userFeatureFlags.length === 0 ? (
+                  <div className="text-sm text-muted">No feature flags configured.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-muted border-b border-border/40">
+                          <th className="py-2 pr-4 font-medium">Flag</th>
+                          <th className="py-2 pr-4 font-medium">Scope</th>
+                          <th className="py-2 pr-4 font-medium">Global</th>
+                          <th className="py-2 pr-4 font-medium">Override</th>
+                          <th className="py-2 pr-4 font-medium">Effective</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userFeatureFlags.map((flag) => {
+                          const overrideValue =
+                            flag.userOverride === null
+                              ? 'inherit'
+                              : flag.userOverride
+                                ? 'enable'
+                                : 'disable'
+
+                          return (
+                            <tr key={flag.flagName} className="border-b border-border/20">
+                              <td className="py-2 pr-4 align-top">
+                                <div className="text-white font-medium capitalize">
+                                  {flag.flagName.replace(/_/g, ' ')}
+                                </div>
+                                {flag.description && (
+                                  <div className="text-xs text-muted mt-1">{flag.description}</div>
+                                )}
+                              </td>
+                              <td className="py-2 pr-4 align-top text-xs text-muted">
+                                {flag.accessLevel}
+                                {flag.rolloutPercentage != null && flag.rolloutPercentage < 100
+                                  ? ` (${flag.rolloutPercentage}% rollout)`
+                                  : ''}
+                              </td>
+                              <td className="py-2 pr-4 align-top text-xs">
+                                <span
+                                  className={`px-2 py-1 rounded ${
+                                    flag.isEnabled
+                                      ? 'bg-green-600/20 text-green-300 border border-green-600/40'
+                                      : 'bg-gray-600/20 text-gray-400 border border-gray-600/40'
+                                  }`}
+                                >
+                                  {flag.isEnabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-4 align-top">
+                                <select
+                                  value={overrideValue}
+                                  onChange={(e) =>
+                                    selectedUser &&
+                                    void handleUserFlagOverrideChange(
+                                      selectedUser.id,
+                                      flag.flagName,
+                                      e.target.value as 'inherit' | 'enable' | 'disable',
+                                    )
+                                  }
+                                  disabled={
+                                    Boolean(userFlagUpdating) && userFlagUpdating !== flag.flagName
+                                  }
+                                  className="bg-surface-1 text-white rounded px-3 py-1 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60 text-xs"
+                                >
+                                  <option value="inherit">Inherit global</option>
+                                  <option value="enable">Force enable</option>
+                                  <option value="disable">Force disable</option>
+                                </select>
+                              </td>
+                              <td className="py-2 pr-4 align-top text-xs">
+                                <span
+                                  className={`px-2 py-1 rounded ${
+                                    flag.effectiveValue === null
+                                      ? 'bg-surface-1 text-muted border border-border/40'
+                                      : flag.effectiveValue
+                                        ? 'bg-primary/20 text-primary border border-primary/40'
+                                        : 'bg-gray-600/20 text-gray-400 border border-gray-600/40'
+                                  }`}
+                                >
+                                  {flag.effectiveValue === null
+                                    ? 'Unknown'
+                                    : flag.effectiveValue
+                                      ? 'Active'
+                                      : 'Inactive'}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

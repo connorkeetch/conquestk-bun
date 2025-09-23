@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { adminService, type FeatureFlag } from '../services/adminService'
 
 interface SystemStatus {
@@ -22,14 +23,6 @@ interface AdminInfo {
   isAdmin: boolean
 }
 
-interface FeatureFlagEntry {
-  key: string
-  flagName: string
-  description?: string
-  isEnabled: boolean
-  updatedAt?: string
-}
-
 export default function AdminDashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null)
@@ -40,6 +33,15 @@ export default function AdminDashboard() {
   const [updatingFlag, setUpdatingFlag] = useState<string | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
   const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
+  const [editingFlag, setEditingFlag] = useState<FeatureFlag | null>(null)
+  const [editDescription, setEditDescription] = useState('')
+  const [editAccessLevel, setEditAccessLevel] = useState<FeatureFlag['accessLevel']>('disabled')
+  const [editCategory, setEditCategory] = useState<string>('')
+  const [editRollout, setEditRollout] = useState(0)
+  const [editConfig, setEditConfig] = useState('')
+  const [editDependencies, setEditDependencies] = useState('')
+  const [editReason, setEditReason] = useState('')
+  const [savingFlag, setSavingFlag] = useState(false)
 
   const loadDashboardData = useCallback(async (options: { showLoader?: boolean } = {}) => {
     const { showLoader = true } = options
@@ -147,6 +149,33 @@ export default function AdminDashboard() {
     return isEnabled ? 'Enabled' : 'Disabled'
   }
 
+  const sortedFeatureFlags = useMemo(() => {
+    if (featureFlags.length > 0) {
+      return [...featureFlags].sort((a, b) => a.flagName.localeCompare(b.flagName))
+    }
+
+    if (systemStatus) {
+      return Object.entries(systemStatus.featureFlags)
+        .map(([flagName, isEnabled]) => ({
+          id: flagName,
+          flagName,
+          description: undefined,
+          isEnabled,
+          config: {},
+          createdBy: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          accessLevel: 'disabled' as FeatureFlag['accessLevel'],
+          category: null,
+          rolloutPercentage: isEnabled ? 100 : 0,
+          dependencies: [],
+        }))
+        .sort((a, b) => a.flagName.localeCompare(b.flagName))
+    }
+
+    return []
+  }, [featureFlags, systemStatus])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -165,6 +194,7 @@ export default function AdminDashboard() {
           <div className="text-2xl mb-4">❌</div>
           <div>Error: {error}</div>
           <button
+            type="button"
             onClick={loadDashboardData}
             className="mt-4 bg-primary hover:brightness-110 px-4 py-2 rounded"
           >
@@ -176,24 +206,66 @@ export default function AdminDashboard() {
   }
 
   const databaseStats = systemStatus?.database
-  const featureFlagEntries: FeatureFlagEntry[] =
-    featureFlags.length > 0
-      ? featureFlags.map((flag) => ({
-          key: flag.id || flag.flagName,
-          flagName: flag.flagName,
-          description: flag.description,
-          isEnabled: flag.isEnabled,
-          updatedAt: flag.updatedAt,
-        }))
-      : systemStatus
-        ? Object.entries(systemStatus.featureFlags).map(([flagName, isEnabled]) => ({
-            key: flagName,
-            flagName,
-            description: undefined,
-            isEnabled,
-            updatedAt: undefined,
-          }))
-        : []
+
+  const openEditModal = (flag: FeatureFlag) => {
+    setEditingFlag(flag)
+    setEditDescription(flag.description ?? '')
+    setEditAccessLevel(flag.accessLevel)
+    setEditCategory(flag.category ?? '')
+    setEditRollout(flag.rolloutPercentage)
+    setEditConfig(JSON.stringify(flag.config ?? {}, null, 2))
+    setEditDependencies(flag.dependencies?.join(', ') ?? '')
+    setEditReason('')
+  }
+
+  const closeEditModal = () => {
+    setEditingFlag(null)
+    setSavingFlag(false)
+  }
+
+  const handleSaveFeatureFlag = async () => {
+    if (!editingFlag) return
+
+    let parsedConfig: Record<string, unknown> | undefined
+    if (editConfig.trim().length > 0) {
+      try {
+        parsedConfig = JSON.parse(editConfig)
+      } catch {
+        toast.error('Config must be valid JSON')
+        return
+      }
+    } else {
+      parsedConfig = {}
+    }
+
+    const dependencies = editDependencies
+      .split(',')
+      .map((dep) => dep.trim())
+      .filter((dep) => dep.length > 0)
+
+    setSavingFlag(true)
+
+    try {
+      await adminService.updateFeatureFlagSettings(editingFlag.flagName, {
+        description: editDescription.trim() || null,
+        accessLevel: editAccessLevel,
+        category: editCategory.trim() || null,
+        rolloutPercentage: editRollout,
+        config: parsedConfig,
+        dependencies,
+        reason: editReason.trim() || undefined,
+      })
+
+      toast.success('Feature flag updated')
+      closeEditModal()
+      await loadDashboardData({ showLoader: false })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update feature flag'
+      toast.error(message)
+    } finally {
+      setSavingFlag(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
@@ -212,7 +284,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-primary-soft">
-                  {databaseStats?.userCount != null ? databaseStats.userCount.toLocaleString() : '0'}
+                  {databaseStats?.userCount != null
+                    ? databaseStats.userCount.toLocaleString()
+                    : '0'}
                 </div>
                 <div className="text-sm text-muted">Total Users</div>
               </div>
@@ -236,7 +310,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
-                  {databaseStats?.activeGames != null ? databaseStats.activeGames.toLocaleString() : '0'}
+                  {databaseStats?.activeGames != null
+                    ? databaseStats.activeGames.toLocaleString()
+                    : '0'}
                 </div>
                 <div className="text-sm text-muted">Active Games</div>
               </div>
@@ -385,16 +461,16 @@ export default function AdminDashboard() {
                 {refreshingFlags ? 'Refreshing...' : '🔄 Refresh'}
               </button>
             </div>
-            {featureFlagEntries.length === 0 ? (
+            {sortedFeatureFlags.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-4xl mb-2">🚩</div>
                 <p className="text-muted">No feature flags configured</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {featureFlagEntries.map((flag) => (
+                {sortedFeatureFlags.map((flag) => (
                   <div
-                    key={flag.key}
+                    key={flag.flagName}
                     className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
                   >
                     <div className="flex-1 pr-4">
@@ -405,9 +481,17 @@ export default function AdminDashboard() {
                       <div className="text-xs text-muted mt-1">
                         Status: {formatFlagStatus(flag.flagName, flag.isEnabled)}
                       </div>
-                      {flag.updatedAt && (
+                      {'updatedAt' in flag && flag.updatedAt && (
                         <div className="text-xs text-muted mt-1">
                           Last updated: {new Date(flag.updatedAt).toLocaleString()}
+                        </div>
+                      )}
+                      {'accessLevel' in flag && (
+                        <div className="text-xs text-muted mt-1">
+                          Scope: {flag.accessLevel}{' '}
+                          {flag.rolloutPercentage != null && flag.rolloutPercentage < 100
+                            ? `(${flag.rolloutPercentage}% rollout)`
+                            : ''}
                         </div>
                       )}
                     </div>
@@ -425,6 +509,15 @@ export default function AdminDashboard() {
                       />
                       <span className="slider"></span>
                     </label>
+                    {featureFlags.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(flag as FeatureFlag)}
+                        className="ml-4 px-3 py-2 text-sm bg-surface-1 border border-border rounded hover:bg-surface-1/70 transition-colors"
+                      >
+                        Manage
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -502,6 +595,143 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {editingFlag && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-1 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between p-6 border-b border-border/50">
+              <div>
+                <h3 className="text-xl font-semibold text-white">
+                  Manage Flag: {formatFlagName(editingFlag.flagName)}
+                </h3>
+                <p className="text-sm text-muted mt-1">
+                  Adjust targeting scope, rollout, and overrides for this feature.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="text-muted hover:text-white text-2xl leading-none"
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex flex-col text-sm">
+                  <span className="text-muted mb-1">Description</span>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  />
+                </label>
+                <div className="space-y-3">
+                  <label className="flex flex-col text-sm">
+                    <span className="text-muted mb-1">Access Level</span>
+                    <select
+                      value={editAccessLevel}
+                      onChange={(e) =>
+                        setEditAccessLevel(e.target.value as FeatureFlag['accessLevel'])
+                      }
+                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    >
+                      <option value="disabled">Disabled</option>
+                      <option value="internal">Internal (admins + testers)</option>
+                      <option value="beta">Beta (admins + testers + beta users)</option>
+                      <option value="public">Public (everyone)</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col text-sm">
+                    <span className="text-muted mb-1">Category</span>
+                    <input
+                      type="text"
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      placeholder="gameplay, ui, experimental..."
+                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    />
+                  </label>
+                  <label className="flex flex-col text-sm">
+                    <span className="text-muted mb-1">Rollout Percentage</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={editRollout}
+                      onChange={(e) => {
+                        const next = Number(e.target.value)
+                        if (Number.isNaN(next)) {
+                          setEditRollout(0)
+                        } else {
+                          setEditRollout(Math.max(0, Math.min(100, next)))
+                        }
+                      }}
+                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex flex-col text-sm">
+                  <span className="text-muted mb-1">Target Criteria (JSON)</span>
+                  <textarea
+                    value={editConfig}
+                    onChange={(e) => setEditConfig(e.target.value)}
+                    rows={8}
+                    className="font-mono text-xs bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  />
+                </label>
+                <div className="space-y-4">
+                  <label className="flex flex-col text-sm">
+                    <span className="text-muted mb-1">Dependencies</span>
+                    <input
+                      type="text"
+                      value={editDependencies}
+                      onChange={(e) => setEditDependencies(e.target.value)}
+                      placeholder="Comma separated flag names"
+                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    />
+                  </label>
+                  <label className="flex flex-col text-sm">
+                    <span className="text-muted mb-1">Change Reason (optional)</span>
+                    <textarea
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                      rows={4}
+                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      placeholder="Document why you're adjusting this flag. Helpful for audit logs."
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 rounded bg-surface-2 border border-border text-white hover:bg-surface-2/80 transition-colors"
+                  disabled={savingFlag}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveFeatureFlag()}
+                  className="px-4 py-2 rounded bg-primary text-white hover:brightness-110 transition-colors disabled:opacity-60"
+                  disabled={savingFlag}
+                >
+                  {savingFlag ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

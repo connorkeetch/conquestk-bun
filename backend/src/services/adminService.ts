@@ -61,8 +61,34 @@ export interface FeatureFlag {
   description?: string
   isEnabled: boolean
   config: Record<string, unknown>
+  accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
+  category?: string | null
+  rolloutPercentage: number
+  dependencies: string[]
   createdBy: string
   createdAt: Date
+  updatedAt: Date
+}
+
+export interface FeatureFlagSettingsUpdate {
+  description?: string | null
+  accessLevel?: FeatureFlag['accessLevel']
+  rolloutPercentage?: number
+  config?: Record<string, unknown>
+  category?: string | null
+  dependencies?: string[]
+}
+
+export interface UserFeatureFlagAssignment {
+  flagName: string
+  description?: string | null
+  isEnabled: boolean
+  accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
+  category?: string | null
+  rolloutPercentage: number
+  config: Record<string, unknown>
+  userOverride: boolean | null
+  effectiveValue: boolean | null
   updatedAt: Date
 }
 
@@ -762,6 +788,15 @@ export class AdminService {
           description: flag.description,
           isEnabled: flag.is_enabled,
           config: targetCriteria,
+          accessLevel: (flag.access_level as FeatureFlag['accessLevel']) ?? 'disabled',
+          category: flag.category,
+          rolloutPercentage:
+            typeof flag.rollout_percentage === 'string'
+              ? parseInt(flag.rollout_percentage, 10)
+              : (flag.rollout_percentage ?? 0),
+          dependencies: Array.isArray(flag.dependencies)
+            ? (flag.dependencies as string[])
+            : this.safeJsonParse<string[]>(flag.dependencies as string | null | undefined, []),
           createdBy: flag.created_by ?? 'system',
           createdAt: new Date(flag.created_at),
           updatedAt: new Date(flag.updated_at),
@@ -817,6 +852,177 @@ export class AdminService {
     )
 
     return true
+  }
+
+  async updateFeatureFlagSettings(
+    flagName: string,
+    updates: FeatureFlagSettingsUpdate,
+    adminUserId: string,
+    reason?: string,
+  ): Promise<FeatureFlag | null> {
+    const mappedUpdates: Record<string, unknown> = {}
+
+    if (updates.description !== undefined) {
+      mappedUpdates.description = updates.description
+    }
+    if (updates.accessLevel !== undefined) {
+      mappedUpdates.access_level = updates.accessLevel
+    }
+    if (updates.rolloutPercentage !== undefined) {
+      mappedUpdates.rollout_percentage = updates.rolloutPercentage
+    }
+    if (updates.config !== undefined) {
+      mappedUpdates.target_criteria = updates.config
+    }
+    if (updates.category !== undefined) {
+      mappedUpdates.category = updates.category
+    }
+    if (updates.dependencies !== undefined) {
+      mappedUpdates.dependencies = updates.dependencies
+    }
+
+    const updatedFlag = await featureFlagService.updateFlag(
+      flagName,
+      mappedUpdates,
+      adminUserId,
+      reason,
+    )
+
+    if (!updatedFlag) {
+      return null
+    }
+
+    const normalizedFlag = await this.getFeatureFlags().then(
+      (flags) => flags.find((flag) => flag.flagName === flagName) ?? null,
+    )
+
+    await this.logAdminAction(
+      adminUserId,
+      'feature_flag_update',
+      {
+        flagName,
+        updates,
+        reason,
+      },
+      'system',
+      normalizedFlag?.id ?? flagName,
+    )
+
+    return normalizedFlag
+  }
+
+  async getUserFeatureFlagAssignments(userId: string): Promise<UserFeatureFlagAssignment[]> {
+    const flags = await featureFlagService.listFlags()
+    const overrides = await featureFlagService.listUserOverrides(userId)
+
+    const userResult = await query(
+      `SELECT id, username, is_admin, is_vip, premium_tier, is_beta_user
+       FROM users WHERE id = $1`,
+      [userId],
+    )
+
+    const userRow = userResult.rows[0] as
+      | {
+          id: string
+          username?: string | null
+          is_admin?: boolean | null
+          is_vip?: boolean | null
+          premium_tier?: string | null
+          is_beta_user?: boolean | null
+        }
+      | undefined
+
+    const userContext = userRow
+      ? {
+          id: userRow.id,
+          role: undefined,
+          isAdmin: Boolean(userRow.is_admin),
+          isVip: Boolean(userRow.is_vip),
+          isBetaUser: Boolean(userRow.is_beta_user),
+          premiumTier: userRow.premium_tier ?? undefined,
+          hasPremium: (userRow.premium_tier ?? 'free') !== 'free',
+        }
+      : undefined
+
+    const assignments: UserFeatureFlagAssignment[] = []
+
+    for (const flag of flags) {
+      const targetCriteria =
+        typeof flag.target_criteria === 'string'
+          ? this.safeJsonParse(flag.target_criteria, {})
+          : flag.target_criteria || {}
+
+      let effectiveValue: boolean | null = null
+      if (userContext) {
+        try {
+          effectiveValue = await featureFlagService.evaluateFlagByName(flag.flag_name, userContext)
+        } catch (error) {
+          logger.warn('Failed to evaluate feature flag for user', {
+            userId,
+            flagName: flag.flag_name,
+            error,
+          })
+        }
+      }
+
+      assignments.push({
+        flagName: flag.flag_name,
+        description: flag.description,
+        isEnabled: Boolean(flag.is_enabled),
+        accessLevel: (flag.access_level as FeatureFlag['accessLevel']) ?? 'disabled',
+        category: flag.category,
+        rolloutPercentage:
+          typeof flag.rollout_percentage === 'string'
+            ? parseInt(flag.rollout_percentage, 10)
+            : (flag.rollout_percentage ?? 0),
+        config: targetCriteria,
+        userOverride: overrides.get(flag.flag_name) ?? null,
+        effectiveValue,
+        updatedAt: new Date(flag.updated_at),
+      })
+    }
+
+    return assignments.sort((a, b) => a.flagName.localeCompare(b.flagName))
+  }
+
+  async setUserFeatureFlagOverride(
+    targetUserId: string,
+    flagName: string,
+    enabled: boolean,
+    adminUserId: string,
+  ): Promise<void> {
+    await featureFlagService.setUserOverride(targetUserId, flagName, enabled)
+
+    await this.logAdminAction(
+      adminUserId,
+      'feature_flag_user_override_set',
+      {
+        targetUserId,
+        flagName,
+        enabled,
+      },
+      'user',
+      targetUserId,
+    )
+  }
+
+  async clearUserFeatureFlagOverride(
+    targetUserId: string,
+    flagName: string,
+    adminUserId: string,
+  ): Promise<void> {
+    await featureFlagService.clearUserOverride(targetUserId, flagName)
+
+    await this.logAdminAction(
+      adminUserId,
+      'feature_flag_user_override_cleared',
+      {
+        targetUserId,
+        flagName,
+      },
+      'user',
+      targetUserId,
+    )
   }
 
   // ============= LOGGING =============
