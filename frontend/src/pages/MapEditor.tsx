@@ -117,6 +117,9 @@ export default function MapEditor() {
   const [notifications, setNotifications] = useState<EditorNotification[]>([])
   const notificationTimeoutsRef = useRef<Map<string, number>>(new Map())
 
+  // Callbacks declared before effects that use them
+  // (moved earlier above)
+
   // Server validation state
   const [serverValidation, setServerValidation] = useState<{
     isValid: boolean | null
