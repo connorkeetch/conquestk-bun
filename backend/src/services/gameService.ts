@@ -10,11 +10,13 @@ import type {
   SerializedGameState,
   Territory,
 } from '../types/game'
+import type { ContinentBonus } from '../types/game'
 import { logger } from '../utils/logger'
 import { gameStateCache } from './cacheService'
 import type { PlayerRating, RatingChange } from './eloService'
 import { eloService } from './eloService'
 import { mapService } from './mapService'
+import { loadMapForEngine } from '../game/mapLoader'
 import { battleMetrics } from './metricsService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
@@ -172,17 +174,25 @@ export class GameService {
       config.numberOfTeams = null
     }
 
-    // Load continent bonuses for custom maps
+    // Load map data from DB when a custom map is selected
+    let overrides: { territories?: Territory[]; continentBonuses?: ContinentBonus[] } | undefined
     if (config.mapId && config.mapId !== 'classic') {
       try {
-        const continentBonuses = await mapService.getMapContinentBonuses(config.mapId)
-        config.continentBonuses = continentBonuses
-      } catch (_error) {
-        // Continue with classic behavior if loading fails
+        const loaded = await loadMapForEngine(config.mapId)
+        overrides = { territories: loaded.territories, continentBonuses: loaded.continentBonuses }
+        // Ensure continent bonuses are present in config (for UI and calculations)
+        if (!config.continentBonuses || config.continentBonuses.length === 0) {
+          config.continentBonuses = loaded.continentBonuses
+        }
+      } catch (error) {
+        logger.warn('Falling back to classic map due to DB map load failure', {
+          mapId: config.mapId,
+          error: error instanceof Error ? error.message : error,
+        })
       }
     }
 
-    const gameState = this.gameEngine.initializeGame(roomId, players, config)
+    const gameState = this.gameEngine.initializeGame(roomId, players, config, overrides)
 
     // Initialize territory modifiers if enabled
     if (config.useTerritoryModifiers) {

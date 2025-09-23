@@ -1,5 +1,6 @@
 import { getClient, query } from '../config/database'
 import type { GameConfiguration, GamePhase, GameState } from '../types/game'
+import capitalGameService from './capitalGameService'
 import type { GameLifecycleStatus, GameRoom } from '../types/gameRoom'
 import { logger } from '../utils/logger'
 import { GameRoomService } from './gameRoomService'
@@ -205,6 +206,11 @@ export class GameLifecycleService {
 
     const configOverrides: Partial<GameConfiguration> = {}
 
+    // Ensure selected map from the room flows into game initialization
+    if (room?.mapId) {
+      configOverrides.mapId = room.mapId
+    }
+
     if (room?.teamMode === 'teams' && room.numberOfTeams && room.numberOfTeams > 1) {
       configOverrides.allowTeamPlay = true
       configOverrides.teamMode = 'teams'
@@ -214,7 +220,25 @@ export class GameLifecycleService {
       }
     }
 
+    // Propagate selected game mode (e.g. 'capitals') into config
+    if (room?.gameMode) {
+      configOverrides.gameMode = room.gameMode
+    }
+
     const gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
+
+    // Initialize capitals if requested and possible
+    if ((room?.gameMode === 'capitals' || configOverrides.gameMode === 'capitals') && room?.mapId) {
+      try {
+        await capitalGameService.initializeCapitals(roomId, players.length, room.mapId)
+      } catch (error) {
+        logger.warn('Failed to initialize capitals; continuing without capitals', {
+          roomId,
+          mapId: room?.mapId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+    }
 
     await this.persistGameState(roomId, gameState)
 

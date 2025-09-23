@@ -159,7 +159,7 @@ The editor, draft service, and `maps.metadata` column all share the following st
 - **`capitalAssignments`** – Maps a player count to an array of territory IDs that should be considered valid capitals for that configuration.
 - **`image`** – Optional data URL payload used when uploading a new background. If omitted, `imageUrl`/`imageWidth`/`imageHeight` fields from the draft are reused.
 
-Legacy static JSON files (e.g. [`frontend/src/data/territories-example.json`](../frontend/src/data/territories-example.json)) follow the same logical shape but omit some optional fields. They remain useful as fixtures for quick prototyping.
+Legacy static JSON fixtures followed the same logical shape but omitted some optional fields. Since the client now reads territory data from the API, keep any local examples in temporary scratch files rather than source control.
 
 ---
 
