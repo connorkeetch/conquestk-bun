@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { logger } from '@/utils/logger'
 import ImageCropper from '../components/ImageCropper'
 import TermsModal from '../components/TermsModal'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import {
   type Coordinate,
   type CustomMap,
@@ -14,7 +15,7 @@ import {
   type TerritoryAbilityType,
   type TerritoryAdjacency,
 } from '../services/mapService'
-import { termsService } from '../services/termsService'
+import { termsService, type TermsCheckResponse } from '../services/termsService'
 
 type EditorTool = 'select' | 'territory' | 'continent' | 'adjacency'
 
@@ -66,6 +67,11 @@ export default function MapEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
+  const imageScaleId = useId()
+  const mapNameId = useId()
+  const mapDescriptionId = useId()
+  const territoryNameId = useId()
+  const territoryContinentId = useId()
 
   const [state, setState] = useState<EditorState>({
     selectedTool: 'select',
@@ -82,7 +88,7 @@ export default function MapEditor() {
 
   // Terms acceptance state
   const [showTermsModal, setShowTermsModal] = useState(false)
-  const [termsContent, setTermsContent] = useState<any>(null)
+  const [termsContent, setTermsContent] = useState<TermsCheckResponse['termsContent']>(null)
   const [isCheckingTerms, setIsCheckingTerms] = useState(true)
   const polygonEditorEnabled = useFeatureFlag(FEATURE_FLAGS.MAP_POLYGON_EDITOR)
 
@@ -192,7 +198,7 @@ export default function MapEditor() {
         setShowTermsModal(true)
       }
     } catch (error) {
-      console.error('Error checking terms:', error)
+      logger.error('Error checking terms', error)
       // If terms check fails, allow access but log the error
     } finally {
       setIsCheckingTerms(false)
@@ -204,7 +210,7 @@ export default function MapEditor() {
       await termsService.acceptTerms('map_editor')
       setShowTermsModal(false)
     } catch (error) {
-      console.error('Error accepting terms:', error)
+      logger.error('Error accepting terms', error)
       addNotification('Failed to accept terms. Please try again.', 'error')
     }
   }
@@ -896,16 +902,25 @@ export default function MapEditor() {
       addNotification('Map saved successfully! You can manage it from your profile.', 'success')
 
       setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch (error: any) {
-      console.error('Map save error:', error)
-      console.error('Error response:', error.response?.data)
+    } catch (error: unknown) {
+      const apiError = error as {
+        response?: { data?: { error?: string; details?: Array<{ msg?: string }> } }
+      }
+      logger.error('Map save error', error)
+      logger.error('Error response', apiError.response?.data)
       setSaveStatus('error')
 
       let errorMessage = 'Failed to save map. Please try again.'
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error
-        if (error.response.data.details) {
-          errorMessage += ': ' + error.response.data.details.map((d: any) => d.msg).join(', ')
+      if (apiError.response?.data?.error) {
+        errorMessage = apiError.response.data.error
+        if (apiError.response.data.details) {
+          const details = apiError.response.data.details
+          const detailMessages = details
+            .map((detail) => detail.msg)
+            .filter((msg): msg is string => Boolean(msg))
+          if (detailMessages.length > 0) {
+            errorMessage += `: ${detailMessages.join(', ')}`
+          }
         }
       }
 
@@ -955,7 +970,7 @@ export default function MapEditor() {
       const file = new File([blob], imageFile?.name || 'cropped-image.png', { type: 'image/png' })
       setImageFile(file)
     } catch (error) {
-      console.error('Failed to convert cropped image:', error)
+      logger.error('Failed to convert cropped image', error)
       setUploadError('Failed to process cropped image')
     }
 
@@ -1000,6 +1015,26 @@ export default function MapEditor() {
     } else {
       issues.forEach((message) => addNotification(message, 'warning'))
       addNotification('Map validation found issues that need attention.', 'error')
+    }
+  }
+
+  const validateMapOnServer = async () => {
+    try {
+      const id = state.currentMap?.id
+      if (!id) {
+        addNotification('Please save the map first to run server validation.', 'warning')
+        return
+      }
+      const result = await mapService.validateMapServer(id)
+      if (result.isValid) {
+        addNotification('✅ Server validation passed! Your map is ready to use.', 'success')
+      } else {
+        result.errors.forEach((message) => addNotification(message, 'warning'))
+        addNotification('Server validation found issues that need attention.', 'error')
+      }
+    } catch (error) {
+      logger.error('Server validation error', error)
+      addNotification('Failed to run server validation. Please try again.', 'error')
     }
   }
 
@@ -1212,6 +1247,7 @@ export default function MapEditor() {
               The polygon-based map editor is currently under development
             </p>
             <button
+              type="button"
               onClick={() => (window.location.href = '/map-editor')}
               className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
             >
@@ -1229,6 +1265,7 @@ export default function MapEditor() {
             <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={handleUseFullImage}
                 className="w-full px-4 py-3 bg-primary hover:bg-primary rounded-lg text-white font-medium flex items-center justify-between"
               >
@@ -1236,6 +1273,7 @@ export default function MapEditor() {
                 <span className="text-sm text-blue-200">No cropping</span>
               </button>
               <button
+                type="button"
                 onClick={handleCropImage}
                 className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium flex items-center justify-between"
               >
@@ -1243,6 +1281,7 @@ export default function MapEditor() {
                 <span className="text-sm text-green-200">Select area</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
@@ -1297,6 +1336,7 @@ export default function MapEditor() {
           <h1 className="text-3xl font-bold text-slate-100">🗺️ Map Editor</h1>
           <div className="space-x-2">
             <button
+              type="button"
               onClick={saveMap}
               disabled={saveStatus === 'saving'}
               className={`px-4 py-2 rounded font-medium ${
@@ -1332,6 +1372,7 @@ export default function MapEditor() {
               className="hidden"
             />
             <button
+              type="button"
               onClick={exportMapJSON}
               className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
             >
@@ -1351,12 +1392,21 @@ export default function MapEditor() {
               📤 Import JSON
             </label>
             <button
+              type="button"
               onClick={validateMap}
               className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
             >
               🔍 Validate Map
             </button>
             <button
+              type="button"
+              onClick={validateMapOnServer}
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
+            >
+              🧪 Validate (Server)
+            </button>
+            <button
+              type="button"
               onClick={clearMap}
               className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-medium"
             >
@@ -1427,7 +1477,7 @@ export default function MapEditor() {
               <div className="space-y-4">
                 {/* Background Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Background Image</label>
+                  <p className="block text-sm font-medium mb-2">Background Image</p>
                   <div
                     className={`bg-surface-2 rounded-lg p-3 border-2 border-dashed transition-colors ${
                       isDragOver ? 'border-primary bg-blue-900/20' : 'border-border'
@@ -1475,6 +1525,7 @@ export default function MapEditor() {
                           </div>
                           <div className="flex justify-center space-x-2">
                             <button
+                              type="button"
                               onClick={() => fileInputRef.current?.click()}
                               className="bg-primary hover:bg-primary px-3 py-1 rounded text-xs transition-colors"
                               disabled={isUploading}
@@ -1482,6 +1533,7 @@ export default function MapEditor() {
                               Change
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 setState((prev) => ({ ...prev, imageUrl: undefined }))
                                 setUploadError(null)
@@ -1523,6 +1575,7 @@ export default function MapEditor() {
                           </div>
                           {!isDragOver && !isUploading && (
                             <button
+                              type="button"
                               onClick={() => fileInputRef.current?.click()}
                               className="bg-primary hover:bg-primary px-4 py-2 rounded text-sm font-medium transition-colors"
                             >
@@ -1541,10 +1594,14 @@ export default function MapEditor() {
                 {/* Image Scale Control */}
                 {state.imageUrl && (
                   <div className="mt-4 p-3 bg-surface-2 rounded">
-                    <label className="block text-sm font-medium mb-2 text-slate-200">
+                    <label
+                      htmlFor={imageScaleId}
+                      className="block text-sm font-medium mb-2 text-slate-200"
+                    >
                       Image Scale: {Math.round(state.imageScale * 100)}%
                     </label>
                     <input
+                      id={imageScaleId}
                       type="range"
                       min="50"
                       max="150"
@@ -1566,8 +1623,14 @@ export default function MapEditor() {
 
                 {/* Map Details */}
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-200">Map Name</label>
+                  <label
+                    htmlFor={mapNameId}
+                    className="block text-sm font-medium mb-1 text-slate-200"
+                  >
+                    Map Name
+                  </label>
                   <input
+                    id={mapNameId}
                     type="text"
                     value={mapName}
                     onChange={(e) => setMapName(e.target.value)}
@@ -1576,10 +1639,14 @@ export default function MapEditor() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-200">
+                  <label
+                    htmlFor={mapDescriptionId}
+                    className="block text-sm font-medium mb-1 text-slate-200"
+                  >
                     Description
                   </label>
                   <textarea
+                    id={mapDescriptionId}
                     value={mapDescription}
                     onChange={(e) => setMapDescription(e.target.value)}
                     className="max-w-md w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -1613,6 +1680,7 @@ export default function MapEditor() {
                   { id: 'adjacency', name: '🔗 Connection Tool', desc: 'Connect territories' },
                 ].map((tool) => (
                   <button
+                    type="button"
                     key={tool.id}
                     onClick={() =>
                       setState((prev) => ({ ...prev, selectedTool: tool.id as EditorTool }))
@@ -1636,10 +1704,14 @@ export default function MapEditor() {
                 <h3 className="text-lg font-bold mb-3 text-slate-100">New Territory</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-200">
+                    <label
+                      htmlFor={territoryNameId}
+                      className="block text-sm font-medium mb-1 text-slate-200"
+                    >
                       Territory Name
                     </label>
                     <input
+                      id={territoryNameId}
                       type="text"
                       value={newTerritoryName}
                       onChange={(e) => setNewTerritoryName(e.target.value)}
@@ -1648,10 +1720,14 @@ export default function MapEditor() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-200">
+                    <label
+                      htmlFor={territoryContinentId}
+                      className="block text-sm font-medium mb-1 text-slate-200"
+                    >
                       Continent
                     </label>
                     <select
+                      id={territoryContinentId}
                       value={state.selectedContinent || ''}
                       onChange={(e) =>
                         setState((prev) => ({
@@ -1674,6 +1750,7 @@ export default function MapEditor() {
                       Drawing... ({state.currentPolygon.length} points)
                       <br />
                       <button
+                        type="button"
                         onClick={finishTerritory}
                         className="mt-2 bg-primary hover:bg-primary px-3 py-1 rounded text-xs"
                       >
@@ -1690,6 +1767,7 @@ export default function MapEditor() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold">Continents ({state.continents.length})</h3>
                 <button
+                  type="button"
                   onClick={() => setShowContinentTerritories(!showContinentTerritories)}
                   className="text-xs bg-surface-2 hover:bg-gray-600 px-2 py-1 rounded"
                 >
@@ -1727,12 +1805,14 @@ export default function MapEditor() {
                     {editingContinent ? (
                       <>
                         <button
+                          type="button"
                           onClick={updateContinent}
                           className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                         >
                           Update
                         </button>
                         <button
+                          type="button"
                           onClick={cancelEditContinent}
                           className="bg-gray-600 hover:bg-surface-2 px-3 py-1 rounded text-sm"
                         >
@@ -1741,6 +1821,7 @@ export default function MapEditor() {
                       </>
                     ) : (
                       <button
+                        type="button"
                         onClick={createContinent}
                         className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm"
                       >
@@ -1781,12 +1862,14 @@ export default function MapEditor() {
                                 +{continent.bonusArmies}
                               </span>
                               <button
+                                type="button"
                                 onClick={() => editContinent(continent.id)}
                                 className="text-xs bg-primary hover:bg-primary px-2 py-1 rounded"
                               >
                                 Edit
                               </button>
                               <button
+                                type="button"
                                 onClick={() => deleteContinent(continent.id)}
                                 className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
                               >
@@ -1867,8 +1950,14 @@ export default function MapEditor() {
                         {/* Continent reassignment dropdown */}
                         {state.selectedTerritory === territory.id && (
                           <div className="mt-2 pt-2 border-t border-border">
-                            <label className="block text-xs mb-1">Reassign to continent:</label>
+                            <label
+                              htmlFor={`territory-${territory.id}-continent`}
+                              className="block text-xs mb-1"
+                            >
+                              Reassign to continent:
+                            </label>
                             <select
+                              id={`territory-${territory.id}-continent`}
                               value={territory.continentId || ''}
                               onChange={(e) =>
                                 reassignTerritoryContinent(
@@ -1899,12 +1988,14 @@ export default function MapEditor() {
               <h3 className="text-lg font-bold mb-3">Actions</h3>
               <div className="space-y-2">
                 <button
+                  type="button"
                   onClick={validateMap}
                   className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
                 >
                   🔍 Validate Map
                 </button>
                 <button
+                  type="button"
                   onClick={clearMap}
                   className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
                 >

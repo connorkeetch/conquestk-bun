@@ -57,7 +57,7 @@ export interface MapTerritory {
   boundaryCoords: Coordinate[]
   armyPosition: Coordinate
   abilityTypeId?: string
-  customAbilityConfig?: any
+  customAbilityConfig?: unknown
   startingOwnerSlot?: number
   startingArmies: number
   createdAt: string
@@ -69,7 +69,7 @@ export interface MapContinent {
   name: string
   bonusArmies: number
   color: string
-  specialRules?: any
+  specialRules?: unknown
   createdAt: string
 }
 
@@ -79,7 +79,7 @@ export interface TerritoryAdjacency {
   toTerritoryId: string
   connectionType: 'land' | 'sea' | 'air' | 'tunnel' | 'special'
   isBidirectional: boolean
-  specialRequirements?: any
+  specialRequirements?: unknown
 }
 
 export interface TerritoryAbilityType {
@@ -87,7 +87,7 @@ export interface TerritoryAbilityType {
   name: string
   description?: string
   icon: string
-  effectConfig: any
+  effectConfig: unknown
   createdAt: string
 }
 
@@ -95,7 +95,7 @@ export interface GameMode {
   id: string
   name: string
   description?: string
-  config: any
+  config: unknown
   isDefault: boolean
   createdAt: string
 }
@@ -161,7 +161,7 @@ export interface CreateAdjacencyRequest {
   toTerritoryId: string
   connectionType?: 'land' | 'sea' | 'air' | 'tunnel' | 'special'
   isBidirectional?: boolean
-  specialRequirements?: any
+  specialRequirements?: unknown
 }
 
 export interface FullMapData {
@@ -193,6 +193,11 @@ export const mapService = {
 
   async getMap(mapId: string): Promise<FullMapData> {
     const response = await api.get(`/maps/${mapId}`)
+    return response.data
+  },
+
+  async validateMapServer(mapId: string): Promise<{ isValid: boolean; errors: string[] }> {
+    const response = await api.get(`/maps/${mapId}/validate`)
     return response.data
   },
 
@@ -277,7 +282,7 @@ export const mapService = {
 
   // ============= RATING OPERATIONS =============
 
-  async rateMap(mapId: string, rating: number, review?: string): Promise<any> {
+  async rateMap(mapId: string, rating: number, review?: string): Promise<unknown> {
     const response = await api.post(`/maps/${mapId}/rate`, { rating, review })
     return response.data
   },

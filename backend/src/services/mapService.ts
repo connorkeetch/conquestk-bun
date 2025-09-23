@@ -928,7 +928,8 @@ export class MapService {
       const visited = new Set<string>()
       const queue: string[] = [start]
       while (queue.length) {
-        const cur = queue.shift()!
+        const cur = queue.shift()
+        if (!cur) continue
         if (visited.has(cur)) continue
         visited.add(cur)
         for (const nxt of neighbors.get(cur) ?? []) {

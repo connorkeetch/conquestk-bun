@@ -583,6 +583,39 @@ router.get(
   },
 )
 
+// Validate a map's playability (owner or public maps)
+router.get(
+  '/:mapId/validate',
+  authenticateToken,
+  param('mapId').isUUID().withMessage('Invalid map ID'),
+  checkValidation,
+  async (req: Request, res: Response) => {
+    try {
+      const mapId = req.params.mapId
+      const map = await mapService.getMap(mapId)
+      if (!map) {
+        return res.status(404).json({ error: 'Map not found' })
+      }
+
+      if (!map.isPublic) {
+        try {
+          await mapPermissionService.assertCanEditMap(mapId, { userId: req.userId }, {
+            allowCollaborator: true,
+          })
+        } catch (_err) {
+          return res.status(403).json({ error: 'Access denied' })
+        }
+      }
+
+      const result = await mapService.validateMapPlayable(mapId)
+      return res.json(result)
+    } catch (error) {
+      handleRouteError(error, req, 'Failed to validate map', 500, { mapId: req.params.mapId })
+      return res.status(500).json({ error: 'Failed to validate map' })
+    }
+  },
+)
+
 // Get game modes
 router.get('/game-modes/list', async (_req: Request, res: Response) => {
   try {
