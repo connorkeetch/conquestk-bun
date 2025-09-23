@@ -117,7 +117,9 @@ export const handleAttackClick = createAsyncThunk<
       } else {
         dispatch(setError('Select your own territory to attack from'))
       }
-    } else if (validTargets.includes(territoryId)) {
+    }
+
+    if (validTargets.includes(territoryId)) {
       // Select target territory or execute attack
       if (territory?.ownerId !== currentPlayerId) {
         // Execute attack
@@ -128,14 +130,15 @@ export const handleAttackClick = createAsyncThunk<
           }),
         )
       }
+      return
+    }
+
+    // Invalid target, select new attacking territory if it's owned by player
+    if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
+      dispatch(selectTerritory(territoryId))
     } else {
-      // Invalid target, select new attacking territory if it's owned by player
-      if (territory?.ownerId === currentPlayerId && territory.armies > 1) {
-        dispatch(selectTerritory(territoryId))
-      } else {
-        dispatch(selectTerritory(null))
-        dispatch(setPendingAction(null))
-      }
+      dispatch(selectTerritory(null))
+      dispatch(setPendingAction(null))
     }
   },
 )

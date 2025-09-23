@@ -53,7 +53,7 @@ const LeaderboardsPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [ITEMS_PER_PAGE, currentPage, tierFilter])
+  }, [currentPage, tierFilter])
 
   useEffect(() => {
     void fetchLeaderboard()

@@ -187,14 +187,14 @@ export default function MapEditor() {
   // Check terms acceptance on mount
   useEffect(() => {
     checkTermsAcceptance()
-  }, [])
+  }, [checkTermsAcceptance])
 
   // Load metadata after terms are accepted
   useEffect(() => {
     if (!showTermsModal && !isCheckingTerms) {
       loadMetadata()
     }
-  }, [showTermsModal, isCheckingTerms])
+  }, [showTermsModal, isCheckingTerms, loadMetadata])
 
   const checkTermsAcceptance = async () => {
     try {
@@ -1310,7 +1310,7 @@ export default function MapEditor() {
 
       <div className="max-w-7xl mx-auto">
         {notifications.length > 0 && (
-          <div className="mb-6 space-y-2" role="status" aria-live="polite">
+          <output className="mb-6 space-y-2" aria-live="polite">
             {notifications.map((notice) => (
               <div
                 key={notice.id}
@@ -1332,7 +1332,7 @@ export default function MapEditor() {
                 </button>
               </div>
             ))}
-          </div>
+          </output>
         )}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-slate-100">🗺️ Map Editor</h1>
@@ -1515,6 +1515,13 @@ export default function MapEditor() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        fileInputRef.current?.click()
+                      }
+                    }}
                   >
                     <div className="text-center">
                       {/* Upload Error Display */}
@@ -1961,6 +1968,13 @@ export default function MapEditor() {
                             setState((prev) => ({ ...prev, selectedTerritory: territory.id }))
                           }
                           className="cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setState((prev) => ({ ...prev, selectedTerritory: territory.id }))
+                            }
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{territory.name}</div>
