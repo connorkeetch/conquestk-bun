@@ -74,17 +74,17 @@ export const THEMES: ThemeDefinition[] = [
     isPremium: true,
   },
   {
+    id: 'metal',
+    name: '⚡ Metal Mayhem',
+    displayColor: '#FF2D95',
+    description: 'Premium heavy metal theme with neon grid energy',
+    isPremium: true,
+  },
+  {
     id: 'halloween',
     name: 'Halloween',
     displayColor: '#FF6B35',
     description: 'Spooky seasonal theme with pumpkin orange and midnight purple',
-    isPremium: true,
-  },
-  {
-    id: 'metal',
-    name: 'Neon Forge',
-    displayColor: '#F312AD',
-    description: 'Premium heavy metal theme with neon magenta riffs and laser blues',
     isPremium: true,
   },
   {

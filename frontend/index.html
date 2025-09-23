@@ -26,7 +26,7 @@
             'cutlers-cheese',
           ]
           const storedTheme = localStorage.getItem('colorTheme') || 'default'
-
+          
           // Validate and apply theme
           const theme = validThemes.includes(storedTheme) ? storedTheme : 'default'
           document.documentElement.setAttribute('data-theme', theme)

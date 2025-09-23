@@ -75,8 +75,8 @@ Themes are defined in CSS and automatically apply when data-theme changes:
 | frontier | Saddle Brown (#C47E35) | 🤠 Premium cowboy theme with campfire glow |
 | black | Gray (#1f2937) | Pure black with gray accents |
 | highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
+| metal | Magenta (#FF2D95) | Premium heavy metal neon grid experience |
 | halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
-| metal | Magenta (#F312AD) | 🤘 Premium heavy metal theme with neon lights |
 | cutlers-cheese | Cheddar Gold (#F5B700) | 🧀 Premium dairy reverie with bubbling fondue ambience |
 
 ## How Theme Switching Works
