@@ -26,7 +26,7 @@ describe('DiscordWebhookChannel', () => {
 
   it('sends payloads to configured webhook URLs', async () => {
     const fetchMock = jest.fn<typeof fetch>()
-    fetchMock.mockResolvedValue(new Response('', { status: 204 }))
+    fetchMock.mockResolvedValue(new Response('', { status: 200 }))
 
     const channel = new DiscordWebhookChannel({
       webhookUrls: ['https://discord.com/api/webhooks/123/abc'],

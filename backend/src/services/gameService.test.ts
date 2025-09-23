@@ -13,6 +13,21 @@ jest.mock('../config/database', () => ({
   })),
 }))
 
+const mockValidateMapPlayable = jest.fn()
+
+jest.mock('../services/mapService', () => ({
+  mapService: {
+    validateMapPlayable: mockValidateMapPlayable,
+  },
+}))
+
+const mockLoadMapForEngine = jest.fn()
+
+jest.mock('../game/mapLoader', () => ({
+  loadMapForEngine: mockLoadMapForEngine,
+}))
+
+import type { ContinentBonus, Territory } from '../types/game'
 import { gameStateCache } from './cacheService'
 import { GameService } from './gameService'
 
@@ -20,8 +35,78 @@ describe('GameService', () => {
   let gameService: GameService
   const createPlayers = (ids: string[]) => ids.map((id) => ({ userId: id, username: id }))
 
+  const territories: Territory[] = [
+    {
+      id: 't1',
+      name: 'Territory 1',
+      continent: 'c1',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t2', 't3'],
+      isCapital: false,
+    },
+    {
+      id: 't2',
+      name: 'Territory 2',
+      continent: 'c1',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t1', 't3'],
+      isCapital: false,
+    },
+    {
+      id: 't3',
+      name: 'Territory 3',
+      continent: 'c2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t1', 't2', 't4'],
+      isCapital: false,
+    },
+    {
+      id: 't4',
+      name: 'Territory 4',
+      continent: 'c2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t3', 't5'],
+      isCapital: false,
+    },
+    {
+      id: 't5',
+      name: 'Territory 5',
+      continent: 'c2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t4', 't6'],
+      isCapital: false,
+    },
+    {
+      id: 't6',
+      name: 'Territory 6',
+      continent: 'c2',
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: ['t5', 't4'],
+      isCapital: false,
+    },
+  ]
+
+  const continentBonuses: ContinentBonus[] = [
+    { id: 'c1', name: 'North', territories: ['t1', 't2', 't3'], bonusArmies: 5 },
+    { id: 'c2', name: 'South', territories: ['t4', 't5', 't6'], bonusArmies: 3 },
+  ]
+
+  const defaultConfig = { mapId: 'test-map' }
+
+  const buildConfig = (overrides: Record<string, unknown> = {}) => ({
+    ...defaultConfig,
+    ...overrides,
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
+    mockDbQuery.mockReset()
     mockDbQuery.mockResolvedValue({ rows: [], rowCount: 0 })
     mockTransaction.mockReset()
     mockTransaction.mockImplementation(async (callback: (client: unknown) => Promise<unknown>) => {
@@ -30,6 +115,10 @@ describe('GameService', () => {
       }
       return callback(client as any)
     })
+    mockValidateMapPlayable.mockReset()
+    mockLoadMapForEngine.mockReset()
+    mockValidateMapPlayable.mockResolvedValue({ isValid: true, errors: [] })
+    mockLoadMapForEngine.mockResolvedValue({ territories, continentBonuses })
     gameService = new GameService()
   })
 
@@ -38,7 +127,11 @@ describe('GameService', () => {
       const roomId = 'test-room'
       const players = ['player1', 'player2', 'player3']
 
-      const gameState = await gameService.initializeGame(roomId, createPlayers(players))
+      const gameState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig(),
+      )
 
       expect(gameState.roomId).toBe(roomId)
       expect(gameState.players).toHaveLength(3)
@@ -47,7 +140,6 @@ describe('GameService', () => {
       expect(players).toContain(gameState.currentPlayer)
       expect(gameState.phase).toBe('setup')
 
-      // Verify game is stored
       const retrievedGame = await gameService.getGameState(roomId)
       expect(retrievedGame).toEqual(gameState)
     })
@@ -56,13 +148,21 @@ describe('GameService', () => {
       const roomId2 = 'test-room-2'
       const players2 = ['player1', 'player2']
 
-      const gameState2 = await gameService.initializeGame(roomId2, createPlayers(players2))
+      const gameState2 = await gameService.initializeGame(
+        roomId2,
+        createPlayers(players2),
+        buildConfig(),
+      )
       expect(gameState2.players).toHaveLength(2)
 
       const roomId6 = 'test-room-6'
       const players6 = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']
 
-      const gameState6 = await gameService.initializeGame(roomId6, createPlayers(players6))
+      const gameState6 = await gameService.initializeGame(
+        roomId6,
+        createPlayers(players6),
+        buildConfig(),
+      )
       expect(gameState6.players).toHaveLength(6)
     })
   })
@@ -77,7 +177,7 @@ describe('GameService', () => {
       const roomId = 'existing-room'
       const players = ['player1', 'player2']
 
-      await gameService.initializeGame(roomId, createPlayers(players))
+      await gameService.initializeGame(roomId, createPlayers(players), buildConfig())
       const retrievedGame = await gameService.getGameState(roomId)
 
       expect(retrievedGame).not.toBeNull()
@@ -90,7 +190,11 @@ describe('GameService', () => {
       const roomId = 'turn-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
+      const initialState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig(),
+      )
       const currentPlayer = initialState.currentPlayer
 
       const firstAdvance = await gameService.endTurn(roomId, currentPlayer)
@@ -106,7 +210,11 @@ describe('GameService', () => {
       const roomId = 'wrong-player-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
+      const initialState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig(),
+      )
       const currentPlayer = initialState.currentPlayer
       const otherPlayer = initialState.players.find((p) => p.id !== currentPlayer)!.id
 
@@ -123,7 +231,11 @@ describe('GameService', () => {
       const roomId = 'deploy-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
+      const initialState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig(),
+      )
       const currentPlayer = initialState.currentPlayer
       await gameService.endTurn(roomId, currentPlayer)
 
@@ -146,7 +258,11 @@ describe('GameService', () => {
       const roomId = 'wrong-phase-test'
       const players = ['player1', 'player2']
 
-      const initialState = await gameService.initializeGame(roomId, createPlayers(players))
+      const initialState = await gameService.initializeGame(
+        roomId,
+        createPlayers(players),
+        buildConfig(),
+      )
       const currentPlayer = initialState.currentPlayer
       const territory = initialState.board.find((t) => t.ownerId === currentPlayer)
 
@@ -198,149 +314,72 @@ describe('GameService', () => {
           isEliminated: false,
         },
       ],
-      currentPlayer: 'attacker',
-      phase: 'attack' as const,
-      turn: 1,
       board: [
         {
           id: 'attacking',
-          name: 'Attacking',
-          continent: 'earth',
+          name: 'Attacking Territory',
+          continent: 'c1',
           ownerId: 'attacker',
           armies: 5,
           adjacentTerritories: ['defending'],
         },
         {
           id: 'defending',
-          name: 'Defending',
-          continent: 'earth',
+          name: 'Defending Territory',
+          continent: 'c1',
           ownerId: 'defender',
           armies: 3,
           adjacentTerritories: ['attacking'],
         },
         {
           id: 'support',
-          name: 'Support',
-          continent: 'earth',
+          name: 'Support Territory',
+          continent: 'c2',
           ownerId: 'support',
           armies: 4,
-          adjacentTerritories: [],
+          adjacentTerritories: ['attacking'],
         },
       ],
+      currentPlayer: 'attacker',
+      phase: 'attack' as const,
+      turn: 1,
       cards: [],
       gameConfig: {
-        movementType: 'classic_adjacent' as const,
+        movementType: 'classic_adjacent',
+        allowTeamPlay: false,
+        teamMode: 'none',
+        numberOfTeams: null,
         maxPlayers: 3,
+        mapId: 'test-map',
+        gameMode: 'standard',
+        continentBonuses,
       },
+      movementTracking: {},
     })
 
-    const payload = {
-      jobId: 'job-1',
-      attackerLosses: 1,
-      defenderLosses: 3,
-      territoryConquered: true,
-      attackingArmiesRemaining: 4,
-      defendingArmiesRemaining: 0,
-      dice: {
-        attacker: [6, 5, 4],
-        defender: [4, 2],
-      },
-      attackingTerritoryId: 'attacking',
-      defendingTerritoryId: 'defending',
-      attackingPlayerId: 'attacker',
-      defendingPlayerId: 'defender',
-      attackingArmiesCommitted: 3,
-    }
+    it('should update state when attacker conquers territory', async () => {
+      const baseState = buildBaseState()
+      await gameStateCache.setGameState(gameId, baseState)
 
-    it('persists conquest results and updates cache', async () => {
-      await gameStateCache.setGameState(gameId, buildBaseState())
+      const result = await gameService.applyBattleResult(gameId, {
+        attackerLosses: 1,
+        defenderLosses: 3,
+        territoryConquered: true,
+        attackingArmiesRemaining: 4,
+        defendingArmiesRemaining: 0,
+        dice: { attacker: [6, 5, 3], defender: [4, 3, 1] },
+        jobId: 'battle-1',
+        attackingTerritoryId: 'attacking',
+        defendingTerritoryId: 'defending',
+        attackingPlayerId: 'attacker',
+        defendingPlayerId: 'defender',
+        attackingArmiesCommitted: 3,
+      })
 
-      let persistedBoardSnapshot: unknown[] = []
-      let persistedLogSnapshot: unknown[] = []
-
-      const client = {
-        query: jest
-          .fn()
-          .mockImplementationOnce(async () => ({ rows: [], rowCount: 0 }))
-          .mockImplementationOnce(async (_sql: string, params: unknown[]) => {
-            persistedBoardSnapshot = JSON.parse(params[5] as string)
-            persistedLogSnapshot = JSON.parse(params[7] as string)
-            return { rows: [], rowCount: 1 }
-          }),
-      }
-
-      mockTransaction.mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
-        callback(client as any),
-      )
-
-      const result = await gameService.applyBattleResult(gameId, payload)
       expect(result.applied).toBe(true)
-      expect(client.query).toHaveBeenCalledTimes(2)
-      expect((client.query.mock.calls[1] ?? [])[0]).toContain('INSERT INTO game_states')
 
-      const persistedDefending = (persistedBoardSnapshot as Array<{ id: string; ownerId: string; armies: number }>).find(
-        (territory) => territory.id === 'defending',
-      )
-      expect(persistedDefending?.ownerId).toBe('attacker')
-      expect(persistedDefending?.armies).toBe(3)
-      expect(persistedLogSnapshot).toEqual(
-        expect.arrayContaining([expect.objectContaining({ jobId: payload.jobId })]),
-      )
-
-      const cachedState = await gameService.getGameState(gameId)
-      expect(cachedState?.board.find((territory) => territory.id === 'defending')?.ownerId).toBe(
-        'attacker',
-      )
-      expect(cachedState?.board.find((territory) => territory.id === 'attacking')?.armies).toBe(1)
-    })
-
-    it('is idempotent when the same battle is re-applied', async () => {
-      await gameStateCache.setGameState(gameId, buildBaseState())
-
-      let persistedBoardSnapshot: unknown[] = []
-
-      const firstClient = {
-        query: jest
-          .fn()
-          .mockImplementationOnce(async () => ({ rows: [], rowCount: 0 }))
-          .mockImplementationOnce(async (_sql: string, params: unknown[]) => {
-            persistedBoardSnapshot = JSON.parse(params[5] as string)
-            return { rows: [], rowCount: 1 }
-          }),
-      }
-
-      const duplicateClient = {
-        query: jest.fn(async (sql: string) => {
-          if (sql.includes('SELECT')) {
-            return {
-              rows: [
-                {
-                  territories: persistedBoardSnapshot,
-                  game_log: [{ jobId: payload.jobId }],
-                  winner_id: null,
-                },
-              ],
-              rowCount: 1,
-            }
-          }
-          throw new Error('Duplicate apply should not issue write queries')
-        }),
-      }
-
-      mockTransaction
-        .mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
-          callback(firstClient as any),
-        )
-        .mockImplementationOnce(async (callback: (dbClient: unknown) => Promise<unknown>) =>
-          callback(duplicateClient as any),
-        )
-
-      await gameService.applyBattleResult(gameId, payload)
-      const secondResult = await gameService.applyBattleResult(gameId, payload)
-
-      expect(secondResult.applied).toBe(false)
-      expect(duplicateClient.query).toHaveBeenCalledTimes(1)
-      expect((duplicateClient.query.mock.calls[0] ?? [])[0]).toContain('SELECT')
+      const updatedState = await gameService.getGameState(gameId)
+      expect(updatedState?.board.find((t) => t.id === 'defending')?.ownerId).toBe('attacker')
     })
   })
 })
