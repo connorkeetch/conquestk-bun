@@ -4,8 +4,7 @@
 Maps should be named: `territories-[mapname].json`
 
 Examples:
-- `territories-classic.json` - Classic Risk world map
-- `territories-example.json` - Example/test map for development
+- `shared/maps/territories-classic.json` - Classic Risk world map fallback bundled with the backend
 
 ## Map Structure
 
@@ -59,11 +58,10 @@ Each map JSON file should follow this schema:
 - 42 territories
 - Used by: RiskGameBoard component
 
-### territories-example.json  
-- Example fantasy-themed map for testing
-- 4 continents (Northern Lands, Central Kingdoms, Southern Realms, Eastern Empire)
-- 20 territories
-- Used by: SimpleRiskGameBoard component
+### Database-backed Maps
+- Primary source of truth
+- Created and edited through the map editor UI
+- Served to the frontend over `/api/maps` endpoints
 
 ## Adding New Maps
 

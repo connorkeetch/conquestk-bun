@@ -14,6 +14,7 @@ import type {
   Territory,
 } from '../types/game'
 import { WorldMap } from './worldMap'
+import type { ContinentBonus } from '../types/game'
 
 export class GameEngine {
   private worldMap = new WorldMap()
@@ -23,8 +24,21 @@ export class GameEngine {
     roomId: string,
     playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
     gameConfig: GameConfiguration,
+    mapOverrides?: { territories?: Territory[]; continentBonuses?: ContinentBonus[] },
   ): GameState {
-    const territories = this.worldMap.getTerritories()
+    const baseTerritories = mapOverrides?.territories ?? this.worldMap.getTerritories()
+    // Ensure we operate on a fresh copy
+    const territories = baseTerritories.map((t) => ({
+      id: t.id,
+      name: t.name,
+      continent: t.continent,
+      ownerId: null,
+      armies: 0,
+      adjacentTerritories: [...t.adjacentTerritories],
+      coordinates: t.coordinates ? { ...t.coordinates } : undefined,
+      isCapital: t.isCapital,
+      capitalOwnerId: t.capitalOwnerId ?? null,
+    }))
     const players = this.createPlayers(playerConfigs)
 
     // Randomize player order
@@ -41,7 +55,9 @@ export class GameEngine {
       continentBonuses:
         gameConfig.continentBonuses && gameConfig.continentBonuses.length > 0
           ? gameConfig.continentBonuses
-          : this.worldMap.getContinentBonuses(),
+          : mapOverrides?.continentBonuses && mapOverrides.continentBonuses.length > 0
+            ? mapOverrides.continentBonuses
+            : this.worldMap.getContinentBonuses(),
     }
 
     return {
