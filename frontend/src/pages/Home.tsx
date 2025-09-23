@@ -73,7 +73,8 @@ const Home: React.FC = () => {
   const highlights: Highlight[] = [
     {
       title: 'Competitive infrastructure',
-      description: 'Every match is tracked, ranked, and backed by the same systems we use internally.',
+      description:
+        'Every match is tracked, ranked, and backed by the same systems we use internally.',
       bullets: [
         'Authoritative game archival captures every dice roll and territory swing.',
         'ELO ladders, win streaks, and performance stats update the moment a battle ends.',
@@ -82,7 +83,8 @@ const Home: React.FC = () => {
     },
     {
       title: 'Creator tools that scale',
-      description: 'Build worlds with the same workflows moderators use to review and ship official maps.',
+      description:
+        'Build worlds with the same workflows moderators use to review and ship official maps.',
       bullets: [
         'Advanced editor manages territories, continents, bonuses, and adjacency in one place.',
         'Versioned drafts flow through review queues before they reach the live rotation.',
@@ -112,22 +114,26 @@ const Home: React.FC = () => {
     {
       title: 'Live multiplayer core',
       status: 'complete',
-      description: 'Real-time delta streaming, lifecycle enforcement, and battle archival now power every match.',
+      description:
+        'Real-time delta streaming, lifecycle enforcement, and battle archival now power every match.',
     },
     {
       title: 'Map authoring security',
       status: 'in-progress',
-      description: 'Locking down collaborator permissions and approvals to protect community-created maps.',
+      description:
+        'Locking down collaborator permissions and approvals to protect community-created maps.',
     },
     {
       title: 'Creator notifications',
       status: 'in-progress',
-      description: 'Rolling out push + socket alerts so reviewers and authors get updates the moment decisions land.',
+      description:
+        'Rolling out push + socket alerts so reviewers and authors get updates the moment decisions land.',
     },
     {
       title: 'Advanced game modes',
       status: 'up-next',
-      description: 'Assassin, Zombie Apocalypse, King of the Hill, and more once core workflows finish hardening.',
+      description:
+        'Assassin, Zombie Apocalypse, King of the Hill, and more once core workflows finish hardening.',
     },
   ]
 
@@ -270,7 +276,8 @@ const Home: React.FC = () => {
               <span className="text-white">Play your way</span>
             </h2>
             <p className="text-muted text-sm">
-              Whether you are climbing the ladder or hosting private wars, ConquestK has a room for you.
+              Whether you are climbing the ladder or hosting private wars, ConquestK has a room for
+              you.
             </p>
           </div>
 
@@ -308,7 +315,8 @@ const Home: React.FC = () => {
               <span className="text-white">Why commanders stay</span>
             </h2>
             <p className="text-muted text-sm">
-              The platform is engineered for competitive clarity, creator freedom, and reliable operations.
+              The platform is engineered for competitive clarity, creator freedom, and reliable
+              operations.
             </p>
           </div>
 
@@ -344,7 +352,8 @@ const Home: React.FC = () => {
               <span className="text-white">Roadmap snapshot</span>
             </h2>
             <p className="text-muted text-sm">
-              We build in the open. Here is what just shipped, what is underway, and what is queued next.
+              We build in the open. Here is what just shipped, what is underway, and what is queued
+              next.
             </p>
           </div>
 
@@ -419,7 +428,8 @@ const Home: React.FC = () => {
           <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-slate-900/80 p-8 md:p-12 text-center">
             <h2 className="text-3xl font-bold text-white">Ready to command your next war?</h2>
             <p className="mt-4 text-white/80 text-base md:text-lg">
-              The beta is live today. Rally your allies, draft a new map, or drop into matchmaking and climb the ladder.
+              The beta is live today. Rally your allies, draft a new map, or drop into matchmaking
+              and climb the ladder.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isAuthenticated ? (

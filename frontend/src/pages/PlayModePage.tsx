@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { gameService } from '../services/gameService'
 import type { GameRoom } from '../types/gameRoom'
 
@@ -15,15 +16,18 @@ type NormalizedRoom = GameRoom & {
   playerCount?: number
 }
 
-const MODE_CONFIG: Record<PlayMode, {
-  title: string
-  description: string
-  heroEmoji: string
-  highlight: string
-  createCta: { label: string; path: string; secondary?: string }
-  bulletPoints: string[]
-  filter: (room: NormalizedRoom) => boolean
-}> = {
+const MODE_CONFIG: Record<
+  PlayMode,
+  {
+    title: string
+    description: string
+    heroEmoji: string
+    highlight: string
+    createCta: { label: string; path: string; secondary?: string }
+    bulletPoints: string[]
+    filter: (room: NormalizedRoom) => boolean
+  }
+> = {
   casual: {
     title: 'Casual Matches',
     description: 'Jump into open games with flexible settings and relaxed rules.',
@@ -60,7 +64,9 @@ const MODE_CONFIG: Record<PlayMode, {
   },
 }
 
-const normalizeRoom = (room: GameRoom & { is_ranked?: boolean; current_players?: number }): NormalizedRoom => {
+const normalizeRoom = (
+  room: GameRoom & { is_ranked?: boolean; current_players?: number },
+): NormalizedRoom => {
   const isRanked =
     typeof room.isRanked === 'boolean'
       ? room.isRanked
@@ -111,7 +117,7 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
       const normalized = rawRooms.map((room) => normalizeRoom(room))
       setRooms(normalized)
     } catch (err) {
-      console.error(`[PlayMode] Failed to load ${mode} rooms`, err)
+      logger.error(`[PlayMode] Failed to load ${mode} rooms`, err)
       setError('Unable to load games right now. Please try again in a moment.')
       setRooms([])
     } finally {
@@ -134,11 +140,12 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
         return
       }
       navigate(`/room/${roomId}`)
-    } catch (err: any) {
-      console.error('[PlayMode] Failed to join room', err)
+    } catch (err: unknown) {
+      logger.error('[PlayMode] Failed to join room', err)
       const message =
-        err?.response?.data?.message ||
-        err?.message ||
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as { response?: { data?: { message?: string } }; message?: string })?.message ||
         'We could not join that game. It might be full or already started.'
       setError(message)
     } finally {
@@ -250,7 +257,9 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-semibold text-white">{room.name || 'Untitled Game'}</h3>
+                    <h3 className="text-2xl font-semibold text-white">
+                      {room.name || 'Untitled Game'}
+                    </h3>
                     {room.mapName && (
                       <span className="text-xs uppercase tracking-wide text-muted bg-white/10 px-2 py-1 rounded">
                         {room.mapName}

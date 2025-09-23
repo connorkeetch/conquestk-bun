@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import { API_URL } from '../config'
 
 interface SubscriptionChangeResult {
@@ -35,8 +36,7 @@ class PushNotificationService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to initialize push notifications'
-      // biome-ignore lint/suspicious/noConsole: surface initialization errors during development
-      console.error('Push notification initialization failed', error)
+      logger.error('Push notification initialization failed', error)
       this.lastError = message
       return false
     }
@@ -76,8 +76,7 @@ class PushNotificationService {
 
       if (!this.backendEnabled) {
         const message = 'Push notifications are currently disabled by the server'
-        // biome-ignore lint/suspicious/noConsole: communicate backend availability changes during development
-        console.warn(message)
+        logger.warn(message)
         this.lastError = message
         return { success: false, message }
       }
@@ -123,8 +122,7 @@ class PushNotificationService {
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to enable push notifications'
-      // biome-ignore lint/suspicious/noConsole: surface subscription failures for troubleshooting
-      console.error('Error subscribing to push notifications', error)
+      logger.error('Error subscribing to push notifications', error)
       this.lastError = message
       return { success: false, message }
     }
@@ -152,8 +150,7 @@ class PushNotificationService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to disable push notifications'
-      // biome-ignore lint/suspicious/noConsole: surface unsubscribe failures for troubleshooting
-      console.error('Error unsubscribing from push notifications', error)
+      logger.error('Error unsubscribing from push notifications', error)
       this.lastError = message
       return { success: false, message }
     }
@@ -194,8 +191,7 @@ class PushNotificationService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to fetch push notification configuration'
-      // biome-ignore lint/suspicious/noConsole: expose configuration load failures to developers
-      console.error('Failed to load push notification configuration', error)
+      logger.error('Failed to load push notification configuration', error)
       this.backendEnabled = false
       this.lastError = message
     }

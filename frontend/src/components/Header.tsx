@@ -380,7 +380,6 @@ export default function Header() {
                 </Link>
               ))}
             </div>
-
           </div>
 
           {/* Bottom Auth Section */}
@@ -393,11 +392,7 @@ export default function Header() {
                     {user?.username ? sanitizeText(user.username) : ''}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full btn-danger"
-                >
+                <button type="button" onClick={handleLogout} className="w-full btn-danger">
                   🚪 Logout
                 </button>
               </div>

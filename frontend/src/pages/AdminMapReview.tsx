@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 interface ReviewCriteria {
@@ -41,14 +41,10 @@ export const AdminMapReview: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const decisionSelectId = 'admin-map-review-decision'
+  const feedbackTextareaId = 'admin-map-review-feedback'
 
-  useEffect(() => {
-    if (requestId) {
-      loadData()
-    }
-  }, [requestId, loadData])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -88,14 +84,24 @@ export const AdminMapReview: React.FC = () => {
       }))
 
       setReviewResults(initialResults)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load review data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [requestId])
 
-  const updateReviewResult = (criteriaId: string, field: keyof ReviewResult, value: any) => {
+  useEffect(() => {
+    if (requestId) {
+      void loadData()
+    }
+  }, [requestId, loadData])
+
+  const updateReviewResult = <K extends keyof ReviewResult>(
+    criteriaId: string,
+    field: K,
+    value: ReviewResult[K],
+  ) => {
     setReviewResults((prev) =>
       prev.map((result) =>
         result.criteriaId === criteriaId ? { ...result, [field]: value } : result,
@@ -109,7 +115,6 @@ export const AdminMapReview: React.FC = () => {
       setError(null)
 
       // Validate required criteria
-      const _requiredCriteria = criteria.filter((c) => c.isRequired)
       const failedRequired = reviewResults.filter((r) => {
         const criterion = criteria.find((c) => c.id === r.criteriaId)
         return criterion?.isRequired && r.status === 'fail'
@@ -141,8 +146,8 @@ export const AdminMapReview: React.FC = () => {
 
       // Navigate back to review queue
       navigate('/admin/map-reviews')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit review')
     } finally {
       setSubmitting(false)
     }
@@ -215,6 +220,7 @@ export const AdminMapReview: React.FC = () => {
             <p className="text-gray-600 mt-1">Review submission for approval and publication</p>
           </div>
           <button
+            type="button"
             onClick={() => navigate('/admin/map-reviews')}
             className="text-gray-600 hover:text-gray-800 font-medium"
           >
@@ -229,19 +235,19 @@ export const AdminMapReview: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Submission Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Map Name</label>
+              <p className="text-sm font-medium text-gray-700">Map Name</p>
               <p className="mt-1 text-gray-900">{approvalRequest.versionName}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Version</label>
+              <p className="text-sm font-medium text-gray-700">Version</p>
               <p className="mt-1 text-gray-900">{approvalRequest.versionNumber}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Creator</label>
+              <p className="text-sm font-medium text-gray-700">Creator</p>
               <p className="mt-1 text-gray-900">{approvalRequest.requesterUsername}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Priority</label>
+              <p className="text-sm font-medium text-gray-700">Priority</p>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   approvalRequest.priorityLevel === 'high'
@@ -256,7 +262,7 @@ export const AdminMapReview: React.FC = () => {
             </div>
             {approvalRequest.submissionNotes && (
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Submission Notes</label>
+                <p className="text-sm font-medium text-gray-700">Submission Notes</p>
                 <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-md">
                   {approvalRequest.submissionNotes}
                 </p>
@@ -285,6 +291,8 @@ export const AdminMapReview: React.FC = () => {
         <div className="space-y-4">
           {criteria.map((criterion) => {
             const result = reviewResults.find((r) => r.criteriaId === criterion.id)
+            const statusInputId = `criteria-${criterion.id}-status`
+            const notesInputId = `criteria-${criterion.id}-notes`
 
             return (
               <div key={criterion.id} className="border border-gray-200 rounded-lg p-4">
@@ -309,10 +317,14 @@ export const AdminMapReview: React.FC = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor={statusInputId}
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Review Status
                     </label>
                     <select
+                      id={statusInputId}
                       value={result?.status || 'pass'}
                       onChange={(e) => updateReviewResult(criterion.id, 'status', e.target.value)}
                       className={`w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
@@ -327,10 +339,14 @@ export const AdminMapReview: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor={notesInputId}
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Reviewer Notes (optional)
                     </label>
                     <textarea
+                      id={notesInputId}
                       value={result?.reviewerNotes || ''}
                       onChange={(e) =>
                         updateReviewResult(criterion.id, 'reviewerNotes', e.target.value)
@@ -353,10 +369,18 @@ export const AdminMapReview: React.FC = () => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Decision</label>
+            <label
+              htmlFor={decisionSelectId}
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Decision
+            </label>
             <select
+              id={decisionSelectId}
               value={decision}
-              onChange={(e) => setDecision(e.target.value as any)}
+              onChange={(e) =>
+                setDecision(e.target.value as 'approved' | 'rejected' | 'needs_changes')
+              }
               className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
             >
               <option value="approved">✅ Approve for Publication</option>
@@ -366,10 +390,14 @@ export const AdminMapReview: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor={feedbackTextareaId}
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Feedback for Creator {decision !== 'approved' && '(Required)'}
             </label>
             <textarea
+              id={feedbackTextareaId}
               value={moderatorFeedback}
               onChange={(e) => setModeratorFeedback(e.target.value)}
               placeholder={
@@ -394,6 +422,7 @@ export const AdminMapReview: React.FC = () => {
 
           <div className="flex space-x-3">
             <button
+              type="button"
               onClick={() => navigate('/admin/map-reviews')}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
               disabled={submitting}
@@ -401,6 +430,7 @@ export const AdminMapReview: React.FC = () => {
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmitReview}
               disabled={submitting || (decision !== 'approved' && !moderatorFeedback.trim())}
               className="px-4 py-2 bg-primary hover:brightness-110 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"

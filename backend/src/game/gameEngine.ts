@@ -4,6 +4,7 @@ import territoryModifierService, {
 import type {
   AttackAction,
   BattleResult,
+  ContinentBonus,
   DeployAction,
   FortifyAction,
   GameAction,
@@ -13,7 +14,6 @@ import type {
   ProcessActionResult,
   Territory,
 } from '../types/game'
-import type { ContinentBonus } from '../types/game'
 
 export class GameEngine {
   private gameModifiers: Map<string, GameTerritoryModifier> = new Map()

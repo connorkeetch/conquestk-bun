@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import MountainLogo from '../components/MountainLogo'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -9,6 +9,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const identifierId = useId()
+  const passwordId = useId()
   const dispatch = useAppDispatch()
   const location = useLocation()
   const { isLoading, error, isAuthenticated, user } = useAppSelector((state) => state.auth)
@@ -75,7 +77,13 @@ export default function Login() {
 
           {successMessage && (
             <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-lg mb-6 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -94,6 +102,8 @@ export default function Login() {
                 height="16"
                 fill="currentColor"
                 viewBox="0 0 20 20"
+                aria-hidden="true"
+                focusable="false"
               >
                 <path
                   fillRule="evenodd"
@@ -108,12 +118,12 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username/Email Field */}
             <div>
-              <label htmlFor="identifier" className="form-label">
+              <label htmlFor={identifierId} className="form-label">
                 👤 Username or Email
               </label>
               <input
                 type="text"
-                id="identifier"
+                id={identifierId}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
@@ -140,7 +150,7 @@ export default function Login() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  id="password"
+                  id={passwordId}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -162,6 +172,8 @@ export default function Login() {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
                     >
                       <path
                         strokeLinecap="round"
@@ -178,6 +190,8 @@ export default function Login() {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
                     >
                       <path
                         strokeLinecap="round"
@@ -208,6 +222,8 @@ export default function Login() {
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
                   >
                     <circle
                       className="opacity-25"
@@ -249,7 +265,12 @@ export default function Login() {
                 disabled
                 className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-surface-2 text-muted transition-colors cursor-not-allowed opacity-50"
               >
-                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
                   <path
                     fill="currentColor"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -274,7 +295,13 @@ export default function Login() {
                 disabled
                 className="flex items-center justify-center px-4 py-2 border border-border rounded-lg hover:bg-surface-2 text-muted transition-colors cursor-not-allowed opacity-50"
               >
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
                   <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418Z" />
                 </svg>
                 Discord

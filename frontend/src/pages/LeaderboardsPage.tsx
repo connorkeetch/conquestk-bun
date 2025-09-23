@@ -85,6 +85,7 @@ const LeaderboardsPage: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             {tiers.map((tier) => (
               <button
+                type="button"
                 key={tier}
                 onClick={() => {
                   setTierFilter(tier)
@@ -221,6 +222,7 @@ const LeaderboardsPage: React.FC = () => {
         {!loading && leaderboard.length > 0 && (
           <div className="mt-6 flex justify-center gap-4">
             <button
+              type="button"
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
               className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -229,6 +231,7 @@ const LeaderboardsPage: React.FC = () => {
             </button>
             <span className="px-4 py-2 text-muted">Page {currentPage + 1}</span>
             <button
+              type="button"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={leaderboard.length < ITEMS_PER_PAGE}
               className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"

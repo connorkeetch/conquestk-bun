@@ -1,8 +1,8 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { GameDelta } from '../types/deltaUpdates'
-import type { GameState } from '../types/game'
-import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { gameService } from '../services/gameService'
+import type { GameDelta } from '../types/deltaUpdates'
+import type { BattleResult, GameState } from '../types/game'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 // Helper function to check if territories are connected through owned territories
 const isConnectedThroughOwnedTerritories = (
@@ -18,7 +18,10 @@ const isConnectedThroughOwnedTerritories = (
   const queue = [fromId]
 
   while (queue.length > 0) {
-    const currentId = queue.shift()!
+    const currentId = queue.shift()
+    if (!currentId) {
+      continue
+    }
 
     if (currentId === toId) {
       return true
@@ -127,7 +130,7 @@ interface GameSliceState {
     action: string
     timestamp: number
   }>
-  battleResult: any | null
+  battleResult: BattleResult | null
   reinforcementArmies: number
 }
 
@@ -144,36 +147,35 @@ const initialState: GameSliceState = {
   reinforcementArmies: 0,
 }
 
-export const fetchGameState = createAsyncThunk<
-  GameState,
-  string,
-  { rejectValue: string }
->('game/fetchGameState', async (roomId, { rejectWithValue }) => {
-  try {
-    const game = await gameService.getGameState(roomId)
-    return game
-  } catch (error) {
-    if (typeof error === 'object' && error && 'response' in error) {
-      const axiosError = error as {
-        response?: { data?: { message?: string }; status?: number }
-        message?: string
+export const fetchGameState = createAsyncThunk<GameState, string, { rejectValue: string }>(
+  'game/fetchGameState',
+  async (roomId, { rejectWithValue }) => {
+    try {
+      const game = await gameService.getGameState(roomId)
+      return game
+    } catch (error) {
+      if (typeof error === 'object' && error && 'response' in error) {
+        const axiosError = error as {
+          response?: { data?: { message?: string }; status?: number }
+          message?: string
+        }
+
+        if (axiosError.response?.status === 404) {
+          return rejectWithValue('NOT_READY')
+        }
+
+        const message = axiosError.response?.data?.message || axiosError.message
+        return rejectWithValue(message || 'Failed to load game state')
       }
 
-      if (axiosError.response?.status === 404) {
-        return rejectWithValue('NOT_READY')
+      if (error instanceof Error) {
+        return rejectWithValue(error.message)
       }
 
-      const message = axiosError.response?.data?.message || axiosError.message
-      return rejectWithValue(message || 'Failed to load game state')
+      return rejectWithValue('Failed to load game state')
     }
-
-    if (error instanceof Error) {
-      return rejectWithValue(error.message)
-    }
-
-    return rejectWithValue('Failed to load game state')
-  }
-})
+  },
+)
 
 const gameSlice = createSlice({
   name: 'game',
@@ -265,7 +267,7 @@ const gameSlice = createSlice({
     setValidTargets: (state, action: PayloadAction<string[]>) => {
       state.validTargets = action.payload
     },
-    setBattleResult: (state, action: PayloadAction<any | null>) => {
+    setBattleResult: (state, action: PayloadAction<BattleResult | null>) => {
       state.battleResult = action.payload
     },
     setReinforcementArmies: (state, action: PayloadAction<number>) => {

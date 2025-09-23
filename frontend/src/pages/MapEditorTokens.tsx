@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from '@/utils/logger'
 import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import ImageProcessor from '../components/ImageProcessor'
 import TerritoryToken from '../components/TerritoryToken'
@@ -101,6 +102,25 @@ interface ImportedMapFile {
   continents?: Continent[]
 }
 
+interface LegacyTerritoryRecord {
+  id?: string
+  name?: string
+  center_x?: number
+  center_y?: number
+  continent?: string
+}
+
+interface LegacyAdjacencyRecord {
+  territory_from?: string
+  territory_to?: string
+  fromTerritoryId?: string
+  toTerritoryId?: string
+  from_territory_id?: string
+  to_territory_id?: string
+  from?: string
+  to?: string
+}
+
 // LocalStorage key for auto-save
 const AUTOSAVE_KEY = 'map-editor-draft'
 const AUTOSAVE_INTERVAL = 10000 // Auto-save every 10 seconds
@@ -187,15 +207,13 @@ const resolveLabelSettings = (settings?: LabelSettings): LabelSettings => ({
 
 const reportError = (message: string, error: unknown) => {
   if (import.meta.env.DEV) {
-    // biome-ignore lint/suspicious/noConsole: Surface debug information during development.
-    console.error(message, error)
+    logger.error(message, error)
   }
 }
 
 const reportInfo = (message: string, details?: unknown) => {
   if (import.meta.env.DEV) {
-    // biome-ignore lint/suspicious/noConsole: Surface debug information during development.
-    console.log(message, details)
+    logger.info(message, details)
   }
 }
 
@@ -472,12 +490,12 @@ export default function MapEditorTokens() {
 
       if (map.territories && Array.isArray(map.territories)) {
         // From admin endpoint - raw territories from database
-        territories = map.territories.map((t: any) => ({
+        territories = (map.territories as LegacyTerritoryRecord[]).map((t) => ({
           id: t.id || uuidv4(),
-          name: t.name,
-          x: t.center_x || 0,
-          y: t.center_y || 0,
-          continentId: t.continent || null,
+          name: t.name ?? 'Unnamed Territory',
+          x: t.center_x ?? 0,
+          y: t.center_y ?? 0,
+          continentId: t.continent ?? null,
           armies: 1,
           connections: [],
         }))
@@ -493,20 +511,13 @@ export default function MapEditorTokens() {
       // Handle adjacencies
       if (map.adjacencies && Array.isArray(map.adjacencies)) {
         // Build connections from adjacency table
-        const connectionsMap = new Map<string, Set<string>>()
-        map.adjacencies.forEach((adj: any) => {
+        const connectionsMap = new Map<string, Set<string>>()(
+          map.adjacencies as LegacyAdjacencyRecord[],
+        ).forEach((adj) => {
           const fromId =
-            adj.territory_from ||
-            adj.fromTerritoryId ||
-            adj.from_territory_id ||
-            adj.from ||
-            null
+            adj.territory_from || adj.fromTerritoryId || adj.from_territory_id || adj.from || null
           const toId =
-            adj.territory_to ||
-            adj.toTerritoryId ||
-            adj.to_territory_id ||
-            adj.to ||
-            null
+            adj.territory_to || adj.toTerritoryId || adj.to_territory_id || adj.to || null
 
           if (!fromId || !toId) {
             return
@@ -581,7 +592,7 @@ export default function MapEditorTokens() {
         return
       }
 
-      const draftData = (draft.data ?? {}) as Record<string, any>
+      const draftData = (draft.data ?? {}) as Record<string, unknown>
       let territories: Territory[] = Array.isArray(draft.territories)
         ? (draft.territories as Territory[])
         : Array.isArray(draftData.territories)
@@ -589,8 +600,9 @@ export default function MapEditorTokens() {
           : []
 
       if (Array.isArray(draft.adjacencies) && draft.adjacencies.length > 0) {
-        const adjacencyMap = new Map<string, Set<string>>()
-        draft.adjacencies.forEach((adj: any) => {
+        const adjacencyMap = new Map<string, Set<string>>()(
+          draft.adjacencies as LegacyAdjacencyRecord[],
+        ).forEach((adj) => {
           const from = adj.from || adj.fromTerritoryId || adj.territory_from
           const to = adj.to || adj.toTerritoryId || adj.territory_to
           if (!from || !to) return

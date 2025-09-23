@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
@@ -153,8 +154,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
 
 const reportError = (message: string, error: unknown) => {
   if (import.meta.env.DEV) {
-    // biome-ignore lint/suspicious/noConsole: Provide additional context during development.
-    console.error(message, error)
+    logger.error(message, error)
   }
 }
 

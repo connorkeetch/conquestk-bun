@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 
@@ -55,7 +56,7 @@ const Maps: React.FC = () => {
       })
       setMaps(response.data.maps || [])
     } catch (error) {
-      console.error('Failed to fetch maps:', error)
+      logger.error('Failed to fetch maps', error)
       setMaps([])
     } finally {
       setLoading(false)
@@ -68,7 +69,7 @@ const Maps: React.FC = () => {
       const response = await api.get('/maps/my-maps')
       setMyMaps(response.data || [])
     } catch (error) {
-      console.error('Failed to fetch my maps:', error)
+      logger.error('Failed to fetch my maps', error)
       setMyMaps([])
     }
   }
@@ -140,12 +141,14 @@ const Maps: React.FC = () => {
           {user && (
             <div className="segmented-control">
               <button
+                type="button"
                 onClick={() => setShowMyMaps(false)}
                 className={!showMyMaps ? 'segmented-active' : ''}
               >
                 🌍 All Maps
               </button>
               <button
+                type="button"
                 onClick={() => setShowMyMaps(true)}
                 className={showMyMaps ? 'segmented-active' : ''}
               >
@@ -317,13 +320,14 @@ const Maps: React.FC = () => {
                     </Link>
                     {map.status === 'draft' && (
                       <button
+                        type="button"
                         onClick={async (e) => {
                           e.stopPropagation()
                           try {
                             await api.put(`/maps/${map.id}/submit`)
                             fetchMyMaps()
                           } catch (error) {
-                            console.error('Failed to submit map:', error)
+                            logger.error('Failed to submit map', error)
                           }
                         }}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1.5 rounded text-center transition-all"

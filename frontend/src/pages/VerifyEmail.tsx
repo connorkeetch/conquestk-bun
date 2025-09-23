@@ -19,8 +19,9 @@ export default function VerifyEmail() {
       await authService.resendVerification(user.email)
       setResendMessage('Verification email sent! Please check your inbox.')
       setTimeout(() => setResendMessage(''), 5000)
-    } catch (error: any) {
-      setResendMessage(error.response?.data?.message || 'Failed to resend verification email')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      setResendMessage(apiError.response?.data?.message || 'Failed to resend verification email')
       setTimeout(() => setResendMessage(''), 5000)
     } finally {
       setIsResending(false)
@@ -50,7 +51,13 @@ export default function VerifyEmail() {
           <div className="text-center">
             {/* Warning Icon */}
             <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className="w-8 h-8 text-yellow-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <path
                   fillRule="evenodd"
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
@@ -82,6 +89,7 @@ export default function VerifyEmail() {
             {/* Actions */}
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={handleResendVerification}
                 disabled={isResending}
                 className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-600/50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -93,7 +101,14 @@ export default function VerifyEmail() {
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -107,6 +122,7 @@ export default function VerifyEmail() {
               </button>
 
               <button
+                type="button"
                 onClick={handleLogout}
                 className="w-full bg-surface-2 hover:bg-gray-600 text-muted font-semibold py-3 px-6 rounded-lg transition-colors"
               >
@@ -119,6 +135,7 @@ export default function VerifyEmail() {
               <p className="text-muted text-sm">
                 Didn't receive the email? Check your spam folder or{' '}
                 <button
+                  type="button"
                   onClick={handleResendVerification}
                   className="text-yellow-400 hover:text-yellow-300 underline"
                   disabled={isResending}

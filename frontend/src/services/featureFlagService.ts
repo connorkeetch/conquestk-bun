@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import { FEATURE_FLAGS, type FeatureFlagName } from '../constants/featureFlags'
 import apiClient from './api'
 
@@ -43,7 +44,7 @@ class FeatureFlagService {
       }
       this.notifyListeners()
     } catch (error) {
-      console.error('Failed to load feature flags:', error)
+      logger.error('Failed to load feature flags', error)
     }
   }
 

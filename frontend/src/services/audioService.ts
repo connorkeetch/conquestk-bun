@@ -1,4 +1,5 @@
 import { Howl, Howler } from 'howler'
+import { logger } from '@/utils/logger'
 
 const SOUND_EFFECTS = {
   // Dice rolling sounds (rotate through multiple - reduced from 7 to 3)
@@ -129,7 +130,7 @@ class AudioService {
         this.preferences = JSON.parse(stored)
         this.applyVolumes()
       } catch (error) {
-        console.error('Failed to load audio preferences:', error)
+        logger.error('Failed to load audio preferences', error)
       }
     }
   }
@@ -164,11 +165,11 @@ class AudioService {
             preload: true,
             volume: this.getEffectiveVolume('effect'),
             onloaderror: (id, error) => {
-              console.warn(`Failed to load sound effect ${soundKey}:`, error)
+              logger.warn(`Failed to load sound effect ${soundKey}`, error)
               this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
             },
             onload: () => {
-              console.log(`Loaded sound effect: ${soundKey}`)
+              logger.debug(`Loaded sound effect ${soundKey}`)
             },
           })
           this.sounds.set(soundKey, { name: soundKey, howl, category: 'effect' })
@@ -182,11 +183,11 @@ class AudioService {
           preload: true,
           volume: this.getEffectiveVolume('effect'),
           onloaderror: (id, error) => {
-            console.warn(`Failed to load sound effect ${effectName}:`, error)
+            logger.warn(`Failed to load sound effect ${effectName}`, error)
             this.sounds.set(effectName, { name: effectName, howl: null, category: 'effect' })
           },
           onload: () => {
-            console.log(`Loaded sound effect: ${effectName}`)
+            logger.debug(`Loaded sound effect ${effectName}`)
           },
         })
         this.sounds.set(effectName, { name: effectName, howl, category: 'effect' })
@@ -226,14 +227,14 @@ class AudioService {
     const resolvedEffectName = this.resolveEffectName(effectName)
 
     if (!resolvedEffectName) {
-      console.warn(`Sound effect '${effectName}' not found`)
+      logger.warn(`Sound effect '${effectName}' not found`)
       return
     }
 
     const effectConfig = SOUND_EFFECTS[resolvedEffectName]
 
     if (!effectConfig) {
-      console.warn(
+      logger.warn(
         `Sound effect '${effectName}' not found or failed to load (resolved as '${resolvedEffectName}')`,
       )
       return
@@ -252,7 +253,7 @@ class AudioService {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()
       } else {
-        console.warn(`Sound effect '${soundKey}' not found or failed to load`)
+        logger.warn(`Sound effect '${soundKey}' not found or failed to load`)
       }
 
       // Update index for next time (rotate through available sounds)
@@ -264,7 +265,7 @@ class AudioService {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()
       } else {
-        console.warn(`Sound effect '${resolvedEffectName}' not found or failed to load`)
+        logger.warn(`Sound effect '${resolvedEffectName}' not found or failed to load`)
       }
     }
   }
@@ -345,7 +346,7 @@ class AudioService {
         this.playMusic(this.musicTrackIndex)
       },
       onloaderror: (id, error) => {
-        console.error(`Failed to load music track ${trackPath}:`, error)
+        logger.error(`Failed to load music track ${trackPath}`, error)
         // Try next track
         this.musicTrackIndex = (this.musicTrackIndex + 1) % this.MUSIC_TRACKS.length
         if (this.musicTrackIndex !== trackIndex) {
@@ -517,7 +518,7 @@ class AudioService {
 
       // If the sound fails to play, device might be in silent mode
       testSound.on('playerror', () => {
-        console.log('Device may be in silent mode')
+        logger.info('Device may be in silent mode')
         return true
       })
 

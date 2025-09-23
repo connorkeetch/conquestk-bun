@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import api from './api'
 
 export interface UserPreferences {
@@ -19,7 +20,7 @@ class PreferencesService {
       const response = await api.get('/preferences')
       return response.data
     } catch (error) {
-      console.error('Failed to fetch preferences:', error)
+      logger.error('Failed to fetch preferences', error)
       return null
     }
   }
@@ -29,7 +30,7 @@ class PreferencesService {
       const response = await api.put('/preferences', preferences)
       return response.data
     } catch (error) {
-      console.error('Failed to update preferences:', error)
+      logger.error('Failed to update preferences', error)
       return null
     }
   }
@@ -39,7 +40,7 @@ class PreferencesService {
       const response = await api.put('/preferences/theme', { theme })
       return response.data.success
     } catch (error) {
-      console.error('Failed to update theme:', error)
+      logger.error('Failed to update theme', error)
       return false
     }
   }

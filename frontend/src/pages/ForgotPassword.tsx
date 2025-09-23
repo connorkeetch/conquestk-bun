@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import authService from '../services/authService'
 
@@ -9,6 +9,7 @@ const ForgotPassword: React.FC = () => {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const emailInputId = useId()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,11 +21,12 @@ const ForgotPassword: React.FC = () => {
       const response = await authService.forgotPassword(email)
       setMessage(response.message || 'Password reset link sent! Check your email.')
       setSubmitted(true)
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      const apiError = error as { response?: { status?: number; data?: { message?: string } } }
+      if (apiError.response?.status === 429) {
         setError('Too many requests. Please wait before trying again.')
       } else {
-        setError(error.response?.data?.message || 'Failed to send reset email')
+        setError(apiError.response?.data?.message || 'Failed to send reset email')
       }
     } finally {
       setIsLoading(false)
@@ -50,12 +52,12 @@ const ForgotPassword: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-muted text-sm font-medium mb-2">
+              <label htmlFor={emailInputId} className="block text-muted text-sm font-medium mb-2">
                 Email Address
               </label>
               <input
                 type="email"
-                id="email"
+                id={emailInputId}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -77,6 +79,8 @@ const ForgotPassword: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
               >
                 <path
                   strokeLinecap="round"
@@ -93,6 +97,7 @@ const ForgotPassword: React.FC = () => {
             </p>
 
             <button
+              type="button"
               onClick={() => {
                 setSubmitted(false)
                 setEmail('')

@@ -1,13 +1,14 @@
 import type React from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { logger } from '@/utils/logger'
 import { API_URL } from '../config'
 import {
   applyTheme,
   getStoredTheme,
-  storeTheme,
-  THEMES,
   PREMIUM_THEMES,
   STANDARD_THEMES,
+  storeTheme,
+  THEMES,
 } from '../config/themes.config'
 import {
   COLOR_DISPLAY_NAMES,
@@ -61,20 +62,28 @@ function ColorDropdown({
     <div className="relative" ref={dropdownRef}>
       {/* Dropdown Button */}
       <button
+        type="button"
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px]"
       >
         {/* Color Hexagon */}
         <div className="relative">
-          <svg width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby={titleId}>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            role="img"
+            aria-labelledby={titleId}
+            aria-hidden="true"
+            focusable="false"
+          >
             <title id={titleId}>Selected color swatch</title>
             <polygon
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
-                fill:
-                  COLOR_HEX_VALUES[value]?.includes('gradient')
-                    ? 'url(#gradient)'
-                    : COLOR_HEX_VALUES[value],
+                fill: COLOR_HEX_VALUES[value]?.includes('gradient')
+                  ? 'url(#gradient)'
+                  : COLOR_HEX_VALUES[value],
                 stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
                 strokeWidth: '1.5',
               }}
@@ -100,13 +109,7 @@ function ColorDropdown({
           </svg>
           {value === 'pulse' && (
             <div className="absolute inset-0 animate-pulse" aria-hidden="true">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                focusable="false"
-              >
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <polygon
                   points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                   fill="none"
@@ -150,6 +153,7 @@ function ColorDropdown({
               const isSelected = value === color
               return (
                 <button
+                  type="button"
                   key={color}
                   onClick={() => {
                     onChange(color)
@@ -171,10 +175,9 @@ function ColorDropdown({
                     <polygon
                       points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                       style={{
-                        fill:
-                          COLOR_HEX_VALUES[color]?.includes('gradient')
-                            ? `url(#gradient-${color})`
-                            : COLOR_HEX_VALUES[color],
+                        fill: COLOR_HEX_VALUES[color]?.includes('gradient')
+                          ? `url(#gradient-${color})`
+                          : COLOR_HEX_VALUES[color],
                         stroke: isSelected ? '#ffffff' : '#ffffff30',
                         strokeWidth: '1.5',
                       }}
@@ -245,6 +248,7 @@ function ColorDropdown({
               const isSelected = value === color
               return (
                 <button
+                  type="button"
                   key={color}
                   onClick={() => {
                     onChange(color)
@@ -267,10 +271,9 @@ function ColorDropdown({
                       <polygon
                         points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                         style={{
-                          fill:
-                            COLOR_HEX_VALUES[color]?.includes('gradient')
-                              ? `url(#gradient-${color})`
-                              : COLOR_HEX_VALUES[color],
+                          fill: COLOR_HEX_VALUES[color]?.includes('gradient')
+                            ? `url(#gradient-${color})`
+                            : COLOR_HEX_VALUES[color],
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
                           filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
@@ -360,11 +363,11 @@ interface SettingItem {
   description: string | React.ReactNode
   type: 'toggle' | 'select' | 'range' | 'button' | 'input' | 'custom' | 'color-theme-selector'
   isWorking: boolean
-  defaultValue?: any
+  defaultValue?: unknown
   options?: { value: string; label: string }[]
   buttonText?: string
   buttonVariant?: 'primary' | 'secondary' | 'danger'
-  onChange?: (value: any) => void
+  onChange?: (value: unknown) => void
   onClick?: () => void
   disabled?: boolean
   disabledReason?: string
@@ -475,7 +478,7 @@ export default function Settings() {
       const data = await response.json()
       setUsernameAvailable(data.available)
     } catch (error) {
-      console.error('Error checking username:', error)
+      logger.error('Error checking username', error)
       setUsernameAvailable(null)
     } finally {
       setCheckingUsername(false)
@@ -491,7 +494,7 @@ export default function Settings() {
         import.meta.env.VITE_API_URL ||
         (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5001/api')
 
-      const updateData: any = {}
+      const updateData: Record<string, unknown> = {}
       if (username) updateData.username = username
       if (email) updateData.email = email
 
@@ -516,7 +519,7 @@ export default function Settings() {
       setTimeout(() => setSaveStatus(null), 5000)
       return false
     } catch (error) {
-      console.error('Profile update error:', error)
+      logger.error('Profile update error', error)
       setSaveStatus('Failed to update profile')
       setTimeout(() => setSaveStatus(null), 5000)
       return false
@@ -526,19 +529,19 @@ export default function Settings() {
   }
 
   // Helper function to persist important settings to server
-  const persistSetting = async (settingKey: string, value: any) => {
+  const persistSetting = async (settingKey: string, value: unknown) => {
     try {
       // For theme specifically, use the preferences API
       if (settingKey === 'theme') {
         const success = await preferencesService.updateTheme(value)
         if (success) {
-          console.log('✅ Theme persisted to database:', value)
+          logger.info('Theme persisted to database', value)
         }
         return
       }
 
       // For other settings, continue using the existing method
-      const settingsToSave: any = {}
+      const settingsToSave: Record<string, unknown> = {}
 
       // Map Redux setting keys to server setting keys
       switch (settingKey) {
@@ -560,9 +563,9 @@ export default function Settings() {
       }
 
       await authService.updateSettings(settingsToSave)
-      console.log('✅ Setting persisted to server:', settingKey, value)
+      logger.info('Setting persisted to server', settingKey, value)
     } catch (error) {
-      console.error('Failed to persist setting:', settingKey, error)
+      logger.error('Failed to persist setting', settingKey, error)
       // Don't show error to user - Redux change still worked locally
     }
   }
@@ -674,6 +677,7 @@ export default function Settings() {
 
           return (
             <button
+              type="button"
               className={buttonClass}
               disabled={isDisabled}
               onClick={() => {
@@ -701,6 +705,7 @@ export default function Settings() {
                   </span>
                   {!isDisabled && (
                     <button
+                      type="button"
                       onClick={() => {
                         setEditingField(setting.id)
                         setFieldValues((prev) => ({
@@ -774,6 +779,7 @@ export default function Settings() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={async () => {
                       const value = fieldValues[setting.id]
                       if (!value) return
@@ -791,7 +797,7 @@ export default function Settings() {
                       }
 
                       // Update profile
-                      const updateData: any = {}
+                      const updateData: Record<string, unknown> = {}
                       if (isUsername) updateData.username = value
                       if (isEmail) updateData.email = value
 
@@ -817,6 +823,7 @@ export default function Settings() {
                     {profileUpdateLoading ? 'Saving...' : 'Save'}
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingField(null)
                       setFieldValues((prev) => {
@@ -857,6 +864,7 @@ export default function Settings() {
             <div className="relative" ref={themeDropdownRef}>
               {/* Dropdown Button */}
               <button
+                type="button"
                 onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
                 disabled={isDisabled}
                 className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px] disabled:opacity-50"
@@ -883,6 +891,8 @@ export default function Settings() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
                 >
                   <path
                     strokeLinecap="round"
@@ -902,6 +912,7 @@ export default function Settings() {
                     </div>
                     {STANDARD_THEMES.map((theme) => (
                       <button
+                        type="button"
                         key={theme.id}
                         onClick={() => {
                           if (!isDisabled && setting.onChange) {
@@ -931,6 +942,8 @@ export default function Settings() {
                             className="w-5 h-5 text-primary flex-shrink-0"
                             fill="currentColor"
                             viewBox="0 0 20 20"
+                            aria-hidden="true"
+                            focusable="false"
                           >
                             <path
                               fillRule="evenodd"
@@ -952,6 +965,7 @@ export default function Settings() {
                         </div>
                         {PREMIUM_THEMES.map((theme) => (
                           <button
+                            type="button"
                             key={theme.id}
                             onClick={() => {
                               if (!isDisabled && setting.onChange) {
@@ -981,6 +995,8 @@ export default function Settings() {
                                 className="w-5 h-5 text-primary flex-shrink-0"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
+                                aria-hidden="true"
+                                focusable="false"
                               >
                                 <path
                                   fillRule="evenodd"
@@ -1328,7 +1344,7 @@ export default function Settings() {
                   }
                 }
               } catch (error) {
-                console.error('Push notification toggle failed', error)
+                logger.error('Push notification toggle failed', error)
                 const message =
                   error instanceof Error ? error.message : 'Unexpected push notification error'
                 setPushStatusMessage(message)
@@ -1400,7 +1416,9 @@ export default function Settings() {
                 alert(errorMessage)
               } catch (error) {
                 const message =
-                  error instanceof Error ? error.message : 'Unexpected error while sending test notification'
+                  error instanceof Error
+                    ? error.message
+                    : 'Unexpected error while sending test notification'
                 alert(message)
               }
             },
@@ -1501,7 +1519,7 @@ export default function Settings() {
                   alert(`❌ Failed to refresh cache: ${error.message || 'Unknown error'}`)
                 }
               } catch (error) {
-                console.error('Cache refresh error:', error)
+                logger.error('Cache refresh error', error)
                 alert('❌ Failed to refresh cache')
               }
             },
@@ -1691,6 +1709,7 @@ export default function Settings() {
               <nav className="space-y-2">
                 {settingsTabs.map((tab) => (
                   <button
+                    type="button"
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${

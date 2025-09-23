@@ -85,7 +85,8 @@ const chatSlice = createSlice({
         if (!currentUserId) {
           return
         }
-        const otherUserId = message.sender_id === currentUserId ? message.recipient_id : message.sender_id
+        const otherUserId =
+          message.sender_id === currentUserId ? message.recipient_id : message.sender_id
         if (!otherUserId) {
           return
         }

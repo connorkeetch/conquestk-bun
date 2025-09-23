@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
+import type { GameState } from '../types/game'
 import gameReducer, {
   selectTargetTerritory,
   selectTerritory,
@@ -7,17 +8,19 @@ import gameReducer, {
   setValidTargets,
   updateTerritory,
 } from './gameSlice'
-import type { GameState } from '../types/game'
 
 describe('gameSlice', () => {
-  let store: any
-
-  beforeEach(() => {
-    store = configureStore({
+  const createTestStore = () =>
+    configureStore({
       reducer: {
         game: gameReducer,
       },
     })
+
+  let store: ReturnType<typeof createTestStore>
+
+  beforeEach(() => {
+    store = createTestStore()
   })
 
   describe('initial state', () => {
@@ -137,7 +140,7 @@ describe('gameSlice', () => {
       )
 
       const state = store.getState().game
-      const alaskaTerritory = state.currentGame?.board.find((t: any) => t.id === 'alaska')
+      const alaskaTerritory = state.currentGame?.board.find((t) => t.id === 'alaska')
 
       expect(alaskaTerritory?.armies).toBe(5)
       expect(alaskaTerritory?.ownerId).toBe('player2')

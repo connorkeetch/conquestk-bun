@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -51,9 +52,7 @@ const GamePage: React.FC = () => {
       } catch (loadError) {
         if (!isSubscribed) return
         const message =
-          loadError instanceof Error
-            ? loadError.message
-            : 'Failed to load game details'
+          loadError instanceof Error ? loadError.message : 'Failed to load game details'
         setPageError(message)
         dispatch(setError(message))
       } finally {
@@ -155,6 +154,11 @@ const GamePage: React.FC = () => {
 
   const showLoadingState = isLoading || isLoadingRoom
 
+  const handleBoardTerritoryClick = (territoryId: string) => {
+    logger.debug('Territory clicked', territoryId)
+    // TODO: wire this into game actions when gameplay interactions are enabled
+  }
+
   if (pageError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -179,19 +183,22 @@ const GamePage: React.FC = () => {
       try {
         await containerRef.current?.requestFullscreen?.()
       } catch (toggleError) {
-        console.error('Failed to enter fullscreen mode', toggleError)
+        logger.error('Failed to enter fullscreen mode', toggleError)
       }
     } else {
       try {
         await document.exitFullscreen?.()
       } catch (toggleError) {
-        console.error('Failed to exit fullscreen mode', toggleError)
+        logger.error('Failed to exit fullscreen mode', toggleError)
       }
     }
   }
 
   return (
-    <div ref={containerRef} className={`${isFullScreen ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`}>
+    <div
+      ref={containerRef}
+      className={`${isFullScreen ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`}
+    >
       {/* Game Header - Minimal when full-screen */}
       <div className={`bg-surface-1 border-b border-border ${isFullScreen ? 'h-12' : 'h-16'}`}>
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
@@ -204,13 +211,13 @@ const GamePage: React.FC = () => {
             <div>
               <h1 className={`font-bold ${isFullScreen ? 'text-lg' : 'text-xl'}`}>{gameName}</h1>
               {!isFullScreen && (
-              <p className="text-sm text-muted">
-                {currentGame && currentTurnPlayer
-                  ? `Turn ${currentGame.turn} • ${currentTurnPlayer.username}'s turn`
-                  : currentRoom?.status
-                    ? `Status: ${formatRoomStatus(currentRoom.status)}`
-                    : 'Preparing game details...'}
-              </p>
+                <p className="text-sm text-muted">
+                  {currentGame && currentTurnPlayer
+                    ? `Turn ${currentGame.turn} • ${currentTurnPlayer.username}'s turn`
+                    : currentRoom?.status
+                      ? `Status: ${formatRoomStatus(currentRoom.status)}`
+                      : 'Preparing game details...'}
+                </p>
               )}
             </div>
           </div>
@@ -219,6 +226,7 @@ const GamePage: React.FC = () => {
             {isFullScreen && (
               <div className="flex gap-1">
                 <button
+                  type="button"
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'board' ? 'bg-primary' : 'bg-surface-2'
                   }`}
@@ -227,6 +235,7 @@ const GamePage: React.FC = () => {
                   Board
                 </button>
                 <button
+                  type="button"
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'chat' ? 'bg-primary' : 'bg-surface-2'
                   }`}
@@ -235,6 +244,7 @@ const GamePage: React.FC = () => {
                   Chat
                 </button>
                 <button
+                  type="button"
                   className={`px-3 py-1 rounded text-sm ${
                     activeTab === 'stats' ? 'bg-primary' : 'bg-surface-2'
                   }`}
@@ -245,11 +255,20 @@ const GamePage: React.FC = () => {
               </div>
             )}
 
-            <button className="btn-secondary px-3 py-1 text-sm">⚙️</button>
-            <button className="btn-secondary px-3 py-1 text-sm" onClick={toggleFullScreen}>
+            <button type="button" className="btn-secondary px-3 py-1 text-sm">
+              ⚙️
+            </button>
+            <button
+              type="button"
+              className="btn-secondary px-3 py-1 text-sm"
+              onClick={toggleFullScreen}
+            >
               {isFullScreen ? '🗗' : '🗖'}
             </button>
-            <button className="px-3 py-1 bg-danger hover:brightness-110 text-white text-sm font-medium rounded-lg transition-colors">
+            <button
+              type="button"
+              className="px-3 py-1 bg-danger hover:brightness-110 text-white text-sm font-medium rounded-lg transition-colors"
+            >
               🏳️
             </button>
           </div>
@@ -261,6 +280,7 @@ const GamePage: React.FC = () => {
           <div className="w-80 bg-surface-1 border-r border-border flex flex-col">
             <div className="flex border-b border-border">
               <button
+                type="button"
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'board' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
@@ -269,6 +289,7 @@ const GamePage: React.FC = () => {
                 Board
               </button>
               <button
+                type="button"
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'chat' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
@@ -277,6 +298,7 @@ const GamePage: React.FC = () => {
                 Chat
               </button>
               <button
+                type="button"
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
                   activeTab === 'stats' ? 'bg-primary text-white' : 'text-muted hover:text-white'
                 }`}
@@ -302,10 +324,15 @@ const GamePage: React.FC = () => {
                       <div className="font-bold">ATTACK PHASE</div>
                       <div className="text-sm">Click territories to attack</div>
                     </div>
-                    <button className="w-full px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors">
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors"
+                    >
                       End Attack Phase
                     </button>
-                    <button className="btn-secondary w-full px-4 py-2">View Help</button>
+                    <button type="button" className="btn-secondary w-full px-4 py-2">
+                      View Help
+                    </button>
                   </div>
                 </div>
               )}
@@ -356,7 +383,7 @@ const GamePage: React.FC = () => {
 
         <div className="flex-1 relative">
           <div className="h-full relative overflow-hidden">
-            <SimpleRiskGameBoard onTerritoryClick={(_territoryId) => {}} />
+            <SimpleRiskGameBoard onTerritoryClick={handleBoardTerritoryClick} />
 
             {isFullScreen && activeTab !== 'board' && !showLoadingState && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">

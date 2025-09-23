@@ -599,9 +599,13 @@ router.get(
 
       if (!map.isPublic) {
         try {
-          await mapPermissionService.assertCanEditMap(mapId, { userId: req.userId }, {
-            allowCollaborator: true,
-          })
+          await mapPermissionService.assertCanEditMap(
+            mapId,
+            { userId: req.userId },
+            {
+              allowCollaborator: true,
+            },
+          )
         } catch (_err) {
           return res.status(403).json({ error: 'Access denied' })
         }

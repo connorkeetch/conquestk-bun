@@ -15,8 +15,6 @@ vi.mock('howler', () => {
     public on = vi.fn()
 
     public once = vi.fn()
-
-    constructor(_options: { src: string[] }) {}
   }
 
   const Howler = {
