@@ -459,7 +459,6 @@ This allows themes to work with any color scheme!
   --box-padding-xl: 2rem;
 }
 
-
 /* Cutler's Cheese theme - Premium dairy daydream */
 :root[data-theme="cutlers-cheese"] {
   --color-primary: #f5b700; /* Sharp cheddar primary */
@@ -959,7 +958,13 @@ body {
   background-image:
     linear-gradient(rgba(255, 45, 149, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(77, 243, 255, 0.07) 1px, transparent 1px),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0) 2px, rgba(255, 255, 255, 0.06) 3px, rgba(0, 0, 0, 0) 4px);
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(255, 255, 255, 0.06) 3px,
+      rgba(0, 0, 0, 0) 4px
+    );
   background-size:
     120px 120px,
     120px 120px,

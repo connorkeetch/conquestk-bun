@@ -1,5 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { socketService } from '../services/socketService'
+import type { GameState } from '../types/game'
+import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,
   selectTargetTerritory,
@@ -8,7 +10,6 @@ import {
   setPendingAction,
 } from './gameSlice'
 import type { RootState } from './index'
-import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 
 // Async thunk for handling territory clicks based on game phase
 export const handleTerritoryClick = createAsyncThunk(
@@ -32,18 +33,16 @@ export const handleTerritoryClick = createAsyncThunk(
     // Handle based on current game phase
     switch (currentGame.phase) {
       case 'reinforcement':
-        return dispatch(
-          handleReinforcementClick({ territoryId, territory, selectedTerritory, state }),
-        )
+        return dispatch(handleReinforcementClick({ territoryId, territory, selectedTerritory }))
 
       case 'attack':
         return dispatch(
-          handleAttackClick({ territoryId, territory, selectedTerritory, validTargets, state }),
+          handleAttackClick({ territoryId, territory, selectedTerritory, validTargets }),
         )
 
       case 'fortify':
         return dispatch(
-          handleFortifyClick({ territoryId, territory, selectedTerritory, validTargets, state }),
+          handleFortifyClick({ territoryId, territory, selectedTerritory, validTargets }),
         )
 
       default:
@@ -53,11 +52,16 @@ export const handleTerritoryClick = createAsyncThunk(
 )
 
 // Handle reinforcement phase clicks
-export const handleReinforcementClick = createAsyncThunk(
+export const handleReinforcementClick = createAsyncThunk<
+  void,
+  { territoryId: string; territory?: GameState['board'][number]; selectedTerritory: string | null },
+  { state: RootState }
+>(
   'game/handleReinforcementClick',
-  async ({ territoryId, territory, selectedTerritory, state }: any, { dispatch }) => {
-    const currentPlayerId = state.auth.user?.id
-    const currentGame = state.game.currentGame
+  async ({ territoryId, territory, selectedTerritory }, { dispatch, getState }) => {
+    const currentState = getState()
+    const currentPlayerId = currentState.auth.user?.id
+    const currentGame = currentState.game.currentGame
 
     if (!currentPlayerId || !currentGame) {
       dispatch(setError('No active game'))
@@ -89,10 +93,19 @@ export const handleReinforcementClick = createAsyncThunk(
 )
 
 // Handle attack phase clicks
-export const handleAttackClick = createAsyncThunk(
+export const handleAttackClick = createAsyncThunk<
+  void,
+  {
+    territoryId: string
+    territory?: GameState['board'][number]
+    selectedTerritory: string | null
+    validTargets: string[]
+  },
+  { state: RootState }
+>(
   'game/handleAttackClick',
-  async ({ territoryId, territory, selectedTerritory, validTargets, state }: any, { dispatch }) => {
-    const currentPlayerId = state.auth.user?.id
+  async ({ territoryId, territory, selectedTerritory, validTargets }, { dispatch, getState }) => {
+    const currentPlayerId = getState().auth.user?.id
 
     if (!selectedTerritory) {
       // Select attacking territory
@@ -130,10 +143,19 @@ export const handleAttackClick = createAsyncThunk(
 )
 
 // Handle fortify phase clicks
-export const handleFortifyClick = createAsyncThunk(
+export const handleFortifyClick = createAsyncThunk<
+  void,
+  {
+    territoryId: string
+    territory?: GameState['board'][number]
+    selectedTerritory: string | null
+    validTargets: string[]
+  },
+  { state: RootState }
+>(
   'game/handleFortifyClick',
-  async ({ territoryId, territory, selectedTerritory, validTargets, state }: any, { dispatch }) => {
-    const currentPlayerId = state.auth.user?.id
+  async ({ territoryId, territory, selectedTerritory, validTargets }, { dispatch, getState }) => {
+    const currentPlayerId = getState().auth.user?.id
 
     if (!selectedTerritory) {
       // Select source territory for fortification
@@ -324,8 +346,8 @@ export const goBackToReinforcement = createAsyncThunk(
 )
 
 // Calculate reinforcement armies for a player
-export const calculateReinforcementArmies = (playerId: string, gameState: any) => {
-  const playerTerritories = gameState.board.filter((t: any) => t.ownerId === playerId)
+export const calculateReinforcementArmies = (playerId: string, gameState: GameState) => {
+  const playerTerritories = gameState.board.filter((t) => t.ownerId === playerId)
   const territoryCount = playerTerritories.length
   const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
 

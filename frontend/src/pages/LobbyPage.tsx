@@ -2,6 +2,7 @@ import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
@@ -23,9 +24,7 @@ interface GameInfo {
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private'>(
-    'browse',
-  )
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-games' | 'private'>('browse')
   const [publicGames, setPublicGames] = useState<GameRoom[]>([])
   const [myGames, setMyGames] = useState<GameInfo[]>([])
   const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'active' | 'lobby' | 'completed'>(
@@ -51,19 +50,27 @@ const LobbyPage: React.FC = () => {
       setError(null)
       const response = await gameService.getPublicGames()
       setPublicGames(response.rooms || [])
-    } catch (err: any) {
-      console.error('Failed to load public games:', err)
+    } catch (err: unknown) {
+      logger.error('Failed to load public games', err)
 
       // Provide helpful error messages based on error type
-      if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
+      const errorObject = err as {
+        code?: string
+        message?: string
+        response?: { status?: number; data?: { message?: string } }
+      }
+
+      if (errorObject.code === 'ECONNREFUSED' || errorObject.message?.includes('Network Error')) {
         setError('Cannot connect to server. Make sure the backend is running.')
-      } else if (err.response?.status === 404) {
+      } else if (errorObject.response?.status === 404) {
         setError('Game service not available. Please try again later.')
-      } else if (err.response?.status >= 500) {
+      } else if ((errorObject.response?.status ?? 0) >= 500) {
         setError('Server error. Please try again later.')
       } else {
         setError(
-          `Failed to load games: ${err.response?.data?.message || err.message || 'Unknown error'}`,
+          `Failed to load games: ${
+            errorObject.response?.data?.message || errorObject.message || 'Unknown error'
+          }`,
         )
       }
       setPublicGames([])
@@ -81,19 +88,27 @@ const LobbyPage: React.FC = () => {
       setError(null)
       const response = await api.get('/game/my-games')
       setMyGames(response.data.games || [])
-    } catch (err: any) {
-      console.error('Failed to load user games:', err)
+    } catch (err: unknown) {
+      logger.error('Failed to load user games', err)
 
       // Provide helpful error messages based on error type
-      if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
+      const errorObject = err as {
+        code?: string
+        message?: string
+        response?: { status?: number; data?: { message?: string } }
+      }
+
+      if (errorObject.code === 'ECONNREFUSED' || errorObject.message?.includes('Network Error')) {
         setError('Cannot connect to server. Make sure the backend is running.')
-      } else if (err.response?.status === 404) {
+      } else if (errorObject.response?.status === 404) {
         setError('User games service not available. Please try again later.')
-      } else if (err.response?.status >= 500) {
+      } else if ((errorObject.response?.status ?? 0) >= 500) {
         setError('Server error. Please try again later.')
       } else {
         setError(
-          `Failed to load your games: ${err.response?.data?.message || err.message || 'Unknown error'}`,
+          `Failed to load your games: ${
+            errorObject.response?.data?.message || errorObject.message || 'Unknown error'
+          }`,
         )
       }
       setMyGames([])
@@ -131,8 +146,9 @@ const LobbyPage: React.FC = () => {
       await authService.resendVerification(user.email)
       setResendMessage('Verification email sent! Please check your inbox.')
       setTimeout(() => setResendMessage(''), 5000)
-    } catch (error: any) {
-      setResendMessage(error.response?.data?.message || 'Failed to resend verification email')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      setResendMessage(apiError.response?.data?.message || 'Failed to resend verification email')
       setTimeout(() => setResendMessage(''), 5000)
     }
   }
@@ -145,8 +161,11 @@ const LobbyPage: React.FC = () => {
         return
       }
       navigate(`/room/${roomId}`)
-    } catch (err: any) {
-      setError(`Failed to join game: ${err.response?.data?.message || err.message}`)
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(
+        `Failed to join game: ${apiError.response?.data?.message || apiError.message || 'Unknown error'}`,
+      )
     }
   }
 
@@ -174,16 +193,17 @@ const LobbyPage: React.FC = () => {
       } else {
         navigate(`/room/${trimmedCode}`)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = err as { response?: { status?: number; data?: { message?: string } } }
       // Provide specific error messages based on the error
-      if (err.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         setError(`No game found with code "${trimmedCode}". Please check the code and try again.`)
-      } else if (err.response?.status === 403) {
+      } else if (apiError.response?.status === 403) {
         setError('This game is full or already started.')
-      } else if (err.response?.status === 401) {
+      } else if (apiError.response?.status === 401) {
         setError('You need to be logged in to join games.')
       } else {
-        setError(err.response?.data?.message || 'Failed to join game. Please try again.')
+        setError(apiError.response?.data?.message || 'Failed to join game. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -256,6 +276,8 @@ const LobbyPage: React.FC = () => {
                 className="w-5 h-5 text-yellow-400 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
+                aria-hidden="true"
+                focusable="false"
               >
                 <path
                   fillRule="evenodd"
@@ -273,6 +295,7 @@ const LobbyPage: React.FC = () => {
               </div>
             </div>
             <button
+              type="button"
               onClick={handleResendVerification}
               className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-sm font-medium rounded-lg transition-colors"
             >
@@ -289,10 +312,7 @@ const LobbyPage: React.FC = () => {
           <p className="text-muted">Find and join games, or create your own</p>
         </div>
         <div className="flex gap-3">
-          <Link
-            to="/create"
-            className="btn-primary"
-          >
+          <Link to="/create" className="btn-primary">
             🎮 Create Game
           </Link>
           <button
@@ -410,7 +430,11 @@ const LobbyPage: React.FC = () => {
               <span className="text-red-400">❌</span>
               <span className="text-red-400">{error}</span>
             </div>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300"
+            >
               ×
             </button>
           </div>
@@ -424,6 +448,7 @@ const LobbyPage: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">Public Games</h2>
               <button
+                type="button"
                 onClick={loadPublicGames}
                 disabled={loading}
                 className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -472,6 +497,7 @@ const LobbyPage: React.FC = () => {
                           Try adjusting your filter settings or create a new game
                         </p>
                         <button
+                          type="button"
                           onClick={() =>
                             setFilters({
                               showFull: true,
@@ -512,6 +538,7 @@ const LobbyPage: React.FC = () => {
                             <div className="text-sm text-muted">by {game.hostUsername}</div>
                           )}
                           <button
+                            type="button"
                             onClick={() => handleJoinGame(game.id)}
                             disabled={
                               game.currentPlayers >= game.maxPlayers || !isLobbyStatus(game.status)
@@ -543,6 +570,7 @@ const LobbyPage: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">My Games</h2>
               <button
+                type="button"
                 onClick={loadMyGames}
                 disabled={loading}
                 className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -554,12 +582,14 @@ const LobbyPage: React.FC = () => {
             {/* Filter buttons for My Games - Using Segmented Control */}
             <div className="segmented-control mb-6">
               <button
+                type="button"
                 onClick={() => setMyGamesFilter('all')}
                 className={myGamesFilter === 'all' ? 'segmented-active' : ''}
               >
                 All Games
               </button>
               <button
+                type="button"
                 onClick={() => setMyGamesFilter('active')}
                 className={myGamesFilter === 'active' ? 'segmented-active' : ''}
               >
@@ -567,6 +597,7 @@ const LobbyPage: React.FC = () => {
                 Active
               </button>
               <button
+                type="button"
                 onClick={() => setMyGamesFilter('lobby')}
                 className={myGamesFilter === 'lobby' ? 'segmented-active' : ''}
               >
@@ -574,6 +605,7 @@ const LobbyPage: React.FC = () => {
                 Lobby
               </button>
               <button
+                type="button"
                 onClick={() => setMyGamesFilter('completed')}
                 className={myGamesFilter === 'completed' ? 'segmented-active' : ''}
               >
@@ -593,6 +625,7 @@ const LobbyPage: React.FC = () => {
                 <p className="text-sm mb-6">Join or create a game to get started!</p>
                 <div className="flex gap-3 justify-center">
                   <button
+                    type="button"
                     onClick={() => setActiveTab('browse')}
                     className="btn-secondary px-4 py-2"
                   >
@@ -628,6 +661,7 @@ const LobbyPage: React.FC = () => {
                           No {myGamesFilter === 'all' ? '' : myGamesFilter} games
                         </p>
                         <button
+                          type="button"
                           onClick={() => setMyGamesFilter('all')}
                           className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
                         >
@@ -715,6 +749,7 @@ const LobbyPage: React.FC = () => {
                   className="w-full text-center text-lg bg-surface-2 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-border focus:border-primary focus:outline-none tracking-wider font-mono"
                 />
                 <button
+                  type="button"
                   onClick={handleJoinPrivateGame}
                   disabled={!privateGameCode.trim()}
                   className="w-full px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -725,7 +760,6 @@ const LobbyPage: React.FC = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )

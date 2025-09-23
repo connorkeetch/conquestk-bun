@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import type { AxiosError } from 'axios'
 import { applyTheme } from '../config/themes.config'
 import { authService } from '../services/authService'
 import type { User } from '../types/user'
@@ -55,15 +56,16 @@ export const login = createAsyncThunk(
       }
 
       return response
-    } catch (error: any) {
-      // authService throws the error.response.data directly for API errors
-      // or an Error object for other errors
-      if (error.message && !error.error) {
-        // This is a plain Error object, extract message
-        return rejectWithValue({ message: error.message })
+    } catch (error: unknown) {
+      if (error && typeof error === 'object') {
+        const errObj = error as { message?: string; error?: string }
+        if (errObj.message && !errObj.error) {
+          return rejectWithValue({ message: errObj.message })
+        }
+        return rejectWithValue(errObj)
       }
-      // This is the full error response from the backend
-      return rejectWithValue(error)
+
+      return rejectWithValue({ message: 'Login failed. Please check your credentials.' })
     }
   },
 )
@@ -105,15 +107,16 @@ export const checkAuth = createAsyncThunk(
       }
 
       return { user: response.user, token }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message?: string }>
       // If it's a 401 or 403, the token is invalid
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
         localStorage.removeItem('token')
         return rejectWithValue('Invalid token')
       }
       // For other errors (network, server down), also clear auth to avoid confusion
       localStorage.removeItem('token')
-      return rejectWithValue(error.message || 'Auth check failed')
+      return rejectWithValue(axiosError.message || 'Auth check failed')
     }
   },
 )
@@ -149,7 +152,7 @@ const authSlice = createSlice({
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false
         // Extract error message from the payload
-        const payload = action.payload as any
+        const payload = action.payload as { message?: string } | undefined
         state.error = payload?.message || action.error.message || 'Login failed'
       })
       .addCase(register.pending, (state) => {

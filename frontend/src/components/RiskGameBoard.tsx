@@ -1,8 +1,7 @@
 import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import type { Territory, TerritoryModifier as RawTerritoryModifier } from '@/types/game'
-import type { TerritoryModifier as IconTerritoryModifier } from './TerritoryModifierIcon'
+import type { TerritoryModifier as RawTerritoryModifier, Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import {
@@ -21,6 +20,7 @@ import { GamePhaseControls } from './GamePhaseControls'
 import { GameHeader } from './game/GameHeader'
 import { TerritoryInfoPanel } from './game/TerritoryInfoPanel'
 import ResponsiveMapContainer from './ResponsiveMapContainer'
+import type { TerritoryModifier as IconTerritoryModifier } from './TerritoryModifierIcon'
 import { TerritoryModifierIcon } from './TerritoryModifierIcon'
 import { TerritoryModifierLegend } from './TerritoryModifierLegend'
 import { WorldMapSVG } from './WorldMapSVG'
@@ -65,7 +65,6 @@ const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDisplayMa
   })
 
   return displayMap
-
 }
 
 const normalizeModifier = (modifier: RawTerritoryModifier): IconTerritoryModifier => ({
@@ -83,10 +82,10 @@ const normaliseModifierMap = (
   modifiers: Map<string, RawTerritoryModifier> | Record<string, RawTerritoryModifier>,
 ): Map<string, IconTerritoryModifier> => {
   const entries =
-    modifiers instanceof Map
-      ? Array.from(modifiers.entries())
-      : Object.entries(modifiers)
-  return new Map(entries.map(([territoryId, modifier]) => [territoryId, normalizeModifier(modifier)]))
+    modifiers instanceof Map ? Array.from(modifiers.entries()) : Object.entries(modifiers)
+  return new Map(
+    entries.map(([territoryId, modifier]) => [territoryId, normalizeModifier(modifier)]),
+  )
 }
 
 export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({

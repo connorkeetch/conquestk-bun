@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import authService from '../services/authService'
 
@@ -12,6 +12,8 @@ const ResetPassword: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const passwordId = useId()
+  const confirmPasswordId = useId()
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
@@ -66,8 +68,9 @@ const ResetPassword: React.FC = () => {
           state: { message: 'Password reset successfully! You can now log in.' },
         })
       }, 3000)
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to reset password'
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      const errorMessage = apiError.response?.data?.message || 'Failed to reset password'
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -85,6 +88,8 @@ const ResetPassword: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
               >
                 <path
                   strokeLinecap="round"
@@ -121,13 +126,13 @@ const ResetPassword: React.FC = () => {
           )}
 
           <div>
-            <label htmlFor="password" className="block text-muted text-sm font-medium mb-2">
+            <label htmlFor={passwordId} className="block text-muted text-sm font-medium mb-2">
               New Password
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                id="password"
+                id={passwordId}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -149,12 +154,15 @@ const ResetPassword: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-muted text-sm font-medium mb-2">
+            <label
+              htmlFor={confirmPasswordId}
+              className="block text-muted text-sm font-medium mb-2"
+            >
               Confirm New Password
             </label>
             <input
               type={showPassword ? 'text' : 'password'}
-              id="confirmPassword"
+              id={confirmPasswordId}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required

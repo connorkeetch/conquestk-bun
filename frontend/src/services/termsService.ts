@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { logger } from '@/utils/logger'
 
 const API_URL = '/api/terms'
 
@@ -35,7 +36,7 @@ class TermsService {
       const response = await axios.get(`${API_URL}/check/${featureType}`)
       return response.data
     } catch (error) {
-      console.error('Error checking terms acceptance:', error)
+      logger.error('Error checking terms acceptance', error)
       throw error
     }
   }
@@ -48,7 +49,7 @@ class TermsService {
       const response = await axios.post(`${API_URL}/accept/${featureType}`)
       return response.data
     } catch (error) {
-      console.error('Error accepting terms:', error)
+      logger.error('Error accepting terms', error)
       throw error
     }
   }
@@ -61,7 +62,7 @@ class TermsService {
       const response = await axios.get(`${API_URL}/content/${featureType}`)
       return response.data
     } catch (error) {
-      console.error('Error fetching terms content:', error)
+      logger.error('Error fetching terms content', error)
       throw error
     }
   }
@@ -74,7 +75,7 @@ class TermsService {
       const response = await axios.get(`${API_URL}/history`)
       return response.data
     } catch (error) {
-      console.error('Error fetching terms history:', error)
+      logger.error('Error fetching terms history', error)
       throw error
     }
   }

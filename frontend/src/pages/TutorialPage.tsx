@@ -94,8 +94,8 @@ const TutorialPage: React.FC = () => {
                     <h4 className="font-semibold text-yellow-400">1. Reinforce</h4>
                     <p className="text-muted mt-1">
                       Place new troops on your territories. You receive troops based on the number
-                      of territories you control, plus bonuses for controlling entire continents.
-                      In team games you can station those reinforcements directly on a teammate's
+                      of territories you control, plus bonuses for controlling entire continents. In
+                      team games you can station those reinforcements directly on a teammate's
                       territory to boost their front lines.
                     </p>
                   </div>

@@ -1,8 +1,8 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAppSelector } from '../hooks/redux'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 // import Breadcrumb from '../components/Breadcrumb';
@@ -183,7 +183,6 @@ const Dashboard: React.FC = () => {
             <p className="text-warning text-sm">Discover new territories</p>
           </div>
         </Link>
-
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

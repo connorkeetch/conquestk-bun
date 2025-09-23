@@ -165,7 +165,8 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
         backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
       }
 
-  const heroGradientOverlay = 'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
+  const heroGradientOverlay =
+    'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
 
   const heroBackgroundStyle: React.CSSProperties = signatureIsGradient
     ? {
@@ -651,7 +652,9 @@ const ProfilePage: React.FC = () => {
                   }}
                 />
                 <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
-                  {premiumColorEntry ? `${premiumColorEntry[0]} Colorway` : preferredColorDisplayName}
+                  {premiumColorEntry
+                    ? `${premiumColorEntry[0]} Colorway`
+                    : preferredColorDisplayName}
                 </span>
               </div>
             </div>

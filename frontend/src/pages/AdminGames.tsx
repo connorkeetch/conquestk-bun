@@ -51,6 +51,7 @@ export default function AdminGames() {
   // Modal state
   const [actionModal, setActionModal] = useState<GameActionModal | null>(null)
   const [actionNotes, setActionNotes] = useState('')
+  const actionNotesId = 'admin-games-action-notes'
 
   const loadGames = async () => {
     try {
@@ -67,8 +68,9 @@ export default function AdminGames() {
 
       setGames(result.games)
       setTotalGames(result.total)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load games')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load games'
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -115,8 +117,9 @@ export default function AdminGames() {
       await loadGames()
       setActionModal(null)
       setActionNotes('')
-    } catch (err: any) {
-      alert(`Failed to ${actionModal.action.replace('_', ' ')} game: ${err.message}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unexpected error'
+      alert(`Failed to ${actionModal.action.replace('_', ' ')} game: ${message}`)
     }
   }
 
@@ -269,6 +272,7 @@ export default function AdminGames() {
 
             {(searchTerm || statusFilter !== 'all') && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchTerm('')
                   setSearchInput('')
@@ -289,6 +293,7 @@ export default function AdminGames() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Games ({totalGames.toLocaleString()})</h2>
               <button
+                type="button"
                 onClick={loadGames}
                 className="bg-primary hover:bg-primary px-4 py-2 rounded text-sm"
               >
@@ -306,7 +311,11 @@ export default function AdminGames() {
             <div className="p-12 text-center">
               <div className="text-2xl mb-4 text-red-400">❌</div>
               <div className="text-red-400 mb-4">{error}</div>
-              <button onClick={loadGames} className="bg-primary hover:bg-primary px-4 py-2 rounded">
+              <button
+                type="button"
+                onClick={loadGames}
+                className="bg-primary hover:bg-primary px-4 py-2 rounded"
+              >
                 Retry
               </button>
             </div>
@@ -389,6 +398,7 @@ export default function AdminGames() {
 
                     <div className="flex flex-col space-y-2 ml-6">
                       <button
+                        type="button"
                         onClick={() => openActionModal(game, 'spectate')}
                         className="bg-primary hover:bg-primary px-3 py-1 rounded text-sm"
                       >
@@ -397,6 +407,7 @@ export default function AdminGames() {
 
                       {game.status === 'active' && (
                         <button
+                          type="button"
                           onClick={() => openActionModal(game, 'pause')}
                           className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm"
                         >
@@ -406,6 +417,7 @@ export default function AdminGames() {
 
                       {game.status === 'paused' && (
                         <button
+                          type="button"
                           onClick={() => openActionModal(game, 'resume')}
                           className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
                         >
@@ -415,6 +427,7 @@ export default function AdminGames() {
 
                       {['active', 'paused', 'waiting'].includes(game.status) && (
                         <button
+                          type="button"
                           onClick={() => openActionModal(game, 'force_end')}
                           className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
                         >
@@ -438,6 +451,7 @@ export default function AdminGames() {
                 </div>
                 <div className="flex space-x-2">
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
@@ -448,6 +462,7 @@ export default function AdminGames() {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
@@ -485,10 +500,11 @@ export default function AdminGames() {
             {actionModal.action !== 'spectate' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label htmlFor={actionNotesId} className="block text-sm font-medium mb-2">
                     {actionModal.action === 'force_end' ? 'Reason (required)' : 'Notes (optional)'}
                   </label>
                   <textarea
+                    id={actionNotesId}
                     value={actionNotes}
                     onChange={(e) => setActionNotes(e.target.value)}
                     className="w-full px-3 py-2 bg-surface-2 border border-border rounded resize-none"
@@ -505,12 +521,14 @@ export default function AdminGames() {
 
             <div className="flex justify-end space-x-2 mt-6">
               <button
+                type="button"
                 onClick={closeActionModal}
                 className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleGameAction}
                 disabled={actionModal.action === 'force_end' && !actionNotes.trim()}
                 className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${

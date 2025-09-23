@@ -1,5 +1,6 @@
 import { transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
+import { loadMapForEngine } from '../game/mapLoader'
 import type {
   GameAction,
   GameConfiguration,
@@ -10,13 +11,11 @@ import type {
   SerializedGameState,
   Territory,
 } from '../types/game'
-import type { ContinentBonus } from '../types/game'
 import { logger } from '../utils/logger'
 import { gameStateCache } from './cacheService'
 import type { PlayerRating, RatingChange } from './eloService'
 import { eloService } from './eloService'
 import { mapService } from './mapService'
-import { loadMapForEngine } from '../game/mapLoader'
 import { battleMetrics } from './metricsService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'

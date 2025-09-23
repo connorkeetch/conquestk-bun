@@ -1,5 +1,5 @@
-import type { ContinentBonus, Territory } from '../types/game'
 import { mapService } from '../services/mapService'
+import type { ContinentBonus, Territory } from '../types/game'
 
 /**
  * Loads a map from the database and adapts it to the GameEngine types.
@@ -26,12 +26,15 @@ export async function loadMapForEngine(mapId: string): Promise<{
     if (!adjacencyMap.has(adj.fromTerritoryId)) {
       adjacencyMap.set(adj.fromTerritoryId, new Set<string>())
     }
-    adjacencyMap.get(adj.fromTerritoryId)!.add(adj.toTerritoryId)
+    const fromSet = adjacencyMap.get(adj.fromTerritoryId)
+    fromSet?.add(adj.toTerritoryId)
+
     if (adj.isBidirectional) {
       if (!adjacencyMap.has(adj.toTerritoryId)) {
         adjacencyMap.set(adj.toTerritoryId, new Set<string>())
       }
-      adjacencyMap.get(adj.toTerritoryId)!.add(adj.fromTerritoryId)
+      const toSet = adjacencyMap.get(adj.toTerritoryId)
+      toSet?.add(adj.fromTerritoryId)
     }
   }
 

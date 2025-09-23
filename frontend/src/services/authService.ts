@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosError } from 'axios'
 
 // Use relative URL in production, absolute URL in development
 const API_URL =
@@ -45,13 +45,14 @@ export const authService = {
     try {
       const response = await api.post('/auth/login', credentials)
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message?: string }>
       // Always throw the full error data if available, not just the message
-      if (error.response?.data) {
-        throw error.response.data
+      if (axiosError.response?.data) {
+        throw axiosError.response.data
       }
       // Fallback for non-API errors
-      throw new Error(error.message || 'Login failed. Please check your credentials.')
+      throw new Error(axiosError.message || 'Login failed. Please check your credentials.')
     }
   },
 
@@ -59,9 +60,16 @@ export const authService = {
     try {
       const response = await api.post('/auth/register', userData)
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{
+        message?: string
+        error?: string
+        field?: string
+        details?: Array<{ message: string }>
+        technicalDetails?: string
+      }>
       // Extract the error message from the backend response
-      const errorData = error.response?.data
+      const errorData = axiosError.response?.data
 
       // Check for technical details (database schema errors)
       if (errorData?.technicalDetails) {
@@ -89,7 +97,10 @@ export const authService = {
       }
 
       const message =
-        errorData?.message || errorData?.error || 'Registration failed. Please try again.'
+        errorData?.message ||
+        errorData?.error ||
+        axiosError.message ||
+        'Registration failed. Please try again.'
       throw new Error(message)
     }
   },
@@ -124,7 +135,7 @@ export const authService = {
     return response.data
   },
 
-  async updateSettings(settings: any) {
+  async updateSettings(settings: Record<string, unknown>) {
     const response = await api.put('/auth/settings', { settings })
     return response.data
   },

@@ -14,13 +14,13 @@ import {
 } from '../store/gameSlice'
 import {
   addPlayerToRoom,
+  applyLifecycleUpdate,
   removePlayerFromRoom,
   updateRoom,
-  applyLifecycleUpdate,
 } from '../store/roomSlice'
+import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
-import type { NotificationType } from '../types/notification'
 
 class SocketService {
   private socket: Socket | null = null
@@ -62,12 +62,12 @@ class SocketService {
     this.socket?.emit('leave-room', roomId)
   }
 
-  sendGameAction(action: any) {
+  sendGameAction(action: unknown) {
     this.socket?.emit('game-action', action)
   }
 
   // Game-specific emit methods
-  emit(event: string, data: any) {
+  emit(event: string, data: unknown) {
     this.socket?.emit(event, data)
   }
 
@@ -92,15 +92,15 @@ class SocketService {
   }
 
   // Chat methods
-  sendChatMessage(data: any) {
+  sendChatMessage(data: unknown) {
     this.socket?.emit('chat:send', data)
   }
 
-  loadChatHistory(data: any) {
+  loadChatHistory(data: unknown) {
     this.socket?.emit('chat:load-history', data)
   }
 
-  markChatAsRead(data: any) {
+  markChatAsRead(data: unknown) {
     this.socket?.emit('chat:mark-read', data)
   }
 
@@ -108,16 +108,16 @@ class SocketService {
     this.socket?.emit('chat:get-unread')
   }
 
-  sendTypingIndicator(data: any) {
+  sendTypingIndicator(data: unknown) {
     this.socket?.emit('chat:typing', data)
   }
 
   // Generic on/off for chat events
-  on(event: string, handler: any) {
+  on(event: string, handler: (...args: unknown[]) => void) {
     this.socket?.on(event, handler)
   }
 
-  off(event: string, handler: any) {
+  off(event: string, handler: (...args: unknown[]) => void) {
     this.socket?.off(event, handler)
   }
 

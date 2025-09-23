@@ -23,8 +23,10 @@ export default function EmailVerificationPending({
       await authService.resendVerification(email)
       setResent(true)
       setTimeout(() => setResent(false), 5000) // Reset after 5 seconds
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend verification email')
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message ? err.message : 'Failed to resend verification email'
+      setError(message)
     } finally {
       setResending(false)
     }
@@ -84,6 +86,7 @@ export default function EmailVerificationPending({
 
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={handleResend}
                 disabled={resending}
                 className="btn-primary w-full flex items-center justify-center gap-2"

@@ -15,7 +15,7 @@ import {
   type TerritoryAbilityType,
   type TerritoryAdjacency,
 } from '../services/mapService'
-import { termsService, type TermsCheckResponse } from '../services/termsService'
+import { type TermsCheckResponse, termsService } from '../services/termsService'
 
 type EditorTool = 'select' | 'territory' | 'continent' | 'adjacency'
 
@@ -1494,7 +1494,9 @@ export default function MapEditor() {
                   onClick={validateMapOnServer}
                   disabled={isServerValidating}
                   className={`px-3 py-1.5 rounded text-sm ${
-                    isServerValidating ? 'bg-gray-600 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600'
+                    isServerValidating
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-slate-700 hover:bg-slate-600'
                   }`}
                 >
                   {isServerValidating ? 'Running…' : 'Run Validation'}
@@ -2065,7 +2067,10 @@ function ServerValidationList({ errors }: { errors: string[] }) {
     const msg = String(e)
     if (msg.toLowerCase().includes('no connections')) {
       groups.missingConnections.items.push(msg)
-    } else if (msg.toLowerCase().includes('not fully connected') || msg.toLowerCase().includes('unreachable')) {
+    } else if (
+      msg.toLowerCase().includes('not fully connected') ||
+      msg.toLowerCase().includes('unreachable')
+    ) {
       groups.connectivity.items.push(msg)
     } else if (msg.startsWith('Adjacency from unknown') || msg.startsWith('Adjacency to unknown')) {
       groups.badAdjacency.items.push(msg)

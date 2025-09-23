@@ -3,37 +3,37 @@ import ReactDOM from 'react-dom/client'
 import { Toaster } from 'react-hot-toast'
 import { Provider } from 'react-redux'
 import { BrowserRouter } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { store } from './store'
-import TestApp from './test-app'
 import './index.css'
 
 // Add comprehensive error logging
-console.log('[MAIN] Starting React app initialization...')
-console.log('[MAIN] React version:', React.version)
+logger.info('[MAIN] Starting React app initialization...')
+logger.debug('[MAIN] React version', React.version)
 
 // Log any import errors
 window.addEventListener('error', (e) => {
-  console.error('[MAIN] Global error:', e.message, e.filename, e.lineno, e.colno)
+  logger.error('[MAIN] Global error', e.message, e.filename, e.lineno, e.colno)
 })
 
 window.addEventListener('unhandledrejection', (e) => {
-  console.error('[MAIN] Unhandled promise rejection:', e.reason)
+  logger.error('[MAIN] Unhandled promise rejection', e.reason)
 })
 
 try {
-  console.log('[MAIN] Looking for root element...')
+  logger.debug('[MAIN] Looking for root element...')
   const rootElement = document.getElementById('root')
 
   if (!rootElement) {
     throw new Error('Root element not found!')
   }
 
-  console.log('[MAIN] Root element found, creating React root...')
+  logger.debug('[MAIN] Root element found, creating React root...')
   const root = ReactDOM.createRoot(rootElement)
 
-  console.log('[MAIN] Rendering React app without StrictMode...')
+  logger.info('[MAIN] Rendering React app without StrictMode...')
   // Restore full app
   root.render(
     <ErrorBoundary>
@@ -46,9 +46,9 @@ try {
     </ErrorBoundary>,
   )
 
-  console.log('[MAIN] React render call completed')
+  logger.info('[MAIN] React render call completed')
 } catch (error) {
-  console.error('[MAIN] Fatal error during app initialization:', error)
+  logger.error('[MAIN] Fatal error during app initialization', error)
   // Also display error in the DOM
   const rootElement = document.getElementById('root')
   if (rootElement) {
