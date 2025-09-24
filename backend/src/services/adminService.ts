@@ -1106,10 +1106,11 @@ export class AdminService {
       `
       SELECT 
         aal.*,
-        u.username as admin_username
+        u.username as admin_username,
+        aal.created_at as log_timestamp
       FROM admin_activity_logs aal
       JOIN users u ON aal.admin_user_id = u.id
-      ORDER BY aal.timestamp DESC
+      ORDER BY aal.created_at DESC
       LIMIT $1 OFFSET $2
     `,
       [limit, offset],
@@ -1125,7 +1126,7 @@ export class AdminService {
       targetId: row.target_id,
       ipAddress: row.ip_address,
       userAgent: row.user_agent,
-      timestamp: new Date(row.timestamp),
+      timestamp: new Date(row.log_timestamp ?? row.created_at),
     }))
   }
 }
