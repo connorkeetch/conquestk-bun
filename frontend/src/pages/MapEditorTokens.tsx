@@ -564,6 +564,8 @@ const reportInfo = (message: string, details?: unknown) => {
   }
 }
 
+const UNASSIGNED_CONTINENT_KEY = '__unassigned__'
+
 export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -639,6 +641,8 @@ export default function MapEditorTokens() {
   const minPlayersId = useId()
   const maxPlayersId = useId()
   const capitalPlayerCountId = useId()
+  const continentColorInputId = useId()
+  const continentBonusInputId = useId()
   const stylePresetId = useId()
   const labelFontSizeId = useId()
   const labelTextColorId = useId()
@@ -778,6 +782,93 @@ export default function MapEditorTokens() {
   const [selectedContinentId, setSelectedContinentId] = useState<string | null>(null)
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('properties')
+  const [expandedContinentGroups, setExpandedContinentGroups] = useState<Record<string, boolean>>(
+    {},
+  )
+
+  const continentOptions = useMemo(
+    () =>
+      state.continents.map((continent) => ({
+        value: continent.id,
+        label: continent.name,
+        color: continent.color,
+      })),
+    [state.continents],
+  )
+
+  const territoriesByContinent = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        continent: Continent | null
+        territories: Territory[]
+      }
+    >()
+
+    state.continents.forEach((continent) => {
+      groups.set(continent.id, {
+        continent,
+        territories: [],
+      })
+    })
+
+    groups.set(UNASSIGNED_CONTINENT_KEY, {
+      continent: null,
+      territories: [],
+    })
+
+    state.territories.forEach((territory) => {
+      const groupKey =
+        territory.continentId && groups.has(territory.continentId)
+          ? territory.continentId
+          : UNASSIGNED_CONTINENT_KEY
+      groups.get(groupKey)?.territories.push(territory)
+    })
+
+    const orderedKeys = [
+      ...state.continents.map((continent) => continent.id),
+      UNASSIGNED_CONTINENT_KEY,
+    ]
+
+    return orderedKeys
+      .filter((key) => groups.has(key))
+      .map((key) => ({
+        key,
+        continent: groups.get(key)?.continent ?? null,
+        territories: groups.get(key)?.territories ?? [],
+      }))
+  }, [state.continents, state.territories])
+
+  const toggleContinentExpanded = useCallback((groupKey: string) => {
+    setExpandedContinentGroups((prev) => ({
+      ...prev,
+      [groupKey]: !(prev[groupKey] ?? true),
+    }))
+  }, [])
+
+  const handleTerritoryContinentChange = useCallback(
+    (territoryId: string, continentId: string | null) => {
+      setState((prev) => ({
+        ...prev,
+        territories: prev.territories.map((territory) =>
+          territory.id === territoryId ? { ...territory, continentId } : territory,
+        ),
+      }))
+
+      setSelectedContinentId(continentId)
+    },
+    [],
+  )
+
+  const updateContinentBonus = useCallback((continentId: string, bonus: number) => {
+    const normalizedBonus = Number.isFinite(bonus) ? Math.max(0, Math.round(bonus)) : 0
+    setState((prev) => ({
+      ...prev,
+      continents: prev.continents.map((continent) =>
+        continent.id === continentId ? { ...continent, bonus: normalizedBonus } : continent,
+      ),
+    }))
+  }, [])
 
   useEffect(() => {
     if (!territoryModifiersEnabled && editorMode === 'modifiers') {
@@ -1613,6 +1704,8 @@ export default function MapEditorTokens() {
     }))
     setEditingContinentId(null)
     setNewContinentName('')
+    setNewContinentColor('#3B82F6')
+    setNewContinentBonus(3)
   }
 
   // Handle continent deletion
@@ -2321,21 +2414,170 @@ export default function MapEditorTokens() {
       case 'territories':
         return (
           <>
-            <h2 className="text-xl font-bold mb-4">🗺️ Territory Settings</h2>
+            <h2 className="text-xl font-bold mb-4">🗺️ Territory Controls</h2>
 
-            {/* Token Display Settings */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold mb-3">Territories by Continent</h3>
+              <div className="space-y-3">
+                {territoriesByContinent.map((group) => {
+                  const continent = group.continent
+                  const territoryCount = group.territories.length
+                  if (!continent && territoryCount === 0) {
+                    return null
+                  }
+                  const isExpanded = expandedContinentGroups[group.key] ?? true
+                  const bonusInputId = `continent-inline-bonus-${group.key}`
+                  const label = continent ? continent.name : 'Unassigned'
+
+                  return (
+                    <div key={group.key} className="rounded border border-border bg-surface-1">
+                      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleContinentExpanded(group.key)}
+                            className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary"
+                            aria-label={isExpanded ? 'Collapse continent' : 'Expand continent'}
+                          >
+                            {isExpanded ? '▾' : '▸'}
+                          </button>
+                          <span
+                            className={`h-4 w-4 rounded ${continent ? '' : 'border border-dashed border-border'}`}
+                            style={continent ? { backgroundColor: continent.color } : undefined}
+                          />
+                          <div>
+                            <div className="font-medium">{label}</div>
+                            <div className="text-xs text-muted">
+                              {territoryCount === 1
+                                ? '1 territory'
+                                : `${territoryCount} territories`}
+                            </div>
+                          </div>
+                        </div>
+                        {continent ? (
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <label htmlFor={bonusInputId} className="text-muted">
+                              Bonus
+                            </label>
+                            <input
+                              id={bonusInputId}
+                              type="number"
+                              min={0}
+                              max={12}
+                              step={1}
+                              value={continent.bonus}
+                              onChange={(e) =>
+                                updateContinentBonus(continent.id, Number(e.target.value) || 0)
+                              }
+                              className="w-16 rounded border border-border bg-surface-1 px-2 py-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingContinentId(continent.id)
+                                setNewContinentName(continent.name)
+                                setNewContinentColor(continent.color)
+                                setNewContinentBonus(continent.bonus)
+                              }}
+                              className="rounded border border-border px-2 py-1 text-xs hover:border-primary"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `Delete continent "${continent.name}"? Territories will become unassigned.`,
+                                  )
+                                ) {
+                                  handleDeleteContinent(continent.id)
+                                }
+                              }}
+                              className="rounded border border-red-600 px-2 py-1 text-xs text-red-400 hover:border-red-400"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted">
+                            Assign ungrouped territories to keep bonuses accurate
+                          </span>
+                        )}
+                      </div>
+                      {isExpanded && (
+                        <div className="space-y-2 border-t border-border px-3 py-3">
+                          {territoryCount === 0 ? (
+                            <p className="rounded bg-surface-2/70 px-3 py-2 text-xs text-muted">
+                              {continent
+                                ? 'No territories assigned to this continent yet. Use the selects below to add some.'
+                                : 'Any territories without a continent assignment will show here.'}
+                            </p>
+                          ) : (
+                            group.territories.map((territory) => (
+                              <div
+                                key={territory.id}
+                                className={`flex items-center gap-2 rounded border px-2 py-2 text-sm transition-colors ${
+                                  state.selectedTerritoryId === territory.id
+                                    ? 'border-primary bg-primary/10'
+                                    : 'border-border bg-surface-2 hover:border-primary'
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setState((prev) => ({
+                                      ...prev,
+                                      selectedTerritoryId: territory.id,
+                                    }))
+                                  }
+                                  className="flex-1 text-left font-medium focus:outline-none"
+                                >
+                                  {territory.name}
+                                </button>
+                                <select
+                                  value={territory.continentId ?? ''}
+                                  onChange={(e) =>
+                                    handleTerritoryContinentChange(
+                                      territory.id,
+                                      e.target.value ? e.target.value : null,
+                                    )
+                                  }
+                                  className="w-36 rounded border border-border bg-surface-1 px-2 py-1 text-xs"
+                                >
+                                  <option value="">Unassigned</option>
+                                  {continentOptions.map((continentOption) => (
+                                    <option
+                                      key={continentOption.value}
+                                      value={continentOption.value}
+                                    >
+                                      {continentOption.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
             <div className="mb-6">
               <h3 className="text-sm font-bold mb-3">Token Display</h3>
 
               <div className="mb-3">
-                <label htmlFor={tokenShapeId} className="block text-sm text-muted mb-1">
+                <label htmlFor={tokenShapeId} className="mb-1 block text-sm text-muted">
                   Shape
                 </label>
                 <select
                   id={tokenShapeId}
                   value={tokenShape}
                   onChange={(e) => setTokenShape(e.target.value as TokenShape)}
-                  className="w-full px-3 py-2 bg-surface-2 rounded"
+                  className="w-full rounded bg-surface-2 px-3 py-2"
                 >
                   <option value="hexagon">⬡ Hexagon</option>
                   <option value="square">◼ Square</option>
@@ -2344,7 +2586,7 @@ export default function MapEditorTokens() {
               </div>
 
               <div className="mb-3">
-                <label htmlFor={tokenSizeId} className="block text-sm text-muted mb-1">
+                <label htmlFor={tokenSizeId} className="mb-1 block text-sm text-muted">
                   Size: {tokenSize}px
                 </label>
                 <input
@@ -2361,15 +2603,16 @@ export default function MapEditorTokens() {
               <button
                 type="button"
                 onClick={() => setShowGrid(!showGrid)}
-                className={`w-full px-3 py-2 rounded text-sm ${
-                  showGrid ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'
+                className={`w-full rounded border px-3 py-2 text-sm font-medium transition ${
+                  showGrid
+                    ? 'border-primary bg-primary text-black'
+                    : 'border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
                 ⊞ {showGrid ? 'Hide Grid' : 'Show Grid'}
               </button>
             </div>
 
-            {/* Label Settings */}
             <div className="mb-6">
               <h3 className="text-sm font-bold mb-3">Labels</h3>
 
@@ -2381,49 +2624,48 @@ export default function MapEditorTokens() {
                     showLabels: !settings.showLabels,
                   }))
                 }
-                className={`w-full px-3 py-2 rounded text-sm mb-2 ${
-                  state.labelSettings?.showLabels ? 'bg-primary' : 'bg-surface-2 hover:bg-gray-600'
+                className={`mb-2 flex w-full items-center justify-between rounded border px-3 py-2 text-sm font-medium transition ${
+                  state.labelSettings?.showLabels
+                    ? 'border-primary bg-primary text-black'
+                    : 'border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
-                🏷️ {state.labelSettings?.showLabels ? 'Hide Labels' : 'Show Labels'}
+                <span>🏷️ {state.labelSettings?.showLabels ? 'Hide Labels' : 'Show Labels'}</span>
+                <span className="text-xs text-muted">
+                  {state.labelSettings?.showLabels ? 'Visible' : 'Hidden'}
+                </span>
               </button>
 
               {state.labelSettings?.showLabels && (
                 <button
                   type="button"
                   onClick={() => setShowLabelSettings(true)}
-                  className="w-full px-3 py-2 bg-surface-2 hover:bg-gray-600 rounded text-sm"
+                  className="flex w-full items-center justify-between rounded border border-border bg-surface-1 px-3 py-2 text-sm font-medium transition hover:border-primary hover:bg-surface-2"
                 >
-                  🎨 Customize Label Style
+                  <span>🎨 Customize Label Style</span>
+                  <span className="text-xs text-muted">Fonts, colors, backgrounds</span>
                 </button>
               )}
             </div>
 
-            {/* Placement Mode */}
-            <button
-              type="button"
-              onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
-              className={`w-full px-4 py-3 rounded font-medium mb-4 ${
-                isPlacingTerritory
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-violet hover:brightness-110'
-              }`}
-            >
-              {isPlacingTerritory ? '📍 Click Map to Place' : '➕ Add Territory'}
-            </button>
-
-            {/* Territory List */}
             <div className="border-t border-border pt-4">
-              <h3 className="text-sm font-bold mb-2">Territories ({state.territories.length})</h3>
-              {state.selectedTerritoryId &&
+              <h3 className="text-sm font-bold mb-2">Selected Territory</h3>
+              {state.selectedTerritoryId ? (
                 (() => {
                   const territory = state.territories.find(
                     (t) => t.id === state.selectedTerritoryId,
                   )
                   if (!territory) return null
                   return (
-                    <div className="p-3 bg-surface-2 rounded mb-3">
+                    <div className="rounded bg-surface-2 p-3">
+                      <label
+                        className="text-xs text-muted"
+                        htmlFor={`territory-name-${territory.id}`}
+                      >
+                        Name
+                      </label>
                       <input
+                        id={`territory-name-${territory.id}`}
                         type="text"
                         value={territory.name}
                         onChange={(e) => {
@@ -2436,7 +2678,7 @@ export default function MapEditorTokens() {
                             ),
                           }))
                         }}
-                        className="w-full px-2 py-1 mb-2 bg-gray-600 rounded text-white"
+                        className="mb-2 mt-1 w-full rounded bg-gray-600 px-2 py-1 text-white"
                       />
                       <button
                         type="button"
@@ -2457,13 +2699,18 @@ export default function MapEditorTokens() {
                             }
                           })
                         }}
-                        className="w-full px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
+                        className="w-full rounded bg-red-600 px-3 py-1 text-sm hover:bg-red-700"
                       >
                         🗑️ Delete Territory
                       </button>
                     </div>
                   )
-                })()}
+                })()
+              ) : (
+                <p className="text-xs text-muted">
+                  Select a territory to rename it or remove it from the map.
+                </p>
+              )}
             </div>
           </>
         )
@@ -2473,66 +2720,225 @@ export default function MapEditorTokens() {
           <>
             <h2 className="text-xl font-bold mb-4">🌍 Continent Management</h2>
 
-            {/* Create Continent Form */}
-            <div className="mb-6 p-3 bg-surface-2 rounded">
-              <h3 className="text-sm font-bold mb-3">Create Continent</h3>
+            <div className="mb-6 rounded border border-border bg-surface-1 p-3">
+              <h3 className="text-sm font-bold mb-3">
+                {editingContinentId ? 'Update Continent' : 'Create Continent'}
+              </h3>
               <input
                 type="text"
                 placeholder="Continent name"
                 value={newContinentName}
                 onChange={(e) => setNewContinentName(e.target.value)}
-                className="w-full px-3 py-2 mb-2 bg-gray-600 rounded text-white"
+                className="w-full rounded bg-gray-600 px-3 py-2 text-white"
               />
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="color"
-                  value={newContinentColor}
-                  onChange={(e) => setNewContinentColor(e.target.value)}
-                  className="w-12 h-8 rounded cursor-pointer"
-                />
-                <input
-                  type="number"
-                  placeholder="Bonus"
-                  value={newContinentBonus}
-                  onChange={(e) => setNewContinentBonus(Number(e.target.value))}
-                  className="flex-1 px-3 py-1 bg-gray-600 rounded text-white"
-                />
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted" htmlFor={continentColorInputId}>
+                    Color
+                  </label>
+                  <input
+                    id={continentColorInputId}
+                    type="color"
+                    value={newContinentColor}
+                    onChange={(e) => setNewContinentColor(e.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded border border-border bg-surface-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted" htmlFor={continentBonusInputId}>
+                    Bonus
+                  </label>
+                  <input
+                    id={continentBonusInputId}
+                    type="number"
+                    min={0}
+                    max={12}
+                    step={1}
+                    value={newContinentBonus}
+                    onChange={(e) => setNewContinentBonus(Number(e.target.value) || 0)}
+                    className="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-sm"
+                  />
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={handleCreateContinent}
-                className="w-full px-3 py-2 bg-primary hover:brightness-110 rounded text-sm"
-              >
-                ➕ Create Continent
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingContinentId) {
+                      handleUpdateContinent(editingContinentId)
+                    } else {
+                      handleCreateContinent()
+                    }
+                  }}
+                  disabled={!newContinentName.trim()}
+                  className={`rounded px-4 py-2 text-sm font-medium transition ${
+                    newContinentName.trim()
+                      ? 'bg-primary text-black hover:brightness-110'
+                      : 'bg-surface-2 text-muted'
+                  }`}
+                >
+                  {editingContinentId ? '💾 Save Changes' : '➕ Create Continent'}
+                </button>
+                {editingContinentId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingContinentId(null)
+                      setNewContinentName('')
+                      setNewContinentColor('#3B82F6')
+                      setNewContinentBonus(3)
+                    }}
+                    className="rounded border border-border px-4 py-2 text-sm hover:border-primary"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              {editingContinentId && (
+                <p className="mt-2 text-xs text-muted">
+                  Saving will update the selected continent in place. Cancel to keep the existing
+                  values.
+                </p>
+              )}
             </div>
 
-            {/* Continent List */}
-            <div className="space-y-2">
-              {state.continents.map((continent) => {
-                const territoryCount = state.territories.filter(
-                  (t) => t.continentId === continent.id,
-                ).length
+            <div className="space-y-3">
+              {territoriesByContinent.map((group) => {
+                const continent = group.continent
+                const territoryCount = group.territories.length
+                if (!continent && territoryCount === 0) {
+                  return null
+                }
+                const isExpanded = expandedContinentGroups[group.key] ?? true
+                const bonusInputId = `continent-inline-bonus-${group.key}`
+                const label = continent ? continent.name : 'Unassigned'
+
                 return (
-                  <div key={continent.id} className="p-3 bg-surface-2 rounded">
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={group.key} className="rounded border border-border bg-surface-1">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: continent.color }}
+                        <button
+                          type="button"
+                          onClick={() => toggleContinentExpanded(group.key)}
+                          className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary"
+                          aria-label={isExpanded ? 'Collapse continent' : 'Expand continent'}
+                        >
+                          {isExpanded ? '▾' : '▸'}
+                        </button>
+                        <span
+                          className={`h-4 w-4 rounded ${continent ? '' : 'border border-dashed border-border'}`}
+                          style={continent ? { backgroundColor: continent.color } : undefined}
                         />
-                        <span className="font-medium">{continent.name}</span>
+                        <div>
+                          <div className="font-medium">{label}</div>
+                          <div className="text-xs text-muted">
+                            {territoryCount === 1 ? '1 territory' : `${territoryCount} territories`}
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted">+{continent.bonus}</span>
+                      {continent ? (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <label htmlFor={bonusInputId} className="text-muted">
+                            Bonus
+                          </label>
+                          <input
+                            id={bonusInputId}
+                            type="number"
+                            min={0}
+                            max={12}
+                            step={1}
+                            value={continent.bonus}
+                            onChange={(e) =>
+                              updateContinentBonus(continent.id, Number(e.target.value) || 0)
+                            }
+                            className="w-16 rounded border border-border bg-surface-1 px-2 py-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingContinentId(continent.id)
+                              setNewContinentName(continent.name)
+                              setNewContinentColor(continent.color)
+                              setNewContinentBonus(continent.bonus)
+                            }}
+                            className="rounded border border-border px-2 py-1 text-xs hover:border-primary"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Delete continent "${continent.name}"? Territories will become unassigned.`,
+                                )
+                              ) {
+                                handleDeleteContinent(continent.id)
+                              }
+                            }}
+                            className="rounded border border-red-600 px-2 py-1 text-xs text-red-400 hover:border-red-400"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">
+                          Assign ungrouped territories to keep bonuses accurate
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xs text-muted mb-2">{territoryCount} territories</div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteContinent(continent.id)}
-                      className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
-                    >
-                      Delete
-                    </button>
+                    {isExpanded && (
+                      <div className="space-y-2 border-t border-border px-3 py-3">
+                        {territoryCount === 0 ? (
+                          <p className="rounded bg-surface-2/70 px-3 py-2 text-xs text-muted">
+                            {continent
+                              ? 'No territories assigned to this continent yet. Use the selects below to add some.'
+                              : 'Any territories without a continent assignment will show here.'}
+                          </p>
+                        ) : (
+                          group.territories.map((territory) => (
+                            <div
+                              key={territory.id}
+                              className={`flex items-center gap-2 rounded border px-2 py-2 text-sm transition-colors ${
+                                state.selectedTerritoryId === territory.id
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-border bg-surface-2 hover:border-primary'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setState((prev) => ({
+                                    ...prev,
+                                    selectedTerritoryId: territory.id,
+                                  }))
+                                }
+                                className="flex-1 text-left font-medium focus:outline-none"
+                              >
+                                {territory.name}
+                              </button>
+                              <select
+                                value={territory.continentId ?? ''}
+                                onChange={(e) =>
+                                  handleTerritoryContinentChange(
+                                    territory.id,
+                                    e.target.value ? e.target.value : null,
+                                  )
+                                }
+                                className="w-36 rounded border border-border bg-surface-1 px-2 py-1 text-xs"
+                              >
+                                <option value="">Unassigned</option>
+                                {continentOptions.map((continentOption) => (
+                                  <option key={continentOption.value} value={continentOption.value}>
+                                    {continentOption.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
