@@ -97,7 +97,7 @@ const ActiveGamesDropdown: React.FC = () => {
               <div className="p-8 text-center">
                 <p className="text-muted mb-4">No games yet</p>
                 <Link
-                  to="/play"
+                  to="/lobby"
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors inline-flex items-center gap-2"
                   onClick={() => setIsOpen(false)}
                 >

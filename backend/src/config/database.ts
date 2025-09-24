@@ -9,6 +9,59 @@ export interface DatabaseQueryResult<T extends QueryResultRow = QueryResultRow> 
 
 type QueryValues = ReadonlyArray<unknown>
 
+function convertQuestionMarksToPgPlaceholders(sql: string, params: QueryValues): string {
+  let placeholderIndex = 0
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let converted = ''
+
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i]
+
+    if (char === "'" && !inDoubleQuote) {
+      converted += char
+      // Handle escaped single quote represented as ''
+      if (inSingleQuote && sql[i + 1] === "'") {
+        converted += "'"
+        i++
+        continue
+      }
+      inSingleQuote = !inSingleQuote
+      continue
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      converted += char
+      // Handle escaped double quote represented as ""
+      if (inDoubleQuote && sql[i + 1] === '"') {
+        converted += '"'
+        i++
+        continue
+      }
+      inDoubleQuote = !inDoubleQuote
+      continue
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && char === '?') {
+      placeholderIndex++
+      converted += `$${placeholderIndex}`
+      continue
+    }
+
+    converted += char
+  }
+
+  if (placeholderIndex !== params.length) {
+    logger.warn('Converted parameter count does not match supplied values', {
+      sql,
+      expected: placeholderIndex,
+      provided: params.length,
+    })
+  }
+
+  return converted
+}
+
 let pgPool: Pool | null = null
 
 // Initialize PostgreSQL connection pool
@@ -97,7 +150,14 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   }
 
   try {
-    const result = await pgPool.query<T>(text, params ? [...params] : undefined)
+    let preparedText = text
+    const values = params ? [...params] : undefined
+
+    if (values && values.length > 0 && text.includes('?')) {
+      preparedText = convertQuestionMarksToPgPlaceholders(text, params)
+    }
+
+    const result = await pgPool.query<T>(preparedText, values)
     return {
       rows: result.rows,
       rowCount: result.rowCount,

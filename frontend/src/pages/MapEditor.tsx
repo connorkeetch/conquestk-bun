@@ -843,7 +843,7 @@ export default function MapEditor() {
         name: mapName,
         description: mapDescription,
         isPublic,
-        tags: ['custom'],
+        tags: [],
       }
 
       const savedMap = await mapService.createMap(mapData, imageFile || undefined)

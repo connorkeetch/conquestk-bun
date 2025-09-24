@@ -168,6 +168,36 @@ const hasTerritoryModifiers = (
   value: Record<string, TerritoryModifierMetadata> | undefined,
 ): boolean => !!value && Object.keys(value).length > 0
 
+const clamp01 = (value: number): number => {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
+const pickFirstFiniteNumber = (candidates: unknown[]): number | null => {
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumberOrNull(candidate)
+    if (numeric !== null) {
+      return numeric
+    }
+  }
+  return null
+}
+
 export class MapWorkflowService {
   /**
    * Save a map draft for later editing
@@ -853,6 +883,92 @@ export class MapWorkflowService {
     return Object.keys(result).length > 0 ? result : undefined
   }
 
+  private normalizeMetadataTerritories(
+    territories: unknown[],
+    widthInput: number | undefined,
+    heightInput: number | undefined,
+  ): MetadataTerritoryInput[] {
+    const width = Number.isFinite(widthInput) && widthInput && widthInput > 0 ? widthInput : 1
+    const height = Number.isFinite(heightInput) && heightInput && heightInput > 0 ? heightInput : 1
+
+    return territories
+      .map((entry) => {
+        if (!isRecord(entry)) {
+          return null
+        }
+
+        const normalizedXCandidate = pickFirstFiniteNumber([
+          entry.normalizedX,
+          entry.normalized_x,
+          (entry.armyPositionNormalized as { x?: unknown } | undefined)?.x,
+          (entry.army_position_normalized as { x?: unknown } | undefined)?.x,
+        ])
+        const normalizedYCandidate = pickFirstFiniteNumber([
+          entry.normalizedY,
+          entry.normalized_y,
+          (entry.armyPositionNormalized as { y?: unknown } | undefined)?.y,
+          (entry.army_position_normalized as { y?: unknown } | undefined)?.y,
+        ])
+
+        const pixelXCandidate = pickFirstFiniteNumber([
+          entry.x,
+          entry.center_x,
+          (entry.armyPosition as { x?: unknown } | undefined)?.x,
+          (entry.army_position as { x?: unknown } | undefined)?.x,
+        ])
+        const pixelYCandidate = pickFirstFiniteNumber([
+          entry.y,
+          entry.center_y,
+          (entry.armyPosition as { y?: unknown } | undefined)?.y,
+          (entry.army_position as { y?: unknown } | undefined)?.y,
+        ])
+
+        let normalizedX = normalizedXCandidate !== null ? clamp01(normalizedXCandidate) : null
+        let normalizedY = normalizedYCandidate !== null ? clamp01(normalizedYCandidate) : null
+
+        if (normalizedX === null && pixelXCandidate !== null) {
+          normalizedX = clamp01(pixelXCandidate / width)
+        }
+        if (normalizedY === null && pixelYCandidate !== null) {
+          normalizedY = clamp01(pixelYCandidate / height)
+        }
+
+        if (normalizedX === null) normalizedX = 0
+        if (normalizedY === null) normalizedY = 0
+
+        const pixelX = clamp01(normalizedX) * width
+        const pixelY = clamp01(normalizedY) * height
+
+        const base: MetadataTerritoryInput = {
+          id: asString(entry.id) ?? undefined,
+          name: asString(entry.name) ?? undefined,
+          boundaryCoords: Array.isArray(entry.boundaryCoords)
+            ? (entry.boundaryCoords as MetadataTerritoryInput['boundaryCoords'])
+            : undefined,
+          continentId: asString(entry.continentId) ?? undefined,
+          x: pixelX,
+          y: pixelY,
+          normalizedX,
+          normalizedY,
+          isCapital: entry.isCapital === true,
+          armyPosition: {
+            x: pixelX,
+            y: pixelY,
+          },
+          armyPositionNormalized: {
+            x: normalizedX,
+            y: normalizedY,
+          },
+          connections: Array.isArray(entry.connections)
+            ? (entry.connections as string[])
+            : undefined,
+        }
+
+        return base
+      })
+      .filter((territory): territory is MetadataTerritoryInput => territory !== null)
+  }
+
   private async buildMapPayloadFromDraft(
     draft: MapDraft,
   ): Promise<CreateMapRequest & { metadata?: MapMetadataPayload }> {
@@ -952,13 +1068,22 @@ export class MapWorkflowService {
         ? metadataModifiers
         : dataModifiers
 
+    const canvasWidth = asNumber(data.width) ?? asNumber(data.mapWidth) ?? imageWidth ?? 1920
+    const canvasHeight = asNumber(data.height) ?? asNumber(data.mapHeight) ?? imageHeight ?? 1080
+
+    const normalizedTerritories = this.normalizeMetadataTerritories(
+      Array.isArray(territories) ? (territories as unknown[]) : [],
+      canvasWidth,
+      canvasHeight,
+    )
+
     const metadata: MapMetadataPayload = {
-      territories: territories as MetadataTerritoryInput[],
+      territories: normalizedTerritories,
       continents: continents as MetadataContinentInput[],
       adjacencies: adjacencies as MetadataAdjacencyInput[],
       capitalAssignments,
-      width: asNumber(data.width) ?? asNumber(data.mapWidth) ?? imageWidth ?? 1920,
-      height: asNumber(data.height) ?? asNumber(data.mapHeight) ?? imageHeight ?? 1080,
+      width: canvasWidth,
+      height: canvasHeight,
     }
 
     if (hasTerritoryModifiers(territoryModifiers)) {
@@ -974,7 +1099,7 @@ export class MapWorkflowService {
           ? draft.tags
           : inferredTags.length > 0
             ? inferredTags
-            : ['custom', 'user-created'],
+            : [],
       imageUrl: imageUrl ?? undefined,
       imageWidth,
       imageHeight,

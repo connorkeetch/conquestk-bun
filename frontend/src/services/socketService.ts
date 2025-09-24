@@ -371,7 +371,7 @@ class SocketService {
           title: "It's your turn!",
           message: `It's your turn in the game - ${payload.phase} phase`,
           read: false,
-          actionUrl: roomId ? `/game/${roomId}` : '/play',
+          actionUrl: roomId ? `/game/${roomId}` : '/lobby',
           actionLabel: 'Go to game',
           metadata: {
             gameId: roomId,

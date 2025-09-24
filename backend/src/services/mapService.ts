@@ -260,12 +260,120 @@ export class MapService {
     if (!metadata) return
 
     try {
-      const territories: MetadataTerritoryInput[] = Array.isArray(metadata.territories)
-        ? metadata.territories
+      const parseNumber = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return value
+        }
+        if (typeof value === 'string') {
+          const parsed = Number(value)
+          if (Number.isFinite(parsed)) {
+            return parsed
+          }
+        }
+        return null
+      }
+
+      const clamp01 = (value: number): number => {
+        if (!Number.isFinite(value)) return 0
+        if (value < 0) return 0
+        if (value > 1) return 1
+        return value
+      }
+
+      const rawTerritories: MetadataTerritoryInput[] = Array.isArray(metadata.territories)
+        ? (metadata.territories as MetadataTerritoryInput[])
         : []
       const continents: MetadataContinentInput[] = Array.isArray(metadata.continents)
         ? metadata.continents
         : []
+
+      const width = typeof metadata.width === 'number' && metadata.width > 0 ? metadata.width : 1
+      const height =
+        typeof metadata.height === 'number' && metadata.height > 0 ? metadata.height : 1
+
+      const territories = rawTerritories.map((territory) => {
+        const legacyRecord = territory as unknown as {
+          normalized_x?: unknown
+          normalized_y?: unknown
+          center_x?: unknown
+          center_y?: unknown
+          army_position_normalized?: { x?: unknown; y?: unknown }
+          army_position?: { x?: unknown; y?: unknown }
+        }
+
+        const normalizedXCandidate =
+          typeof territory.normalizedX === 'number'
+            ? territory.normalizedX
+            : typeof territory.armyPositionNormalized?.x === 'number'
+              ? territory.armyPositionNormalized.x
+              : parseNumber(legacyRecord.normalized_x ?? legacyRecord.army_position_normalized?.x)
+
+        const normalizedYCandidate =
+          typeof territory.normalizedY === 'number'
+            ? territory.normalizedY
+            : typeof territory.armyPositionNormalized?.y === 'number'
+              ? territory.armyPositionNormalized.y
+              : parseNumber(legacyRecord.normalized_y ?? legacyRecord.army_position_normalized?.y)
+
+        const pixelXCandidate =
+          typeof territory.x === 'number'
+            ? territory.x
+            : typeof territory.armyPosition?.x === 'number'
+              ? territory.armyPosition.x
+              : parseNumber(legacyRecord.center_x ?? legacyRecord.army_position?.x)
+
+        const pixelYCandidate =
+          typeof territory.y === 'number'
+            ? territory.y
+            : typeof territory.armyPosition?.y === 'number'
+              ? territory.armyPosition.y
+              : parseNumber(legacyRecord.center_y ?? legacyRecord.army_position?.y)
+
+        const normalizedX =
+          normalizedXCandidate !== undefined && normalizedXCandidate !== null
+            ? clamp01(normalizedXCandidate)
+            : pixelXCandidate !== null && width > 0
+              ? clamp01(pixelXCandidate / width)
+              : 0
+
+        const normalizedY =
+          normalizedYCandidate !== undefined && normalizedYCandidate !== null
+            ? clamp01(normalizedYCandidate)
+            : pixelYCandidate !== null && height > 0
+              ? clamp01(pixelYCandidate / height)
+              : 0
+
+        const pixelX = clamp01(normalizedX) * width
+        const pixelY = clamp01(normalizedY) * height
+
+        const boundaryCoords = Array.isArray(territory.boundaryCoords)
+          ? territory.boundaryCoords.map((coord) => {
+              if (!coord) return coord
+              if (typeof coord.x === 'number' && typeof coord.y === 'number') {
+                const isNormalized = coord.x >= 0 && coord.x <= 1 && coord.y >= 0 && coord.y <= 1
+                if (isNormalized) {
+                  return {
+                    x: clamp01(coord.x) * width,
+                    y: clamp01(coord.y) * height,
+                  }
+                }
+                return coord
+              }
+              return coord
+            })
+          : undefined
+
+        return {
+          ...territory,
+          x: pixelX,
+          y: pixelY,
+          normalizedX,
+          normalizedY,
+          armyPosition: { x: pixelX, y: pixelY },
+          armyPositionNormalized: { x: normalizedX, y: normalizedY },
+          boundaryCoords,
+        }
+      })
 
       await client.query('DELETE FROM territory_adjacencies WHERE map_id = $1', [mapId])
       await client.query('DELETE FROM map_territories WHERE map_id = $1', [mapId])
@@ -320,9 +428,15 @@ export class MapService {
             JSON.stringify({
               ...storedPolygon,
               originalId: territory.id || territoryName,
+              normalizedX: territory.normalizedX,
+              normalizedY: territory.normalizedY,
               armyPosition: territory.armyPosition || {
                 x: territory.x ?? 0,
                 y: territory.y ?? 0,
+              },
+              armyPositionNormalized: territory.armyPositionNormalized || {
+                x: territory.normalizedX ?? 0,
+                y: territory.normalizedY ?? 0,
               },
             }),
             territory.continentId || null,
@@ -592,7 +706,7 @@ export class MapService {
       const territoriesResult = await query(
         `
         SELECT id, adjacencies FROM map_territories 
-        WHERE map_id = ?
+        WHERE map_id = $1
       `,
         [mapId],
       )
@@ -957,10 +1071,10 @@ export class MapService {
         mc.id,
         mc.name,
         mc.bonus_armies,
-        GROUP_CONCAT(mt.territory_id) as territories
+        STRING_AGG(mt.id::text, ',' ORDER BY mt.name) AS territories
       FROM map_continents mc
       LEFT JOIN map_territories mt ON mc.name = mt.continent
-      WHERE mc.map_id = ?
+      WHERE mc.map_id = $1
       GROUP BY mc.id, mc.name, mc.bonus_armies
       ORDER BY mc.name
     `,
@@ -1011,7 +1125,7 @@ export class MapService {
       SELECT ta.* FROM territory_adjacencies ta
       JOIN map_territories mt1 ON ta.from_territory_id = mt1.id
       JOIN map_territories mt2 ON ta.to_territory_id = mt2.id
-      WHERE mt1.map_id = ? AND mt2.map_id = ?
+      WHERE mt1.map_id = $1 AND mt2.map_id = $2
     `,
       [mapId, mapId],
     )

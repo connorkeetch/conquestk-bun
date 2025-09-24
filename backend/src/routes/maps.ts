@@ -611,11 +611,11 @@ router.post('/json', authenticateToken, async (req: Request, res: Response) => {
         tags = Object.values(req.body.tags)
       } else {
         // Fallback to default tags
-        tags = ['custom', 'user-created']
+        tags = []
       }
     } else {
-      // Default tags if nothing else works
-      tags = ['custom', 'user-created']
+      // Default to no tags if nothing else works
+      tags = []
     }
 
     const mapData: CreateMapRequest & { metadata?: MapMetadataPayload } = {

@@ -26,7 +26,7 @@ router.get('/users/:userId/rating', async (req, res) => {
         current_tier,
         last_ranked_game_at
       FROM users
-      WHERE id = ?
+      WHERE id = $1
     `
 
     const result = await query(userQuery, [userId])
@@ -138,7 +138,7 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
         COUNT(*) + 1 as rank
       FROM users
       WHERE skill_rating > (
-        SELECT skill_rating FROM users WHERE id = ?
+        SELECT skill_rating FROM users WHERE id = $1
       )
       AND total_ranked_games > 0
     `
@@ -174,7 +174,7 @@ router.get('/users/:userId/rank', authenticateToken, async (req, res) => {
 router.post('/leaderboards/refresh', authenticateToken, async (req, res) => {
   try {
     // Check if user is admin
-    const userQuery = `SELECT is_admin FROM users WHERE id = ?`
+    const userQuery = `SELECT is_admin FROM users WHERE id = $1`
     const userResult = await query(userQuery, [req.userId])
 
     if (!userResult.rows[0]?.is_admin) {

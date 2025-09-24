@@ -36,7 +36,6 @@ const Maps = lazy(() => import('./pages/Maps'))
 
 import NotFoundPage from './pages/NotFoundPage'
 
-const Play = lazy(() => import('./pages/Play'))
 const PlayModePage = lazy(() => import('./pages/PlayModePage'))
 const ProfilePage = lazy(() => import('./components/ProfilePage'))
 
@@ -77,7 +76,7 @@ const AiComingSoonRoute = () => {
   const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
 
   if (!aiEnabled) {
-    return <Navigate to="/play" replace />
+    return <Navigate to="/lobby" replace />
   }
 
   return (
@@ -743,22 +742,7 @@ function App() {
               </AuthGuard>
             }
           />
-          <Route
-            path="/play"
-            element={
-              <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <Play />
-                </Suspense>
-              </AuthGuard>
-            }
-          />
+          <Route path="/play" element={<Navigate to="/lobby" replace />} />
           <Route
             path="/maps"
             element={

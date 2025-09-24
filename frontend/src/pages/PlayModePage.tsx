@@ -300,8 +300,8 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
       </div>
 
       <div className="pt-6 border-t border-white/10 text-center text-sm text-muted">
-        <Link to="/play" className="text-primary-soft hover:text-primary">
-          ← Back to Play Hub
+        <Link to="/lobby" className="text-primary-soft hover:text-primary">
+          ← Back to Lobby
         </Link>
       </div>
     </div>

@@ -143,7 +143,10 @@ export class MapApprovalService {
         map_id, version_number, version_major, version_minor, version_patch,
         status_id, name, description, image_url, image_width, image_height,
         tags, changelog, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12, $13, $14
+      )
     `,
       [
         mapId,
@@ -172,7 +175,7 @@ export class MapApprovalService {
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
-      WHERE v.map_id = ? AND v.is_current = 1
+      WHERE v.map_id = $1 AND v.is_current = 1
     `,
       [mapId],
     )
@@ -186,7 +189,7 @@ export class MapApprovalService {
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
-      WHERE v.id = ?
+      WHERE v.id = $1
     `,
       [versionId],
     )
@@ -204,7 +207,7 @@ export class MapApprovalService {
       SELECT v.*, s.name as status_name, s.color as status_color
       FROM map_versions v
       JOIN map_status s ON v.status_id = s.id
-      WHERE v.map_id = ?
+      WHERE v.map_id = $1
       ORDER BY v.version_major DESC, v.version_minor DESC, v.version_patch DESC
     `,
       [mapId],
@@ -219,7 +222,7 @@ export class MapApprovalService {
     // Update version to be current (triggers will handle the rest)
     await query(
       `
-      UPDATE map_versions SET is_current = 1 WHERE id = ?
+      UPDATE map_versions SET is_current = 1 WHERE id = $1
     `,
       [versionId],
     )
@@ -243,7 +246,7 @@ export class MapApprovalService {
     const submittedStatusId = await MapApprovalService.getStatusId('submitted')
     await query(
       `
-      UPDATE map_versions SET status_id = ? WHERE id = ?
+      UPDATE map_versions SET status_id = $1 WHERE id = $2
     `,
       [submittedStatusId, versionId],
     )
@@ -253,7 +256,7 @@ export class MapApprovalService {
       `
       INSERT INTO map_approval_requests (
         version_id, requester_id, submission_notes, priority_level
-      ) VALUES (?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4)
     `,
       [versionId, userId, submissionNotes, 'normal'],
     )
@@ -264,7 +267,7 @@ export class MapApprovalService {
   static async getApprovalRequestById(requestId: string): Promise<MapApprovalRequest> {
     const result = await query(
       `
-      SELECT * FROM map_approval_requests WHERE id = ?
+      SELECT * FROM map_approval_requests WHERE id = $1
     `,
       [requestId],
     )
@@ -302,8 +305,8 @@ export class MapApprovalService {
     await query(
       `
       UPDATE map_approval_requests 
-      SET assigned_moderator_id = ?, review_started_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET assigned_moderator_id = $1, review_started_at = CURRENT_TIMESTAMP
+      WHERE id = $2
     `,
       [moderatorId, requestId],
     )
@@ -312,7 +315,7 @@ export class MapApprovalService {
 
     await query(
       `
-      UPDATE map_versions SET status_id = ? WHERE id = ?
+      UPDATE map_versions SET status_id = $1 WHERE id = $2
     `,
       [underReviewStatusId, requestBefore.versionId],
     )
@@ -384,11 +387,20 @@ export class MapApprovalService {
     for (const result of results) {
       await query(
         `
-        INSERT OR REPLACE INTO map_review_results 
-        (approval_request_id, criteria_id, status, reviewer_notes)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO map_review_results (
+          approval_request_id,
+          criteria_id,
+          reviewer_id,
+          status,
+          reviewer_notes
+        ) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (approval_request_id, criteria_id) DO UPDATE SET
+          reviewer_id = EXCLUDED.reviewer_id,
+          status = EXCLUDED.status,
+          reviewer_notes = EXCLUDED.reviewer_notes,
+          updated_at = CURRENT_TIMESTAMP
       `,
-        [requestId, result.criteriaId, result.status, result.reviewerNotes],
+        [requestId, result.criteriaId, moderatorId, result.status, result.reviewerNotes ?? null],
       )
     }
 
@@ -396,8 +408,8 @@ export class MapApprovalService {
     await query(
       `
       UPDATE map_approval_requests 
-      SET decision = ?, moderator_feedback = ?, review_completed_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET decision = $1, moderator_feedback = $2, review_completed_at = CURRENT_TIMESTAMP
+      WHERE id = $3
     `,
       [decision, moderatorFeedback, requestId],
     )
@@ -422,7 +434,7 @@ export class MapApprovalService {
 
     await query(
       `
-      UPDATE map_versions SET status_id = ? WHERE id = ?
+      UPDATE map_versions SET status_id = $1 WHERE id = $2
     `,
       [newStatusId, request.versionId],
     )
@@ -552,7 +564,7 @@ export class MapApprovalService {
              rc.category as criteria_category, rc.is_required
       FROM map_review_results rr
       JOIN map_review_criteria rc ON rr.criteria_id = rc.id
-      WHERE rr.approval_request_id = ?
+      WHERE rr.approval_request_id = $1
       ORDER BY rc.category, rc.check_order
     `,
       [requestId],
@@ -580,8 +592,8 @@ export class MapApprovalService {
     await query(
       `
       UPDATE map_versions 
-      SET status_id = ?, published_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
+      SET status_id = $1, published_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
     `,
       [publishedStatusId, versionId],
     )
@@ -632,7 +644,7 @@ export class MapApprovalService {
 
     await query(
       `
-      UPDATE maps SET status_id = ? WHERE id = ?
+      UPDATE maps SET status_id = $1 WHERE id = $2
     `,
       [archivedStatusId, mapId],
     )
@@ -661,7 +673,7 @@ export class MapApprovalService {
   static async getStatusId(statusName: string): Promise<string> {
     const result = await query<{ id: string }>(
       `
-      SELECT id FROM map_status WHERE name = ?
+      SELECT id FROM map_status WHERE name = $1
     `,
       [statusName],
     )
@@ -685,7 +697,7 @@ export class MapApprovalService {
       `
       INSERT INTO map_moderation_actions 
       (map_id, version_id, moderator_id, action_type, reason, details)
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6)
     `,
       [mapId, versionId, moderatorId, actionType, reason, details ? JSON.stringify(details) : null],
     )
@@ -697,7 +709,7 @@ export class MapApprovalService {
       SELECT ma.*, u.username as moderator_username
       FROM map_moderation_actions ma
       JOIN users u ON ma.moderator_id = u.id
-      WHERE ma.map_id = ?
+      WHERE ma.map_id = $1
       ORDER BY ma.created_at DESC
     `,
       [mapId],
@@ -720,7 +732,7 @@ export class MapApprovalService {
         is_featured,
         updated_at
       FROM maps
-      WHERE id = ?
+      WHERE id = $1
     `,
       [mapId],
     )

@@ -192,20 +192,6 @@ export default function AdminDashboard() {
     return []
   }, [featureFlags, systemStatus])
 
-  const featureFlagSummary = useMemo(
-    () =>
-      sortedFeatureFlags.reduce(
-        (acc, flag) => {
-          if (flag.isEnabled) acc.active += 1
-          if (flag.accessLevel === 'beta') acc.beta += 1
-          if (flag.accessLevel === 'internal') acc.internal += 1
-          return acc
-        },
-        { active: 0, beta: 0, internal: 0 },
-      ),
-    [sortedFeatureFlags],
-  )
-
   const adminToolLinks = useMemo(
     () => [
       {
@@ -450,47 +436,83 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Operational Focus */}
+            {/* Recent Admin Activity */}
             <div className="glass-box-lg">
-              <h2 className="text-xl font-bold mb-4">📌 Operational Focus</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
-                  <div className="text-xs text-muted uppercase tracking-wide">
-                    Pending content approvals
-                  </div>
-                  <div className="text-2xl font-semibold text-yellow-400 mt-2">
-                    {formatCount(databaseStats?.pendingApprovals)}
-                  </div>
-                  <p className="text-xs text-muted mt-2">Items waiting for moderator decisions</p>
-                </div>
-                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
-                  <div className="text-xs text-muted uppercase tracking-wide">
-                    Maps awaiting review
-                  </div>
-                  <div className="text-2xl font-semibold text-orange-400 mt-2">
-                    {formatCount(databaseStats?.mapsPendingReview)}
-                  </div>
-                  <p className="text-xs text-muted mt-2">Community maps queued for approval</p>
-                </div>
-                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
-                  <div className="text-xs text-muted uppercase tracking-wide">
-                    Enabled feature flags
-                  </div>
-                  <div className="text-2xl font-semibold text-green-400 mt-2">
-                    {featureFlagSummary.active}
-                  </div>
-                  <p className="text-xs text-muted mt-2">
-                    Beta: {featureFlagSummary.beta} · Internal: {featureFlagSummary.internal}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-surface-1/60 border border-border/40 p-4">
-                  <div className="text-xs text-muted uppercase tracking-wide">Last sync</div>
-                  <div className="text-2xl font-semibold text-primary-soft mt-2">
-                    {systemStatus ? new Date(systemStatus.timestamp).toLocaleString() : '—'}
-                  </div>
-                  <p className="text-xs text-muted mt-2">Latest data pulled from live services</p>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">📋 Recent Admin Activity</h2>
+                <button
+                  type="button"
+                  onClick={() => void fetchActivityLogs()}
+                  className="px-3 py-1 bg-surface-2 border border-border text-sm rounded hover:bg-surface-2/80 transition-colors disabled:opacity-60"
+                  disabled={loadingActivity}
+                >
+                  {loadingActivity ? 'Loading...' : 'Refresh'}
+                </button>
               </div>
+              {loadingActivity ? (
+                <div className="py-8 text-center text-muted">Loading recent changes...</div>
+              ) : activityError ? (
+                <div className="py-8 text-center space-y-3">
+                  <div className="text-sm text-red-400">Failed to load activity logs</div>
+                  <div className="text-xs text-muted">{activityError}</div>
+                  <button
+                    type="button"
+                    onClick={() => void fetchActivityLogs()}
+                    className="px-3 py-2 bg-primary text-white text-sm rounded hover:brightness-110"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : activityLogs.length === 0 ? (
+                <div className="py-8 text-center text-muted">No admin actions recorded yet.</div>
+              ) : (
+                <div className="space-y-4">
+                  {activityLogs.map((log) => {
+                    const detailEntries = Object.entries(log.actionDetails ?? {})
+                      .filter(
+                        ([_, value]) => typeof value === 'string' || typeof value === 'number',
+                      )
+                      .slice(0, 2)
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-white">
+                              {adminService.formatActionType(log.actionType)}
+                            </div>
+                            <div className="text-xs text-muted mt-1">
+                              {new Date(log.timestamp).toLocaleString()} · {log.adminUsername}
+                            </div>
+                          </div>
+                          {log.targetType && (
+                            <span className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40">
+                              {log.targetType}
+                            </span>
+                          )}
+                        </div>
+                        {(log.targetId || detailEntries.length > 0) && (
+                          <div className="text-xs text-muted mt-3 space-y-1">
+                            {log.targetId && (
+                              <div>
+                                Target ID: <span className="text-white">{log.targetId}</span>
+                              </div>
+                            )}
+                            {detailEntries.map(([key, value]) => (
+                              <div key={key}>
+                                {key}: <span className="text-white">{String(value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -615,82 +637,6 @@ export default function AdminDashboard() {
             ) : (
               <div className="text-sm text-muted">
                 You don't have any delegated admin roles yet. Reach out if this looks wrong.
-              </div>
-            )}
-          </div>
-
-          <div className="glass-box-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">📋 Recent Admin Activity</h2>
-              <button
-                type="button"
-                onClick={() => void fetchActivityLogs()}
-                className="px-3 py-1 bg-surface-2 border border-border text-sm rounded hover:bg-surface-2/80 transition-colors disabled:opacity-60"
-                disabled={loadingActivity}
-              >
-                {loadingActivity ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
-            {loadingActivity ? (
-              <div className="py-8 text-center text-muted">Loading recent changes...</div>
-            ) : activityError ? (
-              <div className="py-8 text-center space-y-3">
-                <div className="text-sm text-red-400">Failed to load activity logs</div>
-                <div className="text-xs text-muted">{activityError}</div>
-                <button
-                  type="button"
-                  onClick={() => void fetchActivityLogs()}
-                  className="px-3 py-2 bg-primary text-white text-sm rounded hover:brightness-110"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : activityLogs.length === 0 ? (
-              <div className="py-8 text-center text-muted">No admin actions recorded yet.</div>
-            ) : (
-              <div className="space-y-4">
-                {activityLogs.map((log) => {
-                  const detailEntries = Object.entries(log.actionDetails ?? {})
-                    .filter(([_, value]) => typeof value === 'string' || typeof value === 'number')
-                    .slice(0, 2)
-
-                  return (
-                    <div
-                      key={log.id}
-                      className="rounded-lg bg-surface-1/60 border border-border/40 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium text-white">
-                            {adminService.formatActionType(log.actionType)}
-                          </div>
-                          <div className="text-xs text-muted mt-1">
-                            {new Date(log.timestamp).toLocaleString()} · {log.adminUsername}
-                          </div>
-                        </div>
-                        {log.targetType && (
-                          <span className="px-2 py-1 text-xs uppercase tracking-wide rounded bg-surface-2/80 border border-border/40">
-                            {log.targetType}
-                          </span>
-                        )}
-                      </div>
-                      {(log.targetId || detailEntries.length > 0) && (
-                        <div className="text-xs text-muted mt-3 space-y-1">
-                          {log.targetId && (
-                            <div>
-                              Target ID: <span className="text-white">{log.targetId}</span>
-                            </div>
-                          )}
-                          {detailEntries.map(([key, value]) => (
-                            <div key={key}>
-                              {key}: <span className="text-white">{String(value)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
               </div>
             )}
           </div>
