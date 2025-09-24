@@ -41,6 +41,10 @@ export interface GameRoom {
   readyCheckStartedAt?: Date | null
   winner?: string | null
   playerCount?: number
+  turnTimerSeconds?: number
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  cardTradeMode?: string | null
+  bonusType?: string | null
   players?: Player[]
 }
 

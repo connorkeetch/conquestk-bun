@@ -37,6 +37,10 @@ export interface GameRoom {
   allowTeamPlay?: boolean
   teamMode?: 'none' | 'teams' | 'auto_balance' | null
   numberOfTeams?: number | null
+  turnTimerSeconds?: number
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  cardTradeMode?: string | null
+  bonusType?: string | null
   players?: Player[]
 }
 
