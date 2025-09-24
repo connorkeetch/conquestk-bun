@@ -10,7 +10,7 @@ This document outlines the coding standards and best practices for the Risk Game
 - **TypeScript**: Follow the official TypeScript style guide
 - **React**: Follow React best practices and hooks rules
 - **Node.js**: Follow Node.js best practices for async operations
-- **SQL**: Use PostgreSQL standards (NOT MySQL syntax)
+- **SQL**: Use PostgreSQL standards—always write native Postgres syntax with `$n` placeholders and Postgres functions (never MySQL, SQLite, or `?` parameters)
 - **CSS**: Use Tailwind CSS v4 exclusively (no inline styles)
 
 ### 2. Documentation and Comments

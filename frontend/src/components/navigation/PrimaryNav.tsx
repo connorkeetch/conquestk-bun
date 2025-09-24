@@ -9,6 +9,7 @@ interface NavItem {
   label: string
   icon: string
   dropdown?: DropdownItem[]
+  activePrefixes?: string[]
 }
 
 interface DropdownItem {
@@ -62,10 +63,11 @@ const PrimaryNav: React.FC = () => {
         icon: '🏠',
       },
       {
-        path: '/play',
+        path: '/lobby',
         label: 'Play',
         icon: '🎮',
         dropdown: playDropdown,
+        activePrefixes: ['/lobby', '/play'],
       },
       {
         path: '/maps',
@@ -154,18 +156,20 @@ const PrimaryNav: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
+  const isActive = (item: NavItem) => {
+    const prefixes = item.activePrefixes ?? [item.path]
+
+    if (prefixes.includes('/dashboard')) {
       return location.pathname === '/' || location.pathname === '/dashboard'
     }
-    return location.pathname.startsWith(path)
+    return prefixes.some((prefix) => location.pathname.startsWith(prefix))
   }
 
-  const getNavItemClass = (path: string) => {
+  const getNavItemClass = (item: NavItem) => {
     const baseClass =
       'relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer'
 
-    if (isActive(path)) {
+    if (isActive(item)) {
       return `${baseClass} bg-primary text-white shadow-lg`
     }
     return `${baseClass} text-muted hover:text-white hover:bg-surface-2`
@@ -187,7 +191,7 @@ const PrimaryNav: React.FC = () => {
           {item.dropdown ? (
             <button
               type="button"
-              className={getNavItemClass(item.path)}
+              className={getNavItemClass(item)}
               onClick={(e) => handleNavItemClick(item, e)}
               aria-haspopup="true"
               aria-expanded={activeDropdown === item.path}
@@ -215,7 +219,7 @@ const PrimaryNav: React.FC = () => {
           ) : (
             <Link
               to={item.path}
-              className={getNavItemClass(item.path)}
+              className={getNavItemClass(item)}
               onClick={() => setActiveDropdown(null)}
             >
               <span>{item.icon}</span>

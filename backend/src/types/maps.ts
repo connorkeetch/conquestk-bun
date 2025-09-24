@@ -274,8 +274,15 @@ export interface MetadataTerritoryInput {
   continentId?: string
   x?: number
   y?: number
+  /**
+   * Normalized token position (0-1) relative to the authoring canvas width.
+   * Retained alongside the pixel values for backward compatibility.
+   */
+  normalizedX?: number
+  normalizedY?: number
   isCapital?: boolean
   armyPosition?: Coordinate
+  armyPositionNormalized?: Coordinate
   connections?: string[]
 }
 

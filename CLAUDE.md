@@ -78,6 +78,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - Routes are mounted under `/api`; add to existing routers before creating new ones.
 - Use `backend/src/middleware/auth.ts` for user context instead of decoding JWTs manually.
 - Follow logging conventions in `backend/src/utils/logger.ts`.
+- The database is **PostgreSQL-only**—write SQL with native PostgreSQL syntax and `$n` placeholders; avoid MySQL/SQLite idioms such as `?` parameters or `INSERT OR REPLACE`.
 - Asset uploads go through `backend/src/utils/assetStorage.ts`, targeting Cloudflare R2 when the `ASSET_*` variables are configured and falling back to local `/uploads` storage in development.
 - Core gameplay lives in `backend/src/game/gameEngine.ts`; keep socket interactions in sync with `backend/src/socket/gameHandlers.ts`.
 - Migrations live in `backend/migrations`; create new files with the pattern `NNN_description.sql` and never edit existing migrations.
@@ -92,6 +93,7 @@ cd backend && npm run make-admin   # promote an account interactively
 
 ## Database & admin utilities
 - Always create a new numbered migration for schema changes and test with `cd backend && npm run migrate` before finishing.
+- Stick to PostgreSQL features in migrations and ad-hoc queries—Postgres is the only supported runtime, so don't introduce vendor-specific SQL.
 - Use `cd backend && npm run seed:users` to refresh demo users locally.
 - Promote or diagnose accounts with the scripts in `backend/src/scripts` (see `make-admin`, `diagnose-admin`, and `ensureDeployAccounts`).
 - The shared Railway connection string is `postgresql://postgres:QZCDzahSSRUZLYUERywzrSMJvUWmgbor@yamanote.proxy.rlwy.net:46553/railway`; treat it carefully even though the repo is private.

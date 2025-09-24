@@ -22,6 +22,8 @@ interface Territory {
   name: string
   x: number
   y: number
+  normalizedX?: number
+  normalizedY?: number
   continentId: string | null // Allow null for unassigned territories
   armies: number
   isCapital?: boolean
@@ -132,6 +134,11 @@ interface LegacyTerritoryRecord {
   center_x?: number
   center_y?: number
   continent?: string
+  metadata?: unknown
+  polygon_data?: unknown
+  army_position?: unknown
+  normalized_x?: number
+  normalized_y?: number
 }
 
 interface LegacyAdjacencyRecord {
@@ -202,6 +209,49 @@ const toBoolean = (value: unknown, fallback = false): boolean => {
   return fallback
 }
 
+const clamp01 = (value: number): number => {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
+}
+
+const withNormalizedPosition = (
+  territory: Territory,
+  mapWidth: number,
+  mapHeight: number,
+): Territory => {
+  const width = mapWidth > 0 ? mapWidth : 1
+  const height = mapHeight > 0 ? mapHeight : 1
+
+  const normalizedX =
+    territory.normalizedX !== undefined
+      ? clamp01(territory.normalizedX)
+      : clamp01(territory.x / width)
+
+  const normalizedY =
+    territory.normalizedY !== undefined
+      ? clamp01(territory.normalizedY)
+      : clamp01(territory.y / height)
+
+  return {
+    ...territory,
+    normalizedX,
+    normalizedY,
+    x: clamp01(normalizedX) * width,
+    y: clamp01(normalizedY) * height,
+  }
+}
+
 const normalizeTerritoryModifierEntry = (
   value: Record<string, unknown>,
 ): TerritoryModifierConfig => ({
@@ -259,15 +309,69 @@ const createDefaultModifier = (): TerritoryModifierConfig => ({
   notes: undefined,
 })
 
-const normalizeTerritoryRecord = (record: LegacyTerritoryRecord): Territory => ({
-  id: record.id || uuidv4(),
-  name: record.name ?? 'Unnamed Territory',
-  x: isNumber(record.center_x) ? record.center_x : 0,
-  y: isNumber(record.center_y) ? record.center_y : 0,
-  continentId: record.continent ?? null,
-  armies: 1,
-  connections: [] as string[],
-})
+const parseOptionalRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value) return null
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return typeof parsed === 'object' && parsed !== null
+        ? (parsed as Record<string, unknown>)
+        : null
+    } catch {
+      return null
+    }
+  }
+  if (typeof value === 'object' && value !== null) {
+    return value as Record<string, unknown>
+  }
+  return null
+}
+
+const normalizeTerritoryRecord = (record: LegacyTerritoryRecord): Territory => {
+  const metadata = parseOptionalRecord(record.metadata)
+  const polygonData = parseOptionalRecord(record.polygon_data)
+  const armyPosition = parseOptionalRecord(record.army_position)
+
+  const normalizedXCandidate =
+    toFiniteNumberOrNull(record.normalized_x) ??
+    toFiniteNumberOrNull((metadata?.armyPositionNormalized as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull((polygonData?.armyPositionNormalized as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull((armyPosition?.armyPositionNormalized as { x?: unknown } | undefined)?.x)
+
+  const normalizedYCandidate =
+    toFiniteNumberOrNull(record.normalized_y) ??
+    toFiniteNumberOrNull((metadata?.armyPositionNormalized as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull((polygonData?.armyPositionNormalized as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull((armyPosition?.armyPositionNormalized as { y?: unknown } | undefined)?.y)
+
+  const pixelX =
+    toFiniteNumberOrNull(record.center_x) ??
+    toFiniteNumberOrNull((metadata?.armyPosition as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull((polygonData?.armyPosition as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull((armyPosition?.armyPosition as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull(metadata?.x) ??
+    0
+
+  const pixelY =
+    toFiniteNumberOrNull(record.center_y) ??
+    toFiniteNumberOrNull((metadata?.armyPosition as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull((polygonData?.armyPosition as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull((armyPosition?.armyPosition as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull(metadata?.y) ??
+    0
+
+  return {
+    id: record.id || uuidv4(),
+    name: record.name ?? 'Unnamed Territory',
+    x: Number.isFinite(pixelX) ? pixelX : 0,
+    y: Number.isFinite(pixelY) ? pixelY : 0,
+    normalizedX: normalizedXCandidate !== null ? clamp01(normalizedXCandidate) : undefined,
+    normalizedY: normalizedYCandidate !== null ? clamp01(normalizedYCandidate) : undefined,
+    continentId: record.continent ?? null,
+    armies: 1,
+    connections: [] as string[],
+  }
+}
 
 const normalizeTerritory = (input: unknown): Territory | null => {
   if (typeof input !== 'object' || input === null) {
@@ -277,8 +381,27 @@ const normalizeTerritory = (input: unknown): Territory | null => {
   const territory = input as Record<string, unknown>
   const id = isString(territory.id) ? territory.id : uuidv4()
   const name = isString(territory.name) ? territory.name : 'Unnamed Territory'
-  const x = isNumber(territory.x) ? territory.x : 0
-  const y = isNumber(territory.y) ? territory.y : 0
+  const armyPosition = parseOptionalRecord(territory.armyPosition)
+  const armyPositionNormalized = parseOptionalRecord(territory.armyPositionNormalized)
+  const normalizedXCandidate =
+    toFiniteNumberOrNull(territory.normalizedX) ??
+    toFiniteNumberOrNull((armyPositionNormalized as { x?: unknown } | undefined)?.x) ??
+    toFiniteNumberOrNull(
+      (armyPositionNormalized as { normalizedX?: unknown } | undefined)?.normalizedX,
+    )
+  const normalizedYCandidate =
+    toFiniteNumberOrNull(territory.normalizedY) ??
+    toFiniteNumberOrNull((armyPositionNormalized as { y?: unknown } | undefined)?.y) ??
+    toFiniteNumberOrNull(
+      (armyPositionNormalized as { normalizedY?: unknown } | undefined)?.normalizedY,
+    )
+
+  const x = isNumber(territory.x)
+    ? territory.x
+    : (toFiniteNumberOrNull((armyPosition as { x?: unknown } | undefined)?.x) ?? 0)
+  const y = isNumber(territory.y)
+    ? territory.y
+    : (toFiniteNumberOrNull((armyPosition as { y?: unknown } | undefined)?.y) ?? 0)
   const continentId = isString(territory.continentId) ? territory.continentId : null
   const armies = isNumber(territory.armies) ? territory.armies : 1
   const isCapital = typeof territory.isCapital === 'boolean' ? territory.isCapital : false
@@ -289,6 +412,8 @@ const normalizeTerritory = (input: unknown): Territory | null => {
     name,
     x,
     y,
+    normalizedX: normalizedXCandidate !== null ? clamp01(normalizedXCandidate) : undefined,
+    normalizedY: normalizedYCandidate !== null ? clamp01(normalizedYCandidate) : undefined,
     continentId,
     armies,
     isCapital,
@@ -602,6 +727,9 @@ export default function MapEditorTokens() {
       ...prev,
       mapWidth: preset.width,
       mapHeight: preset.height,
+      territories: prev.territories.map((territory) =>
+        withNormalizedPosition(territory, preset.width, preset.height),
+      ),
     }))
   }
 
@@ -640,6 +768,9 @@ export default function MapEditorTokens() {
         ...prev,
         mapWidth: nextWidth,
         mapHeight: nextHeight,
+        territories: prev.territories.map((territory) =>
+          withNormalizedPosition(territory, nextWidth, nextHeight),
+        ),
       }
     })
   }
@@ -760,8 +891,15 @@ export default function MapEditorTokens() {
   // Auto-save to localStorage
   const saveToLocalStorage = useCallback(() => {
     try {
+      const territoriesForSave = state.territories.map((territory) =>
+        withNormalizedPosition(territory, state.mapWidth, state.mapHeight),
+      )
+
       const dataToSave = {
-        state,
+        state: {
+          ...state,
+          territories: territoriesForSave,
+        },
         capitalAssignments,
         capitalMetadata,
         savedAt: new Date().toISOString(),
@@ -779,14 +917,38 @@ export default function MapEditorTokens() {
       const saved = localStorage.getItem(AUTOSAVE_KEY)
       if (saved) {
         const data = JSON.parse(saved)
-        setState((prev) => ({
-          ...prev,
-          ...(typeof data.state === 'object' && data.state !== null ? data.state : {}),
-          territoryModifiers:
-            (data.state && (data.state as MapState).territoryModifiers) ||
-            prev.territoryModifiers ||
-            {},
-        }))
+        const savedState = (typeof data.state === 'object' && data.state !== null
+          ? (data.state as Partial<MapState>)
+          : null) ?? { territories: [] }
+
+        setState((prev) => {
+          const nextMapWidth =
+            typeof savedState.mapWidth === 'number' && savedState.mapWidth > 0
+              ? savedState.mapWidth
+              : prev.mapWidth
+          const nextMapHeight =
+            typeof savedState.mapHeight === 'number' && savedState.mapHeight > 0
+              ? savedState.mapHeight
+              : prev.mapHeight
+
+          const nextTerritories = Array.isArray(savedState.territories)
+            ? savedState.territories.map((territory) =>
+                withNormalizedPosition(territory as Territory, nextMapWidth, nextMapHeight),
+              )
+            : prev.territories
+
+          return {
+            ...prev,
+            ...savedState,
+            mapWidth: nextMapWidth,
+            mapHeight: nextMapHeight,
+            territories: nextTerritories,
+            territoryModifiers:
+              (savedState.territoryModifiers as MapState['territoryModifiers']) ??
+              prev.territoryModifiers ??
+              {},
+          }
+        })
         setCapitalAssignments(data.capitalAssignments || {})
         setCapitalMetadata(data.capitalMetadata || {})
         setLastSaved(data.savedAt ? new Date(data.savedAt) : null)
@@ -918,6 +1080,10 @@ export default function MapEditorTokens() {
             ? map.imageHeight
             : prev.mapHeight
 
+        const normalizedTerritories = territories.map((territory) =>
+          withNormalizedPosition(territory, mapWidth, mapHeight),
+        )
+
         return {
           ...prev,
           name: isString(map.name) ? map.name : prev.name,
@@ -925,7 +1091,7 @@ export default function MapEditorTokens() {
           minPlayers,
           maxPlayers,
           imageUrl,
-          territories,
+          territories: normalizedTerritories,
           continents,
           mapWidth,
           mapHeight,
@@ -1015,27 +1181,37 @@ export default function MapEditorTokens() {
         imageUrl = `data:${imagePayload.mimeType || 'image/png'};base64,${imagePayload.data}`
       }
 
-      setState((prev) => ({
-        ...prev,
-        name: draft.name ?? prev.name,
-        description: draft.description || '',
-        minPlayers:
-          typeof draftData.minPlayers === 'number' ? draftData.minPlayers : prev.minPlayers,
-        maxPlayers:
-          typeof draftData.maxPlayers === 'number' ? draftData.maxPlayers : prev.maxPlayers,
-        mapWidth:
-          typeof draftData.width === 'number' ? draftData.width : draft.imageWidth || prev.mapWidth,
-        mapHeight:
+      setState((prev) => {
+        const mapWidth =
+          typeof draftData.width === 'number' ? draftData.width : draft.imageWidth || prev.mapWidth
+
+        const mapHeight =
           typeof draftData.height === 'number'
             ? draftData.height
-            : draft.imageHeight || prev.mapHeight,
-        imageWidth: draft.imageWidth || prev.imageWidth,
-        imageHeight: draft.imageHeight || prev.imageHeight,
-        imageUrl: imageUrl || prev.imageUrl,
-        territories,
-        continents,
-        territoryModifiers,
-      }))
+            : draft.imageHeight || prev.mapHeight
+
+        const normalizedTerritories = territories.map((territory) =>
+          withNormalizedPosition(territory, mapWidth, mapHeight),
+        )
+
+        return {
+          ...prev,
+          name: draft.name ?? prev.name,
+          description: draft.description || '',
+          minPlayers:
+            typeof draftData.minPlayers === 'number' ? draftData.minPlayers : prev.minPlayers,
+          maxPlayers:
+            typeof draftData.maxPlayers === 'number' ? draftData.maxPlayers : prev.maxPlayers,
+          mapWidth,
+          mapHeight,
+          imageWidth: draft.imageWidth || prev.imageWidth,
+          imageHeight: draft.imageHeight || prev.imageHeight,
+          imageUrl: imageUrl || prev.imageUrl,
+          territories: normalizedTerritories,
+          continents,
+          territoryModifiers,
+        }
+      })
 
       setCapitalAssignments(draft.capitalAssignments || {})
       setDraftId(draft.id)
@@ -1210,14 +1386,21 @@ export default function MapEditorTokens() {
         }
 
         // Update map dimensions
-        setState((prev) => ({
-          ...prev,
-          imageUrl: dataUrl,
-          imageWidth: img.width,
-          imageHeight: img.height,
-          mapWidth: Math.min(finalWidth, MAX_WIDTH),
-          mapHeight: Math.min(finalHeight, MAX_HEIGHT),
-        }))
+        setState((prev) => {
+          const mapWidth = Math.min(finalWidth, MAX_WIDTH)
+          const mapHeight = Math.min(finalHeight, MAX_HEIGHT)
+          return {
+            ...prev,
+            imageUrl: dataUrl,
+            imageWidth: img.width,
+            imageHeight: img.height,
+            mapWidth,
+            mapHeight,
+            territories: prev.territories.map((territory) =>
+              withNormalizedPosition(territory, mapWidth, mapHeight),
+            ),
+          }
+        })
 
         // Show options dialog
         setShowImageOptions(true)
@@ -1257,6 +1440,8 @@ export default function MapEditorTokens() {
         name: `Territory ${state.territories.length + 1}`,
         x,
         y,
+        normalizedX: clamp01(x / (state.mapWidth > 0 ? state.mapWidth : 1)),
+        normalizedY: clamp01(y / (state.mapHeight > 0 ? state.mapHeight : 1)),
         continentId: selectedContinentId,
         armies: 1,
         connections: [],
@@ -1362,7 +1547,15 @@ export default function MapEditorTokens() {
       setState((prev) => ({
         ...prev,
         territories: prev.territories.map((t) =>
-          t.id === prev.draggedTerritoryId ? { ...t, x, y } : t,
+          t.id === prev.draggedTerritoryId
+            ? {
+                ...t,
+                x,
+                y,
+                normalizedX: clamp01(x / (prev.mapWidth > 0 ? prev.mapWidth : 1)),
+                normalizedY: clamp01(y / (prev.mapHeight > 0 ? prev.mapHeight : 1)),
+              }
+            : t,
         ),
       }))
     },
@@ -1540,7 +1733,11 @@ export default function MapEditorTokens() {
         }
       }
 
-      const adjacencyList = state.territories.flatMap((territory) =>
+      const territoriesForSave = state.territories.map((territory) =>
+        withNormalizedPosition(territory, state.mapWidth, state.mapHeight),
+      )
+
+      const adjacencyList = territoriesForSave.flatMap((territory) =>
         (territory.connections || []).map((targetId) => ({
           from: territory.id,
           to: targetId,
@@ -1568,14 +1765,14 @@ export default function MapEditorTokens() {
           capitalAssignments,
           territoryModifiers: state.territoryModifiers,
         },
-        territories: state.territories,
+        territories: territoriesForSave,
         continents: state.continents,
         adjacencies: adjacencyList,
         capitalAssignments,
         imageUrl: imageBase64 ? undefined : state.imageUrl,
         imageWidth: state.imageWidth,
         imageHeight: state.imageHeight,
-        tags: ['custom', 'user-created'],
+        tags: [],
         isPublic: false,
         parentMapId: publishedMapId ?? undefined,
       }
@@ -1609,12 +1806,15 @@ export default function MapEditorTokens() {
 
   // Export map data as JSON file for backup/sharing
   const handleExport = () => {
+    const territoriesForExport = state.territories.map((territory) =>
+      withNormalizedPosition(territory, state.mapWidth, state.mapHeight),
+    )
     const mapData = {
       name: state.name,
       imageUrl: state.imageUrl,
       width: state.mapWidth,
       height: state.mapHeight,
-      territories: state.territories,
+      territories: territoriesForExport,
       continents: state.continents,
       territoryModifiers: state.territoryModifiers,
     }
@@ -1646,33 +1846,47 @@ export default function MapEditorTokens() {
           throw new Error('Invalid map data: missing territories')
         }
 
-        const normalizedTerritories: Territory[] = mapData.territories.map((territory) => ({
-          id: territory.id,
-          name: territory.name || `Territory ${territory.id}`,
-          x: territory.x ?? 0,
-          y: territory.y ?? 0,
-          armies: territory.armies ?? 1,
-          connections: territory.connections ?? [],
-          continentId: territory.continentId ?? null,
-        }))
+        const importWidth = isNumber(mapData.width) ? mapData.width : state.mapWidth
+        const importHeight = isNumber(mapData.height) ? mapData.height : state.mapHeight
+        const normalizedTerritories: Territory[] = mapData.territories.map((territory) => {
+          const pixelX = territory.x ?? 0
+          const pixelY = territory.y ?? 0
+          return {
+            id: territory.id,
+            name: territory.name || `Territory ${territory.id}`,
+            x: pixelX,
+            y: pixelY,
+            normalizedX: clamp01(pixelX / (importWidth > 0 ? importWidth : 1)),
+            normalizedY: clamp01(pixelY / (importHeight > 0 ? importHeight : 1)),
+            armies: territory.armies ?? 1,
+            connections: territory.connections ?? [],
+            continentId: territory.continentId ?? null,
+          }
+        })
 
         const importedModifiers = normalizeTerritoryModifiers(mapData.territoryModifiers)
 
         // Load the imported map data
-        setState((prev) => ({
-          ...prev,
-          name: mapData.name || 'Imported Map',
-          imageUrl: mapData.imageUrl || prev.imageUrl,
-          mapWidth: mapData.width ?? prev.mapWidth,
-          mapHeight: mapData.height ?? prev.mapHeight,
-          imageWidth: mapData.width ?? prev.imageWidth,
-          imageHeight: mapData.height ?? prev.imageHeight,
-          territories: normalizedTerritories,
-          continents: mapData.continents || [],
-          territoryModifiers: importedModifiers,
-          selectedTerritoryId: null,
-          draggedTerritoryId: null,
-        }))
+        setState((prev) => {
+          const mapWidth = mapData.width ?? prev.mapWidth
+          const mapHeight = mapData.height ?? prev.mapHeight
+          return {
+            ...prev,
+            name: mapData.name || 'Imported Map',
+            imageUrl: mapData.imageUrl || prev.imageUrl,
+            mapWidth,
+            mapHeight,
+            imageWidth: mapData.width ?? prev.imageWidth,
+            imageHeight: mapData.height ?? prev.imageHeight,
+            territories: normalizedTerritories.map((territory) =>
+              withNormalizedPosition(territory, mapWidth, mapHeight),
+            ),
+            continents: mapData.continents || [],
+            territoryModifiers: importedModifiers,
+            selectedTerritoryId: null,
+            draggedTerritoryId: null,
+          }
+        })
 
         alert('Map imported successfully!')
       } catch (error: unknown) {

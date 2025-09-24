@@ -14,6 +14,13 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback
 }
 
+const clamp01 = (value: number): number => {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
 interface Map {
   id: string
   name: string
@@ -70,6 +77,8 @@ interface MapPreviewDetails {
   adjacencies: RawAdjacencyRecord[]
   imageWidth?: number
   imageHeight?: number
+  canvasWidth?: number
+  canvasHeight?: number
 }
 
 interface TokenPosition {
@@ -135,6 +144,19 @@ const averagePoints = (points: unknown): TokenPosition | null => {
   }
 }
 
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
 const extractPositionFromSource = (value: unknown): TokenPosition | null => {
   const data = parseJsonObject(value)
   if (!data) return null
@@ -162,7 +184,7 @@ const extractPositionFromSource = (value: unknown): TokenPosition | null => {
   return null
 }
 
-const getTokenPosition = (territory: RawTerritoryRecord): TokenPosition | null => {
+const getPixelTokenPosition = (territory: RawTerritoryRecord): TokenPosition | null => {
   if (typeof territory.center_x === 'number' && typeof territory.center_y === 'number') {
     return { x: territory.center_x, y: territory.center_y }
   }
@@ -175,6 +197,66 @@ const getTokenPosition = (territory: RawTerritoryRecord): TokenPosition | null =
     extractPositionFromSource(territory.metadata) ||
     extractPositionFromSource(territory.polygon_data)
   )
+}
+
+const getNormalizedTokenPosition = (
+  territory: RawTerritoryRecord,
+  canvasWidth: number,
+  canvasHeight: number,
+): TokenPosition | null => {
+  if (
+    !Number.isFinite(canvasWidth) ||
+    !Number.isFinite(canvasHeight) ||
+    canvasWidth <= 0 ||
+    canvasHeight <= 0
+  ) {
+    return null
+  }
+
+  const metadata = parseJsonObject(territory.metadata) || parseJsonObject(territory.polygon_data)
+
+  const normalizedXCandidate =
+    toFiniteNumberOrNull(
+      metadata && 'normalizedX' in metadata ? (metadata.normalizedX as unknown) : undefined,
+    ) ??
+    toFiniteNumberOrNull(
+      metadata && 'normalized_x' in metadata ? (metadata.normalized_x as unknown) : undefined,
+    ) ??
+    toFiniteNumberOrNull(
+      metadata && 'armyPositionNormalized' in metadata
+        ? (metadata.armyPositionNormalized as { x?: unknown } | undefined)?.x
+        : undefined,
+    )
+
+  const normalizedYCandidate =
+    toFiniteNumberOrNull(
+      metadata && 'normalizedY' in metadata ? (metadata.normalizedY as unknown) : undefined,
+    ) ??
+    toFiniteNumberOrNull(
+      metadata && 'normalized_y' in metadata ? (metadata.normalized_y as unknown) : undefined,
+    ) ??
+    toFiniteNumberOrNull(
+      metadata && 'armyPositionNormalized' in metadata
+        ? (metadata.armyPositionNormalized as { y?: unknown } | undefined)?.y
+        : undefined,
+    )
+
+  if (normalizedXCandidate !== null && normalizedYCandidate !== null) {
+    return {
+      x: clamp01(normalizedXCandidate),
+      y: clamp01(normalizedYCandidate),
+    }
+  }
+
+  const pixel = getPixelTokenPosition(territory)
+  if (pixel) {
+    return {
+      x: clamp01(pixel.x / canvasWidth),
+      y: clamp01(pixel.y / canvasHeight),
+    }
+  }
+
+  return null
 }
 
 const isCapitalTerritory = (territory: RawTerritoryRecord): boolean => {
@@ -370,6 +452,8 @@ export const AdminMaps: React.FC = () => {
         adjacencies,
         imageWidth: resolvedImageWidth,
         imageHeight: resolvedImageHeight,
+        canvasWidth: metadataWidth,
+        canvasHeight: metadataHeight,
       })
 
       setPreviewMap((current) => {
@@ -556,8 +640,11 @@ export const AdminMaps: React.FC = () => {
     previewImageSize?.height ??
     0
 
+  const effectiveCanvasWidth = previewDetails?.canvasWidth ?? effectiveImageWidth
+  const effectiveCanvasHeight = previewDetails?.canvasHeight ?? effectiveImageHeight
+
   const previewTokens = useMemo(() => {
-    if (!previewDetails || effectiveImageWidth <= 0 || effectiveImageHeight <= 0) {
+    if (!previewDetails || effectiveCanvasWidth <= 0 || effectiveCanvasHeight <= 0) {
       return [] as Array<{
         id: string
         name: string
@@ -570,11 +657,15 @@ export const AdminMaps: React.FC = () => {
 
     return previewDetails.territories
       .map((territory) => {
-        const position = getTokenPosition(territory)
+        const position = getNormalizedTokenPosition(
+          territory,
+          effectiveCanvasWidth,
+          effectiveCanvasHeight,
+        )
         if (!position) return null
 
-        const left = (position.x / effectiveImageWidth) * 100
-        const top = (position.y / effectiveImageHeight) * 100
+        const left = position.x * 100
+        const top = position.y * 100
 
         if (!Number.isFinite(left) || !Number.isFinite(top)) {
           return null
@@ -601,7 +692,7 @@ export const AdminMaps: React.FC = () => {
           continent: string | null | undefined
         } => token !== null,
       )
-  }, [previewDetails, effectiveImageWidth, effectiveImageHeight])
+  }, [previewDetails, effectiveCanvasWidth, effectiveCanvasHeight])
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -718,7 +809,7 @@ export const AdminMaps: React.FC = () => {
             <table className="w-full">
               <thead className="bg-surface-1">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider min-w-[18rem]">
                     Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -764,7 +855,7 @@ export const AdminMaps: React.FC = () => {
                         map.status === 'pending_review' ? 'bg-yellow-900/10' : ''
                       }`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 align-top min-w-[18rem]">
                         <div className="flex items-start gap-3">
                           {imageSrc ? (
                             <div className="relative shrink-0">
@@ -1245,67 +1336,75 @@ export const AdminMaps: React.FC = () => {
             {/* Map Image Preview */}
             {previewImageSrc ? (
               <div className="bg-surface-1 rounded-lg p-4 mb-6">
-                <div className="relative overflow-hidden rounded bg-black/20">
-                  <img
-                    src={previewImageSrc}
-                    alt={previewMap.name}
-                    className="w-full h-auto max-h-[500px] object-contain rounded"
-                    onLoad={(event) => {
-                      const target = event.currentTarget
-                      if (target.naturalWidth > 0 && target.naturalHeight > 0) {
-                        setPreviewImageSize({
-                          width: target.naturalWidth,
-                          height: target.naturalHeight,
-                        })
-                      }
+                <div className="relative overflow-auto rounded bg-black/20">
+                  <div
+                    className="relative"
+                    style={{
+                      width: effectiveCanvasWidth > 0 ? `${effectiveCanvasWidth}px` : '100%',
+                      height: effectiveCanvasHeight > 0 ? `${effectiveCanvasHeight}px` : 'auto',
                     }}
-                    onError={(event) => {
-                      const target = event.currentTarget
-                      target.src =
-                        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzk5OSI+TWFwIEltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+'
-                    }}
-                  />
+                  >
+                    <img
+                      src={previewImageSrc}
+                      alt={previewMap.name}
+                      className="w-full h-full object-fill rounded"
+                      onLoad={(event) => {
+                        const target = event.currentTarget
+                        if (target.naturalWidth > 0 && target.naturalHeight > 0) {
+                          setPreviewImageSize({
+                            width: target.naturalWidth,
+                            height: target.naturalHeight,
+                          })
+                        }
+                      }}
+                      onError={(event) => {
+                        const target = event.currentTarget
+                        target.src =
+                          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzk5OSI+TWFwIEltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+'
+                      }}
+                    />
 
-                  {previewTokens.length > 0 && (
-                    <div className="pointer-events-none absolute inset-0">
-                      {previewTokens.map((token) => {
-                        const clampedLeft = Math.min(Math.max(token.left, 0), 100)
-                        const clampedTop = Math.min(Math.max(token.top, 0), 100)
-                        return (
-                          <div
-                            key={token.id}
-                            className="absolute flex flex-col items-center gap-1 text-xs"
-                            style={{
-                              left: `${clampedLeft}%`,
-                              top: `${clampedTop}%`,
-                              transform: 'translate(-50%, -50%)',
-                            }}
-                          >
+                    {previewTokens.length > 0 && (
+                      <div className="pointer-events-none absolute inset-0">
+                        {previewTokens.map((token) => {
+                          const clampedLeft = Math.min(Math.max(token.left, 0), 100)
+                          const clampedTop = Math.min(Math.max(token.top, 0), 100)
+                          return (
                             <div
-                              className={`w-4 h-4 rounded-full border-2 border-black/60 shadow-md ${
-                                token.isCapital ? 'bg-rose-400' : 'bg-cyan-400'
-                              }`}
-                            />
-                            <span className="pointer-events-auto px-1.5 py-0.5 rounded bg-black/70 text-white whitespace-nowrap">
-                              {token.name}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                              key={token.id}
+                              className="absolute flex flex-col items-center gap-1 text-xs"
+                              style={{
+                                left: `${clampedLeft}%`,
+                                top: `${clampedTop}%`,
+                                transform: 'translate(-50%, -50%)',
+                              }}
+                            >
+                              <div
+                                className={`w-4 h-4 rounded-full border-2 border-black/60 shadow-md ${
+                                  token.isCapital ? 'bg-rose-400' : 'bg-cyan-400'
+                                }`}
+                              />
+                              <span className="pointer-events-auto px-1.5 py-0.5 rounded bg-black/70 text-white whitespace-nowrap">
+                                {token.name}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
 
-                  {previewLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <span className="text-white text-sm">Loading map data…</span>
-                    </div>
-                  )}
+                    {previewLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <span className="text-white text-sm">Loading map data…</span>
+                      </div>
+                    )}
 
-                  {previewError && !previewLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-4 text-center">
-                      <span className="text-red-300 text-sm">{previewError}</span>
-                    </div>
-                  )}
+                    {previewError && !previewLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-4 text-center">
+                        <span className="text-red-300 text-sm">{previewError}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {typeof previewImageWidth === 'number' &&
@@ -1314,6 +1413,13 @@ export const AdminMaps: React.FC = () => {
                       Image size: {previewImageWidth} x {previewImageHeight} px
                     </p>
                   )}
+
+                {effectiveCanvasWidth > 0 && effectiveCanvasHeight > 0 && (
+                  <p className="text-xs text-muted">
+                    Canvas size: {Math.round(effectiveCanvasWidth)} x{' '}
+                    {Math.round(effectiveCanvasHeight)} px
+                  </p>
+                )}
 
                 {!previewError && !previewLoading && previewTokens.length === 0 && (
                   <p className="text-muted text-sm mt-3">No token positions found for this map.</p>
