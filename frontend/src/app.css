@@ -259,40 +259,38 @@ This allows themes to work with any color scheme!
   --box-padding-xl: 2rem;
 }
 
-/* RetroSpace Theme - Nostalgic social profile blues */
+/* RetroSpace Theme - Early social media tribute */
 :root[data-theme="retrospace"] {
-  --color-primary: #0f4cda; /* Royal blue primary inspired by early social media */
-  --color-primary-soft: #4f83ff; /* Brighter hover blue */
-  --color-secondary: #f8fafc; /* Soft white secondary */
-  --color-accent: #ff80cc; /* Neon pink accent for profile flair */
+  --color-primary: #0b3aa7; /* Classic Myspace blue */
+  --color-primary-soft: #1e4fc4; /* Hover blue */
+  --color-secondary: #ffffff; /* Neutral secondary */
+  --color-accent: #ff9900; /* Retro orange accent */
 
-  --color-bg-deep: #020617; /* Midnight navy base */
-  --color-bg-alt: #061537; /* Alternative navy background */
-  --color-bg-void: #01030b; /* Deep vignette edge */
-  --color-surface-1: #0b1f4b; /* Card backgrounds with blue tint */
-  --color-surface-2: #102c63; /* Elevated surface */
+  --color-bg-deep: #ffffff; /* Plain white backdrop */
+  --color-bg-alt: #f1f4ff; /* Light blue content striping */
+  --color-bg-void: #ffffff; /* No vignette */
+  --color-surface-1: #ffffff; /* Card backgrounds */
+  --color-surface-2: #f3f6ff; /* Raised surfaces */
 
-  --color-text: #f8fbff; /* Crisp white text */
-  --color-text-muted: #9cb3df; /* Muted periwinkle text */
-  --color-border: #3b4f86; /* Cool blue divider */
+  --color-text: #1f2937; /* Dark slate text */
+  --color-text-muted: #4b5563; /* Muted gray */
+  --color-border: #b3c1d9; /* Soft blue-gray borders */
 
-  --ck-bg-gradient: linear-gradient(
-    135deg,
-    #01030b 0% /* Deep midnight edge */,
-    rgba(12, 45, 107, 0.9) 45% /* Electric blue center glow */,
-    #040d1f 100% /* Fades back to deep navy */
-  );
+  --ck-bg-gradient: linear-gradient(0deg, #ffffff 0%, #ffffff 100%);
 
-  --ck-glow: var(--color-primary-soft);
+  --ck-glow: transparent;
 
-  /* Box/Card overrides - frosted blue glass */
-  --box-bg: rgba(12, 31, 74, 0.6);
-  --box-bg-solid: #102550;
-  --box-border: rgba(99, 132, 204, 0.45);
-  --box-shadow: 0 20px 45px rgba(4, 13, 31, 0.45);
-  --box-blur: 18px;
-  --box-radius: 0.75rem;
-  --box-padding: 1.5rem;
+  --surface-glass: #ffffff;
+  --surface-glass-light: #f3f6ff;
+
+  /* Box/Card overrides - blocky solid panels */
+  --box-bg: #ffffff;
+  --box-bg-solid: #ffffff;
+  --box-border: #b3c1d9;
+  --box-shadow: none;
+  --box-blur: 0;
+  --box-radius: 0;
+  --box-padding: 1.25rem;
   --box-padding-sm: 0.75rem;
   --box-padding-lg: 1.5rem;
   --box-padding-xl: 2rem;
@@ -803,6 +801,27 @@ body {
   min-height: 100vh;
   position: relative;
   color: var(--color-text);
+}
+
+/* RetroSpace: flat white background without overlays */
+[data-theme="retrospace"] body {
+  background-color: #ffffff;
+  background-image: none;
+  background-attachment: scroll;
+  color: #1f2937;
+}
+
+[data-theme="retrospace"] body::after {
+  content: none;
+}
+
+[data-theme="retrospace"] body,
+[data-theme="retrospace"] button,
+[data-theme="retrospace"] input,
+[data-theme="retrospace"] select,
+[data-theme="retrospace"] textarea {
+  font-family: "Verdana", "Geneva", "Tahoma", sans-serif;
+  letter-spacing: 0.01em;
 }
 
 /* Default grid for most themes */
@@ -1390,6 +1409,89 @@ kbd {
   color: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-text) 20%);
 }
 
+/* RetroSpace button treatments - chunky and flat */
+[data-theme="retrospace"] .btn-primary {
+  background: #0b3aa7;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transform: none;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-primary::before {
+  display: none;
+}
+
+[data-theme="retrospace"] .btn-primary:hover {
+  background: #0d49c8;
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-primary:active {
+  background: #082d73;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .btn-secondary {
+  background: #e7ecff;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  box-shadow: none;
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transform: none;
+  backdrop-filter: none;
+  transition: background-color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-secondary:hover {
+  background: #dbe4ff;
+  color: #0b2f84;
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-secondary:active {
+  background: #c6d4ff;
+  transform: none;
+}
+
+[data-theme="retrospace"] .btn-tertiary {
+  background: #ffffff;
+  border: 2px solid #ff9900;
+  border-radius: 0;
+  box-shadow: none;
+  color: #c24100;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transform: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+[data-theme="retrospace"] .btn-tertiary::before {
+  display: none;
+}
+
+[data-theme="retrospace"] .btn-tertiary:hover {
+  background: #fff4e5;
+  color: #a43400;
+}
+
+[data-theme="retrospace"] .btn-tertiary:active {
+  background: #ffe0bf;
+}
+
 /* Ghost Button - Minimal, text-like */
 .btn-ghost {
   position: relative;
@@ -1661,6 +1763,42 @@ kbd {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+[data-theme="retrospace"] .segmented-control {
+  background: #e7ecff;
+  border: 1px solid #0b2f84;
+  border-radius: 0;
+  gap: 0;
+  padding: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .segmented-control button {
+  border-radius: 0;
+  border: 1px solid transparent;
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+[data-theme="retrospace"] .segmented-control button + button {
+  margin-left: -1px;
+}
+
+[data-theme="retrospace"] .segmented-control button:hover:not(.segmented-active) {
+  background: #dbe4ff;
+  color: #0b2f84;
+}
+
+[data-theme="retrospace"] .segmented-control button.segmented-active {
+  background: #0b3aa7;
+  color: #ffffff;
+  border-color: #0b2f84;
+  box-shadow: none;
+}
+
 /* Theme-specific adjustments for better contrast */
 [data-theme="halloween"] .segmented-control button.segmented-active {
   background: var(--color-accent); /* Use blood red for Halloween */
@@ -1731,6 +1869,44 @@ kbd {
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
 }
 
+[data-theme="retrospace"] .tabs {
+  gap: 0;
+  border: 1px solid #0b2f84;
+  border-bottom: none;
+  background: #0b3aa7;
+  box-shadow: none;
+  padding: 0.125rem 0.25rem 0 0.25rem;
+}
+
+[data-theme="retrospace"] .tab {
+  color: #ffffff;
+  background: #0b3aa7;
+  border: 1px solid #0b2f84;
+  border-bottom: none;
+  border-radius: 0;
+  padding: 0.5rem 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+[data-theme="retrospace"] .tab + .tab {
+  margin-left: -1px; /* Collapse borders for blocky nav */
+}
+
+[data-theme="retrospace"] .tab:hover:not(.tab-active) {
+  background: #0d49c8;
+  color: #ffffff;
+}
+
+[data-theme="retrospace"] .tab-active {
+  color: #0b2f84;
+  background: #ffffff;
+  border-color: #0b2f84;
+  border-bottom: 0;
+}
+
 /* Tab Pills Variant - For settings/admin */
 .tabs-pills {
   display: flex;
@@ -1781,6 +1957,42 @@ kbd {
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+[data-theme="retrospace"] .tabs-pills {
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  border: 1px solid #0b2f84;
+  background: #e7ecff;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .tab-pill {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #0b2f84;
+  transition: none;
+}
+
+[data-theme="retrospace"] .tab-pill + .tab-pill {
+  margin-left: -1px;
+}
+
+[data-theme="retrospace"] .tab-pill:hover:not(.tab-pill-active) {
+  background: #dbe4ff;
+  color: #0b2f84;
+}
+
+[data-theme="retrospace"] .tab-pill-active {
+  color: #ffffff;
+  background: #0b3aa7;
+  border-color: #0b2f84;
+  box-shadow: none;
+}
+
 /* ===== SIDEBAR THEME ADJUSTMENTS ===== */
 /* Make sidebar theme-aware with good UX */
 
@@ -1788,6 +2000,13 @@ kbd {
   background: var(--color-surface-1);
   backdrop-filter: blur(16px);
   border-right: 1px solid var(--color-border);
+}
+
+[data-theme="retrospace"] .sidebar-menu {
+  background: #ffffff;
+  border-right: 2px solid #0b2f84;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 [data-theme="halloween"] .sidebar-menu {
@@ -1799,6 +2018,11 @@ kbd {
 .sidebar-header {
   background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.03), transparent);
   border-bottom: 1px solid var(--color-border);
+}
+
+[data-theme="retrospace"] .sidebar-header {
+  background: #e7ecff;
+  border-bottom: 1px solid #0b2f84;
 }
 
 .sidebar-item {
@@ -1818,9 +2042,19 @@ kbd {
   outline: none;
 }
 
+[data-theme="retrospace"] .sidebar-item {
+  color: #1f2937;
+  border-radius: 0;
+}
+
 .sidebar-item:hover:not(.sidebar-item-active) {
   color: var(--color-text);
   background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="retrospace"] .sidebar-item:hover:not(.sidebar-item-active) {
+  color: #0b2f84;
+  background: #edf1ff;
 }
 
 .sidebar-item-active {
@@ -1829,6 +2063,13 @@ kbd {
   box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.15),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="retrospace"] .sidebar-item-active {
+  color: #0b2f84;
+  background: #dbe4ff;
+  border-left: 4px solid #0b2f84;
+  box-shadow: none;
 }
 
 [data-theme="halloween"] .sidebar-item-active {
@@ -1847,6 +2088,13 @@ kbd {
   box-shadow:
     0 2px 8px 0 rgba(0, 0, 0, 0.15),
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="retrospace"] .sidebar-item:focus,
+[data-theme="retrospace"] .sidebar-item-active:focus {
+  outline: 2px solid #0b2f84;
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 /* ===== TAILWIND v4 COMPONENT CLASSES ===== */
@@ -1944,6 +2192,20 @@ kbd {
   padding: var(--box-padding);
 }
 
+[data-theme="retrospace"] .box2,
+[data-theme="retrospace"] .glass-box,
+[data-theme="retrospace"] .glass-box-sm,
+[data-theme="retrospace"] .glass-box-lg,
+[data-theme="retrospace"] .glass-box-xl,
+[data-theme="retrospace"] .solid-box,
+[data-theme="retrospace"] .box1 {
+  background-color: #ffffff;
+  backdrop-filter: none;
+  border-radius: 0;
+  border: 1px solid #b3c1d9;
+  box-shadow: none;
+}
+
 /* Halloween card glow treatment */
 [data-theme="halloween"] .glass-box,
 [data-theme="halloween"] .glass-box-sm,
@@ -2026,6 +2288,35 @@ kbd {
   background-color: color-mix(in srgb, var(--color-surface-1) 40%, transparent);
 }
 
+[data-theme="retrospace"] .form-input {
+  background-color: #ffffff;
+  border: 1px solid #b3c1d9;
+  border-radius: 0;
+  color: #1f2937;
+  box-shadow: none;
+}
+
+[data-theme="retrospace"] .form-input::placeholder {
+  color: #6b7280;
+}
+
+[data-theme="retrospace"] .form-input:focus {
+  background-color: #ffffff;
+  border-color: #0b3aa7;
+  box-shadow: none;
+  outline: 2px solid #0b3aa7;
+  outline-offset: 0;
+}
+
+[data-theme="retrospace"] .form-input:hover {
+  background-color: #f3f6ff;
+}
+
+[data-theme="retrospace"] .form-input:disabled {
+  background-color: #f3f6ff;
+  color: #9ca3af;
+}
+
 /* Form Label Component */
 .form-label {
   display: block;
@@ -2034,6 +2325,14 @@ kbd {
   font-weight: 500;
   margin-bottom: 0.5rem;
   opacity: 0.95;
+}
+
+[data-theme="retrospace"] .form-label {
+  color: #0b2f84;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 1;
 }
 
 /* Form Error Component */
@@ -2051,6 +2350,10 @@ kbd {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   margin-top: 0.25rem;
+}
+
+[data-theme="retrospace"] .form-help {
+  color: #4b5563;
 }
 
 /* Form Group Component */
@@ -2077,6 +2380,21 @@ kbd {
 /* Inactive Navigation Link */
 .nav-link-inactive {
   color: color-mix(in srgb, var(--color-white) 70%, transparent);
+}
+
+[data-theme="retrospace"] .nav-link {
+  color: #0b2f84;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="retrospace"] .nav-link-active {
+  color: #0b3aa7;
+}
+
+[data-theme="retrospace"] .nav-link-inactive {
+  color: #4b5563;
 }
 
 [data-theme="cutlers-cheese"] .nav-link,
