@@ -127,14 +127,20 @@ try {
     }
   })
 
-  // Test the connection (non-blocking)
-  pgPool.query('SELECT 1', (err) => {
-    if (err) {
-      logger.error('❌ PostgreSQL connection test failed:', err)
-      throw err
-    }
-    logger.info('✅ PostgreSQL connection established')
-  })
+  const shouldTestConnection =
+    process.env.NODE_ENV !== 'test' && process.env.SKIP_DB_CONNECTION_TEST !== 'true'
+
+  if (shouldTestConnection) {
+    pgPool.query('SELECT 1', (err) => {
+      if (err) {
+        logger.error('❌ PostgreSQL connection test failed:', err)
+        throw err
+      }
+      logger.info('✅ PostgreSQL connection established')
+    })
+  } else {
+    logger.debug('ℹ️ Skipping PostgreSQL connection test in test environment')
+  }
 } catch (error) {
   logger.error('❌ Failed to create PostgreSQL pool:', error)
   throw error

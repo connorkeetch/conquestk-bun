@@ -30,8 +30,6 @@ type TestGlobals = typeof globalThis & {
   __socketRegistryMocks?: SocketRegistryMocks
 }
 
-const testGlobals = globalThis as TestGlobals
-
 const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 
 jest.mock('../config/database', () => ({
@@ -39,6 +37,7 @@ jest.mock('../config/database', () => ({
 }))
 
 jest.mock('../services/queueService', () => {
+  const testGlobals = globalThis as TestGlobals
   const mocks: QueueServiceMocks = {
     addGameAction: jest.fn(),
     addBattleSimulation: jest.fn(),
@@ -50,6 +49,7 @@ jest.mock('../services/queueService', () => {
 })
 
 const getQueueServiceMocks = (): QueueServiceMocks => {
+  const testGlobals = globalThis as TestGlobals
   if (!testGlobals.__queueServiceMocks) {
     throw new Error('Queue service mocks not initialised')
   }
@@ -74,6 +74,7 @@ jest.mock('../services/gameService', () => ({
 }))
 
 jest.mock('../services/gameRoomService', () => {
+  const testGlobals = globalThis as TestGlobals
   const mockIsPlayerInRoom = jest.fn()
   const mockGetPlayer = jest.fn()
   const GameRoomService = jest.fn(() => ({
@@ -91,6 +92,7 @@ jest.mock('../services/gameRoomService', () => {
 })
 
 const getGameRoomServiceMocks = (): GameRoomServiceMocks => {
+  const testGlobals = globalThis as TestGlobals
   if (!testGlobals.__gameRoomServiceMocks) {
     throw new Error('Game room service mocks not initialised')
   }
@@ -100,6 +102,7 @@ const getGameRoomServiceMocks = (): GameRoomServiceMocks => {
 const { mockIsPlayerInRoom, mockGetPlayer } = getGameRoomServiceMocks()
 
 jest.mock('../services/cacheService', () => {
+  const testGlobals = globalThis as TestGlobals
   const mockGetCachedState = jest.fn()
   testGlobals.__cacheServiceMocks = {
     mockGetCachedState,
@@ -112,6 +115,7 @@ jest.mock('../services/cacheService', () => {
 })
 
 const getCacheServiceMocks = (): CacheServiceMocks => {
+  const testGlobals = globalThis as TestGlobals
   if (!testGlobals.__cacheServiceMocks) {
     throw new Error('Cache service mocks not initialised')
   }
@@ -121,6 +125,7 @@ const getCacheServiceMocks = (): CacheServiceMocks => {
 const { mockGetCachedState } = getCacheServiceMocks()
 
 jest.mock('../services/socketRegistry', () => {
+  const testGlobals = globalThis as TestGlobals
   const mockRegisterSocketServer = jest.fn()
   testGlobals.__socketRegistryMocks = {
     mockRegisterSocketServer,
@@ -133,6 +138,7 @@ jest.mock('../services/socketRegistry', () => {
 })
 
 const getSocketRegistryMocks = (): SocketRegistryMocks => {
+  const testGlobals = globalThis as TestGlobals
   if (!testGlobals.__socketRegistryMocks) {
     throw new Error('Socket registry mocks not initialised')
   }
