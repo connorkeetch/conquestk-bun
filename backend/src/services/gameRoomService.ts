@@ -27,6 +27,7 @@ interface GameRoomRow {
   ready_check_started_at?: Date | string | null
   created_at: Date | string
   updated_at?: Date | string | null
+  turn_timer?: number | string | null
   is_ranked?: boolean | null
   avg_skill_rating?: number | string | null
   skill_variance?: number | string | null
@@ -35,6 +36,9 @@ interface GameRoomRow {
   skill_tier?: string | null
   map_id?: string | null
   game_mode?: string | null
+  fog_of_war?: string | null
+  card_trade_mode?: string | null
+  bonus_type?: string | null
   team_mode?: boolean | string | null
   number_of_teams?: number | null
   game_started?: boolean | null
@@ -167,6 +171,23 @@ export class GameRoomService {
     }
 
     return 'none'
+  }
+
+  private normalizeFogOfWar(value: unknown): 'off' | 'adjacent' | 'persistent' | undefined {
+    if (typeof value !== 'string') {
+      return undefined
+    }
+
+    const normalized = value.toLowerCase()
+    if (normalized === 'off' || normalized === 'adjacent' || normalized === 'persistent') {
+      return normalized
+    }
+
+    if (normalized === 'on' || normalized === 'true') {
+      return 'adjacent'
+    }
+
+    return undefined
   }
 
   private normalizeStatus(status: string | null | undefined): GameLifecycleStatus {
@@ -312,6 +333,10 @@ export class GameRoomService {
           : row.number_of_teams === null
             ? null
             : undefined,
+      turnTimerSeconds: this.parseNullableNumber(row.turn_timer) ?? undefined,
+      fogOfWar: this.normalizeFogOfWar(row.fog_of_war),
+      cardTradeMode: typeof row.card_trade_mode === 'string' ? row.card_trade_mode : undefined,
+      bonusType: typeof row.bonus_type === 'string' ? row.bonus_type : undefined,
       currentPlayers: this.parseNullableNumber((row as Partial<ActiveGameRoomRow>).current_players),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
       hostSkillRating: this.parseNullableNumber(

@@ -31,6 +31,8 @@ export default function GameRoom() {
   const [readyError, setReadyError] = useState<string | null>(null)
   const [teamUpdating, setTeamUpdating] = useState(false)
   const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
+  const [joinSubmitting, setJoinSubmitting] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
 
   const getStatusLabel = (status: GameRoomType['status']) => {
     switch (status) {
@@ -58,6 +60,8 @@ export default function GameRoom() {
     return currentRoom.players.find((player) => player.userId === user.id)
   }, [currentRoom?.players, user?.id])
 
+  const isMember = Boolean(currentPlayer)
+
   const readySummary = useMemo(() => {
     const total = currentRoom?.players?.length ?? 0
     const ready = currentRoom?.players?.filter((player) => player.isReady).length ?? 0
@@ -65,6 +69,10 @@ export default function GameRoom() {
   }, [currentRoom?.players])
 
   const isHost = currentRoom?.hostId === user?.id
+
+  const lobbyFull = Boolean(
+    currentRoom && (currentRoom.players?.length ?? 0) >= currentRoom.maxPlayers,
+  )
 
   const showTeamAssignment = useMemo(() => {
     if (!currentRoom) {
@@ -91,6 +99,35 @@ export default function GameRoom() {
       })),
     [currentRoom?.players],
   )
+
+  const joinActionDisabled =
+    joinSubmitting || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull
+
+  const joinButtonLabel = (() => {
+    if (joinSubmitting) {
+      return 'Joining...'
+    }
+    if (!currentRoom || currentRoom.status !== 'lobby') {
+      return 'Spectate only'
+    }
+    if (lobbyFull) {
+      return 'Lobby full'
+    }
+    return 'Join Game'
+  })()
+
+  const joinButtonTitle = (() => {
+    if (joinSubmitting) {
+      return 'Joining game...'
+    }
+    if (!currentRoom || currentRoom.status !== 'lobby') {
+      return 'Game has already started'
+    }
+    if (lobbyFull) {
+      return 'Lobby is full'
+    }
+    return 'Join this lobby'
+  })()
 
   const canToggleReady = Boolean(
     currentRoom &&
@@ -166,6 +203,12 @@ export default function GameRoom() {
   }, [currentRoom, dispatch, roomId])
 
   useEffect(() => {
+    if (isMember) {
+      setJoinError(null)
+    }
+  }, [isMember])
+
+  useEffect(() => {
     if (!roomId) {
       return
     }
@@ -216,6 +259,46 @@ export default function GameRoom() {
       setReadySubmitting(false)
     }
   }
+
+  const handleJoinLobby = useCallback(async () => {
+    if (!roomId || isMember || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull) {
+      return
+    }
+
+    try {
+      setJoinSubmitting(true)
+      setJoinError(null)
+
+      const response = await gameService.joinRoom(roomId)
+
+      if (response.room) {
+        dispatch(setCurrentRoom(response.room))
+      } else {
+        const refreshed = await gameService.getRoomDetails(roomId)
+        dispatch(setCurrentRoom(refreshed.room))
+      }
+
+      await dispatch(fetchGameState({ roomId, allowSpectate: false }))
+    } catch (error: unknown) {
+      let message = 'Failed to join game'
+      if (typeof error === 'object' && error !== null) {
+        if ('response' in error) {
+          const apiError = error as { response?: { data?: { message?: string } } }
+          message = apiError.response?.data?.message ?? message
+        } else if (
+          'message' in error &&
+          typeof (error as { message?: unknown }).message === 'string'
+        ) {
+          message = (error as { message: string }).message
+        }
+      } else if (error instanceof Error) {
+        message = error.message
+      }
+      setJoinError(message)
+    } finally {
+      setJoinSubmitting(false)
+    }
+  }, [roomId, isMember, currentRoom, lobbyFull, dispatch])
 
   const handleTeamChange = useCallback(
     async (playerId: string, teamId: number) => {
@@ -313,6 +396,17 @@ export default function GameRoom() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!isMember && (
+            <button
+              onClick={() => void handleJoinLobby()}
+              disabled={joinActionDisabled}
+              type="button"
+              title={joinButtonTitle}
+              className="px-4 py-2 rounded bg-primary text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {joinButtonLabel}
+            </button>
+          )}
           {canToggleReady && (
             <button
               onClick={handleToggleReady}
@@ -346,6 +440,12 @@ export default function GameRoom() {
           </button>
         </div>
       </div>
+
+      {joinError && (
+        <div className="mb-4 rounded bg-red-900/40 border border-red-700 text-red-300 px-4 py-3 text-sm">
+          {joinError}
+        </div>
+      )}
 
       {readyError && (
         <div className="mb-4 rounded bg-red-900/40 border border-red-700 text-red-300 px-4 py-3 text-sm">
