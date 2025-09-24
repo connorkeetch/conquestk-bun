@@ -75,8 +75,12 @@ export const gameService = {
     return response.data
   },
 
-  async getGameState(roomId: string): Promise<GameState> {
-    const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`)
+  async getGameState(
+    roomId: string,
+    options?: { allowSpectate?: boolean },
+  ): Promise<GameState> {
+    const params = options?.allowSpectate ? { spectate: 'true' } : undefined
+    const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
 

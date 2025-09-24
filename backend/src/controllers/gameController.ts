@@ -278,9 +278,15 @@ export class GameController {
         return res.status(404).json({ message: 'Room not found' })
       }
 
+      const spectateParam = req.query?.spectate
+      const wantsSpectate = Array.isArray(spectateParam)
+        ? spectateParam.includes('true')
+        : spectateParam === 'true'
+      const isAdminSpectator = Boolean(req.user?.isAdmin && wantsSpectate)
+
       const isParticipant =
         room.hostId === userId || (await this.gameRoomService.isPlayerInRoom(roomId, userId))
-      if (!isParticipant) {
+      if (!isParticipant && !isAdminSpectator) {
         return res.status(403).json({ message: 'You are not part of this room' })
       }
 

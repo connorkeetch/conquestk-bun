@@ -133,7 +133,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
         role="img"
         aria-labelledby={svgTitleId}
       >
-        <title id={svgTitleId}>Fantasy Realms strategic map</title>
+        <title id={svgTitleId}>Training Grounds strategic map</title>
         {/* Background elements for visual appeal */}
         <defs>
           <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
@@ -200,7 +200,7 @@ export const SimpleMapSVG: React.FC<SimpleMapSVGProps> = ({
 
       {/* Map title overlay */}
       <div className="absolute top-4 left-4 bg-black bg-opacity-60 text-white px-3 py-1 rounded-lg text-sm font-semibold">
-        Fantasy Realms
+        Training Grounds
       </div>
 
       {/* Legend overlay */}

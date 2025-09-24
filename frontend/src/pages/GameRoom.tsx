@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -22,6 +22,10 @@ export default function GameRoom() {
     error: gameError,
   } = useAppSelector((state) => state.game)
   const { user } = useAppSelector((state) => state.auth)
+  const [searchParams] = useSearchParams()
+  const isSpectator = searchParams.get('spectate') === 'true'
+  const [isRoomLoading, setIsRoomLoading] = useState(false)
+  const [roomError, setRoomError] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(audioService.isMutedState())
   const [readySubmitting, setReadySubmitting] = useState(false)
   const [readyError, setReadyError] = useState<string | null>(null)
@@ -101,19 +105,77 @@ export default function GameRoom() {
     }
 
     socketService.connect()
-    socketService.joinRoom(roomId)
-
-    if (!currentGame || currentGame.roomId !== roomId) {
-      void dispatch(fetchGameState(roomId))
+    if (!isSpectator) {
+      socketService.joinRoom(roomId)
     }
 
     return () => {
-      if (roomId) {
+      if (!isSpectator) {
         socketService.leaveRoom(roomId)
       }
       dispatch(clearGame())
+      dispatch(setCurrentRoom(null))
     }
-  }, [roomId, navigate, dispatch, currentGame])
+  }, [dispatch, isSpectator, navigate, roomId])
+
+  useEffect(() => {
+    if (!roomId) {
+      return
+    }
+
+    if (currentRoom && currentRoom.id === roomId) {
+      setRoomError(null)
+      return
+    }
+
+    let isMounted = true
+
+    const loadRoomDetails = async () => {
+      setIsRoomLoading(true)
+      try {
+        const response = await gameService.getRoomDetails(roomId)
+        if (!isMounted) {
+          return
+        }
+        dispatch(setCurrentRoom(response.room))
+        setRoomError(null)
+      } catch (error: unknown) {
+        if (!isMounted) {
+          return
+        }
+        let message = 'Failed to load room details'
+        if (typeof error === 'object' && error && 'response' in error) {
+          const apiError = error as { response?: { data?: { message?: string } } }
+          message = apiError.response?.data?.message ?? message
+        } else if (error instanceof Error) {
+          message = error.message
+        }
+        setRoomError(message)
+      } finally {
+        if (isMounted) {
+          setIsRoomLoading(false)
+        }
+      }
+    }
+
+    void loadRoomDetails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentRoom, dispatch, roomId])
+
+  useEffect(() => {
+    if (!roomId) {
+      return
+    }
+
+    if (currentGame && currentGame.roomId === roomId) {
+      return
+    }
+
+    void dispatch(fetchGameState({ roomId, allowSpectate: isSpectator }))
+  }, [currentGame, dispatch, isSpectator, roomId])
 
   const handleLeaveRoom = () => {
     navigate('/lobby')
@@ -199,7 +261,22 @@ export default function GameRoom() {
     [roomId, dispatch, isHost, currentRoom],
   )
 
-  if (!currentRoom) {
+  if (roomError) {
+    return (
+      <div className="text-center space-y-4">
+        <div className="text-xl text-red-400">{roomError}</div>
+        <button
+          type="button"
+          onClick={() => navigate('/lobby')}
+          className="bg-primary px-4 py-2 rounded text-white"
+        >
+          Return to Lobby
+        </button>
+      </div>
+    )
+  }
+
+  if (isRoomLoading || !currentRoom) {
     return (
       <div className="text-center">
         <div className="text-xl">Loading room...</div>
