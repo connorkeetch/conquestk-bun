@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { adminService, type ContentApprovalItem } from '../services/adminService'
 
 interface ContentModal {
@@ -102,21 +103,16 @@ export default function AdminContent() {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">🔍 Content Moderation</h1>
-            <div className="text-muted">Review and moderate user-generated content</div>
-          </div>
-          <a href="/admin" className="bg-surface-2 hover:bg-gray-600 px-4 py-2 rounded">
-            ← Back to Dashboard
-          </a>
-        </div>
+      <div className="max-w-7xl mx-auto space-y-6">
+        <AdminPageHeader
+          title="Content Moderation"
+          subtitle="Review submissions and keep the community healthy"
+          icon="🔍"
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
@@ -128,7 +124,7 @@ export default function AdminContent() {
             </div>
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-primary-soft">
@@ -140,7 +136,7 @@ export default function AdminContent() {
             </div>
           </div>
 
-          <div className="bg-surface-2 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
@@ -154,7 +150,7 @@ export default function AdminContent() {
         </div>
 
         {/* Content Queue */}
-        <div className="bg-surface-2 rounded-lg overflow-hidden">
+        <div className="glass-box overflow-hidden p-0">
           <div className="p-6 border-b border-border">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Approval Queue</h2>

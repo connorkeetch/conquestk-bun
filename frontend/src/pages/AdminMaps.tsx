@@ -717,8 +717,15 @@ export const AdminMaps: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Status Stats */}
+    <div className="min-h-screen bg-surface-1 text-white p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <AdminPageHeader
+          title="Map Management"
+          subtitle="Review drafts, publish updates, and keep the catalog healthy"
+          icon="🗺️"
+        />
+
+        {/* Status Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="glass-box p-4">
           <p className="text-sm text-muted uppercase tracking-wide">Draft</p>
@@ -1519,6 +1526,7 @@ export const AdminMaps: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -184,36 +185,15 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={handleToggleMute}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors relative group"
+                  className="group relative p-2 rounded-lg hover:bg-surface-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
                   aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`transition-colors ${isMuted ? 'text-danger' : 'text-success'}`}
-                    aria-hidden="true"
-                  >
-                    {isMuted ? (
-                      <>
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <line x1="23" y1="9" x2="17" y2="15" />
-                        <line x1="17" y1="9" x2="23" y2="15" />
-                      </>
-                    ) : (
-                      <>
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                      </>
-                    )}
-                  </svg>
+                  {isMuted ? (
+                    <VolumeX className="w-6 h-6 text-danger transition-colors group-hover:text-danger group-focus-visible:text-danger" />
+                  ) : (
+                    <Volume2 className="w-6 h-6 text-muted transition-colors group-hover:text-primary group-focus-visible:text-primary" />
+                  )}
                 </button>
 
                 {/* Active Games Dropdown */}

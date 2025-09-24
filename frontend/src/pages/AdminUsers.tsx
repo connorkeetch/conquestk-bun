@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { adminService, type UserFeatureFlagAssignment } from '../services/adminService'
 import api from '../services/api'
 
@@ -376,49 +377,51 @@ const AdminUsers: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white">User Management</h2>
-          <p className="text-muted">Manage user accounts, VIP status, and permissions</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {isRefreshing && (
-            <div className="flex items-center gap-2 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              Syncing latest data...
+    <div className="min-h-screen bg-surface-1 text-white p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <AdminPageHeader
+          title="User Management"
+          subtitle="Manage accounts, status changes, and feature access"
+          icon="👥"
+          actions={
+            <div className="flex items-center gap-3">
+              {isRefreshing && (
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  Syncing latest data...
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => void loadUsers()}
+                disabled={loading}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-110 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                🔄 Refresh
+              </button>
             </div>
-          )}
-          <button
-            type="button"
-            onClick={() => void loadUsers()}
-            disabled={loading}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-110 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            🔄 Refresh
-          </button>
-        </div>
-      </div>
+          }
+        />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-surface-2 rounded-lg p-4">
+        <div className="glass-box p-4">
           <div className="text-2xl font-bold text-white">{users.length}</div>
           <div className="text-sm text-muted">Total Users</div>
         </div>
-        <div className="bg-surface-2 rounded-lg p-4">
+        <div className="glass-box p-4">
           <div className="text-2xl font-bold text-purple-400">
             {users.filter((u) => u.isVip).length}
           </div>
           <div className="text-sm text-muted">VIP Users</div>
         </div>
-        <div className="bg-surface-2 rounded-lg p-4">
+        <div className="glass-box p-4">
           <div className="text-2xl font-bold text-yellow-400">
             {users.filter((u) => u.isAdmin).length}
           </div>
           <div className="text-sm text-muted">Admins</div>
         </div>
-        <div className="bg-surface-2 rounded-lg p-4">
+        <div className="glass-box p-4">
           <div className="text-2xl font-bold text-green-400">
             {users.filter((u) => u.premiumTier && u.premiumTier !== 'free').length}
           </div>
@@ -427,7 +430,7 @@ const AdminUsers: React.FC = () => {
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="bg-surface-2 rounded-lg p-4">
+      <div className="glass-box p-4">
         <div className="flex gap-4">
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
             <input
@@ -512,13 +515,13 @@ const AdminUsers: React.FC = () => {
 
       {/* Users Table */}
       {filteredUsers.length === 0 ? (
-        <div className="bg-surface-2 rounded-lg p-8 text-center">
+        <div className="glass-box p-8 text-center">
           <div className="text-6xl mb-4">👥</div>
           <h3 className="text-xl font-bold text-white mb-2">No Users Found</h3>
           <p className="text-muted">No users match your search criteria.</p>
         </div>
       ) : (
-        <div className="bg-surface-2 rounded-lg overflow-hidden">
+        <div className="glass-box overflow-hidden p-0">
           <table className="w-full text-white">
             <thead className="bg-surface-1">
               <tr>
@@ -1147,6 +1150,7 @@ const AdminUsers: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

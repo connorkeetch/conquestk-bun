@@ -1,3 +1,4 @@
+import { Bell } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { notificationService } from '../services/notificationService'
@@ -85,21 +86,17 @@ export default function NotificationDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative p-2 rounded-lg hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80"
+        className="group relative p-2 rounded-lg hover:bg-surface-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         aria-label="Notifications"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          className="fill-white/70 hover:fill-white transition-colors"
+        <Bell
+          className={`w-6 h-6 transition-colors ${
+            unreadCount > 0 ? 'text-primary' : 'text-muted'
+          } group-hover:text-primary group-focus-visible:text-primary`}
           aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-        </svg>
+        />
 
         {/* Unread Badge */}
         {unreadCount > 0 && (
