@@ -12,6 +12,7 @@ import type {
   MetadataAdjacencyInput,
   MetadataContinentInput,
   MetadataTerritoryInput,
+  TerritoryModifierMetadata,
 } from '../types/maps'
 import { storeBase64Image } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
@@ -100,6 +101,72 @@ const asNumber = (value: unknown): number | undefined =>
 
 const asString = (value: unknown): string | undefined =>
   typeof value === 'string' ? value : undefined
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return fallback
+}
+
+const toBoolean = (value: unknown): boolean => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['true', '1', 'yes', 'y'].includes(normalized)) return true
+    if (['false', '0', 'no', 'n'].includes(normalized)) return false
+  }
+  if (typeof value === 'number') {
+    return value !== 0
+  }
+  return false
+}
+
+const normalizeTerritoryModifiers = (value: unknown): Record<string, TerritoryModifierMetadata> => {
+  if (!isRecord(value)) {
+    return {}
+  }
+
+  const modifiers: Record<string, TerritoryModifierMetadata> = {}
+
+  for (const [territoryId, raw] of Object.entries(value)) {
+    if (!isRecord(raw)) continue
+
+    const modifier: TerritoryModifierMetadata = {
+      templateId: asString(raw.templateId) ?? asString(raw.template_id),
+      name: asString(raw.name) ?? undefined,
+      icon: asString(raw.icon) ?? undefined,
+      color: asString(raw.color) ?? undefined,
+      defenseBonus: toNumber(raw.defenseBonus ?? raw.defense_bonus, 0),
+      attackBonus: toNumber(raw.attackBonus ?? raw.attack_bonus, 0),
+      troopBonus: toNumber(
+        raw.troopBonus ?? raw.troop_generation_bonus ?? raw.troopGenerationBonus,
+        0,
+      ),
+      movementRestriction: toBoolean(
+        raw.movementRestriction ?? raw.movement_restriction ?? raw.movementrestriction,
+      ),
+      supplyLineBonus: toBoolean(
+        raw.supplyLineBonus ?? raw.supply_line_bonus ?? raw.supplylinebonus,
+      ),
+      notes: asString(raw.notes) ?? undefined,
+    }
+
+    modifiers[territoryId] = modifier
+  }
+
+  return modifiers
+}
+
+const hasTerritoryModifiers = (
+  value: Record<string, TerritoryModifierMetadata> | undefined,
+): boolean => !!value && Object.keys(value).length > 0
 
 export class MapWorkflowService {
   /**
@@ -340,7 +407,7 @@ export class MapWorkflowService {
       await query(
         `
         INSERT INTO map_review_queue (map_id, submitted_by, status, priority)
-        VALUES (?, ?, 'pending', 0)
+        VALUES ($1, $2, 'pending', 0)
         ON CONFLICT(map_id) DO UPDATE SET 
           status = 'pending', 
           submitted_at = CURRENT_TIMESTAMP
@@ -575,7 +642,7 @@ export class MapWorkflowService {
       await query(
         `
         INSERT INTO map_versions (map_id, version_number, data, territories, continents, adjacencies, change_summary, changed_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
         [
           mapId,
@@ -599,8 +666,8 @@ export class MapWorkflowService {
           UPDATE maps 
           SET status = 'pending_review', 
               submitted_at = CURRENT_TIMESTAMP,
-              parent_map_id = ?
-          WHERE id = ?
+              parent_map_id = $1
+          WHERE id = $2
         `,
           [mapId, mapId],
         )
@@ -650,8 +717,8 @@ export class MapWorkflowService {
       const params: Array<string> = []
 
       if (adminId) {
-        sql += ' AND (admin_id = ? OR admin_id IS NULL)'
         params.push(adminId)
+        sql += ` AND (admin_id = $${params.length} OR admin_id IS NULL)`
       }
 
       if (unreadOnly) {
@@ -677,7 +744,7 @@ export class MapWorkflowService {
         `
         UPDATE admin_notifications 
         SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND (admin_id = ? OR admin_id IS NULL)
+        WHERE id = $1 AND (admin_id = $2 OR admin_id IS NULL)
       `,
         [notificationId, adminId],
       )
@@ -710,6 +777,8 @@ export class MapWorkflowService {
     const mapDataAdjacencies = mapData.adjacencies
     const mapDataCapitalAssignments = mapData.capitalAssignments
     const mapDataTags = mapData.tags
+    const mapDataTerritoryModifiers =
+      mapData.territoryModifiers ?? (mapData as Record<string, unknown>).territory_modifiers
     const fallbackImageWidth = asNumber(mapData.imageWidth)
     const fallbackImageHeight = asNumber(mapData.imageHeight)
     const territories = this.safeJson<unknown[]>(
@@ -730,6 +799,7 @@ export class MapWorkflowService {
     )
     const tags = this.safeJson<string[]>(row.tags, toStringArray(mapDataTags))
     const validationErrors = this.safeJson<unknown[]>(row.validation_errors, [])
+    const territoryModifiers = normalizeTerritoryModifiers(mapDataTerritoryModifiers)
 
     return {
       id: row.id,
@@ -743,6 +813,9 @@ export class MapWorkflowService {
       continents,
       adjacencies,
       capitalAssignments,
+      territoryModifiers: hasTerritoryModifiers(territoryModifiers)
+        ? territoryModifiers
+        : undefined,
       thumbnailUrl: row.thumbnail_url || undefined,
       imageUrl: row.image_url || undefined,
       imageWidth: row.image_width ?? fallbackImageWidth,
@@ -857,6 +930,28 @@ export class MapWorkflowService {
     const minPlayers = asNumber(data.minPlayers) ?? asNumber(metadataRecord?.minPlayers) ?? 2
     const maxPlayers = asNumber(data.maxPlayers) ?? asNumber(metadataRecord?.maxPlayers) ?? 6
 
+    const dataModifiers = normalizeTerritoryModifiers(
+      (data as { territoryModifiers?: unknown; territory_modifiers?: unknown })
+        .territoryModifiers ??
+        (data as { territoryModifiers?: unknown; territory_modifiers?: unknown })
+          .territory_modifiers,
+    )
+
+    const metadataModifiers = normalizeTerritoryModifiers(
+      (metadataRecord as { territoryModifiers?: unknown; territory_modifiers?: unknown })
+        ?.territoryModifiers ??
+        (metadataRecord as { territoryModifiers?: unknown; territory_modifiers?: unknown })
+          ?.territory_modifiers,
+    )
+
+    const draftModifiers = normalizeTerritoryModifiers(draft.territoryModifiers)
+
+    const territoryModifiers = hasTerritoryModifiers(draftModifiers)
+      ? draftModifiers
+      : hasTerritoryModifiers(metadataModifiers)
+        ? metadataModifiers
+        : dataModifiers
+
     const metadata: MapMetadataPayload = {
       territories: territories as MetadataTerritoryInput[],
       continents: continents as MetadataContinentInput[],
@@ -864,6 +959,10 @@ export class MapWorkflowService {
       capitalAssignments,
       width: asNumber(data.width) ?? asNumber(data.mapWidth) ?? imageWidth ?? 1920,
       height: asNumber(data.height) ?? asNumber(data.mapHeight) ?? imageHeight ?? 1080,
+    }
+
+    if (hasTerritoryModifiers(territoryModifiers)) {
+      metadata.territoryModifiers = territoryModifiers
     }
 
     return {
@@ -1079,7 +1178,7 @@ export class MapWorkflowService {
       await query(
         `
         INSERT INTO map_submission_logs (map_id, action, performed_by, details)
-        VALUES (?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4)
       `,
         [mapId, action, performedBy, JSON.stringify(details)],
       )
@@ -1113,15 +1212,15 @@ export class MapWorkflowService {
           u.username as creator_name
         FROM maps m
         JOIN users u ON m.creator_id = u.id
-        WHERE m.status = ?
+        WHERE m.status = $1
         ORDER BY 
           CASE 
-            WHEN ? = 'pending_review' THEN m.submitted_at
-            WHEN ? = 'approved' THEN m.reviewed_at
+            WHEN $2 = 'pending_review' THEN m.submitted_at
+            WHEN $2 = 'approved' THEN m.reviewed_at
             ELSE m.updated_at
           END DESC
       `,
-        [status, status, status],
+        [status, status],
       )
 
       return (result.rows as CustomMap[]) || []
@@ -1143,7 +1242,7 @@ export class MapWorkflowService {
           u.username as performed_by_name
         FROM map_submission_logs msl
         LEFT JOIN users u ON msl.performed_by = u.id
-        WHERE msl.map_id = ?
+        WHERE msl.map_id = $1
         ORDER BY msl.created_at DESC
       `,
         [mapId],

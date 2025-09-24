@@ -214,15 +214,36 @@ if (assetBaseUrl) {
   }
 }
 
+const addUniqueSources = (sources: string[], values: (string | undefined)[]) => {
+  values.forEach((value) => {
+    if (!value) return
+    if (!sources.includes(value)) {
+      sources.push(value)
+    }
+  })
+}
+
 const imgSources = ["'self'", 'data:', 'blob:']
 const mediaSources = ["'self'", 'blob:']
 const fontSources = ["'self'", 'data:']
+const scriptSources = ["'self'", "'unsafe-inline'"]
+const connectSources = ["'self'", 'wss:', 'ws:']
 
 if (assetOrigin) {
-  imgSources.push(assetOrigin)
-  mediaSources.push(assetOrigin)
-  fontSources.push(assetOrigin)
+  addUniqueSources(imgSources, [assetOrigin])
+  addUniqueSources(mediaSources, [assetOrigin])
+  addUniqueSources(fontSources, [assetOrigin])
+  addUniqueSources(connectSources, [assetOrigin])
 }
+
+const cloudflareScriptOrigins = ['https://static.cloudflareinsights.com']
+const cloudflareConnectOrigins = [
+  'https://cloudflareinsights.com',
+  'https://static.cloudflareinsights.com',
+]
+
+addUniqueSources(scriptSources, cloudflareScriptOrigins)
+addUniqueSources(connectSources, cloudflareConnectOrigins)
 
 // Security middleware
 app.use(
@@ -230,10 +251,10 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: scriptSources,
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: imgSources,
-        connectSrc: ["'self'", 'wss:', 'ws:'],
+        connectSrc: connectSources,
         fontSrc: fontSources,
         objectSrc: ["'none'"],
         mediaSrc: mediaSources,

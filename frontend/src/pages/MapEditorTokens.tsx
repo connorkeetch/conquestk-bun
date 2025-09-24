@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '@/utils/logger'
@@ -8,6 +8,8 @@ import ImageCropperEnhanced from '../components/ImageCropperEnhanced'
 import ImageProcessor from '../components/ImageProcessor'
 import TerritoryToken from '../components/TerritoryToken'
 import { PLAYER_COLORS } from '../constants/colors'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import api from '../services/api'
 import mapWorkflowApi, {
   type DraftImagePayload,
@@ -33,6 +35,19 @@ interface Continent {
   bonus: number
 }
 
+interface TerritoryModifierConfig {
+  templateId?: string
+  name: string
+  icon: string
+  color: string
+  defenseBonus: number
+  attackBonus: number
+  troopBonus: number
+  movementRestriction: boolean
+  supplyLineBonus: boolean
+  notes?: string
+}
+
 interface LabelSettings {
   showLabels: boolean
   preset: 'classic' | 'modern' | 'minimal' | 'highContrast' | 'custom'
@@ -52,6 +67,7 @@ interface MapState {
   imageUrl?: string
   territories: Territory[]
   continents: Continent[]
+  territoryModifiers: Record<string, TerritoryModifierConfig>
   selectedTerritoryId: string | null
   draggedTerritoryId: string | null
   mapWidth: number
@@ -62,7 +78,14 @@ interface MapState {
   labelSettings?: LabelSettings // Label customization settings
 }
 
-type EditorMode = 'properties' | 'image' | 'territories' | 'continents' | 'connections' | 'capitals'
+type EditorMode =
+  | 'properties'
+  | 'image'
+  | 'territories'
+  | 'continents'
+  | 'connections'
+  | 'capitals'
+  | 'modifiers'
 type TokenShape = 'hexagon' | 'square' | 'circle'
 
 interface CapitalAssignments {
@@ -153,6 +176,87 @@ const isNumber = (value: unknown): value is number =>
 
 const toStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return fallback
+}
+
+const toBoolean = (value: unknown, fallback = false): boolean => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['true', '1', 'yes', 'y'].includes(normalized)) return true
+    if (['false', '0', 'no', 'n'].includes(normalized)) return false
+  }
+  if (typeof value === 'number') {
+    return value !== 0
+  }
+  return fallback
+}
+
+const normalizeTerritoryModifierEntry = (
+  value: Record<string, unknown>,
+): TerritoryModifierConfig => ({
+  templateId: isString(value.templateId)
+    ? value.templateId
+    : isString(value.template_id)
+      ? value.template_id
+      : undefined,
+  name: isString(value.name) && value.name.trim() ? value.name.trim() : 'Strategic Territory',
+  icon: isString(value.icon) && value.icon.trim() ? value.icon.trim() : '✨',
+  color: isString(value.color) && value.color.trim() ? value.color.trim() : '#a855f7',
+  defenseBonus: toNumber(value.defenseBonus ?? value.defense_bonus, 0),
+  attackBonus: toNumber(value.attackBonus ?? value.attack_bonus, 0),
+  troopBonus: toNumber(
+    value.troopBonus ?? value.troop_generation_bonus ?? value.troopGenerationBonus,
+    0,
+  ),
+  movementRestriction: toBoolean(
+    value.movementRestriction ?? value.movement_restriction ?? value.movementrestriction,
+    false,
+  ),
+  supplyLineBonus: toBoolean(
+    value.supplyLineBonus ?? value.supply_line_bonus ?? value.supplylinebonus,
+    false,
+  ),
+  notes: isString(value.notes) ? value.notes : undefined,
+})
+
+const normalizeTerritoryModifiers = (input: unknown): Record<string, TerritoryModifierConfig> => {
+  if (typeof input !== 'object' || input === null) return {}
+
+  const entries = Object.entries(input as Record<string, unknown>)
+  const result: Record<string, TerritoryModifierConfig> = {}
+
+  for (const [territoryId, rawValue] of entries) {
+    if (typeof rawValue !== 'object' || rawValue === null) continue
+    const normalizedId = territoryId.trim()
+    if (!normalizedId) continue
+    result[normalizedId] = normalizeTerritoryModifierEntry(rawValue as Record<string, unknown>)
+  }
+
+  return result
+}
+
+const createDefaultModifier = (): TerritoryModifierConfig => ({
+  templateId: undefined,
+  name: 'Strategic Territory',
+  icon: '✨',
+  color: '#a855f7',
+  defenseBonus: 0,
+  attackBonus: 0,
+  troopBonus: 0,
+  movementRestriction: false,
+  supplyLineBonus: false,
+  notes: undefined,
+})
 
 const normalizeTerritoryRecord = (record: LegacyTerritoryRecord): Territory => ({
   id: record.id || uuidv4(),
@@ -360,6 +464,7 @@ export default function MapEditorTokens() {
     imageUrl: undefined,
     territories: [],
     continents: [],
+    territoryModifiers: {},
     selectedTerritoryId: null,
     draggedTerritoryId: null,
     mapWidth: 1920, // Default to full HD

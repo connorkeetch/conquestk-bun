@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import MapDetailModal from '@/components/MapDetailModal'
 import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
@@ -32,6 +33,7 @@ const Maps: React.FC = () => {
   const [filterTag, setFilterTag] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [showMyMaps, setShowMyMaps] = useState(false)
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
   const { user } = useAppSelector((state) => state.auth)
 
   const fetchMaps = useCallback(async () => {
@@ -104,25 +106,16 @@ const Maps: React.FC = () => {
     )
   }
 
-  const getRatingStars = (rating: number) => {
-    const stars = []
-    const fullStars = Math.floor(rating)
-    const hasHalfStar = rating % 1 >= 0.5
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push('⭐')
-    }
-    if (hasHalfStar && fullStars < 5) {
-      stars.push('✨')
-    }
-    while (stars.length < 5) {
-      stars.push('☆')
-    }
-    return stars.join('')
-  }
-
   // Get unique tags from all maps for filter dropdown
   const allTags = Array.from(new Set(maps.flatMap((map) => map.tags || []))).sort()
+
+  const openMapModal = (mapId: string) => {
+    setSelectedMapId(mapId)
+  }
+
+  const closeMapModal = () => {
+    setSelectedMapId(null)
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -235,9 +228,11 @@ const Maps: React.FC = () => {
       {!loading && filteredMaps.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredMaps.map((map) => (
-            <div
+            <button
               key={map.id}
-              className="box1 hover:border-primary transition-all duration-200 cursor-pointer group"
+              type="button"
+              onClick={() => openMapModal(map.id)}
+              className="box1 w-full cursor-pointer text-left transition-all duration-200 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary group"
             >
               {/* Map Thumbnail */}
               <div className="relative h-48 bg-surface-2 rounded-t-lg overflow-hidden">
@@ -297,11 +292,11 @@ const Maps: React.FC = () => {
 
                 {/* Stats */}
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted">🎮 {map.playCount || 0}</span>
+                  <div className="flex flex-col gap-1 text-muted">
+                    <span>Games played: {map.playCount || 0}</span>
                     {map.ratingCount > 0 && (
-                      <span className="text-muted" title={`${map.ratingAverage.toFixed(1)}/5`}>
-                        {getRatingStars(map.ratingAverage)}
+                      <span title={`${map.ratingAverage.toFixed(1)}/5`}>
+                        Rating: {map.ratingAverage.toFixed(1)} / 5 ({map.ratingCount})
                       </span>
                     )}
                   </div>
@@ -313,6 +308,7 @@ const Maps: React.FC = () => {
                   <div className="mt-3 pt-3 border-t border-border flex gap-2">
                     <Link
                       to={`/map-editor?edit=${map.id}`}
+                      onClick={(event) => event.stopPropagation()}
                       className="flex-1 bg-primary hover:brightness-110 text-white text-xs px-2 py-1.5 rounded text-center transition-all"
                     >
                       ✏️ Edit
@@ -337,7 +333,7 @@ const Maps: React.FC = () => {
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -361,6 +357,12 @@ const Maps: React.FC = () => {
           </div>
         </div>
       )}
+
+      <MapDetailModal
+        isOpen={selectedMapId !== null}
+        mapId={selectedMapId}
+        onClose={closeMapModal}
+      />
     </div>
   )
 }
