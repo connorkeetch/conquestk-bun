@@ -280,8 +280,9 @@ app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 // Apply suspicious activity tracker globally
 app.use(suspiciousActivityTracker.middleware())
 
-// Ensure API responses are not cached by intermediaries or browsers
+// Set strict content-type handling and prevent caching of API responses
 app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
   if (req.path.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-store')
   }
