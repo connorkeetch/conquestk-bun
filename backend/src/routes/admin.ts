@@ -1675,13 +1675,13 @@ router.delete(
       const gamesCheck = await dbQuery(
         `SELECT COUNT(*) as count 
          FROM game_rooms 
-         WHERE map_id = $1 AND status IN ('in_progress', 'starting')`,
+         WHERE map_id = $1 AND status IN ('in_progress', 'starting', 'waiting')`,
         [mapId],
       )
 
       if (parseInt(gamesCheck.rows[0].count, 10) > 0) {
         res.status(400).json({
-          error: 'Cannot delete map that is being used in active games',
+          error: 'Cannot delete map that is being used in active or waiting games',
         })
         return
       }
