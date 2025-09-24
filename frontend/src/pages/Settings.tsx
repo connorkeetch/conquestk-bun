@@ -18,7 +18,9 @@ import {
   PREMIUM_COLORS,
   STANDARD_COLORS,
 } from '../constants/colors'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
 import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
@@ -382,6 +384,7 @@ export default function Settings() {
   const { user } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
+  const showComingSoonSettings = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_PLACEHOLDERS)
 
   // Get current color theme from centralized config
   const [currentColorTheme, setCurrentColorTheme] = useState<string>(() => getStoredTheme())
@@ -1071,8 +1074,8 @@ export default function Settings() {
   // Settings data definitions
   const getSettingsForTab = (tab: SettingsTab): SettingItem[] => {
     switch (tab) {
-      case 'account':
-        return [
+      case 'account': {
+        const items: SettingItem[] = [
           {
             id: 'username',
             label: 'Username',
@@ -1140,7 +1143,10 @@ export default function Settings() {
               }
             },
           },
-          {
+        ]
+
+        if (showComingSoonSettings) {
+          items.push({
             id: 'two-factor',
             label: 'Two-Factor Authentication',
             description: 'Enable 2FA for extra security',
@@ -1148,49 +1154,53 @@ export default function Settings() {
             isWorking: false,
             buttonText: '📱 Enable 2FA',
             buttonVariant: 'secondary',
-          },
-          {
-            id: 'delete-account',
-            label: 'Delete Account',
-            description: 'Permanently delete your account',
-            type: 'button',
-            isWorking: true,
-            buttonText: '🗑️ Delete Account',
-            buttonVariant: 'danger',
-            onClick: async () => {
-              const confirmation = prompt(
-                'Type "DELETE" to confirm you want to permanently delete your account:',
-              )
-              if (confirmation !== 'DELETE') {
-                alert('Account deletion cancelled')
-                return
+          })
+        }
+
+        items.push({
+          id: 'delete-account',
+          label: 'Delete Account',
+          description: 'Permanently delete your account',
+          type: 'button',
+          isWorking: true,
+          buttonText: '🗑️ Delete Account',
+          buttonVariant: 'danger',
+          onClick: async () => {
+            const confirmation = prompt(
+              'Type "DELETE" to confirm you want to permanently delete your account:',
+            )
+            if (confirmation !== 'DELETE') {
+              alert('Account deletion cancelled')
+              return
+            }
+
+            const finalConfirm = confirm('Are you absolutely sure? This action cannot be undone!')
+            if (!finalConfirm) return
+
+            try {
+              const response = await fetch('/api/auth/delete-account', {
+                method: 'DELETE',
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('token')}`,
+                },
+              })
+
+              if (response.ok) {
+                alert('Account deleted successfully')
+                localStorage.removeItem('token')
+                window.location.href = '/'
+              } else {
+                const data = await response.json()
+                alert(data.message || 'Failed to delete account')
               }
-
-              const finalConfirm = confirm('Are you absolutely sure? This action cannot be undone!')
-              if (!finalConfirm) return
-
-              try {
-                const response = await fetch('/api/auth/delete-account', {
-                  method: 'DELETE',
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                  },
-                })
-
-                if (response.ok) {
-                  alert('Account deleted successfully')
-                  localStorage.removeItem('token')
-                  window.location.href = '/'
-                } else {
-                  const data = await response.json()
-                  alert(data.message || 'Failed to delete account')
-                }
-              } catch (_error) {
-                alert('Error deleting account')
-              }
-            },
+            } catch (_error) {
+              alert('Error deleting account')
+            }
           },
-        ]
+        })
+
+        return items
+      }
 
       case 'game':
         // Color options are created inline in the UI below
@@ -1303,8 +1313,8 @@ export default function Settings() {
           },
         ]
 
-      case 'display':
-        return [
+      case 'display': {
+        const items: SettingItem[] = [
           {
             id: 'unified-theme',
             label: 'Theme',
@@ -1325,15 +1335,21 @@ export default function Settings() {
               void persistSetting('theme', theme)
             },
           },
-          {
+        ]
+
+        if (showComingSoonSettings) {
+          items.push({
             id: 'colorblind-mode',
             label: 'Colorblind Mode',
             description: 'Use colorblind-friendly territory colors',
             type: 'toggle',
             isWorking: false,
             defaultValue: false,
-          },
-        ]
+          })
+        }
+
+        return items
+      }
 
       case 'notifications': {
         const pushDescription =
