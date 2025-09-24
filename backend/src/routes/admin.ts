@@ -398,29 +398,33 @@ router.delete(
 
 // ============= CONTENT MODERATION =============
 
-// Get content approval queue (support both routes for compatibility)
-router.get(
-  '/content/queue',
-  requirePermission('content.moderate'),
-  queryParam('limit').optional().isInt({ min: 1, max: 100 }),
-  queryParam('offset').optional().isInt({ min: 0 }),
-  checkValidation,
-  async (req: Request, res: Response) => {
-    try {
-      const limit = parseInt(req.query.limit as string, 10) || 50
-      const offset = parseInt(req.query.offset as string, 10) || 0
+const registerContentApprovalQueueRoute = (path: string) =>
+  router.get(
+    path,
+    requirePermission('content.moderate'),
+    queryParam('limit').optional().isInt({ min: 1, max: 100 }),
+    queryParam('offset').optional().isInt({ min: 0 }),
+    checkValidation,
+    async (req: Request, res: Response) => {
+      try {
+        const limit = parseInt(req.query.limit as string, 10) || 50
+        const offset = parseInt(req.query.offset as string, 10) || 0
 
-      const result = await adminService.getContentApprovalQueue(limit, offset)
-      res.json(result)
-    } catch (error) {
-      handleRouteError(error, req, 'Failed to get approval queue', 500, {
-        limit: req.query.limit,
-        offset: req.query.offset,
-      })
-      res.status(500).json({ error: 'Failed to get approval queue' })
-    }
-  },
-)
+        const result = await adminService.getContentApprovalQueue(limit, offset)
+        res.json(result)
+      } catch (error) {
+        handleRouteError(error, req, 'Failed to get approval queue', 500, {
+          limit: req.query.limit,
+          offset: req.query.offset,
+        })
+        res.status(500).json({ error: 'Failed to get approval queue' })
+      }
+    },
+  )
+
+// Support legacy '/content/queue' and new '/content/approval-queue' endpoints
+registerContentApprovalQueueRoute('/content/queue')
+registerContentApprovalQueueRoute('/content/approval-queue')
 
 // Approve content
 router.post(
