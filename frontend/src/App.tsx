@@ -67,6 +67,12 @@ import { FEATURE_FLAGS } from './constants/featureFlags'
 import { useFeatureFlag } from './hooks/useFeatureFlag'
 import { checkAuth } from './store/authSlice'
 
+const SuspenseFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="spinner"></div>
+  </div>
+)
+
 const AiComingSoonRoute = () => {
   const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
 
@@ -75,13 +81,7 @@ const AiComingSoonRoute = () => {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="spinner"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={<SuspenseFallback />}>
       <ComingSoon
         title="AI Opponents"
         description="Sharpen your tactics against adaptive bots. We're teaching them the art of conquest and will roll this out soon."
@@ -92,6 +92,20 @@ const AiComingSoonRoute = () => {
           'Achievements for solo victories',
         ]}
       />
+    </Suspense>
+  )
+}
+
+const PolygonEditorRoute = () => {
+  const polygonEditorEnabled = useFeatureFlag(FEATURE_FLAGS.MAP_POLYGON_EDITOR)
+
+  if (!polygonEditorEnabled) {
+    return <Navigate to="/map-editor" replace />
+  }
+
+  return (
+    <Suspense fallback={<SuspenseFallback />}>
+      <MapEditor />
     </Suspense>
   )
 }
@@ -464,15 +478,7 @@ function App() {
             path="/editor/new"
             element={
               <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <MapEditor />
-                </Suspense>
+                <PolygonEditorRoute />
               </AuthGuard>
             }
           />
@@ -480,15 +486,7 @@ function App() {
             path="/editor/:mapId"
             element={
               <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <MapEditor />
-                </Suspense>
+                <PolygonEditorRoute />
               </AuthGuard>
             }
           />
@@ -797,15 +795,7 @@ function App() {
             path="/map-editor-polygon"
             element={
               <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <MapEditor />
-                </Suspense>
+                <PolygonEditorRoute />
               </AuthGuard>
             }
           />

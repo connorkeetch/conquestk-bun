@@ -35,15 +35,26 @@ export interface CustomMap {
   name: string
   description?: string
   creatorId: string
+  creatorName?: string
   imageUrl?: string
   imageWidth: number
   imageHeight: number
   isPublic: boolean
   isFeatured: boolean
+  status: string
+  version: number
+  parentMapId?: string
   downloadCount: number
+  playCount: number
   ratingAverage: number
   ratingCount: number
   tags: string[]
+  capitalTerritories?: Record<string, number[]>
+  submittedAt?: string
+  reviewedAt?: string
+  reviewedBy?: string
+  reviewNotes?: string
+  rejectionReason?: string
   createdAt: string
   updatedAt: string
 }

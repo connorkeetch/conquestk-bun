@@ -151,6 +151,19 @@ export interface ConnectionRequirements {
   [key: string]: unknown
 }
 
+export interface TerritoryModifierMetadata {
+  templateId?: string
+  name?: string
+  icon?: string
+  color?: string
+  defenseBonus?: number
+  attackBonus?: number
+  troopBonus?: number
+  movementRestriction?: boolean
+  supplyLineBonus?: boolean
+  notes?: string
+}
+
 export interface MapRating {
   id: string
   mapId: string
@@ -291,6 +304,7 @@ export interface MapMetadataPayload {
   capitalAssignments?: Record<string, string[]>
   width?: number
   height?: number
+  territoryModifiers?: Record<string, TerritoryModifierMetadata>
 }
 
 export interface CreateMapRequest {
@@ -371,6 +385,7 @@ export interface MapDraft {
   continents?: unknown
   adjacencies?: unknown
   capitalAssignments?: Record<string, string[]>
+  territoryModifiers?: Record<string, TerritoryModifierMetadata>
   thumbnailUrl?: string
   imageUrl?: string
   imageWidth?: number

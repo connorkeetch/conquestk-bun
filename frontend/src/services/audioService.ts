@@ -96,6 +96,8 @@ class AudioService {
   private isMuted: boolean = false
   private previousVolumes: AudioPreferences | null = null
   private readonly audioEnabled: boolean
+  private hasPreloadedSounds: boolean = false
+  private hasQueuedUnlockListener: boolean = false
 
   // Track which audio files are being used
   private audioUsageTracker: Map<SoundEffectKey, { lastUsed: Date; count: number }> = new Map()
@@ -117,7 +119,8 @@ class AudioService {
     this.loadPreferences()
     if (this.audioEnabled) {
       this.setupVisibilityListener()
-      this.preloadSounds()
+      this.setupUserInteractionListeners()
+      this.tryPreloadSounds()
     } else {
       logger.debug('Audio disabled for current environment; skipping preload')
     }
@@ -179,49 +182,104 @@ class AudioService {
     })
   }
 
+  private setupUserInteractionListeners(): void {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const handler = () => {
+      this.tryPreloadSounds()
+    }
+
+    const interactionEvents: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart']
+    interactionEvents.forEach((eventName) => {
+      window.addEventListener(eventName, handler, { once: true })
+    })
+  }
+
+  private tryPreloadSounds(): void {
+    if (!this.audioEnabled || this.hasPreloadedSounds) {
+      return
+    }
+
+    const howlerCapabilities = Howler as unknown as {
+      usingWebAudio?: boolean
+      once?: (event: string, callback: () => void) => void
+    }
+
+    if (howlerCapabilities?.usingWebAudio !== false) {
+      this.preloadSounds()
+      this.hasPreloadedSounds = true
+      return
+    }
+
+    if (this.hasQueuedUnlockListener || typeof howlerCapabilities?.once !== 'function') {
+      return
+    }
+
+    this.hasQueuedUnlockListener = true
+    howlerCapabilities.once('unlock', () => {
+      this.hasQueuedUnlockListener = false
+      this.tryPreloadSounds()
+    })
+  }
+
   private preloadSounds(): void {
-    // Preload sound effects
+    // Preload sound effects when the browser allows Web Audio
     Object.entries(SOUND_EFFECTS).forEach(([name, pathOrPaths]) => {
       const effectName = name as SoundEffectKey
-      const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths]
 
-      // For arrays of sounds, preload all of them
       if (Array.isArray(pathOrPaths)) {
-        paths.forEach((path, index) => {
-          const soundKey = `${effectName}_${index}`
-          const howl = new Howl({
-            src: [path],
-            preload: true,
-            volume: this.getEffectiveVolume('effect'),
-            onloaderror: (_id: number, error: unknown) => {
-              logger.warn(`Failed to load sound effect ${soundKey}`, error)
-              this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
-            },
-            onload: () => {
-              logger.debug(`Loaded sound effect ${soundKey}`)
-            },
-          })
-          this.sounds.set(soundKey, { name: soundKey, howl, category: 'effect' })
+        if (!this.soundIndices.has(effectName)) {
+          this.soundIndices.set(effectName, 0)
+        }
+        pathOrPaths.forEach((_, index) => {
+          this.getOrCreateEffectSound(effectName, index)
         })
-        // Initialize rotation index
-        this.soundIndices.set(effectName, 0)
       } else {
-        // Single sound
-        const howl = new Howl({
-          src: [paths[0]],
-          preload: true,
-          volume: this.getEffectiveVolume('effect'),
-          onloaderror: (_id: number, error: unknown) => {
-            logger.warn(`Failed to load sound effect ${effectName}`, error)
-            this.sounds.set(effectName, { name: effectName, howl: null, category: 'effect' })
-          },
-          onload: () => {
-            logger.debug(`Loaded sound effect ${effectName}`)
-          },
-        })
-        this.sounds.set(effectName, { name: effectName, howl, category: 'effect' })
+        this.getOrCreateEffectSound(effectName)
       }
     })
+  }
+
+  private getOrCreateEffectSound(
+    effectName: SoundEffectKey,
+    variantIndex?: number,
+  ): SoundEffect | null {
+    const soundKey = variantIndex !== undefined ? `${effectName}_${variantIndex}` : effectName
+    const existing = this.sounds.get(soundKey)
+    if (existing) {
+      return existing.howl ? existing : null
+    }
+
+    const definition = SOUND_EFFECTS[effectName]
+    const path = Array.isArray(definition) ? definition[variantIndex ?? 0] : definition
+
+    if (!path) {
+      logger.warn(`No audio path defined for ${soundKey}`)
+      this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
+      return null
+    }
+
+    const howlerCapabilities = Howler as unknown as { usingWebAudio?: boolean }
+
+    const howl = new Howl({
+      src: [path],
+      preload: true,
+      html5: howlerCapabilities?.usingWebAudio === false,
+      volume: this.getEffectiveVolume('effect'),
+      onloaderror: (_id: number, error: unknown) => {
+        logger.warn(`Failed to load sound effect ${soundKey}`, error)
+        this.sounds.set(soundKey, { name: soundKey, howl: null, category: 'effect' })
+      },
+      onload: () => {
+        logger.debug(`Loaded sound effect ${soundKey}`)
+      },
+    })
+
+    const sound: SoundEffect = { name: soundKey, howl, category: 'effect' }
+    this.sounds.set(soundKey, sound)
+    return sound
   }
 
   private getEffectiveVolume(category: 'effect' | 'music'): number {
@@ -271,6 +329,8 @@ class AudioService {
       return
     }
 
+    this.tryPreloadSounds()
+
     // Track usage
     this.trackAudioUsage(resolvedEffectName)
 
@@ -279,15 +339,19 @@ class AudioService {
     }
 
     if (Array.isArray(effectConfig)) {
+      if (!this.soundIndices.has(resolvedEffectName)) {
+        this.soundIndices.set(resolvedEffectName, 0)
+      }
+
       // Get current index and rotate
       const currentIndex = this.soundIndices.get(resolvedEffectName) || 0
-      const soundKey = `${resolvedEffectName}_${currentIndex}`
-      const sound = this.sounds.get(soundKey)
+      const sound = this.getOrCreateEffectSound(resolvedEffectName, currentIndex)
 
       if (sound?.howl) {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()
       } else {
+        const soundKey = `${resolvedEffectName}_${currentIndex}`
         logger.warn(`Sound effect '${soundKey}' not found or failed to load`)
       }
 
@@ -295,7 +359,7 @@ class AudioService {
       this.soundIndices.set(resolvedEffectName, (currentIndex + 1) % effectConfig.length)
     } else {
       // Single sound effect
-      const sound = this.sounds.get(resolvedEffectName)
+      const sound = this.getOrCreateEffectSound(resolvedEffectName)
       if (sound?.howl) {
         sound.howl.volume(this.getEffectiveVolume('effect'))
         sound.howl.play()

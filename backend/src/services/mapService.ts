@@ -22,6 +22,7 @@ import type {
   MetadataTerritoryInput,
   TerritoryAbilityType,
   TerritoryAdjacency,
+  TerritoryModifierMetadata,
   UpdateMapRequest,
 } from '../types/maps'
 import { logger } from '../utils/logger'
@@ -90,6 +91,34 @@ interface AdjacencyRow {
 
 export class MapService {
   // ============= MAP CRUD OPERATIONS =============
+
+  private coerceNumber(value: unknown, fallback = 0): number {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+    return fallback
+  }
+
+  private coerceBoolean(value: unknown): boolean {
+    if (typeof value === 'boolean') {
+      return value
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase()
+      if (['true', '1', 'yes', 'y'].includes(normalized)) return true
+      if (['false', '0', 'no', 'n'].includes(normalized)) return false
+    }
+    if (typeof value === 'number') {
+      return value !== 0
+    }
+    return false
+  }
 
   async createMap(
     userId: string,
@@ -241,6 +270,7 @@ export class MapService {
       await client.query('DELETE FROM territory_adjacencies WHERE map_id = $1', [mapId])
       await client.query('DELETE FROM map_territories WHERE map_id = $1', [mapId])
       await client.query('DELETE FROM map_continents WHERE map_id = $1', [mapId])
+      await client.query('DELETE FROM map_territory_modifiers WHERE map_id = $1', [mapId])
 
       for (const continent of continents) {
         await client.query(
@@ -314,6 +344,13 @@ export class MapService {
           [mapId, from, to],
         )
       }
+
+      if (metadata.territoryModifiers && Object.keys(metadata.territoryModifiers).length > 0) {
+        for (const [territoryKey, modifier] of Object.entries(metadata.territoryModifiers)) {
+          if (!modifier) continue
+          await this.persistTerritoryModifier(client, mapId, territoryKey, modifier)
+        }
+      }
     } catch (error) {
       logger.warn('Failed to synchronize map structure from metadata', {
         mapId,
@@ -383,6 +420,108 @@ export class MapService {
     }
 
     return pairs
+  }
+
+  private async persistTerritoryModifier(
+    client: PoolClient,
+    mapId: string,
+    territoryKey: string,
+    modifier: TerritoryModifierMetadata,
+  ): Promise<void> {
+    const sanitized = {
+      templateId: modifier.templateId,
+      name: modifier.name?.trim() || `Special Territory (${territoryKey})`,
+      icon: modifier.icon?.trim() || '✨',
+      color: modifier.color?.trim() || '#a855f7',
+      defenseBonus: this.coerceNumber(modifier.defenseBonus, 0),
+      attackBonus: this.coerceNumber(modifier.attackBonus, 0),
+      troopBonus: this.coerceNumber(modifier.troopBonus, 0),
+      movementRestriction: this.coerceBoolean(modifier.movementRestriction),
+      supplyLineBonus: this.coerceBoolean(modifier.supplyLineBonus),
+    }
+
+    try {
+      await client.query(
+        'DELETE FROM map_territory_modifiers WHERE map_id = $1 AND (territory_id = $2 OR territory_name = $2)',
+        [mapId, territoryKey],
+      )
+    } catch (error) {
+      logger.warn('Failed to clear existing territory modifier mapping', {
+        mapId,
+        territoryKey,
+        error,
+      })
+    }
+
+    const values: Array<string | number | boolean | null> = [
+      mapId,
+      territoryKey,
+      sanitized.templateId ?? null,
+      sanitized.name,
+      sanitized.icon,
+      sanitized.color,
+      sanitized.defenseBonus,
+      sanitized.attackBonus,
+      sanitized.troopBonus,
+      sanitized.movementRestriction,
+      sanitized.supplyLineBonus,
+    ]
+
+    const insertWithTerritoryId = `
+      INSERT INTO map_territory_modifiers (
+        map_id,
+        territory_id,
+        modifier_template_id,
+        name,
+        icon,
+        color,
+        defense_bonus,
+        attack_bonus,
+        troop_generation_bonus,
+        movement_restriction,
+        supply_line_bonus
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    `
+
+    try {
+      await client.query(insertWithTerritoryId, values)
+      return
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('territory_id')) {
+        const insertWithTerritoryName = `
+          INSERT INTO map_territory_modifiers (
+            map_id,
+            territory_name,
+            modifier_template_id,
+            name,
+            icon,
+            color,
+            defense_bonus,
+            attack_bonus,
+            troop_generation_bonus,
+            movement_restriction,
+            supply_line_bonus
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `
+        try {
+          await client.query(insertWithTerritoryName, values)
+          return
+        } catch (legacyError) {
+          logger.warn('Failed to persist territory modifier (legacy schema)', {
+            mapId,
+            territoryKey,
+            error: legacyError,
+          })
+          return
+        }
+      }
+
+      logger.warn('Failed to persist territory modifier for map', {
+        mapId,
+        territoryKey,
+        error,
+      })
+    }
   }
 
   async getMap(mapId: string): Promise<CustomMap | null> {

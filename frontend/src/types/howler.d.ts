@@ -9,6 +9,7 @@ declare module 'howler' {
     volume?: number
     mute?: boolean
     rate?: number
+    html5?: boolean
     onload?: () => void
     onend?: () => void
     onloaderror?: (id: number, error: unknown) => void
@@ -38,6 +39,12 @@ declare module 'howler' {
     volume(volume?: number): number
     mute(muted?: boolean): void
     noAudio?: boolean
+    usingWebAudio?: boolean
+    once?: (
+      event: HowlEvent | 'unlock',
+      callback: (...args: unknown[]) => void,
+      id?: number,
+    ) => void
   }
 
   export { Howl, Howler }
