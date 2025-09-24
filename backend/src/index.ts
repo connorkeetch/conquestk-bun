@@ -280,6 +280,14 @@ app.use(sessionMiddleware) // Use the wrapper that can handle Redis upgrades
 // Apply suspicious activity tracker globally
 app.use(suspiciousActivityTracker.middleware())
 
+// Ensure API responses are not cached by intermediaries or browsers
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store')
+  }
+  next()
+})
+
 // Apply general rate limiting to all API routes
 app.use('/api', generalApiLimiter)
 
