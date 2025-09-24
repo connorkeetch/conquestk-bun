@@ -1676,11 +1676,19 @@ export default function Settings() {
                         }
                         dispatch(setNotificationPref(newPref))
 
-                        const updatedNotifications = { ...settings.notifications }
-                        if (!updatedNotifications[notification.key]) {
-                          updatedNotifications[notification.key] = { browser: false, email: false }
+                        const currentNotifications = settings.notifications ?? {}
+                        const currentNotificationPref = currentNotifications[notification.key] ?? {
+                          browser: false,
+                          email: false,
                         }
-                        updatedNotifications[notification.key].browser = e.target.checked
+                        const updatedNotifications = {
+                          ...currentNotifications,
+                          [notification.key]: {
+                            ...currentNotificationPref,
+                            browser: e.target.checked,
+                          },
+                        }
+
                         void persistSetting('notifications', updatedNotifications)
                       }}
                     />
@@ -1700,11 +1708,19 @@ export default function Settings() {
                         }
                         dispatch(setNotificationPref(newPref))
 
-                        const updatedNotifications = { ...settings.notifications }
-                        if (!updatedNotifications[notification.key]) {
-                          updatedNotifications[notification.key] = { browser: false, email: false }
+                        const currentNotifications = settings.notifications ?? {}
+                        const currentNotificationPref = currentNotifications[notification.key] ?? {
+                          browser: false,
+                          email: false,
                         }
-                        updatedNotifications[notification.key].email = e.target.checked
+                        const updatedNotifications = {
+                          ...currentNotifications,
+                          [notification.key]: {
+                            ...currentNotificationPref,
+                            email: e.target.checked,
+                          },
+                        }
+
                         void persistSetting('notifications', updatedNotifications)
                       }}
                     />
