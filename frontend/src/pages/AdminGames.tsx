@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { type AdminGame, adminService } from '../services/adminService'
 
 interface GameActionModal {
@@ -142,17 +143,13 @@ export default function AdminGames() {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">🎮 Game Management</h1>
-            <div className="text-muted">Monitor and manage active games</div>
-          </div>
-          <a href="/admin" className="bg-surface-2 hover:bg-gray-600 px-4 py-2 rounded">
-            ← Back to Dashboard
-          </a>
-        </div>
+        <AdminPageHeader
+          title="Game Management"
+          subtitle="Monitor, troubleshoot, and take action on live games"
+          icon="🎮"
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
