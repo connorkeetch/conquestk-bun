@@ -641,6 +641,7 @@ export default function MapEditorTokens() {
   const minPlayersId = useId()
   const maxPlayersId = useId()
   const capitalPlayerCountId = useId()
+  const placementContinentSelectId = useId()
   const continentColorInputId = useId()
   const continentBonusInputId = useId()
   const stylePresetId = useId()
@@ -964,6 +965,32 @@ export default function MapEditorTokens() {
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(4)
   const [isGeneratingCapitals, setIsGeneratingCapitals] = useState(false)
   const [isAssigningCapital, setIsAssigningCapital] = useState(false)
+
+  const handleDeleteTerritory = useCallback((territoryId: string) => {
+    setState((prev) => {
+      if (!prev.territories.some((territory) => territory.id === territoryId)) {
+        return prev
+      }
+
+      const { [territoryId]: _removedModifier, ...remainingModifiers } = prev.territoryModifiers
+
+      return {
+        ...prev,
+        territories: prev.territories.filter((territory) => territory.id !== territoryId),
+        territoryModifiers: remainingModifiers,
+        selectedTerritoryId:
+          prev.selectedTerritoryId === territoryId ? null : prev.selectedTerritoryId,
+      }
+    })
+
+    setCapitalAssignments((prev) => {
+      const updated: CapitalAssignments = {}
+      Object.entries(prev).forEach(([playerCount, assignments]) => {
+        updated[playerCount] = assignments.filter((id) => id !== territoryId)
+      })
+      return updated
+    })
+  }, [])
 
   const selectedModifierTerritory = useMemo(() => {
     if (!selectedModifierTerritoryId) return null
@@ -2416,8 +2443,53 @@ export default function MapEditorTokens() {
           <>
             <h2 className="text-xl font-bold mb-4">🗺️ Territory Controls</h2>
 
+            <div className="mb-6 space-y-3">
+              <div className="rounded border border-border bg-surface-1 p-3">
+                <h3 className="text-sm font-bold mb-3">Placement</h3>
+                <label
+                  htmlFor={placementContinentSelectId}
+                  className="text-xs text-muted mb-2 block uppercase tracking-wide"
+                >
+                  Assign new territories to
+                </label>
+                <select
+                  id={placementContinentSelectId}
+                  value={selectedContinentId || ''}
+                  onChange={(e) => setSelectedContinentId(e.target.value || null)}
+                  className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  <option value="">No Continent (Unassigned)</option>
+                  {state.continents.map((continent) => (
+                    <option key={continent.id} value={continent.id}>
+                      {continent.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setIsPlacingTerritory((prev) => !prev)}
+                  className={`mt-3 w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                    isPlacingTerritory
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-primary text-black hover:brightness-110'
+                  }`}
+                >
+                  {isPlacingTerritory
+                    ? '✅ Click the canvas to place territories'
+                    : '➕ Enable territory placement'}
+                </button>
+                <p className="mt-2 text-xs text-muted">
+                  Choose a continent and enable placement, then click the canvas to drop tokens
+                  where you need them.
+                </p>
+              </div>
+            </div>
+
             <div className="mb-6">
-              <h3 className="text-sm font-bold mb-3">Territories by Continent</h3>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold">Territories by Continent</h3>
+                <span className="text-xs text-muted">{state.territories.length} total</span>
+              </div>
               <div className="space-y-3">
                 {territoriesByContinent.map((group) => {
                   const continent = group.continent
@@ -2430,13 +2502,13 @@ export default function MapEditorTokens() {
                   const label = continent ? continent.name : 'Unassigned'
 
                   return (
-                    <div key={group.key} className="rounded border border-border bg-surface-1">
-                      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                    <div key={group.key} className="rounded border border-border bg-surface-1 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => toggleContinentExpanded(group.key)}
-                            className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary"
+                            className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                             aria-label={isExpanded ? 'Collapse continent' : 'Expand continent'}
                           >
                             {isExpanded ? '▾' : '▸'}
@@ -2469,7 +2541,7 @@ export default function MapEditorTokens() {
                               onChange={(e) =>
                                 updateContinentBonus(continent.id, Number(e.target.value) || 0)
                               }
-                              className="w-16 rounded border border-border bg-surface-1 px-2 py-1"
+                              className="w-16 rounded border border-border bg-surface-1 px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                             />
                             <button
                               type="button"
@@ -2479,7 +2551,7 @@ export default function MapEditorTokens() {
                                 setNewContinentColor(continent.color)
                                 setNewContinentBonus(continent.bonus)
                               }}
-                              className="rounded border border-border px-2 py-1 text-xs hover:border-primary"
+                              className="rounded border border-border px-2 py-1 text-xs hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                             >
                               ✏️ Edit
                             </button>
@@ -2494,7 +2566,7 @@ export default function MapEditorTokens() {
                                   handleDeleteContinent(continent.id)
                                 }
                               }}
-                              className="rounded border border-red-600 px-2 py-1 text-xs text-red-400 hover:border-red-400"
+                              className="rounded border border-red-600/60 px-2 py-1 text-xs text-red-300 hover:border-red-500 hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                             >
                               🗑️ Delete
                             </button>
@@ -2506,7 +2578,7 @@ export default function MapEditorTokens() {
                         )}
                       </div>
                       {isExpanded && (
-                        <div className="space-y-2 border-t border-border px-3 py-3">
+                        <div className="mt-3 space-y-2 border-t border-border pt-3">
                           {territoryCount === 0 ? (
                             <p className="rounded bg-surface-2/70 px-3 py-2 text-xs text-muted">
                               {continent
@@ -2514,49 +2586,90 @@ export default function MapEditorTokens() {
                                 : 'Any territories without a continent assignment will show here.'}
                             </p>
                           ) : (
-                            group.territories.map((territory) => (
-                              <div
-                                key={territory.id}
-                                className={`flex items-center gap-2 rounded border px-2 py-2 text-sm transition-colors ${
-                                  state.selectedTerritoryId === territory.id
-                                    ? 'border-primary bg-primary/10'
-                                    : 'border-border bg-surface-2 hover:border-primary'
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setState((prev) => ({
-                                      ...prev,
-                                      selectedTerritoryId: territory.id,
-                                    }))
-                                  }
-                                  className="flex-1 text-left font-medium focus:outline-none"
+                            group.territories.map((territory) => {
+                              const isSelected = state.selectedTerritoryId === territory.id
+                              return (
+                                <div
+                                  key={territory.id}
+                                  className={`rounded border border-border bg-surface-2/60 p-3 transition-colors ${
+                                    isSelected
+                                      ? 'border-primary bg-primary/10'
+                                      : 'hover:border-primary/70'
+                                  }`}
                                 >
-                                  {territory.name}
-                                </button>
-                                <select
-                                  value={territory.continentId ?? ''}
-                                  onChange={(e) =>
-                                    handleTerritoryContinentChange(
-                                      territory.id,
-                                      e.target.value ? e.target.value : null,
-                                    )
-                                  }
-                                  className="w-36 rounded border border-border bg-surface-1 px-2 py-1 text-xs"
-                                >
-                                  <option value="">Unassigned</option>
-                                  {continentOptions.map((continentOption) => (
-                                    <option
-                                      key={continentOption.value}
-                                      value={continentOption.value}
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setState((prev) => ({
+                                          ...prev,
+                                          selectedTerritoryId: territory.id,
+                                        }))
+                                      }
+                                      className="flex-1 text-left text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                                     >
-                                      {continentOption.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            ))
+                                      {territory.name}
+                                    </button>
+                                    <select
+                                      value={territory.continentId ?? ''}
+                                      onChange={(e) =>
+                                        handleTerritoryContinentChange(
+                                          territory.id,
+                                          e.target.value ? e.target.value : null,
+                                        )
+                                      }
+                                      className="w-36 rounded border border-border bg-surface-1 px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                    >
+                                      <option value="">Unassigned</option>
+                                      {continentOptions.map((continentOption) => (
+                                        <option
+                                          key={continentOption.value}
+                                          value={continentOption.value}
+                                        >
+                                          {continentOption.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTerritory(territory.id)}
+                                      className="rounded border border-red-600/60 px-2 py-1 text-xs text-red-300 hover:border-red-500 hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                                      aria-label={`Delete ${territory.name}`}
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                  {isSelected && (
+                                    <div className="mt-2 space-y-2">
+                                      <label
+                                        className="text-xs text-muted uppercase tracking-wide"
+                                        htmlFor={`territory-name-${territory.id}`}
+                                      >
+                                        Display name
+                                      </label>
+                                      <input
+                                        id={`territory-name-${territory.id}`}
+                                        type="text"
+                                        value={territory.name}
+                                        onChange={(e) => {
+                                          const nextName = e.target.value
+                                          setState((prev) => ({
+                                            ...prev,
+                                            territories: prev.territories.map((t) =>
+                                              t.id === territory.id ? { ...t, name: nextName } : t,
+                                            ),
+                                          }))
+                                        }}
+                                        className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                      />
+                                      <p className="text-xs text-muted">
+                                        Highlighted territories update live on the canvas.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })
                           )}
                         </div>
                       )}
@@ -2566,10 +2679,9 @@ export default function MapEditorTokens() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <h3 className="text-sm font-bold mb-3">Token Display</h3>
-
-              <div className="mb-3">
+            <div className="mb-6 rounded border border-border bg-surface-1 p-3 space-y-3">
+              <h3 className="text-sm font-bold">Token Display</h3>
+              <div>
                 <label htmlFor={tokenShapeId} className="mb-1 block text-sm text-muted">
                   Shape
                 </label>
@@ -2577,7 +2689,7 @@ export default function MapEditorTokens() {
                   id={tokenShapeId}
                   value={tokenShape}
                   onChange={(e) => setTokenShape(e.target.value as TokenShape)}
-                  className="w-full rounded bg-surface-2 px-3 py-2"
+                  className="w-full rounded border border-border bg-surface-1 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <option value="hexagon">⬡ Hexagon</option>
                   <option value="square">◼ Square</option>
@@ -2585,7 +2697,7 @@ export default function MapEditorTokens() {
                 </select>
               </div>
 
-              <div className="mb-3">
+              <div>
                 <label htmlFor={tokenSizeId} className="mb-1 block text-sm text-muted">
                   Size: {tokenSize}px
                 </label>
@@ -2602,18 +2714,18 @@ export default function MapEditorTokens() {
 
               <button
                 type="button"
-                onClick={() => setShowGrid(!showGrid)}
-                className={`w-full rounded border px-3 py-2 text-sm font-medium transition ${
+                onClick={() => setShowGrid((prev) => !prev)}
+                className={`w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                   showGrid
-                    ? 'border-primary bg-primary text-black'
-                    : 'border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
+                    ? 'bg-primary text-black'
+                    : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
-                ⊞ {showGrid ? 'Hide Grid' : 'Show Grid'}
+                ⊞ {showGrid ? 'Hide grid overlay' : 'Show grid overlay'}
               </button>
             </div>
 
-            <div className="mb-6">
+            <div className="rounded border border-border bg-surface-1 p-3">
               <h3 className="text-sm font-bold mb-3">Labels</h3>
 
               <button
@@ -2624,13 +2736,13 @@ export default function MapEditorTokens() {
                     showLabels: !settings.showLabels,
                   }))
                 }
-                className={`mb-2 flex w-full items-center justify-between rounded border px-3 py-2 text-sm font-medium transition ${
+                className={`mb-2 flex w-full items-center justify-between rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                   state.labelSettings?.showLabels
-                    ? 'border-primary bg-primary text-black'
-                    : 'border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
+                    ? 'bg-primary text-black'
+                    : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
-                <span>🏷️ {state.labelSettings?.showLabels ? 'Hide Labels' : 'Show Labels'}</span>
+                <span>🏷️ {state.labelSettings?.showLabels ? 'Hide labels' : 'Show labels'}</span>
                 <span className="text-xs text-muted">
                   {state.labelSettings?.showLabels ? 'Visible' : 'Hidden'}
                 </span>
@@ -2640,76 +2752,11 @@ export default function MapEditorTokens() {
                 <button
                   type="button"
                   onClick={() => setShowLabelSettings(true)}
-                  className="flex w-full items-center justify-between rounded border border-border bg-surface-1 px-3 py-2 text-sm font-medium transition hover:border-primary hover:bg-surface-2"
+                  className="flex w-full items-center justify-between rounded border border-border bg-surface-1 px-3 py-2 text-sm font-medium transition hover:border-primary hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
-                  <span>🎨 Customize Label Style</span>
+                  <span>🎨 Customize label style</span>
                   <span className="text-xs text-muted">Fonts, colors, backgrounds</span>
                 </button>
-              )}
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <h3 className="text-sm font-bold mb-2">Selected Territory</h3>
-              {state.selectedTerritoryId ? (
-                (() => {
-                  const territory = state.territories.find(
-                    (t) => t.id === state.selectedTerritoryId,
-                  )
-                  if (!territory) return null
-                  return (
-                    <div className="rounded bg-surface-2 p-3">
-                      <label
-                        className="text-xs text-muted"
-                        htmlFor={`territory-name-${territory.id}`}
-                      >
-                        Name
-                      </label>
-                      <input
-                        id={`territory-name-${territory.id}`}
-                        type="text"
-                        value={territory.name}
-                        onChange={(e) => {
-                          setState((prev) => ({
-                            ...prev,
-                            territories: prev.territories.map((t) =>
-                              t.id === state.selectedTerritoryId
-                                ? { ...t, name: e.target.value }
-                                : t,
-                            ),
-                          }))
-                        }}
-                        className="mb-2 mt-1 w-full rounded bg-gray-600 px-2 py-1 text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setState((prev) => {
-                            if (!state.selectedTerritoryId) {
-                              return prev
-                            }
-                            const { [state.selectedTerritoryId]: _removed, ...remainingModifiers } =
-                              prev.territoryModifiers
-                            return {
-                              ...prev,
-                              territories: prev.territories.filter(
-                                (t) => t.id !== state.selectedTerritoryId,
-                              ),
-                              territoryModifiers: remainingModifiers,
-                              selectedTerritoryId: null,
-                            }
-                          })
-                        }}
-                        className="w-full rounded bg-red-600 px-3 py-1 text-sm hover:bg-red-700"
-                      >
-                        🗑️ Delete Territory
-                      </button>
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-xs text-muted">
-                  Select a territory to rename it or remove it from the map.
-                </p>
               )}
             </div>
           </>
@@ -2729,7 +2776,7 @@ export default function MapEditorTokens() {
                 placeholder="Continent name"
                 value={newContinentName}
                 onChange={(e) => setNewContinentName(e.target.value)}
-                className="w-full rounded bg-gray-600 px-3 py-2 text-white"
+                className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               />
               <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                 <div className="flex items-center gap-2">
@@ -3637,158 +3684,6 @@ export default function MapEditorTokens() {
           </div>
         </div>
 
-        {modeHelpMessage && (
-          <div className="mt-3 flex items-start gap-2 rounded bg-surface-2/40 px-3 py-3 text-sm text-muted">
-            <span className="text-primary text-base leading-none">💡</span>
-            <div>{modeHelpMessage}</div>
-          </div>
-        )}
-
-        {/* Mode-specific controls */}
-        {editorMode === 'territories' && (
-          <div className="mt-4 flex gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Continent:</span>
-              <select
-                value={selectedContinentId || ''}
-                onChange={(e) => setSelectedContinentId(e.target.value)}
-                className="px-3 py-1 bg-surface-2 rounded text-white"
-              >
-                <option value="">No Continent (Unassigned)</option>
-                {state.continents.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPlacingTerritory(!isPlacingTerritory)}
-              className={`px-4 py-2 rounded ${isPlacingTerritory ? 'bg-green-600' : 'bg-surface-2'}`}
-              title={
-                isPlacingTerritory
-                  ? 'Click to stop placing territories'
-                  : 'Click to start placing territories on the map'
-              }
-            >
-              {isPlacingTerritory ? '🎯 Placing Territories' : '➕ Place Territory'}
-            </button>
-            {state.selectedTerritoryId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setState((prev) => ({
-                    ...prev,
-                    territories: prev.territories.filter((t) => t.id !== state.selectedTerritoryId),
-                  }))
-                }}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
-                title="Remove the selected territory from the map"
-              >
-                🗑️ Delete Selected
-              </button>
-            )}
-          </div>
-        )}
-
-        {editorMode === 'continents' && (
-          <div className="mt-4 space-y-2">
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                placeholder="Continent Name"
-                value={newContinentName}
-                onChange={(e) => setNewContinentName(e.target.value)}
-                className="px-3 py-1 bg-surface-2 rounded text-white"
-              />
-              <input
-                type="color"
-                value={newContinentColor}
-                onChange={(e) => setNewContinentColor(e.target.value)}
-                className="w-12 h-8 bg-surface-2 rounded cursor-pointer"
-              />
-              <input
-                type="number"
-                placeholder="Bonus"
-                value={newContinentBonus}
-                onChange={(e) => setNewContinentBonus(parseInt(e.target.value, 10) || 0)}
-                className="w-20 px-3 py-1 bg-surface-2 rounded text-white"
-                min="0"
-                max="10"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (editingContinentId) {
-                    handleUpdateContinent(editingContinentId)
-                  } else {
-                    handleCreateContinent()
-                  }
-                }}
-                className="px-4 py-1 bg-slate-700 hover:bg-slate-600 rounded"
-                disabled={!newContinentName.trim()}
-              >
-                {editingContinentId ? '💾 Update' : '➕ Add Continent'}
-              </button>
-              {editingContinentId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingContinentId(null)
-                    setNewContinentName('')
-                    setNewContinentColor('#3B82F6')
-                    setNewContinentBonus(3)
-                  }}
-                  className="px-3 py-1 bg-gray-600 hover:bg-surface-2 rounded"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-
-            {/* Continent List */}
-            <div className="flex flex-wrap gap-2">
-              {state.continents.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center gap-2 px-3 py-1 rounded"
-                  style={{ backgroundColor: `${c.color}40`, border: `2px solid ${c.color}` }}
-                >
-                  <span>
-                    {c.name} (+{c.bonus})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingContinentId(c.id)
-                      setNewContinentName(c.name)
-                      setNewContinentColor(c.color)
-                      setNewContinentBonus(c.bonus)
-                    }}
-                    className="text-primary-soft hover:text-primary-soft text-sm px-1"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        confirm(`Delete continent "${c.name}"? Territories will become unassigned.`)
-                      ) {
-                        handleDeleteContinent(c.id)
-                      }
-                    }}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {editorMode === 'connections' && (
           <div className="mt-4">
             <p className="text-sm text-muted">
@@ -4275,9 +4170,14 @@ export default function MapEditorTokens() {
         {/* Map Canvas - Main area taking most space, centered content */}
         <div
           ref={mapContainerRef}
-          className="flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
+          className="relative flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
           style={{ height: 'calc(100vh - 240px)' }}
         >
+          {modeHelpMessage && (
+            <div className="pointer-events-none absolute left-4 top-4 z-20 max-w-xs rounded border border-border bg-surface-2/90 px-3 py-2 text-xs text-muted backdrop-blur-sm">
+              {modeHelpMessage}
+            </div>
+          )}
           <div
             ref={containerRef}
             className="relative flex-shrink-0"
