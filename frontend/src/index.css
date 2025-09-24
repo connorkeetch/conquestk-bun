@@ -4,6 +4,13 @@
 /* Import custom theme configuration */
 @import "./app.css";
 
+@layer base {
+  html,
+  :host {
+    text-size-adjust: 100%;
+  }
+}
+
 /* Root container */
 #root {
   width: 100%;
