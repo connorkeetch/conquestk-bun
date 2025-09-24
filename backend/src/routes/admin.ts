@@ -56,6 +56,8 @@ type AdminMapRow = {
   updated_at: Date | string | null
   is_public: boolean | null
   is_vip_only: boolean | null
+  territoryCount: string | number | null
+  continentCount: string | number | null
 }
 
 type ActiveGameSummaryRow = {
@@ -1234,7 +1236,9 @@ router.get(
           u.username as "creatorName",
           COUNT(DISTINCT gr.id) as "playCount",
           COALESCE(AVG(mr.rating), 0) as "ratingAverage",
-          COUNT(DISTINCT mr.id) as "ratingCount"
+          COUNT(DISTINCT mr.id) as "ratingCount",
+          (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as "territoryCount",
+          (SELECT COUNT(DISTINCT continent) FROM map_territories WHERE map_id = m.id AND continent IS NOT NULL) as "continentCount"
         FROM maps m
         LEFT JOIN users u ON m.creator_id = u.id
         LEFT JOIN game_rooms gr ON gr.map_id = m.id
@@ -1307,6 +1311,8 @@ router.get(
           playCount: parseInt(String(map.playCount ?? '0'), 10),
           ratingAverage: Number.parseFloat(String(map.ratingAverage ?? '0')),
           ratingCount: parseInt(String(map.ratingCount ?? '0'), 10),
+          territoryCount: parseInt(String(map.territoryCount ?? '0'), 10),
+          continentCount: parseInt(String(map.continentCount ?? '0'), 10),
           // Map snake_case to camelCase for dates
           createdAt: map.created_at,
           updatedAt: map.updated_at,
