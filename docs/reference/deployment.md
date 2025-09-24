@@ -15,6 +15,8 @@ git checkout dev
 git push origin dev  # Auto-deploys via Railway
 ```
 
+> **Configuration note (October 2025):** The repo no longer ships a `railway.json`. Manage services and environment variables directly in the Railway dashboard to avoid the deployment regression that file triggered. Document any changes in the GUI so the team can keep this guide current.
+
 ## 🔐 Environment Variables
 
 ### Current Production Setup (September 2025)

@@ -37,6 +37,8 @@ interface RankInsigniaProps {
   showLabel?: boolean
   showRating?: boolean
   className?: string
+  style?: React.CSSProperties
+  textColor?: string
 }
 
 const sizeClasses = {
@@ -59,15 +61,17 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
   showLabel = true,
   showRating = false,
   className = '',
+  style,
+  textColor,
 }) => {
   const rank = getConquestRank(rating)
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2 ${className}`} style={style}>
       {/* Insignia */}
       <span
         className={`${sizeClasses[size]} inline-block`}
-        style={{ color: rank.color }}
+        style={{ color: textColor ?? rank.color }}
         title={`${rank.name} (${rating} ELO)`}
       >
         {rank.insignia}
@@ -75,7 +79,10 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
 
       {/* Rank Name */}
       {showLabel && (
-        <span className={`font-semibold ${labelSizeClasses[size]}`} style={{ color: rank.color }}>
+        <span
+          className={`font-semibold ${labelSizeClasses[size]}`}
+          style={{ color: textColor ?? rank.color }}
+        >
           {rank.name}
         </span>
       )}
