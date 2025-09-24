@@ -75,7 +75,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'metal',
-    name: '⚡ Metal Mayhem',
+    name: 'Metal Mayhem',
     displayColor: '#FF2D95',
     description: 'Premium heavy metal theme with neon grid energy',
     isPremium: true,
