@@ -228,11 +228,19 @@ const Maps: React.FC = () => {
       {!loading && filteredMaps.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredMaps.map((map) => (
-            <button
+            // biome-ignore lint/a11y/useSemanticElements: Card contains nested controls so it cannot be a semantic button element
+            <div
               key={map.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => openMapModal(map.id)}
-              className="box1 w-full cursor-pointer text-left transition-all duration-200 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary group"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  openMapModal(map.id)
+                }
+              }}
+              className="box1 cursor-pointer transition-all duration-200 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary group"
             >
               {/* Map Thumbnail */}
               <div className="relative h-48 bg-surface-2 rounded-t-lg overflow-hidden">
@@ -333,7 +341,7 @@ const Maps: React.FC = () => {
                   </div>
                 )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

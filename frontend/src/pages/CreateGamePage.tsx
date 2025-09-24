@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import MapDetailModal from '@/components/MapDetailModal'
 import { logger } from '@/utils/logger'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
@@ -163,6 +164,7 @@ const CreateGamePage: React.FC = () => {
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
+  const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
   const [searchParams] = useSearchParams()
 
   const initialMode: 'casual' | 'ranked' =
@@ -206,9 +208,21 @@ const CreateGamePage: React.FC = () => {
   // Maps state
   const [maps, setMaps] = useState<GameMap[]>([])
   const [mapsLoading, setMapsLoading] = useState(true)
+  const [mapDetailModalId, setMapDetailModalId] = useState<string | null>(null)
 
   const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
   const modeParam = searchParams.get('mode')
+
+  useEffect(() => {
+    if (!territoryModifiersEnabled) {
+      if (useTerritoryModifiers) {
+        setUseTerritoryModifiers(false)
+      }
+      if (modifierDistribution !== 'balanced') {
+        setModifierDistribution('balanced')
+      }
+    }
+  }, [territoryModifiersEnabled, useTerritoryModifiers, modifierDistribution])
 
   useEffect(() => {
     const normalizedMode =
@@ -319,7 +333,7 @@ const CreateGamePage: React.FC = () => {
         if (turnTimeLimit < 60) specialRules.push(`${turnTimeLimit}min`)
         else specialRules.push(`${Math.floor(turnTimeLimit / 60)}h`)
       }
-      if (useTerritoryModifiers) specialRules.push('Modifiers')
+      if (territoryModifiersEnabled && useTerritoryModifiers) specialRules.push('Modifiers')
       if (spoilsType === 'random') specialRules.push('RND-Spoils')
 
       if (specialRules.length > 0) {
@@ -341,6 +355,7 @@ const CreateGamePage: React.FC = () => {
       fogOfWar,
       turnTimeLimit,
       useTerritoryModifiers,
+      territoryModifiersEnabled,
     ],
   )
 
@@ -427,7 +442,7 @@ const CreateGamePage: React.FC = () => {
             ] as 'adjacent' | 'adjacent_multi' | 'chained' | 'unlimited')
           : fortification
 
-      const finalModifiers = useTerritoryModifiers
+      const finalModifiers = territoryModifiersEnabled && useTerritoryModifiers
 
       // Filter out random option and select a random map
       const availableMaps = maps.filter((m) => m.id !== 'random')
@@ -1059,79 +1074,81 @@ const CreateGamePage: React.FC = () => {
             </div>
 
             {/* Territory Modifiers Section */}
-            <div className="pt-3 border-t border-border">
-              <h4 className="text-sm font-medium text-white mb-2">Territory Modifiers</h4>
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => setUseTerritoryModifiers(false)}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    !useTerritoryModifiers
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <div className="text-sm">❌ Disabled</div>
-                  <p className="text-xs opacity-70">Standard territories only</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUseTerritoryModifiers(true)}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    useTerritoryModifiers
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <div className="text-sm">⚡ Enabled</div>
-                  <p className="text-xs opacity-70">Territories have special properties</p>
-                </button>
-              </div>
-
-              {useTerritoryModifiers && (
-                <div className="mt-3 pt-3 border-t border-gray-500">
-                  <p className="text-sm text-muted mb-2">Distribution:</p>
-                  <div className="space-y-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setModifierDistribution('sparse')}
-                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                        modifierDistribution === 'sparse'
-                          ? 'theme-selected'
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
-                    >
-                      <div className="text-sm">Sparse (15%)</div>
-                      <p className="text-xs opacity-70">Few strategic territories</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModifierDistribution('balanced')}
-                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                        modifierDistribution === 'balanced'
-                          ? 'theme-selected'
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
-                    >
-                      <div className="text-sm">Balanced (30%)</div>
-                      <p className="text-xs opacity-70">Moderate strategic depth</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModifierDistribution('abundant')}
-                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                        modifierDistribution === 'abundant'
-                          ? 'theme-selected'
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
-                    >
-                      <div className="text-sm">Abundant (50%)</div>
-                      <p className="text-xs opacity-70">Many strategic territories</p>
-                    </button>
-                  </div>
+            {territoryModifiersEnabled && (
+              <div className="pt-3 border-t border-border">
+                <h4 className="text-sm font-medium text-white mb-2">Territory Modifiers</h4>
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setUseTerritoryModifiers(false)}
+                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                      !useTerritoryModifiers
+                        ? 'theme-selected'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <div className="text-sm">❌ Disabled</div>
+                    <p className="text-xs opacity-70">Standard territories only</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUseTerritoryModifiers(true)}
+                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                      useTerritoryModifiers
+                        ? 'theme-selected'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <div className="text-sm">⚡ Enabled</div>
+                    <p className="text-xs opacity-70">Territories have special properties</p>
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {useTerritoryModifiers && (
+                  <div className="mt-3 pt-3 border-t border-gray-500">
+                    <p className="text-sm text-muted mb-2">Distribution:</p>
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setModifierDistribution('sparse')}
+                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                          modifierDistribution === 'sparse'
+                            ? 'theme-selected'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                      >
+                        <div className="text-sm">Sparse (15%)</div>
+                        <p className="text-xs opacity-70">Few strategic territories</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModifierDistribution('balanced')}
+                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                          modifierDistribution === 'balanced'
+                            ? 'theme-selected'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                      >
+                        <div className="text-sm">Balanced (30%)</div>
+                        <p className="text-xs opacity-70">Moderate strategic depth</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModifierDistribution('abundant')}
+                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                          modifierDistribution === 'abundant'
+                            ? 'theme-selected'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                      >
+                        <div className="text-sm">Abundant (50%)</div>
+                        <p className="text-xs opacity-70">Many strategic territories</p>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </OptionCard>
 
@@ -1306,15 +1323,35 @@ const CreateGamePage: React.FC = () => {
                   }
 
                   const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
+                  const isRandomMap = selectedMapData.id === 'random'
+
+                  const handleOpenMapDetails = () => {
+                    if (isRandomMap) {
+                      return
+                    }
+                    setMapDetailModalId(selectedMapData.id)
+                  }
 
                   return (
                     <>
-                      <div className="w-full h-48 bg-white/5 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={handleOpenMapDetails}
+                        disabled={isRandomMap}
+                        className={`relative w-full h-60 md:h-72 rounded-lg mb-4 flex items-center justify-center border border-white/10 overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isRandomMap
+                            ? 'bg-white/5'
+                            : 'bg-white/10 hover:border-primary/60 cursor-zoom-in group'
+                        }`}
+                        aria-label={
+                          isRandomMap ? 'Map preview' : 'Open detailed map preview with tokens'
+                        }
+                      >
                         {imageSrc ? (
                           <img
                             src={imageSrc}
                             alt={selectedMapData.name}
-                            className="w-full h-full object-cover"
+                            className="h-full max-h-full w-full max-w-full object-contain"
                             onError={(e) => {
                               ;(e.target as HTMLImageElement).style.display = 'none'
                               const parent = (e.target as HTMLImageElement).parentElement
@@ -1334,59 +1371,60 @@ const CreateGamePage: React.FC = () => {
                             {selectedMap === 'random' ? '🎲 Random Map Selection' : '🗺️ Map Preview'}
                           </span>
                         )}
-                      </div>
+                        {!isRandomMap && (
+                          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                            Click to expand
+                          </span>
+                        )}
+                      </button>
                       {selectedMap !== 'random' && (
                         <div>
                           {selectedMapData.description && (
                             <p className="text-sm text-muted mb-3">{selectedMapData.description}</p>
                           )}
-                          <div className="grid grid-cols-2 gap-4 text-sm">
+                          <dl className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-muted">Territories:</span>
-                              <span className="ml-2 text-white">
+                              <dt className="text-muted">Territories</dt>
+                              <dd className="text-white">
                                 {selectedMapData.territory_count || 'Unknown'}
-                              </span>
+                              </dd>
                             </div>
                             <div>
-                              <span className="text-muted">Continents:</span>
-                              <span className="ml-2 text-white">
+                              <dt className="text-muted">Continents</dt>
+                              <dd className="text-white">
                                 {selectedMapData.continent_count || 'Unknown'}
-                              </span>
+                              </dd>
                             </div>
                             <div>
-                              <span className="text-muted">Players:</span>
-                              <span className="ml-2 text-white">
+                              <dt className="text-muted">Players</dt>
+                              <dd className="text-white">
                                 {selectedMapData.min_players}-{selectedMapData.max_players}
-                              </span>
+                              </dd>
                             </div>
                             <div>
-                              <span className="text-muted">Games Played:</span>
-                              <span className="ml-2 text-white">
-                                {selectedMapData.play_count || 0}
-                              </span>
+                              <dt className="text-muted">Games Played</dt>
+                              <dd className="text-white">{selectedMapData.play_count ?? 0}</dd>
                             </div>
                             {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
                               <div className="col-span-2">
-                                <span className="text-muted">Created by:</span>
-                                <span className="ml-2 text-white">
-                                  {selectedMapData.creator_name}
-                                </span>
+                                <dt className="text-muted">Created by</dt>
+                                <dd className="text-white">{selectedMapData.creator_name}</dd>
                               </div>
                             )}
                             {selectedMapData.rating_average &&
                               selectedMapData.rating_average > 0 && (
                                 <div className="col-span-2">
-                                  <span className="text-muted">Rating:</span>
-                                  <span className="ml-2 text-yellow-400">
+                                  <dt className="text-muted">Rating</dt>
+                                  <dd className="text-yellow-400">
                                     {'⭐'.repeat(Math.floor(selectedMapData.rating_average))}
                                     <span className="text-white ml-1">
                                       ({selectedMapData.rating_average.toFixed(1)}/5 from{' '}
                                       {selectedMapData.rating_count} reviews)
                                     </span>
-                                  </span>
+                                  </dd>
                                 </div>
                               )}
-                          </div>
+                          </dl>
                         </div>
                       )}
                     </>
@@ -1443,6 +1481,12 @@ const CreateGamePage: React.FC = () => {
           {isCreating ? '🔄 Creating...' : '➕ Create & Make Another'}
         </button>
       </div>
+
+      <MapDetailModal
+        isOpen={mapDetailModalId !== null}
+        mapId={mapDetailModalId}
+        onClose={() => setMapDetailModalId(null)}
+      />
     </div>
   )
 }
