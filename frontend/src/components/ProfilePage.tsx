@@ -18,13 +18,6 @@ import RankInsignia, { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
 
-type CopyState = 'idle' | 'copied' | 'error'
-
-interface ActionFeedback {
-  type: 'success' | 'error'
-  message: string
-}
-
 const hexToRgba = (hex: string, alpha = 1): string => {
   const normalized = hex.replace('#', '')
   if (normalized.length !== 6) {
@@ -241,9 +234,11 @@ const buildRankVisuals = (profile: ProfileSummary) => {
   const extractedRankHex = rankColorIsGradient ? extractFirstHexColor(rawRankColor) : rawRankColor
   const fallbackRankHex = '#F59E0B'
   const baseRankHex = extractedRankHex?.startsWith('#') ? extractedRankHex : fallbackRankHex
+  const rankPrimaryHex = baseRankHex
   const rankAccentColor = ensureReadableOnDark(baseRankHex)
   const rankAccentSoft = lightenColor(rankAccentColor, 0.35)
   const rankAccentFaint = lightenColor(rankAccentColor, 0.65)
+  const rankTextColor = getRelativeLuminance(rankPrimaryHex) > 0.55 ? '#0f172a' : '#F8FAFC'
 
   const rankGlowStyle: React.CSSProperties = rankColorIsGradient
     ? { backgroundImage: rawRankColor }
@@ -289,6 +284,8 @@ const buildRankVisuals = (profile: ProfileSummary) => {
     rankCallToActionStyle,
     rankProgress,
     ratingToNextRank,
+    rankPrimaryHex,
+    rankTextColor,
   }
 }
 
@@ -300,8 +297,6 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [copyState, setCopyState] = useState<CopyState>('idle')
-  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
   const requestControllerRef = useRef<AbortController | null>(null)
   const profileExtrasEnabled = useFeatureFlag(FEATURE_FLAGS.PROFILE_EXTRAS)
 
@@ -360,71 +355,14 @@ const ProfilePage: React.FC = () => {
   }, [fetchProfile])
 
   useEffect(() => {
-    if (copyState === 'idle') {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setCopyState('idle')
-    }, 2500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [copyState])
-
-  useEffect(() => {
-    if (!actionFeedback) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setActionFeedback(null)
-    }, 4000)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [actionFeedback])
-
-  useEffect(() => {
     if (!profileExtrasEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
       setActiveTab('overview')
     }
   }, [profileExtrasEnabled, activeTab])
 
   const handleRefreshProfile = useCallback(() => {
-    setActionFeedback(null)
-    setCopyState('idle')
     void fetchProfile()
   }, [fetchProfile])
-
-  const handleShareProfile = useCallback(async () => {
-    if (!profile) {
-      return
-    }
-
-    const shareUrl = `${window.location.origin}/profile/${profile.username}`
-
-    try {
-      if ('share' in navigator && typeof navigator.share === 'function') {
-        await navigator.share({ title: `${profile.username} on ConquestK`, url: shareUrl })
-        setActionFeedback({ type: 'success', message: 'Share panel opened.' })
-        setCopyState('idle')
-        return
-      }
-
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        await navigator.clipboard.writeText(shareUrl)
-        setCopyState('copied')
-        setActionFeedback({ type: 'success', message: 'Profile link copied to clipboard.' })
-        return
-      }
-
-      window.prompt('Copy this profile link:', shareUrl)
-      setCopyState('copied')
-      setActionFeedback({ type: 'success', message: 'Profile link ready to share.' })
-    } catch (_err: unknown) {
-      setCopyState('error')
-      setActionFeedback({ type: 'error', message: 'Unable to share profile link. Try again?' })
-    }
-  }, [profile])
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -520,7 +458,35 @@ const ProfilePage: React.FC = () => {
     rankCallToActionStyle,
     rankProgress,
     ratingToNextRank,
+    rankPrimaryHex,
+    rankTextColor,
   } = rankVisuals
+
+  const rankBadgeStyle: React.CSSProperties = rankColorIsGradient
+    ? {
+        backgroundImage: rawRankColor,
+        borderColor: hexToRgba(rankPrimaryHex, 0.6),
+        boxShadow: `0 8px 24px ${hexToRgba(rankPrimaryHex, 0.35)}`,
+      }
+    : {
+        background: `linear-gradient(140deg, ${hexToRgba(rankPrimaryHex, 0.85)} 0%, ${hexToRgba(
+          rankPrimaryHex,
+          0.55,
+        )} 100%)`,
+        borderColor: hexToRgba(rankPrimaryHex, 0.6),
+        boxShadow: `0 8px 24px ${hexToRgba(rankPrimaryHex, 0.35)}`,
+      }
+
+  const rankAvatarRingStyle: React.CSSProperties = {
+    borderColor: rankPrimaryHex,
+    boxShadow: `0 12px 32px ${hexToRgba(rankPrimaryHex, 0.35)}`,
+    background: `linear-gradient(145deg, ${hexToRgba(rankPrimaryHex, 0.24)} 0%, transparent 70%)`,
+  }
+
+  const rankCardStyle: React.CSSProperties = {
+    borderColor: hexToRgba(rankPrimaryHex, 0.45),
+    backgroundImage: `linear-gradient(180deg, ${hexToRgba(rankPrimaryHex, 0.25)} 0%, rgba(12, 16, 27, 0.9) 90%)`,
+  }
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
@@ -537,22 +503,6 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-deep via-bg-alt to-bg-deep text-white p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {actionFeedback && (
-          <div
-            aria-live="polite"
-            className={`mb-6 glass-box-sm px-4 py-3 rounded-xl border ${
-              actionFeedback.type === 'success'
-                ? 'border-emerald-500/50 text-emerald-200'
-                : 'border-red-500/60 text-red-200'
-            }`}
-          >
-            <div className="flex items-center gap-3 text-sm font-medium">
-              <span aria-hidden="true">{actionFeedback.type === 'success' ? '✅' : '⚠️'}</span>
-              <span>{actionFeedback.message}</span>
-            </div>
-          </div>
-        )}
-
         {/* Profile Header Card with glass effect */}
         <div
           className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden border"
@@ -566,45 +516,6 @@ const ProfilePage: React.FC = () => {
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-35 pointer-events-none"
             style={{ background: hexToRgba(signatureHex, 0.4) }}
           />
-          <div className="absolute top-4 right-4 flex flex-col items-end gap-2 text-sm">
-            <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleRefreshProfile}
-                disabled={loading}
-                className="px-3 py-1.5 rounded-lg bg-surface-3/80 hover:bg-surface-3/100 border border-white/10 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <span>🔄</span>
-                <span className="font-medium">Refresh</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShareProfile}
-                className="px-3 py-1.5 rounded-lg bg-surface-3/80 hover:bg-surface-3/100 border border-white/10 transition-colors flex items-center gap-2"
-              >
-                <span>🔗</span>
-                <span className="font-medium">Share</span>
-              </button>
-              {isOwnProfile && (
-                <Link
-                  to="/settings"
-                  aria-label="Edit your profile settings"
-                  className="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 border border-white/10 transition-colors flex items-center gap-2 font-medium"
-                >
-                  <span>✏️</span>
-                  Edit Profile
-                </Link>
-              )}
-            </div>
-            {copyState !== 'idle' && (
-              <span
-                className={`text-xs ${copyState === 'copied' ? 'text-green-400' : 'text-red-400'}`}
-                aria-live="polite"
-              >
-                {copyState === 'copied' ? 'Profile link copied!' : 'Unable to copy link'}
-              </span>
-            )}
-          </div>
           <div className="relative flex flex-col sm:flex-row gap-6">
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
@@ -614,8 +525,8 @@ const ProfilePage: React.FC = () => {
                   style={rankGlowStyle}
                 />
                 <div
-                  className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
-                  style={{ borderColor: rankAccentColor }}
+                  className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
+                  style={rankAvatarRingStyle}
                 >
                   {profile.avatarUrl ? (
                     <>
@@ -683,30 +594,12 @@ const ProfilePage: React.FC = () => {
               <RankInsignia
                 rating={profile.elo}
                 size="lg"
-                showLabel={true}
-                showRating={true}
-                className="justify-center sm:justify-start px-4 py-2 rounded-full bg-surface-3/60 border border-white/10 backdrop-blur-sm shadow-inner"
+                showLabel
+                showRating
+                className="justify-center sm:justify-start px-4 py-2 rounded-full border backdrop-blur-sm shadow-inner"
+                style={rankBadgeStyle}
+                textColor={rankTextColor}
               />
-
-              <div className="flex flex-col sm:flex-row items-center sm:items-stretch justify-center sm:justify-start gap-3">
-                {isOwnProfile && (
-                  <Link
-                    to="/settings"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-soft text-white font-semibold transition-transform hover:scale-105 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
-                  >
-                    <span aria-hidden="true">✏️</span>
-                    <span>Edit Profile</span>
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={handleShareProfile}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-3/60 border border-white/10 text-white/90 hover:text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
-                >
-                  <span aria-hidden="true">🔗</span>
-                  <span>Share Profile</span>
-                </button>
-              </div>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
                 <span className="flex items-center gap-1">
@@ -744,7 +637,7 @@ const ProfilePage: React.FC = () => {
 
         {/* Identity highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="relative glass-box-sm p-5 overflow-hidden">
+          <div className="relative glass-box-sm border p-5 overflow-hidden" style={rankCardStyle}>
             <div
               className="absolute inset-0 opacity-30 pointer-events-none"
               style={rankHeaderAccentStyle}

@@ -32,6 +32,7 @@ If you are not on Windows, use `npm run dev:manual` or run `npm run dev:backend`
 ## Environments
 - Production: https://conquestk.com (main branch)
 - Staging: https://risk-game-production-9935.up.railway.app/ (dev branch)
+- Railway configuration now lives entirely in the Railway dashboard; `railway.json` was removed after it caused deployment issues, so define services and environment variables via the GUI.
 
 ## Key commands
 ```bash
