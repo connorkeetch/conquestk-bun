@@ -21,7 +21,7 @@ interface SimpleRiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
 }
 
-const FANTASY_CONTINENTS: Record<string, { name: string; bonus: number; color: string }> = {
+const TRAINING_GROUNDS_CONTINENTS: Record<string, { name: string; bonus: number; color: string }> = {
   'northern-lands': { name: 'Northern Lands', bonus: 3, color: '#4CAF50' },
   'central-kingdoms': { name: 'Central Kingdoms', bonus: 4, color: '#2196F3' },
   'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
@@ -89,7 +89,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
       }))
     }
 
-    return Object.entries(FANTASY_CONTINENTS).map(([id, meta]) => ({
+    return Object.entries(TRAINING_GROUNDS_CONTINENTS).map(([id, meta]) => ({
       id,
       name: meta.name,
       bonusArmies: meta.bonus,
@@ -201,7 +201,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-blue-50 to-green-50 rounded-lg">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">🏰 Fantasy Realms</h2>
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">🏰 Training Grounds</h2>
           <p className="text-gray-600 mb-2">No Game in Progress</p>
           <p className="text-muted text-sm">Join a game room to start conquering the realms!</p>
         </div>
@@ -220,7 +220,7 @@ export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerr
       ? 'Mini Risk'
       : mapId === 'test-simple-world'
         ? 'Simple World'
-        : '🏰 Fantasy Realms'
+        : '🏰 Training Grounds'
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg overflow-hidden shadow-lg">

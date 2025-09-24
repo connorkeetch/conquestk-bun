@@ -70,7 +70,7 @@ const Dashboard: React.FC = () => {
       },
       {
         id: '3',
-        mapName: 'Fantasy Realms',
+        mapName: 'Training Grounds',
         players: 5,
         status: 'completed',
         result: 'lost',

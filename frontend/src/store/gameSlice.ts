@@ -178,11 +178,15 @@ const initialState: GameSliceState = {
   reinforcementArmies: 0,
 }
 
-export const fetchGameState = createAsyncThunk<GameState, string, { rejectValue: string }>(
+export const fetchGameState = createAsyncThunk<
+  GameState,
+  { roomId: string; allowSpectate?: boolean },
+  { rejectValue: string }
+>(
   'game/fetchGameState',
-  async (roomId, { rejectWithValue }) => {
+  async ({ roomId, allowSpectate }, { rejectWithValue }) => {
     try {
-      const game = await gameService.getGameState(roomId)
+      const game = await gameService.getGameState(roomId, { allowSpectate })
       return game
     } catch (error) {
       if (typeof error === 'object' && error && 'response' in error) {

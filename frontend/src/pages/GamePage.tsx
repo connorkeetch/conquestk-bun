@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
@@ -16,9 +16,11 @@ const GamePage: React.FC = () => {
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [isLoadingRoom, setIsLoadingRoom] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [searchParams] = useSearchParams()
+  const isSpectator = searchParams.get('spectate') === 'true'
 
   const dispatch = useAppDispatch()
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const { currentGame, isLoading, error } = useAppSelector((state) => state.game)
   const { currentRoom } = useAppSelector((state) => state.room)
 
@@ -33,7 +35,9 @@ const GamePage: React.FC = () => {
     const joinRoom = () => {
       try {
         socketService.connect()
-        socketService.joinRoom(gameId)
+        if (!isSpectator) {
+          socketService.joinRoom(gameId)
+        }
       } catch (_error) {
         // Silently ignore socket errors during initial load
       }
@@ -67,11 +71,13 @@ const GamePage: React.FC = () => {
 
     return () => {
       isSubscribed = false
-      socketService.leaveRoom(gameId)
+      if (!isSpectator) {
+        socketService.leaveRoom(gameId)
+      }
       dispatch(clearGame())
       dispatch(setCurrentRoom(null))
     }
-  }, [gameId, currentRoom, dispatch])
+  }, [gameId, currentRoom, dispatch, isSpectator])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -98,8 +104,8 @@ const GamePage: React.FC = () => {
       return
     }
 
-    void dispatch(fetchGameState(gameId))
-  }, [dispatch, gameId, currentGame])
+    void dispatch(fetchGameState({ roomId: gameId, allowSpectate: isSpectator }))
+  }, [currentGame, dispatch, gameId, isSpectator])
 
   const gameName = currentRoom?.name || 'Conquest Match'
   const formatRoomStatus = (status?: string) => {
