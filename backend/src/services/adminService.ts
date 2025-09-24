@@ -1116,18 +1116,26 @@ export class AdminService {
       [limit, offset],
     )
 
-    return result.rows.map((row) => ({
-      id: row.id,
-      adminUserId: row.admin_user_id,
-      adminUsername: row.admin_username,
-      actionType: row.action_type,
-      actionDetails: JSON.parse(row.action_details || '{}'),
-      targetType: row.target_type,
-      targetId: row.target_id,
-      ipAddress: row.ip_address,
-      userAgent: row.user_agent,
-      timestamp: new Date(row.log_timestamp ?? row.created_at),
-    }))
+    return result.rows.map((row) => {
+      const rawActionDetails = row.action_details ?? {}
+      const actionDetails =
+        typeof rawActionDetails === 'string'
+          ? this.safeJsonParse<Record<string, unknown>>(rawActionDetails, {})
+          : (rawActionDetails as Record<string, unknown>)
+
+      return {
+        id: row.id,
+        adminUserId: row.admin_user_id,
+        adminUsername: row.admin_username,
+        actionType: row.action_type,
+        actionDetails,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        ipAddress: row.ip_address,
+        userAgent: row.user_agent,
+        timestamp: new Date(row.log_timestamp ?? row.created_at),
+      }
+    })
   }
 }
 
