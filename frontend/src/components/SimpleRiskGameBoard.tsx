@@ -21,12 +21,13 @@ interface SimpleRiskGameBoardProps {
   onTerritoryClick?: (territoryId: string) => void
 }
 
-const TRAINING_GROUNDS_CONTINENTS: Record<string, { name: string; bonus: number; color: string }> = {
-  'northern-lands': { name: 'Northern Lands', bonus: 3, color: '#4CAF50' },
-  'central-kingdoms': { name: 'Central Kingdoms', bonus: 4, color: '#2196F3' },
-  'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
-  'eastern-empire': { name: 'Eastern Empire', bonus: 3, color: '#9C27B0' },
-}
+const TRAINING_GROUNDS_CONTINENTS: Record<string, { name: string; bonus: number; color: string }> =
+  {
+    'northern-lands': { name: 'Northern Lands', bonus: 3, color: '#4CAF50' },
+    'central-kingdoms': { name: 'Central Kingdoms', bonus: 4, color: '#2196F3' },
+    'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
+    'eastern-empire': { name: 'Eastern Empire', bonus: 3, color: '#9C27B0' },
+  }
 
 // Helper function to convert Redux territories to display format
 const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDisplayMap => {

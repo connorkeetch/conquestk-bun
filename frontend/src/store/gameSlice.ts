@@ -182,35 +182,32 @@ export const fetchGameState = createAsyncThunk<
   GameState,
   { roomId: string; allowSpectate?: boolean },
   { rejectValue: string }
->(
-  'game/fetchGameState',
-  async ({ roomId, allowSpectate }, { rejectWithValue }) => {
-    try {
-      const game = await gameService.getGameState(roomId, { allowSpectate })
-      return game
-    } catch (error) {
-      if (typeof error === 'object' && error && 'response' in error) {
-        const axiosError = error as {
-          response?: { data?: { message?: string }; status?: number }
-          message?: string
-        }
-
-        if (axiosError.response?.status === 404) {
-          return rejectWithValue('NOT_READY')
-        }
-
-        const message = axiosError.response?.data?.message || axiosError.message
-        return rejectWithValue(message || 'Failed to load game state')
+>('game/fetchGameState', async ({ roomId, allowSpectate }, { rejectWithValue }) => {
+  try {
+    const game = await gameService.getGameState(roomId, { allowSpectate })
+    return game
+  } catch (error) {
+    if (typeof error === 'object' && error && 'response' in error) {
+      const axiosError = error as {
+        response?: { data?: { message?: string }; status?: number }
+        message?: string
       }
 
-      if (error instanceof Error) {
-        return rejectWithValue(error.message)
+      if (axiosError.response?.status === 404) {
+        return rejectWithValue('NOT_READY')
       }
 
-      return rejectWithValue('Failed to load game state')
+      const message = axiosError.response?.data?.message || axiosError.message
+      return rejectWithValue(message || 'Failed to load game state')
     }
-  },
-)
+
+    if (error instanceof Error) {
+      return rejectWithValue(error.message)
+    }
+
+    return rejectWithValue('Failed to load game state')
+  }
+})
 
 const gameSlice = createSlice({
   name: 'game',

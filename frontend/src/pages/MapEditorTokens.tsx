@@ -123,6 +123,7 @@ interface ImportedMapFile {
   height?: number
   territories: ImportedTerritoryData[]
   continents?: Continent[]
+  territoryModifiers?: Record<string, unknown>
 }
 
 interface LegacyTerritoryRecord {
@@ -475,6 +476,26 @@ export default function MapEditorTokens() {
     labelSettings: { ...DEFAULT_LABEL_SETTINGS },
   })
 
+  const polygonEditorEnabled = useFeatureFlag(FEATURE_FLAGS.MAP_POLYGON_EDITOR)
+  const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
+  const [selectedModifierTerritoryId, setSelectedModifierTerritoryId] = useState<string | null>(
+    null,
+  )
+  const [modifierDraft, setModifierDraft] = useState<TerritoryModifierConfig>(
+    createDefaultModifier(),
+  )
+  const [modifierAlert, setModifierAlert] = useState<{
+    type: 'success' | 'info' | 'warning'
+    message: string
+  } | null>(null)
+
+  const updateModifierDraft = useCallback((updates: Partial<TerritoryModifierConfig>) => {
+    setModifierDraft((prev) => ({
+      ...prev,
+      ...updates,
+    }))
+  }, [])
+
   const [showProcessor, setShowProcessor] = useState(false)
   const [showCropper, setShowCropper] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null)
@@ -505,6 +526,26 @@ export default function MapEditorTokens() {
   const customCanvasHeightId = useId()
   const imageScaleId = useId()
   const jsonImportId = useId()
+  const modifierTerritorySelectId = useId()
+  const modifierNameId = useId()
+  const modifierIconId = useId()
+  const modifierColorId = useId()
+  const modifierDefenseId = useId()
+  const modifierAttackId = useId()
+  const modifierTroopsId = useId()
+  const modifierNotesId = useId()
+  useEffect(() => {
+    if (!modifierAlert) return
+    if (typeof window === 'undefined') return
+
+    const timeoutId = window.setTimeout(() => {
+      setModifierAlert(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [modifierAlert])
   useEffect(() => {
     const presetId = findCanvasPresetId(state.mapWidth, state.mapHeight)
     setCanvasSelection(presetId ?? 'custom')
@@ -607,6 +648,49 @@ export default function MapEditorTokens() {
   const [isPlacingTerritory, setIsPlacingTerritory] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode>('properties')
 
+  useEffect(() => {
+    if (!territoryModifiersEnabled && editorMode === 'modifiers') {
+      setEditorMode('capitals')
+    }
+  }, [territoryModifiersEnabled, editorMode])
+
+  useEffect(() => {
+    if (!territoryModifiersEnabled) {
+      if (selectedModifierTerritoryId !== null) {
+        setSelectedModifierTerritoryId(null)
+        setModifierDraft(createDefaultModifier())
+      }
+      if (modifierAlert) {
+        setModifierAlert(null)
+      }
+      return
+    }
+
+    if (
+      selectedModifierTerritoryId &&
+      state.territories.some((territory) => territory.id === selectedModifierTerritoryId)
+    ) {
+      return
+    }
+
+    const firstTerritory = state.territories[0]
+    setSelectedModifierTerritoryId(firstTerritory ? firstTerritory.id : null)
+  }, [territoryModifiersEnabled, state.territories, selectedModifierTerritoryId, modifierAlert])
+
+  useEffect(() => {
+    if (!territoryModifiersEnabled) {
+      return
+    }
+
+    if (!selectedModifierTerritoryId) {
+      setModifierDraft(createDefaultModifier())
+      return
+    }
+
+    const existing = state.territoryModifiers[selectedModifierTerritoryId]
+    setModifierDraft(existing ? { ...existing } : createDefaultModifier())
+  }, [territoryModifiersEnabled, selectedModifierTerritoryId, state.territoryModifiers])
+
   const updateLabelSettings = useCallback((updater: (settings: LabelSettings) => LabelSettings) => {
     setState((prev) => ({
       ...prev,
@@ -659,6 +743,20 @@ export default function MapEditorTokens() {
   const [isGeneratingCapitals, setIsGeneratingCapitals] = useState(false)
   const [isAssigningCapital, setIsAssigningCapital] = useState(false)
 
+  const selectedModifierTerritory = useMemo(() => {
+    if (!selectedModifierTerritoryId) return null
+    return (
+      state.territories.find((territory) => territory.id === selectedModifierTerritoryId) ?? null
+    )
+  }, [selectedModifierTerritoryId, state.territories])
+
+  const savedModifierForSelectedTerritory = useMemo(() => {
+    if (!selectedModifierTerritoryId) return undefined
+    return state.territoryModifiers[selectedModifierTerritoryId]
+  }, [selectedModifierTerritoryId, state.territoryModifiers])
+
+  const modifierFormDisabled = !selectedModifierTerritory
+
   // Auto-save to localStorage
   const saveToLocalStorage = useCallback(() => {
     try {
@@ -681,7 +779,14 @@ export default function MapEditorTokens() {
       const saved = localStorage.getItem(AUTOSAVE_KEY)
       if (saved) {
         const data = JSON.parse(saved)
-        setState(data.state)
+        setState((prev) => ({
+          ...prev,
+          ...(typeof data.state === 'object' && data.state !== null ? data.state : {}),
+          territoryModifiers:
+            (data.state && (data.state as MapState).territoryModifiers) ||
+            prev.territoryModifiers ||
+            {},
+        }))
         setCapitalAssignments(data.capitalAssignments || {})
         setCapitalMetadata(data.capitalMetadata || {})
         setLastSaved(data.savedAt ? new Date(data.savedAt) : null)
@@ -723,6 +828,11 @@ export default function MapEditorTokens() {
       } else {
         continents = normalizeContinents(map.metadata?.continents)
       }
+
+      const territoryModifiers = normalizeTerritoryModifiers(
+        (map.metadata as { territoryModifiers?: unknown })?.territoryModifiers ??
+          (map.metadata as { territory_modifiers?: unknown })?.territory_modifiers,
+      )
 
       // Handle adjacencies
       if (map.adjacencies && Array.isArray(map.adjacencies)) {
@@ -819,6 +929,7 @@ export default function MapEditorTokens() {
           continents,
           mapWidth,
           mapHeight,
+          territoryModifiers,
         }
       })
 
@@ -856,6 +967,11 @@ export default function MapEditorTokens() {
       }
 
       const draftData = (draft.data ?? {}) as Record<string, unknown>
+      const rawDraftModifiers =
+        draftData.territoryModifiers ??
+        draftData.territory_modifiers ??
+        (draft as unknown as { territoryModifiers?: unknown }).territoryModifiers
+      const territoryModifiers = normalizeTerritoryModifiers(rawDraftModifiers)
       let territories: Territory[]
       if (Array.isArray(draft.territories)) {
         territories = normalizeTerritories(draft.territories)
@@ -918,6 +1034,7 @@ export default function MapEditorTokens() {
         imageUrl: imageUrl || prev.imageUrl,
         territories,
         continents,
+        territoryModifiers,
       }))
 
       setCapitalAssignments(draft.capitalAssignments || {})
@@ -1449,6 +1566,7 @@ export default function MapEditorTokens() {
               }
             : undefined,
           capitalAssignments,
+          territoryModifiers: state.territoryModifiers,
         },
         territories: state.territories,
         continents: state.continents,
@@ -1498,6 +1616,7 @@ export default function MapEditorTokens() {
       height: state.mapHeight,
       territories: state.territories,
       continents: state.continents,
+      territoryModifiers: state.territoryModifiers,
     }
 
     const dataStr = JSON.stringify(mapData, null, 2)
@@ -1537,6 +1656,8 @@ export default function MapEditorTokens() {
           continentId: territory.continentId ?? null,
         }))
 
+        const importedModifiers = normalizeTerritoryModifiers(mapData.territoryModifiers)
+
         // Load the imported map data
         setState((prev) => ({
           ...prev,
@@ -1548,6 +1669,7 @@ export default function MapEditorTokens() {
           imageHeight: mapData.height ?? prev.imageHeight,
           territories: normalizedTerritories,
           continents: mapData.continents || [],
+          territoryModifiers: importedModifiers,
           selectedTerritoryId: null,
           draggedTerritoryId: null,
         }))
@@ -1641,6 +1763,65 @@ export default function MapEditorTokens() {
     const index = capitals.indexOf(territoryId)
     return index >= 0 ? index + 1 : null
   }
+
+  const handleSaveModifier = useCallback(() => {
+    if (!territoryModifiersEnabled || !selectedModifierTerritoryId) {
+      alert('Select a territory to configure its modifier.')
+      return
+    }
+
+    const territory = state.territories.find((t) => t.id === selectedModifierTerritoryId)
+    if (!territory) {
+      alert('Please choose a valid territory before saving.')
+      return
+    }
+
+    const sanitizedNotes = modifierDraft.notes?.trim() ? modifierDraft.notes.trim() : undefined
+
+    setState((prev) => ({
+      ...prev,
+      territoryModifiers: {
+        ...prev.territoryModifiers,
+        [selectedModifierTerritoryId]: {
+          ...modifierDraft,
+          notes: sanitizedNotes,
+        },
+      },
+    }))
+
+    setModifierAlert({
+      type: 'success',
+      message: `Saved modifier for ${territory.name}`,
+    })
+  }, [territoryModifiersEnabled, selectedModifierTerritoryId, state.territories, modifierDraft])
+
+  const handleClearModifier = useCallback(() => {
+    if (!territoryModifiersEnabled || !selectedModifierTerritoryId) {
+      return
+    }
+
+    const territory = state.territories.find((t) => t.id === selectedModifierTerritoryId)
+
+    setState((prev) => {
+      if (!prev.territoryModifiers[selectedModifierTerritoryId]) {
+        return prev
+      }
+      const { [selectedModifierTerritoryId]: _removed, ...rest } = prev.territoryModifiers
+      return {
+        ...prev,
+        territoryModifiers: rest,
+      }
+    })
+
+    setModifierDraft(createDefaultModifier())
+
+    if (territory) {
+      setModifierAlert({
+        type: 'info',
+        message: `Removed modifier from ${territory.name}`,
+      })
+    }
+  }, [territoryModifiersEnabled, selectedModifierTerritoryId, state.territories])
 
   // Render sidebar content based on current tab
   const renderSidebarContent = () => {
@@ -2046,13 +2227,21 @@ export default function MapEditorTokens() {
                       <button
                         type="button"
                         onClick={() => {
-                          setState((prev) => ({
-                            ...prev,
-                            territories: prev.territories.filter(
-                              (t) => t.id !== state.selectedTerritoryId,
-                            ),
-                            selectedTerritoryId: null,
-                          }))
+                          setState((prev) => {
+                            if (!state.selectedTerritoryId) {
+                              return prev
+                            }
+                            const { [state.selectedTerritoryId]: _removed, ...remainingModifiers } =
+                              prev.territoryModifiers
+                            return {
+                              ...prev,
+                              territories: prev.territories.filter(
+                                (t) => t.id !== state.selectedTerritoryId,
+                              ),
+                              territoryModifiers: remainingModifiers,
+                              selectedTerritoryId: null,
+                            }
+                          })
                         }}
                         className="w-full px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
                       >
@@ -2305,6 +2494,14 @@ export default function MapEditorTokens() {
           <span>
             <strong>Capitals Mode:</strong> Assign starting positions for each player count (2-8).
             Use auto-generate for balanced spacing or click tokens manually to fine-tune.
+          </span>
+        )
+      case 'modifiers':
+        return (
+          <span>
+            <strong>Modifiers Mode:</strong> Select a territory to define defensive, offensive, or
+            reinforcement bonuses. These rules activate in matches when the territory modifiers
+            feature flag is enabled.
           </span>
         )
       default:
@@ -2629,19 +2826,21 @@ export default function MapEditorTokens() {
               Create continents → Connect territories → Set capitals
             </p>
           </div>
-          <div className="flex gap-4 items-center">
-            <a
-              href="/map-editor-polygon"
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
-              title="Try the polygon-based editor for drawing custom territory shapes"
-            >
-              🏪 Try Polygon Editor (Beta)
-            </a>
-            <div className="text-sm text-muted">
-              <p className="text-xs">Token-based: Place circular tokens as territories</p>
-              <p className="text-xs">Polygon-based: Draw custom territory shapes</p>
+          {polygonEditorEnabled && (
+            <div className="flex gap-4 items-center">
+              <a
+                href="/map-editor-polygon"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+                title="Try the polygon-based editor for drawing custom territory shapes"
+              >
+                🏪 Try Polygon Editor (Beta)
+              </a>
+              <div className="text-sm text-muted">
+                <p className="text-xs">Token-based: Place circular tokens as territories</p>
+                <p className="text-xs">Polygon-based: Draw custom territory shapes</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {/* Tabbed Interface */}
         <div className="bg-surface-1 rounded-lg mx-3 mb-3">
@@ -2713,6 +2912,19 @@ export default function MapEditorTokens() {
             >
               👑 Capitals
             </button>
+            {territoryModifiersEnabled && (
+              <button
+                type="button"
+                onClick={() => setEditorMode('modifiers')}
+                className={`px-6 py-3 font-medium transition-colors relative ${
+                  editorMode === 'modifiers'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted hover:text-white'
+                }`}
+              >
+                ⚡ Modifiers
+              </button>
+            )}
 
             {/* Save/Load Actions on the right */}
             <div className="flex gap-2 ml-auto p-2">
@@ -2779,6 +2991,7 @@ export default function MapEditorTokens() {
                       imageUrl: undefined,
                       territories: [],
                       continents: [],
+                      territoryModifiers: {},
                       selectedTerritoryId: null,
                       draggedTerritoryId: null,
                       mapWidth: 1920,
@@ -3060,6 +3273,379 @@ export default function MapEditorTokens() {
               <p className="text-xs text-yellow-400">
                 ⚠️ Manually adjusted from algorithm suggestion
               </p>
+            )}
+          </div>
+        )}
+
+        {editorMode === 'modifiers' && territoryModifiersEnabled && (
+          <div className="mt-4 space-y-5">
+            {!state.territories.length ? (
+              <div className="p-4 bg-surface-2/60 border border-border rounded text-sm text-muted">
+                Add territories before assigning modifiers. Once you have at least one territory,
+                you can configure bespoke bonuses here.
+              </div>
+            ) : (
+              <>
+                {modifierAlert && (
+                  <div
+                    className={`p-2 rounded border text-xs transition-opacity ${
+                      modifierAlert.type === 'success'
+                        ? 'bg-green-600/20 border-green-500 text-green-200'
+                        : modifierAlert.type === 'info'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-200'
+                          : 'bg-yellow-600/20 border-yellow-500 text-yellow-100'
+                    }`}
+                  >
+                    {modifierAlert.message}
+                  </div>
+                )}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm mb-1" htmlFor={modifierTerritorySelectId}>
+                        Territory
+                      </label>
+                      <select
+                        id={modifierTerritorySelectId}
+                        value={selectedModifierTerritoryId ?? ''}
+                        onChange={(e) => setSelectedModifierTerritoryId(e.target.value || null)}
+                        className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary"
+                      >
+                        <option value="">Select a territory…</option>
+                        {state.territories.map((territory) => (
+                          <option key={territory.id} value={territory.id}>
+                            {territory.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="p-3 bg-surface-2/60 border border-border rounded text-xs text-muted space-y-2">
+                      <div className="flex items-center justify-between text-sm font-medium text-white">
+                        <span>
+                          <span className="mr-2">{modifierDraft.icon}</span>
+                          {modifierDraft.name || 'Strategic Territory'}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-3 w-10 rounded"
+                          style={{ backgroundColor: modifierDraft.color }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span>
+                          🛡️ Defense:{' '}
+                          {modifierDraft.defenseBonus > 0
+                            ? `+${modifierDraft.defenseBonus}`
+                            : modifierDraft.defenseBonus}
+                        </span>
+                        <span>
+                          ⚔️ Attack:{' '}
+                          {modifierDraft.attackBonus > 0
+                            ? `+${modifierDraft.attackBonus}`
+                            : modifierDraft.attackBonus}
+                        </span>
+                        <span>
+                          👥 Troops/Turn:{' '}
+                          {modifierDraft.troopBonus > 0
+                            ? `+${modifierDraft.troopBonus}`
+                            : modifierDraft.troopBonus}
+                        </span>
+                      </div>
+                      {(modifierDraft.movementRestriction || modifierDraft.supplyLineBonus) && (
+                        <div className="pt-2 border-t border-border text-[11px]">
+                          {modifierDraft.movementRestriction && '🚷 Movement restricted'}
+                          {modifierDraft.movementRestriction &&
+                            modifierDraft.supplyLineBonus &&
+                            ' · '}
+                          {modifierDraft.supplyLineBonus && '🔗 Counts as supply line'}
+                        </div>
+                      )}
+                    </div>
+
+                    {savedModifierForSelectedTerritory && (
+                      <div className="text-xs text-muted">
+                        Last saved: {savedModifierForSelectedTerritory.name || 'Custom modifier'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierNameId}>
+                          Modifier Name
+                        </label>
+                        <input
+                          id={modifierNameId}
+                          type="text"
+                          value={modifierDraft.name}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => updateModifierDraft({ name: e.target.value })}
+                          className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierIconId}>
+                          Icon
+                        </label>
+                        <input
+                          id={modifierIconId}
+                          type="text"
+                          maxLength={4}
+                          value={modifierDraft.icon}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => updateModifierDraft({ icon: e.target.value })}
+                          className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierColorId}>
+                          Display Color
+                        </label>
+                        <input
+                          id={modifierColorId}
+                          type="color"
+                          value={modifierDraft.color}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => updateModifierDraft({ color: e.target.value })}
+                          className="h-10 w-full rounded border border-border bg-surface-2 disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierDefenseId}>
+                          Defense Bonus
+                        </label>
+                        <input
+                          id={modifierDefenseId}
+                          type="number"
+                          min={-5}
+                          max={10}
+                          value={modifierDraft.defenseBonus}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => {
+                            const parsed = Number.parseInt(e.target.value, 10)
+                            updateModifierDraft({
+                              defenseBonus: clamp(Number.isNaN(parsed) ? 0 : parsed, -5, 10),
+                            })
+                          }}
+                          className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierAttackId}>
+                          Attack Bonus
+                        </label>
+                        <input
+                          id={modifierAttackId}
+                          type="number"
+                          min={-5}
+                          max={10}
+                          value={modifierDraft.attackBonus}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => {
+                            const parsed = Number.parseInt(e.target.value, 10)
+                            updateModifierDraft({
+                              attackBonus: clamp(Number.isNaN(parsed) ? 0 : parsed, -5, 10),
+                            })
+                          }}
+                          className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1" htmlFor={modifierTroopsId}>
+                          Troops / Turn
+                        </label>
+                        <input
+                          id={modifierTroopsId}
+                          type="number"
+                          min={-5}
+                          max={10}
+                          value={modifierDraft.troopBonus}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) => {
+                            const parsed = Number.parseInt(e.target.value, 10)
+                            updateModifierDraft({
+                              troopBonus: clamp(Number.isNaN(parsed) ? 0 : parsed, -5, 10),
+                            })
+                          }}
+                          className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={modifierDraft.movementRestriction}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) =>
+                            updateModifierDraft({ movementRestriction: e.target.checked })
+                          }
+                          className="h-4 w-4"
+                        />
+                        Restrict movement through this territory
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={modifierDraft.supplyLineBonus}
+                          disabled={modifierFormDisabled}
+                          onChange={(e) =>
+                            updateModifierDraft({ supplyLineBonus: e.target.checked })
+                          }
+                          className="h-4 w-4"
+                        />
+                        Counts as a supply line connection
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm mb-1" htmlFor={modifierNotesId}>
+                        Notes (optional)
+                      </label>
+                      <textarea
+                        id={modifierNotesId}
+                        value={modifierDraft.notes ?? ''}
+                        disabled={modifierFormDisabled}
+                        onChange={(e) => updateModifierDraft({ notes: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 bg-surface-2 text-white rounded border border-border focus:outline-none focus:border-primary disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide text-muted">Quick presets:</span>
+                  <button
+                    type="button"
+                    disabled={modifierFormDisabled}
+                    onClick={() =>
+                      updateModifierDraft({
+                        name: 'Fortified Stronghold',
+                        icon: '🛡️',
+                        color: '#2563eb',
+                        defenseBonus: 2,
+                        attackBonus: 0,
+                        troopBonus: 0,
+                      })
+                    }
+                    className={`px-3 py-1 rounded text-xs font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-blue-600/80 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    Fortify (+2 🛡️)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={modifierFormDisabled}
+                    onClick={() =>
+                      updateModifierDraft({
+                        name: 'War Camp',
+                        icon: '⚔️',
+                        color: '#f97316',
+                        defenseBonus: 0,
+                        attackBonus: 2,
+                        troopBonus: 0,
+                      })
+                    }
+                    className={`px-3 py-1 rounded text-xs font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-orange-600/80 hover:bg-orange-600 text-white'
+                    }`}
+                  >
+                    War Camp (+2 ⚔️)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={modifierFormDisabled}
+                    onClick={() =>
+                      updateModifierDraft({
+                        name: 'Supply Depot',
+                        icon: '📦',
+                        color: '#22c55e',
+                        defenseBonus: 0,
+                        attackBonus: 0,
+                        troopBonus: 2,
+                      })
+                    }
+                    className={`px-3 py-1 rounded text-xs font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-green-600/80 hover:bg-green-600 text-white'
+                    }`}
+                  >
+                    Supply Depot (+2 👥)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={modifierFormDisabled}
+                    onClick={() =>
+                      updateModifierDraft({
+                        movementRestriction: !modifierDraft.movementRestriction,
+                      })
+                    }
+                    className={`px-3 py-1 rounded text-xs font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-purple-600/80 hover:bg-purple-600 text-white'
+                    }`}
+                  >
+                    {modifierDraft.movementRestriction ? 'Allow movement' : 'Block movement'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={modifierFormDisabled}
+                    onClick={() =>
+                      updateModifierDraft({
+                        supplyLineBonus: !modifierDraft.supplyLineBonus,
+                      })
+                    }
+                    className={`px-3 py-1 rounded text-xs font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-teal-600/80 hover:bg-teal-600 text-white'
+                    }`}
+                  >
+                    {modifierDraft.supplyLineBonus ? 'Remove supply bonus' : 'Mark as supply link'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveModifier}
+                    disabled={modifierFormDisabled}
+                    className={`px-4 py-2 rounded text-sm font-medium ${
+                      modifierFormDisabled
+                        ? 'bg-surface-2 text-muted cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    💾 Save Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearModifier}
+                    disabled={!savedModifierForSelectedTerritory}
+                    className={`px-4 py-2 rounded text-sm font-medium ${
+                      savedModifierForSelectedTerritory
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-surface-2 text-muted cursor-not-allowed'
+                    }`}
+                  >
+                    🗑️ Remove Modifier
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}
