@@ -720,31 +720,31 @@ export const AdminMaps: React.FC = () => {
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Status Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-surface-2 rounded-lg border border-border p-4">
+        <div className="glass-box p-4">
           <p className="text-sm text-muted uppercase tracking-wide">Draft</p>
           <p className="mt-1 text-2xl font-bold text-white">
             {maps.filter((m) => m.status === 'draft').length}
           </p>
         </div>
-        <div className="bg-surface-2 rounded-lg border border-orange-500/20 p-4">
+        <div className="glass-box p-4 border border-orange-500/30">
           <p className="text-sm text-orange-400 uppercase tracking-wide">Pending Review</p>
           <p className="mt-1 text-2xl font-bold text-white">
             {maps.filter((m) => m.status === 'pending_review').length}
           </p>
         </div>
-        <div className="bg-surface-2 rounded-lg border border-green-500/20 p-4">
+        <div className="glass-box p-4 border border-green-500/30">
           <p className="text-sm text-green-400 uppercase tracking-wide">Approved</p>
           <p className="mt-1 text-2xl font-bold text-white">
             {maps.filter((m) => m.status === 'approved').length}
           </p>
         </div>
-        <div className="bg-surface-2 rounded-lg border border-red-500/20 p-4">
+        <div className="glass-box p-4 border border-red-500/30">
           <p className="text-sm text-red-400 uppercase tracking-wide">Rejected</p>
           <p className="mt-1 text-2xl font-bold text-white">
             {maps.filter((m) => m.status === 'rejected').length}
           </p>
         </div>
-        <div className="bg-surface-2 rounded-lg border border-gray-500/20 p-4">
+        <div className="glass-box p-4 border border-gray-500/30">
           <p className="text-sm text-gray-400 uppercase tracking-wide">Archived</p>
           <p className="mt-1 text-2xl font-bold text-white">
             {maps.filter((m) => m.status === 'archived').length}
@@ -753,7 +753,7 @@ export const AdminMaps: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-2 rounded-lg shadow-sm border border-border p-4">
+      <div className="glass-box p-4">
         <div className="flex flex-wrap gap-4">
           <input
             type="text"
@@ -798,7 +798,7 @@ export const AdminMaps: React.FC = () => {
       )}
 
       {/* Maps Table */}
-      <div className="bg-surface-2 rounded-lg shadow-sm border border-border overflow-hidden">
+      <div className="glass-box overflow-hidden p-0">
         {maps.length === 0 ? (
           <div className="p-12 text-center">
             <h3 className="text-lg font-medium text-white mb-2">No Maps Found</h3>

@@ -156,7 +156,7 @@ export default function AdminGames() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-surface-1 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-green-400">
@@ -168,7 +168,7 @@ export default function AdminGames() {
             </div>
           </div>
 
-          <div className="bg-surface-1 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
@@ -180,7 +180,7 @@ export default function AdminGames() {
             </div>
           </div>
 
-          <div className="bg-surface-1 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-orange-400">
@@ -192,7 +192,7 @@ export default function AdminGames() {
             </div>
           </div>
 
-          <div className="bg-surface-1 rounded-lg p-6">
+          <div className="glass-box p-6">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold text-red-400">
@@ -213,7 +213,7 @@ export default function AdminGames() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-surface-1 rounded-lg p-6 mb-6">
+        <div className="glass-box p-6 mb-6">
           <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
             <form onSubmit={handleSearch} className="flex-1 flex space-x-4">
               <input
@@ -262,7 +262,7 @@ export default function AdminGames() {
         </div>
 
         {/* Games Table */}
-        <div className="bg-surface-1 rounded-lg overflow-hidden">
+        <div className="glass-box overflow-hidden p-0">
           <div className="p-6 border-b border-border">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Games ({totalGames.toLocaleString()})</h2>
