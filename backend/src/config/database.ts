@@ -151,13 +151,14 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 
   try {
     let preparedText = text
-    const values = params ? [...params] : undefined
+    const values: QueryValues | undefined = params ? [...params] : undefined
 
     if (values && values.length > 0 && text.includes('?')) {
-      preparedText = convertQuestionMarksToPgPlaceholders(text, params)
+      preparedText = convertQuestionMarksToPgPlaceholders(text, values)
     }
+    const queryValues = values ? [...values] : undefined
 
-    const result = await pgPool.query<T>(preparedText, values)
+    const result = await pgPool.query<T>(preparedText, queryValues)
     return {
       rows: result.rows,
       rowCount: result.rowCount,
