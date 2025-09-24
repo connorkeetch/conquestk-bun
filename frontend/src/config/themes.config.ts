@@ -63,7 +63,7 @@ export const THEMES: ThemeDefinition[] = [
     id: 'retrospace',
     name: 'RetroSpace',
     displayColor: '#0F4CDA',
-    description: 'Premium throwback theme with midnight blues and neon profile highlights',
+    description: 'Premium early-2000s social profile homage with blue tabs and white panels',
     isPremium: true,
   },
   {

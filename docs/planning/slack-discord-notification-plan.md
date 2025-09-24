@@ -1,5 +1,5 @@
 # Slack & Discord Notifications — Unified Plan
-_Last updated: May 9, 2026 (progress noted below)_
+_Last updated: May 13, 2026 (progress noted below)_
 
 ## 🎯 Objectives
 Provide a clear, incremental path to deliver automated notifications from ConquestK into Slack channels and Discord servers without disrupting existing workflows. Centralize channel delivery logic so future surfaces (email, SMS, in-game inbox, web push) plug in with minimal friction. Keep configuration environment-driven and secrets out of the codebase.
@@ -61,24 +61,28 @@ export interface NotificationResult {
 ### 3. Channel Implementations
 Add `backend/src/services/channels/`:
 - `WebPushChannel` — wrap existing logic to preserve backwards compatibility.
-- `SlackBotChannel` — preferred, uses `chat.postMessage` with Blocks.
-- `SlackWebhookChannel` — fallback for simple text.
+- `SlackWebhookChannel` — primary Slack integration for Phase 1 using incoming webhooks.
 - `DiscordWebhookChannel` — supports embeds and optional `thread_id`.
+
+> **Slack bot deferment:** A richer Slack bot channel (chat.postMessage + OAuth) remains a Phase 3+ enhancement. The webhook channel already covers our launch requirements, so we removed the separate bot implementation from the near-term scope.
 
 Outbound HTTP calls should use native `fetch` (Node 22+) or `node-fetch`, include retries with jittered exponential backoff (up to three attempts), respect `Retry-After` on 429s, and implement a circuit breaker per channel (`open` after N failures, half-open after cooldown). Log with `logger.child({ channel, eventId, type, severity })`.
 
 ### 4. Configuration & Secrets
-Configuration is environment-driven (Railway + local `.env.*`). Example variables:
+Configuration is environment-driven (Railway + local `.env.*`). Secrets should live in `backend/.env.local` (ignored by git) during development and in Railway/production secrets for deployed environments. Example variables:
 
 ```
 NOTIFICATION_CHANNELS=webpush,slack,discord
 ENABLE_EXTERNAL_NOTIFICATIONS=false
 
-# Slack (choose one or both, bot preferred)
+# Slack webhook (Phase 1 foundation)
 SLACK_NOTIFICATIONS_ENABLED=true
-SLACK_BOT_TOKEN=xoxb-***
-SLACK_DEFAULT_CHANNEL=#operations
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+SLACK_WEBHOOK_URLS=https://hooks.slack.com/services/...,...
+SLACK_DEFAULT_CHANNEL=#operations
+SLACK_ADDITIONAL_CHANNELS=#community,#devops
+SLACK_USERNAME=ConquestK Alerts
+SLACK_ICON_EMOJI=:crossed_swords:
 
 # Discord
 DISCORD_NOTIFICATIONS_ENABLED=true
@@ -87,15 +91,29 @@ DISCORD_USERNAME=ConquestK Bot
 DISCORD_THREAD_ID=optional
 
 # Optional: multiple destinations
-SLACK_ADDITIONAL_CHANNELS=#community,#devops
-DISCORD_WEBHOOK_URLS=https://...1,https://...2
+# SLACK_WEBHOOK_URLS=https://...1,https://...2
+# DISCORD_WEBHOOK_URLS=https://...1,https://...2
 ```
 
 Principles: least privilege, rotation runbook, never log secrets, and per-environment isolation (different webhooks per environment).
 
+> **Slack app credentials (Phase 2 groundwork):** store the app-level values Connor provided in `backend/.env.local` using the placeholders below so we can wire up bot-style messaging once implementation starts. Do **not** commit the real secrets.
+
+```
+SLACK_APP_ID=
+SLACK_CLIENT_ID=
+SLACK_CLIENT_SECRET=
+SLACK_SIGNING_SECRET=
+SLACK_VERIFICATION_TOKEN=
+# Pending OAuth install step to retrieve:
+# SLACK_BOT_TOKEN=xoxb-...
+```
+
+Once the app is installed to Slack and a bot token is issued, we can map user- or channel-specific routing (e.g. DM delivery) by storing the destination IDs in additional env vars such as `SLACK_DEFAULT_DM_USER_ID=U12345678`.
+
 ### 5. Formatting Helpers
-- `formatSlackMessage(event)` → Slack blocks and thread support with `<@U123>` mentions.
-- `formatDiscordMessage(event)` → Discord embeds with severity-based colour.
+- `formatSlackWebhookPayload(event)` → Slack blocks and thread support with `<@U123>` mentions.
+- `formatDiscordWebhookPayload(event)` → Discord embeds with severity-based colour.
 - Provide shared fallbacks for plain text when rich formatting fails.
 
 ### 6. Trigger Points (Producers)
@@ -115,6 +133,14 @@ Start with CLI/manual hooks and expand over time.
 - **Phase 2 — Event Wiring (1–2 days):** refactor `notificationService` to delegate to the dispatcher, emit typed events from `mapWorkflowService`, `gameService`, and key socket handlers, provide CLI (`npm run notify:test -- --channel=slack|discord|all --message="..."`), create unit tests with `nock`, and an integration test using a local webhook receiver.
 - **Phase 3 — Preferences & Admin UI (1–2 days):** add `/admin/notifications` to show configured channels, last deliveries, and a Send Test button; toggle providers per environment; extend `user_preferences` for future per-user routing (disabled initially); update frontend settings copy to mention Slack/Discord feed.
 - **Phase 4 — Deployment, Monitoring, & Scale (1–2 days):** update docs and `.env.example`, add a health endpoint (`GET /api/notifications/status`), expose metrics (deliveries, failures, latency, breaker state), and optionally move to a queue if volume increases.
+
+## ✅ Implementation Snapshot (May 13, 2026)
+
+- **Dispatcher + shared schema shipped:** `NotificationDispatcher` fans out events to every registered channel while respecting `NOTIFICATION_CHANNELS`, `ENABLE_EXTERNAL_NOTIFICATIONS`, and per-channel enable flags.
+- **Channels in production code:** Web push, Slack webhook, and Discord webhook channels all support retries, jittered backoff, and circuit-breaking. Environment helpers auto-register channels only when the corresponding secrets exist.
+- **Producers live:** Map approvals/rejections, map submission pending events, and performance incident alerts now emit typed events through the dispatcher. Admin in-app notifications remain unchanged.
+- **Manual validation path:** `npm run notify` fans out test payloads, allowing staging dry runs without shipping code.
+- **Docs & env templates:** `.env.example` and deployment docs include every required variable with guidance on staging vs. production usage.
 
 ## ✅ Phase 0 Wrap-Up — Decisions & Priorities
 
@@ -174,6 +200,32 @@ Severity drives emoji/colour formatting (see `slackFormatting.ts`) and determine
 - **May 9, 2026:** Completed Phase 0 follow-up by standardizing on Slack incoming webhooks for the initial rollout and prioritizing the incident + map workflow event backlog listed above. Ready to start Phase 1 foundations (WebPush wrapper, Discord webhook channel, dispatcher tests).
 - **May 12, 2026:** Shipped Phase 1 foundations by wrapping the existing web push service as a dispatcher channel, adding the Discord webhook channel with retries and circuit breaking, and backfilling Jest coverage around both providers.
 - **May 13, 2026:** Hooked dispatcher events into map approvals/rejections, performance incident alerts, and introduced `npm run notify` for manual validation so real workflow traffic now exercises Slack/Discord/WebPush routing.
+- **May 13, 2026 (afternoon):** Documented the live implementation footprint and locked the launch checklist below so we can dark-launch confidently.
+
+## 🧾 Launch Checklist & Owner Inputs
+
+| Status | Item | Owner | Notes |
+| --- | --- | --- | --- |
+| ☐ | Provide staging Slack + Discord webhook URLs | Connor | Needed to validate formatting + rate limits before production flip. |
+| ☐ | Confirm production destinations + redundancy plan | Connor | Decide channel mapping (ops/community) and who holds rotation keys. |
+| ☐ | Enable `ENABLE_EXTERNAL_NOTIFICATIONS` in staging `.env` | Connor | Keep production disabled until staging burn-in passes. |
+| ☐ | Verify staging runbook: `npm run notify` with sample payloads | Connor / Dev | Ensure CLI instructions match expectations and log output. |
+| ☐ | Set incident alert thresholds to match performance monitor | Connor | Align OpsGenie/Sentry triggers with Slack severity mapping. |
+| ☐ | Document webhook rotation cadence in ops handbook | Connor | Minimises risk if URLs leak. |
+
+## 🚧 Remaining Engineering Tasks (Post-Dark Launch)
+
+- Add health/metrics endpoint (`GET /api/notifications/status`) exposing channel availability and breaker state.
+- Capture delivery metrics (success/failure counts, latency) for dashboards.
+- Expand producers to gameplay lifecycle events (season start, tournaments) once noise levels are acceptable.
+- Evaluate Slack bot channel once admin UI work (Phase 3) begins.
+
+## 📣 What We Need From Connor Right Now
+
+1. **Share webhook secrets** for staging (Slack + Discord) via 1Password or Railway secrets and confirm target channels.
+2. **Flip the staging flag** (`ENABLE_EXTERNAL_NOTIFICATIONS=true`) after secrets land, then monitor the logs while approving/rejecting a test map.
+3. **Review the severity/channel matrix** above to ensure moderators receive the correct mix of alerts; adjust table as needed.
+4. **Confirm dark-launch timeline** so we can schedule the smoke test window and on-call coverage.
 
 ## ⚠️ Risks & Mitigations
 - **Webhook leakage:** rely on secrets management, URL redaction, and rotation drills.
@@ -197,7 +249,6 @@ Severity drives emoji/colour formatting (see `slackFormatting.ts`) and determine
 - `shared/notifications.ts`
 - `backend/src/services/NotificationDispatcher.ts`
 - `backend/src/services/channels/WebPushChannel.ts`
-- `backend/src/services/channels/SlackBotChannel.ts`
 - `backend/src/services/channels/SlackWebhookChannel.ts`
 - `backend/src/services/channels/DiscordWebhookChannel.ts`
 - `backend/src/scripts/notify.ts`

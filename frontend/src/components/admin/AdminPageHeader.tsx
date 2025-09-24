@@ -13,7 +13,11 @@ export function AdminPageHeader({ title, subtitle, icon, actions }: AdminPageHea
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            {icon ? <span className="text-2xl" aria-hidden="true">{icon}</span> : null}
+            {icon ? (
+              <span className="text-2xl" aria-hidden="true">
+                {icon}
+              </span>
+            ) : null}
             <span>{title}</span>
           </h1>
           {subtitle ? <p className="text-muted max-w-3xl">{subtitle}</p> : null}
@@ -23,4 +27,3 @@ export function AdminPageHeader({ title, subtitle, icon, actions }: AdminPageHea
     </div>
   )
 }
-
