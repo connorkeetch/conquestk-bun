@@ -4,12 +4,29 @@ import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
 import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
+import type { AIDifficulty } from '../types/game'
 import type { GameRoom as GameRoomType } from '../types/gameRoom'
+
+const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
+  recruit: 'Recruit',
+  commander: 'Commander',
+  grandmaster: 'Grandmaster',
+}
+
+const AI_DIFFICULTY_DESCRIPTIONS: Record<AIDifficulty, string> = {
+  recruit: 'Fast, forgiving baseline opponent',
+  commander: 'Balanced with threat awareness',
+  grandmaster: 'Advanced tactics and deeper lookahead',
+}
+
+const AI_DIFFICULTY_ORDER: AIDifficulty[] = ['recruit', 'commander', 'grandmaster']
 
 export default function GameRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -33,6 +50,19 @@ export default function GameRoom() {
   const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  const aiPlayersEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
+  const aiLobbyEnabled = useFeatureFlag(FEATURE_FLAGS.AI_LOBBY_OPTIONS)
+  const aiRecruitEnabled = useFeatureFlag(FEATURE_FLAGS.AI_RECRUIT)
+  const aiCommanderEnabled = useFeatureFlag(FEATURE_FLAGS.AI_COMMANDER)
+  const aiGrandmasterEnabled = useFeatureFlag(FEATURE_FLAGS.AI_GRANDMASTER)
+  const [aiDraftCounts, setAiDraftCounts] = useState<Record<AIDifficulty, number>>({
+    recruit: 0,
+    commander: 0,
+    grandmaster: 0,
+  })
+  const [aiDraftDirty, setAiDraftDirty] = useState(false)
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
 
   const getStatusLabel = (status: GameRoomType['status']) => {
     switch (status) {
@@ -101,6 +131,206 @@ export default function GameRoom() {
       })),
     [currentRoom?.players],
   )
+
+  const aiPlayersInRoom = useMemo(
+    () => (currentRoom?.players ?? []).filter((player) => player.isAi),
+    [currentRoom?.players],
+  )
+
+  const existingAiCounts = useMemo(() => {
+    const counts: Record<AIDifficulty, number> = {
+      recruit: 0,
+      commander: 0,
+      grandmaster: 0,
+    }
+    aiPlayersInRoom.forEach((player) => {
+      const difficulty = (player.aiDifficulty ?? 'recruit') as AIDifficulty
+      if (AI_DIFFICULTY_ORDER.includes(difficulty)) {
+        counts[difficulty] += 1
+      }
+    })
+    return counts
+  }, [aiPlayersInRoom])
+
+  const flaggedAiDifficulties = useMemo(() => {
+    const difficulties: AIDifficulty[] = []
+    if (aiRecruitEnabled) difficulties.push('recruit')
+    if (aiCommanderEnabled) difficulties.push('commander')
+    if (aiGrandmasterEnabled) difficulties.push('grandmaster')
+    return difficulties
+  }, [aiRecruitEnabled, aiCommanderEnabled, aiGrandmasterEnabled])
+
+  const allowedAiDifficulties = useMemo(() => {
+    const allowed = new Set<AIDifficulty>(flaggedAiDifficulties)
+    AI_DIFFICULTY_ORDER.forEach((difficulty) => {
+      if (existingAiCounts[difficulty] > 0) {
+        allowed.add(difficulty)
+      }
+    })
+    return Array.from(allowed)
+  }, [flaggedAiDifficulties, existingAiCounts])
+
+  const humanPlayersCount = useMemo(
+    () => (currentRoom?.players?.filter((player) => !player.isAi)?.length ?? 0),
+    [currentRoom?.players],
+  )
+
+  const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
+  const maxAiCapacity = useMemo(
+    () => Math.max(0, roomMaxPlayers - humanPlayersCount),
+    [roomMaxPlayers, humanPlayersCount],
+  )
+
+  const roomIsRanked = Boolean(currentRoom?.isRanked ?? currentRoom?.is_ranked ?? false)
+  const showAiControls =
+    aiPlayersEnabled &&
+    aiLobbyEnabled &&
+    isHost &&
+    !roomIsRanked &&
+    currentRoom?.status === 'lobby'
+
+  const normalizeAiDraftCounts = useCallback(
+    (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
+      const baseline: Record<AIDifficulty, number> = {
+        recruit: 0,
+        commander: 0,
+        grandmaster: 0,
+      }
+
+      if (!showAiControls || allowedAiDifficulties.length === 0) {
+        return baseline
+      }
+
+      const sanitized: Record<AIDifficulty, number> = { ...baseline }
+      let total = 0
+
+      allowedAiDifficulties.forEach((difficulty) => {
+        const raw = counts[difficulty] ?? 0
+        const value = Math.max(0, Math.trunc(raw))
+        sanitized[difficulty] = value
+        total += value
+      })
+
+      let overflow = total - maxAiCapacity
+      if (overflow > 0) {
+        const reductionOrder = [...AI_DIFFICULTY_ORDER].reverse()
+        while (overflow > 0) {
+          const target = reductionOrder.find(
+            (difficulty) => allowedAiDifficulties.includes(difficulty) && sanitized[difficulty] > 0,
+          )
+          if (!target) {
+            break
+          }
+          sanitized[target] -= 1
+          overflow -= 1
+        }
+      }
+
+      return sanitized
+    },
+    [allowedAiDifficulties, maxAiCapacity, showAiControls],
+  )
+
+  useEffect(() => {
+    setAiDraftCounts((previous) => normalizeAiDraftCounts(previous))
+  }, [normalizeAiDraftCounts])
+
+  useEffect(() => {
+    if (!showAiControls) {
+      if (aiDraftDirty || aiPlayersInRoom.length === 0) {
+        setAiDraftCounts({ recruit: 0, commander: 0, grandmaster: 0 })
+        setAiDraftDirty(false)
+        setAiErrorMessage(null)
+      }
+      return
+    }
+
+    if (!aiDraftDirty) {
+      setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
+    }
+  }, [aiDraftDirty, aiPlayersInRoom.length, existingAiCounts, normalizeAiDraftCounts, showAiControls])
+
+  const draftTotalAi = allowedAiDifficulties.reduce(
+    (sum, difficulty) => sum + (aiDraftCounts[difficulty] ?? 0),
+    0,
+  )
+  const aiSlotsRemaining = Math.max(0, maxAiCapacity - draftTotalAi)
+
+  const hasAiChanges = useMemo(() => {
+    if (!showAiControls) {
+      return false
+    }
+    return AI_DIFFICULTY_ORDER.some(
+      (difficulty) => (aiDraftCounts[difficulty] ?? 0) !== (existingAiCounts[difficulty] ?? 0),
+    )
+  }, [aiDraftCounts, existingAiCounts, showAiControls])
+
+  const buildAiOpponentPayload = useCallback(
+    (counts: Record<AIDifficulty, number>) => {
+      const payload: Array<{ difficulty: AIDifficulty; personalitySeed?: number | null }> = []
+      allowedAiDifficulties.forEach((difficulty) => {
+        const count = counts[difficulty] ?? 0
+        for (let index = 0; index < count; index += 1) {
+          payload.push({ difficulty })
+        }
+      })
+      return payload
+    },
+    [allowedAiDifficulties],
+  )
+
+  const updateAiCount = useCallback(
+    (difficulty: AIDifficulty, value: number) => {
+      setAiDraftDirty(true)
+      setAiErrorMessage(null)
+      setAiDraftCounts((previous) => normalizeAiDraftCounts({ ...previous, [difficulty]: value }))
+    },
+    [normalizeAiDraftCounts],
+  )
+
+  const stepAiCount = useCallback(
+    (difficulty: AIDifficulty, delta: number) => {
+      setAiDraftDirty(true)
+      setAiErrorMessage(null)
+      setAiDraftCounts((previous) =>
+        normalizeAiDraftCounts({ ...previous, [difficulty]: (previous[difficulty] ?? 0) + delta }),
+      )
+    },
+    [normalizeAiDraftCounts],
+  )
+
+  const resetAiDraft = useCallback(() => {
+    setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
+    setAiDraftDirty(false)
+    setAiErrorMessage(null)
+  }, [existingAiCounts, normalizeAiDraftCounts])
+
+  const handleAiSave = useCallback(async () => {
+    if (!currentRoom) {
+      return
+    }
+    setAiSaving(true)
+    setAiErrorMessage(null)
+    try {
+      const payload = buildAiOpponentPayload(normalizeAiDraftCounts(aiDraftCounts))
+      const response = await gameService.updateAiOpponents(currentRoom.id, payload)
+      if (response?.room) {
+        dispatch(setCurrentRoom(response.room))
+      }
+      setAiDraftDirty(false)
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'response' in error) {
+        const apiError = error as { response?: { data?: { message?: string } } }
+        setAiErrorMessage(apiError.response?.data?.message ?? 'Failed to update AI opponents')
+      } else if (error instanceof Error) {
+        setAiErrorMessage(error.message)
+      } else {
+        setAiErrorMessage('Failed to update AI opponents')
+      }
+    } finally {
+      setAiSaving(false)
+    }
+  }, [aiDraftCounts, buildAiOpponentPayload, currentRoom, dispatch, normalizeAiDraftCounts])
 
   const joinActionDisabled =
     joinSubmitting || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull
@@ -348,52 +578,69 @@ export default function GameRoom() {
 
   if (roomError) {
     return (
-      <div className="text-center space-y-4">
-        <div className="text-xl text-red-400">{roomError}</div>
-        <button
-          type="button"
-          onClick={() => navigate('/lobby')}
-          className="bg-primary px-4 py-2 rounded text-white"
-        >
-          Return to Lobby
-        </button>
+      <div className="flex items-center justify-center py-16">
+        <div className="max-w-md space-y-4 text-center">
+          <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-[color:var(--color-danger)]">
+            {roomError}
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/lobby')}
+            className="btn btn-primary"
+          >
+            Return to Lobby
+          </button>
+        </div>
       </div>
     )
   }
 
   if (isRoomLoading || !currentRoom) {
     return (
-      <div className="text-center">
-        <div className="text-xl">Loading room...</div>
+      <div className="flex items-center justify-center py-16">
+        <div className="panel space-y-2 text-center">
+          <div className="text-lg font-semibold text-[color:var(--heading)]">Loading room...</div>
+          <p className="text-sm text-muted">Hang tight while we fetch the latest state.</p>
+        </div>
       </div>
     )
   }
 
   if (isGameLoading && !currentGame) {
     return (
-      <div className="text-center">
-        <div className="text-xl">Loading game state...</div>
+      <div className="flex items-center justify-center py-16">
+        <div className="panel space-y-2 text-center">
+          <div className="text-lg font-semibold text-[color:var(--heading)]">Loading game state...</div>
+          <p className="text-sm text-muted">Preparing the board...</p>
+        </div>
       </div>
     )
   }
 
   if (gameError && !currentGame) {
     return (
-      <div className="text-center">
-        <div className="text-xl">{gameError}</div>
+      <div className="flex items-center justify-center py-16">
+        <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-center text-[color:var(--color-danger)]">
+          {gameError}
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">{currentRoom.name}</h1>
-          <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-2">
-            <span>Status: {getStatusLabel(currentRoom.status)}</span>
-            <span>
-              • Ready {readySummary.ready}/{readySummary.total}
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-[color:var(--heading)]">{currentRoom.name}</h1>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span className="chip text-xs uppercase tracking-wide">
+              Status: {getStatusLabel(currentRoom.status)}
+            </span>
+            <span className="chip text-xs">
+              Ready {readySummary.ready}/{readySummary.total}
+            </span>
+            <span className="chip text-xs">
+              Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
           </div>
         </div>
@@ -404,7 +651,7 @@ export default function GameRoom() {
               disabled={joinActionDisabled}
               type="button"
               title={joinButtonTitle}
-              className="px-4 py-2 rounded bg-primary text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary"
             >
               {joinButtonLabel}
             </button>
@@ -414,9 +661,7 @@ export default function GameRoom() {
               onClick={handleToggleReady}
               disabled={readySubmitting}
               type="button"
-              className={`px-4 py-2 rounded ${
-                currentPlayer?.isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-primary'
-              } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`btn ${currentPlayer?.isReady ? 'btn-success' : 'btn-primary'}`}
             >
               {readySubmitting
                 ? 'Updating...'
@@ -427,7 +672,7 @@ export default function GameRoom() {
           )}
           <button
             onClick={handleToggleMute}
-            className="bg-surface-2 hover:brightness-110 px-4 py-2 rounded flex items-center gap-2"
+            className="btn btn-ghost"
             type="button"
             title={isMuted ? 'Unmute' : 'Mute'}
           >
@@ -436,7 +681,7 @@ export default function GameRoom() {
           <button
             onClick={handleLeaveRoom}
             type="button"
-            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+            className="btn btn-danger"
           >
             Leave Room
           </button>
@@ -444,13 +689,13 @@ export default function GameRoom() {
       </div>
 
       {joinError && (
-        <div className="mb-4 rounded bg-red-900/40 border border-red-700 text-red-300 px-4 py-3 text-sm">
+        <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
           {joinError}
         </div>
       )}
 
       {readyError && (
-        <div className="mb-4 rounded bg-red-900/40 border border-red-700 text-red-300 px-4 py-3 text-sm">
+        <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
           {readyError}
         </div>
       )}
@@ -458,7 +703,7 @@ export default function GameRoom() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Game Board */}
         <div className="lg:col-span-3">
-          <div className="h-[600px]">
+          <div className="panel h-[600px] p-0">
             {currentGame ? (
               <RiskGameBoard
                 onTerritoryClick={(_territoryId) => {
@@ -466,17 +711,19 @@ export default function GameRoom() {
                 }}
               />
             ) : (
-              <div className="bg-surface-1 rounded-lg p-6 h-full flex items-center justify-center">
-                <div className="text-center text-muted">
-                  <h2 className="text-xl font-bold mb-4">Waiting for game to start...</h2>
-                  <p>Need at least 2 players to begin</p>
-                  <div className="mt-6">
-                    <RiskGameBoard
-                      onTerritoryClick={(_territoryId) => {
-                        /* noop */
-                      }}
-                    />
-                  </div>
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold text-[color:var(--heading)]">
+                    Waiting for game to start...
+                  </h2>
+                  <p className="text-sm text-muted">Need at least 2 players to begin</p>
+                </div>
+                <div className="w-full max-w-xl">
+                  <RiskGameBoard
+                    onTerritoryClick={(_territoryId) => {
+                      /* noop */
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -486,41 +733,158 @@ export default function GameRoom() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Players */}
-          <div className="bg-surface-1 rounded-lg p-4">
-            <h3 className="text-lg font-bold mb-3">
+          <div className="panel space-y-4">
+            <h3 className="text-lg font-semibold text-[color:var(--heading)]">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
             </h3>
-            <div className="space-y-2">
+            <ul className="list">
               {currentRoom.players?.map((player) => {
                 const isReady = Boolean(player.isReady)
                 const isCurrentUser = player.userId === user?.id
+                const readyBadgeClass = isReady
+                  ? 'badge bg-[color:var(--color-success)] text-[color:var(--color-white)] border-[color:var(--color-success)]'
+                  : 'badge border-[color:var(--panel-border)] text-muted bg-[color:var(--panel-bg-alt)]'
                 return (
-                  <div key={player.id} className="flex items-center gap-2 text-sm">
-                    <div
-                      className={`w-3 h-3 rounded-full ${isReady ? 'bg-green-500' : 'bg-gray-600'}`}
-                    ></div>
-                    <span className={isCurrentUser ? 'font-bold' : ''}>{player.username}</span>
+                  <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
+                    <span
+                      className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${
+                        isReady
+                          ? 'bg-[color:var(--color-success)]'
+                          : 'bg-[color:var(--panel-border)]'
+                      }`}
+                    ></span>
+                    <span
+                      className={`text-sm ${
+                        isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
+                      }`}
+                    >
+                      {player.username}
+                    </span>
                     {player.isAi && player.aiDifficulty && (
-                      <span className="text-xs bg-gray-700 px-2 py-0.5 rounded">
-                        AI – {player.aiDifficulty.charAt(0).toUpperCase() + player.aiDifficulty.slice(1)}
+                      <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
+                        AI - {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
                       </span>
                     )}
                     {player.userId === currentRoom.hostId && (
-                      <span className="text-xs bg-yellow-600 px-2 py-0.5 rounded">HOST</span>
+                      <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
+                        Host
+                      </span>
                     )}
-                    <span
-                      className={`ml-auto text-xs ${isReady ? 'text-green-400' : 'text-muted'}`}
-                    >
+                    <span className={`${readyBadgeClass} ml-auto`}>
                       {isReady ? 'Ready' : 'Not ready'}
                     </span>
-                  </div>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           </div>
 
+          {showAiControls && (
+            <div className="panel space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="text-lg font-semibold text-[color:var(--heading)]">AI Opponents</h3>
+                <span className="badge border-[color:var(--panel-border)] text-muted">
+                  {aiPlayersInRoom.length}/{Math.max(0, maxAiCapacity)} slots filled
+                </span>
+              </div>
+              {allowedAiDifficulties.length === 0 ? (
+                <p className="text-xs text-muted">
+                  No AI tiers are currently available. Enable an AI difficulty flag to add computer
+                  opponents to this lobby.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted">
+                    Reserve seats for AI. {aiSlotsRemaining > 0
+                      ? `${aiSlotsRemaining} open slot${aiSlotsRemaining === 1 ? '' : 's'} remaining.`
+                      : 'All available AI slots are reserved. Remove one or free a player seat to add more.'}
+                  </p>
+                  <div className="space-y-3">
+                    {allowedAiDifficulties.map((difficulty) => {
+                      const label = AI_DIFFICULTY_LABELS[difficulty]
+                      const description = AI_DIFFICULTY_DESCRIPTIONS[difficulty]
+                      const count = aiDraftCounts[difficulty] ?? 0
+                      const canDecrease = count > 0 && !aiSaving
+                      const canIncrease = aiSlotsRemaining > 0 && !aiSaving
+                      return (
+                        <div
+                          key={difficulty}
+                          className="panel-outline flex items-center justify-between gap-4"
+                        >
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-[color:var(--heading)]">
+                              {label}
+                            </div>
+                            <p className="text-xs text-muted">{description}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => stepAiCount(difficulty, -1)}
+                              disabled={!canDecrease}
+                              className="btn btn-secondary btn-icon"
+                              aria-label={`Remove ${label} AI opponent`}
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              min={0}
+                              max={maxAiCapacity}
+                              value={count}
+                              onChange={(event) => {
+                                const nextValue = Number.parseInt(event.target.value, 10)
+                                updateAiCount(
+                                  difficulty,
+                                  Number.isNaN(nextValue) ? 0 : Math.max(0, nextValue),
+                                )
+                              }}
+                              className="form-input w-16 text-center"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => stepAiCount(difficulty, 1)}
+                              disabled={!canIncrease}
+                              className="btn btn-secondary btn-icon"
+                              aria-label={`Add ${label} AI opponent`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {aiErrorMessage && (
+                    <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-xs text-[color:var(--color-danger)]">
+                      {aiErrorMessage}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={resetAiDraft}
+                      disabled={aiSaving || (!aiDraftDirty && !hasAiChanges)}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAiSave}
+                      disabled={aiSaving || !hasAiChanges}
+                      className="btn btn-primary btn-sm"
+                    >
+                      {aiSaving ? 'Saving...' : 'Save AI Slots'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {showTeamAssignment && currentRoom.numberOfTeams && currentRoom.numberOfTeams > 0 && (
-            <div className="bg-surface-1 rounded-lg p-4 space-y-3">
+            <div className="panel space-y-3">
               <TeamAssignment
                 players={lobbyTeamPlayers}
                 numberOfTeams={currentRoom.numberOfTeams}
@@ -528,47 +892,35 @@ export default function GameRoom() {
                 onTeamChange={handleTeamChange}
               />
               {teamUpdating && (
-                <p className="text-xs text-primary-soft">Updating team assignments...</p>
+                <p className="text-xs text-[color:var(--color-primary-soft)]">Updating team assignments...</p>
               )}
-              {teamUpdateError && <p className="text-xs text-red-400">{teamUpdateError}</p>}
+              {teamUpdateError && (
+                <p className="text-xs text-[color:var(--color-danger)]">{teamUpdateError}</p>
+              )}
             </div>
           )}
 
           {/* Game Controls */}
           {currentGame && (
-            <div className="bg-surface-1 rounded-lg p-4">
-              <h3 className="text-lg font-bold mb-3">Game Controls</h3>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  className="w-full bg-primary hover:brightness-110 px-3 py-2 rounded text-sm"
-                >
-                  Deploy Armies
-                </button>
-                <button
-                  type="button"
-                  className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-sm"
-                >
-                  Attack
-                </button>
-                <button
-                  type="button"
-                  className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm"
-                >
-                  Fortify
-                </button>
-                <button
-                  type="button"
-                  className="w-full bg-surface-2 hover:brightness-110 px-3 py-2 rounded text-sm"
-                >
-                  End Turn
-                </button>
-              </div>
+            <div className="panel space-y-2">
+              <h3 className="text-lg font-semibold text-[color:var(--heading)]">Game Controls</h3>
+              <button type="button" className="btn btn-primary w-full">
+                Deploy Armies
+              </button>
+              <button type="button" className="btn btn-danger w-full">
+                Attack
+              </button>
+              <button type="button" className="btn btn-success w-full">
+                Fortify
+              </button>
+              <button type="button" className="btn btn-secondary w-full">
+                End Turn
+              </button>
             </div>
           )}
 
           {/* Chat */}
-          <div className="bg-surface-1 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+          <div className="panel p-0 overflow-hidden" style={{ height: '400px' }}>
             {roomId && user && (
               <TabbedGameChat
                 gameId={roomId}

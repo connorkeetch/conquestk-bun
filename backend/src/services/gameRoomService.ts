@@ -682,6 +682,173 @@ export class GameRoomService {
     await query(updateQuery, [roomId])
   }
 
+  async updateAiOpponents(
+    roomId: string,
+    hostId: string,
+    aiOpponents: Array<{ difficulty: AIDifficultyOption; personalitySeed?: number | null }> = [],
+  ): Promise<GameRoom> {
+    const client = await getClient()
+
+    try {
+      await client.query('BEGIN')
+
+      const roomResult = await client.query<{
+        host_id: string
+        status: string
+        max_players: number
+        is_ranked: boolean | null
+      }>('SELECT host_id, status, max_players, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE', [
+        roomId,
+      ])
+
+      const roomRow = roomResult.rows[0]
+      if (!roomRow) {
+        throw new Error('Room not found')
+      }
+
+      if (roomRow.host_id !== hostId) {
+        throw new Error('Only the host can update AI opponents')
+      }
+
+      const lifecycleStatus = this.normalizeStatus(roomRow.status)
+      if (lifecycleStatus !== 'lobby') {
+        throw new Error('AI opponents can only be updated in the lobby')
+      }
+
+      if (roomRow.is_ranked) {
+        throw new Error('Ranked games cannot use AI opponents')
+      }
+
+      const playersResult = await client.query<{
+        id: string
+        user_id: string | null
+        ai_player_id: string | null
+        is_ai: boolean | null
+        ai_difficulty: string | null
+        ai_personality_seed: number | null
+      }>('SELECT id, user_id, ai_player_id, is_ai, ai_difficulty, ai_personality_seed FROM room_players WHERE room_id = $1 ORDER BY joined_at ASC', [
+        roomId,
+      ])
+
+      const existingAiPlayers = playersResult.rows.filter((player) => player.is_ai)
+      const humanPlayerCount = playersResult.rows.filter((player) => !player.is_ai).length
+      const maxAiCapacity = Math.max(0, roomRow.max_players - humanPlayerCount)
+
+      const sanitizedRequested = this.sanitizeAiOpponents(
+        roomRow.max_players,
+        aiOpponents,
+        roomRow.is_ranked ?? false,
+      )
+
+      if (sanitizedRequested.length > maxAiCapacity) {
+        throw new Error('Not enough open seats for the requested AI opponents')
+      }
+
+      const desiredCounts: Record<AIDifficultyOption, number> = {
+        recruit: 0,
+        commander: 0,
+        grandmaster: 0,
+      }
+      const desiredSeeds: Record<AIDifficultyOption, Array<number | null | undefined>> = {
+        recruit: [],
+        commander: [],
+        grandmaster: [],
+      }
+
+      sanitizedRequested.forEach((entry) => {
+        if (!entry) {
+          return
+        }
+        const difficulty = entry.difficulty
+        if (!difficulty) {
+          return
+        }
+        desiredCounts[difficulty] = (desiredCounts[difficulty] ?? 0) + 1
+        desiredSeeds[difficulty]?.push(entry.personalitySeed)
+      })
+
+      const existingByDifficulty: Record<AIDifficultyOption, typeof existingAiPlayers> = {
+        recruit: [],
+        commander: [],
+        grandmaster: [],
+      }
+
+      existingAiPlayers.forEach((player) => {
+        const normalizedDifficulty = this.normalizeAIDifficulty(player.ai_difficulty)
+        if (!normalizedDifficulty) {
+          return
+        }
+        existingByDifficulty[normalizedDifficulty].push(player)
+      })
+
+      const removedIds: string[] = []
+
+      for (const difficulty of Object.keys(desiredCounts) as AIDifficultyOption[]) {
+        const targetCount = desiredCounts[difficulty]
+        const existing = existingByDifficulty[difficulty]
+
+        if (existing.length > targetCount) {
+          const removeCount = existing.length - targetCount
+          const toRemove = existing.splice(existing.length - removeCount, removeCount)
+          toRemove.forEach((player) => {
+            removedIds.push(player.id)
+          })
+        }
+
+        if (targetCount > existing.length) {
+          const addCount = targetCount - existing.length
+          for (let index = 0; index < addCount; index += 1) {
+            const aiIdentifier = randomUUID()
+            const personalitySeedRaw = desiredSeeds[difficulty]?.shift()
+            const personalitySeed =
+              typeof personalitySeedRaw === 'number' && Number.isFinite(personalitySeedRaw)
+                ? Math.trunc(personalitySeedRaw)
+                : Math.trunc(Math.random() * 10_000_000)
+
+            await client.query(
+              `
+              INSERT INTO room_players (
+                room_id,
+                user_id,
+                ai_player_id,
+                is_ai,
+                ai_difficulty,
+                ai_personality_seed,
+                is_ready,
+                ready_at
+              )
+              VALUES ($1, NULL, $2, TRUE, $3, $4, TRUE, NOW())
+            `,
+              [roomId, aiIdentifier, difficulty, personalitySeed],
+            )
+          }
+        }
+      }
+
+      if (removedIds.length > 0) {
+        await client.query('DELETE FROM room_players WHERE room_id = $1 AND id = ANY($2::uuid[])', [
+          roomId,
+          removedIds,
+        ])
+      }
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+
+    await this.ensureAiReadyStates(roomId)
+    const updatedRoom = await this.getRoomById(roomId)
+    if (!updatedRoom) {
+      throw new Error('Failed to load room after updating AI opponents')
+    }
+
+    return updatedRoom
+  }
+
   async isPlayerInRoom(roomId: string, userId: string): Promise<boolean> {
     const membershipQuery = `
       SELECT 1
