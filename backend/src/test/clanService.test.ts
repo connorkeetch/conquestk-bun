@@ -146,6 +146,7 @@ describe('ClanService', () => {
             },
           ],
         })
+        .mockResolvedValueOnce({ rows: [] })
 
       const result = await clanService.createClan(ownerId, { name: 'Test Clan', tag: 'tc' })
 
@@ -161,6 +162,7 @@ describe('ClanService', () => {
       expect(result.recentAnnouncements[0].title).toBe('Welcome')
       expect(result.progression).toEqual(progression)
       expect(result.activeObjectives).toEqual([])
+      expect(result.recentActivity).toEqual([])
     })
   })
 

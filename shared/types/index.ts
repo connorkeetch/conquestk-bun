@@ -410,6 +410,8 @@ export interface Notification {
 // Clan Progression Events
 // ============================================
 
+export const CLAN_PROGRESS_EVENT = 'clan:progress' as const
+
 export interface ClanProgressionSocketPayload {
   clanId: string
   gameId: string
@@ -435,6 +437,25 @@ export interface ClanProgressionSocketPayload {
     progressValue: number
     completed: boolean
   }>
+}
+
+export type ClanProgressEventHandler = (payload: ClanProgressionSocketPayload) => void
+
+export interface SocketEventBridge {
+  on(event: string, handler: (...args: unknown[]) => unknown): unknown
+  off?(event: string, handler: (...args: unknown[]) => unknown): unknown
+}
+
+export const subscribeToClanProgress = (
+  socket: SocketEventBridge,
+  handler: ClanProgressEventHandler,
+): (() => void) => {
+  socket.on(CLAN_PROGRESS_EVENT, handler)
+  return () => {
+    if (typeof socket.off === 'function') {
+      socket.off(CLAN_PROGRESS_EVENT, handler)
+    }
+  }
 }
 
 // ============================================

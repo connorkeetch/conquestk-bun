@@ -78,6 +78,17 @@ export interface ClanObjective {
   reward: Record<string, unknown>
 }
 
+export interface ClanActivityEvent {
+  id: string
+  clanId: string
+  actorUserId?: string | null
+  actorUsername?: string | null
+  actionType: string
+  metadata: Record<string, unknown>
+  targetId?: string | null
+  createdAt: string
+}
+
 export interface ClanDetails extends ClanSummary {
   ownerUserId: string
   ownerUsername?: string | null
@@ -88,6 +99,7 @@ export interface ClanDetails extends ClanSummary {
   recentAnnouncements: ClanAnnouncement[]
   progression: ClanProgressionSummary
   activeObjectives: ClanObjective[]
+  recentActivity: ClanActivityEvent[]
 }
 
 export interface ClanListFilters {

@@ -74,6 +74,17 @@ interface ClanAnnouncementRow {
   expires_at?: string | Date | null
 }
 
+interface ClanActivityRow {
+  id: string
+  clan_id: string
+  actor_user_id: string | null
+  action_type: string
+  metadata: Record<string, unknown> | string | null
+  target_id: string | null
+  created_at: string | Date
+  actor_username: string | null
+}
+
 export class ClanServiceError extends Error {
   code: string
 
@@ -422,6 +433,26 @@ export class ClanService {
       [row.id],
     )
 
+    const activityResult = await query<ClanActivityRow>(
+      `
+        SELECT
+          a.id,
+          a.clan_id,
+          a.actor_user_id,
+          a.action_type,
+          a.metadata,
+          a.target_id,
+          a.created_at,
+          u.username AS actor_username
+        FROM clan_activity_log a
+        LEFT JOIN users u ON u.id = a.actor_user_id
+        WHERE a.clan_id = $1
+        ORDER BY a.created_at DESC
+        LIMIT 20
+      `,
+      [row.id],
+    )
+
     const clan = this.mapClan(row)
     const [progression, activeObjectives] = await Promise.all([
       clanProgressionService.getProgressionSummary(row.id),
@@ -441,6 +472,7 @@ export class ClanService {
       ),
       progression,
       activeObjectives,
+      recentActivity: activityResult.rows.map((activity) => this.mapActivityEvent(activity)),
     }
   }
 
@@ -634,6 +666,32 @@ export class ClanService {
       clanName: row.clan_name,
       roleName: row.role_name ?? null,
       status: row.status as ClanMemberStatus,
+    }
+  }
+
+  private mapActivityEvent(row: ClanActivityRow): ClanActivityEvent {
+    let parsedMetadata: Record<string, unknown> = {}
+    if (row.metadata) {
+      if (typeof row.metadata === 'string') {
+        try {
+          parsedMetadata = JSON.parse(row.metadata)
+        } catch (_error) {
+          parsedMetadata = { raw: row.metadata }
+        }
+      } else {
+        parsedMetadata = row.metadata
+      }
+    }
+
+    return {
+      id: row.id,
+      clanId: row.clan_id,
+      actorUserId: row.actor_user_id,
+      actorUsername: row.actor_username,
+      actionType: row.action_type,
+      metadata: parsedMetadata,
+      targetId: row.target_id ?? null,
+      createdAt: row.created_at,
     }
   }
 

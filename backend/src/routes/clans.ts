@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
-import { body, param, query, validationResult } from 'express-validator'
 import type { ParamsDictionary } from 'express-serve-static-core'
+import { body, param, query, validationResult } from 'express-validator'
 import { authenticateToken } from '../middleware/auth'
 import {
   ClanMembershipServiceError,
@@ -13,7 +13,6 @@ import type {
   ClanCreateRequest,
   ClanListFilters,
   ClanPrivacy,
-  ClanRecruitmentPolicy,
   ClanRecruitmentStatus,
 } from '../types/clans'
 import type { AuthenticatedRequest } from '../types/express'

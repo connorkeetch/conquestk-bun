@@ -105,6 +105,7 @@ export interface ClanActivityEvent {
   id: string
   clanId: string
   actorUserId?: string | null
+  actorUsername?: string | null
   actionType: string
   metadata: Record<string, unknown>
   targetId?: string | null
@@ -172,6 +173,7 @@ export interface ClanDetails extends Clan {
   recentAnnouncements: ClanAnnouncement[]
   progression: ClanProgressionSummary
   activeObjectives: ClanObjective[]
+  recentActivity: ClanActivityEvent[]
 }
 
 export interface ClanListFilters {

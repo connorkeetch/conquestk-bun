@@ -1,4 +1,4 @@
-import type { ClanProgressionSocketPayload } from '@shared/types'
+import { type ClanProgressionSocketPayload, subscribeToClanProgress } from '@shared/types'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -46,6 +46,172 @@ const formatDate = (value: string | null | undefined): string | null => {
 
 const formatNumber = (value: number): string => {
   return new Intl.NumberFormat().format(value)
+}
+
+const formatRelativeTime = (value: string): string => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return formatDate(value) ?? ''
+  }
+
+  const diffMs = Date.now() - date.getTime()
+  const isPast = diffMs >= 0
+  const absMs = Math.abs(diffMs)
+
+  if (absMs < 30 * 1000) {
+    return 'just now'
+  }
+
+  const units: Array<[number, Intl.RelativeTimeFormatUnit]> = [
+    [1000 * 60 * 60 * 24 * 365, 'year'],
+    [1000 * 60 * 60 * 24 * 30, 'month'],
+    [1000 * 60 * 60 * 24 * 7, 'week'],
+    [1000 * 60 * 60 * 24, 'day'],
+    [1000 * 60 * 60, 'hour'],
+    [1000 * 60, 'minute'],
+    [1000, 'second'],
+  ]
+
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+  for (const [unitMs, unit] of units) {
+    if (absMs >= unitMs || unit === 'second') {
+      const rawValue = absMs / unitMs
+      const rounded = rawValue < 1 ? 1 : Math.round(rawValue)
+      return rtf.format(isPast ? -rounded : rounded, unit)
+    }
+  }
+
+  return formatDate(value) ?? ''
+}
+
+const humanizeSource = (source?: string | null): string | null => {
+  if (!source) return null
+  return source.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+type ActivityDescription = {
+  title: string
+  subtitle?: string
+  icon: JSX.Element
+  accentClass?: string
+}
+
+const describeActivityEvent = (event: ClanActivityEvent): ActivityDescription => {
+  const actor = event.actorUsername ?? 'A member'
+  const metadata = event.metadata ?? {}
+
+  const coerceNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value)
+      if (!Number.isNaN(parsed)) return parsed
+    }
+    return null
+  }
+
+  switch (event.actionType) {
+    case 'clan_xp_awarded': {
+      const amount = coerceNumber(metadata.amount) ?? 0
+      const placement = coerceNumber(metadata.placement)
+      const matchesPlayed = coerceNumber(metadata.matchesPlayed)
+      const matchesWon = coerceNumber(metadata.matchesWon)
+      const territories = coerceNumber(metadata.territories)
+      const source = humanizeSource((metadata.source as string | undefined) ?? 'match result')
+
+      const detailParts: string[] = []
+      if (source) detailParts.push(source)
+      if (typeof placement === 'number') detailParts.push(`Placement #${placement}`)
+      if (typeof matchesWon === 'number' && matchesWon > 0) {
+        detailParts.push(`${matchesWon} win${matchesWon === 1 ? '' : 's'}`)
+      }
+      if (typeof matchesPlayed === 'number') {
+        detailParts.push(`${matchesPlayed} match${matchesPlayed === 1 ? '' : 'es'}`)
+      }
+      if (typeof territories === 'number') {
+        detailParts.push(`${territories} territories held`)
+      }
+
+      const subtitle = detailParts.join(' • ')
+
+      return {
+        title: `${actor} earned +${formatNumber(Math.max(amount, 0))} clan XP`,
+        subtitle: subtitle.length > 0 ? subtitle : undefined,
+        icon: <Trophy className="w-4 h-4" />,
+        accentClass: 'text-primary-soft',
+      }
+    }
+    case 'clan_level_up': {
+      const toLevel = coerceNumber(metadata.toLevel)
+      return {
+        title: `Clan reached level ${toLevel ?? '?'}`,
+        subtitle: `${actor}'s efforts pushed the clan over the threshold.`,
+        icon: <Sparkles className="w-4 h-4" />,
+        accentClass: 'text-success',
+      }
+    }
+    case 'clan_objective_completed': {
+      const objectiveType = humanizeSource(metadata.objectiveType as string | undefined)
+      return {
+        title: `${actor} completed a ${objectiveType ?? 'clan objective'}`,
+        subtitle: 'Weekly goals now grant their rewards.',
+        icon: <Target className="w-4 h-4" />,
+        accentClass: 'text-warning',
+      }
+    }
+    case 'member_joined':
+      return {
+        title: `${actor} joined the clan`,
+        subtitle: 'A fresh recruit just landed in the roster.',
+        icon: <Users className="w-4 h-4" />,
+        accentClass: 'text-primary-soft',
+      }
+    default:
+      return {
+        title: `${actor} logged ${event.actionType.replace(/_/g, ' ')}`,
+        icon: <Megaphone className="w-4 h-4" />,
+        accentClass: 'text-muted',
+      }
+  }
+}
+
+const ActivityFeed = ({ events }: { events: ClanActivityEvent[] }) => {
+  if (!events.length) {
+    return (
+      <div className="glass-box-lg p-6">
+        <h2 className="text-xl font-semibold text-white">Recent activity</h2>
+        <p className="text-sm text-muted mt-3">
+          Match history is warming up—complete clan games to see contribution logs here.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="glass-box-lg p-6">
+      <h2 className="text-xl font-semibold text-white">Recent activity</h2>
+      <ul className="mt-4 space-y-4">
+        {events.map((event) => {
+          const { title, subtitle, icon, accentClass } = describeActivityEvent(event)
+          return (
+            <li key={`${event.id}-${event.createdAt}`} className="flex items-start gap-4">
+              <div
+                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface-2 ${accentClass ?? 'text-primary-soft'}`}
+              >
+                {icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">{title}</p>
+                {subtitle ? <p className="text-xs text-muted mt-1">{subtitle}</p> : null}
+              </div>
+              <span className="text-xs text-muted whitespace-nowrap">
+                {formatRelativeTime(event.createdAt)}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 const clampProgress = (value: number): number => {
@@ -351,6 +517,30 @@ const ClanDetailPage = () => {
           }
         })
 
+        const actorUsername =
+          current.members.find((member) => member.userId === payload.userId)?.username ?? null
+
+        const activityEntry: ClanActivityEvent = {
+          id: `live-${payload.gameId}-${payload.userId}-${Date.now()}`,
+          clanId: current.id,
+          actorUserId: payload.userId,
+          actorUsername,
+          actionType: 'clan_xp_awarded',
+          metadata: {
+            amount: payload.xpAwarded,
+            source: 'game_result',
+            matchesPlayed: payload.matchesPlayed,
+            matchesWon: payload.matchesWon,
+            placement: payload.placement,
+            territories: payload.territories,
+            armies: payload.armies,
+            eliminated: payload.eliminated,
+            gameId: payload.gameId,
+          },
+          targetId: payload.gameId,
+          createdAt: new Date().toISOString(),
+        }
+
         return {
           ...current,
           progression: {
@@ -359,14 +549,13 @@ const ClanDetailPage = () => {
           },
           activeObjectives: objectives,
           members,
+          recentActivity: [activityEntry, ...(current.recentActivity ?? [])].slice(0, 20),
         }
       })
     }
 
-    socketService.on('clan:progress', handleProgressUpdate)
-    return () => {
-      socketService.off('clan:progress', handleProgressUpdate)
-    }
+    const unsubscribe = subscribeToClanProgress(socketService, handleProgressUpdate)
+    return unsubscribe
   }, [clansEnabled])
 
   const clanCreatedAt = useMemo(() => (clan ? formatDate(clan.createdAt) : null), [clan])
@@ -540,6 +729,8 @@ const ClanDetailPage = () => {
           </div>
           <AnnouncementList announcements={clan.recentAnnouncements} />
         </section>
+
+        <ActivityFeed events={clan.recentActivity ?? []} />
 
         <section className="glass-box-lg p-6 flex items-start gap-4 text-sm text-warning">
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
