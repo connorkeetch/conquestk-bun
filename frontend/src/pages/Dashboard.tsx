@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
             <p className="text-muted mt-2">Ready to conquer some territories?</p>
           </div>
           {notifications > 0 && (
-            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+            <div className="bg-[color:var(--color-danger)] text-[color:var(--color-white)] px-3 py-1 rounded-[var(--radius-sm)] text-sm font-medium">
               {notifications} new notifications
             </div>
           )}
@@ -153,43 +153,37 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Link
           to="/lobby"
-          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
+          className="panel group relative text-center transition-transform duration-200 hover:-translate-y-1"
         >
-          <div className="text-center">
-            <div className="text-3xl mb-3">🎮</div>
-            <h3 className="text-xl font-bold text-white mb-2">Casual Play</h3>
-            <p className="text-primary-soft text-sm">Find a relaxed match</p>
-          </div>
+          <div className="text-3xl mb-3">🎮</div>
+          <h3 className="text-xl font-bold text-[color:var(--heading)] mb-2">Casual Play</h3>
+          <p className="text-sm text-[color:var(--text-muted)]">Find a relaxed match</p>
         </Link>
 
         <Link
           to="/create"
-          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
+          className="panel group relative text-center transition-transform duration-200 hover:-translate-y-1"
         >
-          <div className="text-center">
-            <div className="text-3xl mb-3">➕</div>
-            <h3 className="text-xl font-bold text-white mb-2">Create Lobby</h3>
-            <p className="text-success text-sm">Host a custom game</p>
-          </div>
+          <div className="text-3xl mb-3">➕</div>
+          <h3 className="text-xl font-bold text-[color:var(--heading)] mb-2">Create Lobby</h3>
+          <p className="text-sm text-[color:var(--color-success)]">Host a custom game</p>
         </Link>
 
         <Link
           to="/maps"
-          className="box1 group relative p-6 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
+          className="panel group relative text-center transition-transform duration-200 hover:-translate-y-1"
         >
-          <div className="text-center">
-            <div className="text-3xl mb-3">🗺️</div>
-            <h3 className="text-xl font-bold text-white mb-2">Explore Maps</h3>
-            <p className="text-warning text-sm">Discover new territories</p>
-          </div>
+          <div className="text-3xl mb-3">🗺️</div>
+          <h3 className="text-xl font-bold text-[color:var(--heading)] mb-2">Explore Maps</h3>
+          <p className="text-sm text-[color:var(--color-warning)]">Discover new territories</p>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Stats Overview */}
         <div className="lg:col-span-1">
-          <div className="box1">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+          <div className="panel space-y-6">
+            <h2 className="text-xl font-bold text-[color:var(--heading)] flex items-center">
               <span className="mr-2">📊</span>
               Your Stats
             </h2>
@@ -197,7 +191,9 @@ const Dashboard: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Games Played</span>
-                  <span className="text-white font-bold">{userStats.gamesPlayed}</span>
+                  <span className="text-[color:var(--heading)] font-bold">
+                    {userStats.gamesPlayed}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Games Won</span>
@@ -219,13 +215,15 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="pt-2 border-t border-border">
                   <span className="text-muted text-sm">Favorite Map</span>
-                  <div className="text-white font-medium">{userStats.favoriteMap}</div>
+                  <div className="text-[color:var(--heading)] font-medium">
+                    {userStats.favoriteMap}
+                  </div>
                 </div>
               </div>
             )}
             <Link
               to="/profile/stats"
-              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
+              className="block text-center text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] text-sm font-medium"
             >
               View Detailed Stats →
             </Link>
@@ -234,8 +232,8 @@ const Dashboard: React.FC = () => {
 
         {/* Recent Games */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="box1">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+          <div className="panel space-y-6">
+            <h2 className="text-xl font-bold text-[color:var(--heading)] flex items-center">
               <span className="mr-2">🎮</span>
               Recent Games
             </h2>
@@ -243,14 +241,14 @@ const Dashboard: React.FC = () => {
               {recentGames.map((game) => (
                 <div
                   key={game.id}
-                  className="flex items-center justify-between p-4 bg-surface-2/50 rounded-lg hover:bg-surface-2 transition-all duration-200 border border-border/50 hover:border-border"
+                  className="panel-muted flex items-center justify-between p-4 transition-colors duration-200 hover:bg-[color:var(--hover-bg)] hover:border-[color:var(--hover-border)]"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-surface-2 rounded-lg flex items-center justify-center border border-border">
+                    <div className="w-12 h-12 flex items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--panel-border)] bg-[color:var(--surface-2)]">
                       🗺️
                     </div>
                     <div>
-                      <div className="font-medium text-white">{game.mapName}</div>
+                      <div className="font-medium text-[color:var(--heading)]">{game.mapName}</div>
                       <div className="text-sm text-muted">
                         {game.players} players • {getTimeAgo(game.lastPlayed)}
                       </div>
@@ -263,7 +261,7 @@ const Dashboard: React.FC = () => {
                     {game.status === 'in_progress' && (
                       <Link
                         to={`/room/${game.id}`}
-                        className="text-sm text-primary-soft hover:text-primary"
+                        className="text-sm text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)]"
                       >
                         Continue →
                       </Link>
@@ -274,15 +272,15 @@ const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/profile/history"
-              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
+              className="block text-center text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] text-sm font-medium"
             >
               View All Games →
             </Link>
           </div>
 
           {/* Friends Activity */}
-          <div className="box1">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+          <div className="panel space-y-6">
+            <h2 className="text-xl font-bold text-[color:var(--heading)] flex items-center">
               <span className="mr-2">👥</span>
               Friends Activity
             </h2>
@@ -290,18 +288,20 @@ const Dashboard: React.FC = () => {
               {friendsActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-center space-x-4 p-3 bg-surface-2/50 rounded-lg hover:bg-surface-2 transition-all duration-200 border border-border/50 hover:border-border"
+                  className="panel-muted flex items-center space-x-4 p-3 transition-colors duration-200 hover:bg-[color:var(--hover-bg)] hover:border-[color:var(--hover-border)]"
                 >
                   <div className="relative">
-                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-sm font-bold text-white">
+                    <div className="w-10 h-10 bg-[color:var(--color-primary)] rounded-full flex items-center justify-center text-sm font-bold text-[color:var(--color-white)]">
                       {activity.username.charAt(0)}
                     </div>
                     {activity.online && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-surface-1"></div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[color:var(--color-success)] rounded-full border-2 border-[color:var(--surface-1)]" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="text-white font-medium">{activity.username}</div>
+                    <div className="text-[color:var(--heading)] font-medium">
+                      {activity.username}
+                    </div>
                     <div className="text-muted text-sm">{activity.activity}</div>
                   </div>
                   <div className="text-muted text-xs">{getTimeAgo(activity.timestamp)}</div>
@@ -310,7 +310,7 @@ const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/community/friends"
-              className="block mt-4 text-center text-primary-soft hover:text-primary text-sm font-medium"
+              className="block text-center text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] text-sm font-medium"
             >
               View All Friends →
             </Link>

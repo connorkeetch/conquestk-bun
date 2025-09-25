@@ -33,6 +33,8 @@
   --footer-bg: #e7ecff;
   --modal-bg: #ffffff;
   --modal-border: #0b2f84;
+  --body-bg-image: none;
+  --body-bg-attachment: scroll;
 
   /* Interaction tokens */
   --hover-bg: #dbe4ff;
@@ -82,10 +84,10 @@
 }
 
 [data-theme="retrospace"] body {
-  background-color: #ffffff;
-  background-image: none;
-  background-attachment: scroll;
-  color: #1f2937;
+  background-color: var(--surface-0);
+  background-image: var(--body-bg-image, none);
+  background-attachment: var(--body-bg-attachment, scroll);
+  color: var(--text);
 }
 
 [data-theme="retrospace"] body::after {
