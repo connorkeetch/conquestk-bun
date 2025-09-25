@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authSlice from './authSlice'
 import chatSlice from './chatSlice'
+import messagesReducer from './messagesSlice'
 import gameSlice from './gameSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
@@ -12,6 +13,7 @@ export const store = configureStore({
     room: roomSlice,
     settings: settingsSlice,
     chat: chatSlice,
+    messages: messagesReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

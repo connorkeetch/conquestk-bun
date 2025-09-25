@@ -54,6 +54,7 @@ export interface ConversationEventSummary {
   isReadOnly: boolean
   gameId: string | null
   metadata: Record<string, unknown>
+  memberIds: string[]
 }
 
 export interface ConversationMemberEvent {
@@ -83,6 +84,98 @@ export interface ConversationMessageEventPayload {
   body: string
   createdAt: string
   metadata: Record<string, unknown>
+}
+
+export interface ConversationMembersChangedPayload {
+  conversationId: string
+  members: ConversationMemberEvent[]
+}
+
+export interface ConversationUpdatedPayload {
+  conversation: ConversationEventSummary
+}
+
+export interface MessageSendPayload {
+  conversationId: string
+  body: string
+  clientMessageId?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface MessageSendAck {
+  ok: boolean
+  error?: string
+  code?: string
+  message?: ConversationMessageEventPayload
+}
+
+export interface ConversationCreatePayload {
+  kind: ConversationEventSummary['kind']
+  targetUserId?: string
+  title?: string | null
+  memberIds?: string[]
+  metadata?: Record<string, unknown>
+}
+
+export interface ConversationCreateAck {
+  ok: boolean
+  error?: string
+  code?: string
+  conversation?: ConversationEventSummary & { memberIds: string[] }
+}
+
+export interface ConversationMembersUpdatePayload {
+  conversationId: string
+  add?: string[]
+  remove?: string[]
+  roleUpdates?: Array<{ userId: string; role: 'admin' | 'member' }>
+  archive?: boolean
+}
+
+export interface ConversationMemberUpdateError {
+  type: 'add' | 'remove' | 'role' | 'archive'
+  userId?: string
+  code: string
+  error: string
+}
+
+export interface ConversationMembersUpdateAck {
+  ok: boolean
+  error?: string
+  code?: string
+  added?: ConversationMemberEvent[]
+  removed?: string[]
+  roleUpdates?: ConversationMemberEvent[]
+  archived?: boolean
+  conversation?: ConversationEventSummary
+  errors?: ConversationMemberUpdateError[]
+}
+
+export interface TypingEventPayload {
+  conversationId: string
+}
+
+export interface TypingEventResponse {
+  conversationId: string
+  userId: string
+  username: string
+}
+
+export interface ReceiptReadPayload {
+  conversationId: string
+}
+
+export interface ReceiptReadAck {
+  ok: boolean
+  error?: string
+  code?: string
+}
+
+export interface ReceiptReadEventPayload {
+  conversationId: string
+  userId: string
+  lastReadMessageId: string | null
+  readAt: string
 }
 
 export interface ChatReactionSummary {
@@ -200,9 +293,15 @@ export interface ServerToClientEvents {
   }) => void
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
   'clan:progress': (payload: ClanProgressionSocketPayload) => void
+  'message.new': (payload: ConversationMessageEventPayload) => void
+  'receipt.read': (payload: ReceiptReadEventPayload) => void
+  'typing.start': (payload: TypingEventResponse) => void
+  'typing.stop': (payload: TypingEventResponse) => void
   'conversation.created': (payload: ConversationCreatedPayload) => void
   'conversation.members.added': (payload: ConversationMembersAddedPayload) => void
   'conversation.members.removed': (payload: ConversationMembersRemovedPayload) => void
+  'conversation.members.changed': (payload: ConversationMembersChangedPayload) => void
+  'conversation.updated': (payload: ConversationUpdatedPayload) => void
   'conversation.message.new': (payload: ConversationMessageEventPayload) => void
   phaseChanged: (data: {
     phase: GamePhase
@@ -312,6 +411,18 @@ export interface ClientToServerEvents {
   }) => void
   'chat:add-reaction': (data: { messageId: string; emoji: string }) => void
   'chat:remove-reaction': (data: { messageId: string; emoji: string }) => void
+  'message.send': (payload: MessageSendPayload, callback?: (response: MessageSendAck) => void) => void
+  'receipt.read': (payload: ReceiptReadPayload, callback?: (response: ReceiptReadAck) => void) => void
+  'typing.start': (payload: TypingEventPayload) => void
+  'typing.stop': (payload: TypingEventPayload) => void
+  'conversation.create': (
+    payload: ConversationCreatePayload,
+    callback?: (response: ConversationCreateAck) => void,
+  ) => void
+  'conversation.members.update': (
+    payload: ConversationMembersUpdatePayload,
+    callback?: (response: ConversationMembersUpdateAck) => void,
+  ) => void
 }
 
 // ============================================
