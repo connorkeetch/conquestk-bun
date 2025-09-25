@@ -1,113 +1,325 @@
-import type {
-  ChatConversationType,
-  ChatHistoryPayload,
-  ChatMessagePayload,
-  ChatUnreadCount,
-  ServerToClientEvents,
-} from '@shared/types'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ChatConversationType } from '@shared/types'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
-import type { ChatMessage, LinkPreview } from '../../store/chatSlice'
 import {
   addMessage,
   deleteMessage,
   editMessage,
-  loadChatHistory,
+  loadChatHistory as legacyLoadChatHistory,
   markMessagesAsRead,
   setActiveConversation,
   setTypingUser,
   setUnreadCounts,
 } from '../../store/chatSlice'
+import {
+  loadConversationMessages,
+  messagesActions,
+  refreshConversation,
+  selectConversationById,
+  selectHasMoreMessages,
+  selectMessagesForConversation,
+  selectTypingUsers,
+} from '../../store/messagesSlice'
+import type { ChatMessage } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
-import MessageList from './MessageList'
+import MessageList, { type DisplayMessage } from './MessageList'
 
-interface ChatContainerProps {
-  conversationType: 'game' | 'team' | 'dm'
-  conversationId: string // gameId for games, gameId:teamId for teams, userId for DMs
+type ChatContainerProps = {
+  conversationType: ChatConversationType
+  conversationId: string
   className?: string
 }
 
-export default function ChatContainer({
-  conversationType,
-  conversationId,
-  className = '',
-}: ChatContainerProps) {
+export default function ChatContainer(props: ChatContainerProps) {
+  if (props.conversationType === 'dm') {
+    return <DirectMessageChat {...props} />
+  }
+
+  return <LegacyChat {...props} />
+}
+
+function DirectMessageChat({ conversationId: partnerId, className = '' }: ChatContainerProps) {
   const dispatch = useAppDispatch()
   const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [initializing, setInitializing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const historyRequestedRef = useRef(false)
-  const lastConversationKeyRef = useRef<string | null>(null)
 
-  const normalizeTimestamp = useCallback((value?: string | Date | null) => {
-    if (!value) return undefined
-    return typeof value === 'string' ? value : value.toISOString()
-  }, [])
-
-  const adaptLinkPreview = useCallback(
-    (preview: NonNullable<ChatMessagePayload['link_previews']>[number]): LinkPreview => ({
-      url: preview.url,
-      title: preview.title,
-      description: preview.description,
-      image: preview.image,
-      siteName:
-        preview.siteName ??
-        ((): string | undefined => {
-          const legacy = preview as { site_name?: unknown }
-          return typeof legacy.site_name === 'string' ? legacy.site_name : undefined
-        })(),
-    }),
-    [],
+  const conversation = useAppSelector((state) =>
+    conversationId ? selectConversationById(state, conversationId) : undefined,
+  )
+  const rawMessages = useAppSelector((state) =>
+    conversationId ? selectMessagesForConversation(state, conversationId) : [],
+  )
+  const typingUsersMap = useAppSelector((state) =>
+    conversationId ? selectTypingUsers(state, conversationId) : {},
+  )
+  const hasMore = useAppSelector((state) =>
+    conversationId ? selectHasMoreMessages(state, conversationId) : false,
+  )
+  const isLoadingMessages = useAppSelector(
+    (state) => conversationId && state.messages.loadingMessages[conversationId],
   )
 
-  const adaptChatMessage = useCallback(
-    (payload: ChatMessagePayload): ChatMessage => ({
-      id: payload.id,
-      sender_id: payload.sender_id,
-      sender_username: payload.sender_username,
-      message: payload.message,
-      message_type: payload.message_type,
-      game_id: payload.game_id ?? undefined,
-      team_id: payload.team_id ?? undefined,
-      recipient_id: payload.recipient_id ?? undefined,
-      created_at: normalizeTimestamp(payload.created_at) ?? new Date().toISOString(),
-      edited_at: normalizeTimestamp(payload.edited_at),
-      deleted_at: normalizeTimestamp(payload.deleted_at),
-      is_read: false,
-      link_previews: payload.link_previews?.map(adaptLinkPreview),
-    }),
-    [adaptLinkPreview, normalizeTimestamp],
+  useEffect(() => {
+    if (!partnerId || !currentUserId) {
+      return
+    }
+
+    if (!socketService.getSocket()) {
+      return
+    }
+
+    let cancelled = false
+    setInitializing(true)
+    setError(null)
+
+    socketService.createConversation(
+      { kind: 'direct', targetUserId: partnerId },
+      (ack) => {
+        if (cancelled) {
+          return
+        }
+
+        if (ack?.ok && ack.conversation) {
+          setConversationId(ack.conversation.id)
+          dispatch(refreshConversation(ack.conversation.id))
+        } else {
+          setError(ack?.error ?? 'Failed to open conversation')
+        }
+
+        setInitializing(false)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      setConversationId(null)
+      dispatch(messagesActions.setActiveConversationId(null))
+    }
+  }, [partnerId, currentUserId, dispatch])
+
+  useEffect(() => {
+    if (!conversationId || !currentUserId) {
+      return
+    }
+
+    dispatch(messagesActions.setActiveConversationId(conversationId))
+    dispatch(loadConversationMessages({ conversationId, limit: 50 }))
+    socketService.markConversationReadViaSocket(conversationId)
+  }, [conversationId, currentUserId, dispatch])
+
+  useEffect(() => {
+    if (!conversationId || rawMessages.length === 0) {
+      return
+    }
+    socketService.markConversationReadViaSocket(conversationId)
+  }, [conversationId, rawMessages.length])
+
+  useEffect(() => {
+    if (rawMessages.length === 0) {
+      return
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [rawMessages.length])
+
+  const typingUsers = useMemo(() => Object.values(typingUsersMap), [typingUsersMap])
+
+  const loadOlder = useCallback(() => {
+    if (!conversationId || rawMessages.length === 0) {
+      return
+    }
+    const oldestMessage = rawMessages[0]
+    dispatch(
+      loadConversationMessages({
+        conversationId,
+        before: oldestMessage.id,
+        limit: 50,
+      }),
+    )
+  }, [conversationId, rawMessages, dispatch])
+
+  const messages: DisplayMessage[] = useMemo(
+    () =>
+      rawMessages.map((message) => ({
+        id: message.id,
+        senderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt,
+        metadata: message.metadata,
+      })),
+    [rawMessages],
   )
 
-  // Build conversation key
+  const partnerLabel = conversation?.metadata?.displayName ?? partnerId
+
+  const getDisplayName = useCallback(
+    (_message: DisplayMessage, isOwn: boolean) => {
+      if (isOwn) {
+        return 'You'
+      }
+      return partnerLabel
+    },
+    [partnerLabel],
+  )
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!conversationId || !text.trim()) {
+        return
+      }
+      socketService.sendConversationMessage(
+        {
+          conversationId,
+          body: text,
+        },
+        (ack) => {
+          if (!ack?.ok && ack?.error) {
+            setError(ack.error)
+          }
+        },
+      )
+    },
+    [conversationId],
+  )
+
+  const handleTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!conversationId) {
+        return
+      }
+      if (isTyping) {
+        socketService.startConversationTyping(conversationId)
+      } else {
+        socketService.stopConversationTyping(conversationId)
+      }
+    },
+    [conversationId],
+  )
+
+  const headerTitle = conversation?.title || `Direct Message (${partnerLabel})`
+  const unreadCount = conversation?.unreadCount ?? 0
+
+  return (
+    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+      <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
+        <h3 className="font-semibold text-white">{headerTitle}</h3>
+        {unreadCount > 0 && (
+          <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
+            {unreadCount} unread
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {initializing ? (
+          <div className="text-center text-muted py-4">Connecting to conversation…</div>
+        ) : error ? (
+          <div className="text-center text-red-400 py-4">{error}</div>
+        ) : conversationId === null ? (
+          <div className="text-center text-muted py-4">Preparing conversation…</div>
+        ) : messages.length === 0 && isLoadingMessages ? (
+          <div className="text-center text-muted py-4">Loading messages…</div>
+        ) : (
+          <>
+            {hasMore && (
+              <div className="text-center mb-4">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm text-muted hover:text-white hover:bg-surface-2 rounded-md border border-border"
+                  onClick={loadOlder}
+                  disabled={Boolean(isLoadingMessages)}
+                >
+                  {isLoadingMessages ? 'Loading…' : 'Load older messages'}
+                </button>
+              </div>
+            )}
+
+            {messages.length === 0 ? (
+              <div className="text-center text-muted py-4">
+                No messages yet. Start the conversation!
+              </div>
+            ) : (
+              <MessageList
+                messages={messages}
+                currentUserId={currentUserId}
+                getDisplayName={getDisplayName}
+              />
+            )}
+          </>
+        )}
+
+        {typingUsers.length > 0 && (
+          <div className="text-sm text-muted italic mt-2">
+            {typingUsers.join(', ')}
+            {typingUsers.length === 1 ? ' is' : ' are'} typing…
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      <MessageInput
+        onSendMessage={sendMessage}
+        onTyping={handleTyping}
+        placeholder="Send a direct message…"
+        maxLength={2000}
+      />
+    </div>
+  )
+}
+
+function LegacyChat({ conversationType, conversationId, className = '' }: ChatContainerProps) {
+  const dispatch = useAppDispatch()
+  const currentUserId = useAppSelector((state) => state.auth.user?.id)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const conversationKey = `${conversationType}:${conversationId}`
   const conversation = useAppSelector((state) => state.chat.conversations[conversationKey])
-  const messages = conversation?.messages || []
-  const typingUsers = conversation?.typingUsers || []
+  const messages = conversation?.messages ?? []
+  const typingUsers = conversation?.typingUsers ?? []
+  const isLoadingHistory = conversation?.isLoading ?? false
+
+  const normalizeMessage = useCallback((message: ChatMessage): DisplayMessage => {
+    const linkPreviews =
+      message.link_previews && message.link_previews.length > 0
+        ? { linkPreviews: message.link_previews }
+        : undefined
+
+    return {
+      id: message.id,
+      senderId: message.sender_id,
+      senderName: message.sender_username,
+      body: message.message,
+      createdAt: message.created_at,
+      editedAt: message.edited_at ?? null,
+      deletedAt: message.deleted_at ?? null,
+      metadata: linkPreviews,
+    }
+  }, [])
+
+  const displayMessages = useMemo(() => messages.map(normalizeMessage), [messages, normalizeMessage])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   })
 
-  // Set up socket listeners and load history
   useEffect(() => {
     if (!socketService.getSocket() || !currentUserId) return
 
-    const conversationChanged = lastConversationKeyRef.current !== conversationKey
+    const conversationChanged = conversation?.id !== conversationKey
     if (conversationChanged) {
-      historyRequestedRef.current = false
-      setIsLoadingHistory(false)
-      lastConversationKeyRef.current = conversationKey
+      dispatch(legacyLoadChatHistory({
+        conversationId: conversationKey,
+        messages: [],
+        hasMore: true,
+      }))
     }
 
-    // Set active conversation
     dispatch(setActiveConversation(conversationKey))
 
-    // Load chat history
-    if (!historyRequestedRef.current) {
-      historyRequestedRef.current = true
-      setIsLoadingHistory(true)
+    if (!conversation) {
       socketService.loadChatHistory({
         messageType: conversationType,
         conversationId,
@@ -116,44 +328,34 @@ export default function ChatContainer({
       })
     }
 
-    // Socket event handlers
-    const handleMessage = (message: ChatMessagePayload) => {
-      // Only add messages for this conversation
-      if (conversationType === 'game' && message.game_id === conversationId) {
-        dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
+    const handleMessage = (messagePayload: ChatMessage) => {
+      if (conversationType === 'game' && messagePayload.game_id === conversationId) {
+        dispatch(addMessage({ message: messagePayload, currentUserId }))
       } else if (conversationType === 'team') {
         const [gameId, teamId] = conversationId.split(':')
         if (
-          message.message_type === 'team' &&
-          message.game_id === gameId &&
-          message.team_id === parseInt(teamId, 10)
+          messagePayload.message_type === 'team' &&
+          messagePayload.game_id === gameId &&
+          messagePayload.team_id === parseInt(teamId, 10)
         ) {
-          dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
-        }
-      } else if (conversationType === 'dm') {
-        const isDMForUs =
-          (message.sender_id === currentUserId && message.recipient_id === conversationId) ||
-          (message.sender_id === conversationId && message.recipient_id === currentUserId)
-        if (isDMForUs) {
-          dispatch(addMessage({ message: adaptChatMessage(message), currentUserId }))
+          dispatch(addMessage({ message: messagePayload, currentUserId }))
         }
       }
     }
 
-    const handleHistory = (data: ChatHistoryPayload) => {
+    const handleHistory = (data: { conversationId: string; messageType: ChatConversationType; messages: ChatMessage[] }) => {
       if (data.conversationId === conversationId && data.messageType === conversationType) {
         dispatch(
-          loadChatHistory({
+          legacyLoadChatHistory({
             conversationId: conversationKey,
-            messages: data.messages.map(adaptChatMessage),
+            messages: data.messages,
             hasMore: data.messages.length === 50,
           }),
         )
-        setIsLoadingHistory(false)
       }
     }
 
-    const handleTyping = (data: Parameters<ServerToClientEvents['chat:user-typing']>[0]) => {
+    const handleTyping = (data: { conversationType: ChatConversationType; conversationId: string; userId: string; username: string; isTyping: boolean }) => {
       if (data.conversationType === conversationType && data.conversationId === conversationId) {
         dispatch(
           setTypingUser({
@@ -166,36 +368,29 @@ export default function ChatContainer({
       }
     }
 
-    const handleUnreadCounts = (counts: ChatUnreadCount[]) => {
+    const handleUnreadCounts = (counts: Array<{ conversation_type: ChatConversationType; conversation_id: string; unread_count: number }>) => {
       const formattedCounts = counts.map((c) => ({
-        conversationType: c.conversation_type as ChatConversationType,
+        conversationType: c.conversation_type,
         conversationId: c.conversation_id,
         unreadCount: c.unread_count,
       }))
       dispatch(setUnreadCounts(formattedCounts))
     }
 
-    const handleMessageEdited = (
-      data: Parameters<ServerToClientEvents['chat:message-edited']>[0],
-    ) => {
-      const editedAt =
-        typeof data.editedAt === 'string' ? data.editedAt : new Date(data.editedAt).toISOString()
+    const handleMessageEdited = (data: { messageId: string; newMessage: string; editedAt: string | Date }) => {
       dispatch(
         editMessage({
           messageId: data.messageId,
           newMessage: data.newMessage,
-          editedAt,
+          editedAt: typeof data.editedAt === 'string' ? data.editedAt : data.editedAt.toISOString(),
         }),
       )
     }
 
-    const handleMessageDeleted = (
-      data: Parameters<ServerToClientEvents['chat:message-deleted']>[0],
-    ) => {
+    const handleMessageDeleted = (data: { messageId: string }) => {
       dispatch(deleteMessage(data.messageId))
     }
 
-    // Listen for events
     socketService.on('chat:message', handleMessage)
     socketService.on('chat:history', handleHistory)
     socketService.on('chat:user-typing', handleTyping)
@@ -203,36 +398,26 @@ export default function ChatContainer({
     socketService.on('chat:message-edited', handleMessageEdited)
     socketService.on('chat:message-deleted', handleMessageDeleted)
 
-    // Mark messages as read
-    socketService.markChatAsRead({
-      conversationType,
-      conversationId,
-    })
+    socketService.markChatAsRead({ conversationType, conversationId })
     dispatch(markMessagesAsRead(conversationKey))
-
-    // Request unread counts
     socketService.getChatUnreadCounts()
 
     return () => {
-      // Clean up listeners
       socketService.off('chat:message', handleMessage)
       socketService.off('chat:history', handleHistory)
       socketService.off('chat:user-typing', handleTyping)
       socketService.off('chat:unread-counts', handleUnreadCounts)
       socketService.off('chat:message-edited', handleMessageEdited)
       socketService.off('chat:message-deleted', handleMessageDeleted)
-
-      // Clear active conversation
       dispatch(setActiveConversation(null))
     }
-  }, [conversationType, conversationId, conversationKey, currentUserId, dispatch, adaptChatMessage])
+  }, [conversation, conversationId, conversationKey, conversationType, currentUserId, dispatch])
 
   const sendMessage = (text: string) => {
     if (!socketService.getSocket() || !text.trim()) return
 
     let gameId: string | undefined
     let teamId: number | undefined
-    let recipientId: string | undefined
 
     if (conversationType === 'game') {
       gameId = conversationId
@@ -240,8 +425,6 @@ export default function ChatContainer({
       const [gId, tId] = conversationId.split(':')
       gameId = gId
       teamId = parseInt(tId, 10)
-    } else if (conversationType === 'dm') {
-      recipientId = conversationId
     }
 
     socketService.sendChatMessage({
@@ -249,7 +432,6 @@ export default function ChatContainer({
       messageType: conversationType,
       gameId,
       teamId,
-      recipientId,
     })
   }
 
@@ -265,7 +447,6 @@ export default function ChatContainer({
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
         <h3 className="font-semibold text-white">
           {conversationType === 'game'
@@ -281,19 +462,21 @@ export default function ChatContainer({
         )}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         {isLoadingHistory ? (
           <div className="text-center text-muted py-4">Loading chat history...</div>
-        ) : messages.length === 0 ? (
+        ) : displayMessages.length === 0 ? (
           <div className="text-center text-muted py-4">
             No messages yet. Start the conversation!
           </div>
         ) : (
-          <MessageList messages={messages} currentUserId={currentUserId || ''} />
+          <MessageList
+            messages={displayMessages}
+            currentUserId={currentUserId}
+            getDisplayName={(msg, isOwn) => (isOwn ? 'You' : msg.senderName)}
+          />
         )}
 
-        {/* Typing indicators */}
         {typingUsers.length > 0 && (
           <div className="text-sm text-muted italic mt-2">
             {typingUsers.map((u) => u.username).join(', ')}
@@ -304,7 +487,6 @@ export default function ChatContainer({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <MessageInput
         onSendMessage={sendMessage}
         onTyping={handleTyping}

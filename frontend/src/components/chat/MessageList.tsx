@@ -1,66 +1,118 @@
-import type { ChatMessage } from '../../store/chatSlice'
-import LinkPreviewComponent from './LinkPreview'
+import { useMemo } from 'react'
+import LinkPreviewComponent, { type LinkPreviewData } from './LinkPreview'
 
-interface MessageListProps {
-  messages: ChatMessage[]
-  currentUserId: string
+export interface DisplayMessage {
+  id: string
+  senderId: string | null
+  senderName?: string
+  body: string
+  createdAt: string
+  editedAt?: string | null
+  deletedAt?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
-export default function MessageList({ messages, currentUserId }: MessageListProps) {
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
+interface MessageListProps {
+  messages: DisplayMessage[]
+  currentUserId?: string | null
+  getDisplayName?: (message: DisplayMessage, isOwn: boolean) => string | undefined
+}
 
-    if (diffMins < 1) return 'just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  if (Number.isNaN(diffMins)) return dateString
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const parseLinkPreviews = (metadata?: Record<string, unknown> | null): LinkPreviewData[] => {
+  if (!metadata) {
+    return []
   }
+
+  const candidates = (metadata.linkPreviews ?? metadata.link_previews) as unknown
+  if (!Array.isArray(candidates)) {
+    return []
+  }
+
+  return candidates
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      const url = typeof record.url === 'string' ? record.url : undefined
+      if (!url) {
+        return null
+      }
+
+      return {
+        url,
+        title: typeof record.title === 'string' ? record.title : undefined,
+        description: typeof record.description === 'string' ? record.description : undefined,
+        image: typeof record.image === 'string' ? record.image : undefined,
+        siteName:
+          typeof record.siteName === 'string'
+            ? record.siteName
+            : typeof record.site_name === 'string'
+              ? record.site_name
+              : undefined,
+      }
+    })
+    .filter((preview): preview is LinkPreviewData => preview !== null)
+}
+
+export default function MessageList({
+  messages,
+  currentUserId,
+  getDisplayName,
+}: MessageListProps) {
+  const isOwn = useMemo(
+    () =>
+      new Set(
+        currentUserId && typeof currentUserId === 'string' ? [currentUserId] : [],
+      ),
+    [currentUserId],
+  )
 
   return (
     <div className="space-y-3">
       {messages.map((message) => {
-        const isOwnMessage = message.sender_id === currentUserId
-        const isDeleted = !!message.deleted_at
+        const isOwnMessage = message.senderId ? isOwn.has(message.senderId) : false
+        const senderLabel = getDisplayName?.(message, isOwnMessage) ?? message.senderName
+        const isDeleted = Boolean(message.deletedAt)
+        const linkPreviews = parseLinkPreviews(message.metadata)
 
         return (
-          <div
-            key={message.id}
-            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-          >
+          <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 isOwnMessage ? 'bg-primary text-white' : 'bg-surface-2 text-gray-200'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
-              {/* Username for other users */}
-              {!isOwnMessage && message.sender_username && (
-                <div className="text-xs font-semibold mb-1 opacity-80">
-                  {message.sender_username}
-                </div>
+              {!isOwnMessage && senderLabel && (
+                <div className="text-xs font-semibold mb-1 opacity-80">{senderLabel}</div>
               )}
 
-              {/* Message content */}
               <div className="break-words">
-                {isDeleted ? (
-                  <span className="text-sm italic">Message deleted</span>
-                ) : (
-                  message.message
-                )}
+                {isDeleted ? <span className="text-sm italic">Message deleted</span> : message.body}
               </div>
 
-              {/* Link Previews */}
-              {!isDeleted && message.link_previews && message.link_previews.length > 0 && (
+              {!isDeleted && linkPreviews.length > 0 && (
                 <div className="mt-2 space-y-2">
-                  {message.link_previews.map((preview, index) => (
+                  {linkPreviews.map((preview, index) => (
                     <LinkPreviewComponent
                       key={`${message.id}-preview-${index}`}
                       preview={preview}
@@ -70,14 +122,13 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
                 </div>
               )}
 
-              {/* Timestamp and edit indicator */}
               <div
                 className={`text-xs mt-1 flex items-center gap-2 ${
                   isOwnMessage ? 'text-blue-200' : 'text-muted'
                 }`}
               >
-                <span>{formatTime(message.created_at)}</span>
-                {message.edited_at && !isDeleted && <span className="italic">(edited)</span>}
+                <span>{formatTime(message.createdAt)}</span>
+                {message.editedAt && !isDeleted && <span className="italic">(edited)</span>}
               </div>
             </div>
           </div>

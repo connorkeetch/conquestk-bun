@@ -11,11 +11,7 @@ import type {
 } from '@shared/types'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
-import {
-  loadUnreadSummary,
-  messagesActions,
-  refreshConversation,
-} from '../store/messagesSlice'
+import { loadInbox, loadUnreadSummary, messagesActions, refreshConversation } from '../store/messagesSlice'
 import {
   applyDelta,
   selectTargetTerritory,
@@ -183,6 +179,7 @@ class SocketService {
 
     this.socket.on('connect', () => {
       store.dispatch(loadUnreadSummary())
+      store.dispatch(loadInbox())
     })
 
     this.socket.on('disconnect', () => {
