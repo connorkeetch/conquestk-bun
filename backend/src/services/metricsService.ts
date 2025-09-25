@@ -1,3 +1,4 @@
+import type { AIDifficulty } from '../types/game'
 import { logger } from '../utils/logger'
 
 type LabelValue = Record<string, string>
@@ -27,6 +28,10 @@ class CounterMetric {
       labels: this.deserializeLabels(key),
       value,
     }))
+  }
+
+  resetAll(): void {
+    this.values.clear()
   }
 
   reset(labels: LabelValue): void {
@@ -131,3 +136,69 @@ class BattleMetrics {
 }
 
 export const battleMetrics = new BattleMetrics()
+
+type AITurnMetricRecord = {
+  difficulty: AIDifficulty
+  fallbackUsed: boolean
+  fallbackReason?: string
+  thinkTimeMs?: number
+  plannedActions: number
+  appliedActions: number
+}
+
+class AITurnMetrics {
+  private readonly turnCounter = new CounterMetric('ai_turns_total')
+  private readonly fallbackCounter = new CounterMetric('ai_turn_fallback_total')
+  private readonly thinkTimeGauge = new GaugeMetric('ai_turn_think_time_ms')
+  private readonly plannedActionsGauge = new GaugeMetric('ai_turn_actions_planned')
+  private readonly appliedActionsGauge = new GaugeMetric('ai_turn_actions_applied')
+
+  recordTurn(record: AITurnMetricRecord) {
+    const {
+      difficulty,
+      fallbackUsed,
+      fallbackReason,
+      thinkTimeMs,
+      plannedActions,
+      appliedActions,
+    } = record
+    const baseLabels: LabelValue = { difficulty }
+
+    this.turnCounter.inc(baseLabels)
+    this.plannedActionsGauge.set(plannedActions, baseLabels)
+    this.appliedActionsGauge.set(appliedActions, baseLabels)
+
+    if (typeof thinkTimeMs === 'number' && Number.isFinite(thinkTimeMs)) {
+      this.thinkTimeGauge.set(thinkTimeMs, baseLabels)
+    }
+
+    if (fallbackUsed) {
+      const fallbackLabels: LabelValue = {
+        difficulty,
+        reason: fallbackReason ?? 'unknown',
+      }
+      this.fallbackCounter.inc(fallbackLabels)
+    }
+  }
+
+  reset() {
+    this.turnCounter.resetAll()
+    this.fallbackCounter.resetAll()
+    this.thinkTimeGauge.resetAll()
+    this.plannedActionsGauge.resetAll()
+    this.appliedActionsGauge.resetAll()
+  }
+
+  snapshot() {
+    return {
+      counters: [...this.turnCounter.snapshot(), ...this.fallbackCounter.snapshot()],
+      gauges: [
+        ...this.thinkTimeGauge.snapshot(),
+        ...this.plannedActionsGauge.snapshot(),
+        ...this.appliedActionsGauge.snapshot(),
+      ],
+    }
+  }
+}
+
+export const aiTurnMetrics = new AITurnMetrics()

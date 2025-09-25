@@ -27,6 +27,7 @@ Use this index to jump directly to the information you need.
 - [reference/architecture.md](reference/architecture.md) – system design, packages, and deployment shape
 - [reference/development.md](reference/development.md) – local environment setup and workflow commands
 - [reference/deployment.md](reference/deployment.md) – promotion checklist for staging and production
+- [reference/ai-discovery.md](reference/ai-discovery.md) – AI opponent turn pipeline, telemetry, and decision contract
 - [guides/coding-standards.md](guides/coding-standards.md) – linting, testing, and review expectations
 - [operations/troubleshooting.md](operations/troubleshooting.md) – common issues and quick fixes
 

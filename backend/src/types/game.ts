@@ -1,3 +1,5 @@
+import type { AIDifficulty } from '@risk-game/shared/types'
+
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
 
 export interface GameTerritoryModifier {
@@ -38,6 +40,9 @@ export interface GamePlayer {
   isEliminated: boolean
   capitalTerritory?: string
   teamId?: number | null
+  isAi?: boolean
+  aiDifficulty?: AIDifficulty | null
+  aiPersonalitySeed?: number | null
 }
 
 export interface Territory {

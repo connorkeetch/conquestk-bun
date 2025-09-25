@@ -2,6 +2,7 @@ import { transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
 import { loadMapForEngine } from '../game/mapLoader'
 import type {
+  AIDifficulty,
   GameAction,
   GameConfiguration,
   GamePhase,
@@ -12,11 +13,12 @@ import type {
   Territory,
 } from '../types/game'
 import { logger } from '../utils/logger'
+import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService'
 import { gameStateCache } from './cacheService'
 import type { PlayerRating, RatingChange } from './eloService'
 import { eloService } from './eloService'
 import { mapService } from './mapService'
-import { battleMetrics } from './metricsService'
+import { aiTurnMetrics, battleMetrics } from './metricsService'
 import notificationService from './notificationService'
 import territoryModifierService from './territoryModifierService'
 
@@ -36,6 +38,15 @@ type BattleWorkerResult = {
   attackingPlayerId: string
   defendingPlayerId?: string | null
   attackingArmiesCommitted: number
+}
+
+type PlayerConfig = {
+  userId: string
+  username?: string
+  teamId?: number | null
+  isAi?: boolean
+  aiDifficulty?: AIDifficulty | null
+  aiPersonalitySeed?: number | null
 }
 
 type BattleLogEntry = {
@@ -85,6 +96,69 @@ export class GameService {
     return serialized
   }
 
+  private cloneGameState(state: GameState): GameState {
+    const serialized = this.serializeGameState(state)
+    return this.hydrateGameState(structuredClone(serialized))
+  }
+
+  private normalizeAction(action: GameAction, roomId: string, playerId: string): GameAction | null {
+    if (action.playerId && action.playerId !== playerId) {
+      return null
+    }
+
+    if (action.roomId && action.roomId !== roomId) {
+      return { ...action, playerId, roomId } as GameAction
+    }
+
+    return { ...action, playerId, roomId } as GameAction
+  }
+
+  private async applyActions(
+    baseState: GameState,
+    actions: GameAction[],
+    playerId: string,
+  ): Promise<{ success: boolean; gameState: GameState; applied: GameAction[] }> {
+    if (actions.length === 0) {
+      return { success: false, gameState: baseState, applied: [] }
+    }
+
+    let workingState = this.cloneGameState(baseState)
+    const applied: GameAction[] = []
+
+    for (const originalAction of actions) {
+      const normalized = this.normalizeAction(originalAction, baseState.roomId, playerId)
+      if (!normalized) {
+        return { success: false, gameState: baseState, applied: [] }
+      }
+
+      if (!this.gameEngine.validateAction(workingState, normalized)) {
+        return { success: false, gameState: baseState, applied: [] }
+      }
+
+      const { gameState: updatedState } = await this.gameEngine.processAction(
+        workingState,
+        normalized,
+      )
+      workingState = updatedState
+      applied.push(normalized)
+    }
+
+    return { success: true, gameState: workingState, applied }
+  }
+
+  private limitFallbackActions(
+    actions: GameAction[],
+    budget: DecisionBudget | undefined,
+    roomId: string,
+    playerId: string,
+  ) {
+    const maxAllowed = budget?.maxPlannedActions ?? actions.length
+    const limited = actions.slice(0, Math.max(1, maxAllowed))
+    return limited
+      .map((action) => this.normalizeAction(action, roomId, playerId))
+      .filter((a): a is GameAction => Boolean(a))
+  }
+
   private hydrateGameState(state: GameState | SerializedGameState): GameState {
     if (state.territoryModifiers && !(state.territoryModifiers instanceof Map)) {
       const modifierMap = new Map<string, GameTerritoryModifier>(
@@ -98,6 +172,133 @@ export class GameService {
     }
 
     return state as GameState
+  }
+
+  async executeAiTurn(
+    roomId: string,
+    budgetOverrides?: Partial<DecisionBudget>,
+  ): Promise<{
+    plan: AIDecisionPlan
+    appliedActions: GameAction[]
+    fallbackUsed: boolean
+    fallbackReason?: string
+    gameState: GameState
+  }> {
+    const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+    if (!cachedState) {
+      throw new Error('Game not found')
+    }
+
+    const hydrated = this.hydrateGameState(cachedState)
+    const currentPlayer = hydrated.players.find((player) => player.id === hydrated.currentPlayer)
+
+    if (!currentPlayer) {
+      throw new Error('Current player not found')
+    }
+
+    if (!currentPlayer.isAi) {
+      throw new Error('Current player is not AI-controlled')
+    }
+
+    const effectiveBudget: DecisionBudget = {
+      maxThinkTimeMs: budgetOverrides?.maxThinkTimeMs ?? 1000,
+      maxPlannedActions: budgetOverrides?.maxPlannedActions ?? 4,
+      signal: budgetOverrides?.signal,
+    }
+
+    const decisionPlan = await aiDecisionService.chooseAction({
+      gameState: this.cloneGameState(hydrated),
+      player: currentPlayer,
+      difficulty: currentPlayer.aiDifficulty ?? 'recruit',
+      budget: effectiveBudget,
+    })
+
+    const baselineState = this.cloneGameState(hydrated)
+    const planResult = await this.applyActions(
+      baselineState,
+      decisionPlan.actions,
+      currentPlayer.id,
+    )
+
+    let finalState: GameState
+    let appliedActions: GameAction[]
+    let fallbackUsed = decisionPlan.usedFallback
+    let fallbackReason = decisionPlan.usedFallback
+      ? (decisionPlan.reason ?? 'service_fallback')
+      : undefined
+
+    if (planResult.success) {
+      finalState = planResult.gameState
+      appliedActions = planResult.applied
+    } else {
+      const fallbackActions = this.limitFallbackActions(
+        aiDecisionService.buildFallbackPlan(baselineState, currentPlayer.id),
+        effectiveBudget,
+        roomId,
+        currentPlayer.id,
+      )
+      const fallbackResult = await this.applyActions(
+        baselineState,
+        fallbackActions,
+        currentPlayer.id,
+      )
+      if (!fallbackResult.success) {
+        throw new Error('Failed to apply fallback plan for AI turn')
+      }
+      finalState = fallbackResult.gameState
+      appliedActions = fallbackResult.applied
+      fallbackUsed = true
+      fallbackReason = fallbackReason ?? 'invalid_plan'
+    }
+
+    await gameStateCache.setGameState(roomId, this.serializeGameState(finalState))
+
+    const decisionDiagnostics = decisionPlan.diagnostics
+    const thinkTimeMs = decisionDiagnostics?.durationMs
+    const plannedActionCount = decisionPlan.actions.length
+    const difficulty = currentPlayer.aiDifficulty ?? 'recruit'
+
+    aiTurnMetrics.recordTurn({
+      difficulty,
+      fallbackUsed,
+      fallbackReason,
+      thinkTimeMs,
+      plannedActions: plannedActionCount,
+      appliedActions: appliedActions.length,
+    })
+
+    logger.info('AI turn executed', {
+      roomId,
+      playerId: currentPlayer.id,
+      difficulty,
+      planUsedFallback: decisionPlan.usedFallback,
+      planReason: decisionPlan.reason ?? null,
+      fallbackUsed,
+      fallbackReason: fallbackReason ?? null,
+      plannedActionCount,
+      appliedActionCount: appliedActions.length,
+      thinkTimeMs: thinkTimeMs ?? null,
+      budget: {
+        maxThinkTimeMs:
+          decisionDiagnostics?.budget?.maxThinkTimeMs ?? effectiveBudget.maxThinkTimeMs,
+        maxPlannedActions:
+          decisionDiagnostics?.budget?.maxPlannedActions ?? effectiveBudget.maxPlannedActions,
+      },
+      actionTypes: {
+        planned: decisionPlan.actions.map((action) => action.type),
+        applied: appliedActions.map((action) => action.type),
+      },
+      phaseBefore: baselineState.phase,
+      phaseAfter: finalState.phase,
+    })
+
+    return {
+      plan: decisionPlan,
+      appliedActions,
+      fallbackUsed,
+      fallbackReason,
+      gameState: finalState,
+    }
   }
 
   async isCapitalTerritory(roomId: string, territoryId: string | number): Promise<boolean> {
@@ -135,7 +336,7 @@ export class GameService {
 
   async initializeGame(
     roomId: string,
-    players: Array<{ userId: string; username?: string; teamId?: number | null }>,
+    players: PlayerConfig[],
     gameConfig?: Partial<GameConfiguration>,
   ): Promise<GameState> {
     // Default game configuration

@@ -27,8 +27,10 @@ jest.mock('../game/mapLoader', () => ({
   loadMapForEngine: mockLoadMapForEngine,
 }))
 
-import type { ContinentBonus, Territory } from '../types/game'
+import type { ContinentBonus, GameAction, Territory } from '../types/game'
 import { gameStateCache } from './cacheService'
+import { aiDecisionService } from './aiDecisionService'
+import { aiTurnMetrics } from './metricsService'
 import { GameService } from './gameService'
 
 describe('GameService', () => {
@@ -120,6 +122,7 @@ describe('GameService', () => {
     mockValidateMapPlayable.mockResolvedValue({ isValid: true, errors: [] })
     mockLoadMapForEngine.mockResolvedValue({ territories, continentBonuses })
     gameService = new GameService()
+    aiTurnMetrics.reset()
   })
 
   describe('initializeGame', () => {
@@ -380,6 +383,158 @@ describe('GameService', () => {
 
       const updatedState = await gameService.getGameState(gameId)
       expect(updatedState?.board.find((t) => t.id === 'defending')?.ownerId).toBe('attacker')
+    })
+  })
+
+  describe('executeAiTurn', () => {
+    it('applies the fallback plan for an AI player and advances the turn', async () => {
+      const roomId = 'ai-room'
+      await gameService.initializeGame(
+        roomId,
+        [
+          { userId: 'human', username: 'Human' },
+          { userId: 'ai', username: 'AI Recruit', isAi: true, aiDifficulty: 'recruit' },
+        ],
+        buildConfig(),
+      )
+
+      const stateBefore = await gameService.getGameState(roomId)
+      expect(stateBefore).not.toBeNull()
+      if (!stateBefore) throw new Error('state expected')
+
+      stateBefore.currentPlayer = 'ai'
+      stateBefore.players = stateBefore.players.map((player) =>
+        player.id === 'ai'
+          ? { ...player, isAi: true, aiDifficulty: 'recruit', aiPersonalitySeed: 42 }
+          : { ...player, isAi: false },
+      )
+
+      await gameStateCache.setGameState(roomId, stateBefore)
+
+      const result = await gameService.executeAiTurn(roomId)
+
+      expect(result.fallbackUsed).toBe(true)
+      expect(result.fallbackReason).toBe('stubbed')
+      expect(result.appliedActions[0]?.type).toBe('begin_turn')
+      expect(result.appliedActions).toHaveLength(4)
+      expect(result.gameState.currentPlayer).not.toBe('ai')
+
+      const persisted = await gameService.getGameState(roomId)
+      expect(persisted?.currentPlayer).not.toBe('ai')
+
+      const metrics = aiTurnMetrics.snapshot()
+      expect(metrics.counters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            metric: 'ai_turns_total',
+            value: 1,
+            labels: { difficulty: 'recruit' },
+          }),
+          expect.objectContaining({
+            metric: 'ai_turn_fallback_total',
+            value: 1,
+            labels: { difficulty: 'recruit', reason: 'stubbed' },
+          }),
+        ]),
+      )
+      expect(metrics.gauges).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            metric: 'ai_turn_actions_planned',
+            value: 4,
+            labels: { difficulty: 'recruit' },
+          }),
+          expect.objectContaining({
+            metric: 'ai_turn_actions_applied',
+            value: 4,
+            labels: { difficulty: 'recruit' },
+          }),
+        ]),
+      )
+    })
+
+    it('falls back when the decision plan is invalid', async () => {
+      const roomId = 'ai-invalid-plan'
+      await gameService.initializeGame(
+        roomId,
+        [
+          { userId: 'alpha', username: 'Alpha' },
+          { userId: 'beta', username: 'Beta', isAi: true, aiDifficulty: 'recruit' },
+        ],
+        buildConfig(),
+      )
+
+      const initialState = await gameService.getGameState(roomId)
+      expect(initialState).not.toBeNull()
+      if (!initialState) throw new Error('state expected')
+
+      initialState.currentPlayer = 'beta'
+      initialState.players = initialState.players.map((player) =>
+        player.id === 'beta'
+          ? { ...player, isAi: true, aiDifficulty: 'recruit' }
+          : { ...player, isAi: false },
+      )
+
+      await gameStateCache.setGameState(roomId, initialState)
+
+      const chooseSpy = jest.spyOn(aiDecisionService, 'chooseAction')
+      chooseSpy.mockResolvedValueOnce({
+        actions: [
+          {
+            type: 'end_turn',
+            roomId,
+            playerId: 'alpha',
+          },
+        ] as GameAction[],
+        usedFallback: false,
+        diagnostics: {
+          generatedAt: new Date().toISOString(),
+          durationMs: 1,
+          requestedDifficulty: 'recruit',
+          plannedActionCount: 1,
+          budget: {
+            maxThinkTimeMs: 1000,
+          },
+        },
+      })
+
+      const result = await gameService.executeAiTurn(roomId)
+      expect(result.fallbackUsed).toBe(true)
+      expect(result.fallbackReason).toBe('invalid_plan')
+      expect(result.appliedActions.length).toBeGreaterThan(0)
+      expect(result.appliedActions.every((action) => action.playerId === 'beta')).toBe(true)
+
+      const metrics = aiTurnMetrics.snapshot()
+      expect(metrics.counters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            metric: 'ai_turns_total',
+            value: 1,
+            labels: { difficulty: 'recruit' },
+          }),
+          expect.objectContaining({
+            metric: 'ai_turn_fallback_total',
+            value: 1,
+            labels: { difficulty: 'recruit', reason: 'invalid_plan' },
+          }),
+        ]),
+      )
+      expect(metrics.gauges).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            metric: 'ai_turn_actions_planned',
+            value: 1,
+            labels: { difficulty: 'recruit' },
+          }),
+          expect.objectContaining({
+            metric: 'ai_turn_actions_applied',
+            value: result.appliedActions.length,
+            labels: { difficulty: 'recruit' },
+          }),
+        ]),
+      )
+
+      chooseSpy.mockRestore()
     })
   })
 })

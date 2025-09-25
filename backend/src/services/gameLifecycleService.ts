@@ -13,6 +13,9 @@ interface ReadyPlayerRow {
   ready_at: Date | string | null
   joined_at: Date | string | null
   team_id: number | null
+  is_ai: boolean | null
+  ai_difficulty: string | null
+  ai_personality_seed: number | null
 }
 
 export interface LifecycleSnapshot {
@@ -78,7 +81,7 @@ export class GameLifecycleService {
 
       const playersResult = await client.query<ReadyPlayerRow>(
         `
-        SELECT user_id, is_ready, ready_at, joined_at, team_id
+        SELECT user_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
         FROM room_players
         WHERE room_id = $1
         ORDER BY joined_at ASC
@@ -197,10 +200,51 @@ export class GameLifecycleService {
         teamAssignments[normalizedTeamId].push(player.user_id)
       }
 
+      const normalizedDifficulty = (() => {
+        if (matchingRoomPlayer && matchingRoomPlayer.aiDifficulty !== undefined) {
+          return matchingRoomPlayer.aiDifficulty
+        }
+
+        if (player.ai_difficulty === null) {
+          return null
+        }
+
+        if (typeof player.ai_difficulty === 'string') {
+          const lowered = player.ai_difficulty.toLowerCase()
+          if (lowered === 'recruit' || lowered === 'commander' || lowered === 'grandmaster') {
+            return lowered as 'recruit' | 'commander' | 'grandmaster'
+          }
+        }
+
+        return undefined
+      })()
+
+      const personalitySeed = (() => {
+        if (matchingRoomPlayer && matchingRoomPlayer.aiPersonalitySeed !== undefined) {
+          return matchingRoomPlayer.aiPersonalitySeed
+        }
+
+        if (
+          typeof player.ai_personality_seed === 'number' &&
+          Number.isFinite(player.ai_personality_seed)
+        ) {
+          return Math.trunc(player.ai_personality_seed)
+        }
+
+        if (player.ai_personality_seed === null) {
+          return null
+        }
+
+        return undefined
+      })()
+
       return {
         userId: player.user_id,
         username: matchingRoomPlayer?.username,
         teamId: normalizedTeamId,
+        isAi: player.is_ai === true || matchingRoomPlayer?.isAi === true,
+        aiDifficulty: normalizedDifficulty,
+        aiPersonalitySeed: personalitySeed,
       }
     })
 
@@ -284,6 +328,9 @@ export class GameLifecycleService {
       isReady: Boolean(player.isReady),
       readyAt:
         player.readyAt instanceof Date ? player.readyAt.toISOString() : (player.readyAt ?? null),
+      isAi: player.isAi === true,
+      aiDifficulty: player.aiDifficulty ?? null,
+      aiPersonalitySeed: player.aiPersonalitySeed ?? null,
     }))
 
     const payload = {

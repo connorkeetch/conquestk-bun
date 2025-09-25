@@ -35,6 +35,9 @@ type AdminGamePlayerRow = {
   user_id: string
   username: string
   joined_at: Date | string | null
+  is_ai: boolean | null
+  ai_difficulty: string | null
+  ai_personality_seed: number | null
 }
 
 type AdminMapRow = {
@@ -609,11 +612,14 @@ router.get(
 
       if (gameIds.length > 0) {
         const playersQuery = `
-          SELECT 
+          SELECT
             rp.room_id,
             rp.user_id,
             u.username,
-            rp.joined_at
+            rp.joined_at,
+            rp.is_ai,
+            rp.ai_difficulty,
+            rp.ai_personality_seed
           FROM room_players rp
           JOIN users u ON rp.user_id = u.id
           WHERE rp.room_id = ANY($1)
@@ -635,6 +641,8 @@ router.get(
           color: '#666666',
           territoriesCount: 0,
           armiesCount: 0,
+          isAi: player.is_ai === true,
+          aiDifficulty: player.ai_difficulty,
         }))
 
         const normalizedStatus = normalizeAdminGameStatus(game.status)

@@ -4,6 +4,7 @@
  */
 
 import type {
+  AIDifficulty,
   AttackAction,
   DeployAction,
   EndTurnAction,
@@ -33,6 +34,7 @@ export type {
   FortifyAction,
   EndTurnAction,
   TradeCardsAction,
+  AIDifficulty,
 }
 
 export interface BattleTerritorySnapshot {

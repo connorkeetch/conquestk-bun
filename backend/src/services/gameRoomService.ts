@@ -66,6 +66,9 @@ interface PlayerRow {
   isReady?: boolean | null
   readyAt?: Date | string | null
   teamId?: number | null
+  isAi?: boolean | null
+  aiDifficulty?: string | null
+  aiPersonalitySeed?: number | null
 }
 
 interface GameRoomWithPlayersRow extends GameRoomRow {
@@ -273,6 +276,26 @@ export class GameRoomService {
     return allowedTiers.includes(normalized) ? normalized : undefined
   }
 
+  private normalizeAIDifficulty(value: unknown): Player['aiDifficulty'] {
+    if (value === null) {
+      return null
+    }
+
+    if (typeof value !== 'string') {
+      return undefined
+    }
+
+    const normalized = value.toLowerCase()
+    const allowed: Array<NonNullable<Player['aiDifficulty']>> = [
+      'recruit',
+      'commander',
+      'grandmaster',
+    ]
+    return allowed.includes(normalized as NonNullable<Player['aiDifficulty']>)
+      ? (normalized as NonNullable<Player['aiDifficulty']>)
+      : undefined
+  }
+
   private mapPlayers(players: unknown): GameRoom['players'] {
     if (!Array.isArray(players)) {
       return undefined
@@ -282,7 +305,7 @@ export class GameRoomService {
       .filter((player): player is PlayerRow => this.isPlayerRow(player))
       .map((player) => ({
         userId: player.userId,
-        username: player.username,
+        username: player.username ?? 'AI Opponent',
         skill_rating: this.parseNullableNumber(player.skill_rating) ?? undefined,
         current_tier: this.normalizePlayerTier(player.current_tier),
         joinedAt: this.toDate(player.joinedAt) ?? new Date(),
@@ -292,6 +315,14 @@ export class GameRoomService {
           typeof player.teamId === 'number'
             ? player.teamId
             : player.teamId === null
+              ? null
+              : undefined,
+        isAi: player.isAi === true,
+        aiDifficulty: this.normalizeAIDifficulty(player.aiDifficulty),
+        aiPersonalitySeed:
+          typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
+            ? Math.trunc(player.aiPersonalitySeed)
+            : player.aiPersonalitySeed === null
               ? null
               : undefined,
       }))
@@ -485,7 +516,10 @@ export class GameRoomService {
                  'joinedAt', rp.joined_at,
                  'isReady', rp.is_ready,
                  'readyAt', rp.ready_at,
-                 'teamId', rp.team_id
+                 'teamId', rp.team_id,
+                 'isAi', rp.is_ai,
+                 'aiDifficulty', rp.ai_difficulty,
+                 'aiPersonalitySeed', rp.ai_personality_seed
                )
              ) as players
       FROM game_rooms gr
@@ -517,7 +551,8 @@ export class GameRoomService {
 
   async getPlayer(roomId: string, userId: string): Promise<Player | null> {
     const playerQuery = `
-      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id
+      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id,
+             rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
       FROM room_players rp
       LEFT JOIN users u ON rp.user_id = u.id
       WHERE rp.room_id = $1 AND rp.user_id = $2
@@ -531,6 +566,9 @@ export class GameRoomService {
       is_ready: boolean | null
       ready_at: Date | string | null
       team_id: number | null
+      is_ai: boolean | null
+      ai_difficulty: string | null
+      ai_personality_seed: number | null
     }>(playerQuery, [roomId, userId])
 
     const row = result.rows[0]
@@ -546,6 +584,14 @@ export class GameRoomService {
       readyAt: this.toDate(row.ready_at) ?? null,
       teamId:
         typeof row.team_id === 'number' ? row.team_id : row.team_id === null ? null : undefined,
+      isAi: row.is_ai === true,
+      aiDifficulty: this.normalizeAIDifficulty(row.ai_difficulty),
+      aiPersonalitySeed:
+        typeof row.ai_personality_seed === 'number' && Number.isFinite(row.ai_personality_seed)
+          ? Math.trunc(row.ai_personality_seed)
+          : row.ai_personality_seed === null
+            ? null
+            : undefined,
     }
   }
 
