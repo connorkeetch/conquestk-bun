@@ -6,9 +6,11 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
+import { selectTotalUnreadMessages } from '../store/messagesSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
+import MessagesDrawer from './messages/MessagesDrawer'
 import NotificationDropdown from './NotificationDropdown'
 
 interface MenuItem {
@@ -23,9 +25,11 @@ export default function Header() {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
   const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
+  const unreadMessages = useAppSelector(selectTotalUnreadMessages)
 
   useEffect(() => {
     // Check initial mute state
@@ -224,6 +228,26 @@ export default function Header() {
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
 
+                {/* Messages */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMessagesOpen(true)
+                    setIsUserDropdownOpen(false)
+                  }}
+                  className="relative p-2 rounded-lg hover:bg-surface-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  aria-label="Open messages"
+                >
+                  <span role="img" aria-hidden="true" className="text-lg">
+                    💬
+                  </span>
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 rounded-full bg-primary text-[10px] font-semibold text-white text-center">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
+
                 {/* Notification Dropdown */}
                 <NotificationDropdown />
 
@@ -348,15 +372,15 @@ export default function Header() {
               </span>
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen(false)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            aria-label="Close menu"
-          >
-            <svg
-              width="20"
-              height="20"
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Close menu"
+              >
+                <svg
+                  width="20"
+                  height="20"
               viewBox="0 0 24 24"
               className="fill-white/70"
               aria-hidden="true"
@@ -422,6 +446,8 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      <MessagesDrawer isOpen={isMessagesOpen} onClose={() => setIsMessagesOpen(false)} />
     </>
   )
 }

@@ -23,6 +23,7 @@ export interface ChatMessagePayload {
   created_at: string | Date
   edited_at?: string | Date | null
   deleted_at?: string | Date | null
+  is_read?: boolean
   link_previews?: Array<{
     url: string
     title?: string

@@ -497,4 +497,23 @@ export const selectHasMoreMessages = (
   conversationId: string,
 ): boolean => state.messages.hasMore[conversationId] ?? true
 
+export const selectActiveConversationId = (state: RootState): string | null =>
+  state.messages.activeConversationId
+
+export const selectMessagesInboxLoading = (state: RootState): boolean => state.messages.loadingInbox
+
+export const selectMessagesInboxError = (state: RootState): string | null => state.messages.inboxError
+
+export const selectTotalUnreadMessages = (state: RootState): number => {
+  const conversationUnread = Object.values(state.messages.conversations).reduce(
+    (total, conversation) => total + (conversation.unreadCount ?? 0),
+    0,
+  )
+  const pendingUnread = Object.values(state.messages.pendingUnread).reduce(
+    (total, count) => total + count,
+    0,
+  )
+  return conversationUnread + pendingUnread
+}
+
 export default messagesReducer

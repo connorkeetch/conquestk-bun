@@ -40,20 +40,16 @@ export default function GameLobby() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Game Lobby</h1>
-        <button
-          type="button"
-          onClick={() => setShowCreateRoom(true)}
-          className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-        >
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-[color:var(--heading)]">Game Lobby</h1>
+        <button type="button" onClick={() => setShowCreateRoom(true)} className="btn btn-success">
           Create Room
         </button>
       </div>
 
       {showCreateRoom && (
-        <div className="bg-surface-1 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-bold mb-4">Create New Room</h2>
+        <div className="panel mb-6 space-y-4">
+          <h2 className="text-xl font-semibold text-[color:var(--heading)]">Create New Room</h2>
           <form onSubmit={handleCreateRoom} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2" htmlFor={roomNameId}>
@@ -65,7 +61,7 @@ export default function GameLobby() {
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded text-white"
+                className="form-input"
               />
             </div>
             <div>
@@ -76,7 +72,7 @@ export default function GameLobby() {
                 id={maxPlayersId}
                 value={maxPlayers}
                 onChange={(e) => setMaxPlayers(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded text-white"
+                className="form-select"
               >
                 <option value={2}>2 Players</option>
                 <option value={3}>3 Players</option>
@@ -91,20 +87,20 @@ export default function GameLobby() {
                 id={privateRoomId}
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="mr-2"
+                className="form-checkbox mr-2"
               />
               <label htmlFor={privateRoomId} className="text-sm">
                 Private Room
               </label>
             </div>
             <div className="flex space-x-2">
-              <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+              <button type="submit" className="btn btn-success">
                 Create
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateRoom(false)}
-                className="bg-gray-600 hover:bg-surface-2 px-4 py-2 rounded"
+                className="btn btn-secondary"
               >
                 Cancel
               </button>
@@ -117,12 +113,10 @@ export default function GameLobby() {
         {isLoading ? (
           <div className="text-center">Loading rooms...</div>
         ) : rooms.length === 0 ? (
-          <div className="text-center text-muted">
-            No rooms available. Create one to get started!
-          </div>
+          <div className="panel text-center text-muted">No rooms available. Create one to get started!</div>
         ) : (
           rooms.map((room) => (
-            <div key={room.id} className="bg-surface-1 p-4 rounded-lg">
+            <div key={room.id} className="panel">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-semibold">{room.name}</h3>
@@ -136,7 +130,7 @@ export default function GameLobby() {
                   disabled={
                     room.status !== 'lobby' || (room.players?.length || 0) >= room.maxPlayers
                   }
-                  className="bg-primary hover:bg-primary disabled:bg-gray-600 px-4 py-2 rounded"
+                  className="btn btn-primary"
                 >
                   Join
                 </button>
