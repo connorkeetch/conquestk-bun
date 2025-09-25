@@ -18,7 +18,7 @@ const TutorialPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'basics' | 'gametypes' | 'strategy' | 'rankings' | 'editor' | 'options'
   >('basics')
-  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -700,7 +700,7 @@ const TutorialPage: React.FC = () => {
                     <span>
                       <strong>Game Visibility:</strong> Public (anyone can join), Private (invite
                       code)
-                      {tournamentsEnabled ? ', or Tournament' : ''}
+                      {comingSoonUiEnabled ? ', or Tournament' : ''}
                     </span>
                   </li>
                   <li className="flex items-start gap-2">

@@ -298,7 +298,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const requestControllerRef = useRef<AbortController | null>(null)
-  const profileExtrasEnabled = useFeatureFlag(FEATURE_FLAGS.PROFILE_EXTRAS)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   const isOwnProfile = currentUser?.username === username
 
@@ -355,10 +355,10 @@ const ProfilePage: React.FC = () => {
   }, [fetchProfile])
 
   useEffect(() => {
-    if (!profileExtrasEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
+    if (!comingSoonUiEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
       setActiveTab('overview')
     }
-  }, [profileExtrasEnabled, activeTab])
+  }, [comingSoonUiEnabled, activeTab])
 
   const handleRefreshProfile = useCallback(() => {
     void fetchProfile()
@@ -493,7 +493,7 @@ const ProfilePage: React.FC = () => {
     { id: 'stats', label: 'Statistics', icon: '📊', available: true },
   ]
 
-  if (profileExtrasEnabled) {
+  if (comingSoonUiEnabled) {
     tabs.push(
       { id: 'matches', label: 'Matches', icon: '🎮', available: true },
       { id: 'achievements', label: 'Achievements', icon: '🏆', available: true },
@@ -730,7 +730,7 @@ const ProfilePage: React.FC = () => {
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {!tab.available && <span className="text-xs">(Soon)</span>}
-                {tab.available && profileExtrasEnabled && isPreviewTab && (
+                {tab.available && comingSoonUiEnabled && isPreviewTab && (
                   <span className="text-xs text-muted">(Preview)</span>
                 )}
               </button>
@@ -827,7 +827,7 @@ const ProfilePage: React.FC = () => {
             />
           )}
 
-          {profileExtrasEnabled && activeTab === 'matches' && (
+          {comingSoonUiEnabled && activeTab === 'matches' && (
             <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🎮</div>
               <h2 className="text-2xl font-bold text-white mb-2">Match History Coming Soon</h2>
@@ -837,7 +837,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {profileExtrasEnabled && activeTab === 'achievements' && (
+          {comingSoonUiEnabled && activeTab === 'achievements' && (
             <div className="relative glass-box-xl shadow-xl text-center">
               <div className="text-5xl mb-4">🏆</div>
               <h2 className="text-2xl font-bold text-white mb-2">Achievements Coming Soon</h2>

@@ -4,8 +4,10 @@ import { logger } from '@/utils/logger'
 import { API_URL } from '../config'
 import {
   applyTheme,
+  getBackgroundMotionPreference,
   getStoredTheme,
   PREMIUM_THEMES,
+  setBackgroundMotionPreference,
   STANDARD_THEMES,
   storeTheme,
   THEMES,
@@ -390,10 +392,13 @@ export default function Settings() {
   const { user } = useAppSelector((state) => state.auth)
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
-  const showComingSoonSettings = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_PLACEHOLDERS)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   // Get current color theme from centralized config
   const [currentColorTheme, setCurrentColorTheme] = useState<string>(() => getStoredTheme())
+  const [backgroundMotionEnabled, setBackgroundMotionEnabled] = useState<boolean>(
+    () => getBackgroundMotionPreference(),
+  )
   // State for theme dropdown (moved here to avoid re-declaration)
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
   const themeDropdownRef = useRef<HTMLDivElement>(null)
@@ -1178,7 +1183,7 @@ export default function Settings() {
           },
         ]
 
-        if (showComingSoonSettings) {
+        if (comingSoonUiEnabled) {
           items.push({
             id: 'two-factor',
             label: 'Two-Factor Authentication',
@@ -1368,9 +1373,27 @@ export default function Settings() {
               void persistSetting('theme', theme)
             },
           },
+          {
+            id: 'background-motion',
+            label: 'Background Motion',
+            description:
+              'Animate themed backgrounds with parallax and particle effects. Disable if you prefer static backdrops or reduced motion.',
+            type: 'toggle',
+            isWorking: true,
+            defaultValue: backgroundMotionEnabled,
+            onChange: (value) => {
+              if (typeof value !== 'boolean') {
+                return
+              }
+
+              setBackgroundMotionEnabled(value)
+              setBackgroundMotionPreference(value)
+              void persistSetting('backgroundMotion', value ? 'on' : 'off')
+            },
+          },
         ]
 
-        if (showComingSoonSettings) {
+        if (comingSoonUiEnabled) {
           items.push({
             id: 'colorblind-mode',
             label: 'Colorblind Mode',

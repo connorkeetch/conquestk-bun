@@ -65,6 +65,8 @@ export default function Header() {
     setIsMenuOpen(!isMenuOpen)
   }
 
+  const navTabClass = (active: boolean) => `nav-tab${active ? ' is-active' : ''}`
+
   return (
     <>
       <header className="sticky top-0 z-50 glass border-b border-white/10">
@@ -130,44 +132,44 @@ export default function Header() {
           </div>
 
           {/* Center nav - hidden on mobile, visible on desktop */}
-          <nav className="hidden lg:flex items-center gap-6 text-body-sm absolute left-1/2 transform -translate-x-1/2">
+          <nav className="hidden lg:flex nav-tabs text-body-sm absolute left-1/2 transform -translate-x-1/2">
             {isAuthenticated ? (
               <>
                 <Link
-                  className={`transition ${location.pathname === '/lobby' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                  className={navTabClass(location.pathname === '/lobby')}
                   to="/lobby"
                 >
                   Play
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/maps' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                  className={navTabClass(location.pathname === '/maps')}
                   to="/maps"
                 >
                   Maps
                 </Link>
                 <Link
-                  className={`transition ${location.pathname === '/community' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                  className={navTabClass(location.pathname === '/community')}
                   to="/community"
                 >
                   Community
                 </Link>
                 {clansEnabled && (
                   <Link
-                    className={`transition ${location.pathname.startsWith('/clans') ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                    className={navTabClass(location.pathname.startsWith('/clans'))}
                     to="/clans"
                   >
                     Clans
                   </Link>
                 )}
                 <Link
-                  className={`transition ${location.pathname === '/tutorial' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                  className={navTabClass(location.pathname === '/tutorial')}
                   to="/tutorial"
                 >
                   How to Play
                 </Link>
                 {user?.isAdmin && (
                   <Link
-                    className={`transition ${location.pathname === '/admin' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                    className={navTabClass(location.pathname === '/admin')}
                     to="/admin"
                   >
                     Admin
@@ -176,24 +178,24 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link className="text-white/70 hover:text-primary-soft transition" to="/">
+                <Link className={navTabClass(location.pathname === '/')} to="/">
                   Home
                 </Link>
-                <Link className="text-white/70 hover:text-primary-soft transition" to="/lobby">
+                <Link className={navTabClass(location.pathname === '/lobby')} to="/lobby">
                   Play Now
                 </Link>
-                <Link className="text-white/70 hover:text-primary-soft transition" to="/maps">
+                <Link className={navTabClass(location.pathname === '/maps')} to="/maps">
                   Browse Maps
                 </Link>
-                <Link className="text-white/70 hover:text-primary-soft transition" to="/community">
+                <Link className={navTabClass(location.pathname === '/community')} to="/community">
                   Community
                 </Link>
                 {clansEnabled && (
-                  <Link className="text-white/70 hover:text-primary-soft transition" to="/clans">
+                  <Link className={navTabClass(location.pathname.startsWith('/clans'))} to="/clans">
                     Clans
                   </Link>
                 )}
-                <Link className="text-white/70 hover:text-primary-soft transition" to="/tutorial">
+                <Link className={navTabClass(location.pathname === '/tutorial')} to="/tutorial">
                   How to Play
                 </Link>
               </>
