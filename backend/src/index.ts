@@ -50,6 +50,7 @@ let profileRoutes: Router
 let skillsRoutes: Router
 let userRoutes: Router
 let messagesRoutes: Router
+let clanRoutes: Router
 let initializeRedis: typeof import('./config/redis').initializeRedis
 let setupSocketHandlers: typeof import('./services/socketService').setupSocketHandlers
 let ensureTablesExist: typeof import('./utils/initTables').ensureTablesExist
@@ -84,6 +85,7 @@ try {
   skillsRoutes = require('./routes/skills').default
   userRoutes = require('./routes/users').default
   messagesRoutes = require('./routes/messages').default
+  clanRoutes = require('./routes/clans').default
   setupSocketHandlers = require('./services/socketService').setupSocketHandlers
   ensureTablesExist = require('./utils/initTables').ensureTablesExist
   logger = require('./utils/logger').logger
@@ -305,6 +307,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/messages', messagesRoutes)
+app.use('/api/clans', clanRoutes)
 app.use('/api/workflow', require('./routes/mapWorkflow').default)
 app.use('/api/terms', require('./routes/terms').default)
 app.use('/api/staging', require('./routes/mapStaging').default)

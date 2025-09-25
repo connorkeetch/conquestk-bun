@@ -15,6 +15,7 @@ export const FEATURE_FLAGS = {
   MAP_POLYGON_EDITOR: 'ui_map_polygon_editor',
   TOURNAMENT_SURFACES: 'ui_tournaments',
   PROFILE_EXTRAS: 'ui_profile_extras',
+  CLANS_CORE: 'clans_enabled',
   COMING_SOON_PLACEHOLDERS: 'ui_coming_soon_placeholders',
 
   // Experimental Features

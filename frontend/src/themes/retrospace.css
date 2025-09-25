@@ -15,17 +15,61 @@
   --color-text-muted: #4b5563; /* Muted gray */
   --color-border: #b3c1d9; /* Soft blue-gray borders */
 
+  /* Typography tokens */
+  --text: #1f2937;
+  --text-muted: #4b5563;
+  --heading: #0b2f84;
+  --link: #0b3aa7;
+
+  /* Surface tokens */
+  --surface-0: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f3f6ff;
+  --panel-bg: #ffffff;
+  --panel-border: #b3c1d9;
+  --panel-bg-alt: #f1f4ff;
+  --nav-bg: #0b3aa7;
+  --nav-border: #0b2f84;
+  --footer-bg: #e7ecff;
+  --modal-bg: #ffffff;
+  --modal-border: #0b2f84;
+
+  /* Interaction tokens */
+  --hover-bg: #dbe4ff;
+  --hover-border: #0b2f84;
+
+  /* Radius tokens */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-surface: 0;
+  --panel-radius: 0;
+
+  /* Shadow tokens */
+  --shadow-0: none;
+  --shadow-1: none;
+  --shadow-2: none;
+  --shadow-modal: none;
+
   --ck-bg-gradient: linear-gradient(0deg, #ffffff 0%, #ffffff 100%);
 
   --ck-glow: transparent;
 
-  --surface-glass: #ffffff;
-  --surface-glass-light: #f3f6ff;
+  --glass-bg: #ffffff;
+  --glass-bg-light: #f3f6ff;
+  --glass-border: #b3c1d9;
+  --glass-blur: 0;
+  --glass-shadow: none;
+  --glass-radius-sm: 0;
+  --glass-radius-lg: 0;
+
+  --surface-glass: var(--glass-bg);
+  --surface-glass-light: var(--glass-bg-light);
 
   /* Box/Card overrides - blocky solid panels */
-  --box-bg: #ffffff;
+  --box-bg: var(--glass-bg);
   --box-bg-solid: #ffffff;
-  --box-border: #b3c1d9;
+  --box-border: var(--glass-border);
   --box-shadow: none;
   --box-blur: 0;
   --box-radius: 0;
@@ -33,6 +77,8 @@
   --box-padding-sm: 0.75rem;
   --box-padding-lg: 1.5rem;
   --box-padding-xl: 2rem;
+
+  --panel-padding: 1.25rem;
 }
 
 [data-theme="retrospace"] body {

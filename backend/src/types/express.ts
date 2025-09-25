@@ -1,6 +1,7 @@
 import type { Request } from 'express'
 import type { ParamsDictionary } from 'express-serve-static-core'
 import type { ParsedQs } from 'qs'
+import type { ClanMembershipContext } from './clans'
 
 export interface RequestUser {
   id: string
@@ -12,6 +13,7 @@ export interface RequestUser {
   isBetaUser?: boolean
   premiumTier?: 'free' | 'premium' | 'pro' | 'enterprise' | string
   hasPremium?: boolean
+  clanMembership?: ClanMembershipContext | null
 }
 
 export type AuthenticatedRequest<

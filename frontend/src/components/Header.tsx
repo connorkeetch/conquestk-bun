@@ -1,6 +1,8 @@
 import { Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { FEATURE_FLAGS } from '@/constants/featureFlags'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
@@ -23,6 +25,7 @@ export default function Header() {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
+  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
 
   useEffect(() => {
     // Check initial mute state
@@ -43,8 +46,15 @@ export default function Header() {
     { path: '/community', label: 'Community', icon: '👥' },
     { path: '/tutorial', label: 'How to Play', icon: '📚' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
-    ...(user?.isAdmin ? [{ path: '/admin', label: 'Admin', icon: '🛡️' }] : []),
   ]
+
+  if (clansEnabled) {
+    menuItems.splice(5, 0, { path: '/clans', label: 'Clans', icon: '🛡️' })
+  }
+
+  if (user?.isAdmin) {
+    menuItems.push({ path: '/admin', label: 'Admin', icon: '🛡️' })
+  }
 
   const handleLogout = () => {
     dispatch(logout())
@@ -141,6 +151,14 @@ export default function Header() {
                 >
                   Community
                 </Link>
+                {clansEnabled && (
+                  <Link
+                    className={`transition ${location.pathname.startsWith('/clans') ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
+                    to="/clans"
+                  >
+                    Clans
+                  </Link>
+                )}
                 <Link
                   className={`transition ${location.pathname === '/tutorial' ? 'text-white font-medium' : 'text-white/70 hover:text-primary-soft'}`}
                   to="/tutorial"
@@ -170,6 +188,11 @@ export default function Header() {
                 <Link className="text-white/70 hover:text-primary-soft transition" to="/community">
                   Community
                 </Link>
+                {clansEnabled && (
+                  <Link className="text-white/70 hover:text-primary-soft transition" to="/clans">
+                    Clans
+                  </Link>
+                )}
                 <Link className="text-white/70 hover:text-primary-soft transition" to="/tutorial">
                   How to Play
                 </Link>

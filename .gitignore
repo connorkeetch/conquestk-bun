@@ -60,6 +60,7 @@ coverage/
 *.sqlite3
 database.sqlite
 risk_game.db
+backend/backups/
 
 # OS generated files
 .DS_Store

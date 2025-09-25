@@ -1,6 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import jwt, { TokenExpiredError } from 'jsonwebtoken'
 import { query } from '../config/database'
+import { clanService } from '../services/clanService'
 import type { RequestUser } from '../types/express'
 import { getErrorMessage, toKnownError } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
@@ -78,6 +79,8 @@ export const authenticateToken: RequestHandler = async (
         const hasAdminRole = Number(adminResult.rows[0]?.count || 0) > 0
 
         const premiumTier = userRow.premium_tier || 'free'
+        const membership = await clanService.getActiveMembership(payload.userId)
+
         const requestUser: RequestUser = {
           id: userRow.id,
           username: userRow.username ?? undefined,
@@ -87,6 +90,7 @@ export const authenticateToken: RequestHandler = async (
           isBetaUser: Boolean(userRow.is_beta_user),
           premiumTier,
           hasPremium: premiumTier !== 'free',
+          clanMembership: membership,
         }
 
         req.user = requestUser
