@@ -31,6 +31,7 @@ Progress over the summer 2025 cycle that is now in production:
 - **Audio polish:** prune duplicate legacy files, lazy-load infrequent SFX, and add accessibility cues for key moments.
 - **Analytics & telemetry:** implement the funnel/latency dashboards outlined in the go-live plan to monitor play completion and approval throughput.
 - **Documentation pass:** finish the public API reference outline and contributing guide once the above systems stabilize.
+- **Clan progression follow-through:** expose the new `clan:progress` socket contract to mobile/minimal clients, surface contribution deltas in the clan activity feed, and review XP multipliers once live telemetry lands.
 
 ## 🔭 Future opportunities (longer-term)
 - **Advanced game modes:** Assassin, Zombie Apocalypse, King of the Hill, Sudden Death, Battle Royale.
