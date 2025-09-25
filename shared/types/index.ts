@@ -450,10 +450,17 @@ export const subscribeToClanProgress = (
   socket: SocketEventBridge,
   handler: ClanProgressEventHandler,
 ): (() => void) => {
-  socket.on(CLAN_PROGRESS_EVENT, handler)
+  const wrappedHandler: (...args: unknown[]) => void = (...args) => {
+    const [payload] = args
+    if (payload && typeof payload === 'object') {
+      handler(payload as ClanProgressionSocketPayload)
+    }
+  }
+
+  socket.on(CLAN_PROGRESS_EVENT, wrappedHandler)
   return () => {
     if (typeof socket.off === 'function') {
-      socket.off(CLAN_PROGRESS_EVENT, handler)
+      socket.off(CLAN_PROGRESS_EVENT, wrappedHandler)
     }
   }
 }

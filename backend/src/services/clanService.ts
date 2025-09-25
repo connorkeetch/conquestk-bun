@@ -10,6 +10,7 @@ import type {
   ClanMember,
   ClanMemberStatus,
   ClanMembershipContext,
+  ClanActivityEvent,
   ClanPrivacy,
   ClanRecruitmentPolicy,
   ClanRecruitmentStatus,
