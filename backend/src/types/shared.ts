@@ -3,6 +3,7 @@
  * These are the core types that both frontend and backend use
  */
 
+import type { ClanProgressionSocketPayload } from './clans'
 import type { GameDelta } from './deltaUpdates'
 import type { BattleResult, GameAction, SerializedGameState } from './game'
 
@@ -184,6 +185,7 @@ export interface ServerToClientEvents {
     conversationId: string
   }) => void
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
+  'clan:progress': (payload: ClanProgressionSocketPayload) => void
   'conversation.created': (payload: ConversationCreatedPayload) => void
   'conversation.members.added': (payload: ConversationMembersAddedPayload) => void
   'conversation.members.removed': (payload: ConversationMembersRemovedPayload) => void

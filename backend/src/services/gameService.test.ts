@@ -1,5 +1,20 @@
 const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 const mockTransaction = jest.fn()
+const mockGetActiveMembershipsForUsers = jest.fn()
+const mockAwardContribution = jest.fn()
+const mockEvaluateFlagByName = jest.fn()
+const mockApplyRatingChanges = jest.fn()
+const mockUpdateLeaderboardCache = jest.fn()
+const mockTryGetSocketServer = jest.fn()
+
+class MockClanProgressionServiceError extends Error {
+  code: string
+
+  constructor(code: string, message?: string) {
+    super(message)
+    this.code = code
+  }
+}
 
 jest.mock('../config/database', () => ({
   query: mockDbQuery,
@@ -19,6 +34,37 @@ jest.mock('../services/mapService', () => ({
   mapService: {
     validateMapPlayable: mockValidateMapPlayable,
   },
+}))
+
+jest.mock('../services/clanService', () => ({
+  clanService: {
+    getActiveMembershipsForUsers: mockGetActiveMembershipsForUsers,
+  },
+}))
+
+jest.mock('../services/clanProgressionService', () => ({
+  clanProgressionService: {
+    awardContribution: mockAwardContribution,
+  },
+  ClanProgressionServiceError: MockClanProgressionServiceError,
+}))
+
+jest.mock('../services/featureFlagService', () => ({
+  featureFlagService: {
+    evaluateFlagByName: mockEvaluateFlagByName,
+  },
+}))
+
+jest.mock('../services/eloService', () => ({
+  eloService: {
+    calculateRatingChanges: jest.fn(() => []),
+    applyRatingChanges: mockApplyRatingChanges,
+    updateLeaderboardCache: mockUpdateLeaderboardCache,
+  },
+}))
+
+jest.mock('../services/socketRegistry', () => ({
+  tryGetSocketServer: mockTryGetSocketServer,
 }))
 
 const mockLoadMapForEngine = jest.fn()
@@ -118,6 +164,34 @@ describe('GameService', () => {
       return callback(client as any)
     })
     mockValidateMapPlayable.mockReset()
+    mockGetActiveMembershipsForUsers.mockReset()
+    mockGetActiveMembershipsForUsers.mockResolvedValue(new Map())
+    mockAwardContribution.mockReset()
+    mockAwardContribution.mockResolvedValue({
+      clanId: 'clan-0',
+      totalXp: 0,
+      level: 1,
+      leveledUp: false,
+      progression: {
+        clanId: 'clan-0',
+        totalXp: 0,
+        level: 1,
+        currentLevelXp: 0,
+        nextLevelXp: 1000,
+        xpIntoLevel: 0,
+        xpToNextLevel: 1000,
+        progressPercent: 0,
+      },
+      objectiveUpdates: [],
+    })
+    mockEvaluateFlagByName.mockReset()
+    mockEvaluateFlagByName.mockResolvedValue(false)
+    mockApplyRatingChanges.mockReset()
+    mockApplyRatingChanges.mockResolvedValue(undefined)
+    mockUpdateLeaderboardCache.mockReset()
+    mockUpdateLeaderboardCache.mockResolvedValue(undefined)
+    mockTryGetSocketServer.mockReset()
+    mockTryGetSocketServer.mockReturnValue(null)
     mockLoadMapForEngine.mockReset()
     mockValidateMapPlayable.mockResolvedValue({ isValid: true, errors: [] })
     mockLoadMapForEngine.mockResolvedValue({ territories, continentBonuses })
@@ -383,6 +457,175 @@ describe('GameService', () => {
 
       const updatedState = await gameService.getGameState(gameId)
       expect(updatedState?.board.find((t) => t.id === 'defending')?.ownerId).toBe('attacker')
+    })
+
+    it('awards clan contributions when the game concludes', async () => {
+      const gameIdComplete = 'battle-finish'
+      const completionState = {
+        roomId: gameIdComplete,
+        players: [
+          {
+            id: 'attacker',
+            username: 'Attacker',
+            color: 'red',
+            armies: 5,
+            territories: ['attacking'],
+            cards: [],
+            isEliminated: false,
+          },
+          {
+            id: 'defender',
+            username: 'Defender',
+            color: 'blue',
+            armies: 3,
+            territories: ['defending'],
+            cards: [],
+            isEliminated: false,
+          },
+        ],
+        board: [
+          {
+            id: 'attacking',
+            name: 'Attacking Territory',
+            continent: 'c1',
+            ownerId: 'attacker',
+            armies: 5,
+            adjacentTerritories: ['defending'],
+          },
+          {
+            id: 'defending',
+            name: 'Defending Territory',
+            continent: 'c1',
+            ownerId: 'defender',
+            armies: 1,
+            adjacentTerritories: ['attacking'],
+          },
+        ],
+        currentPlayer: 'attacker',
+        phase: 'attack' as const,
+        turn: 5,
+        cards: [],
+        gameConfig: {
+          movementType: 'classic_adjacent',
+          allowTeamPlay: false,
+          teamMode: 'none',
+          numberOfTeams: null,
+          maxPlayers: 2,
+          mapId: 'test-map',
+          gameMode: 'standard',
+          continentBonuses,
+        },
+        movementTracking: {},
+      }
+
+      await gameStateCache.setGameState(gameIdComplete, completionState)
+
+      const membershipMap = new Map([
+        [
+          'attacker',
+          {
+            clanId: 'clan-1',
+            clanSlug: 'clan-one',
+            clanName: 'Clan One',
+            roleName: 'Member',
+            status: 'active',
+          },
+        ],
+      ])
+
+      const now = new Date('2025-10-01T00:00:00.000Z')
+      mockEvaluateFlagByName.mockResolvedValue(true)
+      mockGetActiveMembershipsForUsers.mockResolvedValue(membershipMap)
+      mockAwardContribution.mockResolvedValue({
+        clanId: 'clan-1',
+        totalXp: 1200,
+        level: 2,
+        leveledUp: false,
+        progression: {
+          clanId: 'clan-1',
+          totalXp: 1200,
+          level: 2,
+          currentLevelXp: 1000,
+          nextLevelXp: 1500,
+          xpIntoLevel: 200,
+          xpToNextLevel: 300,
+          progressPercent: 200 / 500,
+        },
+        objectiveUpdates: [],
+      })
+
+      const emit = jest.fn()
+      const mockTo = jest.fn(() => ({ emit }))
+      mockTryGetSocketServer.mockReturnValue({
+        to: mockTo,
+      })
+
+      mockTransaction.mockImplementation(async (callback: (client: unknown) => Promise<unknown>) => {
+        const client = {
+          query: jest.fn()
+            .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing game_results
+            .mockResolvedValueOnce({
+              rows: [{ map_id: 'test-map', started_at: now, ended_at: null }],
+              rowCount: 1,
+            })
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // update game_rooms
+            .mockResolvedValueOnce({
+              rows: [
+                { id: 'attacker', username: 'Attacker', skill_rating: 1200, created_at: now },
+                { id: 'defender', username: 'Defender', skill_rating: 1100, created_at: now },
+              ],
+              rowCount: 2,
+            })
+            .mockResolvedValueOnce({
+              rows: [
+                { user_id: 'attacker', games_played: 10 },
+                { user_id: 'defender', games_played: 5 },
+              ],
+              rowCount: 2,
+            })
+            .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+            .mockResolvedValueOnce({ rows: [], rowCount: 2 })
+            .mockResolvedValueOnce({ rows: [], rowCount: 2 })
+            .mockResolvedValue({ rows: [], rowCount: 1 })
+        }
+        return callback(client as any)
+      })
+
+      const result = await gameService.applyBattleResult(gameIdComplete, {
+        attackerLosses: 0,
+        defenderLosses: 1,
+        territoryConquered: true,
+        attackingArmiesRemaining: 4,
+        defendingArmiesRemaining: 0,
+        dice: { attacker: [6, 5, 3], defender: [2] },
+        jobId: 'battle-final',
+        attackingTerritoryId: 'attacking',
+        defendingTerritoryId: 'defending',
+        attackingPlayerId: 'attacker',
+        defendingPlayerId: 'defender',
+        attackingArmiesCommitted: 3,
+      })
+
+      expect(result.applied).toBe(true)
+      expect(mockEvaluateFlagByName).toHaveBeenCalledWith('clans_enabled')
+      expect(mockGetActiveMembershipsForUsers).toHaveBeenCalledWith(['attacker', 'defender'])
+      expect(mockAwardContribution).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clanId: 'clan-1',
+          userId: 'attacker',
+          matchesPlayed: 1,
+          matchesWon: 1,
+          source: 'game_result',
+        }),
+      )
+      const awardedXp = mockAwardContribution.mock.calls[0]?.[0]?.xp
+      expect(awardedXp).toBeGreaterThanOrEqual(400)
+      expect(mockAwardContribution).toHaveBeenCalledTimes(1)
+      expect(mockTo).toHaveBeenCalledWith('clan:clan-1')
+      expect(emit).toHaveBeenCalledWith(
+        'clan:progress',
+        expect.objectContaining({ clanId: 'clan-1', userId: 'attacker', xpAwarded: expect.any(Number) }),
+      )
     })
   })
 

@@ -1,3 +1,4 @@
+import type { ClanProgressionSocketPayload } from '@shared/types'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -17,6 +18,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { clanApi } from '@/services/clanService'
+import { socketService } from '@/services/socketService'
 import type {
   ClanAnnouncement,
   ClanDetails,
@@ -315,6 +317,57 @@ const ClanDetailPage = () => {
       isMounted = false
     }
   }, [slug, clansEnabled])
+
+  useEffect(() => {
+    if (!clansEnabled) {
+      return
+    }
+
+    const handleProgressUpdate = (payload: ClanProgressionSocketPayload) => {
+      setClan((current) => {
+        if (!current || payload.clanId !== current.id) {
+          return current
+        }
+
+        const objectives = current.activeObjectives.map((objective) => {
+          const update = payload.objectiveUpdates.find((item) => item.objectiveId === objective.id)
+          if (!update) {
+            return objective
+          }
+          return {
+            ...objective,
+            progressValue: update.progressValue,
+          }
+        })
+
+        const members = current.members.map((member) => {
+          if (member.userId !== payload.userId) {
+            return member
+          }
+          return {
+            ...member,
+            contributionXp: member.contributionXp + payload.xpAwarded,
+            contributionMatches: member.contributionMatches + payload.matchesPlayed,
+          }
+        })
+
+        return {
+          ...current,
+          progression: {
+            ...current.progression,
+            ...payload.progression,
+          },
+          activeObjectives: objectives,
+          members,
+        }
+      })
+    }
+
+    socketService.on('clan:progress', handleProgressUpdate)
+    return () => {
+      socketService.off('clan:progress', handleProgressUpdate)
+    }
+  }, [clansEnabled])
 
   const clanCreatedAt = useMemo(() => (clan ? formatDate(clan.createdAt) : null), [clan])
   const objectiveResetAt = useMemo(() => {

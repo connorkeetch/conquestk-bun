@@ -103,3 +103,24 @@ export interface ClanListResponse {
   clans: ClanSummary[]
   nextCursor?: string | null
 }
+
+export interface ClanObjectiveProgressUpdate {
+  objectiveId: string
+  progressValue: number
+  completed: boolean
+}
+
+export interface ClanProgressionSocketPayload {
+  clanId: string
+  gameId: string
+  userId: string
+  xpAwarded: number
+  matchesPlayed: number
+  matchesWon: number
+  placement: number
+  territories: number
+  armies: number
+  eliminated: boolean
+  progression: ClanProgressionSummary
+  objectiveUpdates: ClanObjectiveProgressUpdate[]
+}
