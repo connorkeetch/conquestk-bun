@@ -82,7 +82,7 @@ const LeaderboardsPage: React.FC = () => {
 
         {/* Tier Filter */}
         <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="segmented-control">
             {tiers.map((tier) => (
               <button
                 type="button"
@@ -91,11 +91,7 @@ const LeaderboardsPage: React.FC = () => {
                   setTierFilter(tier)
                   setCurrentPage(0)
                 }}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  tierFilter === tier
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-1 text-muted hover:bg-surface-2'
-                }`}
+                className={tierFilter === tier ? 'segmented-active' : ''}
               >
                 {tier === 'all' ? 'All Tiers' : tier}
               </button>
@@ -113,48 +109,50 @@ const LeaderboardsPage: React.FC = () => {
         ) : leaderboard.length === 0 ? (
           <div className="text-center py-12 text-muted">No players found in this tier</div>
         ) : (
-          <div className="bg-surface-1 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-surface-1">
+          <div className="panel p-0 overflow-hidden">
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Player
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Tier
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Rating
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Games
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Win Rate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Trend
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody>
                 {leaderboard.map((entry) => {
                   const isCurrentUser = currentUser?.id === entry.userId
                   return (
                     <tr
                       key={entry.userId}
-                      className={`${
-                        isCurrentUser ? 'bg-blue-900 bg-opacity-20' : 'hover:bg-surface-1'
-                      } transition-colors`}
+                      className={`table-row transition-colors ${
+                        isCurrentUser
+                          ? 'bg-[color:var(--hover-bg)]'
+                          : 'hover:bg-[color:var(--surface-2)]'
+                      }`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <span
                             className={`text-lg font-bold ${
-                              entry.rank <= 3 ? 'text-yellow-400' : 'text-muted'
+                              entry.rank <= 3 ? 'text-[color:var(--color-warning)]' : 'text-muted'
                             }`}
                           >
                             {entry.rank === 1 && '🏆 '}
@@ -166,7 +164,7 @@ const LeaderboardsPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
                           to={`/profile/${entry.userId}`}
-                          className="text-primary-soft hover:text-primary-soft font-medium"
+                          className="text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] font-medium"
                         >
                           {entry.username}
                           {isCurrentUser && <span className="ml-2 text-xs text-muted">(You)</span>}
@@ -198,10 +196,10 @@ const LeaderboardsPage: React.FC = () => {
                         <span
                           className={`font-medium ${
                             entry.winRate >= 60
-                              ? 'text-green-400'
+                              ? 'text-[color:var(--color-success)]'
                               : entry.winRate >= 40
                                 ? 'text-muted'
-                                : 'text-red-400'
+                                : 'text-[color:var(--color-danger)]'
                           }`}
                         >
                           {entry.winRate.toFixed(1)}%
@@ -220,12 +218,12 @@ const LeaderboardsPage: React.FC = () => {
 
         {/* Pagination */}
         {!loading && leaderboard.length > 0 && (
-          <div className="mt-6 flex justify-center gap-4">
+          <div className="mt-6 flex justify-center items-center gap-4">
             <button
               type="button"
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
-              className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-secondary"
             >
               Previous
             </button>
@@ -234,7 +232,7 @@ const LeaderboardsPage: React.FC = () => {
               type="button"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={leaderboard.length < ITEMS_PER_PAGE}
-              className="px-4 py-2 bg-surface-1 text-muted rounded-lg hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-secondary"
             >
               Next
             </button>
