@@ -1,0 +1,198 @@
+/* Cutler's Cheese theme - Premium dairy daydream */
+:root[data-theme="cutlers-cheese"] {
+  --color-primary: #f5b700; /* Sharp cheddar primary */
+  --color-primary-soft: #ffd166; /* Melted cheddar glow */
+  --color-secondary: #ffe066; /* Gouda gold secondary */
+  --color-accent: #c15c00; /* Toasted crust accent */
+
+  --color-bg-deep: #090400; /* Cellar darkness */
+  --color-bg-alt: #120700; /* Smoky amber shadows */
+  --color-bg-void: #070300; /* Aging cave void */
+  --color-surface-1: #1a1004; /* Barrel-aged oak */
+  --color-surface-2: #251707; /* Toasted walnut */
+
+  --color-text: #fff4d6; /* Creamy parchment */
+  --color-text-muted: #f0ce83; /* Butter-washed parchment */
+  --color-border: #7a4100; /* Caramelized rind */
+
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #090400 0% /* Dark rind edges */,
+    rgba(245, 183, 0, 0.28) 35% /* Cheddar glow */,
+    rgba(255, 224, 102, 0.35) 65% /* Gouda highlight */,
+    #050200 100% /* Cave shadows */
+  );
+
+  --ck-glow: #ffd166;
+
+  /* Box/Card overrides - buttery glassmorphism */
+  --box-bg: rgba(26, 16, 4, 0.72);
+  --box-bg-solid: #1a1004;
+  --box-border: rgba(255, 209, 102, 0.38);
+  --box-shadow: 0 16px 46px rgba(122, 65, 0, 0.35);
+  --box-blur: 18px;
+  --box-radius: 0.85rem;
+  --box-padding: 1.65rem;
+  --box-padding-sm: 0.85rem;
+  --box-padding-lg: 1.75rem;
+  --box-padding-xl: 2.25rem;
+
+  --surface-glass: rgba(26, 16, 4, 0.68);
+  --surface-glass-light: rgba(40, 24, 6, 0.42);
+}
+
+@keyframes cutlers-cheese-bubble {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.35;
+  }
+  45% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 0.6;
+  }
+  55% {
+    transform: translateY(-6px) scale(1.08);
+    opacity: 0.7;
+  }
+}
+
+@keyframes cutlers-cheese-waft {
+  0% {
+    transform: translate3d(-4%, 4%, 0) scale(1);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.05);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate3d(-4%, 4%, 0) scale(1);
+    opacity: 0.12;
+  }
+}
+
+[data-theme="cutlers-cheese"] body::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  background:
+    radial-gradient(circle at 15% 25%, rgba(255, 221, 128, 0.18), transparent 60%),
+    radial-gradient(circle at 70% 30%, rgba(240, 184, 52, 0.16), transparent 65%),
+    radial-gradient(circle at 45% 70%, rgba(255, 210, 102, 0.12), transparent 55%);
+  filter: blur(50px);
+  transform-origin: center;
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+  animation: cutlers-cheese-waft 22s ease-in-out infinite;
+}
+
+[data-theme="cutlers-cheese"] body::after {
+  background-image:
+    radial-gradient(42px 42px at 18% 28%, rgba(255, 221, 128, 0.2), transparent 60%),
+    radial-gradient(34px 34px at 70% 35%, rgba(252, 196, 67, 0.18), transparent 62%),
+    radial-gradient(28px 28px at 40% 78%, rgba(240, 168, 40, 0.15), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size:
+    320px 320px,
+    420px 420px,
+    260px 260px,
+    44px 44px,
+    44px 44px;
+  animation: cutlers-cheese-bubble 18s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+[data-theme="cutlers-cheese"] a:hover {
+  color: var(--color-secondary);
+  text-shadow: 0 0 8px rgba(255, 214, 102, 0.45);
+}
+
+[data-theme="cutlers-cheese"] input:focus,
+[data-theme="cutlers-cheese"] textarea:focus,
+[data-theme="cutlers-cheese"] select:focus {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.22);
+}
+
+[data-theme="cutlers-cheese"]::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-bg-deep) 85%, transparent);
+}
+
+[data-theme="cutlers-cheese"]::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(245, 183, 0, 0.9), rgba(193, 92, 0, 0.9));
+  border-radius: 999px;
+}
+
+[data-theme="cutlers-cheese"] .game-board {
+  cursor:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23F5B700" stroke="%238C3B00" stroke-width="1.5" d="M6 5L27 15L6 25Z"/><circle cx="14" cy="13" r="2.4" fill="%23FFE18D"/><circle cx="12" cy="19" r="1.8" fill="%23F5C33B"/></svg>')
+    8 8,
+    auto;
+}
+
+/* Cutler's Cheese call-to-action embellishments */
+[data-theme="cutlers-cheese"] .btn-primary {
+  padding-left: 2.65rem;
+  color: #2a1500;
+  background: linear-gradient(135deg, rgba(245, 183, 0, 0.92), rgba(255, 209, 102, 0.98));
+  box-shadow:
+    0 14px 32px rgba(245, 183, 0, 0.33),
+    0 0 0 1px rgba(255, 209, 102, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="cutlers-cheese"] .btn-primary::after {
+  content: "🧀";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(-8deg);
+  font-size: 1.15rem;
+  filter: drop-shadow(0 0 6px rgba(245, 183, 0, 0.45));
+  pointer-events: none;
+}
+
+[data-theme="cutlers-cheese"] .btn-secondary {
+  padding-right: 2.4rem;
+  background: linear-gradient(135deg, rgba(122, 65, 0, 0.45), rgba(255, 224, 102, 0.18));
+  border-color: rgba(255, 209, 102, 0.35);
+  color: color-mix(in srgb, var(--color-text) 85%, #ffedb5 15%);
+}
+
+[data-theme="cutlers-cheese"] .btn-secondary::after {
+  content: "🥖";
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(5deg);
+  font-size: 1.05rem;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+[data-theme="cutlers-cheese"] .btn-tertiary {
+  background: linear-gradient(135deg, rgba(255, 221, 128, 0.9), rgba(193, 92, 0, 0.8));
+  color: #2a1500;
+  border-color: rgba(255, 224, 102, 0.55);
+  box-shadow:
+    0 12px 28px rgba(193, 92, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="cutlers-cheese"] .btn-tertiary::before {
+  background: linear-gradient(120deg, rgba(255, 247, 209, 0.6), transparent 65%);
+}
+
+[data-theme="cutlers-cheese"] .nav-link,
+[data-theme="cutlers-cheese"] .sidebar-item {
+  text-shadow: 0 0 12px rgba(245, 183, 0, 0.25);
+}
+
+[data-theme="cutlers-cheese"] .nav-link-active {
+  box-shadow:
+    0 8px 24px rgba(245, 183, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}

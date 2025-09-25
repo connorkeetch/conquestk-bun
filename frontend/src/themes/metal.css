@@ -1,0 +1,127 @@
+/* Metal Theme - Premium heavy metal neon energy */
+:root[data-theme="metal"] {
+  --color-primary: #ff2d95; /* Electric magenta */
+  --color-primary-soft: #ff5cbf; /* Hover magenta */
+  --color-secondary: #9efc38; /* Toxic neon green */
+  --color-accent: #4df3ff; /* Cyan lightning */
+
+  --color-bg-deep: #020106; /* Amplifier black */
+  --color-bg-alt: #070014; /* Stage shadow violet */
+  --color-bg-void: #010005; /* Sub-bass black */
+  --color-surface-1: #0d0a17; /* Dark stage floor */
+  --color-surface-2: #171327; /* Amp stack surface */
+
+  --color-text: #f4f6ff; /* Frosted silver */
+  --color-text-muted: #8a90b2; /* Steel muted */
+  --color-border: #2f2b3e; /* Guitar string graphite */
+
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #05010a 0% /* Deep violet edges */,
+    rgba(255, 45, 149, 0.35) 32% /* Magenta solo */,
+    rgba(77, 243, 255, 0.22) 62% /* Cyan feedback */,
+    #020106 100% /* Fade to black */
+  );
+
+  --ck-glow: #ff5cbf;
+
+  /* Box/Card overrides - glossy plexiglass */
+  --box-bg: rgba(13, 10, 23, 0.68);
+  --box-bg-solid: #0d0a17;
+  --box-border: rgba(77, 243, 255, 0.28);
+  --box-shadow: 0 10px 45px rgba(4, 11, 37, 0.55);
+  --box-blur: 14px;
+  --box-radius: 0.85rem;
+  --box-padding: 1.6rem;
+}
+
+/* Metal theme neon grid overlay */
+@keyframes metal-grid-pan {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      240px 240px,
+      -240px 240px,
+      0 12px;
+  }
+}
+
+@keyframes metal-scan {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes metal-glow-pulse {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(0.98);
+    opacity: 0.4;
+  }
+}
+
+[data-theme="metal"] body::before {
+  content: "";
+  position: fixed;
+  inset: -15%;
+  background:
+    radial-gradient(circle at 20% 25%, rgba(255, 45, 149, 0.32), transparent 55%),
+    radial-gradient(circle at 78% 30%, rgba(77, 243, 255, 0.25), transparent 60%),
+    radial-gradient(circle at 55% 75%, rgba(158, 252, 56, 0.22), transparent 65%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 0;
+  animation: metal-glow-pulse 18s ease-in-out infinite;
+}
+
+[data-theme="metal"] body::after {
+  background-image:
+    linear-gradient(rgba(255, 45, 149, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77, 243, 255, 0.07) 1px, transparent 1px),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(255, 255, 255, 0.06) 3px,
+      rgba(0, 0, 0, 0) 4px
+    );
+  background-size:
+    120px 120px,
+    120px 120px,
+    100% 6px;
+  mix-blend-mode: screen;
+  animation:
+    metal-grid-pan 36s linear infinite,
+    metal-scan 6s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+[data-theme="metal"] a:hover {
+  color: var(--color-secondary);
+  text-shadow: 0 0 12px rgba(158, 252, 56, 0.45);
+}
+
+[data-theme="metal"] input:focus,
+[data-theme="metal"] textarea:focus,
+[data-theme="metal"] select:focus {
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 3px rgba(77, 243, 255, 0.18),
+    0 0 18px rgba(255, 45, 149, 0.25);
+}

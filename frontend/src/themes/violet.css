@@ -1,0 +1,37 @@
+/* Violet Theme */
+:root[data-theme="violet"] {
+  --color-primary: #7c3aed; /* Violet primary */
+  --color-primary-soft: #8b5cf6; /* Lighter violet for hover */
+  --color-secondary: #ffd700; /* Gold secondary */
+  --color-accent: #b22222; /* Crimson accent */
+
+  --color-bg-deep: #0b0812; /* Black with violet tint */
+  --color-bg-alt: #090510; /* Near black with violet */
+  --color-surface-1: #0f172a;
+  --color-surface-2: #111827;
+
+  --color-text: #f9fafb;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #0d0814 0% /* Dark violet edges */,
+    rgba(124, 58, 237, 0.4) 50% /* Purple glow in center */,
+    #080510 100% /* Darker corner */
+  );
+
+  --ck-glow: var(--color-primary-soft);
+
+  /* Box/Card overrides - neutral */
+  --box-bg: rgba(30, 41, 59, 0.5);
+  --box-bg-solid: #1e293b;
+  --box-border: rgba(71, 85, 105, 0.5);
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --box-blur: 12px;
+  --box-radius: 0.75rem;
+  --box-padding: 1.5rem;
+  --box-padding-sm: 0.75rem;
+  --box-padding-lg: 1.5rem;
+  --box-padding-xl: 2rem;
+}
