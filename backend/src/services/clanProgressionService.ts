@@ -422,6 +422,7 @@ class ClanProgressionService {
             amount: xpGain,
             source: options.source ?? 'unspecified',
             matchesPlayed,
+            ...(options.metadata ?? {}),
           },
           client,
         })
