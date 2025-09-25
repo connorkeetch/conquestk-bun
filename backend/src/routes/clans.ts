@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
 import { body, param, query, validationResult } from 'express-validator'
+import type { ParamsDictionary } from 'express-serve-static-core'
 import { authenticateToken } from '../middleware/auth'
 import {
   ClanMembershipServiceError,
@@ -122,7 +123,10 @@ router.post(
     body('region').optional().isString().isLength({ max: 32 }),
     body('timeZone').optional().isString().isLength({ max: 64 }),
   ],
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest<ParamsDictionary, unknown, ClanCreateRequest>,
+    res: Response,
+  ) => {
     if (validateRequest(req as Request, res)) return
 
     try {
@@ -137,14 +141,14 @@ router.post(
         description: req.body.description,
         crestAssetUrl: req.body.crestAssetUrl,
         bannerAssetUrl: req.body.bannerAssetUrl,
-        recruitmentPolicy: req.body.recruitmentPolicy as ClanRecruitmentPolicy | undefined,
-        recruitmentStatus: req.body.recruitmentStatus as ClanRecruitmentStatus | undefined,
+        recruitmentPolicy: req.body.recruitmentPolicy,
+        recruitmentStatus: req.body.recruitmentStatus,
         minimumRank: req.body.minimumRank,
         autoAcceptThresholds: req.body.autoAcceptThresholds,
         language: req.body.language,
         region: req.body.region,
         timeZone: req.body.timeZone,
-        privacy: req.body.privacy as ClanPrivacy | undefined,
+        privacy: req.body.privacy,
       }
 
       const clan = await clanService.createClan(req.userId as string, clanRequest)
@@ -189,7 +193,10 @@ router.post(
   '/:slug/applications',
   authenticateToken,
   [param('slug').isString(), body('message').optional().isString().isLength({ max: 500 })],
-  async (req: AuthenticatedRequest<{ slug: string }>, res: Response) => {
+  async (
+    req: AuthenticatedRequest<{ slug: string }, unknown, { message?: string }>,
+    res: Response,
+  ) => {
     if (validateRequest(req as Request, res)) return
 
     try {

@@ -9,6 +9,7 @@ import type {
   ClanListResult,
   ClanMember,
   ClanMemberStatus,
+  ClanMembershipContext,
   ClanPrivacy,
   ClanRecruitmentPolicy,
   ClanRecruitmentStatus,
@@ -466,7 +467,8 @@ export class ClanService {
         `SELECT clan_id FROM clan_members WHERE user_id = $1 AND status = 'active' LIMIT 1`,
         [ownerUserId],
       )
-      if (membershipCheck.rowCount > 0) {
+      const activeMembershipCount = membershipCheck.rowCount ?? 0
+      if (activeMembershipCount > 0) {
         throw new ClanServiceError(
           'ALREADY_IN_CLAN',
           'You must leave your current clan before creating a new one',
@@ -633,6 +635,59 @@ export class ClanService {
       roleName: row.role_name ?? null,
       status: row.status as ClanMemberStatus,
     }
+  }
+
+  async getActiveMembershipsForUsers(
+    userIds: string[],
+  ): Promise<Map<string, ClanMembershipContext>> {
+    const normalizedIds = Array.from(
+      new Set(userIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)),
+    )
+
+    if (normalizedIds.length === 0) {
+      return new Map()
+    }
+
+    const result = await query<{
+      user_id: string
+      clan_id: string
+      clan_slug: string
+      clan_name: string
+      status: string
+      role_name?: string | null
+    }>(
+      `
+        SELECT
+          m.user_id,
+          m.clan_id,
+          c.slug AS clan_slug,
+          c.name AS clan_name,
+          m.status,
+          r.name AS role_name
+        FROM clan_members m
+        INNER JOIN clans c ON c.id = m.clan_id
+        LEFT JOIN clan_roles r ON r.id = m.role_id
+        WHERE m.user_id = ANY($1::uuid[]) AND m.status = 'active' AND c.deleted_at IS NULL
+      `,
+      [normalizedIds],
+    )
+
+    const membershipMap = new Map<string, ClanMembershipContext>()
+    for (const row of result.rows) {
+      if (!row.user_id || membershipMap.has(row.user_id)) {
+        continue
+      }
+
+      membershipMap.set(row.user_id, {
+        clanId: row.clan_id,
+        clanSlug: row.clan_slug,
+        clanName: row.clan_name,
+        roleName: row.role_name ?? null,
+        status: row.status as ClanMemberStatus,
+      })
+    }
+
+    return membershipMap
   }
 }
 

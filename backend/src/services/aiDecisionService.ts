@@ -43,7 +43,311 @@ class AIDecisionService {
       return this.createFallbackPlan('timeout', request, start)
     }
 
-    return this.createFallbackPlan('stubbed', request, start)
+    try {
+      const plannedActions = this.generatePlan(request)
+
+      if (request.budget.signal?.aborted) {
+        return this.createFallbackPlan('aborted', request, start)
+      }
+
+      const elapsed = Date.now() - start
+      if (elapsed > request.budget.maxThinkTimeMs) {
+        return this.createFallbackPlan('timeout', request, start)
+      }
+
+      if (plannedActions.length === 0) {
+        return this.createFallbackPlan('stubbed', request, start)
+      }
+
+      const boundedActions = this.enforceBudget(plannedActions, request)
+      if (boundedActions.length === 0) {
+        return this.createFallbackPlan('stubbed', request, start)
+      }
+
+      return {
+        actions: boundedActions,
+        usedFallback: false,
+        diagnostics: {
+          generatedAt: new Date().toISOString(),
+          durationMs: elapsed,
+          requestedDifficulty: request.difficulty,
+          plannedActionCount: boundedActions.length,
+          budget: {
+            maxThinkTimeMs: request.budget.maxThinkTimeMs,
+            maxPlannedActions: request.budget.maxPlannedActions,
+          },
+        },
+      }
+    } catch {
+      return this.createFallbackPlan('stubbed', request, start)
+    }
+  }
+
+  private generatePlan(request: DecisionRequest): GameAction[] {
+    if (request.player.isEliminated) {
+      return []
+    }
+
+    switch (request.difficulty) {
+      case 'recruit':
+        return this.generateRecruitPlan(request)
+      default:
+        return []
+    }
+  }
+
+  private generateRecruitPlan(request: DecisionRequest): GameAction[] {
+    const { gameState, player, budget } = request
+    const actions: GameAction[] = []
+    const roomId = gameState.roomId
+    const maxActions = budget.maxPlannedActions ?? Number.POSITIVE_INFINITY
+
+    const pushAction = (action: GameAction) => {
+      if (actions.length < maxActions) {
+        actions.push(action)
+        return true
+      }
+      return false
+    }
+
+    if (gameState.phase === 'setup' || gameState.phase === 'finished') {
+      return []
+    }
+
+    let currentPhase = gameState.phase
+
+    if (currentPhase === 'reinforcement') {
+      const reinforcement = this.buildReinforcementAction(gameState, player.id, player.armies)
+      if (reinforcement) {
+        if (!pushAction(reinforcement)) {
+          return actions
+        }
+      }
+
+      if (!pushAction({ type: 'end_turn', roomId, playerId: player.id })) {
+        return actions
+      }
+
+      currentPhase = 'attack'
+    }
+
+    if (currentPhase === 'attack') {
+      const attack = this.findRecruitAttack(gameState, player.id)
+      if (attack) {
+        if (!pushAction(attack)) {
+          return actions
+        }
+      }
+
+      if (!pushAction({ type: 'end_turn', roomId, playerId: player.id })) {
+        return actions
+      }
+
+      currentPhase = 'fortify'
+    }
+
+    if (currentPhase === 'fortify') {
+      const fortify = this.findRecruitFortify(gameState, player.id)
+      if (fortify) {
+        if (!pushAction(fortify)) {
+          return actions
+        }
+      }
+
+      pushAction({ type: 'end_turn', roomId, playerId: player.id })
+    }
+
+    return actions
+  }
+
+  private buildReinforcementAction(
+    gameState: GameState,
+    playerId: string,
+    availableArmies: number,
+  ): GameAction | null {
+    if (!availableArmies || availableArmies <= 0) {
+      return null
+    }
+
+    const ownedTerritories = gameState.board.filter((territory) => territory.ownerId === playerId)
+    if (ownedTerritories.length === 0) {
+      return null
+    }
+
+    const borderTerritories = ownedTerritories.filter((territory) =>
+      this.hasEnemyNeighbor(gameState, territory, playerId),
+    )
+
+    const targetTerritories = borderTerritories.length > 0 ? borderTerritories : ownedTerritories
+    const target = [...targetTerritories].sort((a, b) => a.armies - b.armies)[0]
+
+    return {
+      type: 'deploy',
+      roomId: gameState.roomId,
+      playerId,
+      payload: {
+        territoryId: target.id,
+        armies: availableArmies,
+      },
+    }
+  }
+
+  private findRecruitAttack(gameState: GameState, playerId: string): GameAction | null {
+    const ownedTerritories = gameState.board.filter((territory) => territory.ownerId === playerId)
+    const rankedSources = [...ownedTerritories].sort((a, b) => b.armies - a.armies)
+
+    for (const source of rankedSources) {
+      if (source.armies <= 3) {
+        continue
+      }
+
+      const hostileNeighbors = source.adjacentTerritories
+        .map((neighborId) => this.getTerritory(gameState, neighborId))
+        .filter((territory): territory is NonNullable<typeof territory> => {
+          if (!territory) {
+            return false
+          }
+          if (territory.ownerId === playerId) {
+            return false
+          }
+          if (
+            territory.ownerId &&
+            this.arePlayersTeammates(gameState, playerId, territory.ownerId)
+          ) {
+            return false
+          }
+          return true
+        })
+        .sort((a, b) => a.armies - b.armies)
+
+      const target = hostileNeighbors.find((neighbor) => source.armies - 1 > neighbor.armies)
+      if (!target) {
+        continue
+      }
+
+      return {
+        type: 'attack',
+        roomId: gameState.roomId,
+        playerId,
+        payload: {
+          fromTerritoryId: source.id,
+          toTerritoryId: target.id,
+          armies: Math.min(3, Math.max(1, source.armies - 1)),
+        },
+      }
+    }
+
+    return null
+  }
+
+  private findRecruitFortify(gameState: GameState, playerId: string): GameAction | null {
+    const ownedTerritories = gameState.board.filter((territory) => territory.ownerId === playerId)
+
+    if (ownedTerritories.length === 0) {
+      return null
+    }
+
+    const interiorSources = ownedTerritories
+      .filter(
+        (territory) =>
+          territory.armies >= 3 && !this.hasEnemyNeighbor(gameState, territory, playerId),
+      )
+      .sort((a, b) => b.armies - a.armies)
+
+    const borderTargets = ownedTerritories
+      .filter((territory) => this.hasEnemyNeighbor(gameState, territory, playerId))
+      .sort((a, b) => a.armies - b.armies)
+
+    for (const source of interiorSources) {
+      for (const target of borderTargets) {
+        if (source.adjacentTerritories.includes(target.id)) {
+          const armiesToMove = Math.min(3, source.armies - 1)
+          if (armiesToMove > 0) {
+            return {
+              type: 'fortify',
+              roomId: gameState.roomId,
+              playerId,
+              payload: {
+                fromTerritoryId: source.id,
+                toTerritoryId: target.id,
+                armies: armiesToMove,
+              },
+            }
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  private enforceBudget(actions: GameAction[], request: DecisionRequest): GameAction[] {
+    const maxAllowed = request.budget.maxPlannedActions
+    if (typeof maxAllowed === 'number') {
+      if (maxAllowed <= 0) {
+        return []
+      }
+      return actions.slice(0, maxAllowed)
+    }
+    return actions
+  }
+
+  private hasEnemyNeighbor(
+    gameState: GameState,
+    territory: GameState['board'][number],
+    playerId: string,
+  ): boolean {
+    return territory.adjacentTerritories.some((neighborId) =>
+      this.isHostileTerritory(gameState, neighborId, playerId),
+    )
+  }
+
+  private isHostileTerritory(gameState: GameState, territoryId: string, playerId: string): boolean {
+    const neighbor = this.getTerritory(gameState, territoryId)
+    if (!neighbor) {
+      return false
+    }
+
+    if (neighbor.ownerId === playerId) {
+      return false
+    }
+
+    if (neighbor.ownerId && this.arePlayersTeammates(gameState, playerId, neighbor.ownerId)) {
+      return false
+    }
+
+    return true
+  }
+
+  private arePlayersTeammates(
+    gameState: GameState,
+    playerA: string,
+    playerB?: string | null,
+  ): boolean {
+    if (!playerB || playerB === 'neutral') {
+      return false
+    }
+
+    if (!gameState.gameConfig.allowTeamPlay) {
+      return false
+    }
+
+    const player = gameState.players.find((entry) => entry.id === playerA)
+    const teammate = gameState.players.find((entry) => entry.id === playerB)
+
+    if (!player || !teammate) {
+      return false
+    }
+
+    const playerTeam = typeof player.teamId === 'number' && player.teamId > 0 ? player.teamId : null
+    const teammateTeam =
+      typeof teammate.teamId === 'number' && teammate.teamId > 0 ? teammate.teamId : null
+
+    return playerTeam !== null && playerTeam === teammateTeam
+  }
+
+  private getTerritory(gameState: GameState, territoryId: string) {
+    return gameState.board.find((territory) => territory.id === territoryId) ?? null
   }
 
   buildFallbackPlan(gameState: GameState, playerId: string): GameAction[] {
