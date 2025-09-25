@@ -18,10 +18,16 @@ _Last updated: September 24, 2025_
 ## Scope
 - AI seats in synchronous and asynchronous games.
 - Three difficulty tiers with increasing sophistication.
-- Backend‑driven decision service; optional native worker for heavy search if profiling proves need.
-- Frontend UX for AI configuration, in‑game indicators, replays, and post‑game stats.
+- Backend-driven decision service; optional native worker for heavy search if profiling proves need.
+- Frontend UX for AI configuration, in-game indicators, replays, and post-game stats.
 
-**Out of scope for launch**: campaigns, hybrid human+AI co‑piloting, machine‑learned policies.
+**Out of scope for launch**: campaigns, hybrid human+AI co-piloting, machine-learned policies.
+
+## Current status
+- Lobby creation accepts AI opponent payloads behind feature flags and returns enriched player metadata to clients.
+- Game room UI displays AI badges, hides DM tabs for non-human seats, and team assignment supports AI slots.
+- Socket `player-joined` / `player-left` events now include AI identifiers, difficulty, and readiness while `ensureAiReadyStates` keeps AI opponents auto-ready after lobby roster changes.
+- Added regression coverage for socket payloads, AI readiness hydration, and Redux room state to lock in the lobby behaviour.
 
 ## User‑facing experience
 1. **Creation**: hosts can add AI per seat and set difficulty; async and real‑time supported.
@@ -85,6 +91,7 @@ Async: may exceed real‑time budgets with queue persistence, still bounded by w
 - Battle worker reactivation, Bull queue reliability, Redis monitoring, AI strings and localization.
 
 ## Next steps
-1. Confirm schema and API changes, then ship Phase 1 behind a flag.
-2. Profile decision complexity on max‑player maps.
-3. Finalize message contracts for aiDecisionService and any cross‑language bridge.
+1. Expose AI opponent controls in the Create Game and lobby management UI (difficulty picker, slot counts) gated by the existing feature flags.
+2. Implement backend endpoints to adjust AI rosters post-creation (add/remove seats) while reusing the new readiness guard.
+3. Profile decision complexity on max-player maps to validate Recruit/Commander TypeScript strategies meet turn budgets.
+4. Finalize message contracts for `aiDecisionService` and any cross-language bridge ahead of Commander tier work.

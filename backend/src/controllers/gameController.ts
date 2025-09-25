@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
+import { featureFlagService } from '../services/featureFlagService'
 import type { AuthenticatedRequest } from '../types/express'
 import { logger } from '../utils/logger'
 
@@ -31,6 +32,8 @@ export class GameController {
         teamMode,
         numberOfTeams,
         allowTeamPlay,
+        isRanked,
+        aiOpponents,
       } = req.body as CreateRoomRequestBody
       const hostId = req.userId
 
@@ -44,6 +47,8 @@ export class GameController {
           : typeof numberOfTeams === 'string'
             ? Number.parseInt(numberOfTeams, 10)
             : undefined
+
+      const normalizedIsRanked = Boolean(isRanked)
 
       let normalizedTeamMode: 'none' | 'teams' | 'auto_balance'
       if (teamMode === 'teams' || teamMode === 'auto_balance' || teamMode === 'none') {
@@ -61,6 +66,74 @@ export class GameController {
         normalizedTeamMode = 'none'
       }
 
+      const requestedAiOpponents = Array.isArray(aiOpponents) ? aiOpponents : []
+      const normalizedAiOpponents: Array<{
+        difficulty: 'recruit' | 'commander' | 'grandmaster'
+        personalitySeed?: number | null
+      }> = []
+
+      if (requestedAiOpponents.length > 0 && !normalizedIsRanked) {
+        const aiLobbyEnabled = await featureFlagService.evaluateFlagByName(
+          'experimental_ai_lobby_options',
+          req.user ?? undefined,
+        )
+
+        if (aiLobbyEnabled) {
+          const recruitEnabled = await featureFlagService.evaluateFlagByName(
+            'experimental_ai_recruit',
+            req.user ?? undefined,
+          )
+          const commanderEnabled = await featureFlagService.evaluateFlagByName(
+            'experimental_ai_commander',
+            req.user ?? undefined,
+          )
+          const grandmasterEnabled = await featureFlagService.evaluateFlagByName(
+            'experimental_ai_grandmaster',
+            req.user ?? undefined,
+          )
+
+          const allowedDifficulties = new Set<string>()
+          if (recruitEnabled) allowedDifficulties.add('recruit')
+          if (commanderEnabled) allowedDifficulties.add('commander')
+          if (grandmasterEnabled) allowedDifficulties.add('grandmaster')
+
+          if (allowedDifficulties.size > 0) {
+            for (const opponent of requestedAiOpponents) {
+              if (!opponent || typeof opponent !== 'object') {
+                continue
+              }
+
+              const rawDifficulty =
+                typeof opponent.difficulty === 'string'
+                  ? opponent.difficulty.toLowerCase()
+                  : null
+
+              if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty)) {
+                continue
+              }
+
+              let personalitySeed: number | null | undefined
+              if (
+                typeof opponent.personalitySeed === 'number' &&
+                Number.isFinite(opponent.personalitySeed)
+              ) {
+                personalitySeed = Math.trunc(opponent.personalitySeed)
+              }
+
+              normalizedAiOpponents.push({
+                difficulty: rawDifficulty as 'recruit' | 'commander' | 'grandmaster',
+                personalitySeed: personalitySeed ?? undefined,
+              })
+            }
+          }
+        }
+      }
+
+      const maxAiSlots = Math.max(0, (maxPlayers || 6) - 1)
+      if (normalizedAiOpponents.length > maxAiSlots) {
+        normalizedAiOpponents.splice(maxAiSlots)
+      }
+
       const roomData: CreateRoomData = {
         name,
         hostId,
@@ -75,6 +148,8 @@ export class GameController {
           typeof parsedNumberOfTeams === 'number' && !Number.isNaN(parsedNumberOfTeams)
             ? parsedNumberOfTeams
             : undefined,
+        isRanked: normalizedIsRanked,
+        aiOpponents: normalizedAiOpponents,
       }
 
       const room = await this.gameRoomService.createRoom(roomData)
@@ -92,7 +167,9 @@ export class GameController {
 
       await this.lifecycleService.refreshLifecycle(room.id)
 
-      return res.status(201).json({ room })
+      const hydratedRoom = await this.gameRoomService.getRoomById(room.id)
+
+      return res.status(201).json({ room: hydratedRoom ?? room })
     } catch (error) {
       logger.error('Create room error:', error)
 
@@ -115,8 +192,9 @@ export class GameController {
     try {
       const { roomId } = req.params
       const hostId = req.userId
-      const { playerId, teamId } = req.body as {
+      const { playerId, playerSlotId, teamId } = req.body as {
         playerId?: string
+        playerSlotId?: string
         teamId?: number | string | null
       }
 
@@ -124,7 +202,9 @@ export class GameController {
         return res.status(401).json({ message: 'Authentication required' })
       }
 
-      if (!playerId) {
+      const targetIdentifier = playerSlotId ?? playerId
+
+      if (!targetIdentifier) {
         return res.status(400).json({ message: 'playerId is required' })
       }
 
@@ -142,7 +222,7 @@ export class GameController {
       const room = await this.gameRoomService.assignPlayerToTeam(
         roomId,
         hostId,
-        playerId,
+        targetIdentifier,
         parsedTeamId,
       )
 
@@ -342,4 +422,9 @@ type CreateRoomRequestBody = {
   teamMode?: 'none' | 'teams' | 'auto_balance' | boolean
   numberOfTeams?: number | string
   allowTeamPlay?: boolean
+  isRanked?: boolean
+  aiOpponents?: Array<{
+    difficulty?: string
+    personalitySeed?: number
+  }>
 }

@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MapDetailModal from '@/components/MapDetailModal'
 import { logger } from '@/utils/logger'
@@ -8,6 +8,7 @@ import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import api from '../services/api'
+import type { AIDifficulty } from '../types/game'
 import { type CreateGameData, gameService } from '../services/gameService'
 
 // Map interface
@@ -117,6 +118,20 @@ const getColorName = (color: string | PlayerColor): string => {
   return 'Custom'
 }
 
+const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
+  recruit: 'Recruit',
+  commander: 'Commander',
+  grandmaster: 'Grandmaster',
+}
+
+const AI_DIFFICULTY_DESCRIPTIONS: Record<AIDifficulty, string> = {
+  recruit: 'Fast, forgiving baseline opponent',
+  commander: 'Balanced with threat awareness',
+  grandmaster: 'Advanced tactics and deeper lookahead',
+}
+
+const AI_DIFFICULTY_ORDER: AIDifficulty[] = ['recruit', 'commander', 'grandmaster']
+
 // Reusable OptionCard component
 interface OptionCardProps {
   number: string
@@ -165,6 +180,11 @@ const CreateGamePage: React.FC = () => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
+  const aiPlayersEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
+  const aiLobbyEnabled = useFeatureFlag(FEATURE_FLAGS.AI_LOBBY_OPTIONS)
+  const aiRecruitEnabled = useFeatureFlag(FEATURE_FLAGS.AI_RECRUIT)
+  const aiCommanderEnabled = useFeatureFlag(FEATURE_FLAGS.AI_COMMANDER)
+  const aiGrandmasterEnabled = useFeatureFlag(FEATURE_FLAGS.AI_GRANDMASTER)
   const [searchParams] = useSearchParams()
 
   const initialMode: 'casual' | 'ranked' =
@@ -204,11 +224,135 @@ const CreateGamePage: React.FC = () => {
   const [playersOption, setPlayersOption] = useState<number | 'random'>(6)
   const [createAndStay, setCreateAndStay] = useState(false)
   const [mapSearch, setMapSearch] = useState('')
+  const [aiCounts, setAiCounts] = useState<Record<AIDifficulty, number>>({
+    recruit: 0,
+    commander: 0,
+    grandmaster: 0,
+  })
 
   // Maps state
   const [maps, setMaps] = useState<GameMap[]>([])
   const [mapsLoading, setMapsLoading] = useState(true)
   const [mapDetailModalId, setMapDetailModalId] = useState<string | null>(null)
+
+  const allowedAiDifficulties = useMemo(() => {
+    const difficulties: AIDifficulty[] = []
+    if (aiRecruitEnabled) difficulties.push('recruit')
+    if (aiCommanderEnabled) difficulties.push('commander')
+    if (aiGrandmasterEnabled) difficulties.push('grandmaster')
+    return difficulties
+  }, [aiRecruitEnabled, aiCommanderEnabled, aiGrandmasterEnabled])
+
+  const maxAiSlots = useMemo(() => Math.max(0, maxPlayers - 1), [maxPlayers])
+
+  const normalizeAiCounts = useCallback(
+    (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
+      const baseline: Record<AIDifficulty, number> = {
+        recruit: 0,
+        commander: 0,
+        grandmaster: 0,
+      }
+
+      if (!aiPlayersEnabled || !aiLobbyEnabled || isRanked || allowedAiDifficulties.length === 0) {
+        return baseline
+      }
+
+      const sanitized: Record<AIDifficulty, number> = { ...baseline }
+      let total = 0
+
+      allowedAiDifficulties.forEach((difficulty) => {
+        const raw = counts[difficulty] ?? 0
+        const value = Math.max(0, Math.trunc(raw))
+        sanitized[difficulty] = value
+        total += value
+      })
+
+      let overflow = total - maxAiSlots
+      if (overflow > 0) {
+        const reductionOrder = [...AI_DIFFICULTY_ORDER].reverse()
+        while (overflow > 0) {
+          const target = reductionOrder.find(
+            (difficulty) => allowedAiDifficulties.includes(difficulty) && sanitized[difficulty] > 0,
+          )
+          if (!target) {
+            break
+          }
+          sanitized[target] -= 1
+          overflow -= 1
+        }
+      }
+
+      return sanitized
+    },
+    [aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties, isRanked, maxAiSlots],
+  )
+
+  useEffect(() => {
+    setAiCounts((previous) => {
+      const normalized = normalizeAiCounts(previous)
+      const hasChanged = AI_DIFFICULTY_ORDER.some((difficulty) => normalized[difficulty] !== previous[difficulty])
+      return hasChanged ? normalized : previous
+    })
+  }, [normalizeAiCounts])
+
+  const totalAiOpponents = useMemo(() => {
+    if (!aiPlayersEnabled || !aiLobbyEnabled) {
+      return 0
+    }
+    return allowedAiDifficulties.reduce((sum, difficulty) => sum + (aiCounts[difficulty] ?? 0), 0)
+  }, [aiCounts, aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties])
+
+  const remainingAiSlots = Math.max(0, maxAiSlots - totalAiOpponents)
+
+  const buildAiOpponentPayload = useCallback(
+    (counts: Record<AIDifficulty, number>) => {
+      const payload: Array<{ difficulty: AIDifficulty; personalitySeed?: number | null }> = []
+      if (!aiPlayersEnabled || !aiLobbyEnabled || isRanked) {
+        return payload
+      }
+
+      allowedAiDifficulties.forEach((difficulty) => {
+        const count = counts[difficulty] ?? 0
+        for (let index = 0; index < count; index += 1) {
+          payload.push({ difficulty })
+        }
+      })
+
+      return payload
+    },
+    [aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties, isRanked],
+  )
+
+  const handleAiCountChange = useCallback(
+    (difficulty: AIDifficulty, value: number) => {
+      setAiCounts((previous) => normalizeAiCounts({ ...previous, [difficulty]: value }))
+    },
+    [normalizeAiCounts],
+  )
+
+  const adjustAiCount = useCallback(
+    (difficulty: AIDifficulty, delta: number) => {
+      setAiCounts((previous) =>
+        normalizeAiCounts({ ...previous, [difficulty]: (previous[difficulty] ?? 0) + delta }),
+      )
+    },
+    [normalizeAiCounts],
+  )
+
+  const showAiOpponentCard = aiPlayersEnabled && aiLobbyEnabled && !isRanked
+
+  const getStepNumber = useCallback(
+    (base: number) => {
+      if (!showAiOpponentCard) {
+        return String(base)
+      }
+      if (base < 5) {
+        return String(base)
+      }
+      return String(base + 1)
+    },
+    [showAiOpponentCard],
+  )
 
   const lastAppliedModeRef = useRef<'casual' | 'ranked' | null>(initialMode)
   const modeParam = searchParams.get('mode')
@@ -451,6 +595,14 @@ const CreateGamePage: React.FC = () => {
           ? availableMaps[Math.floor(Math.random() * availableMaps.length)]?.id || 'classic'
           : selectedMap
 
+      const aiOpponentsPayload = buildAiOpponentPayload(aiCounts)
+      const maxAllowedAi = Math.max(0, finalPlayers - 1)
+
+      if (aiOpponentsPayload.length > maxAllowedAi) {
+        setError(`Reduce AI opponents to ${maxAllowedAi} or choose a higher player count.`)
+        return
+      }
+
       const gameData: CreateGameData = {
         name: gameName || generateSmartName(true), // Resolve random options when creating
         maxPlayers: finalPlayers,
@@ -465,6 +617,10 @@ const CreateGamePage: React.FC = () => {
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,
         modifierDistribution: finalModifiers ? modifierDistribution : 'none',
+      }
+
+      if (aiOpponentsPayload.length > 0) {
+        gameData.aiOpponents = aiOpponentsPayload
       }
 
       const response = await gameService.createRoom(gameData)
@@ -841,8 +997,95 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
+        {showAiOpponentCard && (
+          <OptionCard number="5" title="AI Opponents (Optional)">
+            {allowedAiDifficulties.length === 0 ? (
+              <p className="text-xs text-muted">
+                No AI difficulties are currently enabled for your account. Ask an admin to enable
+                an AI tier flag to add computer opponents.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-muted">
+                  You can reserve up to {maxAiSlots} AI slot{maxAiSlots === 1 ? '' : 's'} in this
+                  lobby. {remainingAiSlots > 0 ? `${remainingAiSlots} open slot${remainingAiSlots === 1 ? '' : 's'} remaining.` : 'No open slots remain—lower counts or raise max players.'}
+                </p>
+                {playersOption === 'random' && (
+                  <p className="text-xs text-amber-300">
+                    Random player counts are resolved at game creation. If the roll produces fewer
+                    seats than the reserved AI total, excess opponents are dropped automatically.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {allowedAiDifficulties.map((difficulty) => {
+                    const count = aiCounts[difficulty] ?? 0
+                    const label = AI_DIFFICULTY_LABELS[difficulty]
+                    const description = AI_DIFFICULTY_DESCRIPTIONS[difficulty]
+                    const canDecrease = count > 0
+                    const canIncrease = remainingAiSlots > 0
+
+                    return (
+                      <div
+                        key={difficulty}
+                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                      >
+                        <div className="mr-4">
+                          <div className="font-medium text-sm text-white">{label}</div>
+                          <p className="text-xs text-muted">{description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => adjustAiCount(difficulty, -1)}
+                            disabled={!canDecrease}
+                            className={`h-8 w-8 rounded-lg border border-white/20 text-lg leading-none ${
+                              canDecrease
+                                ? 'bg-white/10 text-white hover:bg-white/20'
+                                : 'bg-transparent text-muted cursor-not-allowed opacity-50'
+                            }`}
+                            aria-label={`Remove ${label} AI opponent`}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxAiSlots}
+                            value={count}
+                            onChange={(event) => {
+                              const nextValue = Number.parseInt(event.target.value, 10)
+                              handleAiCountChange(
+                                difficulty,
+                                Number.isNaN(nextValue) ? 0 : Math.max(0, nextValue),
+                              )
+                            }}
+                            className="w-16 rounded-lg border border-white/20 bg-surface-2 px-2 py-1 text-center text-sm text-white focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => adjustAiCount(difficulty, 1)}
+                            disabled={!canIncrease}
+                            className={`h-8 w-8 rounded-lg border border-white/20 text-lg leading-none ${
+                              canIncrease
+                                ? 'bg-white/10 text-white hover:bg-white/20'
+                                : 'bg-transparent text-muted cursor-not-allowed opacity-50'
+                            }`}
+                            aria-label={`Add ${label} AI opponent`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </OptionCard>
+        )}
+
         {/* 5. Teams Card */}
-        <OptionCard number="5" title="Teams">
+        <OptionCard number={getStepNumber(5)} title="Teams">
           <div className="space-y-2">
             <button
               type="button"
@@ -897,7 +1140,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 6. Fortification Card */}
-        <OptionCard number="6" title="Fortification">
+        <OptionCard number={getStepNumber(6)} title="Fortification">
           <div className="space-y-2">
             <button
               type="button"
@@ -969,7 +1212,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 7. Spoils of War Card */}
-        <OptionCard number="7" title="Spoils of War">
+        <OptionCard number={getStepNumber(7)} title="Spoils of War">
           <div className="space-y-2">
             <button
               type="button"
@@ -1028,7 +1271,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 8. Advanced Options Card */}
-        <OptionCard number="8" title="Advanced Options">
+        <OptionCard number={getStepNumber(8)} title="Advanced Options">
           <div className="space-y-4">
             {/* Fog of War Section */}
             <div>
@@ -1153,7 +1396,7 @@ const CreateGamePage: React.FC = () => {
         </OptionCard>
 
         {/* 9. Choose Your Color Card */}
-        <OptionCard number="9" title="Choose Your Color">
+        <OptionCard number={getStepNumber(9)} title="Choose Your Color">
           <div className="space-y-3">
             {/* Display selected color name */}
             <div className="text-center p-2 bg-white/10 rounded-lg">
@@ -1236,7 +1479,7 @@ const CreateGamePage: React.FC = () => {
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
             <span className="text-2xl bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-              10
+              {getStepNumber(10)}
             </span>
             <span className="text-white">Select Map</span>
           </h2>

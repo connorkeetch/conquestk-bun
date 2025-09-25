@@ -60,17 +60,18 @@ export default function TabbedGameChat({
     }
 
     players
-      .filter((player) => player.userId !== currentUserId)
+      .filter((player) => player.userId && player.userId !== currentUserId)
       .forEach((player) => {
+        const userId = player.userId as string
         const isTeammate = userTeamId !== null && player.teamId === userTeamId
         const teamIndicator = isTeammate ? ' 🤝' : ''
 
         builtTabs.push({
-          id: `dm-${player.userId}`,
+          id: `dm-${userId}`,
           label: `💬 ${player.username}${teamIndicator}`,
           type: 'dm',
-          conversationId: player.userId,
-          badge: unreadCounts[`dm:${player.userId}`]?.unreadCount || 0,
+          conversationId: userId,
+          badge: unreadCounts[`dm:${userId}`]?.unreadCount || 0,
           enabled: true,
         })
       })

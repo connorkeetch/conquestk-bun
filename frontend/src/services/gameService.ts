@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { GameState } from '../types/game'
+import type { AIDifficulty, GameState } from '../types/game'
 import type { GameRoom } from '../types/gameRoom'
 
 // Use relative URL in production, absolute URL in development
@@ -33,6 +33,10 @@ export interface CreateGameData {
   capitalsEnabled?: boolean
   useTerritoryModifiers?: boolean
   modifierDistribution?: 'none' | 'sparse' | 'balanced' | 'abundant'
+  aiOpponents?: Array<{
+    difficulty: AIDifficulty
+    personalitySeed?: number | null
+  }>
 }
 
 export interface JoinGameResponse {
@@ -62,10 +66,20 @@ export const gameService = {
     return response.data
   },
 
-  async assignPlayerTeam(roomId: string, playerId: string, teamId: number | null) {
+  async assignPlayerTeam(roomId: string, playerSlotId: string, teamId: number | null) {
     const response = await api.post(`/game/rooms/${roomId}/team-assignments`, {
-      playerId,
+      playerSlotId,
       teamId,
+    })
+    return response.data
+  },
+
+  async updateAiOpponents(
+    roomId: string,
+    aiOpponents: Array<{ difficulty: AIDifficulty; personalitySeed?: number | null }>,
+  ) {
+    const response = await api.put(`/game/rooms/${roomId}/ai-opponents`, {
+      aiOpponents,
     })
     return response.data
   },

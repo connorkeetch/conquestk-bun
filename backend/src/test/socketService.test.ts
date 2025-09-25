@@ -430,8 +430,46 @@ describe('socketService event handlers', () => {
       'player-joined',
       expect.objectContaining({
         roomId: 'room-123',
-        player: expect.objectContaining({ userId: 'user-1', username: 'User One' }),
+        player: expect.objectContaining({
+          userId: 'user-1',
+          username: 'User One',
+          isAi: false,
+          isReady: false,
+        }),
       }),
     ])
+  })
+
+  it('emits rich metadata when a user leaves a game channel', async () => {
+    mockGetPlayer.mockResolvedValueOnce({
+      id: 'slot-42',
+      userId: 'user-1',
+      aiPlayerId: null,
+      username: 'User One',
+      joinedAt: new Date('2024-01-03T00:00:00Z'),
+      isAi: false,
+      isReady: false,
+      readyAt: null,
+      teamId: null,
+    })
+
+    const { socket } = initialiseHandlers()
+    const leaveHandler = getSocketHandler(socket, 'leave-room')
+
+    await leaveHandler('room-depart')
+
+    const toMock = socket.to as jest.Mock
+    expect(toMock).toHaveBeenCalledWith('game:room-depart')
+
+    expect(socket.broadcastEmit).toHaveBeenCalledWith(
+      'player-left',
+      expect.objectContaining({
+        roomId: 'room-depart',
+        playerSlotId: 'slot-42',
+        userId: 'user-1',
+        aiPlayerId: null,
+        isAi: false,
+      }),
+    )
   })
 })

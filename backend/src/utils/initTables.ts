@@ -54,7 +54,8 @@ async function createPostgreSQLTables(): Promise<void> {
     `CREATE TABLE IF NOT EXISTS room_players (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         room_id UUID NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        ai_player_id UUID,
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_ai BOOLEAN NOT NULL DEFAULT FALSE,
         ai_difficulty VARCHAR(20),

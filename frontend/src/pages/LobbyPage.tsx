@@ -508,11 +508,11 @@ const LobbyPage: React.FC = () => {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Email Verification Banner */}
       {emailVerified === false && (
-        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-          <div className="flex items-center justify-between">
+        <div className="panel mb-6 border-[color:var(--color-warning)] bg-[color:var(--hover-bg)]">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <svg
-                className="w-5 h-5 text-yellow-400 mt-0.5"
+                className="w-5 h-5 text-[color:var(--color-warning)] mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 aria-hidden="true"
@@ -525,18 +525,20 @@ const LobbyPage: React.FC = () => {
                 />
               </svg>
               <div>
-                <h3 className="text-yellow-300 font-medium">Verify Your Email</h3>
+                <h3 className="font-medium text-[color:var(--color-warning)]">Verify Your Email</h3>
                 <p className="text-muted text-sm mt-1">
                   Please verify your email address to access all features. Check your inbox for the
                   verification link.
                 </p>
-                {resendMessage && <p className="text-green-400 text-sm mt-2">{resendMessage}</p>}
+                {resendMessage && (
+                  <p className="text-sm text-[color:var(--color-success)] mt-2">{resendMessage}</p>
+                )}
               </div>
             </div>
             <button
               type="button"
               onClick={handleResendVerification}
-              className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-sm font-medium rounded-lg transition-colors"
+              className="btn btn-secondary btn-sm text-[color:var(--color-warning)] border-[color:var(--color-warning)]"
             >
               Resend Email
             </button>
@@ -547,7 +549,9 @@ const LobbyPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-primary-soft mb-2">Game Lobby</h1>
+          <h1 className="text-4xl font-bold text-[color:var(--color-primary-soft)] mb-2">
+            Game Lobby
+          </h1>
           <p className="text-muted">Find and join games, or create your own</p>
         </div>
         <div className="flex gap-3">
@@ -567,9 +571,9 @@ const LobbyPage: React.FC = () => {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="mb-6 glass-box-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">Filter Options</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="panel mb-6 space-y-6">
+          <h3 className="text-lg font-semibold text-[color:var(--heading)]">Filter Options</h3>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
               <p className="text-sm text-muted mb-2">Game Type</p>
               <div className="segmented-control">
@@ -598,14 +602,17 @@ const LobbyPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-white text-sm mb-2" htmlFor={mapFieldId}>
+              <label
+                className="block text-sm text-[color:var(--heading)] mb-2"
+                htmlFor={mapFieldId}
+              >
                 Map
               </label>
               <select
                 id={mapFieldId}
                 value={filters.map}
                 onChange={(e) => setFilters((prev) => ({ ...prev, map: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white focus:border-primary focus:outline-none"
+                className="form-select w-full"
               >
                 <option value="all">All maps</option>
                 {mapOptions.map((option) => (
@@ -617,14 +624,17 @@ const LobbyPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-white text-sm mb-2" htmlFor={modeFieldId}>
+              <label
+                className="block text-sm text-[color:var(--heading)] mb-2"
+                htmlFor={modeFieldId}
+              >
                 Game Mode
               </label>
               <select
                 id={modeFieldId}
                 value={filters.gameMode}
                 onChange={(e) => setFilters((prev) => ({ ...prev, gameMode: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white focus:border-primary focus:outline-none"
+                className="form-select w-full"
               >
                 <option value="all">All modes</option>
                 {gameModeOptions.map((option) => (
@@ -636,7 +646,10 @@ const LobbyPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-white text-sm mb-2" htmlFor={teamFieldId}>
+              <label
+                className="block text-sm text-[color:var(--heading)] mb-2"
+                htmlFor={teamFieldId}
+              >
                 Team Setup
               </label>
               <select
@@ -648,7 +661,7 @@ const LobbyPage: React.FC = () => {
                     teamPreference: e.target.value as LobbyFilters['teamPreference'],
                   }))
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white focus:border-primary focus:outline-none"
+                className="form-select w-full"
               >
                 <option value="all">All team settings</option>
                 <option value="ffa">Free-for-all</option>
@@ -657,7 +670,10 @@ const LobbyPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-white text-sm mb-2" htmlFor={minPlayersFieldId}>
+              <label
+                className="block text-sm text-[color:var(--heading)] mb-2"
+                htmlFor={minPlayersFieldId}
+              >
                 Min Players
               </label>
               <input
@@ -672,12 +688,15 @@ const LobbyPage: React.FC = () => {
                     minPlayers: Number.parseInt(e.target.value, 10) || 2,
                   }))
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white focus:border-primary focus:outline-none"
+                className="form-input w-full"
               />
             </div>
 
             <div>
-              <label className="block text-white text-sm mb-2" htmlFor={maxPlayersFieldId}>
+              <label
+                className="block text-sm text-[color:var(--heading)] mb-2"
+                htmlFor={maxPlayersFieldId}
+              >
                 Max Players
               </label>
               <input
@@ -692,28 +711,28 @@ const LobbyPage: React.FC = () => {
                     maxPlayers: Number.parseInt(e.target.value, 10) || 12,
                   }))
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-lg text-white focus:border-primary focus:outline-none"
+                className="form-input w-full"
               />
             </div>
 
             <div className="space-y-3">
-              <label className="flex items-center space-x-2 text-white">
+              <label className="flex items-center gap-2 text-[color:var(--text)]">
                 <input
                   type="checkbox"
                   checked={filters.showFull}
                   onChange={(e) => setFilters((prev) => ({ ...prev, showFull: e.target.checked }))}
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-primary"
+                  className="form-checkbox"
                 />
                 <span>Show full games</span>
               </label>
-              <label className="flex items-center space-x-2 text-white">
+              <label className="flex items-center gap-2 text-[color:var(--text)]">
                 <input
                   type="checkbox"
                   checked={filters.showInProgress}
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, showInProgress: e.target.checked }))
                   }
-                  className="rounded border-border bg-surface-2 text-blue-600 focus:ring-primary"
+                  className="form-checkbox"
                 />
                 <span>Show in-progress games</span>
               </label>
@@ -723,7 +742,7 @@ const LobbyPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setFilters({ ...DEFAULT_LOBBY_FILTERS })}
-              className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
+              className="btn btn-secondary"
             >
               Reset Filters
             </button>
@@ -760,16 +779,16 @@ const LobbyPage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="text-red-400">❌</span>
-              <span className="text-red-400">{error}</span>
+        <div className="panel mb-6 border-[color:var(--color-danger)] bg-[color:var(--hover-bg)] text-[color:var(--color-danger)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true">❌</span>
+              <span>{error}</span>
             </div>
             <button
               type="button"
               onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-300"
+              className="btn btn-ghost btn-sm text-[color:var(--color-danger)]"
             >
               ×
             </button>
@@ -783,7 +802,7 @@ const LobbyPage: React.FC = () => {
           <div>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-white">Public Games</h2>
+                <h2 className="text-2xl font-bold text-[color:var(--heading)]">Public Games</h2>
                 <p className="text-sm text-muted mt-1">
                   Showing {filteredPublicGames.length} of {publicGames.length} available rooms
                 </p>
@@ -818,7 +837,7 @@ const LobbyPage: React.FC = () => {
                   type="button"
                   onClick={loadPublicGames}
                   disabled={loading}
-                  className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`btn btn-secondary btn-sm ${loading ? 'opacity-75' : ''}`}
                 >
                   {loading ? '🔄 Loading...' : '🔄 Refresh'}
                 </button>
@@ -830,30 +849,33 @@ const LobbyPage: React.FC = () => {
                 {() => <GameCardSkeleton />}
               </SkeletonGroup>
             ) : publicGames.length === 0 ? (
-              <div className="text-center text-muted py-16">
+              <div className="panel text-center py-16">
                 <div className="text-6xl mb-4">🎲</div>
-                <p className="text-lg mb-2">No public games available</p>
-                <p className="text-sm mb-6">Be the first to create a game for others to join!</p>
-                <Link
-                  to="/create"
-                  className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
-                >
+                <p className="text-lg mb-2 text-[color:var(--heading)]">
+                  No public games available
+                </p>
+                <p className="text-sm mb-6 text-muted">
+                  Be the first to create a game for others to join!
+                </p>
+                <Link to="/create" className="btn btn-primary">
                   🎮 Create Game
                 </Link>
               </div>
             ) : (
               <div className="grid gap-4">
                 {filteredPublicGames.length === 0 ? (
-                  <div className="text-center text-muted py-16">
+                  <div className="panel text-center py-16">
                     <div className="text-6xl mb-4">🔍</div>
-                    <p className="text-lg mb-2 text-muted">No games match your filters</p>
-                    <p className="text-sm mb-6">
+                    <p className="text-lg mb-2 text-[color:var(--heading)]">
+                      No games match your filters
+                    </p>
+                    <p className="text-sm mb-6 text-muted">
                       Try adjusting your filter settings or create a new game
                     </p>
                     <button
                       type="button"
                       onClick={() => setFilters({ ...DEFAULT_LOBBY_FILTERS })}
-                      className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
+                      className="btn btn-secondary"
                     >
                       Reset Filters
                     </button>
@@ -866,8 +888,8 @@ const LobbyPage: React.FC = () => {
                     const statusClass = getGameStatusColor(game.status)
                     const gameTypeClass =
                       game.isRanked === true
-                        ? 'bg-purple-500/15 border border-purple-400/30 text-purple-200'
-                        : 'bg-green-500/15 border border-green-400/30 text-green-200'
+                        ? 'badge bg-[color:var(--color-primary)] text-[color:var(--color-white)] border-[color:var(--color-primary)]'
+                        : 'badge bg-[color:var(--color-success)] text-[color:var(--color-white)] border-[color:var(--color-success)]'
 
                     const openSlots = Math.max(game.maxPlayers - currentPlayers, 0)
                     const capacityLabel = isLobbyStatus(game.status)
@@ -894,11 +916,11 @@ const LobbyPage: React.FC = () => {
                       <Link
                         key={game.id}
                         to={`/room/${game.id}`}
-                        className="group block bg-surface-1 border border-border rounded-lg p-4 hover:border-primary transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="panel block group transition-shadow hover:border-[color:var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-white truncate">
+                            <h3 className="text-lg font-semibold text-[color:var(--heading)] truncate">
                               {game.name}
                             </h3>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted mt-1">
@@ -907,9 +929,7 @@ const LobbyPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${gameTypeClass}`}
-                            >
+                            <span className={gameTypeClass}>
                               {game.isRanked === true ? 'Ranked' : 'Casual'}
                             </span>
                             {game.hostUsername && (
@@ -919,10 +939,7 @@ const LobbyPage: React.FC = () => {
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
                           {uniqueDetailBadges.map((badge) => (
-                            <span
-                              key={`${game.id}-${badge}`}
-                              className="px-2 py-1 rounded-full border border-border/60 bg-surface-2 text-xs text-muted group-hover:border-primary/60"
-                            >
+                            <span key={`${game.id}-${badge}`} className="chip text-xs">
                               {badge}
                             </span>
                           ))}
@@ -934,7 +951,7 @@ const LobbyPage: React.FC = () => {
                             </span>
                             <span>• {capacityLabel}</span>
                           </div>
-                          <span className="text-primary-soft font-medium flex items-center gap-1">
+                          <span className="text-[color:var(--color-primary-soft)] font-medium flex items-center gap-1">
                             Open lobby
                             <span aria-hidden="true">→</span>
                           </span>
@@ -951,12 +968,12 @@ const LobbyPage: React.FC = () => {
         {activeTab === 'my-games' && user && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">My Games</h2>
+              <h2 className="text-2xl font-bold text-[color:var(--heading)]">My Games</h2>
               <button
                 type="button"
                 onClick={loadMyGames}
                 disabled={loading}
-                className="px-3 py-1 glass-box-sm hover:brightness-110 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`btn btn-secondary btn-sm ${loading ? 'opacity-75' : ''}`}
               >
                 {loading ? '🔄 Loading...' : '🔄 Refresh'}
               </button>
@@ -1002,22 +1019,19 @@ const LobbyPage: React.FC = () => {
                 {() => <GameCardSkeleton />}
               </SkeletonGroup>
             ) : myGames.length === 0 ? (
-              <div className="text-center text-muted py-16">
+              <div className="panel text-center py-16">
                 <div className="text-6xl mb-4">🎮</div>
-                <p className="text-lg mb-2">No games yet</p>
-                <p className="text-sm mb-6">Join or create a game to get started!</p>
+                <p className="text-lg mb-2 text-[color:var(--heading)]">No games yet</p>
+                <p className="text-sm mb-6 text-muted">Join or create a game to get started!</p>
                 <div className="flex gap-3 justify-center">
                   <button
                     type="button"
                     onClick={() => setActiveTab('browse')}
-                    className="btn-secondary px-4 py-2"
+                    className="btn btn-secondary"
                   >
                     🌍 Browse Games
                   </button>
-                  <Link
-                    to="/create"
-                    className="px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors inline-block"
-                  >
+                  <Link to="/create" className="btn btn-primary">
                     ➕ Create Game
                   </Link>
                 </div>
@@ -1032,7 +1046,7 @@ const LobbyPage: React.FC = () => {
 
                   if (filteredGames.length === 0) {
                     return (
-                      <div className="text-center text-muted py-16">
+                      <div className="panel text-center py-16">
                         <div className="text-6xl mb-4">
                           {myGamesFilter === 'active'
                             ? '🎮'
@@ -1040,13 +1054,13 @@ const LobbyPage: React.FC = () => {
                               ? '⏰'
                               : '🏆'}
                         </div>
-                        <p className="text-lg mb-2 text-muted">
+                        <p className="text-lg mb-2 text-[color:var(--heading)]">
                           No {myGamesFilter === 'all' ? '' : myGamesFilter} games
                         </p>
                         <button
                           type="button"
                           onClick={() => setMyGamesFilter('all')}
-                          className="px-4 py-2 glass-box-sm hover:brightness-110 text-white font-medium transition-all"
+                          className="btn btn-secondary"
                         >
                           Show All Games
                         </button>
@@ -1055,13 +1069,12 @@ const LobbyPage: React.FC = () => {
                   }
 
                   return filteredGames.map((game) => (
-                    <div
-                      key={game.id}
-                      className="bg-surface-1 border border-border rounded-lg p-4 hover:border-border transition-colors"
-                    >
+                    <div key={game.id} className="panel">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white">{game.name}</h3>
+                          <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                            {game.name}
+                          </h3>
                           <div className="flex items-center space-x-4 text-sm text-muted">
                             <span>
                               {game.playerCount}/{game.maxPlayers} players
@@ -1070,36 +1083,29 @@ const LobbyPage: React.FC = () => {
                               • {getStatusLabel(game.status)}
                             </span>
                             {game.isYourTurn && (
-                              <span className="text-red-500 font-semibold animate-pulse">
+                              <span className="text-[color:var(--color-danger)] font-semibold animate-pulse">
                                 • Your Turn!
                               </span>
                             )}
                             {game.winner && (
-                              <span className="text-yellow-400">• Winner: {game.winner}</span>
+                              <span className="text-[color:var(--color-warning)]">
+                                • Winner: {game.winner}
+                              </span>
                             )}
                             <span>• Created {formatTimeAgo(game.createdAt)}</span>
                           </div>
                         </div>
                         <div>
                           {game.status === 'lobby' || game.status === 'initializing' ? (
-                            <Link
-                              to={`/room/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-primary hover:brightness-110 text-white rounded-lg transition-colors"
-                            >
+                            <Link to={`/room/${game.id}`} className="btn btn-primary btn-sm">
                               📋 View Lobby
                             </Link>
                           ) : game.status === 'active' ? (
-                            <Link
-                              to={`/game/${game.id}`}
-                              className="px-3 py-1 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                            >
+                            <Link to={`/game/${game.id}`} className="btn btn-success btn-sm">
                               {game.isYourTurn ? '🎯 Play Turn' : '👁️ View Game'}
                             </Link>
                           ) : (
-                            <Link
-                              to={`/game/${game.id}`}
-                              className="btn-secondary px-3 py-1 text-sm"
-                            >
+                            <Link to={`/game/${game.id}`} className="btn btn-secondary btn-sm">
                               📊 View Results
                             </Link>
                           )}
@@ -1115,8 +1121,10 @@ const LobbyPage: React.FC = () => {
 
         {activeTab === 'private' && (
           <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Join Private Game</h2>
-            <div className="max-w-md mx-auto text-center py-16">
+            <h2 className="text-2xl font-bold text-[color:var(--heading)] mb-6">
+              Join Private Game
+            </h2>
+            <div className="panel max-w-md mx-auto text-center py-16">
               <div className="text-6xl mb-4">🔐</div>
               <p className="text-lg text-muted mb-2">Enter game code to join private game</p>
               <p className="text-sm text-muted mb-6">
@@ -1129,13 +1137,13 @@ const LobbyPage: React.FC = () => {
                   value={privateGameCode}
                   onChange={(e) => setPrivateGameCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinPrivateGame()}
-                  className="w-full text-center text-lg bg-surface-2 text-white placeholder-gray-400 rounded-lg px-4 py-3 border border-border focus:border-primary focus:outline-none tracking-wider font-mono"
+                  className="form-input w-full text-center text-lg tracking-wider font-mono"
                 />
                 <button
                   type="button"
                   onClick={handleJoinPrivateGame}
                   disabled={!privateGameCode.trim()}
-                  className="w-full px-4 py-2 bg-primary hover:brightness-110 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   🎮 Join Game
                 </button>

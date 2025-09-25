@@ -73,18 +73,41 @@ const roomSlice = createSlice({
 
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players = state.currentRoom.players || []
-        const exists = state.currentRoom.players.some((p) => p.userId === player.userId)
+        const exists = state.currentRoom.players.some(
+          (p) => p.id === player.id || (player.userId && p.userId === player.userId),
+        )
         if (!exists) {
           state.currentRoom.players.push(player)
         }
       }
     },
-    removePlayerFromRoom: (state, action: PayloadAction<{ roomId: string; playerId: string }>) => {
-      const { roomId, playerId } = action.payload
+    removePlayerFromRoom: (
+      state,
+      action: PayloadAction<{
+        roomId: string
+        playerSlotId: string
+        userId?: string | null
+        aiPlayerId?: string | null
+      }>,
+    ) => {
+      const { roomId, playerSlotId, userId, aiPlayerId } = action.payload
 
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players =
-          state.currentRoom.players?.filter((player) => player.userId !== playerId) || []
+          state.currentRoom.players?.filter(
+            (player) => {
+              if (player.id === playerSlotId) {
+                return false
+              }
+              if (userId && player.userId === userId) {
+                return false
+              }
+              if (aiPlayerId && player.aiPlayerId === aiPlayerId) {
+                return false
+              }
+              return true
+            },
+          ) || []
       }
     },
     applyLifecycleUpdate: (state, action: PayloadAction<LifecycleUpdatePayload>) => {
@@ -134,7 +157,7 @@ const roomSlice = createSlice({
         if (readyStates) {
           const readyMap = new Map(readyStates.map((entry) => [entry.userId, entry]))
           room.players = room.players?.map((player) => {
-            const readyEntry = readyMap.get(player.userId)
+            const readyEntry = readyMap.get(player.userId ?? player.id)
             if (!readyEntry) {
               return player
             }

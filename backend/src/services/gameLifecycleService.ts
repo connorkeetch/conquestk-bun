@@ -8,7 +8,9 @@ import { GameService } from './gameService'
 import { tryGetSocketServer } from './socketRegistry'
 
 interface ReadyPlayerRow {
-  user_id: string
+  id: string
+  user_id: string | null
+  ai_player_id: string | null
   is_ready: boolean
   ready_at: Date | string | null
   joined_at: Date | string | null
@@ -81,7 +83,7 @@ export class GameLifecycleService {
 
       const playersResult = await client.query<ReadyPlayerRow>(
         `
-        SELECT user_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
+        SELECT id, user_id, ai_player_id, is_ready, ready_at, joined_at, team_id, is_ai, ai_difficulty, ai_personality_seed
         FROM room_players
         WHERE room_id = $1
         ORDER BY joined_at ASC
@@ -176,7 +178,7 @@ export class GameLifecycleService {
       room,
       readyStates:
         room?.players?.map((player) => ({
-          userId: player.userId,
+          userId: player.userId ?? player.id,
           isReady: Boolean(player.isReady),
           readyAt: player.readyAt ? player.readyAt.toISOString() : null,
         })) ?? [],
@@ -189,7 +191,11 @@ export class GameLifecycleService {
 
     const teamAssignments: Record<number, string[]> = {}
     const playerConfigs = players.map((player) => {
-      const matchingRoomPlayer = room?.players?.find((p) => p.userId === player.user_id)
+      const slotIdentifier = player.user_id ?? player.ai_player_id
+      const configUserId = slotIdentifier ?? player.id
+      const matchingRoomPlayer = room?.players?.find(
+        (p) => p.id === player.id || (slotIdentifier && p.userId === slotIdentifier),
+      )
       const normalizedTeamId =
         typeof player.team_id === 'number' && !Number.isNaN(player.team_id) ? player.team_id : null
 
@@ -197,7 +203,7 @@ export class GameLifecycleService {
         if (!teamAssignments[normalizedTeamId]) {
           teamAssignments[normalizedTeamId] = []
         }
-        teamAssignments[normalizedTeamId].push(player.user_id)
+        teamAssignments[normalizedTeamId].push(configUserId)
       }
 
       const normalizedDifficulty = (() => {
@@ -239,7 +245,7 @@ export class GameLifecycleService {
       })()
 
       return {
-        userId: player.user_id,
+        userId: configUserId,
         username: matchingRoomPlayer?.username,
         teamId: normalizedTeamId,
         isAi: player.is_ai === true || matchingRoomPlayer?.isAi === true,
@@ -322,7 +328,9 @@ export class GameLifecycleService {
     }
 
     const players = snapshot.room.players?.map((player) => ({
-      userId: player.userId,
+      id: player.id,
+      userId: player.userId ?? player.id,
+      aiPlayerId: player.aiPlayerId ?? null,
       username: player.username,
       joinedAt: player.joinedAt instanceof Date ? player.joinedAt.toISOString() : player.joinedAt,
       isReady: Boolean(player.isReady),
