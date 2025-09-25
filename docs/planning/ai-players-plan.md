@@ -1,5 +1,5 @@
 # AI-Controlled Players (Opponents) Implementation Plan
-_Last updated: September 22, 2025_
+_Last updated: September 24, 2025_
 
 ## Why this matters
 - Keep lobbies alive with solo and co‑op when friends are offline.
@@ -60,7 +60,7 @@ Async: may exceed real‑time budgets with queue persistence, still bounded by w
 ## Implementation phases
 - **Phase 0 – Discovery**: audit engine and sockets; define telemetry; spec decision interface.
 - **Phase 1 – Foundations**: schema migrations, lobby and API surface, aiDecisionService stub, flags, tests for AI‑triggered turn progression.
-- **Phase 2 – Recruit MVP**: deterministic heuristics; async persistence of queued actions; authoritative battle worker; staged rollout.
+- **Phase 2 – Recruit MVP**: deterministic heuristics (baseline reinforcement/attack/fortify pipeline now in TypeScript service); async persistence of queued actions; authoritative battle worker; staged rollout.
 - **Phase 3 – Commander**: threat scoring, 2‑ply pruning, card timing, improved fortify; profiling and budgets.
 - **Phase 4 – Grandmaster**: simulations + opponent modelling; optional Rust/Go worker via queue; personality weights.
 - **Phase 5 – Polish & rollout**: avatars/badges, spectator‑friendly logs, rate‑limiters, dashboards; enable tiers sequentially.

@@ -84,7 +84,8 @@ export class ClanMembershipService {
         [userId],
       )
 
-      if (activeMembership.rowCount > 0) {
+      const activeMembershipCount = activeMembership.rowCount ?? 0
+      if (activeMembershipCount > 0) {
         throw new ClanMembershipServiceError(
           'ALREADY_IN_CLAN',
           'You are already a member of a clan and cannot apply to another until you leave.',
