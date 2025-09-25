@@ -1,0 +1,117 @@
+/* Frontier Theme - Premium cowboy fantasy */
+:root[data-theme="frontier"] {
+  --color-primary: #c47e35; /* Saddle-brown primary */
+  --color-primary-soft: #e19b4c; /* Sunlit leather hover */
+  --color-secondary: #f4d9a0; /* Parchment secondary */
+  --color-accent: #2f9c95; /* Turquoise gemstone accent */
+
+  --color-bg-deep: #090604; /* Midnight desert */
+  --color-bg-alt: #120b06; /* Campfire shadow */
+  --color-surface-1: #24150b; /* Weathered leather */
+  --color-surface-2: #352012; /* Dark oak table */
+
+  --color-text: #f8ead3; /* Warm parchment text */
+  --color-text-muted: #cbb99e; /* Faded saddle tan */
+  --color-border: #8b5e34; /* Distressed brass */
+
+  --ck-bg-gradient: linear-gradient(
+    135deg,
+    #060302 0% /* Dusk horizon */,
+    rgba(103, 55, 26, 0.55) 35% /* Canyon glow */,
+    rgba(228, 166, 89, 0.3) 65% /* Dusty sunset */,
+    #120b06 100% /* Campfire shadows */
+  );
+
+  --ck-glow: #e19b4c;
+
+  --surface-glass: rgba(36, 21, 11, 0.65);
+  --surface-glass-light: rgba(53, 32, 18, 0.45);
+
+  /* Box/Card overrides - leather + brass */
+  --box-bg: rgba(36, 21, 11, 0.72);
+  --box-bg-solid: #2d1a0e;
+  --box-border: rgba(193, 140, 79, 0.4);
+  --box-shadow: 0 12px 45px rgba(12, 6, 2, 0.6);
+  --box-blur: 14px;
+  --box-radius: 0.9rem;
+  --box-padding: 1.6rem;
+  --box-padding-sm: 0.85rem;
+  --box-padding-lg: 1.6rem;
+  --box-padding-xl: 2.2rem;
+}
+
+/* Frontier shimmering heat + dust */
+@keyframes frontier-campfire {
+  0%,
+  100% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+    opacity: 0.28;
+  }
+}
+
+@keyframes frontier-trail {
+  0%,
+  100% {
+    background-position:
+      0 0,
+      120px 80px,
+      240px 160px,
+      60px 200px;
+  }
+  50% {
+    background-position:
+      40px 25px,
+      160px 120px,
+      280px 210px,
+      100px 240px;
+  }
+}
+
+[data-theme="frontier"] body::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  background:
+    radial-gradient(circle at 20% 70%, rgba(228, 166, 89, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(191, 114, 44, 0.2), transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(47, 156, 149, 0.18), transparent 65%);
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+  animation: frontier-campfire 28s ease-in-out infinite;
+}
+
+[data-theme="frontier"] body::after {
+  background-image:
+    linear-gradient(rgba(244, 217, 160, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 217, 160, 0.04) 1px, transparent 1px),
+    radial-gradient(2px 2px at 15% 25%, rgba(225, 155, 76, 0.35), transparent),
+    radial-gradient(1px 1px at 75% 65%, rgba(47, 156, 149, 0.35), transparent);
+  background-size:
+    56px 56px,
+    56px 56px,
+    280px 280px,
+    260px 260px;
+  animation: frontier-trail 36s linear infinite;
+}
+
+[data-theme="frontier"] a:hover {
+  color: var(--color-secondary);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--color-secondary) 50%, transparent);
+}
+
+[data-theme="frontier"] input:focus,
+[data-theme="frontier"] textarea:focus,
+[data-theme="frontier"] select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+[data-theme="frontier"]::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--color-primary), var(--color-accent));
+}
