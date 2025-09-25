@@ -13,6 +13,7 @@ _Last updated: January 2026_
 ### Backend (Express + Socket.io)
 - Routes live under `backend/src/routes`. Each route composes request validation, middleware (`backend/src/middleware`), and concrete services.
 - Core game orchestration resides in `backend/src/services/gameService.ts` and `backend/src/game/gameEngine.ts`, which persist lifecycle transitions, enforce phase rules, and emit Socket.io deltas.
+- Completed matches now flow through `gameService.finalizeCompletedGame`, which archives results, adjusts ELO, and calls the clan progression service (`clanProgressionService.awardContribution`) when the `clans_enabled` flag is active. XP grants use the v1 formula (400 base + per-placement bonus + 5 × territories held, capped at +150) and log activity events for analytics.
 - Map workflows span `mapService.ts`, `mapWorkflowService.ts`, and `mapApprovalService.ts`, with permission checks centralized in `mapPermissionService.ts` so creator, collaborator, and admin roles stay consistent.
 - Authentication combines session cookies and JWT validation in `backend/src/middleware/auth.ts`; request-scoped user context is required for any mutating route.
 - Socket.io rooms follow the `game:{gameId}` convention, coordinated through `backend/src/socket/gameHandlers.ts` and the shared `socketRegistry` helper so workers, gameplay routes, and reconnect logic use the same channel identifiers.
@@ -46,6 +47,7 @@ _Last updated: January 2026_
 ## Notifications & Messaging
 - Chat and notifications share identity derived from the authenticated Redux store; Socket.io channels broadcast edits, deletes, and system events through `notificationService.ts` and `realtimeNotificationService.ts`.
 - Push subscriptions persist via `web_push_subscriptions`; the service worker relays gameplay turn reminders today.
+- Clan progression updates broadcast over the shared Socket.io layer as `clan:progress` events, fanning out to `clan:{clanId}` rooms. Payloads include XP deltas, placement metadata, and objective progress so web and upcoming mobile clients can refresh contribution/goal UI without refetching the entire clan profile.
 - Remaining work: complete creator/moderator map approval push fan-out and DM push roll-out (tracked as Go-Live item B2).
 
 ## Deployment & Operations
