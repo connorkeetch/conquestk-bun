@@ -696,30 +696,37 @@ export const AdminMaps: React.FC = () => {
   }, [previewDetails, effectiveCanvasWidth, effectiveCanvasHeight])
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      draft: 'bg-gray-100 text-gray-800',
-      pending_review: 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-400',
-      approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
-      archived: 'bg-gray-100 text-gray-600',
+    const base = 'badge'
+    switch (status) {
+      case 'pending_review':
+        return `${base} border-[color:var(--color-warning)] text-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 15%, transparent)]`
+      case 'approved':
+        return `${base} border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:color-mix(in srgb, var(--color-success) 15%, transparent)]`
+      case 'rejected':
+        return `${base} border-[color:var(--color-danger)] text-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]`
+      case 'archived':
+        return `${base} border-[color:var(--panel-border)] text-muted bg-[color:var(--panel-bg-alt)]`
+      default:
+        return `${base} border-[color:var(--panel-border)] text-muted bg-[color:var(--panel-bg-alt)]`
     }
-    return badges[status as keyof typeof badges] || badges.draft
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted">Loading maps...</p>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="panel space-y-3 text-center">
+          <div className="flex justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--color-primary)]"></div>
+          </div>
+          <p className="text-sm text-muted">Loading maps...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <AdminPageHeader
           title="Map Management"
           subtitle="Review drafts, publish updates, and keep the catalog healthy"
@@ -727,54 +734,56 @@ export const AdminMaps: React.FC = () => {
         />
 
         {/* Status Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="glass-box p-4">
-            <p className="text-sm text-muted uppercase tracking-wide">Draft</p>
-            <p className="mt-1 text-2xl font-bold text-white">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <div className="panel">
+            <p className="text-sm uppercase tracking-wide text-muted">Draft</p>
+            <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'draft').length}
             </p>
           </div>
-          <div className="glass-box p-4 border border-orange-500/30">
-            <p className="text-sm text-orange-400 uppercase tracking-wide">Pending Review</p>
-            <p className="mt-1 text-2xl font-bold text-white">
+          <div className="panel border-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 12%, transparent)]">
+            <p className="text-sm uppercase tracking-wide text-[color:var(--color-warning)]">
+              Pending Review
+            </p>
+            <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'pending_review').length}
             </p>
           </div>
-          <div className="glass-box p-4 border border-green-500/30">
-            <p className="text-sm text-green-400 uppercase tracking-wide">Approved</p>
-            <p className="mt-1 text-2xl font-bold text-white">
+          <div className="panel border-[color:var(--color-success)] bg-[color:color-mix(in srgb, var(--color-success) 12%, transparent)]">
+            <p className="text-sm uppercase tracking-wide text-[color:var(--color-success)]">Approved</p>
+            <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'approved').length}
             </p>
           </div>
-          <div className="glass-box p-4 border border-red-500/30">
-            <p className="text-sm text-red-400 uppercase tracking-wide">Rejected</p>
-            <p className="mt-1 text-2xl font-bold text-white">
+          <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
+            <p className="text-sm uppercase tracking-wide text-[color:var(--color-danger)]">Rejected</p>
+            <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'rejected').length}
             </p>
           </div>
-          <div className="glass-box p-4 border border-gray-500/30">
-            <p className="text-sm text-gray-400 uppercase tracking-wide">Archived</p>
-            <p className="mt-1 text-2xl font-bold text-white">
+          <div className="panel">
+            <p className="text-sm uppercase tracking-wide text-muted">Archived</p>
+            <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'archived').length}
             </p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="glass-box p-4">
+        <div className="panel">
           <div className="flex flex-wrap gap-4">
             <input
               type="text"
               placeholder="Search maps..."
               value={filters.search || ''}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="px-4 py-2 bg-surface-1 border border-border rounded-lg text-white flex-1 min-w-[200px]"
+              className="form-input flex-1 min-w-[200px]"
             />
 
             <select
               value={filters.status || ''}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="px-4 py-2 bg-surface-1 border border-border rounded-lg text-white"
+              className="form-select"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -787,7 +796,7 @@ export const AdminMaps: React.FC = () => {
             <select
               value={filters.sortBy}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-              className="px-4 py-2 bg-surface-1 border border-border rounded-lg text-white"
+              className="form-select"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -799,71 +808,73 @@ export const AdminMaps: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
-            <h3 className="text-red-400 font-medium">Error Loading Maps</h3>
-            <p className="text-red-300 text-sm mt-1">{error}</p>
+          <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
+            <h3 className="text-sm font-semibold text-[color:var(--color-danger)]">Error Loading Maps</h3>
+            <p className="mt-1 text-sm text-[color:var(--color-danger)]">{error}</p>
           </div>
         )}
 
         {/* Maps Table */}
-        <div className="glass-box overflow-hidden p-0">
+        <div className="panel p-0">
           {maps.length === 0 ? (
-            <div className="p-12 text-center">
-              <h3 className="text-lg font-medium text-white mb-2">No Maps Found</h3>
-              <p className="text-muted">No maps match your current filters.</p>
+            <div className="py-12 text-center">
+              <h3 className="mb-2 text-lg font-semibold text-[color:var(--heading)]">No Maps Found</h3>
+              <p className="text-sm text-muted">No maps match your current filters.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-surface-1">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider min-w-[18rem]">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted min-w-[18rem]">
                       Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Creator
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Players
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Territories
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Continents
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Games Played
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Rating
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Access
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Updated
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="text-left text-xs font-semibold uppercase tracking-wide text-muted">
                       Manage
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {maps.map((map) => {
                     const imageSrc = map.imageUrl || map.image_url
 
                     return (
                       <tr
                         key={map.id}
-                        className={`transition-colors hover:bg-surface-1 ${
-                          map.status === 'pending_review' ? 'bg-yellow-900/10' : ''
+                        className={`table-row hover:bg-[color:var(--hover-bg)] ${
+                          map.status === 'pending_review'
+                            ? 'bg-[color:color-mix(in srgb, var(--color-warning) 12%, transparent)]'
+                            : ''
                         }`}
                       >
-                        <td className="px-6 py-4 align-top min-w-[18rem]">
+                        <td className="align-top min-w-[18rem]">
                           <div className="flex items-start gap-3">
                             {imageSrc ? (
                               <div className="relative shrink-0">
@@ -874,25 +885,27 @@ export const AdminMaps: React.FC = () => {
                                 />
                               </div>
                             ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded bg-surface-1 text-[10px] uppercase tracking-wide text-muted">
+                              <div className="flex h-12 w-12 items-center justify-center rounded border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] text-[10px] uppercase tracking-wide text-muted">
                                 No image
                               </div>
                             )}
                             <div className="space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-medium text-white">{map.name}</span>
+                                <span className="text-sm font-semibold text-[color:var(--heading)]">
+                                  {map.name}
+                                </span>
                                 {map.isFeatured && (
-                                  <span className="rounded bg-yellow-600/20 px-2 py-0.5 text-[11px] font-medium uppercase text-yellow-300">
+                                  <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
                                     Featured
                                   </span>
                                 )}
                                 {!map.isPublic && (
-                                  <span className="rounded bg-gray-600/20 px-2 py-0.5 text-[11px] font-medium uppercase text-gray-300">
+                                  <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
                                     Private
                                   </span>
                                 )}
                                 {map.isVipOnly && (
-                                  <span className="rounded bg-purple-600/20 px-2 py-0.5 text-[11px] font-medium uppercase text-purple-300">
+                                  <span className="badge border-[color:var(--color-primary)] text-[color:var(--color-primary)]">
                                     VIP
                                   </span>
                                 )}
@@ -903,10 +916,7 @@ export const AdminMaps: React.FC = () => {
                               {Array.isArray(map.tags) && map.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2 pt-1">
                                   {map.tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="rounded bg-surface-1 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted"
-                                    >
+                                    <span key={tag} className="chip text-xs">
                                       {tag}
                                     </span>
                                   ))}
@@ -915,57 +925,55 @@ export const AdminMaps: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadge(map.status)}`}
-                          >
-                            {statusLabels[map.status]}
-                          </span>
+                        <td>
+                          <span className={getStatusBadge(map.status)}>{statusLabels[map.status]}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-white">{map.creatorName || 'Unknown'}</div>
+                        <td>
+                          <div className="text-sm text-[color:var(--heading)]">
+                            {map.creatorName || 'Unknown'}
+                          </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {map.minPlayers}-{map.maxPlayers}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {typeof map.territoryCount === 'number' ? map.territoryCount : 'N/A'}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {typeof map.continentCount === 'number' ? map.continentCount : 'N/A'}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {(map.playCount ?? 0).toLocaleString()}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {map.ratingCount > 0
                               ? `${map.ratingAverage.toFixed(1)} (${map.ratingCount})`
                               : 'No ratings'}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="flex flex-col text-sm text-muted">
-                            <span className="text-white">
+                            <span className="text-[color:var(--heading)]">
                               {map.isPublic ? 'Public' : 'Private'}
                             </span>
                             {map.isVipOnly && <span>VIP Only</span>}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="text-sm text-muted">
                             {new Date(map.updatedAt).toLocaleDateString()}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="flex justify-end">
                             <button
                               type="button"
@@ -973,7 +981,7 @@ export const AdminMaps: React.FC = () => {
                                 event.stopPropagation()
                                 handlePreviewMap(map)
                               }}
-                              className="rounded bg-violet px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-110"
+                              className="btn btn-primary btn-sm"
                             >
                               Manage
                             </button>
@@ -990,13 +998,14 @@ export const AdminMaps: React.FC = () => {
 
         {/* Edit Modal */}
         {showEditModal && selectedMap && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold text-white mb-4">Edit Map Details</h2>
-
-              <div className="space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="modal w-full max-w-md">
+              <div className="modal-header">
+                <h2 className="text-lg font-semibold text-[color:var(--heading)]">Edit Map Details</h2>
+              </div>
+              <div className="modal-body space-y-4">
                 <div>
-                  <label className="block text-sm text-muted mb-1" htmlFor={mapNameId}>
+                  <label className="form-label" htmlFor={mapNameId}>
                     Name
                   </label>
                   <input
@@ -1004,12 +1013,12 @@ export const AdminMaps: React.FC = () => {
                     type="text"
                     value={editForm.name}
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
+                    className="form-input"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-muted mb-1" htmlFor={mapStatusId}>
+                  <label className="form-label" htmlFor={mapStatusId}>
                     Status
                   </label>
                   <select
@@ -1018,7 +1027,7 @@ export const AdminMaps: React.FC = () => {
                     onChange={(e) =>
                       setEditForm({ ...editForm, status: e.target.value as Map['status'] })
                     }
-                    className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
+                    className="form-select"
                   >
                     <option value="draft">Draft</option>
                     <option value="pending_review">Pending Review</option>
@@ -1029,20 +1038,20 @@ export const AdminMaps: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-muted mb-1" htmlFor={mapDescriptionId}>
+                  <label className="form-label" htmlFor={mapDescriptionId}>
                     Description
                   </label>
                   <textarea
                     id={mapDescriptionId}
                     value={editForm.description}
                     onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white h-20"
+                    className="form-input h-24"
                   />
                 </div>
 
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-muted mb-1" htmlFor={mapMinPlayersId}>
+                    <label className="form-label" htmlFor={mapMinPlayersId}>
                       Min Players
                     </label>
                     <input
@@ -1052,13 +1061,13 @@ export const AdminMaps: React.FC = () => {
                       max="12"
                       value={editForm.minPlayers}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, minPlayers: parseInt(e.target.value, 10) })
+                        setEditForm({ ...editForm, minPlayers: Number.parseInt(e.target.value, 10) })
                       }
-                      className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
+                      className="form-input"
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-muted mb-1" htmlFor={mapMaxPlayersId}>
+                    <label className="form-label" htmlFor={mapMaxPlayersId}>
                       Max Players
                     </label>
                     <input
@@ -1068,67 +1077,68 @@ export const AdminMaps: React.FC = () => {
                       max="12"
                       value={editForm.maxPlayers}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, maxPlayers: parseInt(e.target.value, 10) })
+                        setEditForm({ ...editForm, maxPlayers: Number.parseInt(e.target.value, 10) })
                       }
-                      className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white"
+                      className="form-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex gap-4">
-                    <label className="flex items-center" htmlFor={mapFeaturedId}>
+                  <div className="flex flex-wrap gap-4">
+                    <label
+                      className="flex items-center gap-2 text-sm text-[color:var(--text)]"
+                      htmlFor={mapFeaturedId}
+                    >
                       <input
                         id={mapFeaturedId}
                         type="checkbox"
                         checked={editForm.isFeatured}
                         onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
-                        className="mr-2"
                       />
-                      <span className="text-sm text-white">Featured</span>
+                      <span>Featured</span>
                     </label>
-                    <label className="flex items-center" htmlFor={mapPublicId}>
+                    <label
+                      className="flex items-center gap-2 text-sm text-[color:var(--text)]"
+                      htmlFor={mapPublicId}
+                    >
                       <input
                         id={mapPublicId}
                         type="checkbox"
                         checked={editForm.isPublic}
                         onChange={(e) => setEditForm({ ...editForm, isPublic: e.target.checked })}
-                        className="mr-2"
                       />
-                      <span className="text-sm text-white">Public</span>
+                      <span>Public</span>
                     </label>
                   </div>
                   <div>
-                    <label className="flex items-center" htmlFor={mapVipOnlyId}>
+                    <label
+                      className="flex items-center gap-2 text-sm text-[color:var(--text)]"
+                      htmlFor={mapVipOnlyId}
+                    >
                       <input
                         id={mapVipOnlyId}
                         type="checkbox"
                         checked={editForm.isVipOnly || false}
                         onChange={(e) => setEditForm({ ...editForm, isVipOnly: e.target.checked })}
-                        className="mr-2"
                       />
-                      <span className="text-sm text-white">VIP Only</span>
-                      <span className="text-xs text-purple-400 ml-2">
+                      <span>VIP Only</span>
+                      <span className="text-xs text-[color:var(--color-accent)]">
                         (Requires VIP status to play)
                       </span>
                     </label>
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
+                  className="btn btn-ghost"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleEditMap}
-                  className="px-4 py-2 bg-violet text-white rounded hover:brightness-110"
-                >
+                <button type="button" onClick={handleEditMap} className="btn btn-primary">
                   Save Changes
                 </button>
               </div>
@@ -1138,25 +1148,25 @@ export const AdminMaps: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedMap && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold text-white mb-4">Delete Map</h2>
-              <p className="text-muted mb-4">
-                Are you sure you want to delete "{selectedMap.name}"? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="modal w-full max-w-md">
+              <div className="modal-header">
+                <h2 className="text-lg font-semibold text-[color:var(--heading)]">Delete Map</h2>
+              </div>
+              <div className="modal-body">
+                <p className="text-sm text-muted">
+                  Are you sure you want to delete "{selectedMap.name}"? This action cannot be undone.
+                </p>
+              </div>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
+                  className="btn btn-ghost"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteMap}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                >
+                <button type="button" onClick={handleDeleteMap} className="btn btn-danger">
                   Delete Map
                 </button>
               </div>
@@ -1166,33 +1176,37 @@ export const AdminMaps: React.FC = () => {
 
         {/* Rejection Modal */}
         {showApprovalModal && selectedMap && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold text-white mb-4">Reject Map</h2>
-              <p className="text-muted mb-4">
-                Provide a reason for rejecting "{selectedMap.name}":
-              </p>
-              <textarea
-                value={approvalNotes}
-                onChange={(e) => setApprovalNotes(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-1 border border-border rounded text-white h-32"
-                placeholder="Enter rejection reason..."
-              />
-              <div className="flex justify-end gap-3 mt-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="modal w-full max-w-md">
+              <div className="modal-header">
+                <h2 className="text-lg font-semibold text-[color:var(--heading)]">Reject Map</h2>
+              </div>
+              <div className="modal-body space-y-3">
+                <p className="text-sm text-muted">
+                  Provide a reason for rejecting "{selectedMap.name}":
+                </p>
+                <textarea
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  className="form-input h-32"
+                  placeholder="Enter rejection reason..."
+                />
+              </div>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => {
                     setShowApprovalModal(false)
                     setApprovalNotes('')
                   }}
-                  className="px-4 py-2 bg-surface-1 text-white rounded hover:bg-gray-600"
+                  className="btn btn-ghost"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => handleStatusChange(selectedMap.id, 'rejected', approvalNotes)}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="btn btn-danger"
                 >
                   Reject Map
                 </button>
@@ -1207,7 +1221,7 @@ export const AdminMaps: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-label={`Preview map ${previewMap.name}`}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
             tabIndex={-1}
             onClick={(event) => {
               if (event.target === event.currentTarget) {
@@ -1223,43 +1237,38 @@ export const AdminMaps: React.FC = () => {
           >
             <div
               role="document"
-              className="bg-surface-2 rounded-lg p-6 w-full max-w-[90vw] mx-4 max-h-[90vh] overflow-y-auto"
+              className="modal w-full max-w-[90vw] max-h-[90vh] overflow-y-auto p-6"
             >
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-3">
-                  <h2 className="text-3xl font-bold text-white">{previewMap.name}</h2>
+                  <h2 className="text-3xl font-bold text-[color:var(--heading)]">{previewMap.name}</h2>
                   {previewMap.description && (
                     <p className="text-sm text-muted md:max-w-3xl">{previewMap.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
                     {previewMap.isFeatured && (
-                      <span className="rounded bg-yellow-600/20 px-2 py-0.5 text-xs font-medium uppercase text-yellow-300">
+                      <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
                         Featured
                       </span>
                     )}
                     {!previewMap.isPublic && (
-                      <span className="rounded bg-gray-600/20 px-2 py-0.5 text-xs font-medium uppercase text-gray-300">
+                      <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
                         Private
                       </span>
                     )}
                     {previewMap.isVipOnly && (
-                      <span className="rounded bg-purple-600/20 px-2 py-0.5 text-xs font-medium uppercase text-purple-300">
+                      <span className="badge border-[color:var(--color-primary)] text-[color:var(--color-primary)]">
                         VIP Only
                       </span>
                     )}
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-medium uppercase ${getStatusBadge(previewMap.status)}`}
-                    >
+                    <span className={getStatusBadge(previewMap.status)}>
                       {statusLabels[previewMap.status]}
                     </span>
                   </div>
                   {previewMap.tags && previewMap.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
                       {previewMap.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded bg-surface-1 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted"
-                        >
+                        <span key={tag} className="chip text-xs">
                           {tag}
                         </span>
                       ))}
@@ -1269,26 +1278,28 @@ export const AdminMaps: React.FC = () => {
                 <button
                   type="button"
                   onClick={closePreviewModal}
-                  className="self-start rounded bg-surface-1 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-gray-600"
+                  className="btn btn-ghost self-start"
                 >
                   Close
                 </button>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+              <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Created By</p>
-                  <p className="mt-1 text-sm text-white">{previewMap.creatorName || 'Unknown'}</p>
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
+                    {previewMap.creatorName || 'Unknown'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Players</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {previewMap.minPlayers}-{previewMap.maxPlayers}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Territories</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {typeof previewMap.territoryCount === 'number'
                       ? previewMap.territoryCount
                       : 'N/A'}
@@ -1296,7 +1307,7 @@ export const AdminMaps: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Continents</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {typeof previewMap.continentCount === 'number'
                       ? previewMap.continentCount
                       : 'N/A'}
@@ -1304,13 +1315,13 @@ export const AdminMaps: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Games Played</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {(previewMap.playCount ?? 0).toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Rating</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {previewMap.ratingCount > 0
                       ? `${previewMap.ratingAverage.toFixed(1)} (${previewMap.ratingCount})`
                       : 'No ratings'}
@@ -1318,28 +1329,28 @@ export const AdminMaps: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Visibility</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {previewMap.isPublic ? 'Public' : 'Private'}
                   </p>
                   {previewMap.isVipOnly && <p className="text-xs text-muted">VIP Only</p>}
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Created</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {new Date(previewMap.createdAt).toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">Last Updated</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-[color:var(--heading)]">
                     {new Date(previewMap.updatedAt).toLocaleString()}
                   </p>
                 </div>
               </div>
 
               {previewMap.rejectionReason && previewMap.status === 'rejected' && (
-                <div className="mb-6 rounded border border-red-500/40 bg-red-900/20 p-4">
-                  <p className="text-sm text-red-200">
+                <div className="panel mb-6 border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
+                  <p className="text-sm text-[color:var(--color-danger)]">
                     Rejection notes: {previewMap.rejectionReason}
                   </p>
                 </div>
@@ -1347,7 +1358,7 @@ export const AdminMaps: React.FC = () => {
 
               {/* Map Image Preview */}
               {previewImageSrc ? (
-                <div className="bg-surface-1 rounded-lg p-4 mb-6">
+                <div className="panel mb-6">
                   <div className="relative overflow-auto rounded bg-black/20">
                     <div
                       className="relative"
@@ -1393,10 +1404,12 @@ export const AdminMaps: React.FC = () => {
                               >
                                 <div
                                   className={`w-4 h-4 rounded-full border-2 border-black/60 shadow-md ${
-                                    token.isCapital ? 'bg-rose-400' : 'bg-cyan-400'
+                                    token.isCapital
+                                      ? 'bg-[color:var(--color-danger)]'
+                                      : 'bg-[color:var(--color-primary)]'
                                   }`}
                                 />
-                                <span className="pointer-events-auto px-1.5 py-0.5 rounded bg-black/70 text-white whitespace-nowrap">
+                                <span className="pointer-events-auto whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-[color:var(--color-white)]">
                                   {token.name}
                                 </span>
                               </div>
@@ -1407,13 +1420,13 @@ export const AdminMaps: React.FC = () => {
 
                       {previewLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <span className="text-white text-sm">Loading map data…</span>
+                          <span className="text-sm text-[color:var(--color-white)]">Loading map data…</span>
                         </div>
                       )}
 
                       {previewError && !previewLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-4 text-center">
-                          <span className="text-red-300 text-sm">{previewError}</span>
+                          <span className="text-sm text-[color:var(--color-danger)]">{previewError}</span>
                         </div>
                       )}
                     </div>
@@ -1440,24 +1453,24 @@ export const AdminMaps: React.FC = () => {
                   )}
 
                   {previewError && !previewLoading && (
-                    <p className="text-red-300 text-sm mt-3">{previewError}</p>
+                    <p className="mt-3 text-sm text-[color:var(--color-danger)]">{previewError}</p>
                   )}
                 </div>
               ) : (
-                <div className="mb-6 rounded-lg border border-border bg-surface-1 p-12 text-center">
+                <div className="panel mb-6 text-center py-12">
                   <p className="text-sm text-muted">No preview image available</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--panel-border)] pt-4">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() =>
                       window.open(`/map-editor-tokens?edit=${previewMap.id}`, '_blank')
                     }
-                    className="rounded bg-violet px-4 py-2 text-sm font-medium text-white transition hover:brightness-110"
+                    className="btn btn-primary btn-sm"
                   >
                     Open Map Editor
                   </button>
@@ -1467,24 +1480,24 @@ export const AdminMaps: React.FC = () => {
                       closePreviewModal()
                       openEditModal(previewMap)
                     }}
-                    className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    className="btn btn-secondary btn-sm"
                   >
                     Edit Details
                   </button>
                   <button
                     type="button"
                     onClick={() => handleCloneMap(previewMap.id)}
-                    className="rounded border border-border px-4 py-2 text-sm font-medium text-white transition hover:bg-surface-1"
+                    className="btn btn-outline btn-sm"
                   >
                     Clone Map
                   </button>
                   <button
                     type="button"
                     onClick={() => handleToggleFeatured(previewMap, !previewMap.isFeatured)}
-                    className={`rounded px-4 py-2 text-sm font-medium transition ${
+                    className={`btn btn-sm ${
                       previewMap.isFeatured
-                        ? 'border border-yellow-400 text-yellow-300 hover:bg-yellow-500/10'
-                        : 'bg-yellow-500 text-black hover:bg-yellow-400'
+                        ? 'btn-outline border-[color:var(--color-warning)] text-[color:var(--color-warning)]'
+                        : 'btn-secondary'
                     }`}
                   >
                     {previewMap.isFeatured ? 'Remove Feature' : 'Feature Map'}
@@ -1496,7 +1509,7 @@ export const AdminMaps: React.FC = () => {
                       setShowDeleteModal(true)
                       closePreviewModal()
                     }}
-                    className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+                    className="btn btn-danger btn-sm"
                   >
                     Delete Map
                   </button>
@@ -1505,7 +1518,7 @@ export const AdminMaps: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(previewMap.id, 'approved')}
-                        className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+                        className="btn btn-success btn-sm"
                       >
                         Approve Map
                       </button>
@@ -1515,7 +1528,7 @@ export const AdminMaps: React.FC = () => {
                           closePreviewModal()
                           openApprovalModal(previewMap)
                         }}
-                        className="rounded border border-red-500 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-900/30"
+                        className="btn btn-outline btn-sm text-[color:var(--color-danger)] border-[color:var(--color-danger)]"
                       >
                         Reject Map
                       </button>
@@ -1523,11 +1536,7 @@ export const AdminMaps: React.FC = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={closePreviewModal}
-                    className="rounded bg-surface-1 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-600"
-                  >
+                  <button type="button" onClick={closePreviewModal} className="btn btn-ghost btn-sm">
                     Close Preview
                   </button>
                 </div>

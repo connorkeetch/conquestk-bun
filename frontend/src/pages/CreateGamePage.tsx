@@ -178,7 +178,7 @@ const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
-  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
   const aiPlayersEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
   const aiLobbyEnabled = useFeatureFlag(FEATURE_FLAGS.AI_LOBBY_OPTIONS)
@@ -760,7 +760,7 @@ const CreateGamePage: React.FC = () => {
                 >
                   🔒 Private
                 </button>
-                {tournamentsEnabled && (
+                {comingSoonUiEnabled && (
                   <button
                     type="button"
                     disabled

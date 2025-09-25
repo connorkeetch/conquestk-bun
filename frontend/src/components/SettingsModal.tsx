@@ -20,7 +20,7 @@ type SettingsTab =
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
   const modalRef = useRef<HTMLDivElement>(null)
-  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const controlIds = {
     username: 'settings-username',
     email: 'settings-email',
@@ -649,7 +649,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   </label>
                 </div>
 
-                {tournamentsEnabled && (
+                {comingSoonUiEnabled && (
                   <div className="flex justify-between items-center">
                     <div>
                       <label

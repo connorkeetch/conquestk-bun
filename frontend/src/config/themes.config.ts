@@ -110,10 +110,49 @@ export function getThemeById(id: string): ThemeDefinition | undefined {
   return THEMES.find((theme) => theme.id === id)
 }
 
+const BACKGROUND_MOTION_KEY = 'backgroundMotion'
+
+export function getBackgroundMotionPreference(): boolean {
+  if (typeof window === 'undefined') {
+    return true
+  }
+
+  try {
+    const stored = localStorage.getItem(BACKGROUND_MOTION_KEY)
+    if (stored === 'off') {
+      return false
+    }
+    if (stored === 'on') {
+      return true
+    }
+  } catch {
+    // Ignore storage errors and fall back to default
+  }
+
+  return true
+}
+
+export function setBackgroundMotionPreference(enabled: boolean, persist = true): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  document.body.setAttribute('data-background-motion', enabled ? 'on' : 'off')
+
+  if (persist) {
+    try {
+      localStorage.setItem(BACKGROUND_MOTION_KEY, enabled ? 'on' : 'off')
+    } catch {
+      // Ignore storage failures (e.g., Safari private mode)
+    }
+  }
+}
+
 export function applyTheme(themeId: string): void {
   // Pure CSS-based theming - just set the data-theme attribute
   // All styling is handled by CSS rules in app.css
   document.documentElement.setAttribute('data-theme', themeId)
+  setBackgroundMotionPreference(getBackgroundMotionPreference(), false)
 }
 
 export function getStoredTheme(): string {

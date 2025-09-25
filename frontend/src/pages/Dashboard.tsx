@@ -35,7 +35,7 @@ interface UserStats {
 
 const Dashboard: React.FC = () => {
   const { user } = useAppSelector((state) => state.auth)
-  const tournamentsEnabled = useFeatureFlag(FEATURE_FLAGS.TOURNAMENT_SURFACES)
+  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [recentGames, setRecentGames] = useState<RecentGame[]>([])
   const [friendsActivity, setFriendsActivity] = useState<FriendActivity[]>([])
@@ -96,12 +96,12 @@ const Dashboard: React.FC = () => {
       {
         id: '3',
         username: 'ForestWarden',
-        activity: tournamentsEnabled ? 'Joined a tournament' : 'Joined a ranked match',
+        activity: comingSoonUiEnabled ? 'Joined a tournament' : 'Joined a ranked match',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
         online: false,
       },
     ])
-  }, [tournamentsEnabled])
+  }, [comingSoonUiEnabled])
 
   const getTimeAgo = (date: Date) => {
     const now = new Date()

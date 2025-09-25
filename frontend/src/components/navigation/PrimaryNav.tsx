@@ -167,12 +167,12 @@ const PrimaryNav: React.FC = () => {
 
   const getNavItemClass = (item: NavItem) => {
     const baseClass =
-      'relative px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 cursor-pointer'
+      'nav-tab flex items-center gap-2 text-sm font-medium transition-colors duration-200 cursor-pointer'
 
     if (isActive(item)) {
-      return `${baseClass} bg-primary text-white shadow-lg`
+      return `${baseClass} is-active`
     }
-    return `${baseClass} text-muted hover:text-white hover:bg-surface-2`
+    return baseClass
   }
 
   const handleNavItemClick = (item: NavItem, e: React.MouseEvent) => {
@@ -185,7 +185,7 @@ const PrimaryNav: React.FC = () => {
   }
 
   return (
-    <div className="hidden md:flex items-center space-x-1" ref={dropdownRef}>
+    <div className="hidden md:flex nav-tabs items-center" ref={dropdownRef}>
       {navItems.map((item) => (
         <div key={item.path} className="relative">
           {item.dropdown ? (
