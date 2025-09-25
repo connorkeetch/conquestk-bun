@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Loader2, X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import { socketService } from '@/services/socketService'
 import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
+import profileService from '@/services/profileService'
 import {
   loadConversationMessages,
   loadInbox,
@@ -54,6 +55,11 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null)
   const [sendError, setSendError] = useState<string | null>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
+  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [newUsername, setNewUsername] = useState('')
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const newConversationInputId = useId()
 
   const sortedConversations = useMemo(() => {
     return [...conversations].sort((a, b) => {
@@ -62,6 +68,13 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
       return bTime - aTime
     })
   }, [conversations])
+
+  const filteredConversations = useMemo(() => {
+    if (filter === 'unread') {
+      return sortedConversations.filter((conversation) => (conversation.unreadCount ?? 0) > 0)
+    }
+    return sortedConversations
+  }, [sortedConversations, filter])
 
   const activeConversation = useAppSelector((state) =>
     activeConversationId ? selectConversationById(state, activeConversationId) : undefined,
@@ -164,6 +177,53 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
     )
   }, [activeConversationId, dispatch, messagesByConversation])
 
+  const handleCreateConversation = useCallback(
+    async (event?: React.FormEvent) => {
+      event?.preventDefault()
+      const username = newUsername.trim()
+      if (!username || isCreatingConversation) {
+        return
+      }
+
+      try {
+        setIsCreatingConversation(true)
+        setCreateError(null)
+
+        const profile = await profileService.getProfileByUsername(username)
+        const targetUserId = profile.id
+
+        socketService.createConversation(
+          { kind: 'direct', targetUserId },
+          (ack) => {
+            if (!ack?.ok || !ack.conversation) {
+              setCreateError(ack?.error ?? 'Unable to start conversation')
+              setIsCreatingConversation(false)
+              return
+            }
+
+            const conversationId = ack.conversation.id
+            dispatch(messagesActions.setActiveConversationId(conversationId))
+            dispatch(refreshConversation(conversationId))
+            dispatch(loadInbox())
+            socketService.markConversationReadViaSocket(conversationId)
+            setNewUsername('')
+            setIsCreatingConversation(false)
+            setFilter('all')
+          },
+        )
+      } catch (error) {
+        const maybeAxios = error as { response?: { status?: number } }
+        if (maybeAxios?.response?.status === 404) {
+          setCreateError('User not found')
+        } else {
+          setCreateError('Failed to start conversation')
+        }
+        setIsCreatingConversation(false)
+      }
+    },
+    [newUsername, isCreatingConversation, dispatch],
+  )
+
   const displayMessages: DisplayMessage[] = useMemo(() => {
     return activeMessages.map((message) => ({
       id: message.id,
@@ -265,20 +325,71 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
           </header>
 
           <div className="flex flex-1 min-h-0">
-            <aside className="hidden sm:flex sm:flex-col sm:w-72 border-r border-border bg-surface-1/60">
-              <div className="px-3 py-2 border-b border-border text-xs uppercase tracking-wide text-muted">
-                Conversations
+            <aside className="hidden sm:flex sm:flex-col sm:w-80 border-r border-border bg-surface-1/60">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border text-xs uppercase tracking-wide text-muted">
+                <span>Conversations</span>
+                <div className="inline-flex items-center gap-0.5 rounded-full bg-surface-2/80 p-0.5">
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${
+                      filter === 'all' ? 'bg-primary/80 text-white' : 'text-muted'
+                    }`}
+                    onClick={() => setFilter('all')}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${
+                      filter === 'unread' ? 'bg-primary/80 text-white' : 'text-muted'
+                    }`}
+                    onClick={() => setFilter('unread')}
+                  >
+                    Unread
+                  </button>
+                </div>
+              </div>
+              <div className="px-3 py-3 border-b border-border">
+                <form onSubmit={handleCreateConversation} className="space-y-2">
+                  <label htmlFor={newConversationInputId} className="text-[11px] uppercase tracking-wide text-muted block">
+                    Start new conversation
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={newConversationInputId}
+                      type="text"
+                      value={newUsername}
+                      onChange={(event) => setNewUsername(event.target.value)}
+                      placeholder="Enter username"
+                      className="flex-1 rounded-md bg-surface-2/80 border border-border px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                    <button
+                      type="submit"
+                      className="btn-primary px-3 py-2 text-xs"
+                      disabled={isCreatingConversation || !newUsername.trim()}
+                    >
+                      {isCreatingConversation ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Start'
+                      )}
+                    </button>
+                  </div>
+                  {createError && <div className="text-xs text-red-400">{createError}</div>}
+                </form>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {inboxLoading && conversations.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-muted">Loading conversations…</div>
                 ) : inboxError ? (
                   <div className="px-4 py-6 text-sm text-red-400">{inboxError}</div>
-                ) : sortedConversations.length === 0 ? (
-                  <div className="px-4 py-6 text-sm text-muted">No conversations yet.</div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-muted">
+                    {filter === 'unread' ? 'No unread conversations.' : 'No conversations yet.'}
+                  </div>
                 ) : (
                   <ul className="divide-y divide-border/60">
-                    {sortedConversations.map((conversation) => {
+                    {filteredConversations.map((conversation) => {
                       const isActive = conversation.id === activeConversationId
                       const unread = conversation.unreadCount ?? 0
                       const subtitle = conversation.lastMessage?.body ?? 'No messages yet'

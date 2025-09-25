@@ -32,6 +32,7 @@ export interface ConversationMemberRole {
   role: 'owner' | 'admin' | 'member'
   joinedAt: Date
   shadowMuted: boolean
+  username: string
 }
 
 export interface ConversationWithMembers extends ConversationRecord {
@@ -117,6 +118,10 @@ type ConversationMemberRow = {
   shadow_muted: boolean | null
 }
 
+type ConversationMemberRoleRow = ConversationMemberRow & {
+  username: string
+}
+
 type ConversationMembershipRow = {
   role: 'owner' | 'admin' | 'member'
   shadow_muted: boolean | null
@@ -156,12 +161,13 @@ const mapMessageRow = (row: ConversationMessageRow): ConversationMessageRecord =
 const getConversationMemberRoles = async (
   conversationId: string,
 ): Promise<ConversationMemberRole[]> => {
-  const result = await query<ConversationMemberRow>(
+  const result = await query<ConversationMemberRoleRow>(
     `
-    SELECT user_id, role, joined_at, shadow_muted
-    FROM conversation_members
-    WHERE conversation_id = $1
-    ORDER BY joined_at ASC
+    SELECT cm.user_id, cm.role, cm.joined_at, cm.shadow_muted, u.username
+    FROM conversation_members cm
+    JOIN users u ON u.id = cm.user_id
+    WHERE cm.conversation_id = $1
+    ORDER BY cm.joined_at ASC
   `,
     [conversationId],
   )
@@ -171,6 +177,7 @@ const getConversationMemberRoles = async (
     role: row.role,
     joinedAt: row.joined_at,
     shadowMuted: row.shadow_muted ?? false,
+    username: row.username,
   }))
 }
 
@@ -863,7 +870,11 @@ const emitConversationCreatedEvent = (
 
     const payload = {
       conversation: serializeConversationForEvent(conversation),
-      members: conversation.memberRoles.map(({ userId, role }) => ({ userId, role })),
+      members: conversation.memberRoles.map(({ userId, role, username }) => ({
+        userId,
+        role,
+        username,
+      })),
     }
 
     const targetUserIds = recipients ?? conversation.memberIds
@@ -895,7 +906,7 @@ const emitConversationMembersAddedEvent = (
 
     const payload = {
       conversationId,
-      members: addedMembers.map(({ userId, role }) => ({ userId, role })),
+      members: addedMembers.map(({ userId, role, username }) => ({ userId, role, username })),
     }
 
     for (const userId of recipients) {
