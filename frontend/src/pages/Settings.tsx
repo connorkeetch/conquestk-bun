@@ -68,7 +68,7 @@ function ColorDropdown({
       <button
         type="button"
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px]"
+        className="btn w-full min-w-[240px] items-center justify-start gap-3 hover:bg-[color:var(--hover-bg)]"
       >
         {/* Color Hexagon */}
         <div className="relative">
@@ -118,7 +118,9 @@ function ColorDropdown({
         </div>
 
         {/* Color Name */}
-        <span className="flex-1 text-left text-white">{COLOR_DISPLAY_NAMES[value]}</span>
+        <span className="flex-1 text-left text-[color:var(--text)]">
+          {COLOR_DISPLAY_NAMES[value]}
+        </span>
 
         {/* Dropdown Arrow */}
         <svg
@@ -138,7 +140,7 @@ function ColorDropdown({
 
       {/* Dropdown Menu */}
       {isDropdownOpen && (
-        <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+        <div className="absolute mt-2 w-full panel z-50 max-h-96 overflow-y-auto p-0">
           {/* Standard Colors Section */}
           <div className="p-2">
             <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
@@ -154,8 +156,10 @@ function ColorDropdown({
                     onChange(color)
                     setIsDropdownOpen(false)
                   }}
-                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700 ${
-                    isSelected ? 'bg-slate-700' : ''
+                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-[var(--radius-sm)] border transition-colors hover:bg-[color:var(--hover-bg)] ${
+                    isSelected
+                      ? 'bg-[color:var(--hover-bg)] border-[color:var(--hover-border)]'
+                      : 'border-transparent'
                   }`}
                 >
                   {/* Color Hexagon */}
@@ -195,14 +199,14 @@ function ColorDropdown({
                   </svg>
 
                   {/* Color Name */}
-                  <span className="flex-1 text-left text-gray-200">
+                  <span className="flex-1 text-left text-[color:var(--text)]">
                     {COLOR_DISPLAY_NAMES[color]}
                   </span>
 
                   {/* Selected Check */}
                   {isSelected && (
                     <svg
-                      className="w-4 h-4 text-green-400"
+                      className="w-4 h-4 text-[color:var(--color-success)]"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       role="img"
@@ -222,11 +226,11 @@ function ColorDropdown({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-slate-700 my-1" />
+          <div className="border-t border-[color:var(--panel-border)] my-1" />
 
           {/* Premium Colors Section */}
           <div className="p-2">
-            <div className="text-xs text-yellow-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
+            <div className="text-xs uppercase tracking-wider px-2 py-1 flex items-center gap-1 text-[color:var(--color-secondary)]">
               <span>Premium Colors</span>
               <span>⭐</span>
             </div>
@@ -240,8 +244,10 @@ function ColorDropdown({
                     onChange(color)
                     setIsDropdownOpen(false)
                   }}
-                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700 ${
-                    isSelected ? 'bg-slate-700' : ''
+                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-[var(--radius-sm)] border transition-colors hover:bg-[color:var(--hover-bg)] ${
+                    isSelected
+                      ? 'bg-[color:var(--hover-bg)] border-[color:var(--hover-border)]'
+                      : 'border-transparent'
                   }`}
                 >
                   {/* Color Hexagon */}
@@ -303,14 +309,14 @@ function ColorDropdown({
                   </div>
 
                   {/* Color Name */}
-                  <span className="flex-1 text-left text-gray-200">
+                  <span className="flex-1 text-left text-[color:var(--text)]">
                     {COLOR_DISPLAY_NAMES[color]}
                   </span>
 
                   {/* Selected Check */}
                   {isSelected && (
                     <svg
-                      className="w-4 h-4 text-green-400"
+                      className="w-4 h-4 text-[color:var(--color-success)]"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       role="img"

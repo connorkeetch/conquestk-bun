@@ -1,300 +1,101 @@
-# Theme System Documentation
+# Theme System
 
-## Overview
+## Why It Exists
+ConquestK ships multiple visual themes (default, dark, RetroSpace, seasonal drops) without duplicating component code. The theming layer is **CSS-first**: JavaScript simply toggles the `data-theme` attribute, while CSS variables and semantic utilities handle the visuals. That keeps first paint fast, avoids FOUC, and makes theme rollouts predictable.
 
-ConquestK uses a **pure CSS-based theme system** that provides instant theme switching with zero JavaScript overhead. All theme styling is handled through CSS custom properties and data attributes, ensuring no flash of unstyled content and optimal performance.
+## File Map
+- `frontend/src/app.css`
+  - Light-first baseline tokens under `:root`
+  - Theme overrides (`:root[data-theme="*"]`)
+  - Shared utilities (`@layer utilities`) and semantic component classes (`@layer components`)
+- `frontend/src/themes/*.css`
+  - Optional theme-specific overrides when a theme needs more than the defaults
+- `frontend/src/utils/themeLoader.ts`
+  - Runs before React hydrates, applies the stored theme to prevent flash
+- `frontend/src/config/themes.config.ts`
+  - Theme metadata (name, description, preview color) used by selectors/settings
+- `frontend/src/constants/colors.ts`
+  - Game art colors only (armies, ranks). Themes do **not** live here.
+- `backend/migrations/009_user_preferences.sql`
+  - Persists a user’s theme choice so it follows them across devices
 
-## Architecture
+## Token Baseline (light-first)
+`frontend/src/app.css` defines neutral defaults on `:root`. Themes only override what changes.
 
-### CSS-First Approach
-All theme definitions are maintained as CSS rules in `/frontend/src/app.css` using `[data-theme="name"]` selectors. JavaScript only changes the data-theme attribute - CSS handles all the styling automatically.
+**Core categories**
+- **Typography**: `--font-family-base`, `--text`, `--text-muted`, `--heading`, `--link`
+- **Surfaces**: `--surface-0`, `--surface-1`, `--surface-2`, `--panel-bg`, `--panel-border`, `--panel-bg-alt`
+- **Chrome**: `--nav-bg`, `--nav-border`, `--footer-bg`, `--modal-bg`, `--modal-border`, `--body-bg-image`, `--body-bg-attachment`
+- **Interaction**: `--hover-bg`, `--hover-border`
+- **Radii**: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-surface`
+- **Elevation**: `--shadow-0`, `--shadow-1`, `--shadow-2`, `--shadow-modal`
+- **Glass**: `--glass-bg`, `--glass-bg-light`, `--glass-border`, `--glass-blur`, `--glass-shadow`, `--glass-radius-sm`, `--glass-radius-lg`
+- **Legacy aliases** kept for gradual cleanup: `--color-*`, `--box-*`, `--surface-glass*`
 
-### 📁 File Locations & Responsibilities
-
-1. **`/frontend/src/app.css`** 
-   - Theme definitions using `[data-theme="themename"]` selectors
-   - CSS variables for each theme (colors, gradients, effects)
-   - Source of truth for all theme styling
-
-2. **`/frontend/src/config/themes.config.ts`**
-   - Theme metadata (names, descriptions, display colors)
-   - `applyTheme()` function - Sets data-theme attribute
-   - `getStoredTheme()` - Retrieves saved theme preference
-   - No longer applies inline styles (pure CSS now)
-
-3. **`/frontend/src/utils/themeLoader.ts`**
-   - Script injected into index.html before React loads
-   - Sets initial theme from localStorage
-   - Prevents flash of unstyled content (FOUC)
-
-4. **`/frontend/src/constants/colors.ts`**
-   - Game-specific color constants (NOT themes)
-   - `PLAYER_COLORS` - 13 player colors for game pieces
-   - `PREMIUM_PLAYER_COLORS` - VIP/premium player colors
-   - `RANK_COLORS` - ELO rank display colors
-   - **Note**: Theme objects here are DEPRECATED and unused
-
-5. **`/backend/migrations/009_user_preferences.sql`**
-   - Database persistence for theme preferences
-   - Syncs across devices/sessions
-
-### Theme Structure
-Each theme defines:
-- **Primary Colors**: Primary, primary-soft, secondary, accent
-- **Background Colors**: bgDeep (deepest), bgAlt (alternative deep)
-- **Surface Colors**: surface-1 (cards/panels), surface-2 (nested elements)
-- **Text Colors**: text (primary), textMuted (secondary)
-- **Border Color**: For dividers and outlines
-- **Gradient**: Complex background gradients with multiple stops
-
-### CSS Variable System
-Themes are defined in CSS and automatically apply when data-theme changes:
+**Example**
 ```css
-[data-theme="default"] {
-  --color-primary: #2563EB;      /* Blue buttons */
-  --color-bg-deep: #000000;      /* Pure black */
-  --color-surface-1: #0f172a;    /* Dark cards */
-  --ck-bg-gradient: linear-gradient(135deg, 
-    #111827 0%,                   /* gray-900 */
-    rgba(88, 28, 135, 0.2) 50%,  /* purple-900/20 */
-    #000000 100%);                /* black */
+:root {
+  --text: #0f172a;
+  --surface-1: #ffffff;
+  --nav-bg: #ffffff;
+  --radius-md: 8px;
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.65);
 }
 ```
 
-## Available Themes
+### Dark & RetroSpace Overrides
+- `:root[data-theme="dark"]` (also aliased as `default`) restores the legacy dark look by overriding surface colors, radii, shadows, and glass tokens.
+- `frontend/src/themes/retrospace.css` now overrides only tokens (Verdana stack, square radii, flat chrome, zero shadows). Body/backdrop styles read `--body-bg-*` tokens instead of bespoke rules.
 
-| Theme | Primary Color | Description |
-|-------|--------------|-------------|
-| default | Blue (#2563EB) | Blue buttons with dark purple gradient background |
-| dark | Blue (#2563EB) | Alias for default (backwards compatibility) |
-| violet | Purple (#7C3AED) | Purple theme with violet accents |
-| red | Red (#DC2626) | Crimson theme with red accents |
-| blue | Blue (#2563EB) | Ocean blue theme |
-| retrospace | Royal Blue (#0F4CDA) | Premium retro social profile blues with neon highlights |
-| green | Emerald (#059669) | Emerald green theme |
-| frontier | Saddle Brown (#C47E35) | 🤠 Premium cowboy theme with campfire glow |
-| black | Gray (#1f2937) | Pure black with gray accents |
-| highcontrast | Bright Blue (#00B4FF) | Accessibility-focused high contrast (WCAG AAA) |
-| metal | Magenta (#FF2D95) | Premium heavy metal neon grid experience |
-| halloween | Orange (#FF6B35) | 🎃 Spooky seasonal theme with animated effects |
-| cutlers-cheese | Cheddar Gold (#F5B700) | 🧀 Premium dairy reverie with bubbling fondue ambience |
+Other themes can continue to override selective tokens. If a theme needs structural tweaks beyond variables, prefer adding theme-specific selectors in its CSS file rather than mutating components.
 
-## How Theme Switching Works
+## Semantic Utility Layer
+Implemented in `app.css` under `@layer components`. These classes consume the tokens above so React components can drop bespoke Tailwind chains:
 
-1. **User selects theme** → Settings page calls `applyTheme(themeId)`
-2. **Apply theme** → Sets `document.documentElement.setAttribute('data-theme', themeId)`
-3. **CSS takes over** → Browser applies matching `[data-theme="themename"]` styles
-4. **Save preference** → Stored in localStorage and database
-5. **Next visit** → themeLoader.ts applies saved theme before React loads
+- **Surfaces**: `.panel`, `.panel-muted`, `.panel-outline`
+- **Buttons**: `.btn` base plus `.btn-primary`, `.btn-secondary`, `.btn-tertiary`, `.btn-outline`, `.btn-ghost`, `.btn-danger`, `.btn-success`, `.btn-icon`, `.btn-sm`, `.btn-lg`
+- **Forms**: `.form-label`, `.form-input`, `.form-select`, `.form-help`, `.form-checkbox`, `.form-radio`
+- **Navigation**: `.nav-bar`, `.nav-item`, `.nav-item-active`, `.nav-dropdown`
+- **Badges & Chips**: `.badge`, `.chip`
+- **Tables & Lists**: `.table`, `.table-row`, `.list`, `.list-item`
+- **Modals**: `.modal`, `.modal-header`, `.modal-body`, `.modal-footer`
 
-## Migration Status
+RetroSpace (or any square theme) automatically gets sharp corners and flat chrome because the tokens it overrides feed every class above.
 
-- ✅ Moved from JavaScript objects to pure CSS
-- ✅ Removed inline style application
-- ✅ Database persistence implemented
-- ✅ Zero-flash loading implemented
-- ⚠️ Some components still use CORE_COLORS (gradual migration)
-- 🔄 Theme objects in colors.ts marked deprecated
+## Using the System
+1. **Pick the semantic class first.** Example: wrap cards with `.panel` instead of `rounded-xl shadow-xl bg-slate-900/40`.
+2. **Reach for tokens in CSS when semantically unique.** e.g. a new HUD overlay can use `border-radius: var(--radius-sm)` directly.
+3. **Legacy Tailwind utilities** are still available for layout/spacing, but avoid hardcoding radii, shadows, blur, or color values that already exist as tokens.
+4. **Glass effects**: use `.panel.glass` + custom modifier, or directly reference `--glass-*` tokens if you need something special.
+5. **When adding a theme**, only override tokens (`--text`, `--panel-bg`, etc.) unless a bespoke selector is unavoidable.
 
-## Usage
+## RetroSpace Migration Checklist
+Latest status (2025‑03‑12):
+- ✅ Token baseline split into light-first root + dark overrides + RetroSpace token hooks.
+- ✅ Semantic utility layer scaffolding added for surfaces, buttons, forms, nav, tables, lists, modals.
+- 🔄 In progress: convert high-traffic screens to `.panel`/`.btn`/`.form-*` classes and delete redundant Tailwind chains.
+- 🔄 Pending: migrate remaining glass/translucent components, extract hero gradients into tokens, add RetroSpace-only textures via `--body-bg-image` when ready.
+- 🔄 QA: visual diff (default, dark, RetroSpace), run `npm run lint`, `npm run test:frontend`, `npm run build` before launch.
 
-### Switching Themes (Frontend)
-```typescript
-import { useDispatch } from 'react-redux';
-import { setTheme } from '@/store/settingsSlice';
+## Adding or Updating Themes
+1. **Tokens** – update `:root[data-theme="yourtheme"]` (or add a new file in `frontend/src/themes/`). Keep overrides token-only when possible.
+2. **Metadata** – add to `themes.config.ts` so the picker displays the theme.
+3. **Assets** – theme-specific fonts or images belong in `frontend/public/themes/` or CDN as needed; reference them via tokens like `--body-bg-image`.
+4. **Testing** – validate in a private lobby (`npm run dev`) and in production build (`npm run build && npm run preview`).
 
-// In a React component
-const dispatch = useDispatch();
-dispatch(setTheme('violet')); // Switch to violet theme
-```
-
-### Using Theme Colors in Components
-Always use semantic Tailwind classes that adapt to themes:
-```tsx
-// ✅ CORRECT - Uses semantic classes
-<div className="bg-surface-1 text-white border-border">
-  <button className="bg-primary hover:brightness-110 text-white">
-    Click Me
-  </button>
-</div>
-
-// ❌ WRONG - Hardcoded colors
-<div className="bg-gray-800 text-gray-100 border-gray-600">
-  <button className="bg-blue-600 hover:bg-blue-700 text-white">
-    Click Me
-  </button>
-</div>
-```
-
-### Semantic Color Classes
-
-#### Backgrounds
-- `bg-deep` - Deepest background (page background)
-- `bg-alt` - Alternative deep background
-- `bg-surface-1` - Primary surface (cards, panels)
-- `bg-surface-2` - Secondary surface (nested elements)
-
-#### Text
-- `text-white` - Primary text (adapts in light theme)
-- `text-muted` - Secondary/muted text
-- `text-primary` - Primary theme color text
-- `text-primary-soft` - Softer primary color text
-
-#### Buttons & Interactive
-- `bg-primary` - Primary action buttons
-- `bg-secondary` - Secondary elements
-- `bg-accent` - Accent/danger actions
-- `hover:brightness-110` - Universal hover effect
-
-#### State Colors
-- `bg-success-soft` - Success states
-- `bg-warning-soft` - Warning states
-- `bg-error-soft` - Error states
-- `bg-info-soft` - Info states
-
-## Theme Loading Performance
-
-The theme system uses a specialized loader to prevent flash of unstyled content:
-
-1. **Pre-React Loading**: Theme is applied before React hydrates
-2. **LocalStorage Persistence**: Theme choice persists across sessions
-3. **Instant Switching**: No page reload required
-4. **Zero Flash**: Theme is set before first paint
-
-## Adding a New Theme
-
-### 1. Define CSS Theme in app.css
-Add your theme definition after existing themes:
-```css
-[data-theme="mytheme"] {
-  --color-primary: #yourcolor;
-  --color-primary-soft: #yourhovercolor;
-  --color-secondary: #FFD700;
-  --color-accent: #accentcolor;
-  --color-bg-deep: #000000;
-  --color-bg-alt: #050505;
-  --color-surface-1: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-text: #F9FAFB;
-  --color-text-muted: #94A3B8;
-  --color-border: #334155;
-  --ck-bg-gradient: linear-gradient(135deg, ...);
-}
-```
-
-### 2. Add Theme Metadata to themes.config.ts
-For UI display purposes only:
-```typescript
-{
-  id: 'mytheme',
-  name: 'My Theme',
-  displayColor: '#yourcolor',  // Color shown in UI picker
-  description: 'Description of your theme',
-  colors: {
-    // These should match your CSS values
-    primary: '#yourcolor',
-    // ... other colors
-  }
-}
-```
-
-### 3. Update Valid Themes in themeLoader.ts
-Add to the validThemes array:
-```javascript
-const validThemes = [
-  'default',
-  'dark',
-  'red',
-  'violet',
-  'blue',
-  'retrospace',
-  'green',
-  'frontier',
-  'black',
-  'highcontrast',
-  'halloween',
-  'metal',
-  'cutlers-cheese',
-  'mytheme',
-];
-```
-
-## Best Practices
-
-### ✅ DO:
-- Use semantic color classes (`bg-primary`, `text-muted`)
-- Test all themes when adding new components
-- Use `hover:brightness-110` for consistent hover effects
-- Keep backgrounds very dark for dark themes (#0a0a0f or darker)
-- Define themes in app.css using data-theme selectors
-- Ensure adequate contrast ratios (WCAG AA minimum)
-
-### ❌ DON'T:
-- Don't add theme colors to `colors.ts` (use CSS)
-- Don't apply inline styles for theming (use CSS variables)
-- Don't import theme objects from colors.ts (they're deprecated)
-- Don't modify theme colors in JavaScript (CSS-only)
-
-## Performance Benefits
-
-- **Instant switching** - No JavaScript processing
-- **Zero flash** - Theme applied before React
-- **Smaller bundle** - No theme objects in JS
-- **Browser optimized** - Native CSS handling
-- **Cache friendly** - CSS can be cached separately
-
-## Component Examples
-
-### Card Component
-```tsx
-<div className="bg-surface-1 border border-border rounded-lg p-4">
-  <h3 className="text-white font-bold mb-2">Card Title</h3>
-  <p className="text-muted">Card content goes here</p>
-</div>
-```
-
-### Button Component
-```tsx
-<button className="bg-primary hover:brightness-110 text-white px-4 py-2 rounded">
-  Primary Button
-</button>
-
-<button className="bg-surface-2 hover:bg-surface-1 text-white px-4 py-2 rounded">
-  Secondary Button
-</button>
-```
-
-### Form Input
-```tsx
-<input 
-  className="bg-surface-2 border border-border text-white placeholder-muted 
-             focus:border-primary rounded px-3 py-2"
-  placeholder="Enter text..."
-/>
-```
+## Component Migration Tips
+- Replace `bg-surface-*`, `rounded-*`, `shadow-*`, and `backdrop-blur-*` usages with the semantic classes.
+- If a component still needs Tailwind for layout (grid, flex, spacing), keep those utilities alongside the new semantic class.
+- When a replacement is risky, leave a `// TODO(theme)` comment and capture the follow-up in Jira/Linear.
 
 ## Troubleshooting
+- **Theme not applying?** Ensure `data-theme="name"` matches CSS selectors and the loader runs before React.
+- **RetroSpace looks rounded?** Some hardcoded `rounded-*` remains—swap to `.panel` or the appropriate token.
+- **Unexpected blur/glow?** Audit for legacy `.glass`, `backdrop-blur`, or gradient utilities; replace with tokenized equivalents.
 
-### Theme not persisting
-- Check localStorage is enabled
-- Verify `colorTheme` key exists in localStorage
-- Ensure Redux store is properly initialized
+## Historical Notes
+- 2024‑10: Migrated from JS theme maps to CSS variables.
+- 2025‑03: Token baseline expanded; semantic utility layer introduced as part of RetroSpace unification.
 
-### Colors not updating
-- Verify using semantic classes, not hardcoded
-- Check component isn't using inline styles
-- Ensure theme definition has all required colors
-
-### Flash on page load
-- Verify themeLoader script is in index.html
-- Check theme is applied before React hydrates
-- Ensure no conflicting CSS
-
-## Future Enhancements
-
-Planned improvements (tracked in [planning/roadmap.md](planning/roadmap.md)):
-- Style themes (modern, retro, minimal)
-- Auto theme based on time of day
-- Custom theme creator
-- Theme animations and transitions
-- High contrast accessibility mode
+This document is now the single source of truth for theming. If a future change alters tokens, utilities, or migration strategy, update this file and reference it from release notes.
