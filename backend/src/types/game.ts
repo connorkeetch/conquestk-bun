@@ -1,4 +1,3 @@
-import type { AIDifficulty } from '@risk-game/shared/types'
 export type { AIDifficulty } from '@risk-game/shared/types'
 
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'

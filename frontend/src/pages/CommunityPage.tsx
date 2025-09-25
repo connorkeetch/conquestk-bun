@@ -1,6 +1,9 @@
 import { Calendar, Crown, Medal, TrendingUp, Trophy, Users } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { FEATURE_FLAGS } from '@/constants/featureFlags'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { logger } from '@/utils/logger'
 import api from '../services/api'
 
@@ -16,6 +19,7 @@ interface LeaderboardEntry {
 }
 
 const CommunityPage: React.FC = () => {
+  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
   const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'monthly' | 'friends'>('global')
   const [globalLeaderboard, setGlobalLeaderboard] = useState<LeaderboardEntry[]>([])
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -80,6 +84,50 @@ const CommunityPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {clansEnabled && (
+        <div className="grid gap-6 md:grid-cols-2 mb-10">
+          <Link to="/clans" className="group">
+            <div className="glass-box-lg p-6 h-full flex flex-col gap-4 border border-primary/20 group-hover:border-primary/60 transition">
+              <div className="flex items-center gap-3 text-primary-soft">
+                <Users className="w-5 h-5" />
+                <span className="text-sm uppercase tracking-[0.3em]">New</span>
+              </div>
+              <h2 className="text-2xl font-semibold text-white">Clans directory</h2>
+              <p className="text-muted leading-relaxed">
+                Explore featured clans, review their mission statements, and find the crew that
+                matches your playstyle.
+              </p>
+              <div className="mt-auto flex items-center gap-2 text-primary-soft font-medium">
+                Enter directory
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4 transform group-hover:translate-x-1 transition"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </Link>
+          <div className="glass-box-lg p-6 flex flex-col gap-4 border border-white/10">
+            <h3 className="text-lg font-semibold text-white">Clan recruitment tips</h3>
+            <ul className="text-muted text-sm space-y-2 list-disc list-inside">
+              <li>Set expectations in your clan description so applicants know what you value.</li>
+              <li>Encourage members to add their region and active hours in their profiles.</li>
+              <li>Use announcements to celebrate wins and keep members engaged.</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-primary/10 text-primary-soft">

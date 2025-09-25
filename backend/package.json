@@ -25,9 +25,6 @@
     "check:schema": "ts-node src/scripts/checkSchema.ts",
     "migrate:status": "ts-node src/scripts/checkSchema.ts",
     "notify": "ts-node src/scripts/notify.ts",
-    "backup:production": "node scripts/backup-production.js",
-    "deploy:consolidated": "node scripts/deploy-consolidated-migration.js",
-    "deploy:consolidated:nodejs": "node scripts/deploy-consolidated-nodejs.js",
     "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts"
   },
   "dependencies": {

@@ -162,6 +162,19 @@ SELECT * FROM schema_migrations ORDER BY executed_at DESC;
 railway run --environment production npm run migrate:rollback
 ```
 
+### Database Backups (January 2026 update)
+- Prefer Railway's built-in PostgreSQL snapshots for automated retention and point-in-time recovery.
+- For ad-hoc exports, run `pg_dump` to a directory **outside** the repository so we never commit SQL dumps again:
+
+```bash
+mkdir -p ~/conquestk-backups
+railway run --environment production \
+  pg_dump "$DATABASE_URL" --format=custom --no-owner \
+  > ~/conquestk-backups/conquestk-prod-$(date +%Y%m%d%H%M).dump
+```
+
+- Document the backup location in the incident ticket and rotate the dump after verification. Upload to secure object storage if the dump must persist beyond the incident response window.
+
 ### Common Issues & Fixes
 
 **Deployment Not Triggering**

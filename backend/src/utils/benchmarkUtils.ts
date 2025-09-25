@@ -227,25 +227,52 @@ export function comparePerformance(
   throughput: { change: number; improvement: boolean }
   errorRate: { change: number; improvement: boolean }
 } {
-  const responseTimeChange =
-    ((current.avgResponseTime - baseline.avgResponseTime) / baseline.avgResponseTime) * 100
-  const throughputChange =
-    ((current.requestsPerSecond - baseline.requestsPerSecond) / baseline.requestsPerSecond) * 100
-  const errorRateChange = ((current.errorRate - baseline.errorRate) / baseline.errorRate) * 100
+  const responseTime = calculateMetricChange(
+    current.avgResponseTime,
+    baseline.avgResponseTime,
+    false,
+  )
+  const throughput = calculateMetricChange(
+    current.requestsPerSecond,
+    baseline.requestsPerSecond,
+    true,
+  )
+  const errorRate = calculateMetricChange(current.errorRate, baseline.errorRate, false)
 
   return {
-    responseTime: {
-      change: Math.round(responseTimeChange),
-      improvement: responseTimeChange < 0, // Lower is better
-    },
-    throughput: {
-      change: Math.round(throughputChange),
-      improvement: throughputChange > 0, // Higher is better
-    },
-    errorRate: {
-      change: Math.round(errorRateChange),
-      improvement: errorRateChange < 0, // Lower is better
-    },
+    responseTime,
+    throughput,
+    errorRate,
+  }
+}
+
+const NEAR_ZERO = 1e-9
+
+function calculateMetricChange(
+  currentValue: number,
+  baselineValue: number,
+  higherIsBetter: boolean,
+): { change: number; improvement: boolean } {
+  const difference = currentValue - baselineValue
+
+  if (Math.abs(baselineValue) < NEAR_ZERO) {
+    if (Math.abs(currentValue) < NEAR_ZERO) {
+      return { change: 0, improvement: false }
+    }
+
+    const roundedDifference = Math.round(difference * 100) / 100
+
+    return {
+      change: roundedDifference,
+      improvement: higherIsBetter ? difference > 0 : difference < 0,
+    }
+  }
+
+  const percentChange = (difference / baselineValue) * 100
+
+  return {
+    change: Math.round(percentChange),
+    improvement: higherIsBetter ? percentChange > 0 : percentChange < 0,
   }
 }
 

@@ -103,6 +103,41 @@ This allows themes to work with any color scheme!
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
 
+  /* ===== TYPOGRAPHY TOKENS ===== */
+  --text: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --heading: var(--color-text);
+  --link: var(--color-primary);
+
+  /* ===== SURFACE & CHROME TOKENS ===== */
+  --surface-0: var(--color-bg-deep);
+  --surface-1: var(--color-surface-1);
+  --surface-2: var(--color-surface-2);
+  --panel-bg: var(--color-surface-1);
+  --panel-border: var(--color-border);
+  --panel-bg-alt: color-mix(in srgb, var(--color-surface-2) 60%, transparent);
+  --nav-bg: color-mix(in srgb, var(--color-bg-deep) 85%, transparent);
+  --nav-border: color-mix(in srgb, var(--color-border) 60%, transparent);
+  --footer-bg: var(--color-bg-void);
+  --modal-bg: var(--panel-bg);
+  --modal-border: var(--panel-border);
+
+  /* ===== INTERACTION TOKENS ===== */
+  --hover-bg: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  --hover-border: color-mix(in srgb, var(--color-primary) 40%, transparent);
+
+  /* ===== RADIUS TOKENS ===== */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-surface: var(--radius-lg);
+
+  /* ===== SHADOW TOKENS ===== */
+  --shadow-0: none;
+  --shadow-1: 0 4px 12px rgba(15, 23, 42, 0.25);
+  --shadow-2: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --shadow-modal: 0 30px 80px rgba(0, 0, 0, 0.35);
+
   /* Section spacing */
   --section-spacing: 3rem;
   --section-spacing-sm: 2rem;
@@ -113,18 +148,31 @@ This allows themes to work with any color scheme!
   /* Atmospheric glow */
   --ck-glow: var(--color-primary-soft);
 
-  /* Surface glass effects */
-  --surface-glass: rgba(15, 23, 42, 0.6);
-  --surface-glass-light: rgba(17, 24, 39, 0.4);
+  /* Glass surface tokens */
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-bg-light: rgba(17, 24, 39, 0.4);
+  --glass-border: rgba(71, 85, 105, 0.5);
+  --glass-blur: 12px;
+  --glass-shadow: var(--shadow-2);
+  --glass-radius-sm: 0.5rem;
+  --glass-radius-lg: 1rem;
 
-  /* Box/Card component variables */
-  --box-bg: rgba(30, 41, 59, 0.5); /* slate-800/50 equivalent */
+  /* Surface glass effects (legacy aliases) */
+  --surface-glass: var(--glass-bg);
+  --surface-glass-light: var(--glass-bg-light);
+
+  /* Panel tokens */
+  --panel-radius: var(--radius-surface);
+  --panel-padding: 1.5rem;
+
+  /* Box/Card component variables (legacy aliases) */
+  --box-bg: var(--glass-bg); /* slate-800/50 equivalent */
   --box-bg-solid: #1e293b; /* Solid version for non-glass boxes */
-  --box-border: rgba(71, 85, 105, 0.5); /* slate-600/50 */
-  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  --box-blur: 12px;
-  --box-radius: 0.75rem;
-  --box-padding: 1.5rem;
+  --box-border: var(--glass-border); /* slate-600/50 */
+  --box-shadow: var(--glass-shadow);
+  --box-blur: var(--glass-blur);
+  --box-radius: var(--radius-lg);
+  --box-padding: var(--panel-padding);
 }
 
 /* Default grid for most themes */
@@ -896,42 +944,42 @@ kbd {
 
 /* Glass Box - Settings-style semi-transparent box with theme support */
 .glass-box {
-  background-color: var(--box-bg);
-  backdrop-filter: blur(var(--box-blur));
-  border: 1px solid var(--box-border);
-  border-radius: var(--box-radius);
-  padding: var(--box-padding);
-  box-shadow: var(--box-shadow);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--panel-radius);
+  padding: var(--panel-padding);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Glass Box Small - For compact components */
 .glass-box-sm {
-  background-color: var(--box-bg);
-  backdrop-filter: blur(var(--box-blur));
-  border: 1px solid var(--box-border);
-  border-radius: 0.5rem;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-sm);
   padding: 1rem;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Glass Box Large - For main content areas */
 .glass-box-lg {
-  background-color: var(--box-bg);
-  backdrop-filter: blur(var(--box-blur));
-  border: 1px solid var(--box-border);
-  border-radius: 1rem;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
   padding: 2rem;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Glass Box XL - For page sections */
 .glass-box-xl {
-  background-color: var(--box-bg);
-  backdrop-filter: blur(var(--box-blur));
-  border: 1px solid var(--box-border);
-  border-radius: 1rem;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
   padding: 2rem;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Solid Box - Non-transparent version */
