@@ -616,20 +616,20 @@ export default function Settings() {
   const renderSetting = (setting: SettingItem) => {
     const isDisabled = !setting.isWorking || setting.disabled === true
 
-    const baseContainerClass = `p-4 rounded-lg border transition-all ${
+    const baseContainerClass = `panel relative transition-all ${
       !isDisabled
-        ? 'bg-slate-800/50 border-slate-600 hover:border-slate-500'
-        : 'bg-slate-800/20 border-slate-700/50 opacity-60'
+        ? 'hover:border-[color:var(--hover-border)] hover:shadow-[var(--shadow-1)]'
+        : 'opacity-60'
     }`
 
-    const labelClass = `text-base font-medium ${!isDisabled ? 'text-gray-200' : 'text-muted'}`
+    const labelClass = `text-base font-medium ${!isDisabled ? 'text-[color:var(--heading)]' : 'text-muted'}`
 
     const descriptionClass = 'text-sm mt-1 text-muted'
 
     const renderComingSoonBadge = () => {
       if (!setting.isWorking) {
         return (
-          <div className="absolute -top-2 -right-2 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold z-10">
+          <div className="badge absolute -top-2 -right-2 text-[color:var(--color-warning)] border-[color:var(--color-warning)] bg-[color:var(--hover-bg)] text-xs font-semibold z-10">
             Coming Soon
           </div>
         )
@@ -660,9 +660,7 @@ export default function Settings() {
         case 'select':
           return (
             <select
-              className={`px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`form-select ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isDisabled}
               value={typeof setting.defaultValue === 'string' ? setting.defaultValue : ''}
               onChange={(e) => {
@@ -704,10 +702,10 @@ export default function Settings() {
         case 'button': {
           const buttonClass =
             setting.buttonVariant === 'danger'
-              ? `px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+              ? `btn btn-danger ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
               : setting.buttonVariant === 'primary'
-                ? `px-4 py-2 bg-primary hover:bg-primary text-white font-medium rounded-lg transition-colors text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
-                : `btn-secondary text-sm ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+                ? `btn btn-primary ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
+                : `btn btn-secondary ${!setting.isWorking ? 'opacity-50 cursor-not-allowed' : ''}`
 
           return (
             <button
@@ -754,7 +752,7 @@ export default function Settings() {
                           setUsernameAvailable(null)
                         }
                       }}
-                      className="px-3 py-1 bg-primary hover:bg-primary text-white text-sm rounded transition-colors"
+                      className="btn btn-primary btn-sm"
                     >
                       Edit
                     </button>
@@ -766,12 +764,12 @@ export default function Settings() {
                     <div className="flex items-center gap-2">
                       <input
                         type={isEmail ? 'email' : 'text'}
-                        className={`px-3 py-2 bg-slate-700 border rounded-lg text-white text-sm w-48 ${
+                        className={`form-input w-48 ${
                           isUsername && usernameAvailable === false
-                            ? 'border-red-500'
+                            ? 'border-[color:var(--color-danger)]'
                             : isUsername && usernameAvailable === true
-                              ? 'border-green-500'
-                              : 'border-slate-600'
+                              ? 'border-[color:var(--color-success)]'
+                              : ''
                         }`}
                         value={fieldValues[setting.id] || ''}
                         onChange={(e) => {
@@ -797,9 +795,9 @@ export default function Settings() {
                           {checkingUsername ? (
                             <span className="text-muted">⏳</span>
                           ) : usernameAvailable === true ? (
-                            <span className="text-green-400">✓</span>
+                            <span className="text-[color:var(--color-success)]">✓</span>
                           ) : usernameAvailable === false ? (
-                            <span className="text-red-400">✗</span>
+                            <span className="text-[color:var(--color-danger)]">✗</span>
                           ) : null}
                         </div>
                       )}
@@ -807,7 +805,7 @@ export default function Settings() {
 
                     {/* Username availability message */}
                     {isUsername && usernameAvailable === false && (
-                      <p className="text-red-400 text-xs">
+                      <p className="text-[color:var(--color-danger)] text-xs">
                         {fieldValues[setting.id]?.length < 3
                           ? 'Username must be at least 3 characters'
                           : 'Username is already taken'}
@@ -855,7 +853,12 @@ export default function Settings() {
                       profileUpdateLoading ||
                       (isUsername && (checkingUsername || usernameAvailable === false))
                     }
-                    className="px-3 py-1 bg-success hover:brightness-110 disabled:bg-surface-2 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+                    className={`btn btn-success btn-sm ${
+                      profileUpdateLoading ||
+                      (isUsername && (checkingUsername || usernameAvailable === false))
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
+                    }`}
                   >
                     {profileUpdateLoading ? 'Saving...' : 'Save'}
                   </button>
@@ -873,7 +876,7 @@ export default function Settings() {
                         setUsernameAvailable(null)
                       }
                     }}
-                    className="btn-secondary px-3 py-1 text-sm"
+                    className="btn btn-secondary btn-sm"
                   >
                     Cancel
                   </button>
@@ -901,7 +904,9 @@ export default function Settings() {
                 type="button"
                 onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
                 disabled={isDisabled}
-                className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all min-w-[240px] disabled:opacity-50"
+                className={`btn w-full min-w-[240px] items-center justify-start gap-3 ${
+                  isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[color:var(--hover-bg)]'
+                }`}
               >
                 <div className="flex items-center gap-3">
                   {/* Color Circle */}
@@ -914,7 +919,9 @@ export default function Settings() {
                     }}
                   />
                   {/* Theme Name */}
-                  <span className="flex-1 text-left text-white">{selectedTheme.name}</span>
+                  <span className="flex-1 text-left text-[color:var(--text)]">
+                    {selectedTheme.name}
+                  </span>
                 </div>
 
                 {/* Dropdown Arrow */}
@@ -939,7 +946,7 @@ export default function Settings() {
 
               {/* Dropdown Menu */}
               {isThemeDropdownOpen && (
-                <div className="absolute mt-2 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                <div className="absolute mt-2 w-full panel z-50 max-h-96 overflow-y-auto p-0">
                   <div className="p-2">
                     <div className="text-xs text-muted uppercase tracking-wider px-2 py-1">
                       Standard Themes
@@ -955,7 +962,11 @@ export default function Settings() {
                           setIsThemeDropdownOpen(false)
                         }}
                         disabled={isDisabled}
-                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
+                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-[var(--radius-sm)] border transition-colors hover:bg-[color:var(--hover-bg)] ${
+                          setting.defaultValue === theme.id
+                            ? 'bg-[color:var(--hover-bg)] border-[color:var(--hover-border)]'
+                            : 'border-transparent'
+                        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {/* Color Circle */}
                         <div
@@ -967,13 +978,15 @@ export default function Settings() {
                         />
                         {/* Theme Info */}
                         <div className="flex items-center flex-grow">
-                          <span className="text-sm font-medium text-white">{theme.name}</span>
+                          <span className="text-sm font-medium text-[color:var(--text)]">
+                            {theme.name}
+                          </span>
                         </div>
 
                         {/* Selected Check */}
                         {setting.defaultValue === theme.id && (
                           <svg
-                            className="w-5 h-5 text-primary flex-shrink-0"
+                            className="w-5 h-5 text-[color:var(--color-primary)] flex-shrink-0"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                             aria-hidden="true"
@@ -991,9 +1004,9 @@ export default function Settings() {
                   </div>
                   {PREMIUM_THEMES.length > 0 && (
                     <>
-                      <div className="border-t border-slate-700 my-1" />
+                      <div className="border-t border-[color:var(--panel-border)] my-1" />
                       <div className="p-2">
-                        <div className="text-xs text-yellow-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1">
+                        <div className="text-xs uppercase tracking-wider px-2 py-1 flex items-center gap-1 text-[color:var(--color-secondary)]">
                           <span>Premium Themes</span>
                           <span>⭐</span>
                         </div>
@@ -1008,7 +1021,11 @@ export default function Settings() {
                               setIsThemeDropdownOpen(false)
                             }}
                             disabled={isDisabled}
-                            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all hover:bg-slate-700"
+                            className={`w-full flex items-center gap-3 px-2 py-2 rounded-[var(--radius-sm)] border transition-colors hover:bg-[color:var(--hover-bg)] ${
+                              setting.defaultValue === theme.id
+                                ? 'bg-[color:var(--hover-bg)] border-[color:var(--hover-border)]'
+                                : 'border-transparent'
+                            } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             {/* Color Circle */}
                             <div
@@ -1020,13 +1037,15 @@ export default function Settings() {
                             />
                             {/* Theme Info */}
                             <div className="flex items-center flex-grow">
-                              <span className="text-sm font-medium text-white">{theme.name}</span>
+                              <span className="text-sm font-medium text-[color:var(--text)]">
+                                {theme.name}
+                              </span>
                             </div>
 
                             {/* Selected Check */}
                             {setting.defaultValue === theme.id && (
                               <svg
-                                className="w-5 h-5 text-primary flex-shrink-0"
+                                className="w-5 h-5 text-[color:var(--color-primary)] flex-shrink-0"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                                 aria-hidden="true"
@@ -1064,10 +1083,14 @@ export default function Settings() {
               <h4 className={labelClass}>{setting.label}</h4>
               <p className={descriptionClass}>{setting.description}</p>
               {setting.disabled && setting.disabledReason && (
-                <p className="text-sm text-orange-300 mt-2">{setting.disabledReason}</p>
+                <p className="text-sm text-[color:var(--color-warning)] mt-2">
+                  {setting.disabledReason}
+                </p>
               )}
               {setting.statusMessage && (
-                <p className="text-sm text-red-300 mt-2">{setting.statusMessage}</p>
+                <p className="text-sm text-[color:var(--color-danger)] mt-2">
+                  {setting.statusMessage}
+                </p>
               )}
             </div>
             <div className="shrink-0">{renderControl()}</div>
@@ -1097,9 +1120,13 @@ export default function Settings() {
               <span>
                 Your account email for notifications and recovery •{' '}
                 {user?.emailVerified ? (
-                  <span className="text-primary-soft font-semibold">✓ Verified</span>
+                  <span className="text-[color:var(--color-primary-soft)] font-semibold">
+                    ✓ Verified
+                  </span>
                 ) : (
-                  <span className="text-red-400 font-semibold">⚠ Not Verified</span>
+                  <span className="text-[color:var(--color-danger)] font-semibold">
+                    ⚠ Not Verified
+                  </span>
                 )}
               </span>
             ),
@@ -1748,12 +1775,16 @@ export default function Settings() {
       return (
         <div className="space-y-8">
           <div>
-            <h3 className="text-xl font-semibold text-white mb-6">Push Notification Setup</h3>
+            <h3 className="text-xl font-semibold text-[color:var(--heading)] mb-6">
+              Push Notification Setup
+            </h3>
             <div className="space-y-4">{settingsData.map((setting) => renderSetting(setting))}</div>
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold text-white mb-6">Notification Preferences</h3>
+            <h3 className="text-xl font-semibold text-[color:var(--heading)] mb-6">
+              Notification Preferences
+            </h3>
             <div className="glass-box">{renderNotificationTable()}</div>
           </div>
         </div>
@@ -1764,16 +1795,18 @@ export default function Settings() {
       return (
         <div className="space-y-8">
           {saveStatus && (
-            <div className="p-3 bg-green-600/20 border border-green-500 rounded-lg text-green-400">
+            <div className="panel border-[color:var(--color-success)] bg-[color:var(--hover-bg)] text-[color:var(--color-success)]">
               ✅ {saveStatus}
             </div>
           )}
           <div>
-            <h3 className="text-xl font-semibold mb-6 text-white">Account Information</h3>
+            <h3 className="text-xl font-semibold mb-6 text-[color:var(--heading)]">
+              Account Information
+            </h3>
             <div className="space-y-4">{settingsData.slice(0, 2).map(renderSetting)}</div>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-6 text-white">Security</h3>
+            <h3 className="text-xl font-semibold mb-6 text-[color:var(--heading)]">Security</h3>
             <div className="space-y-4">
               {settingsData.slice(2).map((setting) => renderSetting(setting))}
             </div>
@@ -1784,7 +1817,7 @@ export default function Settings() {
 
     return (
       <div className="space-y-6">
-        <h3 className="text-xl font-semibold text-white mb-6">
+        <h3 className="text-xl font-semibold text-[color:var(--heading)] mb-6">
           {settingsTabs.find((tab) => tab.id === activeTab)?.label} Settings
         </h3>
         <div className="space-y-4">{settingsData.map((setting) => renderSetting(setting))}</div>
@@ -1795,23 +1828,21 @@ export default function Settings() {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-primary-soft mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold text-[color:var(--heading)] mb-2">Settings</h1>
         <p className="text-muted text-lg mb-8">Customize your game experience</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Settings Navigation */}
           <div className="lg:col-span-1">
-            <div className="glass-box-lg">
-              <nav className="space-y-2">
+            <div className="panel space-y-2 p-4">
+              <nav className="flex flex-col gap-2">
                 {settingsTabs.map((tab) => (
                   <button
                     type="button"
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                      activeTab === tab.id
-                        ? 'bg-primary/20 text-primary-soft border border-primary/30'
-                        : 'text-muted hover:bg-slate-700/50 hover:text-white'
+                    className={`nav-item w-full justify-start ${
+                      activeTab === tab.id ? 'nav-item-active' : 'text-[color:var(--text-muted)]'
                     }`}
                   >
                     <span className="text-lg">{tab.icon}</span>
@@ -1824,7 +1855,7 @@ export default function Settings() {
 
           {/* Settings Content */}
           <div className="lg:col-span-3">
-            <div className="glass-box-xl">{renderTabContent()}</div>
+            <div className="panel">{renderTabContent()}</div>
           </div>
         </div>
       </div>
