@@ -206,6 +206,14 @@
 **Deliverables**: Clan XP & levels; contribution tracking; rotating objectives with scheduled resets; notifications/digests.
 **AC**: Completing matches increments clan XP & objective progress; weekly reset rotates objectives; digests sent.
 
+**Progress – Oct 18, 2025**
+
+* Game archival now aggregates member contributions: `gameService.finalizeCompletedGame` calls into the clan progression service so finished matches automatically award XP, flag wins, and advance objective counters for every active clan member in the lobby.
+* A new `clan:progress` socket event fans updates to `clan:{clanId}` rooms, keeping the React detail view in sync without forcing a refresh. Payload includes XP deltas, placement context, and objective tick marks for simple UI hydration.
+* Frontend clan pages subscribe to the socket channel and patch the local clan state, bumping contribution totals, progression bars, and objective progress in real time.
+* XP formula (v1): 400 base per match +250 for winners, +placement bonus (150/100/50 for top three) +5 per territory held (capped at +150). This keeps caps predictable while rewarding map control; tune once clan ladders expose real data.
+* Follow-up: expose contribution history in the activity feed and surface the new websocket event in the shared SDK so mobile clients can subscribe once the app shells land.
+
 ### Phase 3 — Competitive Layer
 
 **Deliverables**: Wars schema + APIs; match reporting pipeline; war dashboard; leaderboards; rewards distribution.

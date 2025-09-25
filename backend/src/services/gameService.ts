@@ -1,6 +1,7 @@
 import { transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
 import { loadMapForEngine } from '../game/mapLoader'
+import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
 import type {
   AIDifficulty,
   GameAction,
@@ -15,11 +16,15 @@ import type {
 import { logger } from '../utils/logger'
 import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService'
 import { gameStateCache } from './cacheService'
+import { ClanProgressionServiceError, clanProgressionService } from './clanProgressionService'
+import { clanService } from './clanService'
 import type { PlayerRating, RatingChange } from './eloService'
 import { eloService } from './eloService'
+import { featureFlagService } from './featureFlagService'
 import { mapService } from './mapService'
 import { aiTurnMetrics, battleMetrics } from './metricsService'
 import notificationService from './notificationService'
+import { tryGetSocketServer } from './socketRegistry'
 import territoryModifierService from './territoryModifierService'
 
 type BattleWorkerResult = {
@@ -73,6 +78,16 @@ type PlayerRankingSummary = {
   armies: number
   eliminationOrder: number | null
 }
+
+const CLAN_XP_BASE = 400
+const CLAN_XP_WIN_BONUS = 250
+const CLAN_XP_TOP_PLACEMENTS: Record<number, number> = {
+  1: 150,
+  2: 100,
+  3: 50,
+}
+const CLAN_XP_TERRITORY_FACTOR = 5
+const CLAN_XP_TERRITORY_CAP = 150
 
 export class GameService {
   private gameEngine = new GameEngine()
@@ -889,7 +904,7 @@ export class GameService {
     }
 
     if (persistenceOutcome.applied && gameEnded) {
-      await this.finalizeCompletedGame(
+      const finalization = await this.finalizeCompletedGame(
         gameId,
         serializedState,
         playersAfterBattle,
@@ -897,6 +912,9 @@ export class GameService {
         latestBattleLog,
       )
       battleMetrics.clearGame(gameId)
+      if (finalization.archived) {
+        await this.awardClanContributions(gameId, finalization.playerRankings)
+      }
     }
 
     return { applied: persistenceOutcome.applied }
@@ -1047,6 +1065,131 @@ export class GameService {
     })
   }
 
+  private calculateClanXp(ranking: PlayerRankingSummary): number {
+    const placementBonus = CLAN_XP_TOP_PLACEMENTS[ranking.position] ?? 0
+    const territoryBonus = Math.min(
+      CLAN_XP_TERRITORY_CAP,
+      Math.max(0, ranking.territories * CLAN_XP_TERRITORY_FACTOR),
+    )
+
+    const rawTotal =
+      CLAN_XP_BASE + placementBonus + territoryBonus + (ranking.isWinner ? CLAN_XP_WIN_BONUS : 0)
+    return Math.max(CLAN_XP_BASE, Math.round(rawTotal))
+  }
+
+  private async awardClanContributions(
+    gameId: string,
+    rankings: PlayerRankingSummary[],
+  ): Promise<void> {
+    if (rankings.length === 0) {
+      return
+    }
+
+    let clansEnabled = false
+    try {
+      clansEnabled = await featureFlagService.evaluateFlagByName('clans_enabled')
+    } catch (error) {
+      logger.warn('Failed to evaluate clans_enabled flag, skipping clan XP awarding', {
+        gameId,
+        error: error instanceof Error ? error.message : error,
+      })
+      return
+    }
+
+    if (!clansEnabled) {
+      return
+    }
+
+    let membershipMap: Map<string, ClanMembershipContext>
+    try {
+      membershipMap = await clanService.getActiveMembershipsForUsers(
+        rankings.map((ranking) => ranking.userId),
+      )
+    } catch (error) {
+      logger.error('Failed to load clan memberships for awarding contributions', {
+        gameId,
+        error: error instanceof Error ? error.message : error,
+      })
+      return
+    }
+
+    if (membershipMap.size === 0) {
+      return
+    }
+
+    for (const ranking of rankings) {
+      const membership = membershipMap.get(ranking.userId)
+      if (!membership) {
+        continue
+      }
+
+      const xp = this.calculateClanXp(ranking)
+      if (xp <= 0) {
+        continue
+      }
+
+      try {
+        const contribution = await clanProgressionService.awardContribution({
+          clanId: membership.clanId,
+          userId: ranking.userId,
+          actorUserId: ranking.userId,
+          xp,
+          matchesPlayed: 1,
+          matchesWon: ranking.isWinner ? 1 : 0,
+          source: 'game_result',
+          metadata: {
+            gameId,
+            placement: ranking.position,
+            territories: ranking.territories,
+            armies: ranking.armies,
+            eliminated: ranking.eliminated,
+          },
+        })
+
+        this.emitClanProgressionUpdate({
+          clanId: contribution.clanId,
+          gameId,
+          userId: ranking.userId,
+          xpAwarded: xp,
+          matchesPlayed: 1,
+          matchesWon: ranking.isWinner ? 1 : 0,
+          placement: ranking.position,
+          territories: ranking.territories,
+          armies: ranking.armies,
+          eliminated: ranking.eliminated,
+          progression: contribution.progression,
+          objectiveUpdates: contribution.objectiveUpdates,
+        })
+      } catch (error) {
+        if (error instanceof ClanProgressionServiceError) {
+          logger.warn('Skipped clan contribution for player', {
+            gameId,
+            userId: ranking.userId,
+            clanId: membership.clanId,
+            code: error.code,
+          })
+          continue
+        }
+
+        logger.error('Failed to award clan contribution', {
+          gameId,
+          userId: ranking.userId,
+          clanId: membership.clanId,
+          error: error instanceof Error ? error.message : error,
+        })
+      }
+    }
+  }
+
+  private emitClanProgressionUpdate(payload: ClanProgressionSocketPayload): void {
+    const io = tryGetSocketServer()
+    if (!io) {
+      return
+    }
+
+    io.to(`clan:${payload.clanId}`).emit('clan:progress', payload)
+  }
+
   private async finalizeCompletedGame(
     gameId: string,
     serializedState: SerializedGameState,
@@ -1056,7 +1199,7 @@ export class GameService {
       { territories: number; armies: number; eliminated: boolean }
     >,
     battleLog: BattleLogEntry[],
-  ): Promise<void> {
+  ): Promise<{ archived: boolean; playerRankings: PlayerRankingSummary[] }> {
     const playerRankings = this.buildPlayerRanking(players, playerStatsSnapshot, battleLog)
     const winner = playerRankings.find((ranking) => ranking.isWinner) ?? null
     const playerIds = playerRankings.map((ranking) => ranking.userId)
@@ -1065,14 +1208,14 @@ export class GameService {
     const totalTurns = serializedState.turn ?? 0
     const archiveTimestamp = new Date()
 
-    await transaction(async (client) => {
+    const persisted = await transaction<boolean>(async (client) => {
       const existingResult = await client.query<{ room_id: string }>(
         'SELECT room_id FROM game_results WHERE room_id = $1',
         [gameId],
       )
 
       if ((existingResult.rowCount ?? 0) > 0) {
-        return
+        return false
       }
 
       const roomResult = await client.query<{
@@ -1281,13 +1424,18 @@ export class GameService {
       }
 
       await eloService.updateLeaderboardCache(client)
+      return true
     })
 
     await gameStateCache.setInactiveGameState(gameId, serializedState)
-    logger.info('Archived completed game', {
-      gameId,
-      winnerId: winner?.userId ?? null,
-    })
+    if (persisted) {
+      logger.info('Archived completed game', {
+        gameId,
+        winnerId: winner?.userId ?? null,
+      })
+    }
+
+    return { archived: persisted, playerRankings }
   }
 
   async archiveGameResults(gameId: string, results: Record<string, unknown>): Promise<void> {

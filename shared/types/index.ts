@@ -407,6 +407,37 @@ export interface Notification {
 }
 
 // ============================================
+// Clan Progression Events
+// ============================================
+
+export interface ClanProgressionSocketPayload {
+  clanId: string
+  gameId: string
+  userId: string
+  xpAwarded: number
+  matchesPlayed: number
+  matchesWon: number
+  placement: number
+  territories: number
+  armies: number
+  eliminated: boolean
+  progression: {
+    totalXp: number
+    level: number
+    currentLevelXp: number
+    nextLevelXp: number
+    xpIntoLevel: number
+    xpToNextLevel: number
+    progressPercent: number
+  }
+  objectiveUpdates: Array<{
+    objectiveId: string
+    progressValue: number
+    completed: boolean
+  }>
+}
+
+// ============================================
 // Socket.io Event Types
 // ============================================
 
@@ -440,6 +471,7 @@ export interface ServerToClientEvents {
     conversationId: string
   }) => void
   'chat:reactions-updated': (data: { messageId: string; reactions: ChatReactionSummary[] }) => void
+  'clan:progress': (payload: ClanProgressionSocketPayload) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string

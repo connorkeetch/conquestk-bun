@@ -8,6 +8,7 @@ import type { GamePlayer, GameState, SerializedGameState, Territory } from '../t
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
 import { gameStateCache } from './cacheService'
+import { clanService } from './clanService'
 import { eloService, type PlayerRating } from './eloService'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
@@ -18,6 +19,7 @@ interface AuthenticatedSocket extends Socket<ClientToServerEvents, ServerToClien
   userId?: string
   username?: string
   joinedGameRooms?: Set<string>
+  joinedClanRoom?: string
 }
 
 function requireUserId(socket: AuthenticatedSocket): string {
@@ -134,6 +136,22 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
     // Join user's personal room for DMs
     if (socket.userId) {
       socket.join(`user:${socket.userId}`)
+
+      void (async () => {
+        try {
+          const membership = await clanService.getActiveMembership(socket.userId as string)
+          if (membership?.clanId) {
+            const clanRoom = `clan:${membership.clanId}`
+            await socket.join(clanRoom)
+            socket.joinedClanRoom = clanRoom
+          }
+        } catch (error) {
+          logger.warn('Failed to join clan room for user', {
+            userId: socket.userId,
+            error: error instanceof Error ? error.message : error,
+          })
+        }
+      })()
     }
 
     // Setup chat handlers

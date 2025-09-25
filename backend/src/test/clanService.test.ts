@@ -192,4 +192,62 @@ describe('ClanService', () => {
       expect(result.clans[0].name).toBe('Alpha')
     })
   })
+
+  describe('getActiveMembershipsForUsers', () => {
+    it('returns a map of active memberships keyed by user id', async () => {
+      mockQuery.mockResolvedValueOnce({
+        rows: [
+          {
+            user_id: 'user-1',
+            clan_id: 'clan-1',
+            clan_slug: 'clan-one',
+            clan_name: 'Clan One',
+            status: 'active',
+            role_name: 'Member',
+          },
+          {
+            user_id: 'user-2',
+            clan_id: 'clan-2',
+            clan_slug: 'clan-two',
+            clan_name: 'Clan Two',
+            status: 'active',
+            role_name: null,
+          },
+        ],
+      })
+
+      const map = await clanService.getActiveMembershipsForUsers([
+        'user-1',
+        'user-2',
+        'user-1',
+        '',
+        '   ',
+      ])
+
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM clan_members m'), [
+        expect.arrayContaining(['user-1', 'user-2']),
+      ])
+      expect(map.size).toBe(2)
+      expect(map.get('user-1')).toEqual({
+        clanId: 'clan-1',
+        clanSlug: 'clan-one',
+        clanName: 'Clan One',
+        roleName: 'Member',
+        status: 'active',
+      })
+      expect(map.get('user-2')).toEqual({
+        clanId: 'clan-2',
+        clanSlug: 'clan-two',
+        clanName: 'Clan Two',
+        roleName: null,
+        status: 'active',
+      })
+    })
+
+    it('returns an empty map when no valid user ids provided', async () => {
+      const map = await clanService.getActiveMembershipsForUsers(['', '   '])
+      expect(mockQuery).not.toHaveBeenCalled()
+      expect(map.size).toBe(0)
+    })
+  })
 })

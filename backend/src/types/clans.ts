@@ -150,6 +150,21 @@ export interface ClanContributionResult {
   objectiveUpdates: ClanObjectiveProgressUpdate[]
 }
 
+export interface ClanProgressionSocketPayload {
+  clanId: string
+  gameId: string
+  userId: string
+  xpAwarded: number
+  matchesPlayed: number
+  matchesWon: number
+  placement: number
+  territories: number
+  armies: number
+  eliminated: boolean
+  progression: ClanProgressionSummary
+  objectiveUpdates: ClanObjectiveProgressUpdate[]
+}
+
 export interface ClanDetails extends Clan {
   ownerUsername?: string | null
   memberCount: number
