@@ -1,0 +1,163 @@
+# RetroSpace Theme Unification — Codex Instructions
+
+## Goal
+Refactor the codebase so the RetroSpace theme renders a consistent mid-2000s "MySpace" look using CSS tokens and semantic utilities, without forking components or sprinkling hacks.
+
+## 0. Ground Rules Codex Must Respect
+- `CSS-first theming`: Themes are applied via `data-theme` on `<html>`, with tokens in `frontend/src/app.css`. A tiny loader in `frontend/index.html` sets the theme before React mounts. Do not add new JavaScript plumbing.
+- `Styling constraints`: Tailwind v4 utilities are allowed, but prefer semantic utilities and CSS variables. Avoid introducing new inline styles.
+- `Paths & tooling`: The frontend is React 19 in `frontend/`. The shared alias `@/` maps to `src/`. Keep TypeScript strict and avoid adding new `any` types. Follow existing lint rules and scripts.
+
+## 1. Token Expansion Pass
+### Files to Edit
+- `frontend/src/app.css` (tokens and utility hooks)
+- `frontend/src/styles/` if present for shared utilities
+- `frontend/index.html` only if a missing token comment anchor must be added, never logic
+
+### Actions
+- Split base tokens into:
+  - `:root` neutral baseline (light-first)
+  - `[data-theme="dark"]` and `[data-theme="retrospace"]` overrides
+- Add variables for non-color primitives currently hardcoded in Tailwind or class rules:
+  - **Radius**: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-surface`
+  - **Shadow presets**: `--shadow-0`, `--shadow-1`, `--shadow-2`, `--shadow-modal`
+  - **Hover behavior**: `--hover-bg`, `--hover-border`
+  - **Chrome**: `--nav-bg`, `--nav-border`, `--footer-bg`, `--modal-bg`, `--modal-border`
+  - **Surface palette**: `--surface-0`, `--surface-1`, `--surface-2`, `--panel-bg`, `--panel-border`
+  - **Text palette**: `--text`, `--text-muted`, `--link`, `--heading`
+- Implement RetroSpace overrides:
+  - Use a Verdana/Tahoma font stack
+  - Set all radius tokens to `0`
+  - Flatten shadows to minimal or none
+  - Apply solid blues and whites for nav and panels, without gradients or blurs
+- Move glass-box sizing to variables:
+  - `--glass-radius-sm`, `--glass-radius-lg`, `--glass-blur`, `--glass-bg`
+  - RetroSpace sets these to `0` or `none`
+
+### Exit Criteria
+- Components no longer rely on hardcoded radius or shadow values; all choices derive from tokens.
+
+## 2. Introduce Semantic Utilities
+### New Utility Classes (global stylesheet)
+- Surfaces: `.panel`, `.panel-muted`, `.panel-outline`
+- Buttons: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`
+- Navigation: `.nav-bar`, `.nav-item`, `.nav-dropdown`
+- Forms: `.form-input`, `.form-label`, `.form-help`, `.form-select`, `.form-checkbox`, `.form-radio`
+- Badges and chips: `.badge`, `.chip`
+- Tables and lists: `.table`, `.table-row`, `.list`, `.list-item`
+- Modals: `.modal`, `.modal-header`, `.modal-body`, `.modal-footer`
+
+### Rules
+- Each class maps only to tokens plus minimal layout properties.
+- Do not introduce gradients, transforms, or fixed colors in the classes.
+- Provide `[data-theme="retrospace"]` selectors that square corners, add borders, and flatten styling.
+
+## 3. Codemod: Replace Hard-Coded Modern Tailwind Chains
+Perform safe, mechanical edits across JSX and TSX files. When a replacement is risky, leave a `TODO` comment describing the gap.
+
+### Transform Set A: Text Colors
+- Replace `text-white` with a `text-token` class that maps to `color: var(--text)`.
+- Replace `text-slate-*` and gradient text utilities with `text-heading` or `text-muted` equivalents.
+
+### Transform Set B: Rounding and Shadows
+- Replace `rounded-*` on panels and cards with `.panel`, or fall back to `rounded-[var(--radius-surface)]` where a utility is required.
+- Replace `shadow-*` on panels with `.panel` or `shadow-[var(--shadow-1)]`.
+
+### Transform Set C: Translucent and Glass Surfaces
+- Replace `bg-white/10`, `bg-black/20`, `backdrop-blur*`, and `.glass*` on layout containers with `.panel` or `.panel-muted`.
+- When intentionally creating glass chrome, wrap containers with `.panel` and add a `[data-theme="dark"] .panel.glassy { ... }` specialization instead of inline utilities.
+
+### Transform Set D: Hero Backgrounds and Overlays
+- Extract inline gradients and glow overlays into CSS variables such as `--hero-bg` and `--hero-overlay`.
+- Reference the variables in page-level classes so RetroSpace can set them to `none`.
+
+### Transform Set E: Buttons
+- Replace ad-hoc `bg-primary hover:brightness-110 rounded-lg` chains with `.btn*` variants.
+- Map call-to-action components to `.btn-primary`, and destructive cases to `.btn-secondary` or `.btn-ghost`.
+
+### Transform Set F: Forms
+- Replace ad-hoc inputs that use slate or dark backgrounds with `.form-input`.
+- Pair labels, help text, selects, checkboxes, and radios with the corresponding `.form-*` classes.
+- Ensure focus rings originate from tokens such as `--focus-ring`.
+
+### Transform Set G: Constants
+- Locate imports of `CORE_COLORS` or hex literals in UI code and replace usages with CSS variables or theme-aware helpers.
+- When a refactor is unsafe, add a local adapter that reads tokens.
+
+## 4. Screen-by-Screen Migration
+Prioritize high-traffic areas. For each screen, remove modern artifacts and apply semantic utilities.
+
+### Header and Primary Navigation
+- Replace pill navigation with `.nav-bar` and `.nav-item` square tabs.
+- Move the logo gradient into a `--logo-fill` token and set it to flat styling in RetroSpace.
+- Remove translucency and blur in favor of a solid `--nav-bg` with a `1px` `--nav-border`.
+
+### Dashboard and Home
+- Replace gradient heroes and rounded marketing cards with `.panel` sections and optional sidebar layouts.
+- Eliminate glow overlays by setting `--hero-overlay: none` within RetroSpace.
+
+### Lobby and Game Flows
+- Convert lists, tabs, and modals to `.panel` or `.tab` via semantic utilities.
+- Ensure chat and message bubbles avoid translucent dark backgrounds by using token-based surfaces.
+
+### Profile and Community
+- Replace glass cards with `.panel-outline` variants.
+- Provide optional RetroSpace extras such as left navigation and top banner slots controlled through tokens.
+
+### Settings and Auth
+- Enforce `.form-*` classes and remove ad-hoc slate backgrounds and rounded corners.
+
+### Dropdowns, Tables, and Badges
+- Introduce `.table` with token-driven striped rows.
+- Make `.badge` square with `1px` borders.
+- Remove hover fades and neon glows.
+
+### Overlays and Modals
+- Ensure `.modal` uses a flat header bar, square corners, and a simple drop shadow defined by `--shadow-modal`.
+
+### Game Board HUD and Overlays
+- Expose colors and radii for overlays via CSS variables or props.
+- Apply flat, bordered boxes under RetroSpace.
+
+## 5. RetroSpace-Only Flourishes (After Flattening)
+- Add optional repeating textures through `--body-bg-image` and `--body-bg-size`; RetroSpace supplies tiled assets.
+- Allow "profile modules" ordering and simple status text blocks styled with `.panel`.
+- Swap the modern icon set with a theme-aware component that maps to pixel-style icons when RetroSpace is active.
+
+## 6. QA and Regression
+- Capture visual snapshots for each primary page in both dark and RetroSpace themes after migration.
+- Confirm legibility, avoiding white-on-white interactions and ensuring sufficient contrast for links and headings.
+- Verify that the legacy dark theme continues to override neutral tokens correctly.
+- Run `npm run lint`, frontend tests, and the build.
+- Fix all new lint errors.
+
+## 7. Concrete Tasks for Codex (Batchable)
+- Add tokens to `frontend/src/app.css` as specified and create `[data-theme="retrospace"]` overrides for every new token.
+- Generate semantic utility classes and connect them to tokens.
+- Run codemod passes:
+  - Replace `text-white|text-slate-\d+` with `text-token|text-muted|text-heading` according to context.
+  - Replace `rounded-(sm|md|lg|xl|full)` on containers with `.panel` or tokenized radii.
+  - Replace `shadow-(sm|md|lg|xl|2xl)` on containers with `.panel` or tokenized shadows.
+  - Replace `bg-(white|black)/\d+`, `backdrop-blur.*`, or `glass(-light)?` on containers with `.panel` or `.panel-muted`.
+  - Replace ad-hoc button chains with `.btn*`.
+  - Replace ad-hoc input, select, checkbox, and radio styling with `.form-*`.
+  - Extract inline gradients and overlays into CSS variable references.
+- Refactor the header and navigation to use `.nav-bar` and `.nav-item` with tokenized chrome, and remove gradient logo inline styles.
+- Migrate Profile, Settings, Lobby, and Dashboard containers to `.panel` variants and remove gradient or glass utilities.
+- Replace constant color imports in UI code with token-based CSS when feasible, otherwise wrap constants with theme-aware adapters.
+- Add RetroSpace extras via tokens, including optional tiled body backgrounds and pixel icon mapping.
+- Run the QA script: build the project and capture screenshots for dark and RetroSpace themes across key screens.
+
+## 8. Acceptance Criteria
+- Switching to `[data-theme="retrospace"]` produces:
+  - A solid blue top navigation with sharp corners and Verdana/Tahoma typography.
+  - Flat, bordered panels and modals with no blur or translucency.
+  - Legible text colors across pages, with gradient headings only when tokenized and set to `none`.
+  - Square buttons, tabs, and inputs with simple hover states.
+- The dark theme remains visually unchanged on all migrated pages.
+- No inline gradients, shadows, or radii remain in JSX except where they are explicitly tokenized.
+- Lint, test, and build commands all pass.
+
+## 9. Notes for Future Themes
+- The neutral baseline and semantic utilities allow new light themes to inherit sane defaults.
+- Avoid reintroducing glass utilities globally; keep modern styles opt-in and token-driven.
