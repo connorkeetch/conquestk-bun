@@ -345,6 +345,28 @@ export class MigrationRunner {
             logger.error(`     Error message: ${errorMessage}`)
             logger.error(`     Statement preview: ${statementPreview}`)
             logger.error(`     Full statement (first 500 chars): ${statement.substring(0, 500)}`)
+
+            // If parser got confused by dollar-quoted blocks, try a safe fallback.
+            const msg = errorMessage.toLowerCase()
+            const looksLikeDollarQuoteIssue =
+              msg.includes('unterminated dollar-quoted string') || msg.includes('$$')
+            if (looksLikeDollarQuoteIssue) {
+              try {
+                logger.warn(
+                  '  ⚠️  Detected dollar-quote parsing issue. Falling back to whole-script execution',
+                )
+                // Abort current transaction and retry by executing the entire script at once
+                await query('ROLLBACK')
+                await query('BEGIN')
+                await query(migrationSQL)
+                await query('COMMIT')
+                logger.info('  ✅ Whole-script execution succeeded after parser fallback')
+                return
+              } catch (fallbackErr) {
+                logger.error('  ❌ Fallback whole-script execution failed:', fallbackErr)
+                throw error
+              }
+            }
             throw error
           }
         }
@@ -363,48 +385,56 @@ export class MigrationRunner {
     const statements: string[] = []
     let currentStatement = ''
     let inFunction = false
-    let inTrigger = false
+    let inDoBlock = false
     let dollarQuoteCount = 0
 
     const lines = migrationSQL.split('\n')
     for (const line of lines) {
-      const trimmedLine = line.trim().toUpperCase()
+      const trimmedLine = line.trim()
+      const upper = trimmedLine.toUpperCase()
 
-      // Track dollar-quoted strings (PostgreSQL function syntax)
+      // Track dollar-quoted strings (PostgreSQL function/DO syntax). This detects $$ or $tag$
       const dollarMatches = line.match(/\$\$|\$[a-zA-Z_][a-zA-Z0-9_]*\$/g)
       if (dollarMatches) {
         dollarQuoteCount += dollarMatches.length
       }
 
-      // Detect function/trigger blocks
-      if (
-        trimmedLine.includes('CREATE FUNCTION') ||
-        trimmedLine.includes('CREATE OR REPLACE FUNCTION')
-      ) {
+      // Detect function blocks (outside of a DO block)
+      if (!inDoBlock && (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))) {
         inFunction = true
-      } else if (trimmedLine.includes('CREATE TRIGGER')) {
-        inTrigger = true
+      }
+
+      // Detect DO $$ blocks
+      // Examples: "DO $$", "DO $tag$", optional LANGUAGE may be on same/next line
+      if (!inFunction && !inDoBlock && /^(DO\s+\$\$|DO\s+\$[A-Za-z_][A-Za-z0-9_]*\$)/i.test(trimmedLine)) {
+        inDoBlock = true
       }
 
       currentStatement += `${line}\n`
 
-      // Check for statement end
-      if (line.trim().endsWith(';')) {
-        if (inFunction && dollarQuoteCount % 2 === 0) {
-          // End of function (even number of dollar quotes means we're outside the function body)
-          statements.push(currentStatement.trim())
-          currentStatement = ''
-          inFunction = false
-          dollarQuoteCount = 0
-        } else if (inTrigger) {
-          // Check for end of trigger
-          if (trimmedLine.startsWith('END') && trimmedLine.endsWith(';')) {
+      // Determine if this line ends a statement
+      if (trimmedLine.endsWith(';')) {
+        const insideDollar = dollarQuoteCount % 2 !== 0
+
+        if (inFunction) {
+          // End of function when we are outside the dollar-quoted body
+          if (!insideDollar) {
             statements.push(currentStatement.trim())
             currentStatement = ''
-            inTrigger = false
+            inFunction = false
+            dollarQuoteCount = 0
           }
-        } else if (!inFunction && dollarQuoteCount % 2 === 0) {
-          // Regular statement (not inside dollar-quoted function body)
+        } else if (inDoBlock) {
+          // DO blocks end when we close the dollar-quoted body and see the trailing ;
+          // Common patterns: "END; $$;" or "END $$;" or just "$$;" on its own line
+          if (!insideDollar) {
+            statements.push(currentStatement.trim())
+            currentStatement = ''
+            inDoBlock = false
+            dollarQuoteCount = 0
+          }
+        } else if (!insideDollar) {
+          // Regular statement (not inside function/DO body)
           statements.push(currentStatement.trim())
           currentStatement = ''
         }
