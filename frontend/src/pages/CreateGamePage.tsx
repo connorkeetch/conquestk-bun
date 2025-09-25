@@ -149,24 +149,35 @@ const OptionCard: React.FC<OptionCardProps> = ({
   className = '',
 }) => (
   <div
-    className={`bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-xl hover:shadow-2xl ${comingSoon ? 'opacity-50' : ''} ${className}`}
+    className={`panel transition-shadow duration-200 hover:shadow-[var(--shadow-2)] ${
+      comingSoon ? 'opacity-60 pointer-events-none' : ''
+    } ${className}`}
   >
-    <div className="flex items-start justify-between mb-4">
-      <h2 className="text-lg font-bold flex items-center gap-3">
-        <span className="text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+    <div className="flex items-start justify-between gap-3 mb-4">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-[color:var(--heading)]">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--color-primary)] text-[color:var(--color-primary)] text-base font-semibold">
           {number}
         </span>
-        <span className="text-white">{title}</span>
+        <span>{title}</span>
       </h2>
       {comingSoon && (
-        <span className="text-xs bg-orange-500/20 border border-orange-500/30 rounded-full px-2 py-1 text-orange-400 font-semibold">
+        <span className="badge text-[color:var(--color-warning)] border-[color:var(--color-warning)] bg-[color:var(--hover-bg)]">
           Coming Soon
         </span>
       )}
     </div>
-    <div className={comingSoon ? 'pointer-events-none' : ''}>{children}</div>
+    <div>{children}</div>
   </div>
 )
+
+const choiceClass = (isActive: boolean, extra: string) =>
+  `panel-outline transition-colors ${
+    isActive
+      ? 'theme-selected'
+      : 'text-muted hover:text-[color:var(--heading)] hover:border-[color:var(--hover-border)] hover:bg-[color:var(--hover-bg)]'
+  } ${extra}`
+
+const disabledChoiceClass = 'panel-outline text-muted opacity-50 cursor-not-allowed'
 
 const reportError = (message: string, error: unknown) => {
   if (import.meta.env.DEV) {
@@ -821,26 +832,26 @@ const CreateGamePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setGameMode('classic')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                gameMode === 'classic'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                gameMode === 'classic',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium">⚔️ Classic Risk</div>
-              <p className="text-xs opacity-70 mt-1">Conquer all territories to win</p>
+              <div className="font-medium text-[color:var(--heading)]">⚔️ Classic Risk</div>
+              <p className="text-xs text-muted">
+                Conquer all territories to win
+              </p>
             </button>
             <button
               type="button"
               onClick={() => setGameMode('capitals')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                gameMode === 'capitals'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                gameMode === 'capitals',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium">🏰 Capitals</div>
-              <p className="text-xs opacity-70 mt-1">
+              <div className="font-medium text-[color:var(--heading)]">🏰 Capitals</div>
+              <p className="text-xs text-muted">
                 Protect your capital territory to stay alive
               </p>
             </button>
@@ -848,14 +859,13 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setGameMode('random')}
-                className={`w-full p-3 rounded-lg text-left transition-colors ${
-                  gameMode === 'random'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                className={choiceClass(
+                  gameMode === 'random',
+                  'w-full p-3 text-left flex flex-col gap-1'
+                )}
               >
-                <div className="font-medium">🎲 Random</div>
-                <p className="text-xs opacity-70 mt-1">Game mode chosen when game starts</p>
+                <div className="font-medium text-[color:var(--heading)]">🎲 Random</div>
+                <p className="text-xs text-muted">Game mode chosen when game starts</p>
               </button>
             )}
           </div>
@@ -870,26 +880,18 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTurnTimeLimit(5)}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    turnTimeLimit === 5
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(turnTimeLimit === 5, 'px-3 py-2 text-sm text-left')}
                 >
-                  5 min
-                  <p className="text-xs opacity-70">Quick</p>
+                  <span className="font-semibold text-[color:var(--heading)]">5 min</span>
+                  <p className="text-xs text-muted">Quick</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTurnTimeLimit(10)}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    turnTimeLimit === 10
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(turnTimeLimit === 10, 'px-3 py-2 text-sm text-left')}
                 >
-                  10 min
-                  <p className="text-xs opacity-70">Normal</p>
+                  <span className="font-semibold text-[color:var(--heading)]">10 min</span>
+                  <p className="text-xs text-muted">Normal</p>
                 </button>
               </div>
             </div>
@@ -900,36 +902,24 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTurnTimeLimit(6 * 60)}
-                  className={`px-2 py-2 rounded-lg text-sm transition-colors ${
-                    turnTimeLimit === 6 * 60
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(turnTimeLimit === 6 * 60, 'px-2 py-2 text-sm')}
                 >
                   6h
                 </button>
                 <button
                   type="button"
                   onClick={() => setTurnTimeLimit(12 * 60)}
-                  className={`px-2 py-2 rounded-lg text-sm transition-colors ${
-                    turnTimeLimit === 12 * 60
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(turnTimeLimit === 12 * 60, 'px-2 py-2 text-sm')}
                 >
                   12h
                 </button>
                 <button
                   type="button"
                   onClick={() => setTurnTimeLimit(24 * 60)}
-                  className={`px-2 py-2 rounded-lg text-sm transition-colors ${
-                    turnTimeLimit === 24 * 60
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(turnTimeLimit === 24 * 60, 'px-2 py-2 text-sm text-left')}
                 >
-                  24h
-                  <p className="text-xs opacity-70">Default</p>
+                  <span className="font-semibold text-[color:var(--heading)]">24h</span>
+                  <p className="text-xs text-muted">Default</p>
                 </button>
               </div>
             </div>
@@ -950,12 +940,13 @@ const CreateGamePage: React.FC = () => {
                   <button
                     type="button"
                     key={playerCount}
-                    className={`p-3 rounded-lg font-bold transition-all duration-200 ${
+                    className={`${
                       isDisabled
-                        ? 'bg-white/5 text-muted cursor-not-allowed opacity-50'
-                        : playersOption === playerCount
-                          ? 'theme-selected shadow-lg'
-                          : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
+                        ? `${disabledChoiceClass} p-3 text-center font-bold`
+                        : choiceClass(
+                            playersOption === playerCount,
+                            'p-3 text-center font-bold transition-all duration-200'
+                          )
                     }`}
                     disabled={isDisabled}
                     onClick={() => !isDisabled && setPlayersOption(playerCount)}
@@ -967,11 +958,10 @@ const CreateGamePage: React.FC = () => {
               {!isRanked && (
                 <button
                   type="button"
-                  className={`p-3 rounded-lg font-bold transition-all duration-200 ${
-                    playersOption === 'random'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
-                      : 'bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(
+                    playersOption === 'random',
+                    'p-3 text-center font-bold transition-all duration-200'
+                  )}
                   onClick={() => setPlayersOption('random')}
                 >
                   🎲
@@ -1016,10 +1006,12 @@ const CreateGamePage: React.FC = () => {
                     return (
                       <div
                         key={difficulty}
-                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                        className="panel-outline flex items-center justify-between p-3"
                       >
                         <div className="mr-4">
-                          <div className="font-medium text-sm text-white">{label}</div>
+                          <div className="font-medium text-sm text-[color:var(--heading)]">
+                            {label}
+                          </div>
                           <p className="text-xs text-muted">{description}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1027,11 +1019,7 @@ const CreateGamePage: React.FC = () => {
                             type="button"
                             onClick={() => adjustAiCount(difficulty, -1)}
                             disabled={!canDecrease}
-                            className={`h-8 w-8 rounded-lg border border-white/20 text-lg leading-none ${
-                              canDecrease
-                                ? 'bg-white/10 text-white hover:bg-white/20'
-                                : 'bg-transparent text-muted cursor-not-allowed opacity-50'
-                            }`}
+                            className="btn btn-secondary btn-icon"
                             aria-label={`Remove ${label} AI opponent`}
                           >
                             −
@@ -1048,17 +1036,13 @@ const CreateGamePage: React.FC = () => {
                                 Number.isNaN(nextValue) ? 0 : Math.max(0, nextValue),
                               )
                             }}
-                            className="w-16 rounded-lg border border-white/20 bg-surface-2 px-2 py-1 text-center text-sm text-white focus:border-primary focus:outline-none"
+                            className="form-input w-16 text-center"
                           />
                           <button
                             type="button"
                             onClick={() => adjustAiCount(difficulty, 1)}
                             disabled={!canIncrease}
-                            className={`h-8 w-8 rounded-lg border border-white/20 text-lg leading-none ${
-                              canIncrease
-                                ? 'bg-white/10 text-white hover:bg-white/20'
-                                : 'bg-transparent text-muted cursor-not-allowed opacity-50'
-                            }`}
+                            className="btn btn-secondary btn-icon"
                             aria-label={`Add ${label} AI opponent`}
                           >
                             +
@@ -1079,12 +1063,10 @@ const CreateGamePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setTeams(0)}
-              className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                teams === 0 ? 'theme-selected' : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(teams === 0, 'w-full p-3 text-left flex flex-col gap-1')}
             >
-              <div className="font-medium text-sm">Free for All</div>
-              <p className="text-xs opacity-70">Every player for themselves</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">Free for All</div>
+              <p className="text-xs text-muted">Every player for themselves</p>
             </button>
 
             {playersOption !== 'random' &&
@@ -1097,14 +1079,15 @@ const CreateGamePage: React.FC = () => {
                     key={teamOption}
                     type="button"
                     onClick={() => setTeams(teamOption)}
-                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                      teams === teamOption
-                        ? 'theme-selected'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
+                    className={choiceClass(
+                      teams === teamOption,
+                      'w-full p-3 text-left flex flex-col gap-1'
+                    )}
                   >
-                    <div className="font-medium text-sm">{teamOption} Teams</div>
-                    <p className="text-xs opacity-70">
+                    <div className="font-medium text-sm text-[color:var(--heading)]">
+                      {teamOption} Teams
+                    </div>
+                    <p className="text-xs text-muted">
                       {Math.floor(maxPlayers / teamOption)} players per team
                     </p>
                   </button>
@@ -1115,14 +1098,15 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTeams('random')}
-                className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                  teams === 'random'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                className={choiceClass(
+                  teams === 'random',
+                  'w-full p-3 text-left flex flex-col gap-1'
+                )}
               >
-                <div className="font-medium text-sm">🎲 Random Teams</div>
-                <p className="text-xs opacity-70">Team configuration chosen when game starts</p>
+                <div className="font-medium text-sm text-[color:var(--heading)]">
+                  🎲 Random Teams
+                </div>
+                <p className="text-xs text-muted">Team configuration chosen when game starts</p>
               </button>
             )}
           </div>
@@ -1134,67 +1118,66 @@ const CreateGamePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setFortification('adjacent')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                fortification === 'adjacent'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                fortification === 'adjacent',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">🔗 Adjacent Only</div>
-              <p className="text-xs opacity-70">Move troops only between connected territories</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">
+                🔗 Adjacent Only
+              </div>
+              <p className="text-xs text-muted">Move troops only between connected territories</p>
             </button>
 
             <button
               type="button"
               onClick={() => setFortification('adjacent_multi')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                fortification === 'adjacent_multi'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                fortification === 'adjacent_multi',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">🔄 Adjacent Multiple</div>
-              <p className="text-xs opacity-70">Multiple moves between adjacent territories</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">
+                🔄 Adjacent Multiple
+              </div>
+              <p className="text-xs text-muted">Multiple moves between adjacent territories</p>
             </button>
 
             <button
               type="button"
               onClick={() => setFortification('chained')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                fortification === 'chained'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                fortification === 'chained',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">⛓️ Chained</div>
-              <p className="text-xs opacity-70">Move along a path of connected territories</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">⛓️ Chained</div>
+              <p className="text-xs text-muted">Move along a path of connected territories</p>
             </button>
 
             <button
               type="button"
               onClick={() => setFortification('unlimited')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                fortification === 'unlimited'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                fortification === 'unlimited',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">🌍 Unlimited</div>
-              <p className="text-xs opacity-70">Move between any owned territories</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">🌍 Unlimited</div>
+              <p className="text-xs text-muted">Move between any owned territories</p>
             </button>
 
             {!isRanked && (
               <button
                 type="button"
                 onClick={() => setFortification('random')}
-                className={`w-full p-3 rounded-lg text-left transition-colors ${
-                  fortification === 'random'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                className={choiceClass(
+                  fortification === 'random',
+                  'w-full p-3 text-left flex flex-col gap-1'
+                )}
               >
-                <div className="font-medium text-sm">🎲 Random</div>
-                <p className="text-xs opacity-70">Fortification type chosen when game starts</p>
+                <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
+                <p className="text-xs text-muted">Fortification type chosen when game starts</p>
               </button>
             )}
           </div>
@@ -1206,54 +1189,50 @@ const CreateGamePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setSpoilsType('escalating')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                spoilsType === 'escalating'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                spoilsType === 'escalating',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">📈 Escalating</div>
-              <p className="text-xs opacity-70">Card values increase each turn (2,4,6,8...)</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">📈 Escalating</div>
+              <p className="text-xs text-muted">Card values increase each turn (2,4,6,8...)</p>
             </button>
 
             <button
               type="button"
               onClick={() => setSpoilsType('fixed')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                spoilsType === 'fixed'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                spoilsType === 'fixed',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">⚖️ Fixed Value</div>
-              <p className="text-xs opacity-70">Cards always worth the same amount</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">⚖️ Fixed Value</div>
+              <p className="text-xs text-muted">Cards always worth the same amount</p>
             </button>
 
             <button
               type="button"
               onClick={() => setSpoilsType('static')}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
-                spoilsType === 'static'
-                  ? 'theme-selected'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={choiceClass(
+                spoilsType === 'static',
+                'w-full p-3 text-left flex flex-col gap-1'
+              )}
             >
-              <div className="font-medium text-sm">🔒 Static</div>
-              <p className="text-xs opacity-70">No card bonuses, pure strategy</p>
+              <div className="font-medium text-sm text-[color:var(--heading)]">🔒 Static</div>
+              <p className="text-xs text-muted">No card bonuses, pure strategy</p>
             </button>
 
             {!isRanked && (
               <button
                 type="button"
                 onClick={() => setSpoilsType('random')}
-                className={`w-full p-3 rounded-lg text-left transition-colors ${
-                  spoilsType === 'random'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                className={choiceClass(
+                  spoilsType === 'random',
+                  'w-full p-3 text-left flex flex-col gap-1'
+                )}
               >
-                <div className="font-medium text-sm">🎲 Random</div>
-                <p className="text-xs opacity-70">Card bonus type chosen when game starts</p>
+                <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
+                <p className="text-xs text-muted">Card bonus type chosen when game starts</p>
               </button>
             )}
           </div>
@@ -1264,43 +1243,40 @@ const CreateGamePage: React.FC = () => {
           <div className="space-y-4">
             {/* Fog of War Section */}
             <div>
-              <h4 className="text-sm font-medium text-white mb-2">Fog of War</h4>
+              <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">Fog of War</h4>
               <div className="space-y-1.5">
                 <button
                   type="button"
                   onClick={() => setFogOfWar('off')}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    fogOfWar === 'off'
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(
+                    fogOfWar === 'off',
+                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                  )}
                 >
-                  <div className="text-sm">☀️ No Fog</div>
-                  <p className="text-xs opacity-70">See entire map</p>
+                  <div className="text-sm text-[color:var(--heading)]">☀️ No Fog</div>
+                  <p className="text-xs text-muted">See entire map</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFogOfWar('adjacent')}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    fogOfWar === 'adjacent'
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(
+                    fogOfWar === 'adjacent',
+                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                  )}
                 >
-                  <div className="text-sm">🔗 Adjacent</div>
-                  <p className="text-xs opacity-70">See neighbors only</p>
+                  <div className="text-sm text-[color:var(--heading)]">🔗 Adjacent</div>
+                  <p className="text-xs text-muted">See neighbors only</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFogOfWar('persistent')}
-                  className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                    fogOfWar === 'persistent'
-                      ? 'theme-selected'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
+                  className={choiceClass(
+                    fogOfWar === 'persistent',
+                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                  )}
                 >
-                  <div className="text-sm">🗺️ Persistent</div>
-                  <p className="text-xs opacity-70">Once revealed, stays visible</p>
+                  <div className="text-sm text-[color:var(--heading)]">🗺️ Persistent</div>
+                  <p className="text-xs text-muted">Once revealed, stays visible</p>
                 </button>
               </div>
             </div>
@@ -1308,73 +1284,70 @@ const CreateGamePage: React.FC = () => {
             {/* Territory Modifiers Section */}
             {territoryModifiersEnabled && (
               <div className="pt-3 border-t border-border">
-                <h4 className="text-sm font-medium text-white mb-2">Territory Modifiers</h4>
+                <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">
+                  Territory Modifiers
+                </h4>
                 <div className="space-y-1.5">
                   <button
                     type="button"
                     onClick={() => setUseTerritoryModifiers(false)}
-                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                      !useTerritoryModifiers
-                        ? 'theme-selected'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
+                    className={choiceClass(
+                      !useTerritoryModifiers,
+                      'w-full px-3 py-2 text-left flex flex-col gap-1'
+                    )}
                   >
-                    <div className="text-sm">❌ Disabled</div>
-                    <p className="text-xs opacity-70">Standard territories only</p>
+                    <div className="text-sm text-[color:var(--heading)]">❌ Disabled</div>
+                    <p className="text-xs text-muted">Standard territories only</p>
                   </button>
                   <button
                     type="button"
                     onClick={() => setUseTerritoryModifiers(true)}
-                    className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                      useTerritoryModifiers
-                        ? 'theme-selected'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
+                    className={choiceClass(
+                      useTerritoryModifiers,
+                      'w-full px-3 py-2 text-left flex flex-col gap-1'
+                    )}
                   >
-                    <div className="text-sm">⚡ Enabled</div>
-                    <p className="text-xs opacity-70">Territories have special properties</p>
+                    <div className="text-sm text-[color:var(--heading)]">⚡ Enabled</div>
+                    <p className="text-xs text-muted">Territories have special properties</p>
                   </button>
                 </div>
 
                 {useTerritoryModifiers && (
-                  <div className="mt-3 pt-3 border-t border-gray-500">
+                  <div className="mt-3 pt-3 border-t border-border">
                     <p className="text-sm text-muted mb-2">Distribution:</p>
                     <div className="space-y-1.5">
                       <button
                         type="button"
                         onClick={() => setModifierDistribution('sparse')}
-                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                          modifierDistribution === 'sparse'
-                            ? 'theme-selected'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        className={choiceClass(
+                          modifierDistribution === 'sparse',
+                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                        )}
                       >
-                        <div className="text-sm">Sparse (15%)</div>
-                        <p className="text-xs opacity-70">Few strategic territories</p>
+                        <div className="text-sm text-[color:var(--heading)]">Sparse (15%)</div>
+                        <p className="text-xs text-muted">Few strategic territories</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setModifierDistribution('balanced')}
-                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                          modifierDistribution === 'balanced'
-                            ? 'theme-selected'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        className={choiceClass(
+                          modifierDistribution === 'balanced',
+                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                        )}
                       >
-                        <div className="text-sm">Balanced (30%)</div>
-                        <p className="text-xs opacity-70">Moderate strategic depth</p>
+                        <div className="text-sm text-[color:var(--heading)]">Balanced (30%)</div>
+                        <p className="text-xs text-muted">Moderate strategic depth</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setModifierDistribution('abundant')}
-                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                          modifierDistribution === 'abundant'
-                            ? 'theme-selected'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        className={choiceClass(
+                          modifierDistribution === 'abundant',
+                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                        )}
                       >
-                        <div className="text-sm">Abundant (50%)</div>
-                        <p className="text-xs opacity-70">Many strategic territories</p>
+                        <div className="text-sm text-[color:var(--heading)]">Abundant (50%)</div>
+                        <p className="text-xs text-muted">Many strategic territories</p>
                       </button>
                     </div>
                   </div>
@@ -1388,8 +1361,8 @@ const CreateGamePage: React.FC = () => {
         <OptionCard number={getStepNumber(9)} title="Choose Your Color">
           <div className="space-y-3">
             {/* Display selected color name */}
-            <div className="text-center p-2 bg-white/10 rounded-lg">
-              <span className="text-sm font-semibold text-white">
+            <div className="panel-outline text-center py-3">
+              <span className="text-sm font-semibold text-[color:var(--heading)]">
                 Selected: {getColorName(selectedColor)}
               </span>
             </div>
