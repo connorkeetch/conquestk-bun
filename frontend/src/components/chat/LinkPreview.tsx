@@ -1,12 +1,24 @@
-import type { LinkPreview } from '../../store/chatSlice'
+export interface LinkPreviewData {
+  url: string
+  title?: string
+  description?: string
+  image?: string
+  siteName?: string
+}
 
 interface LinkPreviewProps {
-  preview: LinkPreview
+  preview: LinkPreviewData
   isOwnMessage?: boolean
 }
 
 export default function LinkPreviewComponent({ preview, isOwnMessage = false }: LinkPreviewProps) {
-  const hostname = new URL(preview.url).hostname
+  const hostname = (() => {
+    try {
+      return new URL(preview.url).hostname
+    } catch (_error) {
+      return preview.url
+    }
+  })()
 
   return (
     <a
@@ -26,7 +38,6 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
-              // Hide image if it fails to load
               ;(e.target as HTMLElement).style.display = 'none'
             }}
           />
