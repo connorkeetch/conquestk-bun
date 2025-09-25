@@ -1,5 +1,5 @@
 // Lazy load heavy components for code splitting
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthGuard from './components/AuthGuard'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -9,57 +9,58 @@ import Layout from './components/Layout'
 import VerificationGuard from './components/VerificationGuard'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { useFaviconBadge } from './hooks/useFaviconBadge'
+import { lazyWithRetry } from './utils/lazyWithRetry'
 import { isTokenExpired } from './utils/token'
 
-const CommunityPage = lazy(() => import('./pages/CommunityPage'))
-const CreateGamePage = lazy(() => import('./pages/CreateGamePage'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+const CommunityPage = lazyWithRetry(() => import('./pages/CommunityPage'))
+const CreateGamePage = lazyWithRetry(() => import('./pages/CreateGamePage'))
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 
 import ForgotPassword from './pages/ForgotPassword'
 
-const GameListPage = lazy(() => import('./pages/GameListPage'))
-const GamePage = lazy(() => import('./pages/GamePage'))
-const GameRoom = lazy(() => import('./pages/GameRoom'))
+const GameListPage = lazyWithRetry(() => import('./pages/GameListPage'))
+const GamePage = lazyWithRetry(() => import('./pages/GamePage'))
+const GameRoom = lazyWithRetry(() => import('./pages/GameRoom'))
 
 // Public Pages
 import Home from './pages/Home'
 
-const LearnPage = lazy(() => import('./pages/LearnPage'))
+const LearnPage = lazyWithRetry(() => import('./pages/LearnPage'))
 // Protected Pages
-const LobbyPage = lazy(() => import('./pages/LobbyPage'))
+const LobbyPage = lazyWithRetry(() => import('./pages/LobbyPage'))
 
 import Login from './pages/Login'
 
-const MapEditor = lazy(() => import('./pages/MapEditor'))
-const MapEditorTokens = lazy(() => import('./pages/MapEditorTokens'))
-const Maps = lazy(() => import('./pages/Maps'))
+const MapEditor = lazyWithRetry(() => import('./pages/MapEditor'))
+const MapEditorTokens = lazyWithRetry(() => import('./pages/MapEditorTokens'))
+const Maps = lazyWithRetry(() => import('./pages/Maps'))
 
 import NotFoundPage from './pages/NotFoundPage'
 
-const PlayModePage = lazy(() => import('./pages/PlayModePage'))
-const ProfilePage = lazy(() => import('./components/ProfilePage'))
+const PlayModePage = lazyWithRetry(() => import('./pages/PlayModePage'))
+const ProfilePage = lazyWithRetry(() => import('./components/ProfilePage'))
 
 import ProfileRedirect from './components/ProfileRedirect'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 
-const Settings = lazy(() => import('./pages/Settings'))
-const Statistics = lazy(() => import('./pages/Statistics'))
-const TutorialPage = lazy(() => import('./pages/TutorialPage'))
-const ComingSoon = lazy(() => import('./pages/ComingSoon'))
+const Settings = lazyWithRetry(() => import('./pages/Settings'))
+const Statistics = lazyWithRetry(() => import('./pages/Statistics'))
+const TutorialPage = lazyWithRetry(() => import('./pages/TutorialPage'))
+const ComingSoon = lazyWithRetry(() => import('./pages/ComingSoon'))
 
 import VerifyEmail from './pages/VerifyEmail'
 import VerifyEmailToken from './pages/VerifyEmailToken'
 
-const AdminLayout = lazy(() => import('./components/AdminLayout'))
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
-const AdminUsers = lazy(() => import('./pages/AdminUsers'))
-const AdminContent = lazy(() => import('./pages/AdminContent'))
-const AdminMaps = lazy(() => import('./pages/AdminMaps'))
-const AdminGames = lazy(() => import('./pages/AdminGames'))
-const AdminMapReview = lazy(() => import('./pages/AdminMapReview'))
-const TermsPage = lazy(() => import('./pages/TermsPage'))
-const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const AdminLayout = lazyWithRetry(() => import('./components/AdminLayout'))
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'))
+const AdminUsers = lazyWithRetry(() => import('./pages/AdminUsers'))
+const AdminContent = lazyWithRetry(() => import('./pages/AdminContent'))
+const AdminMaps = lazyWithRetry(() => import('./pages/AdminMaps'))
+const AdminGames = lazyWithRetry(() => import('./pages/AdminGames'))
+const AdminMapReview = lazyWithRetry(() => import('./pages/AdminMapReview'))
+const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'))
+const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
 
 import { applyTheme, getStoredTheme } from './config/themes.config'
 import { FEATURE_FLAGS } from './constants/featureFlags'
