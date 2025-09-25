@@ -324,6 +324,93 @@ export class GameController {
     }
   }
 
+  updateAiOpponents = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId } = req.params
+      const hostId = req.userId
+
+      if (!hostId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
+
+      const { aiOpponents } = req.body as {
+        aiOpponents?: Array<{ difficulty?: string; personalitySeed?: number | null }>
+      }
+
+      if (!Array.isArray(aiOpponents)) {
+        return res.status(400).json({ message: 'aiOpponents must be an array' })
+      }
+
+      const aiLobbyEnabled = await featureFlagService.evaluateFlagByName(
+        'experimental_ai_lobby_options',
+        req.user ?? undefined,
+      )
+
+      if (!aiLobbyEnabled) {
+        return res.status(403).json({ message: 'AI opponent controls are disabled' })
+      }
+
+      const [recruitEnabled, commanderEnabled, grandmasterEnabled] = await Promise.all([
+        featureFlagService.evaluateFlagByName('experimental_ai_recruit', req.user ?? undefined),
+        featureFlagService.evaluateFlagByName('experimental_ai_commander', req.user ?? undefined),
+        featureFlagService.evaluateFlagByName('experimental_ai_grandmaster', req.user ?? undefined),
+      ])
+
+      type NormalizedDifficulty = 'recruit' | 'commander' | 'grandmaster'
+      const allowedDifficulties = new Set<NormalizedDifficulty>()
+      if (recruitEnabled) allowedDifficulties.add('recruit')
+      if (commanderEnabled) allowedDifficulties.add('commander')
+      if (grandmasterEnabled) allowedDifficulties.add('grandmaster')
+
+      const sanitizedRequest: Array<{ difficulty: NormalizedDifficulty; personalitySeed?: number | null }> = []
+
+      for (const entry of aiOpponents) {
+        if (!entry || typeof entry !== 'object') {
+          continue
+        }
+        const rawDifficulty =
+          typeof entry.difficulty === 'string' ? entry.difficulty.toLowerCase() : undefined
+        if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty as NormalizedDifficulty)) {
+          continue
+        }
+
+        let personalitySeed: number | null | undefined
+        if (typeof entry.personalitySeed === 'number' && Number.isFinite(entry.personalitySeed)) {
+          personalitySeed = Math.trunc(entry.personalitySeed)
+        }
+
+        sanitizedRequest.push({
+          difficulty: rawDifficulty as NormalizedDifficulty,
+          personalitySeed: personalitySeed ?? undefined,
+        })
+      }
+
+      const room = await this.gameRoomService.updateAiOpponents(roomId, hostId, sanitizedRequest)
+      await this.lifecycleService.refreshLifecycle(roomId)
+
+      return res.json({ room })
+    } catch (error) {
+      logger.error('Update AI opponents error:', error)
+
+      if (error instanceof Error) {
+        if (error.message === 'Room not found') {
+          return res.status(404).json({ message: error.message })
+        }
+        if (error.message.includes('Only the host')) {
+          return res.status(403).json({ message: error.message })
+        }
+        if (error.message.includes('lobby') || error.message.includes('Ranked games')) {
+          return res.status(409).json({ message: error.message })
+        }
+        if (error.message.includes('Not enough open seats')) {
+          return res.status(400).json({ message: error.message })
+        }
+      }
+
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
+
   getRoomDetails = async (req: Request, res: Response) => {
     try {
       const { roomId } = req.params

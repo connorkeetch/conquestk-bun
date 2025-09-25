@@ -27,6 +27,7 @@ _Last updated: September 24, 2025_
 - Lobby creation accepts AI opponent payloads behind feature flags and returns enriched player metadata to clients.
 - Game room UI displays AI badges, hides DM tabs for non-human seats, and team assignment supports AI slots.
 - Socket `player-joined` / `player-left` events now include AI identifiers, difficulty, and readiness while `ensureAiReadyStates` keeps AI opponents auto-ready after lobby roster changes.
+- Hosts can adjust AI rosters from the lobby (add/remove or change difficulty) via the new `/ai-opponents` endpoint, keeping sockets in sync.
 - Added regression coverage for socket payloads, AI readiness hydration, and Redux room state to lock in the lobby behaviour.
 
 ## User‑facing experience
@@ -92,6 +93,5 @@ Async: may exceed real‑time budgets with queue persistence, still bounded by w
 
 ## Next steps
 1. Expose AI opponent controls in the Create Game and lobby management UI (difficulty picker, slot counts) gated by the existing feature flags.
-2. Implement backend endpoints to adjust AI rosters post-creation (add/remove seats) while reusing the new readiness guard.
-3. Profile decision complexity on max-player maps to validate Recruit/Commander TypeScript strategies meet turn budgets.
-4. Finalize message contracts for `aiDecisionService` and any cross-language bridge ahead of Commander tier work.
+2. Profile decision complexity on max-player maps to validate Recruit/Commander TypeScript strategies meet turn budgets.
+3. Finalize message contracts for `aiDecisionService` and any cross-language bridge ahead of Commander tier work.
