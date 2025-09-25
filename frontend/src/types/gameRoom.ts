@@ -45,7 +45,9 @@ export interface GameRoom {
 }
 
 export interface Player {
-  userId: string
+  id: string
+  userId?: string | null
+  aiPlayerId?: string | null
   username: string
   joinedAt: string
   isReady?: boolean

@@ -93,9 +93,11 @@ export default function GameRoom() {
   const lobbyTeamPlayers = useMemo(
     () =>
       (currentRoom?.players || []).map((player) => ({
-        id: player.userId,
+        id: player.id,
         username: player.username,
         teamId: player.teamId ?? null,
+        isAi: player.isAi,
+        aiDifficulty: player.aiDifficulty ?? undefined,
       })),
     [currentRoom?.players],
   )
@@ -307,7 +309,7 @@ export default function GameRoom() {
       }
 
       const existingTeamId =
-        currentRoom?.players?.find((player) => player.userId === playerId)?.teamId ?? null
+        currentRoom?.players?.find((player) => player.id === playerId)?.teamId ?? null
 
       if (existingTeamId === teamId) {
         return
@@ -493,11 +495,16 @@ export default function GameRoom() {
                 const isReady = Boolean(player.isReady)
                 const isCurrentUser = player.userId === user?.id
                 return (
-                  <div key={player.userId} className="flex items-center gap-2 text-sm">
+                  <div key={player.id} className="flex items-center gap-2 text-sm">
                     <div
                       className={`w-3 h-3 rounded-full ${isReady ? 'bg-green-500' : 'bg-gray-600'}`}
                     ></div>
                     <span className={isCurrentUser ? 'font-bold' : ''}>{player.username}</span>
+                    {player.isAi && player.aiDifficulty && (
+                      <span className="text-xs bg-gray-700 px-2 py-0.5 rounded">
+                        AI – {player.aiDifficulty.charAt(0).toUpperCase() + player.aiDifficulty.slice(1)}
+                      </span>
+                    )}
                     {player.userId === currentRoom.hostId && (
                       <span className="text-xs bg-yellow-600 px-2 py-0.5 rounded">HOST</span>
                     )}

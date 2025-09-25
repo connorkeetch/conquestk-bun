@@ -179,12 +179,30 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         socket.joinedGameRooms.add(roomId)
 
         const player = await gameRoomService.getPlayer(roomId, userId)
+        const isAi = player?.isAi === true
         const normalizedPlayer = {
+          id: player?.id ?? player?.userId ?? userId,
           userId: player?.userId ?? userId,
+          aiPlayerId: player?.aiPlayerId ?? null,
           username: player?.username ?? socket.username ?? 'Unknown player',
           joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
-          isReady: Boolean(player?.isReady),
-          readyAt: player?.readyAt instanceof Date ? player?.readyAt.toISOString() : null,
+          isReady:
+            player?.isReady === undefined
+              ? isAi
+              : Boolean(player.isReady),
+          readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
+          teamId:
+            typeof player?.teamId === 'number'
+              ? player.teamId
+              : player?.teamId === null
+                ? null
+                : undefined,
+          isAi,
+          aiDifficulty: player?.aiDifficulty ?? null,
+          aiPersonalitySeed:
+            typeof player?.aiPersonalitySeed === 'number'
+              ? player.aiPersonalitySeed
+              : player?.aiPersonalitySeed ?? null,
         }
 
         socket.to(channel).emit('player-joined', {
@@ -218,12 +236,17 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const userId = requireUserId(socket)
         const channel = getGameChannel(roomId)
 
+        const player = await gameRoomService.getPlayer(roomId, userId).catch(() => null)
+
         await socket.leave(channel)
         socket.joinedGameRooms?.delete(roomId)
 
         socket.to(channel).emit('player-left', {
           roomId,
-          playerId: userId,
+          playerSlotId: player?.id ?? userId,
+          userId,
+          aiPlayerId: player?.aiPlayerId ?? null,
+          isAi: player?.isAi === true,
         })
         logger.info(`User ${userId} left game channel ${channel}`)
       }),

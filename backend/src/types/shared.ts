@@ -6,6 +6,7 @@
 import type { ClanProgressionSocketPayload } from './clans'
 import type { GameDelta } from './deltaUpdates'
 import type { BattleResult, GameAction, SerializedGameState } from './game'
+import type { Player as RoomPlayer } from './gameRoom'
 
 export type ChatConversationType = 'game' | 'team' | 'dm'
 
@@ -149,18 +150,31 @@ export interface RealtimeNotification {
   metadata?: Record<string, unknown>
 }
 
+export interface RoomPlayerEvent {
+  id: string
+  userId?: string | null
+  aiPlayerId?: string | null
+  username: string
+  joinedAt: string
+  isReady: boolean
+  readyAt: string | null
+  teamId?: number | null
+  isAi: boolean
+  aiDifficulty?: RoomPlayer['aiDifficulty']
+  aiPersonalitySeed?: number | null
+}
+
+export interface PlayerLeftEvent {
+  roomId: string
+  playerSlotId: string
+  userId?: string | null
+  aiPlayerId?: string | null
+  isAi: boolean
+}
+
 export interface ServerToClientEvents {
-  'player-joined': (data: {
-    roomId: string
-    player: {
-      userId: string
-      username: string
-      joinedAt: string
-      isReady: boolean
-      readyAt: string | null
-    }
-  }) => void
-  'player-left': (data: { roomId: string; playerId: string }) => void
+  'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
+  'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game-update': (gameState: SerializedGameState) => void
   'game-delta': (delta: GameDelta) => void // Delta update for efficient real-time broadcasting

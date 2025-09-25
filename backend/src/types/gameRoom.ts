@@ -49,7 +49,9 @@ export interface GameRoom {
 }
 
 export interface Player {
-  userId: string
+  id: string
+  userId?: string | null
+  aiPlayerId?: string | null
   username: string
   skill_rating?: number
   current_tier?: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Master' | 'Grandmaster'

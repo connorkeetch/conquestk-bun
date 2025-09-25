@@ -1,5 +1,8 @@
-import { getClient, query } from '../config/database'
+import { randomUUID } from 'node:crypto'
+import { getClient, query, transaction } from '../config/database'
 import type { GameLifecycleStatus, GameRoom, Player } from '../types/gameRoom'
+
+type AIDifficultyOption = NonNullable<Player['aiDifficulty']>
 
 export interface CreateRoomData {
   name: string
@@ -12,6 +15,10 @@ export interface CreateRoomData {
   teamMode?: 'none' | 'teams' | 'auto_balance' | boolean | null
   numberOfTeams?: number | null
   isRanked?: boolean
+  aiOpponents?: Array<{
+    difficulty: AIDifficultyOption
+    personalitySeed?: number | null
+  }>
 }
 
 interface GameRoomRow {
@@ -58,8 +65,10 @@ interface ActiveGameRoomRow extends GameRoomRow {
 }
 
 interface PlayerRow {
-  userId: string
-  username: string
+  id: string
+  userId?: string | null
+  aiPlayerId?: string | null
+  username?: string | null
   skill_rating?: number | null
   current_tier?: string | null
   joinedAt: Date | string | null
@@ -252,8 +261,7 @@ export class GameRoomService {
     return (
       typeof value === 'object' &&
       value !== null &&
-      'userId' in value &&
-      'username' in value &&
+      'id' in value &&
       'joinedAt' in value
     )
   }
@@ -296,6 +304,60 @@ export class GameRoomService {
       : undefined
   }
 
+  private sanitizeAiOpponents(
+    maxPlayers: number,
+    aiOpponents: CreateRoomData['aiOpponents'],
+    isRanked?: boolean,
+  ): Array<{ difficulty: AIDifficultyOption; personalitySeed?: number | null }> {
+    if (!Array.isArray(aiOpponents) || aiOpponents.length === 0) {
+      return []
+    }
+
+    if (isRanked) {
+      return []
+    }
+
+    const maxAvailableSlots = Math.max(0, maxPlayers - 1)
+    if (maxAvailableSlots === 0) {
+      return []
+    }
+
+    const allowed: Set<AIDifficultyOption> = new Set(['recruit', 'commander', 'grandmaster'])
+    const normalized: Array<{ difficulty: AIDifficultyOption; personalitySeed?: number | null }> = []
+
+    for (const entry of aiOpponents) {
+      if (!entry || typeof entry !== 'object') {
+        continue
+      }
+
+      const rawDifficulty =
+        typeof entry.difficulty === 'string' ? entry.difficulty.toLowerCase() : null
+
+      if (!rawDifficulty || !allowed.has(rawDifficulty as AIDifficultyOption)) {
+        continue
+      }
+
+      let personalitySeed: number | null | undefined
+      if (
+        typeof entry.personalitySeed === 'number' &&
+        Number.isFinite(entry.personalitySeed)
+      ) {
+        personalitySeed = Math.trunc(entry.personalitySeed)
+      }
+
+      normalized.push({
+        difficulty: rawDifficulty as AIDifficultyOption,
+        personalitySeed: personalitySeed ?? undefined,
+      })
+
+      if (normalized.length >= maxAvailableSlots) {
+        break
+      }
+    }
+
+    return normalized
+  }
+
   private mapPlayers(players: unknown): GameRoom['players'] {
     if (!Array.isArray(players)) {
       return undefined
@@ -303,34 +365,60 @@ export class GameRoomService {
 
     const mapped = players
       .filter((player): player is PlayerRow => this.isPlayerRow(player))
-      .map((player) => ({
-        userId: player.userId,
-        username: player.username ?? 'AI Opponent',
-        skill_rating: this.parseNullableNumber(player.skill_rating) ?? undefined,
-        current_tier: this.normalizePlayerTier(player.current_tier),
-        joinedAt: this.toDate(player.joinedAt) ?? new Date(),
-        isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
-        readyAt: this.toDate(player.readyAt) ?? null,
-        teamId:
-          typeof player.teamId === 'number'
-            ? player.teamId
-            : player.teamId === null
-              ? null
+      .map((player) => {
+        const isAi = player.isAi === true
+        const aiDifficulty = this.normalizeAIDifficulty(player.aiDifficulty)
+        const usernameFallback = isAi
+          ? `AI ${aiDifficulty ? aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1) : 'Opponent'}`
+          : 'Unknown player'
+
+        return {
+          id: player.id,
+          userId:
+            typeof player.userId === 'string' && player.userId.length > 0
+              ? player.userId
               : undefined,
-        isAi: player.isAi === true,
-        aiDifficulty: this.normalizeAIDifficulty(player.aiDifficulty),
-        aiPersonalitySeed:
-          typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
-            ? Math.trunc(player.aiPersonalitySeed)
-            : player.aiPersonalitySeed === null
-              ? null
+          aiPlayerId:
+            typeof player.aiPlayerId === 'string' && player.aiPlayerId.length > 0
+              ? player.aiPlayerId
               : undefined,
-      }))
+          username: player.username ?? usernameFallback,
+          skill_rating: this.parseNullableNumber(player.skill_rating) ?? undefined,
+          current_tier: this.normalizePlayerTier(player.current_tier),
+          joinedAt: this.toDate(player.joinedAt) ?? new Date(),
+          isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
+          readyAt: this.toDate(player.readyAt) ?? null,
+          teamId:
+            typeof player.teamId === 'number'
+              ? player.teamId
+              : player.teamId === null
+                ? null
+                : undefined,
+          isAi,
+          aiDifficulty,
+          aiPersonalitySeed:
+            typeof player.aiPersonalitySeed === 'number' &&
+            Number.isFinite(player.aiPersonalitySeed)
+              ? Math.trunc(player.aiPersonalitySeed)
+              : player.aiPersonalitySeed === null
+                ? null
+                : undefined,
+        }
+      })
 
     return mapped.length > 0 ? mapped : undefined
   }
 
   private mapRoomRow(row: GameRoomRow): GameRoom {
+    const players = this.mapPlayers(row.players)
+    const aggregatedCurrentPlayers = this.parseNullableNumber(
+      (row as Partial<ActiveGameRoomRow>).current_players,
+    )
+    const normalizedPlayerCount =
+      this.parseNullableNumber(
+        row.playerCount ?? row.playercount ?? (row as Partial<ActiveGameRoomRow>).current_players,
+      ) ?? (players ? players.length : undefined)
+
     return {
       id: row.id,
       name: row.name,
@@ -368,7 +456,7 @@ export class GameRoomService {
       fogOfWar: this.normalizeFogOfWar(row.fog_of_war),
       cardTradeMode: typeof row.card_trade_mode === 'string' ? row.card_trade_mode : undefined,
       bonusType: typeof row.bonus_type === 'string' ? row.bonus_type : undefined,
-      currentPlayers: this.parseNullableNumber((row as Partial<ActiveGameRoomRow>).current_players),
+      currentPlayers: aggregatedCurrentPlayers ?? (players ? players.length : undefined),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
       hostSkillRating: this.parseNullableNumber(
         (row as Partial<ActiveGameRoomRow>).host_skill_rating,
@@ -385,11 +473,8 @@ export class GameRoomService {
       turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
       winner: row.winner ?? undefined,
-      playerCount:
-        this.parseNullableNumber(
-          row.playerCount ?? row.playercount ?? (row as Partial<ActiveGameRoomRow>).current_players,
-        ) ?? undefined,
-      players: this.mapPlayers(row.players),
+      playerCount: normalizedPlayerCount,
+      players,
     }
   }
 
@@ -437,48 +522,85 @@ export class GameRoomService {
     // Validate team configuration
     this.validateTeamConfiguration(roomData.maxPlayers, normalizedTeamMode, normalizedNumberOfTeams)
 
-    const insertQuery = `
-      INSERT INTO game_rooms (
-        name,
-        host_id,
-        max_players,
-        is_private,
-        map_id,
-        game_mode,
-        team_mode,
-        number_of_teams,
-        is_ranked,
-        status,
-        lifecycle_phase
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'lobby', 'lobby')
-      RETURNING *
-    `
-
-    const result = await query<GameRoomRow>(insertQuery, [
-      roomData.name,
-      roomData.hostId,
+    const sanitizedAiOpponents = this.sanitizeAiOpponents(
       roomData.maxPlayers,
-      roomData.isPrivate,
-      roomData.mapId || null,
-      roomData.gameMode || 'classic',
-      allowTeamPlay,
-      normalizedNumberOfTeams,
-      roomData.isRanked || false,
-    ])
+      roomData.aiOpponents,
+      roomData.isRanked,
+    )
 
-    const row = result.rows[0]
-    if (!row) {
-      throw new Error('Failed to create game room')
-    }
+    const roomRow = await transaction(async (client) => {
+      const insertQuery = `
+        INSERT INTO game_rooms (
+          name,
+          host_id,
+          max_players,
+          is_private,
+          map_id,
+          game_mode,
+          team_mode,
+          number_of_teams,
+          is_ranked,
+          status,
+          lifecycle_phase
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'lobby', 'lobby')
+        RETURNING *
+      `
 
-    return this.mapRoomRow(row)
+      const insertResult = await client.query<GameRoomRow>(insertQuery, [
+        roomData.name,
+        roomData.hostId,
+        roomData.maxPlayers,
+        roomData.isPrivate,
+        roomData.mapId || null,
+        roomData.gameMode || 'classic',
+        allowTeamPlay,
+        normalizedNumberOfTeams,
+        roomData.isRanked || false,
+      ])
+
+      const createdRoom = insertResult.rows[0]
+      if (!createdRoom) {
+        throw new Error('Failed to create game room')
+      }
+
+      if (sanitizedAiOpponents.length > 0) {
+        const insertAiQuery = `
+          INSERT INTO room_players (
+            room_id,
+            user_id,
+            ai_player_id,
+            is_ai,
+            ai_difficulty,
+            ai_personality_seed,
+            is_ready,
+            ready_at
+          )
+          VALUES ($1, NULL, $2, TRUE, $3, $4, TRUE, NOW())
+        `
+
+        for (const opponent of sanitizedAiOpponents) {
+          const aiIdentifier = randomUUID()
+          const seed =
+            typeof opponent.personalitySeed === 'number'
+              ? opponent.personalitySeed
+              : Math.trunc(Math.random() * 10_000_000)
+
+          await client.query(insertAiQuery, [createdRoom.id, aiIdentifier, opponent.difficulty, seed])
+        }
+      }
+
+      return createdRoom
+    })
+
+    const hydratedRoom = await this.getRoomById(roomRow.id)
+    return hydratedRoom ?? this.mapRoomRow(roomRow)
   }
 
   async getActiveRooms(): Promise<GameRoom[]> {
     const getQuery = `
       SELECT gr.*, 
-             COUNT(rp.user_id) as current_players,
+             COUNT(rp.id) as current_players,
              u.username as host_username,
              u.skill_rating as host_skill_rating,
              -- u.current_tier as host_tier, -- Column doesn't exist yet
@@ -504,24 +626,34 @@ export class GameRoomService {
   }
 
   async getRoomById(roomId: string): Promise<GameRoom | null> {
+    await this.ensureAiReadyStates(roomId)
     const roomQuery = `
       SELECT gr.*, 
              json_agg(
                json_build_object(
-                 'userId', u.id,
-                 'username', u.username,
-                 'skill_rating', u.skill_rating,
-                 -- 'current_tier', u.current_tier, -- Column doesn't exist yet
-                 'current_tier', NULL,
-                 'joinedAt', rp.joined_at,
-                 'isReady', rp.is_ready,
-                 'readyAt', rp.ready_at,
-                 'teamId', rp.team_id,
-                 'isAi', rp.is_ai,
-                 'aiDifficulty', rp.ai_difficulty,
-                 'aiPersonalitySeed', rp.ai_personality_seed
+                  'id', rp.id,
+                  'userId', rp.user_id,
+                  'aiPlayerId', rp.ai_player_id,
+                  'username', COALESCE(
+                    u.username,
+                    CASE
+                      WHEN rp.is_ai THEN CONCAT('AI ', INITCAP(COALESCE(rp.ai_difficulty, 'opponent')))
+                      ELSE 'Unknown player'
+                    END
+                  ),
+                  'skill_rating', u.skill_rating,
+                  -- 'current_tier', u.current_tier, -- Column doesn't exist yet
+                  'current_tier', NULL,
+                  'joinedAt', rp.joined_at,
+                  'isReady', rp.is_ready,
+                  'readyAt', rp.ready_at,
+                  'teamId', rp.team_id,
+                  'isAi', rp.is_ai,
+                  'aiDifficulty', rp.ai_difficulty,
+                  'aiPersonalitySeed', rp.ai_personality_seed
                )
-             ) as players
+               ORDER BY rp.joined_at
+             ) FILTER (WHERE rp.id IS NOT NULL) as players
       FROM game_rooms gr
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON rp.user_id = u.id
@@ -535,6 +667,19 @@ export class GameRoomService {
       return null
     }
     return this.mapRoomRow(row)
+  }
+
+  async ensureAiReadyStates(roomId: string): Promise<void> {
+    const updateQuery = `
+      UPDATE room_players
+      SET is_ready = TRUE,
+          ready_at = COALESCE(ready_at, NOW())
+      WHERE room_id = $1
+        AND is_ai IS TRUE
+        AND (is_ready IS DISTINCT FROM TRUE OR ready_at IS NULL)
+    `
+
+    await query(updateQuery, [roomId])
   }
 
   async isPlayerInRoom(roomId: string, userId: string): Promise<boolean> {
@@ -551,7 +696,7 @@ export class GameRoomService {
 
   async getPlayer(roomId: string, userId: string): Promise<Player | null> {
     const playerQuery = `
-      SELECT rp.user_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id,
+      SELECT rp.id, rp.user_id, rp.ai_player_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id,
              rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
       FROM room_players rp
       LEFT JOIN users u ON rp.user_id = u.id
@@ -560,7 +705,9 @@ export class GameRoomService {
     `
 
     const result = await query<{
+      id: string
       user_id: string
+      ai_player_id: string | null
       username: string | null
       joined_at: Date | string | null
       is_ready: boolean | null
@@ -577,7 +724,9 @@ export class GameRoomService {
     }
 
     return {
+      id: row.id,
       userId: row.user_id,
+      aiPlayerId: typeof row.ai_player_id === 'string' ? row.ai_player_id : undefined,
       username: row.username ?? 'Unknown player',
       joinedAt: this.toDate(row.joined_at) ?? new Date(),
       isReady: typeof row.is_ready === 'boolean' ? row.is_ready : undefined,
@@ -704,7 +853,7 @@ export class GameRoomService {
   async assignPlayerToTeam(
     roomId: string,
     actingUserId: string,
-    targetUserId: string,
+    targetPlayerIdentifier: string,
     teamId: number | null | undefined,
   ): Promise<GameRoom> {
     const client = await getClient()
@@ -736,12 +885,25 @@ export class GameRoomService {
         throw new Error('Team play is not enabled for this room')
       }
 
-      const membershipResult = await client.query(
-        'SELECT 1 FROM room_players WHERE room_id = $1 AND user_id = $2',
-        [roomId, targetUserId],
-      )
+      const playerLookupById = await client.query<{
+        id: string
+        user_id: string | null
+      }>('SELECT id, user_id FROM room_players WHERE room_id = $1 AND id = $2', [roomId, targetPlayerIdentifier])
 
-      if (membershipResult.rowCount === 0) {
+      let targetPlayerRow = playerLookupById.rows[0]
+
+      if (!targetPlayerRow) {
+        const playerLookupByUser = await client.query<{
+          id: string
+          user_id: string | null
+        }>('SELECT id, user_id FROM room_players WHERE room_id = $1 AND user_id = $2', [
+          roomId,
+          targetPlayerIdentifier,
+        ])
+        targetPlayerRow = playerLookupByUser.rows[0]
+      }
+
+      if (!targetPlayerRow) {
         throw new Error('Player is not part of this room')
       }
 
@@ -764,8 +926,8 @@ export class GameRoomService {
       }
 
       await client.query(
-        'UPDATE room_players SET team_id = $3 WHERE room_id = $1 AND user_id = $2',
-        [roomId, targetUserId, normalizedTeamId],
+        'UPDATE room_players SET team_id = $3 WHERE room_id = $1 AND id = $2',
+        [roomId, targetPlayerRow.id, normalizedTeamId],
       )
 
       await client.query('COMMIT')

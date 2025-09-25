@@ -148,10 +148,32 @@ class SocketService {
         return
       }
 
+      const normalizedPlayer: RoomPlayer = {
+        id: payload.player.id,
+        userId: payload.player.userId ?? undefined,
+        aiPlayerId: payload.player.aiPlayerId ?? undefined,
+        username: payload.player.username,
+        joinedAt: payload.player.joinedAt,
+        isReady: payload.player.isReady,
+        readyAt: payload.player.readyAt,
+        teamId:
+          payload.player.teamId === null
+            ? null
+            : payload.player.teamId === undefined
+              ? undefined
+              : payload.player.teamId,
+        isAi: payload.player.isAi,
+        aiDifficulty: payload.player.aiDifficulty ?? undefined,
+        aiPersonalitySeed:
+          payload.player.aiPersonalitySeed === null || payload.player.aiPersonalitySeed === undefined
+            ? payload.player.aiPersonalitySeed ?? undefined
+            : payload.player.aiPersonalitySeed,
+      }
+
       store.dispatch(
         addPlayerToRoom({
           roomId: payload.roomId,
-          player: payload.player,
+          player: normalizedPlayer,
         }),
       )
     })
@@ -159,14 +181,16 @@ class SocketService {
     this.socket.on('player-left', (data) => {
       const payload = data as Parameters<ServerToClientEvents['player-left']>[0]
 
-      if (!payload?.roomId || !payload?.playerId) {
+      if (!payload?.roomId || !payload?.playerSlotId) {
         return
       }
 
       store.dispatch(
         removePlayerFromRoom({
           roomId: payload.roomId,
-          playerId: payload.playerId,
+          playerSlotId: payload.playerSlotId,
+          userId: payload.userId ?? undefined,
+          aiPlayerId: payload.aiPlayerId ?? undefined,
         }),
       )
     })
