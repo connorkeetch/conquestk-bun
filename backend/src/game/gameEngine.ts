@@ -20,7 +20,14 @@ export class GameEngine {
 
   initializeGame(
     roomId: string,
-    playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
+    playerConfigs: Array<{
+      userId: string
+      username?: string
+      teamId?: number | null
+      isAi?: boolean
+      aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
+      aiPersonalitySeed?: number | null
+    }>,
     gameConfig: GameConfiguration,
     mapOverrides: { territories: Territory[]; continentBonuses: ContinentBonus[] },
   ): GameState {
@@ -123,7 +130,14 @@ export class GameEngine {
   }
 
   private createPlayers(
-    playerConfigs: Array<{ userId: string; username?: string; teamId?: number | null }>,
+    playerConfigs: Array<{
+      userId: string
+      username?: string
+      teamId?: number | null
+      isAi?: boolean
+      aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
+      aiPersonalitySeed?: number | null
+    }>,
   ): GamePlayer[] {
     const colors = [
       'red',
@@ -152,6 +166,12 @@ export class GameEngine {
         typeof player.teamId === 'number' && !Number.isNaN(player.teamId) && player.teamId > 0
           ? player.teamId
           : null,
+      isAi: player.isAi === true,
+      aiDifficulty: player.aiDifficulty ?? null,
+      aiPersonalitySeed:
+        typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
+          ? Math.trunc(player.aiPersonalitySeed)
+          : (player.aiPersonalitySeed ?? null),
     }))
   }
 

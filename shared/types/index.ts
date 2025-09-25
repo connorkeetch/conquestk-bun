@@ -90,6 +90,7 @@ export interface AdminRole {
 // ============================================
 
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
+export type AIDifficulty = 'recruit' | 'commander' | 'grandmaster'
 export type GameStatus = 'waiting' | 'in_progress' | 'completed' | 'abandoned' | 'paused'
 export type GameLifecycleStatus =
   | 'lobby'
@@ -156,7 +157,9 @@ export interface Player {
   eliminatedAt?: Date | string
   position?: number
   capitalTerritory?: string
-  isAI?: boolean
+  isAi?: boolean
+  aiDifficulty?: AIDifficulty | null
+  aiPersonalitySeed?: number | null
   turnTimeRemaining?: number
   teamId?: number // For team games
 }

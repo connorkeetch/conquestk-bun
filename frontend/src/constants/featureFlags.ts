@@ -19,6 +19,10 @@ export const FEATURE_FLAGS = {
 
   // Experimental Features
   AI_PLAYERS: 'experimental_ai_players',
+  AI_LOBBY_OPTIONS: 'experimental_ai_lobby_options',
+  AI_RECRUIT: 'experimental_ai_recruit',
+  AI_COMMANDER: 'experimental_ai_commander',
+  AI_GRANDMASTER: 'experimental_ai_grandmaster',
 
   // VIP Features
   VIP_EXCLUSIVE_MAPS: 'vip_exclusive_maps',

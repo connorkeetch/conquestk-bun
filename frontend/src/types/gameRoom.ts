@@ -1,4 +1,4 @@
-import type { GamePhase } from './game'
+import type { AIDifficulty, GamePhase } from './game'
 
 export type GameLifecycleStatus =
   | 'lobby'
@@ -53,4 +53,7 @@ export interface Player {
   skill_rating?: number
   current_tier?: string | null
   teamId?: number | null
+  isAi?: boolean
+  aiDifficulty?: AIDifficulty | null
+  aiPersonalitySeed?: number | null
 }

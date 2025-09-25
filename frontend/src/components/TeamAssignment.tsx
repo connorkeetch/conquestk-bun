@@ -11,7 +11,13 @@ interface TeamAssignmentPlayer {
   id: string
   username: string
   teamId?: number | null
-  isAI?: boolean
+  isAi?: boolean
+  aiDifficulty?: string | null
+}
+
+const formatDifficulty = (difficulty?: string | null) => {
+  if (!difficulty) return ''
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
 }
 
 const TEAM_COLORS = [
@@ -123,8 +129,10 @@ export default function TeamAssignment({
                   >
                     <div className="w-2 h-2 bg-green-400 rounded-full" />
                     <span className="text-sm text-white">{player.username}</span>
-                    {player.isAI && (
-                      <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">AI</span>
+                    {player.isAi && (
+                      <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">
+                        AI{player.aiDifficulty ? ` – ${formatDifficulty(player.aiDifficulty)}` : ''}
+                      </span>
                     )}
                   </button>
                 </li>
@@ -160,8 +168,10 @@ export default function TeamAssignment({
                 >
                   <div className="w-2 h-2 bg-yellow-400 rounded-full" />
                   <span className="text-sm text-white">{player.username}</span>
-                  {player.isAI && (
-                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">AI</span>
+                  {player.isAi && (
+                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded">
+                      AI{player.aiDifficulty ? ` – ${formatDifficulty(player.aiDifficulty)}` : ''}
+                    </span>
                   )}
                 </button>
               </li>

@@ -57,4 +57,7 @@ export interface Player {
   isReady?: boolean
   readyAt?: Date | null
   teamId?: number | null
+  isAi?: boolean
+  aiDifficulty?: 'recruit' | 'commander' | 'grandmaster' | null
+  aiPersonalitySeed?: number | null
 }
