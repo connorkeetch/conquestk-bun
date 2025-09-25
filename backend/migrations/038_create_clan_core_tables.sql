@@ -314,7 +314,7 @@ SELECT
   FALSE,
   0,
   '{}'::jsonb,
-  ARRAY[]::text[]
+  '{}'::text[]
 WHERE NOT EXISTS (
   SELECT 1 FROM feature_flags WHERE flag_name = 'clans_enabled'
 );
