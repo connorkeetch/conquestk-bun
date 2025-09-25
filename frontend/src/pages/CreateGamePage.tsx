@@ -704,10 +704,7 @@ const CreateGamePage: React.FC = () => {
               )}
             </p>
           </div>
-          <Link
-            to="/lobby"
-            className="px-4 py-2 bg-surface-2 hover:bg-surface-1 text-white rounded-lg transition-colors"
-          >
+          <Link to="/lobby" className="btn btn-secondary">
             ← Back to Lobby
           </Link>
         </div>
@@ -741,10 +738,8 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setGameVisibility('public')}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    gameVisibility === 'public'
-                      ? 'theme-selected'
-                      : 'bg-surface-2 text-muted hover:bg-gray-600'
+                  className={`btn btn-secondary flex-1 justify-start gap-2 text-left ${
+                    gameVisibility === 'public' ? 'theme-selected' : ''
                   }`}
                 >
                   🌍 Public
@@ -752,10 +747,8 @@ const CreateGamePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setGameVisibility('private')}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    gameVisibility === 'private'
-                      ? 'theme-selected'
-                      : 'bg-surface-2 text-muted hover:bg-gray-600'
+                  className={`btn btn-secondary flex-1 justify-start gap-2 text-left ${
+                    gameVisibility === 'private' ? 'theme-selected' : ''
                   }`}
                 >
                   🔒 Private
@@ -764,7 +757,7 @@ const CreateGamePage: React.FC = () => {
                   <button
                     type="button"
                     disabled
-                    className="flex-1 px-3 py-2 rounded-lg transition-colors text-sm bg-surface-2 text-muted cursor-not-allowed"
+                    className="btn btn-secondary flex-1 flex-col items-start gap-1 text-left"
                   >
                     🏆 Tournament
                     <p className="text-xs opacity-70 mt-0.5">Coming soon</p>
@@ -783,10 +776,8 @@ const CreateGamePage: React.FC = () => {
                     setGameType('casual')
                     setIsRanked(false)
                   }}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    gameType === 'casual'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-surface-2 text-muted hover:bg-gray-600'
+                  className={`btn btn-secondary flex-1 flex-col items-start text-left gap-1 ${
+                    gameType === 'casual' ? 'theme-selected' : ''
                   }`}
                 >
                   😎 Casual
@@ -798,10 +789,8 @@ const CreateGamePage: React.FC = () => {
                     setGameType('ranked')
                     setIsRanked(true)
                   }}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    gameType === 'ranked'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-surface-2 text-muted hover:bg-gray-600'
+                  className={`btn btn-secondary flex-1 flex-col items-start text-left gap-1 ${
+                    gameType === 'ranked' ? 'theme-selected' : ''
                   }`}
                 >
                   ⚔️ Ranked

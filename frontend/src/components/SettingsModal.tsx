@@ -158,10 +158,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   P
                 </div>
                 <div>
-                  <button
-                    type="button"
-                    className="px-3 py-1 bg-surface-2 hover:bg-gray-600 text-white text-sm font-medium rounded-lg mb-2 transition-colors"
-                  >
+                  <button type="button" className="btn btn-secondary btn-sm">
                     📁 Upload New Avatar
                   </button>
                   <p className="text-xs text-muted">Recommended: 256x256px, JPG or PNG</p>
@@ -172,22 +169,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Security</h3>
               <div className="space-y-3">
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-secondary w-full justify-start">
                   🔑 Change Password
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-secondary w-full justify-start">
                   📱 Two-Factor Authentication
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-danger w-full justify-start">
                   🗑️ Delete Account
                 </button>
               </div>
@@ -911,28 +899,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Data Management</h3>
               <div className="space-y-3">
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-secondary w-full justify-start">
                   📊 Export Game Data
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-secondary w-full justify-start">
                   💾 Backup Settings
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-danger w-full justify-start">
                   🗑️ Clear Cache
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-left"
-                >
+                <button type="button" className="btn btn-danger w-full justify-start">
                   ⚠️ Reset All Settings
                 </button>
               </div>
@@ -1012,10 +988,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-surface-2 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
+            className="btn btn-secondary"
+          >
+            Cancel
+          </button>
             <button
               type="button"
               onClick={onClose}
