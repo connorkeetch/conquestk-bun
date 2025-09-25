@@ -599,6 +599,186 @@ export async function removeConversationMember(
   emitConversationMembersRemovedEvent(conversationId, [targetUserId], descriptor.memberIds)
 }
 
+export async function updateConversationMemberRole(
+  options: UpdateConversationMemberRoleOptions,
+): Promise<ConversationMemberRole> {
+  const { actorId, conversationId, targetUserId, role } = options
+
+  if (role !== 'admin' && role !== 'member') {
+    throw new ConversationError('INVALID_ROLE', 'Only admin and member roles are supported')
+  }
+
+  await transaction(async (client) => {
+    const conversationResult = await client.query<ConversationRow>(
+      `
+      SELECT ${CONVERSATION_COLUMNS}
+      FROM conversations
+      WHERE id = $1
+      FOR UPDATE
+    `,
+      [conversationId],
+    )
+
+    if (conversationResult.rows.length === 0) {
+      throw new ConversationError('NOT_FOUND', 'Conversation not found')
+    }
+
+    const conversationRow = conversationResult.rows[0]
+    if (conversationRow.kind !== 'group') {
+      throw new ConversationError(
+        'INVALID_OPERATION',
+        'Role updates are only supported for group conversations',
+      )
+    }
+
+    const actorResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, actorId],
+    )
+
+    if (actorResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'You are not a member of this conversation')
+    }
+
+    const actorRole = actorResult.rows[0].role
+    if (actorRole !== 'owner' && actorRole !== 'admin') {
+      throw new ConversationError('FORBIDDEN', 'You do not have permission to change roles')
+    }
+
+    const targetResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, targetUserId],
+    )
+
+    if (targetResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'Target user is not part of this conversation')
+    }
+
+    const target = targetResult.rows[0]
+    if (target.role === 'owner') {
+      throw new ConversationError('FORBIDDEN', 'Cannot change the conversation owner role')
+    }
+
+    if (actorRole === 'admin' && target.role !== 'member') {
+      throw new ConversationError('FORBIDDEN', 'Admins can only manage member roles')
+    }
+
+    if (target.role === role) {
+      return
+    }
+
+    await client.query(
+      `
+      UPDATE conversation_members
+      SET role = $3, updated_at = NOW()
+      WHERE conversation_id = $1 AND user_id = $2
+    `,
+      [conversationId, targetUserId, role],
+    )
+
+    await client.query(
+      `
+      UPDATE conversations
+      SET updated_at = NOW()
+      WHERE id = $1
+    `,
+      [conversationId],
+    )
+  })
+
+  const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId))
+  const updatedMember = descriptor.memberRoles.find((member) => member.userId === targetUserId)
+  if (!updatedMember) {
+    throw new ConversationError('NOT_MEMBER', 'Target user is not part of this conversation')
+  }
+
+  emitConversationMembersChangedEvent(conversationId, [updatedMember], descriptor.memberIds)
+
+  return updatedMember
+}
+
+export async function setConversationArchived(
+  options: SetConversationArchivedOptions,
+): Promise<ConversationWithMembers> {
+  const { actorId, conversationId, archived } = options
+
+  let changed = false
+
+  await transaction(async (client) => {
+    const conversationResult = await client.query<ConversationRow>(
+      `
+      SELECT ${CONVERSATION_COLUMNS}
+      FROM conversations
+      WHERE id = $1
+      FOR UPDATE
+    `,
+      [conversationId],
+    )
+
+    if (conversationResult.rows.length === 0) {
+      throw new ConversationError('NOT_FOUND', 'Conversation not found')
+    }
+
+    const conversationRow = conversationResult.rows[0]
+    if (conversationRow.kind !== 'group') {
+      throw new ConversationError(
+        'INVALID_OPERATION',
+        'Archiving is only supported for group conversations',
+      )
+    }
+
+    const actorResult = await client.query<ConversationMemberRow>(
+      `
+      SELECT user_id, role, joined_at, shadow_muted
+      FROM conversation_members
+      WHERE conversation_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [conversationId, actorId],
+    )
+
+    if (actorResult.rows.length === 0) {
+      throw new ConversationError('NOT_MEMBER', 'You are not a member of this conversation')
+    }
+
+    const actorRole = actorResult.rows[0].role
+    if (actorRole !== 'owner' && actorRole !== 'admin') {
+      throw new ConversationError('FORBIDDEN', 'You do not have permission to archive this conversation')
+    }
+
+    if (conversationRow.is_archived === archived) {
+      return
+    }
+
+    await client.query(
+      `
+      UPDATE conversations
+      SET is_archived = $2, updated_at = NOW()
+      WHERE id = $1
+    `,
+      [conversationId, archived],
+    )
+
+    changed = true
+  })
+
+  const descriptor = await buildConversationDescriptor(await getConversationRow(conversationId))
+  if (changed) {
+    emitConversationUpdatedEvent(descriptor)
+  }
+  return descriptor
+}
+
 const ensureMembership = async (
   conversationId: string,
   userId: string,
@@ -657,7 +837,7 @@ const getOtherDirectMember = async (
 const toIsoString = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : value
 
-const serializeConversationForEvent = (conversation: ConversationRecord) => ({
+const serializeConversationForEvent = (conversation: ConversationWithMembers) => ({
   id: conversation.id,
   kind: conversation.kind,
   title: conversation.title,
@@ -668,6 +848,7 @@ const serializeConversationForEvent = (conversation: ConversationRecord) => ({
   isReadOnly: conversation.isReadOnly,
   gameId: conversation.gameId,
   metadata: conversation.metadata,
+  memberIds: conversation.memberIds,
 })
 
 const emitConversationCreatedEvent = (
@@ -759,6 +940,38 @@ const emitConversationMembersRemovedEvent = (
   }
 }
 
+const emitConversationMembersChangedEvent = (
+  conversationId: string,
+  members: ConversationMemberRole[],
+  recipients: string[],
+) => {
+  if (members.length === 0) {
+    return
+  }
+
+  try {
+    const io = tryGetSocketServer()
+    if (!io) {
+      return
+    }
+
+    const payload = {
+      conversationId,
+      members: members.map(({ userId, role }) => ({ userId, role })),
+    }
+
+    io.to(`conversation:${conversationId}`).emit('conversation.members.changed', payload)
+    for (const userId of recipients) {
+      io.to(`user:${userId}`).emit('conversation.members.changed', payload)
+    }
+  } catch (error) {
+    logger.warn('Failed to emit conversation.members.changed event', {
+      conversationId,
+      error,
+    })
+  }
+}
+
 const emitConversationMessageEvent = (
   descriptor: ConversationWithMembers,
   message: ConversationMessageRecord,
@@ -779,12 +992,37 @@ const emitConversationMessageEvent = (
     }
 
     io.to(`conversation:${descriptor.id}`).emit('conversation.message.new', payload)
+    io.to(`conversation:${descriptor.id}`).emit('message.new', payload)
     for (const userId of descriptor.memberIds) {
       io.to(`user:${userId}`).emit('conversation.message.new', payload)
+      io.to(`user:${userId}`).emit('message.new', payload)
     }
   } catch (error) {
     logger.warn('Failed to emit conversation.message.new event', {
       conversationId: descriptor.id,
+      error,
+    })
+  }
+}
+
+const emitConversationUpdatedEvent = (conversation: ConversationWithMembers) => {
+  try {
+    const io = tryGetSocketServer()
+    if (!io) {
+      return
+    }
+
+    const payload = {
+      conversation: serializeConversationForEvent(conversation),
+    }
+
+    io.to(`conversation:${conversation.id}`).emit('conversation.updated', payload)
+    for (const userId of conversation.memberIds) {
+      io.to(`user:${userId}`).emit('conversation.updated', payload)
+    }
+  } catch (error) {
+    logger.warn('Failed to emit conversation.updated event', {
+      conversationId: conversation.id,
       error,
     })
   }
@@ -815,6 +1053,19 @@ export interface RemoveConversationMemberOptions {
   actorId: string
   conversationId: string
   targetUserId: string
+}
+
+export interface UpdateConversationMemberRoleOptions {
+  actorId: string
+  conversationId: string
+  targetUserId: string
+  role: 'admin' | 'member'
+}
+
+export interface SetConversationArchivedOptions {
+  actorId: string
+  conversationId: string
+  archived: boolean
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<ConversationMessageRecord> {
@@ -1189,6 +1440,8 @@ export default {
   addMembersToConversation,
   leaveConversation,
   removeConversationMember,
+  updateConversationMemberRole,
+  setConversationArchived,
   markConversationRead,
   getConversationDetail,
   listConversationsForUser,

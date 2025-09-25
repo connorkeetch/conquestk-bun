@@ -1,6 +1,21 @@
-import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types'
+import type {
+  ClientToServerEvents,
+  ConversationCreateAck,
+  ConversationCreatePayload,
+  ConversationMembersUpdateAck,
+  ConversationMembersUpdatePayload,
+  MessageSendAck,
+  MessageSendPayload,
+  ReceiptReadAck,
+  ServerToClientEvents,
+} from '@shared/types'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
+import {
+  loadUnreadSummary,
+  messagesActions,
+  refreshConversation,
+} from '../store/messagesSlice'
 import {
   applyDelta,
   selectTargetTerritory,
@@ -117,6 +132,39 @@ class SocketService {
     this.socket?.emit('chat:typing', data)
   }
 
+  sendConversationMessage(payload: MessageSendPayload, callback?: (ack: MessageSendAck) => void) {
+    this.socket?.emit('message.send', payload, callback)
+  }
+
+  markConversationReadViaSocket(
+    conversationId: string,
+    callback?: (ack: ReceiptReadAck) => void,
+  ) {
+    this.socket?.emit('receipt.read', { conversationId }, callback)
+  }
+
+  startConversationTyping(conversationId: string) {
+    this.socket?.emit('typing.start', { conversationId })
+  }
+
+  stopConversationTyping(conversationId: string) {
+    this.socket?.emit('typing.stop', { conversationId })
+  }
+
+  createConversation(
+    payload: ConversationCreatePayload,
+    callback?: (ack: ConversationCreateAck) => void,
+  ) {
+    this.socket?.emit('conversation.create', payload, callback)
+  }
+
+  updateConversationMembers(
+    payload: ConversationMembersUpdatePayload,
+    callback?: (ack: ConversationMembersUpdateAck) => void,
+  ) {
+    this.socket?.emit('conversation.members.update', payload, callback)
+  }
+
   // Generic on/off for chat events
   on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
     this.socket?.on(event, handler)
@@ -134,7 +182,7 @@ class SocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
-      // connection established
+      store.dispatch(loadUnreadSummary())
     })
 
     this.socket.on('disconnect', () => {
@@ -624,6 +672,83 @@ class SocketService {
         const effect = data.type === 'chat_message' ? 'message' : 'swoosh'
         audioService.playEffect(effect)
       }
+    })
+
+    this.socket.on('message.new', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['message.new']>[0]
+      const state = store.getState()
+      const currentUserId = state.auth.user?.id
+
+      store.dispatch(messagesActions.messageReceived({ message: data, currentUserId }))
+
+      if (!state.messages.conversations[data.conversationId]) {
+        store.dispatch(refreshConversation(data.conversationId))
+      }
+    })
+
+    this.socket.on('conversation.created', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['conversation.created']>[0]
+      const state = store.getState()
+      const currentUserId = state.auth.user?.id
+      if (!currentUserId) {
+        return
+      }
+
+      const membershipRole =
+        data.members.find((member) => member.userId === currentUserId)?.role ?? 'member'
+
+      store.dispatch(
+        messagesActions.conversationCreated({
+          payload: data,
+          membership: {
+            role: membershipRole,
+            joinedAt: new Date().toISOString(),
+            isMuted: false,
+            isPinned: false,
+            shadowMuted: false,
+            lastReadMessageId: null,
+            lastReadAt: null,
+          },
+        }),
+      )
+
+      store.dispatch(refreshConversation(data.conversation.id))
+    })
+
+    this.socket.on('conversation.members.added', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['conversation.members.added']>[0]
+      store.dispatch(messagesActions.conversationMembersAdded(data))
+    })
+
+    this.socket.on('conversation.members.removed', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['conversation.members.removed']>[0]
+      store.dispatch(messagesActions.conversationMembersRemoved(data))
+    })
+
+    this.socket.on('conversation.members.changed', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['conversation.members.changed']>[0]
+      store.dispatch(messagesActions.conversationMembersChanged(data))
+    })
+
+    this.socket.on('conversation.updated', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['conversation.updated']>[0]
+      store.dispatch(messagesActions.conversationUpdated(data))
+    })
+
+    this.socket.on('receipt.read', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['receipt.read']>[0]
+      const currentUserId = store.getState().auth.user?.id
+      store.dispatch(messagesActions.receiptReadReceived({ payload: data, currentUserId }))
+    })
+
+    this.socket.on('typing.start', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['typing.start']>[0]
+      store.dispatch(messagesActions.typingStarted(data))
+    })
+
+    this.socket.on('typing.stop', (payload) => {
+      const data = payload as Parameters<ServerToClientEvents['typing.stop']>[0]
+      store.dispatch(messagesActions.typingStopped(data))
     })
 
     this.socket.on('chat-message', (_data) => {
