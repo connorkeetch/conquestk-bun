@@ -152,7 +152,9 @@ const UserStats: React.FC<UserStatsProps> = ({
               <span>📊</span>
               Battlefield summary
             </h2>
-            <p className="text-sm text-muted">Tracking ranked matches from the ConquestK servers.</p>
+            <p className="text-sm text-muted">
+              Tracking ranked matches from the ConquestK servers.
+            </p>
           </div>
           {loading && (
             <div className="inline-flex items-center gap-2 text-sm text-muted">
@@ -209,7 +211,9 @@ const UserStats: React.FC<UserStatsProps> = ({
               {formatNumber(summary.bestTerritories)}
             </div>
             <p className="text-xs text-muted">Most territories held at once</p>
-            <p className="text-xs text-muted">Largest army {formatNumber(summary.bestArmies)} units</p>
+            <p className="text-xs text-muted">
+              Largest army {formatNumber(summary.bestArmies)} units
+            </p>
           </div>
           <div className="panel-muted space-y-2">
             <h3 className="text-xs uppercase tracking-widest text-muted">Card trades</h3>
@@ -226,9 +230,12 @@ const UserStats: React.FC<UserStatsProps> = ({
           <div className="flex items-start gap-3">
             <div className="text-2xl">🔒</div>
             <div>
-              <h3 className="text-lg font-semibold text-[color:var(--heading)]">Detailed analytics are private</h3>
+              <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                Detailed analytics are private
+              </h3>
               <p className="text-sm text-muted">
-                {username ? `${username}'s` : "This commander's"} detailed breakdown is only visible to them. Start a match to build your own statistics.
+                {username ? `${username}'s` : "This commander's"} detailed breakdown is only visible
+                to them. Start a match to build your own statistics.
               </p>
             </div>
           </div>
@@ -257,7 +264,9 @@ const UserStats: React.FC<UserStatsProps> = ({
                 {stats.maps.map((map) => (
                   <div key={map.mapName} className="panel-muted space-y-2">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-lg font-semibold text-[color:var(--heading)]">{map.mapName}</h4>
+                      <h4 className="text-lg font-semibold text-[color:var(--heading)]">
+                        {map.mapName}
+                      </h4>
                       <span className="text-xs text-muted uppercase tracking-widest">
                         {formatPercent(computeWinRate(map.wins, map.gamesPlayed))}
                       </span>
@@ -332,9 +341,7 @@ const UserStats: React.FC<UserStatsProps> = ({
                         </td>
                         <td>{formatNumber(entry.gamesPlayed)}</td>
                         <td>{formatNumber(entry.wins)}</td>
-                        <td>
-                          {formatPercent(computeWinRate(entry.wins, entry.gamesPlayed))}
-                        </td>
+                        <td>{formatPercent(computeWinRate(entry.wins, entry.gamesPlayed))}</td>
                         <td>{formatDurationFromMinutes(entry.playtimeMinutes)}</td>
                       </tr>
                     ))}

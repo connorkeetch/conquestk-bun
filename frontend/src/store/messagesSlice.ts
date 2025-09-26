@@ -287,42 +287,41 @@ export const loadUnreadSummary = createAsyncThunk<
   }
 })
 
-export const ensureDirectConversation = createAsyncThunk<ConversationDetail, string, { rejectValue: string }>(
-  'messages/ensureDirectConversation',
-  async (targetUserId, { rejectWithValue }) => {
-    try {
-      return await ensureDirectConversationRequest(targetUserId)
-    } catch (_error) {
-      return rejectWithValue('Failed to start direct conversation')
-    }
-  },
-)
+export const ensureDirectConversation = createAsyncThunk<
+  ConversationDetail,
+  string,
+  { rejectValue: string }
+>('messages/ensureDirectConversation', async (targetUserId, { rejectWithValue }) => {
+  try {
+    return await ensureDirectConversationRequest(targetUserId)
+  } catch (_error) {
+    return rejectWithValue('Failed to start direct conversation')
+  }
+})
 
-export const ensureGameConversation = createAsyncThunk<ConversationDetail, string, { rejectValue: string }>(
-  'messages/ensureGameConversation',
-  async (gameId, { rejectWithValue }) => {
-    try {
-      return await ensureGameConversationRequest(gameId)
-    } catch (_error) {
-      return rejectWithValue('Failed to ensure game conversation')
-    }
-  },
-)
+export const ensureGameConversation = createAsyncThunk<
+  ConversationDetail,
+  string,
+  { rejectValue: string }
+>('messages/ensureGameConversation', async (gameId, { rejectWithValue }) => {
+  try {
+    return await ensureGameConversationRequest(gameId)
+  } catch (_error) {
+    return rejectWithValue('Failed to ensure game conversation')
+  }
+})
 
 export const ensureTeamConversation = createAsyncThunk<
   ConversationDetail,
   { gameId: string; teamId: number },
   { rejectValue: string }
->(
-  'messages/ensureTeamConversation',
-  async ({ gameId, teamId }, { rejectWithValue }) => {
-    try {
-      return await ensureTeamConversationRequest(gameId, teamId)
-    } catch (_error) {
-      return rejectWithValue('Failed to ensure team conversation')
-    }
-  },
-)
+>('messages/ensureTeamConversation', async ({ gameId, teamId }, { rejectWithValue }) => {
+  try {
+    return await ensureTeamConversationRequest(gameId, teamId)
+  } catch (_error) {
+    return rejectWithValue('Failed to ensure team conversation')
+  }
+})
 
 const messagesSlice = createSlice({
   name: 'messages',

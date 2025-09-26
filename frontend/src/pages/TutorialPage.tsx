@@ -86,10 +86,12 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'basics' && (
           <div className="space-y-8">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Getting started</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                Getting started
+              </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Understand the win condition, the three-part turn loop, and the controls you&apos;ll use in
-                every match.
+                Understand the win condition, the three-part turn loop, and the controls you&apos;ll
+                use in every match.
               </p>
             </header>
 
@@ -103,25 +105,27 @@ const TutorialPage: React.FC = () => {
 
             <section className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Turn phases</h3>
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                  Turn phases
+                </h3>
                 <p className="text-xs text-muted sm:text-sm max-w-xl">
-                  Each turn flows through three steps. Use them together to build momentum and secure
-                  the front lines.
+                  Each turn flows through three steps. Use them together to build momentum and
+                  secure the front lines.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="panel-muted border-l-4 border-[color:var(--color-warning)]">
                   <h4 className="font-semibold text-[color:var(--color-warning)]">1. Reinforce</h4>
                   <p className="text-sm text-muted mt-2">
-                    Deploy new troops to friendly territory. Bonus soldiers arrive when you hold entire
-                    continents, and in team games you can reinforce an ally directly.
+                    Deploy new troops to friendly territory. Bonus soldiers arrive when you hold
+                    entire continents, and in team games you can reinforce an ally directly.
                   </p>
                 </div>
                 <div className="panel-muted border-l-4 border-[color:var(--color-danger)]">
                   <h4 className="font-semibold text-[color:var(--color-danger)]">2. Attack</h4>
                   <p className="text-sm text-muted mt-2">
-                    Strike adjacent enemies. Dice rolls resolve battles, and you can chain attacks until
-                    you stop or run out of units.
+                    Strike adjacent enemies. Dice rolls resolve battles, and you can chain attacks
+                    until you stop or run out of units.
                   </p>
                 </div>
                 <div className="panel-muted border-l-4 border-[color:var(--color-success)]">
@@ -135,7 +139,9 @@ const TutorialPage: React.FC = () => {
             </section>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Basic controls</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Basic controls
+              </h3>
               <ul className="text-sm text-muted space-y-2">
                 <li>Click friendly territories (or a teammate&apos;s) to place reinforcements</li>
                 <li>Drag from your territory to an enemy territory to attack</li>
@@ -151,8 +157,8 @@ const TutorialPage: React.FC = () => {
             <header className="space-y-2">
               <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game types</h2>
               <p className="text-sm text-muted max-w-2xl">
-                Mix up the rules to keep matches fresh. These presets are available in matchmaking and
-                private lobbies.
+                Mix up the rules to keep matches fresh. These presets are available in matchmaking
+                and private lobbies.
               </p>
             </header>
 
@@ -160,22 +166,26 @@ const TutorialPage: React.FC = () => {
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-success)]">
                 <h3 className="text-lg font-semibold text-[color:var(--color-success)]">Classic</h3>
                 <p className="text-sm text-muted">
-                  The standard ConquestK experience—start with shared territory, push opponents off the
-                  board, and rule the map.
+                  The standard ConquestK experience—start with shared territory, push opponents off
+                  the board, and rule the map.
                 </p>
               </div>
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-primary)]">
-                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Capitals</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
+                  Capitals
+                </h3>
                 <p className="text-sm text-muted">
-                  Each player defends a capital. Eliminating every rival still wins the war, but holding
-                  capitals creates strategic pressure.
+                  Each player defends a capital. Eliminating every rival still wins the war, but
+                  holding capitals creates strategic pressure.
                 </p>
               </div>
               <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-info)]">
-                <h3 className="text-lg font-semibold text-[color:var(--color-info)]">Random mode</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-info)]">
+                  Random mode
+                </h3>
                 <p className="text-sm text-muted">
-                  Shake up spoils, timers, fog, and more with a single click. Perfect for groups who want
-                  every match to feel different.
+                  Shake up spoils, timers, fog, and more with a single click. Perfect for groups who
+                  want every match to feel different.
                 </p>
               </div>
             </div>
@@ -187,14 +197,16 @@ const TutorialPage: React.FC = () => {
             <header className="space-y-2">
               <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Strategic tips</h2>
               <p className="text-sm text-muted max-w-2xl">
-                Positioning, timing, and resource management win campaigns. These fundamentals help at
-                every stage of the match.
+                Positioning, timing, and resource management win campaigns. These fundamentals help
+                at every stage of the match.
               </p>
             </header>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="panel-muted space-y-3">
-                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Early game</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
+                  Early game
+                </h3>
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
@@ -202,16 +214,23 @@ const TutorialPage: React.FC = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                    <span>Favor regions with fewer borders (Australia, South America) early on.</span>
+                    <span>
+                      Favor regions with fewer borders (Australia, South America) early on.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                    <span>Consolidate strength before expanding—spread troops too thin and you invite counterattacks.</span>
+                    <span>
+                      Consolidate strength before expanding—spread troops too thin and you invite
+                      counterattacks.
+                    </span>
                   </li>
                 </ul>
               </div>
               <div className="panel-muted space-y-3">
-                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Mid game</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
+                  Mid game
+                </h3>
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
@@ -223,12 +242,17 @@ const TutorialPage: React.FC = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                    <span>Coordinate temporary alliances to check runaway leaders—but remember there&apos;s only one victor.</span>
+                    <span>
+                      Coordinate temporary alliances to check runaway leaders—but remember
+                      there&apos;s only one victor.
+                    </span>
                   </li>
                 </ul>
               </div>
               <div className="panel-muted space-y-3">
-                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Late game</h3>
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">
+                  Late game
+                </h3>
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
@@ -247,12 +271,16 @@ const TutorialPage: React.FC = () => {
             </div>
 
             <section className="panel-muted space-y-2">
-              <h3 className="text-lg font-semibold text-[color:var(--color-danger)]">Combat odds at a glance</h3>
+              <h3 className="text-lg font-semibold text-[color:var(--color-danger)]">
+                Combat odds at a glance
+              </h3>
               <ul className="text-sm text-muted space-y-1">
                 <li>Attackers roll up to 3 dice; defenders roll up to 2.</li>
                 <li>Higher dice win ties in favor of the defender.</li>
                 <li>Aim for at least a 3:2 troop ratio when launching major assaults.</li>
-                <li>Never leave a captured territory with a single troop—keep reserves in place.</li>
+                <li>
+                  Never leave a captured territory with a single troop—keep reserves in place.
+                </li>
               </ul>
             </section>
           </div>
@@ -422,7 +450,9 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div className="panel-muted space-y-2">
-                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Earning points</h3>
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                  Earning points
+                </h3>
                 <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                   <li>Win games to grow your rating</li>
                   <li>Eliminations and decisive victories award bonus points</li>
@@ -437,14 +467,19 @@ const TutorialPage: React.FC = () => {
         {activeTab === 'editor' && (
           <div className="space-y-6">
             <header className="space-y-2">
-              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Map editor guide</h2>
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+                Map editor guide
+              </h2>
               <p className="text-sm text-muted max-w-2xl">
-                Create custom battlefields with the token-based editor and share them with the community.
+                Create custom battlefields with the token-based editor and share them with the
+                community.
               </p>
             </header>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Quick start steps</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Quick start steps
+              </h3>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted">
                 <li>Upload a background image (minimum 400×300)</li>
                 <li>Place territory tokens on strategic locations</li>
@@ -456,52 +491,90 @@ const TutorialPage: React.FC = () => {
             </section>
 
             <section className="space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Editor modes</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Editor modes
+              </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-success)]">🗺️ Territories mode</h4>
-                  <p className="text-sm text-muted">Place and reposition territory tokens. Select a continent first to auto-assign new territories.</p>
+                  <h4 className="font-semibold text-[color:var(--color-success)]">
+                    🗺️ Territories mode
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Place and reposition territory tokens. Select a continent first to auto-assign
+                    new territories.
+                  </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-primary)]">🌍 Continents mode</h4>
-                  <p className="text-sm text-muted">Group territories into continents, set bonus values, and choose highlight colors.</p>
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">
+                    🌍 Continents mode
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Group territories into continents, set bonus values, and choose highlight
+                    colors.
+                  </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-info)]">🔗 Connections mode</h4>
-                  <p className="text-sm text-muted">Select a territory, then click neighbours to establish attack paths and adjacency.</p>
+                  <h4 className="font-semibold text-[color:var(--color-info)]">
+                    🔗 Connections mode
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Select a territory, then click neighbours to establish attack paths and
+                    adjacency.
+                  </p>
                 </div>
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-warning)]">👑 Capitals mode</h4>
-                  <p className="text-sm text-muted">Auto-generate or hand-pick balanced starting positions for 2–12 players.</p>
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">
+                    👑 Capitals mode
+                  </h4>
+                  <p className="text-sm text-muted">
+                    Auto-generate or hand-pick balanced starting positions for 2–12 players.
+                  </p>
                 </div>
               </div>
             </section>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Capital assignment system</h3>
-              <p className="text-sm text-muted">Balanced starting locations keep every match fair:</p>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Capital assignment system
+              </h3>
+              <p className="text-sm text-muted">
+                Balanced starting locations keep every match fair:
+              </p>
               <ul className="space-y-2 text-sm text-muted">
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-success)]">✨</span>
-                  <span><strong>Auto-generation:</strong> Maximises distance between capitals using a maximin algorithm.</span>
+                  <span>
+                    <strong>Auto-generation:</strong> Maximises distance between capitals using a
+                    maximin algorithm.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-primary)]">🎯</span>
-                  <span><strong>Manual override:</strong> Click territories in Capitals mode to customise placements.</span>
+                  <span>
+                    <strong>Manual override:</strong> Click territories in Capitals mode to
+                    customise placements.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-info)]">👥</span>
-                  <span><strong>Player-specific sets:</strong> Generates optimal layouts for every supported player count.</span>
+                  <span>
+                    <strong>Player-specific sets:</strong> Generates optimal layouts for every
+                    supported player count.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-warning)]">⚖️</span>
-                  <span><strong>Fair play:</strong> Prevents unfair clustering or unreachable capitals.</span>
+                  <span>
+                    <strong>Fair play:</strong> Prevents unfair clustering or unreachable capitals.
+                  </span>
                 </li>
               </ul>
             </section>
 
             <section className="panel space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Map requirements</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Map requirements
+              </h3>
               <table className="table text-sm">
                 <thead>
                   <tr>
@@ -536,40 +609,68 @@ const TutorialPage: React.FC = () => {
             </section>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Getting maps approved</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Getting maps approved
+              </h3>
               <ol className="list-decimal list-inside space-y-2 text-sm text-muted">
-                <li><strong>Validation:</strong> Automatic checks confirm minimum requirements.</li>
-                <li><strong>Playability:</strong> All territories must be connected.</li>
-                <li><strong>Balance:</strong> Distribute territories and bonuses evenly.</li>
-                <li><strong>Quality:</strong> Ensure clear visuals and theme consistency.</li>
-                <li><strong>Community review:</strong> Gather feedback from playtesters.</li>
-                <li><strong>Admin approval:</strong> Final verification before publication.</li>
+                <li>
+                  <strong>Validation:</strong> Automatic checks confirm minimum requirements.
+                </li>
+                <li>
+                  <strong>Playability:</strong> All territories must be connected.
+                </li>
+                <li>
+                  <strong>Balance:</strong> Distribute territories and bonuses evenly.
+                </li>
+                <li>
+                  <strong>Quality:</strong> Ensure clear visuals and theme consistency.
+                </li>
+                <li>
+                  <strong>Community review:</strong> Gather feedback from playtesters.
+                </li>
+                <li>
+                  <strong>Admin approval:</strong> Final verification before publication.
+                </li>
               </ol>
-              <p className="text-sm text-muted">💡 Tip: Well-balanced maps with interesting themes move through review faster.</p>
+              <p className="text-sm text-muted">
+                💡 Tip: Well-balanced maps with interesting themes move through review faster.
+              </p>
             </section>
 
             <section className="panel-muted space-y-2">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Advanced features</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Advanced features
+              </h3>
               <ul className="space-y-2 text-sm text-muted">
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-info)]">📏</span>
-                  <span><strong>Grid snap:</strong> Toggle grid snapping for precise placement.</span>
+                  <span>
+                    <strong>Grid snap:</strong> Toggle grid snapping for precise placement.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-primary)]">🔄</span>
-                  <span><strong>Import/export:</strong> Save maps as JSON for backup or collaboration.</span>
+                  <span>
+                    <strong>Import/export:</strong> Save maps as JSON for backup or collaboration.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-success)]">🎨</span>
-                  <span><strong>Token shapes:</strong> Choose hexagon, square, or circle tokens.</span>
+                  <span>
+                    <strong>Token shapes:</strong> Choose hexagon, square, or circle tokens.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-warning)]">🔍</span>
-                  <span><strong>Image scaling:</strong> Adjust the background between 50% and 150%.</span>
+                  <span>
+                    <strong>Image scaling:</strong> Adjust the background between 50% and 150%.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-[color:var(--color-danger)]">✂️</span>
-                  <span><strong>Smart cropping:</strong> Trim images to the ideal dimensions.</span>
+                  <span>
+                    <strong>Smart cropping:</strong> Trim images to the ideal dimensions.
+                  </span>
                 </li>
               </ul>
             </section>
@@ -581,15 +682,20 @@ const TutorialPage: React.FC = () => {
             <header className="space-y-2">
               <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game options</h2>
               <p className="text-sm text-muted max-w-2xl">
-                Dial in lobby rules to match your group&apos;s pace, playstyle, and competitive level.
+                Dial in lobby rules to match your group&apos;s pace, playstyle, and competitive
+                level.
               </p>
             </header>
 
             <section className="space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Game settings</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Game settings
+              </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="panel-muted space-y-1">
-                  <h4 className="font-semibold text-[color:var(--color-warning)]">Turn time limit</h4>
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">
+                    Turn time limit
+                  </h4>
                   <p className="text-sm text-muted">
                     Async games default to 24 hours (customisable from 30 minutes up to 72 hours).
                     Real-time games use shorter limits for fast-paced play.
@@ -605,38 +711,64 @@ const TutorialPage: React.FC = () => {
                 <div className="panel-muted space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-primary)]">Spoils cards</h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    <li><strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... exponential payouts.</li>
-                    <li><strong>Fixed:</strong> A steady 10 armies per set.</li>
-                    <li><strong>Static:</strong> Choose a custom value between 5 and 50 armies.</li>
-                    <li><strong>Random:</strong> Let the game pick a spoils style each match.</li>
+                    <li>
+                      <strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... exponential payouts.
+                    </li>
+                    <li>
+                      <strong>Fixed:</strong> A steady 10 armies per set.
+                    </li>
+                    <li>
+                      <strong>Static:</strong> Choose a custom value between 5 and 50 armies.
+                    </li>
+                    <li>
+                      <strong>Random:</strong> Let the game pick a spoils style each match.
+                    </li>
                   </ul>
                 </div>
                 <div className="panel-muted space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-info)]">Fortification</h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    <li><strong>Adjacent:</strong> One move to a connected territory.</li>
-                    <li><strong>Adjacent multi:</strong> Multiple moves across adjacent spaces.</li>
-                    <li><strong>Chained:</strong> One move along your contiguous territory chain.</li>
-                    <li><strong>Unlimited:</strong> Reposition freely along owned chains.</li>
+                    <li>
+                      <strong>Adjacent:</strong> One move to a connected territory.
+                    </li>
+                    <li>
+                      <strong>Adjacent multi:</strong> Multiple moves across adjacent spaces.
+                    </li>
+                    <li>
+                      <strong>Chained:</strong> One move along your contiguous territory chain.
+                    </li>
+                    <li>
+                      <strong>Unlimited:</strong> Reposition freely along owned chains.
+                    </li>
                   </ul>
                 </div>
                 <div className="panel-muted space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-primary)]">Fog of war</h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    <li><strong>Off:</strong> Everyone sees the entire map.</li>
-                    <li><strong>Adjacent:</strong> Vision extends only to neighbouring territories.</li>
-                    <li><strong>Persistent:</strong> Previously scouted territories stay revealed.</li>
+                    <li>
+                      <strong>Off:</strong> Everyone sees the entire map.
+                    </li>
+                    <li>
+                      <strong>Adjacent:</strong> Vision extends only to neighbouring territories.
+                    </li>
+                    <li>
+                      <strong>Persistent:</strong> Previously scouted territories stay revealed.
+                    </li>
                   </ul>
                 </div>
               </div>
             </section>
 
             <section className="panel-muted space-y-3">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Room options</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Room options
+              </h3>
               <ul className="space-y-2 text-sm text-muted">
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span><strong>Player count:</strong> Choose the roster size for the lobby.</span>
+                  <span>
+                    <strong>Player count:</strong> Choose the roster size for the lobby.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
@@ -647,28 +779,46 @@ const TutorialPage: React.FC = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span><strong>Teams:</strong> Enable balanced teams or stick with free-for-all.</span>
+                  <span>
+                    <strong>Teams:</strong> Enable balanced teams or stick with free-for-all.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
-                  <span><strong>Game type:</strong> Casual matches for practice or Ranked for ELO stakes.</span>
+                  <span>
+                    <strong>Game type:</strong> Casual matches for practice or Ranked for ELO
+                    stakes.
+                  </span>
                 </li>
               </ul>
             </section>
 
             <section className="panel-muted space-y-2">
-              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Advanced options</h3>
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                Advanced options
+              </h3>
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                <li><strong>Territory modifiers:</strong> Sparse, Balanced, or Abundant bonus layouts.</li>
-                <li><strong>Game speed:</strong> Real-time (synchronous) or Async (take turns over hours).</li>
-                <li><strong>Auto-naming:</strong> Generate descriptive lobby names from settings.</li>
-                <li><strong>Color selection:</strong> Pick from standard or premium player palettes.</li>
-                <li><strong>Map selection:</strong> Classic world, community creations, or random choice.</li>
+                <li>
+                  <strong>Territory modifiers:</strong> Sparse, Balanced, or Abundant bonus layouts.
+                </li>
+                <li>
+                  <strong>Game speed:</strong> Real-time (synchronous) or Async (take turns over
+                  hours).
+                </li>
+                <li>
+                  <strong>Auto-naming:</strong> Generate descriptive lobby names from settings.
+                </li>
+                <li>
+                  <strong>Color selection:</strong> Pick from standard or premium player palettes.
+                </li>
+                <li>
+                  <strong>Map selection:</strong> Classic world, community creations, or random
+                  choice.
+                </li>
               </ul>
             </section>
           </div>
         )}
-
       </div>
     </div>
   )

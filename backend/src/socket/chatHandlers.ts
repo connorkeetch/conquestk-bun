@@ -1,17 +1,17 @@
 import type { Server, Socket } from 'socket.io'
 import {
+  addMembersToConversation,
+  ConversationError,
   type ConversationMessageRecord,
   type ConversationWithMembers,
-  addMembersToConversation,
   createGroupConversation,
   ensureDirectConversation,
   getConversationDetail,
   markConversationRead,
   removeConversationMember,
-  setConversationArchived,
   sendMessage as sendConversationMessage,
+  setConversationArchived,
   updateConversationMemberRole,
-  ConversationError,
 } from '../services/conversationService'
 import notificationService from '../services/notificationService'
 import type {
@@ -20,9 +20,9 @@ import type {
   ConversationCreatePayload,
   ConversationEventSummary,
   ConversationMemberEvent,
-  ConversationMemberUpdateError,
   ConversationMembersUpdateAck,
   ConversationMembersUpdatePayload,
+  ConversationMemberUpdateError,
   ConversationMessageEventPayload,
   MessageSendAck,
   MessageSendPayload,
@@ -119,16 +119,16 @@ const mapConversationError = (error: ConversationError) => ({
   code: error.code,
 })
 
-const ackSuccess = <T extends { ok: boolean }>(callback: ConversationAckCallback<T>, payload: T) => {
+const ackSuccess = <T extends { ok: boolean }>(
+  callback: ConversationAckCallback<T>,
+  payload: T,
+) => {
   if (callback) {
     callback(payload)
   }
 }
 
-const ackError = <T extends { ok: boolean }>(
-  callback: ConversationAckCallback<T>,
-  payload: T,
-) => {
+const ackError = <T extends { ok: boolean }>(callback: ConversationAckCallback<T>, payload: T) => {
   if (callback) {
     callback(payload)
   }
@@ -221,7 +221,11 @@ const sanitizeMetadata = (metadata: unknown): Record<string, unknown> | undefine
 
 const sendConversationMessageForUser = async (
   options: MessageSendOptions,
-): Promise<{ message: ConversationMessageRecord; descriptor: ConversationWithMembers; body: string }> => {
+): Promise<{
+  message: ConversationMessageRecord
+  descriptor: ConversationWithMembers
+  body: string
+}> => {
   const trimmed = options.body.trim()
   if (!trimmed) {
     throw new ConversationError('EMPTY_MESSAGE', 'Message cannot be empty')
@@ -301,16 +305,28 @@ const handleConversationMembersUpdate = async (
   try {
     const { conversationId } = payload
     if (!conversationId || typeof conversationId !== 'string') {
-      return ackError(callback, { ok: false, error: 'conversationId is required', code: 'INVALID_INPUT' })
+      return ackError(callback, {
+        ok: false,
+        error: 'conversationId is required',
+        code: 'INVALID_INPUT',
+      })
     }
 
     await ensureConversationAccess(socket, conversationId, actorId)
 
     const additions = Array.isArray(payload.add)
-      ? Array.from(new Set(payload.add.filter((id): id is string => typeof id === 'string' && id !== actorId)))
+      ? Array.from(
+          new Set(
+            payload.add.filter((id): id is string => typeof id === 'string' && id !== actorId),
+          ),
+        )
       : []
     const removals = Array.isArray(payload.remove)
-      ? Array.from(new Set(payload.remove.filter((id): id is string => typeof id === 'string' && id !== actorId)))
+      ? Array.from(
+          new Set(
+            payload.remove.filter((id): id is string => typeof id === 'string' && id !== actorId),
+          ),
+        )
       : []
 
     const roleUpdatesPayload = Array.isArray(payload.roleUpdates) ? payload.roleUpdates : []
@@ -321,11 +337,16 @@ const handleConversationMembersUpdate = async (
 
     for (const update of roleUpdatesPayload) {
       if (!update || typeof update.userId !== 'string' || typeof update.role !== 'string') {
-        errors.push({ type: 'role', code: 'INVALID_INPUT', error: 'roleUpdates require userId and role' })
+        errors.push({
+          type: 'role',
+          code: 'INVALID_INPUT',
+          error: 'roleUpdates require userId and role',
+        })
         continue
       }
 
-      const normalizedRole = update.role === 'admin' ? 'admin' : update.role === 'member' ? 'member' : null
+      const normalizedRole =
+        update.role === 'admin' ? 'admin' : update.role === 'member' ? 'member' : null
       if (!normalizedRole) {
         errors.push({
           type: 'role',
@@ -414,7 +435,12 @@ const handleConversationMembersUpdate = async (
         roleResults.push({ userId: updated.userId, role: updated.role })
       } catch (error) {
         if (error instanceof ConversationError) {
-          errors.push({ type: 'role', userId: update.userId, code: error.code, error: error.message })
+          errors.push({
+            type: 'role',
+            userId: update.userId,
+            code: error.code,
+            error: error.message,
+          })
         } else {
           logger.error('Failed to update conversation member role', { error })
           errors.push({
@@ -514,64 +540,78 @@ export const setupChatHandlers = (
     })
   }
 
-  socket.on('message.send', async (data: MessageSendPayload, callback?: (response: MessageSendAck) => void) => {
-    try {
-      const userId = requireUserId()
-      if (!userId) return
+  socket.on(
+    'message.send',
+    async (data: MessageSendPayload, callback?: (response: MessageSendAck) => void) => {
+      try {
+        const userId = requireUserId()
+        if (!userId) return
 
-      if (!data || typeof data.conversationId !== 'string') {
-        return ackError(callback, { ok: false, error: 'conversationId is required', code: 'INVALID_INPUT' })
+        if (!data || typeof data.conversationId !== 'string') {
+          return ackError(callback, {
+            ok: false,
+            error: 'conversationId is required',
+            code: 'INVALID_INPUT',
+          })
+        }
+
+        if (typeof data.body !== 'string') {
+          return ackError(callback, { ok: false, error: 'body is required', code: 'INVALID_INPUT' })
+        }
+
+        const metadata = sanitizeMetadata(data.metadata)
+
+        const { message } = await sendConversationMessageForUser({
+          ...data,
+          metadata,
+          userId,
+        })
+
+        ackSuccess(callback, {
+          ok: true,
+          message: toConversationMessageEventPayload(message),
+        })
+      } catch (error) {
+        if (error instanceof ConversationError) {
+          return ackError(callback, mapConversationError(error))
+        }
+
+        logger.error('message.send handler failed', { error })
+        ackError(callback, {
+          ok: false,
+          error: 'Failed to send message',
+          code: 'UNKNOWN_ERROR',
+        })
       }
+    },
+  )
 
-      if (typeof data.body !== 'string') {
-        return ackError(callback, { ok: false, error: 'body is required', code: 'INVALID_INPUT' })
+  socket.on(
+    'receipt.read',
+    async (data: ReceiptReadPayload, callback?: (response: ReceiptReadAck) => void) => {
+      try {
+        const userId = requireUserId()
+        if (!userId) return
+
+        if (!data || typeof data.conversationId !== 'string') {
+          return ackError(callback, {
+            ok: false,
+            error: 'conversationId is required',
+            code: 'INVALID_INPUT',
+          })
+        }
+
+        await broadcastReceiptRead(io, socket, data.conversationId, userId)
+        ackSuccess(callback, { ok: true })
+      } catch (error) {
+        if (error instanceof ConversationError) {
+          return ackError(callback, mapConversationError(error))
+        }
+        logger.error('receipt.read handler failed', { error })
+        ackError(callback, { ok: false, error: 'Failed to mark read', code: 'UNKNOWN_ERROR' })
       }
-
-      const metadata = sanitizeMetadata(data.metadata)
-
-      const { message } = await sendConversationMessageForUser({
-        ...data,
-        metadata,
-        userId,
-      })
-
-      ackSuccess(callback, {
-        ok: true,
-        message: toConversationMessageEventPayload(message),
-      })
-    } catch (error) {
-      if (error instanceof ConversationError) {
-        return ackError(callback, mapConversationError(error))
-      }
-
-      logger.error('message.send handler failed', { error })
-      ackError(callback, {
-        ok: false,
-        error: 'Failed to send message',
-        code: 'UNKNOWN_ERROR',
-      })
-    }
-  })
-
-  socket.on('receipt.read', async (data: ReceiptReadPayload, callback?: (response: ReceiptReadAck) => void) => {
-    try {
-      const userId = requireUserId()
-      if (!userId) return
-
-      if (!data || typeof data.conversationId !== 'string') {
-        return ackError(callback, { ok: false, error: 'conversationId is required', code: 'INVALID_INPUT' })
-      }
-
-      await broadcastReceiptRead(io, socket, data.conversationId, userId)
-      ackSuccess(callback, { ok: true })
-    } catch (error) {
-      if (error instanceof ConversationError) {
-        return ackError(callback, mapConversationError(error))
-      }
-      logger.error('receipt.read handler failed', { error })
-      ackError(callback, { ok: false, error: 'Failed to mark read', code: 'UNKNOWN_ERROR' })
-    }
-  })
+    },
+  )
 
   socket.on('typing.start', async (data: TypingEventPayload) => {
     try {
@@ -679,5 +719,4 @@ export const setupChatHandlers = (
       await handleConversationMembersUpdate(io, socket, userId, payload, callback)
     },
   )
-
 }

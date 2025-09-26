@@ -326,8 +326,14 @@ export interface ClientToServerEvents {
   }) => void
   endTurn: (data: { roomId: string }) => void
   'chat-message': (data: { roomId: string; message: string }) => void
-  'message.send': (payload: MessageSendPayload, callback?: (response: MessageSendAck) => void) => void
-  'receipt.read': (payload: ReceiptReadPayload, callback?: (response: ReceiptReadAck) => void) => void
+  'message.send': (
+    payload: MessageSendPayload,
+    callback?: (response: MessageSendAck) => void,
+  ) => void
+  'receipt.read': (
+    payload: ReceiptReadPayload,
+    callback?: (response: ReceiptReadAck) => void,
+  ) => void
   'typing.start': (payload: TypingEventPayload) => void
   'typing.stop': (payload: TypingEventPayload) => void
   'conversation.create': (

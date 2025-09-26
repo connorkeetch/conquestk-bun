@@ -228,7 +228,9 @@ export default function AdminContent() {
                         </div>
                         <div>
                           <p className="text-muted">Status</p>
-                          <p className="capitalize text-[color:var(--color-warning)]">{item.status}</p>
+                          <p className="capitalize text-[color:var(--color-warning)]">
+                            {item.status}
+                          </p>
                         </div>
                       </div>
 
@@ -281,8 +283,8 @@ export default function AdminContent() {
             <div className="border-t border-[color:var(--panel-border)] px-6 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm text-muted">
-                  Showing {(currentPage - 1) * limit + 1} to {Math.min(currentPage * limit, totalItems)} of{' '}
-                  {totalItems} items
+                  Showing {(currentPage - 1) * limit + 1} to{' '}
+                  {Math.min(currentPage * limit, totalItems)} of {totalItems} items
                 </p>
                 <div className="flex items-center gap-2">
                   <button
@@ -310,78 +312,78 @@ export default function AdminContent() {
           )}
         </div>
 
-      {/* Action Modal */}
-      {actionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="modal w-full max-w-md space-y-5">
-            <div className="modal-header">
-              <h3 className="text-lg font-semibold text-[color:var(--heading)]">
-                {actionModal.action === 'approve' ? 'Approve content' : 'Reject content'}
-              </h3>
-            </div>
-
-            <div className="modal-body space-y-4">
-              <section className="panel-muted space-y-1">
-                <div className="font-medium text-[color:var(--heading)]">
-                  {actionModal.item.contentName || 'Unnamed content'}
-                </div>
-                <div className="text-sm text-muted">
-                  {adminService.formatContentType(actionModal.item.contentType)} by{' '}
-                  {actionModal.item.submitterUsername}
-                </div>
-              </section>
-
-              <div>
-                <label
-                  htmlFor={notesFieldId}
-                  className="mb-2 block text-sm font-medium text-[color:var(--heading)]"
-                >
-                  {actionModal.action === 'approve'
-                    ? 'Notes (optional)'
-                    : 'Reason for rejection (required)'}
-                </label>
-                <textarea
-                  id={notesFieldId}
-                  value={actionNotes}
-                  onChange={(event) => setActionNotes(event.target.value)}
-                  className="w-full rounded border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] px-3 py-2 text-sm text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)]"
-                  rows={4}
-                  placeholder={
-                    actionModal.action === 'approve'
-                      ? 'Optional notes about the approval...'
-                      : 'Please explain why this content is being rejected...'
-                  }
-                />
+        {/* Action Modal */}
+        {actionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="modal w-full max-w-md space-y-5">
+              <div className="modal-header">
+                <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                  {actionModal.action === 'approve' ? 'Approve content' : 'Reject content'}
+                </h3>
               </div>
 
-              {actionError && (
-                <p className="text-sm text-[color:var(--color-danger)]">{actionError}</p>
-              )}
-            </div>
+              <div className="modal-body space-y-4">
+                <section className="panel-muted space-y-1">
+                  <div className="font-medium text-[color:var(--heading)]">
+                    {actionModal.item.contentName || 'Unnamed content'}
+                  </div>
+                  <div className="text-sm text-muted">
+                    {adminService.formatContentType(actionModal.item.contentType)} by{' '}
+                    {actionModal.item.submitterUsername}
+                  </div>
+                </section>
 
-            <div className="modal-footer">
-              <button type="button" onClick={closeActionModal} className="btn-secondary">
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleContentAction}
-                disabled={
-                  submittingAction || (actionModal.action === 'reject' && !actionNotes.trim())
-                }
-                className={actionModal.action === 'approve' ? 'btn-success' : 'btn-danger'}
-              >
-                {submittingAction
-                  ? 'Working...'
-                  : actionModal.action === 'approve'
-                    ? '✅ Approve'
-                    : '❌ Reject'}
-              </button>
+                <div>
+                  <label
+                    htmlFor={notesFieldId}
+                    className="mb-2 block text-sm font-medium text-[color:var(--heading)]"
+                  >
+                    {actionModal.action === 'approve'
+                      ? 'Notes (optional)'
+                      : 'Reason for rejection (required)'}
+                  </label>
+                  <textarea
+                    id={notesFieldId}
+                    value={actionNotes}
+                    onChange={(event) => setActionNotes(event.target.value)}
+                    className="w-full rounded border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] px-3 py-2 text-sm text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)]"
+                    rows={4}
+                    placeholder={
+                      actionModal.action === 'approve'
+                        ? 'Optional notes about the approval...'
+                        : 'Please explain why this content is being rejected...'
+                    }
+                  />
+                </div>
+
+                {actionError && (
+                  <p className="text-sm text-[color:var(--color-danger)]">{actionError}</p>
+                )}
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={closeActionModal} className="btn-secondary">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContentAction}
+                  disabled={
+                    submittingAction || (actionModal.action === 'reject' && !actionNotes.trim())
+                  }
+                  className={actionModal.action === 'approve' ? 'btn-success' : 'btn-danger'}
+                >
+                  {submittingAction
+                    ? 'Working...'
+                    : actionModal.action === 'approve'
+                      ? '✅ Approve'
+                      : '❌ Reject'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
-  </div>
-)
+  )
 }

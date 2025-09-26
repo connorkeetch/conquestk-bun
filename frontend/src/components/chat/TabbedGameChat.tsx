@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
-import { ensureGameConversation, ensureTeamConversation, selectAllConversations } from '../../store/messagesSlice'
+import {
+  ensureGameConversation,
+  ensureTeamConversation,
+  selectAllConversations,
+} from '../../store/messagesSlice'
 import ChatContainer from './ChatContainer'
 
 interface ChatPlayer {
@@ -48,7 +52,11 @@ export default function TabbedGameChat({
   }, [dispatch, gameId, userTeamId])
 
   const gameConversation = useMemo(
-    () => conversations.find((conversationEntity) => conversationEntity.kind === 'game' && conversationEntity.gameId === gameId),
+    () =>
+      conversations.find(
+        (conversationEntity) =>
+          conversationEntity.kind === 'game' && conversationEntity.gameId === gameId,
+      ),
     [conversations, gameId],
   )
 
@@ -120,7 +128,15 @@ export default function TabbedGameChat({
       })
 
     return builtTabs
-  }, [currentUserId, gameId, players, userTeamId, gameConversation, teamConversation, directConversationByUserId])
+  }, [
+    currentUserId,
+    gameId,
+    players,
+    userTeamId,
+    gameConversation,
+    teamConversation,
+    directConversationByUserId,
+  ])
 
   // Make sure active tab is valid
   useEffect(() => {

@@ -349,7 +349,9 @@ export class MigrationRunner {
             // If parser got confused by dollar-quoted blocks, try a safe fallback.
             const msg = errorMessage.toLowerCase()
             const looksLikeDollarQuoteIssue =
-              msg.includes('unterminated dollar-quoted string') || msg.includes('$$')
+              msg.includes('unterminated dollar-quoted string') ||
+              msg.includes('syntax error at or near "$$"') ||
+              /syntax error at or near "\$[a-z_][a-z0-9_]*\$"/i.test(errorMessage)
             if (looksLikeDollarQuoteIssue) {
               try {
                 logger.warn(
@@ -358,6 +360,7 @@ export class MigrationRunner {
                 // Abort current transaction and retry by executing the entire script at once
                 await query('ROLLBACK')
                 await query('BEGIN')
+                await query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
                 await query(migrationSQL)
                 await query('COMMIT')
                 logger.info('  ✅ Whole-script execution succeeded after parser fallback')
@@ -387,6 +390,7 @@ export class MigrationRunner {
     let inFunction = false
     let inDoBlock = false
     let dollarQuoteCount = 0
+    let pendingDoStart = false
 
     const lines = migrationSQL.split('\n')
     for (const line of lines) {
@@ -400,21 +404,28 @@ export class MigrationRunner {
       }
 
       // Detect function blocks (outside of a DO block)
-      if (
-        !inDoBlock &&
-        (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))
-      ) {
+      if (!inDoBlock && (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))) {
         inFunction = true
+        pendingDoStart = false
       }
 
-      // Detect DO $$ blocks
-      // Examples: "DO $$", "DO $tag$", optional LANGUAGE may be on same/next line
-      if (
-        !inFunction &&
-        !inDoBlock &&
-        /^(DO\s+\$\$|DO\s+\$[A-Za-z_][A-Za-z0-9_]*\$)/i.test(trimmedLine)
-      ) {
-        inDoBlock = true
+      // Detect DO blocks, including cases where the dollar quote starts on the next line
+      if (!inFunction && !inDoBlock) {
+        if (/^DO\b/i.test(trimmedLine)) {
+          if (/\$(?:\$|[A-Za-z_][A-Za-z0-9_]*)\$/.test(trimmedLine)) {
+            inDoBlock = true
+            pendingDoStart = false
+          } else {
+            pendingDoStart = true
+          }
+        } else if (pendingDoStart) {
+          if (/\$(?:\$|[A-Za-z_][A-Za-z0-9_]*)\$/.test(trimmedLine)) {
+            inDoBlock = true
+            pendingDoStart = false
+          } else if (trimmedLine && !trimmedLine.startsWith('--') && !trimmedLine.startsWith('/*')) {
+            pendingDoStart = false
+          }
+        }
       }
 
       currentStatement += `${line}\n`
@@ -439,11 +450,13 @@ export class MigrationRunner {
             currentStatement = ''
             inDoBlock = false
             dollarQuoteCount = 0
+            pendingDoStart = false
           }
         } else if (!insideDollar) {
           // Regular statement (not inside function/DO body)
           statements.push(currentStatement.trim())
           currentStatement = ''
+          pendingDoStart = false
         }
       }
     }

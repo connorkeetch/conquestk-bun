@@ -51,10 +51,9 @@ export async function fetchUnreadSummary(): Promise<UnreadSummaryEntry[]> {
 }
 
 export async function ensureDirectConversation(targetUserId: string): Promise<ConversationDetail> {
-  const response = await apiClient.post<{ conversation: { id: string } }>(
-    '/messages/dm',
-    { targetUserId },
-  )
+  const response = await apiClient.post<{ conversation: { id: string } }>('/messages/dm', {
+    targetUserId,
+  })
   const conversationId = response.data.conversation.id
   return fetchConversationDetail(conversationId, { markRead: false })
 }
