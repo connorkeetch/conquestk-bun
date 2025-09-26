@@ -277,6 +277,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         image_url: imageUrl,
         imageUrl,
         is_vip_only: row.is_vip_only || false,
+        createdAt: row.created_at,
       }
     })
 

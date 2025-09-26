@@ -30,6 +30,7 @@ interface GameMap {
   tags?: string[]
   imageUrl?: string | null
   image_url?: string | null
+  createdAt?: string | null
 }
 
 const computeMapSizeFromCounts = (
@@ -1579,13 +1580,36 @@ const CreateGamePage: React.FC = () => {
                               </dd>
                             </div>
                             <div>
+                              <dt className="text-muted">Games Last Month</dt>
+                              <dd className="text-white">—</dd>
+                            </div>
+                            <div>
                               <dt className="text-muted">Games Played</dt>
-                              <dd className="text-white">{selectedMapData.play_count ?? 0}</dd>
+                              <dd className="text-white">
+                                {selectedMapData.play_count && selectedMapData.play_count > 0
+                                  ? selectedMapData.play_count
+                                  : '—'}
+                              </dd>
                             </div>
                             {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
                               <div className="col-span-2">
                                 <dt className="text-muted">Created by</dt>
                                 <dd className="text-white">{selectedMapData.creator_name}</dd>
+                              </div>
+                            )}
+                            {selectedMapData.createdAt && (
+                              <div className="col-span-2">
+                                <dt className="text-muted">Created</dt>
+                                <dd className="text-white">
+                                  {new Date(selectedMapData.createdAt).toLocaleDateString(
+                                    undefined,
+                                    {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric',
+                                    },
+                                  )}
+                                </dd>
                               </div>
                             )}
                             {selectedMapData.rating_average &&

@@ -666,7 +666,10 @@ export default function GameRoom() {
               Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
             {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-              <span className="chip text-xs" title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}>
+              <span
+                className="chip text-xs"
+                title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}
+              >
                 {formatTimeUntil(expiresAtDate)}
               </span>
             )}
