@@ -1,7 +1,7 @@
 import { type ComponentType, type LazyExoticComponent, lazy } from 'react'
 
-// Use ComponentType<any> to avoid strict generic incompatibilities with default exports
-type ModuleFactory<T extends ComponentType<any>> = () => Promise<{ default: T }>
+// Use ComponentType<unknown> to avoid explicit any while remaining flexible for props
+type ModuleFactory<T extends ComponentType<unknown>> = () => Promise<{ default: T }>
 
 type LazyWithRetryOptions = {
   retries?: number
@@ -25,7 +25,7 @@ const isChunkLoadError = (error: unknown) => {
   return chunkErrorSignatures.some((signature) => error.message.includes(signature))
 }
 
-export function lazyWithRetry<T extends ComponentType<any>>(
+export function lazyWithRetry<T extends ComponentType<unknown>>(
   factory: ModuleFactory<T>,
   options: LazyWithRetryOptions = {},
 ): LazyExoticComponent<T> {
