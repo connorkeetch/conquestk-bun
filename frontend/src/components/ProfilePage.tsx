@@ -11,6 +11,7 @@ import {
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import friendsService, { type RelationshipStatus } from '@/services/friendsService'
 import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
@@ -62,6 +63,17 @@ const rgbComponentToHex = (component: number): string => {
 
 const rgbToHex = (r: number, g: number, b: number): string => {
   return `#${rgbComponentToHex(r)}${rgbComponentToHex(g)}${rgbComponentToHex(b)}`
+}
+
+// Simple RGB distance to detect color similarity
+const colorDistance = (hexA: string, hexB: string): number => {
+  const a = hexToRgb(hexA)
+  const b = hexToRgb(hexB)
+  if (!a || !b) return Infinity
+  const dr = a.r - b.r
+  const dg = a.g - b.g
+  const db = a.b - b.b
+  return Math.sqrt(dr * dr + dg * dg + db * db)
 }
 
 const mixColors = (hexA: string, hexB: string, amount: number): string => {
@@ -205,6 +217,30 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
+    // Signature-derived accents used in cards/headers/cta to avoid rank conflicts
+    signatureHeaderAccentStyle: signatureIsGradient
+      ? { backgroundImage: resolvedPreferredColor }
+      : {
+          backgroundImage: `linear-gradient(140deg, ${hexToRgba(
+            ensureReadableOnDark(signatureHex),
+            0.3,
+          )} 0%, transparent 80%)`,
+        },
+    signatureCardStyle: {
+      borderColor: hexToRgba(ensureReadableOnDark(signatureHex), 0.35),
+      backgroundImage: `linear-gradient(180deg, ${hexToRgba(
+        ensureReadableOnDark(signatureHex),
+        0.2,
+      )} 0%, rgba(12, 16, 27, 0.9) 90%)`,
+    } as React.CSSProperties,
+    signatureCallToActionStyle: signatureIsGradient
+      ? { backgroundImage: resolvedPreferredColor }
+      : {
+          backgroundImage: `linear-gradient(90deg, ${hexToRgba(
+            ensureReadableOnDark(signatureHex),
+            0.95,
+          )}, ${hexToRgba(ensureReadableOnDark(signatureHex), 0.7)})`,
+        },
   }
 }
 
@@ -299,6 +335,8 @@ const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const requestControllerRef = useRef<AbortController | null>(null)
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
+  const [relationship, setRelationship] = useState<RelationshipStatus>('none')
+  const [relBusy, setRelBusy] = useState<string>('')
 
   const isOwnProfile = currentUser?.username === username
 
@@ -363,6 +401,80 @@ const ProfilePage: React.FC = () => {
   const handleRefreshProfile = useCallback(() => {
     void fetchProfile()
   }, [fetchProfile])
+
+  // Load relationship status when viewing another user's profile
+  useEffect(() => {
+    const run = async () => {
+      try {
+        if (!profile || isOwnProfile) return
+        const status = await friendsService.status(profile.id)
+        setRelationship(status)
+      } catch (_e) {
+        setRelationship('none')
+      }
+    }
+    void run()
+  }, [profile, isOwnProfile])
+
+  const sendFriendRequest = async () => {
+    if (!profile) return
+    setRelBusy('send')
+    try {
+      await friendsService.sendRequest(profile.id)
+      const status = await friendsService.status(profile.id)
+      setRelationship(status)
+    } finally {
+      setRelBusy('')
+    }
+  }
+
+  const cancelRequest = async () => {
+    if (!profile) return
+    setRelBusy('cancel')
+    try {
+      await friendsService.cancel(profile.id)
+      const status = await friendsService.status(profile.id)
+      setRelationship(status)
+    } finally {
+      setRelBusy('')
+    }
+  }
+
+  const acceptRequest = async () => {
+    if (!profile) return
+    setRelBusy('accept')
+    try {
+      await friendsService.accept(profile.id)
+      const status = await friendsService.status(profile.id)
+      setRelationship(status)
+    } finally {
+      setRelBusy('')
+    }
+  }
+
+  const declineRequest = async () => {
+    if (!profile) return
+    setRelBusy('decline')
+    try {
+      await friendsService.decline(profile.id)
+      const status = await friendsService.status(profile.id)
+      setRelationship(status)
+    } finally {
+      setRelBusy('')
+    }
+  }
+
+  const unfriend = async () => {
+    if (!profile) return
+    setRelBusy('unfriend')
+    try {
+      await friendsService.unfriend(profile.id)
+      const status = await friendsService.status(profile.id)
+      setRelationship(status)
+    } finally {
+      setRelBusy('')
+    }
+  }
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -442,6 +554,9 @@ const ProfilePage: React.FC = () => {
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
+    signatureHeaderAccentStyle,
+    signatureCardStyle,
+    signatureCallToActionStyle,
   } = signatureVisuals
 
   const {
@@ -462,6 +577,9 @@ const ProfilePage: React.FC = () => {
     rankTextColor,
   } = rankVisuals
 
+  // Detect rank vs. player color conflict (too similar = muddy UI)
+  const hasColorConflict = colorDistance(signatureHex, rankPrimaryHex) < 60
+
   const rankBadgeStyle: React.CSSProperties = rankColorIsGradient
     ? {
         backgroundImage: rawRankColor,
@@ -477,16 +595,14 @@ const ProfilePage: React.FC = () => {
         boxShadow: `0 8px 24px ${hexToRgba(rankPrimaryHex, 0.35)}`,
       }
 
-  const rankAvatarRingStyle: React.CSSProperties = {
-    borderColor: rankPrimaryHex,
-    boxShadow: `0 12px 32px ${hexToRgba(rankPrimaryHex, 0.35)}`,
-    background: `linear-gradient(145deg, ${hexToRgba(rankPrimaryHex, 0.24)} 0%, transparent 70%)`,
+  // Shift avatar/card accents to signature color to reduce rank dominance
+  const avatarRingStyle: React.CSSProperties = {
+    borderColor: ensureReadableOnDark(signatureHex),
+    boxShadow: `0 12px 32px ${hexToRgba(signatureHex, 0.28)}`,
+    background: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.22)} 0%, transparent 70%)`,
   }
 
-  const rankCardStyle: React.CSSProperties = {
-    borderColor: hexToRgba(rankPrimaryHex, 0.45),
-    backgroundImage: `linear-gradient(180deg, ${hexToRgba(rankPrimaryHex, 0.25)} 0%, rgba(12, 16, 27, 0.9) 90%)`,
-  }
+  const cardStyleNeutralToSignature: React.CSSProperties = signatureCardStyle
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
@@ -522,11 +638,11 @@ const ProfilePage: React.FC = () => {
               <div className="relative group">
                 <div
                   className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-                  style={rankGlowStyle}
+                  style={hasColorConflict ? signatureGlowStyle : rankGlowStyle}
                 />
                 <div
                   className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
-                  style={rankAvatarRingStyle}
+                  style={avatarRingStyle}
                 >
                   {profile.avatarUrl ? (
                     <>
@@ -631,16 +747,51 @@ const ProfilePage: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {!isOwnProfile && (
+                <div className="flex gap-2 mt-2">
+                  {relationship === 'none' && (
+                    <button type="button" className="btn btn-primary" onClick={sendFriendRequest} disabled={relBusy === 'send'}>
+                      {relBusy === 'send' ? 'Sending…' : 'Add Friend'}
+                    </button>
+                  )}
+                  {relationship === 'pending_outgoing' && (
+                    <>
+                      <button type="button" className="btn btn-secondary" disabled>
+                        Request Sent
+                      </button>
+                      <button type="button" className="btn btn-tertiary" onClick={cancelRequest} disabled={relBusy === 'cancel'}>
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                  {relationship === 'pending_incoming' && (
+                    <>
+                      <button type="button" className="btn btn-primary" onClick={acceptRequest} disabled={relBusy === 'accept'}>
+                        Accept
+                      </button>
+                      <button type="button" className="btn btn-tertiary" onClick={declineRequest} disabled={relBusy === 'decline'}>
+                        Decline
+                      </button>
+                    </>
+                  )}
+                  {relationship === 'friends' && (
+                    <button type="button" className="btn btn-danger" onClick={unfriend} disabled={relBusy === 'unfriend'}>
+                      Unfriend
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Identity highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="relative glass-box-sm border p-5 overflow-hidden" style={rankCardStyle}>
+          <div className="relative glass-box-sm border p-5 overflow-hidden" style={cardStyleNeutralToSignature}>
             <div
               className="absolute inset-0 opacity-30 pointer-events-none"
-              style={rankHeaderAccentStyle}
+              style={signatureHeaderAccentStyle}
             />
             <div className="relative flex items-center gap-3">
               <div className="text-3xl" style={{ color: rankAccentColor }}>
@@ -683,9 +834,10 @@ const ProfilePage: React.FC = () => {
             <div
               className="absolute inset-0 opacity-25 pointer-events-none"
               style={{
-                backgroundImage: rankColorIsGradient
-                  ? rawRankColor
-                  : `linear-gradient(160deg, ${hexToRgba(rankAccentFaint, 0.35)} 0%, transparent 85%)`,
+                backgroundImage: `linear-gradient(160deg, ${hexToRgba(
+                  ensureReadableOnDark(signatureHex),
+                  0.25,
+                )} 0%, transparent 85%)`,
               }}
             />
             <div className="relative flex items-center gap-3">
@@ -809,7 +961,7 @@ const ProfilePage: React.FC = () => {
                     <button
                       type="button"
                       className="mt-4 px-6 py-2 text-white rounded-lg font-medium transition-all hover:scale-105 shadow-lg"
-                      style={rankCallToActionStyle}
+                      style={signatureCallToActionStyle}
                     >
                       Start Playing
                     </button>

@@ -2,6 +2,8 @@ import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
+import type { Metal, TreasureConfig, TreasureState } from '@shared/types'
+import { tradeTreasureSet } from '../store/gameActions'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -153,6 +155,64 @@ const GamePage: React.FC = () => {
       if (prev.length >= 3) return prev
       return [...prev, idx]
     })
+  }
+
+  // Hidden Treasures helpers for UI
+  const CLASSIC_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
+  const computeTriangularPayout = (index: number) => {
+    if (index <= 0) return 4
+    let payout = 4
+    let delta = 2
+    for (let i = 1; i <= index; i++) {
+      payout += delta
+      delta += 1
+    }
+    return payout
+  }
+  const getNextPayout = (config: TreasureConfig | undefined, state: TreasureState | undefined) => {
+    const idx = state?.nextPayoutIndex ?? 0
+    const mode = config?.payoutMode ?? 'triangular'
+    if (!config || config.enabled === false) return 0
+    switch (mode) {
+      case 'classic': {
+        if (idx < CLASSIC_SEQUENCE.length) return CLASSIC_SEQUENCE[idx]
+        const overflowIndex = idx - CLASSIC_SEQUENCE.length + 1
+        return CLASSIC_SEQUENCE[CLASSIC_SEQUENCE.length - 1] + overflowIndex * 5
+      }
+      case 'fixed':
+        return Math.max(1, Math.min(50, Math.trunc(config.fixedValue ?? 8)))
+      case 'none':
+        return 0
+      case 'triangular':
+      default:
+        return computeTriangularPayout(idx)
+    }
+  }
+  const isThreeOfAKind = (a: Metal, b: Metal, c: Metal) => a === b && b === c && a !== 'diamond'
+  const isOneOfEach = (a: Metal, b: Metal, c: Metal) => {
+    const set = new Set([a, b, c])
+    return set.size === 3 && set.has('bronze') && set.has('silver') && set.has('gold')
+  }
+  const includesDiamond = (a: Metal, b: Metal, c: Metal) => a === 'diamond' || b === 'diamond' || c === 'diamond'
+  const isValidSet = (metals: [Metal, Metal, Metal]) => {
+    const [a, b, c] = metals
+    if (includesDiamond(a, b, c)) return true
+    if (isThreeOfAKind(a, b, c)) return true
+    if (isOneOfEach(a, b, c)) return true
+    return false
+  }
+  const findRedeemableSets = (hand: Metal[]): Array<{ indices: [number, number, number]; hasDiamond: boolean }> => {
+    const matches: Array<{ indices: [number, number, number]; hasDiamond: boolean }> = []
+    for (let i = 0; i < hand.length - 2; i++) {
+      for (let j = i + 1; j < hand.length - 1; j++) {
+        for (let k = j + 1; k < hand.length; k++) {
+          const metals: [Metal, Metal, Metal] = [hand[i], hand[j], hand[k]]
+          if (!isValidSet(metals)) continue
+          matches.push({ indices: [i, j, k], hasDiamond: includesDiamond(...metals) })
+        }
+      }
+    }
+    return matches
   }
 
   const isUsersTurn = Boolean(
@@ -646,6 +706,69 @@ const GamePage: React.FC = () => {
                           })
                         )}
                       </div>
+                      {/* Selection validity + payout preview */}
+                      {selectedTreasureIndices.length > 0 && (
+                        <div className="text-sm">
+                          {selectedTreasureIndices.length === 3 ? (
+                            (() => {
+                              const hand = (viewerPlayer.treasures ?? []) as Metal[]
+                              const [a, b, c] = selectedTreasureIndices
+                              const metals = [hand[a], hand[b], hand[c]] as [Metal, Metal, Metal]
+                              const valid = isValidSet(metals)
+                              const hasDiamond = includesDiamond(...metals)
+                              const base = getNextPayout(currentGame?.gameConfig?.treasureConfig, currentGame?.treasureState)
+                              const bonus = hasDiamond ? Math.max(0, Math.trunc(currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ?? 0)) : 0
+                              return (
+                                <div className={`p-2 rounded ${valid ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'}`}>
+                                  {valid ? (
+                                    <span>
+                                      Valid set selected • Payout preview: <strong className="text-foreground">{base + bonus}</strong>
+                                      {bonus > 0 ? (
+                                        <span className="text-muted"> (base {base} + diamond bonus {bonus})</span>
+                                      ) : null}
+                                    </span>
+                                  ) : (
+                                    <span>Not a valid set</span>
+                                  )}
+                                </div>
+                              )
+                            })()
+                          ) : (
+                            <div className="p-2 rounded bg-surface-2 text-muted">Select 3 treasures to preview payout</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Suggested valid sets */}
+                      {(() => {
+                        const hand = (viewerPlayer.treasures ?? []) as Metal[]
+                        const sets = findRedeemableSets(hand)
+                        if (sets.length === 0) return null
+                        const base = getNextPayout(currentGame?.gameConfig?.treasureConfig, currentGame?.treasureState)
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-xs uppercase tracking-wide text-muted">Suggested sets</p>
+                            <div className="flex flex-wrap gap-2">
+                              {sets.map(({ indices, hasDiamond }, i) => {
+                                const bonus = hasDiamond ? Math.max(0, Math.trunc(currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ?? 0)) : 0
+                                const payout = base + bonus
+                                return (
+                                  <button
+                                    key={`set-${i}-${indices.join('-')}`}
+                                    type="button"
+                                    className="px-2 py-1 rounded border border-border bg-surface-2 text-xs hover:border-primary"
+                                    onClick={() => setSelectedTreasureIndices(indices as number[])}
+                                    title={`Payout ${payout}${bonus > 0 ? ` (base ${base} + bonus ${bonus})` : ''}`}
+                                  >
+                                    [{indices.join(', ')}]{' '}
+                                    <span className="text-muted">→ {payout}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })()}
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -655,11 +778,8 @@ const GamePage: React.FC = () => {
                               .map((n) => Number(n))
                               .filter((n) => Number.isInteger(n))
                               .sort((a, b) => a - b) as [number, number, number]
-                            import('../store/gameActions').then(({ tradeTreasureSet }) => {
-                              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                              (dispatch as any)(tradeTreasureSet(sorted))
-                              setSelectedTreasureIndices([])
-                            })
+                            dispatch(tradeTreasureSet(sorted))
+                            setSelectedTreasureIndices([])
                           }}
                           className={`btn btn-primary btn-sm ${selectedTreasureIndices.length !== 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
