@@ -2259,6 +2259,30 @@ export default function MapEditorTokens() {
         return (
           <>
             <h2 className="text-xl font-bold mb-4">📋 Map Properties</h2>
+            {/* Validation Checklist (moved to top) */}
+            <div className="mb-4 p-3 bg-surface-1 rounded border border-border">
+              <h3 className="text-sm font-bold mb-2">✅ Validation Checklist</h3>
+              <div className="space-y-1 text-xs">
+                <div className={state.imageUrl ? 'text-green-400' : 'text-muted'}>
+                  {state.imageUrl ? '✓' : '○'} Background image uploaded
+                </div>
+                <div className={state.territories.length > 0 ? 'text-green-400' : 'text-muted'}>
+                  {state.territories.length > 0 ? '✓' : '○'} {state.territories.length} territories
+                  placed
+                </div>
+                <div className={state.continents.length > 0 ? 'text-green-400' : 'text-muted'}>
+                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} continents
+                  created
+                </div>
+                <div
+                  className={
+                    Object.keys(capitalAssignments).length > 0 ? 'text-green-400' : 'text-muted'
+                  }
+                >
+                  {Object.keys(capitalAssignments).length > 0 ? '✓' : '○'} Capitals assigned
+                </div>
+              </div>
+            </div>
             <div className="mb-4">
               <label htmlFor={mapNameId} className="block text-sm mb-1">
                 Map Name
@@ -2315,6 +2339,180 @@ export default function MapEditorTokens() {
                 className="w-full"
               />
             </div>
+            {/* Image options consolidated under Properties */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full btn-primary inline-flex items-center justify-center gap-2 text-base mb-4"
+              >
+                <span className="text-lg">📤</span>
+                <span>Upload Map Image</span>
+              </button>
+
+              {/* Canvas Size Settings */}
+              <div className="p-3 bg-surface-1 rounded border border-border">
+                <h3 className="text-sm font-bold mb-3">📐 Canvas Size</h3>
+                <p className="text-xs text-muted leading-relaxed mb-3">
+                  The canvas is the playable surface that tokens and interactions use. Background
+                  images scale to fit whatever canvas you choose during matches, so pick a preset
+                  that matches how detailed you want the battlefield to feel.
+                </p>
+                <div className="flex items-center justify-between text-xs text-muted mb-3">
+                  <span>Current canvas</span>
+                  <span className="text-white font-semibold">
+                    {state.mapWidth}×{state.mapHeight}px
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {CANVAS_PRESETS.map((preset) => {
+                    const isActive = canvasSelection === preset.id
+                    return (
+                      <button
+                        type="button"
+                        key={preset.id}
+                        onClick={() => applyCanvasPreset(preset.id)}
+                        className={`rounded border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
+                          isActive
+                            ? 'border-primary bg-primary/10 text-white shadow-inner'
+                            : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-sm font-semibold">
+                          <span>{preset.label}</span>
+                          {preset.recommended && (
+                            <span className="text-xs text-primary font-medium">Recommended</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted mt-1">
+                          {preset.width}×{preset.height}px
+                        </div>
+                        {preset.description && (
+                          <div className="text-[11px] text-muted mt-1">{preset.description}</div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectCustomCanvas}
+                  className={`mt-3 w-full rounded border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
+                    canvasSelection === 'custom'
+                      ? 'border-primary bg-primary/10 text-white shadow-inner'
+                      : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
+                  }`}
+                >
+                  ✏️ Custom Size
+                </button>
+                {canvasSelection === 'custom' && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label
+                        htmlFor={customCanvasWidthId}
+                        className="block text-xs text-muted mb-1"
+                      >
+                        Width ({CANVAS_LIMITS.width.min}-{CANVAS_LIMITS.width.max}px)
+                      </label>
+                      <input
+                        id={customCanvasWidthId}
+                        type="number"
+                        min={CANVAS_LIMITS.width.min}
+                        max={CANVAS_LIMITS.width.max}
+                        step={50}
+                        value={customCanvasSize.width}
+                        onChange={(e) => handleCustomCanvasSizeChange('width', e.target.value)}
+                        className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={customCanvasHeightId}
+                        className="block text-xs text-muted mb-1"
+                      >
+                        Height ({CANVAS_LIMITS.height.min}-{CANVAS_LIMITS.height.max}px)
+                      </label>
+                      <input
+                        id={customCanvasHeightId}
+                        type="number"
+                        min={CANVAS_LIMITS.height.min}
+                        max={CANVAS_LIMITS.height.max}
+                        step={50}
+                        value={customCanvasSize.height}
+                        onChange={(e) => handleCustomCanvasSizeChange('height', e.target.value)}
+                        className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between rounded border border-yellow-700 bg-yellow-900/30 px-3 py-2 text-xs text-yellow-200">
+                      <span>Preset: {canvasSelection}</span>
+                      <span>
+                        Ratio:{' '}
+                        {state.mapWidth && state.mapHeight
+                          ? (state.mapWidth / state.mapHeight).toFixed(2)
+                          : 0}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {state.imageUrl && (
+                <div className="mt-4 p-3 bg-surface-1 rounded border border-border">
+                  <h3 className="text-sm font-bold mb-2">Current Image</h3>
+                  <div className="text-xs text-muted space-y-1">
+                    <div>Width: {state.imageWidth}px</div>
+                    <div>Height: {state.imageHeight}px</div>
+                    <div>Scale: {(state.imageScale * 100).toFixed(0)}%</div>
+                  </div>
+                  <div className="mt-3">
+                    <label htmlFor={imageScaleId} className="block text-sm text-muted mb-1">
+                      Image Scale: {(state.imageScale * 100).toFixed(0)}%
+                    </label>
+                    <input
+                      id={imageScaleId}
+                      type="range"
+                      min="50"
+                      max="200"
+                      step="10"
+                      value={state.imageScale * 100}
+                      onChange={(e) =>
+                        setState((prev) => ({ ...prev, imageScale: Number(e.target.value) / 100 }))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCropper(true)}
+                      className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
+                      title="Crop the image to specific dimensions"
+                    >
+                      ✂️ Crop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProcessor(true)}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                      title="Compress and optimize image for web use (reduces file size)"
+                    >
+                      🎨 Process
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Remove the background image?')) {
+                          setState((prev) => ({ ...prev, imageUrl: undefined }))
+                        }
+                      }}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded"
+                    >
+                      🗑️ Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Import/Export Section */}
             <div className="mt-6 p-3 bg-surface-1 rounded border border-border">
               <h3 className="text-sm font-bold mb-3">📦 Import/Export</h3>
@@ -2336,200 +2534,7 @@ export default function MapEditorTokens() {
               </div>
             </div>
 
-            {/* Validation Checklist */}
-            <div className="mt-4 p-3 bg-surface-1 rounded border border-border">
-              <h3 className="text-sm font-bold mb-2">✅ Validation Checklist</h3>
-              <div className="space-y-1 text-xs">
-                <div className={state.imageUrl ? 'text-green-400' : 'text-muted'}>
-                  {state.imageUrl ? '✓' : '○'} Background image uploaded
-                </div>
-                <div className={state.territories.length > 0 ? 'text-green-400' : 'text-muted'}>
-                  {state.territories.length > 0 ? '✓' : '○'} {state.territories.length} territories
-                  placed
-                </div>
-                <div className={state.continents.length > 0 ? 'text-green-400' : 'text-muted'}>
-                  {state.continents.length > 0 ? '✓' : '○'} {state.continents.length} continents
-                  created
-                </div>
-                <div
-                  className={
-                    Object.keys(capitalAssignments).length > 0 ? 'text-green-400' : 'text-muted'
-                  }
-                >
-                  {Object.keys(capitalAssignments).length > 0 ? '✓' : '○'} Capitals assigned
-                </div>
-              </div>
-            </div>
-          </>
-        )
-
-      case 'image':
-        return (
-          <>
-            <h2 className="text-xl font-bold mb-4">🖼️ Image Settings</h2>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full btn-primary inline-flex items-center justify-center gap-2 text-base mb-4"
-            >
-              <span className="text-lg">📤</span>
-              <span>Upload Map Image</span>
-            </button>
-
-            {/* Canvas Size Settings */}
-            <div className="mb-6 p-3 bg-surface-1 rounded border border-border">
-              <h3 className="text-sm font-bold mb-3">📐 Canvas Size</h3>
-              <p className="text-xs text-muted leading-relaxed mb-3">
-                The canvas is the playable surface that tokens and interactions use. Background
-                images scale to fit whatever canvas you choose during matches, so pick a preset that
-                matches how detailed you want the battlefield to feel.
-              </p>
-              <div className="flex items-center justify-between text-xs text-muted mb-3">
-                <span>Current canvas</span>
-                <span className="text-white font-semibold">
-                  {state.mapWidth}×{state.mapHeight}px
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {CANVAS_PRESETS.map((preset) => {
-                  const isActive = canvasSelection === preset.id
-                  return (
-                    <button
-                      type="button"
-                      key={preset.id}
-                      onClick={() => applyCanvasPreset(preset.id)}
-                      className={`rounded border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
-                        isActive
-                          ? 'border-primary bg-primary/10 text-white shadow-inner'
-                          : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between text-sm font-semibold">
-                        <span>{preset.label}</span>
-                        {preset.recommended && (
-                          <span className="text-xs text-primary font-medium">Recommended</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted mt-1">
-                        {preset.width}×{preset.height}px
-                      </div>
-                      {preset.description && (
-                        <div className="text-[11px] text-muted mt-1">{preset.description}</div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-              <button
-                type="button"
-                onClick={handleSelectCustomCanvas}
-                className={`mt-3 w-full rounded border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80 ${
-                  canvasSelection === 'custom'
-                    ? 'border-primary bg-primary/10 text-white shadow-inner'
-                    : 'border-border bg-surface-2 text-muted hover:text-white hover:border-primary hover:bg-surface-1'
-                }`}
-              >
-                ✏️ Custom Size
-              </button>
-              {canvasSelection === 'custom' && (
-                <div className="mt-3 space-y-3">
-                  <div>
-                    <label htmlFor={customCanvasWidthId} className="block text-xs text-muted mb-1">
-                      Width ({CANVAS_LIMITS.width.min}-{CANVAS_LIMITS.width.max}px)
-                    </label>
-                    <input
-                      id={customCanvasWidthId}
-                      type="number"
-                      min={CANVAS_LIMITS.width.min}
-                      max={CANVAS_LIMITS.width.max}
-                      step={50}
-                      value={customCanvasSize.width}
-                      onChange={(e) => handleCustomCanvasSizeChange('width', e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={customCanvasHeightId} className="block text-xs text-muted mb-1">
-                      Height ({CANVAS_LIMITS.height.min}-{CANVAS_LIMITS.height.max}px)
-                    </label>
-                    <input
-                      id={customCanvasHeightId}
-                      type="number"
-                      min={CANVAS_LIMITS.height.min}
-                      max={CANVAS_LIMITS.height.max}
-                      step={50}
-                      value={customCanvasSize.height}
-                      onChange={(e) => handleCustomCanvasSizeChange('height', e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-2 border border-border rounded"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">
-                    Tip: 16:9 layouts such as 1280×720 align best with ConquestK's interface, while
-                    smaller sizes load faster on lower-powered devices.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {state.imageUrl && (
-              <>
-                <div className="mb-4 p-3 bg-surface-1 rounded border border-border">
-                  <h3 className="text-sm font-bold mb-2">Current Image</h3>
-                  <div className="text-xs text-muted space-y-1">
-                    <div>Width: {state.imageWidth}px</div>
-                    <div>Height: {state.imageHeight}px</div>
-                    <div>Scale: {(state.imageScale * 100).toFixed(0)}%</div>
-                  </div>
-
-                  {/* Image Scale Control */}
-                  <div className="mt-3">
-                    <label htmlFor={imageScaleId} className="block text-sm text-muted mb-1">
-                      Image Scale: {(state.imageScale * 100).toFixed(0)}%
-                    </label>
-                    <input
-                      id={imageScaleId}
-                      type="range"
-                      min="50"
-                      max="200"
-                      step="10"
-                      value={state.imageScale * 100}
-                      onChange={(e) =>
-                        setState((prev) => ({ ...prev, imageScale: Number(e.target.value) / 100 }))
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowCropper(true)}
-                  className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded mb-2"
-                  title="Crop the image to specific dimensions"
-                >
-                  ✂️ Crop Image
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowProcessor(true)}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded mb-2"
-                  title="Compress and optimize image for web use (reduces file size)"
-                >
-                  🎨 Process Image (Compress)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm('Remove the background image?')) {
-                      setState((prev) => ({ ...prev, imageUrl: undefined }))
-                    }
-                  }}
-                  className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
-                >
-                  🗑️ Clear Image
-                </button>
-              </>
-            )}
+            {/* End Properties */}
           </>
         )
 
@@ -2566,7 +2571,7 @@ export default function MapEditorTokens() {
                   className={`mt-3 w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                     isPlacingTerritory
                       ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-primary text-black hover:brightness-110'
+                      : 'bg-primary text-white hover:brightness-110'
                   }`}
                 >
                   {isPlacingTerritory
@@ -2578,6 +2583,89 @@ export default function MapEditorTokens() {
                   where you need them.
                 </p>
               </div>
+            </div>
+
+            {/* Continent Management (consolidated here) */}
+            <div className="mb-6 rounded border border-border bg-surface-1 p-3">
+              <h3 className="text-sm font-bold mb-3">
+                {editingContinentId ? 'Update Continent' : 'Create Continent'}
+              </h3>
+              <input
+                type="text"
+                placeholder="Continent name"
+                value={newContinentName}
+                onChange={(e) => setNewContinentName(e.target.value)}
+                className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              />
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted" htmlFor={continentColorInputId}>
+                    Color
+                  </label>
+                  <input
+                    id={continentColorInputId}
+                    type="color"
+                    value={newContinentColor}
+                    onChange={(e) => setNewContinentColor(e.target.value)}
+                    className="h-9 w-14 cursor-pointer rounded border border-border bg-surface-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted" htmlFor={continentBonusInputId}>
+                    Bonus
+                  </label>
+                  <input
+                    id={continentBonusInputId}
+                    type="number"
+                    min={0}
+                    max={12}
+                    step={1}
+                    value={newContinentBonus}
+                    onChange={(e) => setNewContinentBonus(Number(e.target.value) || 0)}
+                    className="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingContinentId) {
+                      handleUpdateContinent(editingContinentId)
+                    } else {
+                      handleCreateContinent()
+                    }
+                  }}
+                  disabled={!newContinentName.trim()}
+                  className={`rounded px-4 py-2 text-sm font-medium transition ${
+                    newContinentName.trim()
+                      ? 'bg-primary text-white hover:brightness-110'
+                      : 'bg-surface-2 text-muted'
+                  }`}
+                >
+                  {editingContinentId ? '💾 Save Changes' : '➕ Create Continent'}
+                </button>
+                {editingContinentId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingContinentId(null)
+                      setNewContinentName('')
+                      setNewContinentColor('#3B82F6')
+                      setNewContinentBonus(3)
+                    }}
+                    className="rounded border border-border px-4 py-2 text-sm hover:border-primary"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              {editingContinentId && (
+                <p className="mt-2 text-xs text-muted">
+                  Saving will update the selected continent in place. Cancel to keep the existing
+                  values.
+                </p>
+              )}
             </div>
 
             <div className="mb-6">
@@ -2812,7 +2900,7 @@ export default function MapEditorTokens() {
                 onClick={() => setShowGrid((prev) => !prev)}
                 className={`w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                   showGrid
-                    ? 'bg-primary text-black'
+                    ? 'bg-primary text-white'
                     : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
@@ -2833,7 +2921,7 @@ export default function MapEditorTokens() {
                 }
                 className={`mb-2 flex w-full items-center justify-between rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                   state.labelSettings?.showLabels
-                    ? 'bg-primary text-black'
+                    ? 'bg-primary text-white'
                     : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
                 }`}
               >
@@ -2853,237 +2941,6 @@ export default function MapEditorTokens() {
                   <span className="text-xs text-muted">Fonts, colors, backgrounds</span>
                 </button>
               )}
-            </div>
-          </>
-        )
-
-      case 'continents':
-        return (
-          <>
-            <h2 className="text-xl font-bold mb-4">🌍 Continent Management</h2>
-
-            <div className="mb-6 rounded border border-border bg-surface-1 p-3">
-              <h3 className="text-sm font-bold mb-3">
-                {editingContinentId ? 'Update Continent' : 'Create Continent'}
-              </h3>
-              <input
-                type="text"
-                placeholder="Continent name"
-                value={newContinentName}
-                onChange={(e) => setNewContinentName(e.target.value)}
-                className="w-full rounded border border-border bg-surface-1 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-              />
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted" htmlFor={continentColorInputId}>
-                    Color
-                  </label>
-                  <input
-                    id={continentColorInputId}
-                    type="color"
-                    value={newContinentColor}
-                    onChange={(e) => setNewContinentColor(e.target.value)}
-                    className="h-9 w-14 cursor-pointer rounded border border-border bg-surface-1"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted" htmlFor={continentBonusInputId}>
-                    Bonus
-                  </label>
-                  <input
-                    id={continentBonusInputId}
-                    type="number"
-                    min={0}
-                    max={12}
-                    step={1}
-                    value={newContinentBonus}
-                    onChange={(e) => setNewContinentBonus(Number(e.target.value) || 0)}
-                    className="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (editingContinentId) {
-                      handleUpdateContinent(editingContinentId)
-                    } else {
-                      handleCreateContinent()
-                    }
-                  }}
-                  disabled={!newContinentName.trim()}
-                  className={`rounded px-4 py-2 text-sm font-medium transition ${
-                    newContinentName.trim()
-                      ? 'bg-primary text-black hover:brightness-110'
-                      : 'bg-surface-2 text-muted'
-                  }`}
-                >
-                  {editingContinentId ? '💾 Save Changes' : '➕ Create Continent'}
-                </button>
-                {editingContinentId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingContinentId(null)
-                      setNewContinentName('')
-                      setNewContinentColor('#3B82F6')
-                      setNewContinentBonus(3)
-                    }}
-                    className="rounded border border-border px-4 py-2 text-sm hover:border-primary"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-              {editingContinentId && (
-                <p className="mt-2 text-xs text-muted">
-                  Saving will update the selected continent in place. Cancel to keep the existing
-                  values.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              {territoriesByContinent.map((group) => {
-                const continent = group.continent
-                const territoryCount = group.territories.length
-                if (!continent && territoryCount === 0) {
-                  return null
-                }
-                const isExpanded = expandedContinentGroups[group.key] ?? true
-                const bonusInputId = `continent-inline-bonus-${group.key}`
-                const label = continent ? continent.name : 'Unassigned'
-
-                return (
-                  <div key={group.key} className="rounded border border-border bg-surface-1">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleContinentExpanded(group.key)}
-                          className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-primary"
-                          aria-label={isExpanded ? 'Collapse continent' : 'Expand continent'}
-                        >
-                          {isExpanded ? '▾' : '▸'}
-                        </button>
-                        <span
-                          className={`h-4 w-4 rounded ${continent ? '' : 'border border-dashed border-border'}`}
-                          style={continent ? { backgroundColor: continent.color } : undefined}
-                        />
-                        <div>
-                          <div className="font-medium">{label}</div>
-                          <div className="text-xs text-muted">
-                            {territoryCount === 1 ? '1 territory' : `${territoryCount} territories`}
-                          </div>
-                        </div>
-                      </div>
-                      {continent ? (
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <label htmlFor={bonusInputId} className="text-muted">
-                            Bonus
-                          </label>
-                          <input
-                            id={bonusInputId}
-                            type="number"
-                            min={0}
-                            max={12}
-                            step={1}
-                            value={continent.bonus}
-                            onChange={(e) =>
-                              updateContinentBonus(continent.id, Number(e.target.value) || 0)
-                            }
-                            className="w-16 rounded border border-border bg-surface-1 px-2 py-1"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingContinentId(continent.id)
-                              setNewContinentName(continent.name)
-                              setNewContinentColor(continent.color)
-                              setNewContinentBonus(continent.bonus)
-                            }}
-                            className="rounded border border-border px-2 py-1 text-xs hover:border-primary"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Delete continent "${continent.name}"? Territories will become unassigned.`,
-                                )
-                              ) {
-                                handleDeleteContinent(continent.id)
-                              }
-                            }}
-                            className="rounded border border-red-600 px-2 py-1 text-xs text-red-400 hover:border-red-400"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted">
-                          Assign ungrouped territories to keep bonuses accurate
-                        </span>
-                      )}
-                    </div>
-                    {isExpanded && (
-                      <div className="space-y-2 border-t border-border px-3 py-3">
-                        {territoryCount === 0 ? (
-                          <p className="rounded bg-surface-2/70 px-3 py-2 text-xs text-muted">
-                            {continent
-                              ? 'No territories assigned to this continent yet. Use the selects below to add some.'
-                              : 'Any territories without a continent assignment will show here.'}
-                          </p>
-                        ) : (
-                          group.territories.map((territory) => (
-                            <div
-                              key={territory.id}
-                              className={`flex items-center gap-2 rounded border px-2 py-2 text-sm transition-colors ${
-                                state.selectedTerritoryId === territory.id
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-border bg-surface-2 hover:border-primary'
-                              }`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setState((prev) => ({
-                                    ...prev,
-                                    selectedTerritoryId: territory.id,
-                                  }))
-                                }
-                                className="flex-1 text-left font-medium focus:outline-none"
-                              >
-                                {territory.name}
-                              </button>
-                              <select
-                                value={territory.continentId ?? ''}
-                                onChange={(e) =>
-                                  handleTerritoryContinentChange(
-                                    territory.id,
-                                    e.target.value ? e.target.value : null,
-                                  )
-                                }
-                                className="w-36 rounded border border-border bg-surface-1 px-2 py-1 text-xs"
-                              >
-                                <option value="">Unassigned</option>
-                                {continentOptions.map((continentOption) => (
-                                  <option key={continentOption.value} value={continentOption.value}>
-                                    {continentOption.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
             </div>
           </>
         )
@@ -3214,33 +3071,17 @@ export default function MapEditorTokens() {
       case 'properties':
         return (
           <span>
-            <strong>Properties Mode:</strong> Name your map, describe the gameplay style, and set
-            the supported player counts. Drafts auto-save every few seconds, so you can explore
-            without losing progress.
-          </span>
-        )
-      case 'image':
-        return (
-          <span>
-            <strong>Image Mode:</strong> Upload a background image, then pick a canvas preset that
-            matches your target device. The canvas defines the playable area; the background image
-            scales to fill it.
+            <strong>Properties:</strong> Name your map, describe the gameplay style, set player
+            counts, and manage your background image and canvas size. Drafts auto-save frequently so
+            you can explore without losing progress.
           </span>
         )
       case 'territories':
         return (
           <span>
-            <strong>Territories Mode:</strong> Click on the map to place territory markers. Drag
-            territories to reposition them. Select a continent first to assign territories to it.
-            Right-click or use Delete to remove territories.
-          </span>
-        )
-      case 'continents':
-        return (
-          <span>
-            <strong>Continents Mode:</strong> Create continent groups to organize territories. Each
-            continent provides bonus armies. Click territories to assign them and use the form to
-            add custom colors and bonuses.
+            <strong>Regions:</strong> Enable placement to add tokens, drag to reposition, and use
+            the grouping panel to assign or edit continents and bonuses. Right-click or Delete
+            removes tokens.
           </span>
         )
       case 'connections':
@@ -3628,7 +3469,7 @@ export default function MapEditorTokens() {
                   : 'text-muted hover:text-white'
               }`}
             >
-              🗺️ Territories & Continents
+              🗺️ Regions
             </button>
             <button
               type="button"
@@ -3779,91 +3620,7 @@ export default function MapEditorTokens() {
           </div>
         )}
 
-        {editorMode === 'capitals' && (
-          <div className="mt-4 space-y-3">
-            <div className="flex gap-4 items-center">
-              <button
-                type="button"
-                onClick={handleGenerateCapitals}
-                disabled={isGeneratingCapitals || state.territories.length < 2}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded"
-              >
-                {isGeneratingCapitals ? '⏳ Generating...' : '✨ Generate Capitals'}
-              </button>
-              <span className="text-sm text-muted">
-                Auto-generate optimal starting positions for all player counts
-              </span>
-            </div>
-
-            <div className="flex gap-2 items-center flex-wrap">
-              <span className="text-sm">Player Count:</span>
-              {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((count) => (
-                <button
-                  type="button"
-                  key={count}
-                  onClick={() => setSelectedPlayerCount(count)}
-                  disabled={state.territories.length < count}
-                  className={`px-3 py-1 rounded text-sm ${
-                    selectedPlayerCount === count
-                      ? 'bg-primary'
-                      : state.territories.length < count
-                        ? 'bg-surface-1 text-gray-600 cursor-not-allowed'
-                        : 'bg-surface-2 hover:bg-gray-600'
-                  }`}
-                >
-                  {count}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-4 items-center">
-              <button
-                type="button"
-                onClick={() => setIsAssigningCapital(!isAssigningCapital)}
-                className={`px-4 py-2 rounded ${
-                  isAssigningCapital ? 'bg-yellow-600' : 'bg-surface-2'
-                }`}
-              >
-                {isAssigningCapital ? '🎯 Click Territories' : '📍 Assign Capitals'}
-              </button>
-              <div className="text-sm">
-                <span className="text-muted">Capitals for {selectedPlayerCount} players: </span>
-                <span className="text-white">
-                  {(capitalAssignments[selectedPlayerCount.toString()] || []).length}/
-                  {selectedPlayerCount}
-                </span>
-              </div>
-            </div>
-
-            {capitalAssignments[selectedPlayerCount.toString()]?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {capitalAssignments[selectedPlayerCount.toString()].map((territoryId, index) => {
-                  const territory = state.territories.find((t) => t.id === territoryId)
-                  if (!territory) return null
-                  const playerColors = PLAYER_COLORS
-                  return (
-                    <div
-                      key={territoryId}
-                      className="px-3 py-1 rounded text-sm"
-                      style={{
-                        backgroundColor: `${playerColors[index % playerColors.length]}20`,
-                        border: `2px solid ${playerColors[index % playerColors.length]}`,
-                      }}
-                    >
-                      Player {index + 1}: {territory.name}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {capitalMetadata.manuallyAdjusted?.[selectedPlayerCount.toString()] && (
-              <p className="text-xs text-yellow-400">
-                ⚠️ Manually adjusted from algorithm suggestion
-              </p>
-            )}
-          </div>
-        )}
+        {/* Capitals actions moved into sidebar; main-area duplication removed */}
 
         {editorMode === 'modifiers' && territoryModifiersEnabled && (
           <div className="mt-4 space-y-5">
@@ -4246,11 +4003,7 @@ export default function MapEditorTokens() {
           className="relative flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
           style={{ height: 'calc(100vh - 240px)' }}
         >
-          {modeHelpMessage && (
-            <div className="pointer-events-none absolute left-4 top-4 z-20 max-w-xs rounded border border-border bg-surface-2/90 px-3 py-2 text-xs text-muted backdrop-blur-sm">
-              {modeHelpMessage}
-            </div>
-          )}
+          {/* Help tooltip moved to sidebar footer to avoid covering canvas */}
           <div
             ref={containerRef}
             className="relative flex-shrink-0"
@@ -4458,6 +4211,11 @@ export default function MapEditorTokens() {
           style={{ height: 'calc(100vh - 240px)' }}
         >
           {renderSidebarContent()}
+          {modeHelpMessage && (
+            <div className="mt-6 rounded border border-border bg-surface-1 p-3 text-xs text-muted">
+              {modeHelpMessage}
+            </div>
+          )}
         </div>
       </div>
 
