@@ -13,13 +13,14 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactElement, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { clanApi } from '@/services/clanService'
 import { socketService } from '@/services/socketService'
 import type {
+  ClanActivityEvent,
   ClanAnnouncement,
   ClanDetails,
   ClanMember,
@@ -92,7 +93,7 @@ const humanizeSource = (source?: string | null): string | null => {
 type ActivityDescription = {
   title: string
   subtitle?: string
-  icon: JSX.Element
+  icon: ReactElement
   accentClass?: string
 }
 
@@ -274,7 +275,7 @@ const ProgressionCard = ({ progression }: { progression: ClanProgressionSummary 
 
 const getObjectiveCopy = (
   objective: ClanObjective,
-): { title: string; description: string; icon: JSX.Element } => {
+): { title: string; description: string; icon: ReactElement } => {
   const percent = objective.targetValue
     ? clampProgress(objective.progressValue / objective.targetValue)
     : 0

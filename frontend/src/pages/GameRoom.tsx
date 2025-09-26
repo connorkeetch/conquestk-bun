@@ -181,7 +181,7 @@ export default function GameRoom() {
     [roomMaxPlayers, humanPlayersCount],
   )
 
-  const roomIsRanked = Boolean(currentRoom?.isRanked ?? currentRoom?.is_ranked ?? false)
+  const roomIsRanked = Boolean(currentRoom?.isRanked ?? false)
   const showAiControls =
     aiPlayersEnabled && aiLobbyEnabled && isHost && !roomIsRanked && currentRoom?.status === 'lobby'
 
@@ -923,7 +923,11 @@ export default function GameRoom() {
             {roomId && user && (
               <TabbedGameChat
                 gameId={roomId}
-                players={currentRoom.players || []}
+                players={(currentRoom.players || []).map((p) => ({
+                  userId: p.userId ?? p.id,
+                  username: p.username,
+                  teamId: p.teamId ?? null,
+                }))}
                 currentUserId={user.id}
                 userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
                 className="h-full"

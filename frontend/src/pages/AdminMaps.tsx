@@ -427,7 +427,7 @@ export const AdminMaps: React.FC = () => {
               polygon_data: record,
             }
           })
-          .filter((item): item is RawTerritoryRecord => Boolean(item)) as RawTerritoryRecord[]
+          .filter((item): item is NonNullable<typeof item> => item !== null) as RawTerritoryRecord[]
 
         territories = mapped
       }
@@ -683,18 +683,7 @@ export const AdminMaps: React.FC = () => {
           continent: territory.continent ?? null,
         }
       })
-      .filter(
-        (
-          token,
-        ): token is {
-          id: string
-          name: string
-          left: number
-          top: number
-          isCapital: boolean
-          continent: string | null | undefined
-        } => token !== null,
-      )
+      .filter((token): token is NonNullable<typeof token> => token !== null)
   }, [previewDetails, effectiveCanvasWidth, effectiveCanvasHeight])
 
   const getStatusBadge = (status: string) => {
