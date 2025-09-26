@@ -1,4 +1,4 @@
-import type { AIDifficulty } from '../types/game'
+import type { AIDifficulty, Metal, TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
 
 type LabelValue = Record<string, string>
@@ -136,6 +136,43 @@ class BattleMetrics {
 }
 
 export const battleMetrics = new BattleMetrics()
+
+class TreasureMetrics {
+  private readonly drawCounter = new CounterMetric('treasure_drawn_total')
+  private readonly cashCounter = new CounterMetric('treasure_cashed_total')
+  private readonly modeCounter = new CounterMetric('treasure_mode_total')
+
+  recordMode(config: TreasureConfig) {
+    const mode = config.payoutMode ?? 'triangular'
+    const enabled = config.enabled ? 'enabled' : 'disabled'
+    this.modeCounter.inc({ mode, enabled })
+  }
+
+  recordDraw(config: TreasureConfig, metal: Metal) {
+    if (!config.enabled) return
+    const mode = config.payoutMode ?? 'triangular'
+    this.drawCounter.inc({ mode, metal })
+  }
+
+  recordCash(config: TreasureConfig, hasDiamond: boolean) {
+    if (!config.enabled) return
+    const mode = config.payoutMode ?? 'triangular'
+    this.cashCounter.inc({ mode, diamond: hasDiamond ? 'yes' : 'no' })
+  }
+
+  snapshot() {
+    return {
+      counters: [
+        ...this.drawCounter.snapshot(),
+        ...this.cashCounter.snapshot(),
+        ...this.modeCounter.snapshot(),
+      ],
+      gauges: [] as GaugeSnapshot[],
+    }
+  }
+}
+
+export const treasureMetrics = new TreasureMetrics()
 
 type AITurnMetricRecord = {
   difficulty: AIDifficulty

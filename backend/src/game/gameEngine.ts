@@ -1,6 +1,7 @@
 import territoryModifierService, {
   type GameTerritoryModifier,
 } from '../services/territoryModifierService'
+import { treasureMetrics } from '../services/metricsService'
 import type {
   AttackAction,
   BattleResult,
@@ -11,9 +12,19 @@ import type {
   GameConfiguration,
   GamePlayer,
   GameState,
+  TradeCardsAction,
   ProcessActionResult,
   Territory,
+  Metal,
+  TreasureConfig,
 } from '../types/game'
+import {
+  drawTreasure,
+  ensureTreasureState,
+  findRedeemableSets,
+  normalizeTreasureConfig,
+  redeemSet,
+} from './hiddenTreasures'
 
 export class GameEngine {
   private gameModifiers: Map<string, GameTerritoryModifier> = new Map()
@@ -66,6 +77,9 @@ export class GameEngine {
           : mapOverrides.continentBonuses,
     }
 
+    const treasureConfig = this.ensureTreasureConfig(hydratedConfig)
+    treasureMetrics.recordMode(treasureConfig)
+
     return {
       roomId,
       players,
@@ -76,6 +90,9 @@ export class GameEngine {
       cards: [],
       gameConfig: hydratedConfig,
       movementTracking: {},
+      treasureState: treasureConfig.enabled ? ensureTreasureState() : undefined,
+      mustCashInTreasures: false,
+      conqueredDuringTurn: false,
     }
   }
 
@@ -96,6 +113,7 @@ export class GameEngine {
       case 'end_turn':
         return { gameState: this.handleEndTurn(newState) }
       case 'trade_cards':
+        return { gameState: this.handleTradeCards(newState, action) }
       case 'go_back_to_reinforcement':
         return { gameState: this.handleGoBackToReinforcement(newState) }
       default: {
@@ -122,6 +140,7 @@ export class GameEngine {
       case 'end_turn':
         return true
       case 'trade_cards':
+        return this.validateTreasureTrade(gameState, action)
       case 'go_back_to_reinforcement':
         return gameState.phase === 'attack' && !gameState.hasAttackedThisTurn
       default:
@@ -172,6 +191,8 @@ export class GameEngine {
         typeof player.aiPersonalitySeed === 'number' && Number.isFinite(player.aiPersonalitySeed)
           ? Math.trunc(player.aiPersonalitySeed)
           : (player.aiPersonalitySeed ?? null),
+      treasures: [],
+      mustCashInTreasures: false,
     }))
   }
 
@@ -184,6 +205,98 @@ export class GameEngine {
       6: 20,
     }
     return armyMap[playerCount] || 20
+  }
+
+  private ensureTreasureConfig(gameConfig: GameConfiguration): TreasureConfig {
+    const normalized = normalizeTreasureConfig(gameConfig.treasureConfig)
+    gameConfig.treasureConfig = normalized
+    return normalized
+  }
+
+  private getPlayerTreasureHand(player: GamePlayer): Metal[] {
+    if (!player.treasures) {
+      player.treasures = []
+    }
+    return player.treasures
+  }
+
+  private updateCurrentPlayerCashRequirement(
+    gameState: GameState,
+    treasureConfig: TreasureConfig,
+  ): void {
+    if (!treasureConfig.enabled) {
+      gameState.mustCashInTreasures = false
+      return
+    }
+
+    const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
+    if (!currentPlayer) {
+      gameState.mustCashInTreasures = false
+      return
+    }
+
+    const hand = this.getPlayerTreasureHand(currentPlayer)
+    currentPlayer.mustCashInTreasures = hand.length >= treasureConfig.handCap
+    gameState.mustCashInTreasures = currentPlayer.mustCashInTreasures ?? false
+  }
+
+  private maybeAwardTreasureForConquest(
+    gameState: GameState,
+    player: GamePlayer,
+    treasureConfig: TreasureConfig,
+  ): void {
+    if (!treasureConfig.enabled || !gameState.conqueredDuringTurn) {
+      return
+    }
+
+    const treasureState = ensureTreasureState(gameState.treasureState)
+    const treasure = drawTreasure(treasureConfig)
+    const hand = this.getPlayerTreasureHand(player)
+    hand.push(treasure)
+    gameState.treasureState = treasureState
+    treasureMetrics.recordDraw(treasureConfig, treasure)
+
+    if (hand.length >= treasureConfig.handCap) {
+      player.mustCashInTreasures = true
+    }
+  }
+
+  private transferEliminatedTreasures(
+    gameState: GameState,
+    eliminatorId: string,
+    treasureConfig: TreasureConfig,
+    eliminatedPlayerIds: string[] = [],
+  ): void {
+    if (!treasureConfig.enabled || eliminatedPlayerIds.length === 0) {
+      return
+    }
+
+    const eliminator = gameState.players.find((p) => p.id === eliminatorId)
+    if (!eliminator) {
+      return
+    }
+
+    const eliminatorHand = this.getPlayerTreasureHand(eliminator)
+    let transferred = 0
+
+    for (const playerId of eliminatedPlayerIds) {
+      const eliminated = gameState.players.find((p) => p.id === playerId)
+      if (!eliminated || !eliminated.treasures || eliminated.treasures.length === 0) {
+        continue
+      }
+
+      eliminatorHand.push(...eliminated.treasures)
+      transferred += eliminated.treasures.length
+      eliminated.treasures = []
+      eliminated.mustCashInTreasures = false
+    }
+
+    if (transferred > 0 && eliminatorHand.length >= treasureConfig.handCap) {
+      eliminator.mustCashInTreasures = true
+      if (eliminator.id === gameState.currentPlayer) {
+        gameState.mustCashInTreasures = true
+      }
+    }
   }
 
   private randomizePlayerOrder(players: GamePlayer[]): void {
@@ -340,6 +453,8 @@ export class GameEngine {
       throw new Error('Invalid territories for attack')
     }
 
+    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+
     // Mark that player has attacked this turn
     gameState.hasAttackedThisTurn = true
 
@@ -386,11 +501,13 @@ export class GameEngine {
         defender.territories = defender.territories.filter((t) => t !== toTerritoryId)
         // Add territory to attacker
         attacker.territories.push(toTerritoryId)
+        this.getPlayerTreasureHand(attacker)
       }
 
       toTerritory.ownerId = action.playerId
       toTerritory.armies = 1 // Attacker must move at least 1 army
       fromTerritory.armies -= 1
+      gameState.conqueredDuringTurn = true
     }
 
     const result: BattleResult = {
@@ -418,6 +535,15 @@ export class GameEngine {
       result.gameEnded = gameEndCheck.gameEnded
       result.winner = gameEndCheck.winner
       result.eliminatedPlayers = gameEndCheck.eliminatedPlayers
+
+      this.transferEliminatedTreasures(
+        gameState,
+        action.playerId,
+        treasureConfig,
+        gameEndCheck.eliminatedPlayers ?? [],
+      )
+
+      this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
     }
 
     return result
@@ -448,9 +574,43 @@ export class GameEngine {
     return gameState
   }
 
-  private handleEndTurn(gameState: GameState): GameState {
-    const _currentPlayerIndex = gameState.players.findIndex((p) => p.id === gameState.currentPlayer)
+  private handleTradeCards(gameState: GameState, action: TradeCardsAction): GameState {
+    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+    if (!treasureConfig.enabled) {
+      return gameState
+    }
 
+    const player = gameState.players.find((p) => p.id === action.playerId)
+    if (!player) {
+      return gameState
+    }
+
+    const selection = action.payload?.treasureSet
+    if (!Array.isArray(selection) || selection.length !== 3) {
+      throw new Error('Treasure set selection is required')
+    }
+
+    const indices = selection.map((value) => Number(value)) as number[]
+    if (indices.some((value) => Number.isNaN(value))) {
+      throw new Error('Treasure indices must be numeric')
+    }
+
+    const tuple = [indices[0], indices[1], indices[2]] as [number, number, number]
+    const treasureState = ensureTreasureState(gameState.treasureState)
+    const result = redeemSet(this.getPlayerTreasureHand(player), tuple, treasureConfig, treasureState)
+
+    player.treasures = result.updatedHand
+    player.armies += result.troops
+    player.mustCashInTreasures = player.treasures.length >= treasureConfig.handCap
+    gameState.treasureState = result.updatedState
+
+    treasureMetrics.recordCash(treasureConfig, result.hasDiamond)
+    this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
+
+    return gameState
+  }
+
+  private handleEndTurn(gameState: GameState): GameState {
     // Advance phase or move to next player
     switch (gameState.phase) {
       case 'setup':
@@ -477,6 +637,17 @@ export class GameEngine {
   }
 
   private endPlayerTurn(gameState: GameState): void {
+    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+    const currentPlayerIndex = gameState.players.findIndex((p) => p.id === gameState.currentPlayer)
+    const currentPlayer = gameState.players[currentPlayerIndex]
+
+    if (currentPlayer) {
+      this.getPlayerTreasureHand(currentPlayer)
+      this.maybeAwardTreasureForConquest(gameState, currentPlayer, treasureConfig)
+    }
+
+    gameState.conqueredDuringTurn = false
+
     // Check for eliminated players first
     this.updateEliminatedPlayers(gameState)
 
@@ -487,7 +658,6 @@ export class GameEngine {
       return
     }
 
-    const currentPlayerIndex = gameState.players.findIndex((p) => p.id === gameState.currentPlayer)
     let nextPlayerIndex = (currentPlayerIndex + 1) % gameState.players.length
 
     // Skip eliminated players
@@ -509,6 +679,8 @@ export class GameEngine {
       gameState.gameConfig,
     )
 
+    this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
+
     // Increment turn counter when we complete a full round (back to first active player)
     const firstActivePlayerIndex = gameState.players.findIndex((p) => !p.isEliminated)
     if (nextPlayerIndex === firstActivePlayerIndex) {
@@ -517,6 +689,8 @@ export class GameEngine {
   }
 
   beginTurn(gameState: GameState): GameState {
+    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+
     // Player hits "Begin Turn" button
     if (gameState.phase === 'setup') {
       // Transition from setup to reinforcement phase
@@ -532,6 +706,19 @@ export class GameEngine {
         )
       }
     }
+
+    if (treasureConfig.enabled) {
+      gameState.treasureState = ensureTreasureState(gameState.treasureState)
+      const currentPlayer = gameState.players.find((p) => p.id === gameState.currentPlayer)
+      if (currentPlayer) {
+        this.getPlayerTreasureHand(currentPlayer)
+      }
+    } else {
+      gameState.treasureState = undefined
+    }
+
+    this.updateCurrentPlayerCashRequirement(gameState, treasureConfig)
+    gameState.conqueredDuringTurn = false
 
     return gameState
   }
@@ -632,6 +819,10 @@ export class GameEngine {
   }
 
   private validateAttack(gameState: GameState, action: AttackAction): boolean {
+    if (gameState.mustCashInTreasures) {
+      return false
+    }
+
     const { fromTerritoryId, toTerritoryId, armies = 0 } = action.payload
     const fromTerritory = gameState.board.find((t) => t.id === fromTerritoryId)
     const toTerritory = gameState.board.find((t) => t.id === toTerritoryId)
@@ -664,6 +855,42 @@ export class GameEngine {
 
     // Check movement type restrictions
     return this.validateMovementByType(gameState, fromTerritoryId, toTerritoryId, action.playerId)
+  }
+
+  private validateTreasureTrade(gameState: GameState, action: TradeCardsAction): boolean {
+    const allowedPhases: GameState['phase'][] = ['reinforcement', 'attack', 'fortify']
+    if (!allowedPhases.includes(gameState.phase)) {
+      return false
+    }
+
+    const treasureConfig = this.ensureTreasureConfig(gameState.gameConfig)
+    if (!treasureConfig.enabled) {
+      return false
+    }
+
+    const player = gameState.players.find((p) => p.id === action.playerId)
+    if (!player) {
+      return false
+    }
+
+    const selection = action.payload?.treasureSet
+    if (!Array.isArray(selection) || selection.length !== 3) {
+      return false
+    }
+
+    const hand = this.getPlayerTreasureHand(player)
+    const indices = selection.map((value) => Number(value)) as number[]
+    if (indices.some((value) => Number.isNaN(value))) {
+      return false
+    }
+
+    const sorted = [...indices].sort((a, b) => a - b)
+    if (sorted.some((index) => index < 0 || index >= hand.length)) {
+      return false
+    }
+
+    const matches = findRedeemableSets(hand)
+    return matches.some((match) => match.indices.every((value, idx) => value === sorted[idx]))
   }
 
   private simulateBattle(

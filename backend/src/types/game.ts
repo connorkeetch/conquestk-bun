@@ -1,6 +1,11 @@
-import type { AIDifficulty } from '@risk-game/shared/types'
+import type {
+  AIDifficulty,
+  Metal,
+  TreasureConfig,
+  TreasureState,
+} from '@risk-game/shared/types'
 
-export type { AIDifficulty } from '@risk-game/shared/types'
+export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
 
 export type GamePhase = 'setup' | 'reinforcement' | 'attack' | 'fortify' | 'finished'
 
@@ -30,6 +35,9 @@ export interface GameState {
   movementTracking?: Record<string, boolean>
   territoryModifiers?: Map<string, GameTerritoryModifier>
   capitalAssignments?: Record<string, string>
+  treasureState?: TreasureState
+  mustCashInTreasures?: boolean
+  conqueredDuringTurn?: boolean
 }
 
 export interface GamePlayer {
@@ -45,6 +53,8 @@ export interface GamePlayer {
   isAi?: boolean
   aiDifficulty?: AIDifficulty | null
   aiPersonalitySeed?: number | null
+  treasures?: Metal[]
+  mustCashInTreasures?: boolean
 }
 
 export interface Territory {
@@ -126,6 +136,7 @@ export type BeginTurnAction = ActionBase<'begin_turn'> & {
 export type TradeCardsAction = ActionBase<'trade_cards'> & {
   payload?: {
     cards?: string[]
+    treasureSet?: [number, number, number] | number[]
   }
 }
 
@@ -167,6 +178,7 @@ export interface GameConfiguration {
   continentBonuses?: ContinentBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
+  treasureConfig?: TreasureConfig
 }
 
 export interface ContinentBonus {
