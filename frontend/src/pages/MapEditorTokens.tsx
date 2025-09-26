@@ -3621,17 +3621,6 @@ export default function MapEditorTokens() {
             </button>
             <button
               type="button"
-              onClick={() => setEditorMode('image')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'image'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              🖼️ Image
-            </button>
-            <button
-              type="button"
               onClick={() => setEditorMode('territories')}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 editorMode === 'territories'
@@ -3639,18 +3628,7 @@ export default function MapEditorTokens() {
                   : 'text-muted hover:text-white'
               }`}
             >
-              🗺️ Territories
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode('continents')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'continents'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              🌍 Continents
+              🗺️ Territories & Continents
             </button>
             <button
               type="button"

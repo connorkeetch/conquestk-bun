@@ -1,5 +1,5 @@
 import { Bell, MessageSquare } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { notificationService } from '@/services/notificationService'
 import type { Notification } from '@/types/notification'
 
@@ -7,6 +7,8 @@ interface NotificationDropdownProps {
   isOpen: boolean
   onClose: () => void
   onOpenMessages: () => void
+  // Optional: treat clicks on the trigger as inside, to support toggle-close
+  triggerRef?: RefObject<HTMLElement | null>
 }
 
 const formatRelativeTime = (date: Date) => {
@@ -22,6 +24,7 @@ export default function NotificationDropdown({
   isOpen,
   onClose,
   onOpenMessages,
+  triggerRef,
 }: NotificationDropdownProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
@@ -50,13 +53,15 @@ export default function NotificationDropdown({
     const onClick = (e: MouseEvent) => {
       if (!containerRef.current) return
       const target = e.target as Node
-      if (!containerRef.current.contains(target)) {
+      const clickedInsidePanel = containerRef.current.contains(target)
+      const clickedOnTrigger = triggerRef?.current?.contains(target) ?? false
+      if (!clickedInsidePanel && !clickedOnTrigger) {
         onClose()
       }
     }
     window.addEventListener('mousedown', onClick)
     return () => window.removeEventListener('mousedown', onClick)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, triggerRef])
 
   const handleNotificationClick = (n: Notification) => {
     notificationService.markAsRead(n.id)
@@ -140,10 +145,7 @@ export default function NotificationDropdown({
           </div>
         )}
 
-        <div className="px-4 py-3 border-t border-[color:var(--panel-border)] flex items-center justify-between">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
-            Close
-          </button>
+        <div className="px-4 py-3 border-t border-[color:var(--panel-border)] flex items-center justify-end">
           <button
             type="button"
             className="btn-primary btn-sm inline-flex items-center gap-1"
