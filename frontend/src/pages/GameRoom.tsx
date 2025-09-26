@@ -120,6 +120,19 @@ export default function GameRoom() {
     return (currentRoom.numberOfTeams ?? 0) > 1
   }, [currentRoom])
 
+  const treasureSummary = useMemo(() => {
+    const cfg = currentRoom?.treasureConfig
+    if (!cfg) return null
+    if (cfg.enabled === false) return 'Treasures: Off'
+    const mode = cfg.payoutMode || 'triangular'
+    if (mode === 'fixed') {
+      const fixed = Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue ?? 8)))
+      return `Treasures: Fixed (${fixed}) · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
+    }
+    const label = mode === 'triangular' ? 'Triangular' : mode === 'classic' ? 'Classic' : 'None'
+    return `Treasures: ${label} · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
+  }, [currentRoom?.treasureConfig])
+
   const lobbyTeamPlayers = useMemo(
     () =>
       (currentRoom?.players || []).map((player) => ({
@@ -642,6 +655,11 @@ export default function GameRoom() {
             <span className="chip text-xs">
               Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
+            {treasureSummary && (
+              <span className="chip text-xs" title="Hidden Treasures configuration">
+                {treasureSummary}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

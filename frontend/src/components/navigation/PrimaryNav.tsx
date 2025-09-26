@@ -185,21 +185,28 @@ const PrimaryNav: React.FC = () => {
   }
 
   return (
-    <div className="hidden md:flex nav-tabs items-center" ref={dropdownRef}>
+    <div
+      className="hidden lg:flex nav-tabs items-center gap-1 xl:gap-2 px-1 py-0.5 rounded-full bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/10"
+      ref={dropdownRef}
+    >
       {navItems.map((item) => (
         <div key={item.path} className="relative">
           {item.dropdown ? (
             <button
               type="button"
-              className={getNavItemClass(item)}
+              className={`${getNavItemClass(item)} justify-center xl:justify-start`}
               onClick={(e) => handleNavItemClick(item, e)}
               aria-haspopup="true"
               aria-expanded={activeDropdown === item.path}
+              aria-label={item.label}
             >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="text-lg" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="hidden xl:inline">{item.label}</span>
+              <span className="sr-only xl:hidden">{item.label}</span>
               <svg
-                className={`w-4 h-4 transition-transform duration-200 ${
+                className={`hidden xl:block w-4 h-4 transition-transform duration-200 ${
                   activeDropdown === item.path ? 'rotate-180' : ''
                 }`}
                 fill="none"
@@ -219,11 +226,15 @@ const PrimaryNav: React.FC = () => {
           ) : (
             <Link
               to={item.path}
-              className={getNavItemClass(item)}
+              className={`${getNavItemClass(item)} justify-center xl:justify-start`}
               onClick={() => setActiveDropdown(null)}
+              aria-label={item.label}
             >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="text-lg" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="hidden xl:inline">{item.label}</span>
+              <span className="sr-only xl:hidden">{item.label}</span>
             </Link>
           )}
 

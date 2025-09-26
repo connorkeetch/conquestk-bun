@@ -1,5 +1,5 @@
 import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
@@ -81,6 +81,113 @@ export default function Header() {
 
   const navTabClass = (active: boolean) => `nav-tab${active ? ' is-active' : ''}`
 
+  interface PrimaryNavLink {
+    to: string
+    label: string
+    icon: string
+    isActive: boolean
+  }
+
+  const navLinks = useMemo<PrimaryNavLink[]>(() => {
+    const base: PrimaryNavLink[] = []
+
+    if (isAuthenticated) {
+      base.push(
+        {
+          to: '/lobby',
+          label: 'Play',
+          icon: '🎮',
+          isActive: location.pathname.startsWith('/lobby'),
+        },
+        {
+          to: '/maps',
+          label: 'Maps',
+          icon: '🗺️',
+          isActive: location.pathname.startsWith('/maps'),
+        },
+        {
+          to: '/community',
+          label: 'Community',
+          icon: '👥',
+          isActive: location.pathname.startsWith('/community'),
+        },
+      )
+
+      if (clansEnabled) {
+        base.push({
+          to: '/clans',
+          label: 'Clans',
+          icon: '🛡️',
+          isActive: location.pathname.startsWith('/clans'),
+        })
+      }
+
+      base.push({
+        to: '/tutorial',
+        label: 'How to Play',
+        icon: '📚',
+        isActive: location.pathname.startsWith('/tutorial'),
+      })
+
+      if (user?.isAdmin) {
+        base.push({
+          to: '/admin',
+          label: 'Admin',
+          icon: '🛡️',
+          isActive: location.pathname.startsWith('/admin'),
+        })
+      }
+    } else {
+      base.push(
+        {
+          to: '/',
+          label: 'Home',
+          icon: '🏠',
+          isActive: location.pathname === '/',
+        },
+        {
+          to: '/lobby',
+          label: 'Play Now',
+          icon: '🎮',
+          isActive: location.pathname === '/lobby' || location.pathname.startsWith('/play'),
+        },
+        {
+          to: '/maps',
+          label: 'Browse Maps',
+          icon: '🗺️',
+          isActive: location.pathname.startsWith('/maps'),
+        },
+        {
+          to: '/community',
+          label: 'Community',
+          icon: '👥',
+          isActive: location.pathname.startsWith('/community'),
+        },
+      )
+
+      if (clansEnabled) {
+        base.push({
+          to: '/clans',
+          label: 'Clans',
+          icon: '🛡️',
+          isActive: location.pathname.startsWith('/clans'),
+        })
+      }
+
+      base.push({
+        to: '/tutorial',
+        label: 'How to Play',
+        icon: '📚',
+        isActive: location.pathname.startsWith('/tutorial'),
+      })
+    }
+
+    return base
+  }, [clansEnabled, isAuthenticated, location.pathname, user?.isAdmin])
+
+  const sanitizedUsername = user?.username ? sanitizeText(user.username) : ''
+  const userInitial = sanitizedUsername ? sanitizedUsername.charAt(0).toUpperCase() : '👤'
+
   // Show mute only in game/editor contexts
   const showMute =
     location.pathname.startsWith('/room') ||
@@ -151,58 +258,30 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Center nav - hidden on mobile, visible on desktop */}
-          <nav className="hidden lg:flex nav-tabs text-body-sm absolute left-1/2 transform -translate-x-1/2">
-            {isAuthenticated ? (
-              <>
-                <Link className={navTabClass(location.pathname === '/lobby')} to="/lobby">
-                  Play
+          {/* Center nav - compact icons for large screens, full nav for extra large */}
+          <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 flex-col items-center gap-2">
+            <nav className="hidden xl:flex nav-tabs text-body-sm">
+              {navLinks.map((link) => (
+                <Link key={link.to} className={navTabClass(link.isActive)} to={link.to}>
+                  {link.label}
                 </Link>
-                <Link className={navTabClass(location.pathname === '/maps')} to="/maps">
-                  Maps
+              ))}
+            </nav>
+            <nav className="hidden lg:flex xl:hidden nav-tabs items-center gap-1 rounded-full bg-white/5 px-2 py-1 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/10">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  className={`${navTabClass(link.isActive)} flex h-9 w-9 items-center justify-center rounded-full`}
+                  to={link.to}
+                  aria-label={link.label}
+                >
+                  <span aria-hidden="true" className="text-lg">
+                    {link.icon}
+                  </span>
                 </Link>
-                <Link className={navTabClass(location.pathname === '/community')} to="/community">
-                  Community
-                </Link>
-                {clansEnabled && (
-                  <Link className={navTabClass(location.pathname.startsWith('/clans'))} to="/clans">
-                    Clans
-                  </Link>
-                )}
-                <Link className={navTabClass(location.pathname === '/tutorial')} to="/tutorial">
-                  How to Play
-                </Link>
-                {user?.isAdmin && (
-                  <Link className={navTabClass(location.pathname === '/admin')} to="/admin">
-                    Admin
-                  </Link>
-                )}
-              </>
-            ) : (
-              <>
-                <Link className={navTabClass(location.pathname === '/')} to="/">
-                  Home
-                </Link>
-                <Link className={navTabClass(location.pathname === '/lobby')} to="/lobby">
-                  Play Now
-                </Link>
-                <Link className={navTabClass(location.pathname === '/maps')} to="/maps">
-                  Browse Maps
-                </Link>
-                <Link className={navTabClass(location.pathname === '/community')} to="/community">
-                  Community
-                </Link>
-                {clansEnabled && (
-                  <Link className={navTabClass(location.pathname.startsWith('/clans'))} to="/clans">
-                    Clans
-                  </Link>
-                )}
-                <Link className={navTabClass(location.pathname === '/tutorial')} to="/tutorial">
-                  How to Play
-                </Link>
-              </>
-            )}
-          </nav>
+              ))}
+            </nav>
+          </div>
 
           {/* Right auth */}
           <div className="flex items-center gap-1 sm:gap-2">
@@ -254,9 +333,11 @@ export default function Header() {
                     type="button"
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
+                    aria-label={sanitizedUsername ? `${sanitizedUsername} menu` : 'Account menu'}
                   >
-                    <span className="hidden sm:inline">
-                      {user?.username ? sanitizeText(user.username) : ''}
+                    <span className="hidden sm:inline">{sanitizedUsername}</span>
+                    <span className="sm:hidden flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+                      {userInitial}
                     </span>
                     <svg
                       width="12"

@@ -1,4 +1,5 @@
 import { type Request, type Response, Router } from 'express'
+import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
 import {
   acceptFriendRequest,
@@ -12,7 +13,6 @@ import {
   sendFriendRequest,
 } from '../services/friendService'
 import { handleRouteError } from '../utils/routeErrorHandler'
-import { query } from '../config/database'
 
 const router = Router()
 

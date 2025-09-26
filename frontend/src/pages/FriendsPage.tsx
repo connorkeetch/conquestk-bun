@@ -4,8 +4,8 @@ import friendsService, {
   type FriendRequestsResponse,
   type FriendSummary,
 } from '@/services/friendsService'
-import { logger } from '@/utils/logger'
 import { socketService } from '@/services/socketService'
+import { logger } from '@/utils/logger'
 
 type LoadState = 'idle' | 'loading' | 'error'
 
@@ -27,7 +27,10 @@ export default function FriendsPage() {
     setState('loading')
     setError(null)
     try {
-      const [f, r] = await Promise.all([friendsService.listFriends(), friendsService.listRequests()])
+      const [f, r] = await Promise.all([
+        friendsService.listFriends(),
+        friendsService.listRequests(),
+      ])
       setFriends(f)
       setRequests(r)
       setState('idle')
@@ -50,7 +53,7 @@ export default function FriendsPage() {
     try {
       const res = await api.get(`/users/${encodeURIComponent(username)}/profile`)
       return { id: res.data.id, username: res.data.username } as UserProfileLookup
-    } catch (e) {
+    } catch (_e) {
       return null
     }
   }
@@ -104,7 +107,7 @@ export default function FriendsPage() {
     try {
       await friendsService.accept(requesterId)
       await load()
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to accept request')
     } finally {
       setActionBusy('')
@@ -116,7 +119,7 @@ export default function FriendsPage() {
     try {
       await friendsService.decline(requesterId)
       await load()
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to decline request')
     } finally {
       setActionBusy('')
@@ -128,7 +131,7 @@ export default function FriendsPage() {
     try {
       await friendsService.cancel(targetUserId)
       await load()
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to cancel request')
     } finally {
       setActionBusy('')
@@ -140,7 +143,7 @@ export default function FriendsPage() {
     try {
       await friendsService.unfriend(friendId)
       await load()
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to remove friend')
     } finally {
       setActionBusy('')
@@ -150,19 +153,19 @@ export default function FriendsPage() {
   // Live refresh via socket
   useEffect(() => {
     const refresh = () => void load()
-    socketService.io?.on('friend.request.received', refresh)
-    socketService.io?.on('friend.request.accepted', refresh)
-    socketService.io?.on('friend.request.declined', refresh)
-    socketService.io?.on('friend.request.cancelled', refresh)
-    socketService.io?.on('friend.added', refresh)
-    socketService.io?.on('friend.removed', refresh)
+    socketService.on('friend.request.received', refresh)
+    socketService.on('friend.request.accepted', refresh)
+    socketService.on('friend.request.declined', refresh)
+    socketService.on('friend.request.cancelled', refresh)
+    socketService.on('friend.added', refresh)
+    socketService.on('friend.removed', refresh)
     return () => {
-      socketService.io?.off('friend.request.received', refresh)
-      socketService.io?.off('friend.request.accepted', refresh)
-      socketService.io?.off('friend.request.declined', refresh)
-      socketService.io?.off('friend.request.cancelled', refresh)
-      socketService.io?.off('friend.added', refresh)
-      socketService.io?.off('friend.removed', refresh)
+      socketService.off('friend.request.received', refresh)
+      socketService.off('friend.request.accepted', refresh)
+      socketService.off('friend.request.declined', refresh)
+      socketService.off('friend.request.cancelled', refresh)
+      socketService.off('friend.added', refresh)
+      socketService.off('friend.removed', refresh)
     }
   }, [load])
 
@@ -181,7 +184,12 @@ export default function FriendsPage() {
             value={usernameToAdd}
             onChange={(e) => setUsernameToAdd(e.target.value)}
           />
-          <button type="button" className="btn btn-primary" onClick={onSendRequest} disabled={actionBusy === 'send'}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onSendRequest}
+            disabled={actionBusy === 'send'}
+          >
             {actionBusy === 'send' ? 'Sending…' : 'Send Friend Request'}
           </button>
         </div>

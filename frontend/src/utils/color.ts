@@ -86,4 +86,3 @@ export const colorDistance = (hexA: string, hexB: string): number => {
   const db = a.b - b.b
   return Math.sqrt(dr * dr + dg * dg + db * db)
 }
-

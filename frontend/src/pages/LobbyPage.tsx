@@ -190,6 +190,24 @@ const formatBonusType = (bonus?: string | null) => {
   return `Bonus: ${formatted}`
 }
 
+const formatTreasureMode = (
+  treasureConfig: NormalizedLobbyRoom['treasureConfig'],
+): string | undefined => {
+  if (!treasureConfig) return undefined
+  const enabled = treasureConfig.enabled !== false
+  if (!enabled) return 'Treasures: Off'
+  const mode = treasureConfig.payoutMode || 'triangular'
+  if (mode === 'fixed') {
+    return `Treasures: Fixed (${Math.max(1, Math.min(50, treasureConfig.fixedValue ?? 8))})`
+  }
+  const labelMap: Record<string, string> = {
+    triangular: 'Triangular',
+    classic: 'Classic',
+    none: 'None',
+  }
+  return `Treasures: ${labelMap[mode] || mode}`
+}
+
 const LobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
@@ -908,6 +926,10 @@ const LobbyPage: React.FC = () => {
                     const bonusLabel = formatBonusType(game.bonusType)
                     if (bonusLabel) {
                       detailBadges.push(bonusLabel)
+                    }
+                    const treasureLabel = formatTreasureMode(game.treasureConfig)
+                    if (treasureLabel) {
+                      detailBadges.push(treasureLabel)
                     }
 
                     const uniqueDetailBadges = Array.from(new Set(detailBadges))
