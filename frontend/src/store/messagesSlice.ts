@@ -101,7 +101,8 @@ const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
     : undefined,
 })
 
-const adaptConversationDetail = (detail: ConversationDetail): ConversationEntity => adaptConversation(detail)
+const adaptConversationDetail = (detail: ConversationDetail): ConversationEntity =>
+  adaptConversation(detail)
 
 const adaptMessage = (message: ConversationMessageEventPayload): ConversationMessage => ({
   id: message.id,
@@ -121,7 +122,10 @@ const adaptFetchedMessage = (message: ConversationMessage): ConversationMessage 
   metadata: normalizeMetadata(message.metadata),
 })
 
-const ensureMessagesArray = (state: MessagesState, conversationId: string): ConversationMessage[] => {
+const ensureMessagesArray = (
+  state: MessagesState,
+  conversationId: string,
+): ConversationMessage[] => {
   if (!state.messages[conversationId]) {
     state.messages[conversationId] = []
   }
@@ -246,21 +250,18 @@ export const loadConversationMessages = createAsyncThunk<
   { conversationId: string; messages: ConversationMessage[]; hasMore: boolean },
   { conversationId: string; before?: string; limit?: number },
   { rejectValue: string }
->(
-  'messages/loadConversationMessages',
-  async (payload, { rejectWithValue }) => {
-    try {
-      const messages = await fetchConversationMessages(payload.conversationId, {
-        before: payload.before,
-        limit: payload.limit,
-      })
-      const hasMore = messages.length === (payload.limit ?? 50)
-      return { conversationId: payload.conversationId, messages, hasMore }
-    } catch (_error) {
-      return rejectWithValue('Failed to load messages')
-    }
-  },
-)
+>('messages/loadConversationMessages', async (payload, { rejectWithValue }) => {
+  try {
+    const messages = await fetchConversationMessages(payload.conversationId, {
+      before: payload.before,
+      limit: payload.limit,
+    })
+    const hasMore = messages.length === (payload.limit ?? 50)
+    return { conversationId: payload.conversationId, messages, hasMore }
+  } catch (_error) {
+    return rejectWithValue('Failed to load messages')
+  }
+})
 
 export const refreshConversation = createAsyncThunk<
   ConversationDetail,
@@ -274,16 +275,17 @@ export const refreshConversation = createAsyncThunk<
   }
 })
 
-export const loadUnreadSummary = createAsyncThunk<UnreadSummaryEntry[], void, { rejectValue: string }>(
-  'messages/loadUnreadSummary',
-  async (_payload, { rejectWithValue }) => {
-    try {
-      return await fetchUnreadSummary()
-    } catch (_error) {
-      return rejectWithValue('Failed to load unread summary')
-    }
-  },
-)
+export const loadUnreadSummary = createAsyncThunk<
+  UnreadSummaryEntry[],
+  void,
+  { rejectValue: string }
+>('messages/loadUnreadSummary', async (_payload, { rejectWithValue }) => {
+  try {
+    return await fetchUnreadSummary()
+  } catch (_error) {
+    return rejectWithValue('Failed to load unread summary')
+  }
+})
 
 export const ensureDirectConversation = createAsyncThunk<ConversationDetail, string, { rejectValue: string }>(
   'messages/ensureDirectConversation',
@@ -355,18 +357,22 @@ const messagesSlice = createSlice({
         if (!fromSelf && state.activeConversationId !== normalized.conversationId) {
           conversation.unreadCount = (conversation.unreadCount ?? 0) + 1
         }
-      } else if (!action.payload.currentUserId || normalized.senderId !== action.payload.currentUserId) {
-        state.pendingUnread[normalized.conversationId] = (state.pendingUnread[normalized.conversationId] ?? 0) + 1
+      } else if (
+        !action.payload.currentUserId ||
+        normalized.senderId !== action.payload.currentUserId
+      ) {
+        state.pendingUnread[normalized.conversationId] =
+          (state.pendingUnread[normalized.conversationId] ?? 0) + 1
       }
     },
     conversationCreated(
       state,
-      action: PayloadAction<{ payload: ConversationCreatedPayload; membership: ConversationMembership }>,
+      action: PayloadAction<{
+        payload: ConversationCreatedPayload
+        membership: ConversationMembership
+      }>,
     ) {
-      const {
-        conversation: summary,
-        members,
-      } = action.payload.payload
+      const { conversation: summary, members } = action.payload.payload
       const normalizedSummary: ConversationSummary = {
         ...summary,
         createdAt: toIsoString(summary.createdAt),
@@ -404,7 +410,12 @@ const messagesSlice = createSlice({
       const conversation = state.conversations[action.payload.conversationId]
       if (!conversation) return
 
-      mergeMembers(conversation, [], action.payload.members.map((member) => member.userId), [])
+      mergeMembers(
+        conversation,
+        [],
+        action.payload.members.map((member) => member.userId),
+        [],
+      )
     },
     conversationMembersChanged(state, action: PayloadAction<ConversationMembersChangedPayload>) {
       const conversation = state.conversations[action.payload.conversationId]
@@ -546,17 +557,16 @@ export const selectTypingUsers = (
   conversationId: string,
 ): Record<string, string> => state.messages.typing[conversationId] ?? {}
 
-export const selectHasMoreMessages = (
-  state: RootState,
-  conversationId: string,
-): boolean => state.messages.hasMore[conversationId] ?? true
+export const selectHasMoreMessages = (state: RootState, conversationId: string): boolean =>
+  state.messages.hasMore[conversationId] ?? true
 
 export const selectActiveConversationId = (state: RootState): string | null =>
   state.messages.activeConversationId
 
 export const selectMessagesInboxLoading = (state: RootState): boolean => state.messages.loadingInbox
 
-export const selectMessagesInboxError = (state: RootState): string | null => state.messages.inboxError
+export const selectMessagesInboxError = (state: RootState): string | null =>
+  state.messages.inboxError
 
 export const selectTotalUnreadMessages = (state: RootState): number => {
   const conversationUnread = Object.values(state.messages.conversations).reduce(

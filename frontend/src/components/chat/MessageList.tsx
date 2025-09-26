@@ -74,16 +74,9 @@ const parseLinkPreviews = (metadata?: Record<string, unknown> | null): LinkPrevi
     .filter((preview): preview is LinkPreviewData => preview !== null)
 }
 
-export default function MessageList({
-  messages,
-  currentUserId,
-  getDisplayName,
-}: MessageListProps) {
+export default function MessageList({ messages, currentUserId, getDisplayName }: MessageListProps) {
   const isOwn = useMemo(
-    () =>
-      new Set(
-        currentUserId && typeof currentUserId === 'string' ? [currentUserId] : [],
-      ),
+    () => new Set(currentUserId && typeof currentUserId === 'string' ? [currentUserId] : []),
     [currentUserId],
   )
 
@@ -96,7 +89,10 @@ export default function MessageList({
         const linkPreviews = parseLinkPreviews(message.metadata)
 
         return (
-          <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+          <div
+            key={message.id}
+            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+          >
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
                 isOwnMessage ? 'bg-primary text-white' : 'bg-surface-2 text-gray-200'

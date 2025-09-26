@@ -186,10 +186,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           aiPlayerId: player?.aiPlayerId ?? null,
           username: player?.username ?? socket.username ?? 'Unknown player',
           joinedAt: (player?.joinedAt ?? new Date()).toISOString(),
-          isReady:
-            player?.isReady === undefined
-              ? isAi
-              : Boolean(player.isReady),
+          isReady: player?.isReady === undefined ? isAi : Boolean(player.isReady),
           readyAt: player?.readyAt instanceof Date ? player.readyAt.toISOString() : null,
           teamId:
             typeof player?.teamId === 'number'
@@ -202,7 +199,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           aiPersonalitySeed:
             typeof player?.aiPersonalitySeed === 'number'
               ? player.aiPersonalitySeed
-              : player?.aiPersonalitySeed ?? null,
+              : (player?.aiPersonalitySeed ?? null),
         }
 
         socket.to(channel).emit('player-joined', {

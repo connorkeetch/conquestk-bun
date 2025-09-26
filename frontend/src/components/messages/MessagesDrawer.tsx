@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Loader2, X } from 'lucide-react'
-import { useAppDispatch, useAppSelector } from '@/hooks/redux'
-import { socketService } from '@/services/socketService'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import profileService from '@/services/profileService'
+import { socketService } from '@/services/socketService'
 import {
   loadConversationMessages,
   loadInbox,
@@ -86,7 +86,7 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
     activeConversationId ? Object.values(state.messages.typing[activeConversationId] ?? {}) : [],
   )
 
-  const hasMore = activeConversationId ? hasMoreMap[activeConversationId] ?? true : false
+  const hasMore = activeConversationId ? (hasMoreMap[activeConversationId] ?? true) : false
   const isThreadLoading = activeConversationId
     ? Boolean(loadingMessagesMap[activeConversationId])
     : false
@@ -192,25 +192,22 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
         const profile = await profileService.getProfileByUsername(username)
         const targetUserId = profile.id
 
-        socketService.createConversation(
-          { kind: 'direct', targetUserId },
-          (ack) => {
-            if (!ack?.ok || !ack.conversation) {
-              setCreateError(ack?.error ?? 'Unable to start conversation')
-              setIsCreatingConversation(false)
-              return
-            }
-
-            const conversationId = ack.conversation.id
-            dispatch(messagesActions.setActiveConversationId(conversationId))
-            dispatch(refreshConversation(conversationId))
-            dispatch(loadInbox())
-            socketService.markConversationReadViaSocket(conversationId)
-            setNewUsername('')
+        socketService.createConversation({ kind: 'direct', targetUserId }, (ack) => {
+          if (!ack?.ok || !ack.conversation) {
+            setCreateError(ack?.error ?? 'Unable to start conversation')
             setIsCreatingConversation(false)
-            setFilter('all')
-          },
-        )
+            return
+          }
+
+          const conversationId = ack.conversation.id
+          dispatch(messagesActions.setActiveConversationId(conversationId))
+          dispatch(refreshConversation(conversationId))
+          dispatch(loadInbox())
+          socketService.markConversationReadViaSocket(conversationId)
+          setNewUsername('')
+          setIsCreatingConversation(false)
+          setFilter('all')
+        })
       } catch (error) {
         const maybeAxios = error as { response?: { status?: number } }
         if (maybeAxios?.response?.status === 404) {
@@ -233,7 +230,7 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
           ? 'You'
           : typeof message.metadata?.senderName === 'string'
             ? (message.metadata.senderName as string)
-            : message.senderId ?? undefined,
+            : (message.senderId ?? undefined),
       body: message.body,
       createdAt: message.createdAt,
       metadata: message.metadata,
@@ -280,12 +277,16 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
       return 'Messages'
     }
 
-    const metadataTitle = typeof activeConversation.metadata?.displayName === 'string'
-      ? activeConversation.metadata.displayName
-      : undefined
+    const metadataTitle =
+      typeof activeConversation.metadata?.displayName === 'string'
+        ? activeConversation.metadata.displayName
+        : undefined
 
     return (
-      activeConversation.title || metadataTitle || DEFAULT_TITLES[activeConversation.kind] || 'Conversation'
+      activeConversation.title ||
+      metadataTitle ||
+      DEFAULT_TITLES[activeConversation.kind] ||
+      'Conversation'
     )
   }, [activeConversation])
 
@@ -312,7 +313,9 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
           <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-1/80">
             <div>
               <h2 className="text-lg font-semibold text-white">Messages</h2>
-              <p className="text-xs text-muted">{totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}</p>
+              <p className="text-xs text-muted">
+                {totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}
+              </p>
             </div>
             <button
               type="button"
@@ -351,7 +354,10 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
               </div>
               <div className="px-3 py-3 border-b border-border">
                 <form onSubmit={handleCreateConversation} className="space-y-2">
-                  <label htmlFor={newConversationInputId} className="text-[11px] uppercase tracking-wide text-muted block">
+                  <label
+                    htmlFor={newConversationInputId}
+                    className="text-[11px] uppercase tracking-wide text-muted block"
+                  >
                     Start new conversation
                   </label>
                   <div className="flex items-center gap-2">
@@ -412,7 +418,9 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className={`text-sm font-medium ${isActive ? 'text-white' : 'text-white/90'}`}>
+                                <p
+                                  className={`text-sm font-medium ${isActive ? 'text-white' : 'text-white/90'}`}
+                                >
                                   {title}
                                 </p>
                                 <p className="text-xs text-muted truncate">{subtitle}</p>
@@ -486,9 +494,7 @@ export default function MessagesDrawer({ isOpen, onClose }: MessagesDrawerProps)
                   </div>
 
                   <div className="border-t border-border bg-surface-1/80">
-                    {sendError && (
-                      <div className="px-4 pt-3 text-sm text-red-400">{sendError}</div>
-                    )}
+                    {sendError && <div className="px-4 pt-3 text-sm text-red-400">{sendError}</div>}
                     {activeConversation.isReadOnly ? (
                       <div className="px-4 py-3 text-sm text-muted">
                         This conversation is read-only.

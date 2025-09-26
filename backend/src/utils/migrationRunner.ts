@@ -400,13 +400,20 @@ export class MigrationRunner {
       }
 
       // Detect function blocks (outside of a DO block)
-      if (!inDoBlock && (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))) {
+      if (
+        !inDoBlock &&
+        (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))
+      ) {
         inFunction = true
       }
 
       // Detect DO $$ blocks
       // Examples: "DO $$", "DO $tag$", optional LANGUAGE may be on same/next line
-      if (!inFunction && !inDoBlock && /^(DO\s+\$\$|DO\s+\$[A-Za-z_][A-Za-z0-9_]*\$)/i.test(trimmedLine)) {
+      if (
+        !inFunction &&
+        !inDoBlock &&
+        /^(DO\s+\$\$|DO\s+\$[A-Za-z_][A-Za-z0-9_]*\$)/i.test(trimmedLine)
+      ) {
         inDoBlock = true
       }
 

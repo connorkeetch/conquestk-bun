@@ -645,7 +645,10 @@ This allows themes to work with any color scheme!
     border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
     color: var(--heading);
     box-shadow: var(--shadow-1);
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
   }
 
   .theme-selected:hover {
@@ -739,8 +742,8 @@ body {
   font-family: var(--font-family-base, "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif);
 }
 
-body[data-background-motion='off']::before,
-body[data-background-motion='off']::after {
+body[data-background-motion="off"]::before,
+body[data-background-motion="off"]::after {
   animation: none;
 }
 
@@ -918,7 +921,7 @@ kbd {
 }
 
 .nav-tab.is-active::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   bottom: -0.45rem;
@@ -961,7 +964,7 @@ kbd {
 }
 
 .segmented-control button.segmented-active::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   bottom: -0.45rem;

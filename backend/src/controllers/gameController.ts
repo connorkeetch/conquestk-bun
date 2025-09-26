@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express'
+import { featureFlagService } from '../services/featureFlagService'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
-import { featureFlagService } from '../services/featureFlagService'
 import type { AuthenticatedRequest } from '../types/express'
 import { logger } from '../utils/logger'
 
@@ -104,9 +104,7 @@ export class GameController {
               }
 
               const rawDifficulty =
-                typeof opponent.difficulty === 'string'
-                  ? opponent.difficulty.toLowerCase()
-                  : null
+                typeof opponent.difficulty === 'string' ? opponent.difficulty.toLowerCase() : null
 
               if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty)) {
                 continue
@@ -362,7 +360,10 @@ export class GameController {
       if (commanderEnabled) allowedDifficulties.add('commander')
       if (grandmasterEnabled) allowedDifficulties.add('grandmaster')
 
-      const sanitizedRequest: Array<{ difficulty: NormalizedDifficulty; personalitySeed?: number | null }> = []
+      const sanitizedRequest: Array<{
+        difficulty: NormalizedDifficulty
+        personalitySeed?: number | null
+      }> = []
 
       for (const entry of aiOpponents) {
         if (!entry || typeof entry !== 'object') {

@@ -985,13 +985,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between p-6 border-t border-border bg-surface-1">
           <div className="text-sm text-muted">Changes are saved automatically</div>
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
+            <button type="button" onClick={onClose} className="btn btn-secondary">
+              Cancel
+            </button>
             <button
               type="button"
               onClick={onClose}

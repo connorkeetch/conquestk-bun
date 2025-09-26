@@ -1,10 +1,10 @@
-import apiClient from './api'
 import type {
   ConversationDetail,
   ConversationListItem,
   ConversationMessage,
   UnreadSummaryEntry,
 } from '../types/messages'
+import apiClient from './api'
 
 export async function fetchConversations(options?: {
   limit?: number

@@ -258,12 +258,7 @@ export class GameRoomService {
   }
 
   private isPlayerRow(value: unknown): value is PlayerRow {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      'id' in value &&
-      'joinedAt' in value
-    )
+    return typeof value === 'object' && value !== null && 'id' in value && 'joinedAt' in value
   }
 
   private normalizePlayerTier(tier: string | null | undefined): Player['current_tier'] {
@@ -323,7 +318,8 @@ export class GameRoomService {
     }
 
     const allowed: Set<AIDifficultyOption> = new Set(['recruit', 'commander', 'grandmaster'])
-    const normalized: Array<{ difficulty: AIDifficultyOption; personalitySeed?: number | null }> = []
+    const normalized: Array<{ difficulty: AIDifficultyOption; personalitySeed?: number | null }> =
+      []
 
     for (const entry of aiOpponents) {
       if (!entry || typeof entry !== 'object') {
@@ -338,10 +334,7 @@ export class GameRoomService {
       }
 
       let personalitySeed: number | null | undefined
-      if (
-        typeof entry.personalitySeed === 'number' &&
-        Number.isFinite(entry.personalitySeed)
-      ) {
+      if (typeof entry.personalitySeed === 'number' && Number.isFinite(entry.personalitySeed)) {
         personalitySeed = Math.trunc(entry.personalitySeed)
       }
 
@@ -586,7 +579,12 @@ export class GameRoomService {
               ? opponent.personalitySeed
               : Math.trunc(Math.random() * 10_000_000)
 
-          await client.query(insertAiQuery, [createdRoom.id, aiIdentifier, opponent.difficulty, seed])
+          await client.query(insertAiQuery, [
+            createdRoom.id,
+            aiIdentifier,
+            opponent.difficulty,
+            seed,
+          ])
         }
       }
 
@@ -697,9 +695,10 @@ export class GameRoomService {
         status: string
         max_players: number
         is_ranked: boolean | null
-      }>('SELECT host_id, status, max_players, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE', [
-        roomId,
-      ])
+      }>(
+        'SELECT host_id, status, max_players, is_ranked FROM game_rooms WHERE id = $1 FOR UPDATE',
+        [roomId],
+      )
 
       const roomRow = roomResult.rows[0]
       if (!roomRow) {
@@ -726,9 +725,10 @@ export class GameRoomService {
         is_ai: boolean | null
         ai_difficulty: string | null
         ai_personality_seed: number | null
-      }>('SELECT id, user_id, ai_player_id, is_ai, ai_difficulty, ai_personality_seed FROM room_players WHERE room_id = $1 ORDER BY joined_at ASC', [
-        roomId,
-      ])
+      }>(
+        'SELECT id, user_id, ai_player_id, is_ai, ai_difficulty, ai_personality_seed FROM room_players WHERE room_id = $1 ORDER BY joined_at ASC',
+        [roomId],
+      )
 
       const existingAiPlayers = playersResult.rows.filter((player) => player.is_ai)
       const humanPlayerCount = playersResult.rows.filter((player) => !player.is_ai).length
@@ -1055,7 +1055,10 @@ export class GameRoomService {
       const playerLookupById = await client.query<{
         id: string
         user_id: string | null
-      }>('SELECT id, user_id FROM room_players WHERE room_id = $1 AND id = $2', [roomId, targetPlayerIdentifier])
+      }>('SELECT id, user_id FROM room_players WHERE room_id = $1 AND id = $2', [
+        roomId,
+        targetPlayerIdentifier,
+      ])
 
       let targetPlayerRow = playerLookupById.rows[0]
 
@@ -1092,10 +1095,11 @@ export class GameRoomService {
         }
       }
 
-      await client.query(
-        'UPDATE room_players SET team_id = $3 WHERE room_id = $1 AND id = $2',
-        [roomId, targetPlayerRow.id, normalizedTeamId],
-      )
+      await client.query('UPDATE room_players SET team_id = $3 WHERE room_id = $1 AND id = $2', [
+        roomId,
+        targetPlayerRow.id,
+        normalizedTeamId,
+      ])
 
       await client.query('COMMIT')
     } catch (error) {

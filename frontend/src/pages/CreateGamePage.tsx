@@ -8,8 +8,8 @@ import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import api from '../services/api'
-import type { AIDifficulty } from '../types/game'
 import { type CreateGameData, gameService } from '../services/gameService'
+import type { AIDifficulty } from '../types/game'
 
 // Map interface
 interface GameMap {
@@ -301,7 +301,9 @@ const CreateGamePage: React.FC = () => {
   useEffect(() => {
     setAiCounts((previous) => {
       const normalized = normalizeAiCounts(previous)
-      const hasChanged = AI_DIFFICULTY_ORDER.some((difficulty) => normalized[difficulty] !== previous[difficulty])
+      const hasChanged = AI_DIFFICULTY_ORDER.some(
+        (difficulty) => normalized[difficulty] !== previous[difficulty],
+      )
       return hasChanged ? normalized : previous
     })
   }, [normalizeAiCounts])
@@ -834,26 +836,22 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setGameMode('classic')}
               className={choiceClass(
                 gameMode === 'classic',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-[color:var(--heading)]">⚔️ Classic Risk</div>
-              <p className="text-xs text-muted">
-                Conquer all territories to win
-              </p>
+              <p className="text-xs text-muted">Conquer all territories to win</p>
             </button>
             <button
               type="button"
               onClick={() => setGameMode('capitals')}
               className={choiceClass(
                 gameMode === 'capitals',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-[color:var(--heading)]">🏰 Capitals</div>
-              <p className="text-xs text-muted">
-                Protect your capital territory to stay alive
-              </p>
+              <p className="text-xs text-muted">Protect your capital territory to stay alive</p>
             </button>
             {!isRanked && (
               <button
@@ -861,7 +859,7 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setGameMode('random')}
                 className={choiceClass(
                   gameMode === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1'
+                  'w-full p-3 text-left flex flex-col gap-1',
                 )}
               >
                 <div className="font-medium text-[color:var(--heading)]">🎲 Random</div>
@@ -945,7 +943,7 @@ const CreateGamePage: React.FC = () => {
                         ? `${disabledChoiceClass} p-3 text-center font-bold`
                         : choiceClass(
                             playersOption === playerCount,
-                            'p-3 text-center font-bold transition-all duration-200'
+                            'p-3 text-center font-bold transition-all duration-200',
                           )
                     }`}
                     disabled={isDisabled}
@@ -960,7 +958,7 @@ const CreateGamePage: React.FC = () => {
                   type="button"
                   className={choiceClass(
                     playersOption === 'random',
-                    'p-3 text-center font-bold transition-all duration-200'
+                    'p-3 text-center font-bold transition-all duration-200',
                   )}
                   onClick={() => setPlayersOption('random')}
                 >
@@ -980,14 +978,17 @@ const CreateGamePage: React.FC = () => {
           <OptionCard number="5" title="AI Opponents (Optional)">
             {allowedAiDifficulties.length === 0 ? (
               <p className="text-xs text-muted">
-                No AI difficulties are currently enabled for your account. Ask an admin to enable
-                an AI tier flag to add computer opponents.
+                No AI difficulties are currently enabled for your account. Ask an admin to enable an
+                AI tier flag to add computer opponents.
               </p>
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-muted">
                   You can reserve up to {maxAiSlots} AI slot{maxAiSlots === 1 ? '' : 's'} in this
-                  lobby. {remainingAiSlots > 0 ? `${remainingAiSlots} open slot${remainingAiSlots === 1 ? '' : 's'} remaining.` : 'No open slots remain—lower counts or raise max players.'}
+                  lobby.{' '}
+                  {remainingAiSlots > 0
+                    ? `${remainingAiSlots} open slot${remainingAiSlots === 1 ? '' : 's'} remaining.`
+                    : 'No open slots remain—lower counts or raise max players.'}
                 </p>
                 {playersOption === 'random' && (
                   <p className="text-xs text-amber-300">
@@ -1081,7 +1082,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setTeams(teamOption)}
                     className={choiceClass(
                       teams === teamOption,
-                      'w-full p-3 text-left flex flex-col gap-1'
+                      'w-full p-3 text-left flex flex-col gap-1',
                     )}
                   >
                     <div className="font-medium text-sm text-[color:var(--heading)]">
@@ -1100,7 +1101,7 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setTeams('random')}
                 className={choiceClass(
                   teams === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1'
+                  'w-full p-3 text-left flex flex-col gap-1',
                 )}
               >
                 <div className="font-medium text-sm text-[color:var(--heading)]">
@@ -1120,7 +1121,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('adjacent')}
               className={choiceClass(
                 fortification === 'adjacent',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">
@@ -1134,7 +1135,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('adjacent_multi')}
               className={choiceClass(
                 fortification === 'adjacent_multi',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">
@@ -1148,7 +1149,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('chained')}
               className={choiceClass(
                 fortification === 'chained',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">⛓️ Chained</div>
@@ -1160,7 +1161,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setFortification('unlimited')}
               className={choiceClass(
                 fortification === 'unlimited',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">🌍 Unlimited</div>
@@ -1173,7 +1174,7 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setFortification('random')}
                 className={choiceClass(
                   fortification === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1'
+                  'w-full p-3 text-left flex flex-col gap-1',
                 )}
               >
                 <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
@@ -1191,7 +1192,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('escalating')}
               className={choiceClass(
                 spoilsType === 'escalating',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">📈 Escalating</div>
@@ -1203,7 +1204,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('fixed')}
               className={choiceClass(
                 spoilsType === 'fixed',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">⚖️ Fixed Value</div>
@@ -1215,7 +1216,7 @@ const CreateGamePage: React.FC = () => {
               onClick={() => setSpoilsType('static')}
               className={choiceClass(
                 spoilsType === 'static',
-                'w-full p-3 text-left flex flex-col gap-1'
+                'w-full p-3 text-left flex flex-col gap-1',
               )}
             >
               <div className="font-medium text-sm text-[color:var(--heading)]">🔒 Static</div>
@@ -1228,7 +1229,7 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setSpoilsType('random')}
                 className={choiceClass(
                   spoilsType === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1'
+                  'w-full p-3 text-left flex flex-col gap-1',
                 )}
               >
                 <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
@@ -1250,7 +1251,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('off')}
                   className={choiceClass(
                     fogOfWar === 'off',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                    'w-full px-3 py-2 text-left flex flex-col gap-1',
                   )}
                 >
                   <div className="text-sm text-[color:var(--heading)]">☀️ No Fog</div>
@@ -1261,7 +1262,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('adjacent')}
                   className={choiceClass(
                     fogOfWar === 'adjacent',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                    'w-full px-3 py-2 text-left flex flex-col gap-1',
                   )}
                 >
                   <div className="text-sm text-[color:var(--heading)]">🔗 Adjacent</div>
@@ -1272,7 +1273,7 @@ const CreateGamePage: React.FC = () => {
                   onClick={() => setFogOfWar('persistent')}
                   className={choiceClass(
                     fogOfWar === 'persistent',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1'
+                    'w-full px-3 py-2 text-left flex flex-col gap-1',
                   )}
                 >
                   <div className="text-sm text-[color:var(--heading)]">🗺️ Persistent</div>
@@ -1293,7 +1294,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setUseTerritoryModifiers(false)}
                     className={choiceClass(
                       !useTerritoryModifiers,
-                      'w-full px-3 py-2 text-left flex flex-col gap-1'
+                      'w-full px-3 py-2 text-left flex flex-col gap-1',
                     )}
                   >
                     <div className="text-sm text-[color:var(--heading)]">❌ Disabled</div>
@@ -1304,7 +1305,7 @@ const CreateGamePage: React.FC = () => {
                     onClick={() => setUseTerritoryModifiers(true)}
                     className={choiceClass(
                       useTerritoryModifiers,
-                      'w-full px-3 py-2 text-left flex flex-col gap-1'
+                      'w-full px-3 py-2 text-left flex flex-col gap-1',
                     )}
                   >
                     <div className="text-sm text-[color:var(--heading)]">⚡ Enabled</div>
@@ -1321,7 +1322,7 @@ const CreateGamePage: React.FC = () => {
                         onClick={() => setModifierDistribution('sparse')}
                         className={choiceClass(
                           modifierDistribution === 'sparse',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                          'w-full px-3 py-2 text-left flex flex-col gap-1',
                         )}
                       >
                         <div className="text-sm text-[color:var(--heading)]">Sparse (15%)</div>
@@ -1332,7 +1333,7 @@ const CreateGamePage: React.FC = () => {
                         onClick={() => setModifierDistribution('balanced')}
                         className={choiceClass(
                           modifierDistribution === 'balanced',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                          'w-full px-3 py-2 text-left flex flex-col gap-1',
                         )}
                       >
                         <div className="text-sm text-[color:var(--heading)]">Balanced (30%)</div>
@@ -1343,7 +1344,7 @@ const CreateGamePage: React.FC = () => {
                         onClick={() => setModifierDistribution('abundant')}
                         className={choiceClass(
                           modifierDistribution === 'abundant',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1'
+                          'w-full px-3 py-2 text-left flex flex-col gap-1',
                         )}
                       >
                         <div className="text-sm text-[color:var(--heading)]">Abundant (50%)</div>

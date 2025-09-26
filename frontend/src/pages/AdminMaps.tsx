@@ -750,13 +750,17 @@ export const AdminMaps: React.FC = () => {
             </p>
           </div>
           <div className="panel border-[color:var(--color-success)] bg-[color:color-mix(in srgb, var(--color-success) 12%, transparent)]">
-            <p className="text-sm uppercase tracking-wide text-[color:var(--color-success)]">Approved</p>
+            <p className="text-sm uppercase tracking-wide text-[color:var(--color-success)]">
+              Approved
+            </p>
             <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'approved').length}
             </p>
           </div>
           <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
-            <p className="text-sm uppercase tracking-wide text-[color:var(--color-danger)]">Rejected</p>
+            <p className="text-sm uppercase tracking-wide text-[color:var(--color-danger)]">
+              Rejected
+            </p>
             <p className="mt-1 text-2xl font-bold text-[color:var(--heading)]">
               {maps.filter((m) => m.status === 'rejected').length}
             </p>
@@ -809,7 +813,9 @@ export const AdminMaps: React.FC = () => {
 
         {error && (
           <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
-            <h3 className="text-sm font-semibold text-[color:var(--color-danger)]">Error Loading Maps</h3>
+            <h3 className="text-sm font-semibold text-[color:var(--color-danger)]">
+              Error Loading Maps
+            </h3>
             <p className="mt-1 text-sm text-[color:var(--color-danger)]">{error}</p>
           </div>
         )}
@@ -818,7 +824,9 @@ export const AdminMaps: React.FC = () => {
         <div className="panel p-0">
           {maps.length === 0 ? (
             <div className="py-12 text-center">
-              <h3 className="mb-2 text-lg font-semibold text-[color:var(--heading)]">No Maps Found</h3>
+              <h3 className="mb-2 text-lg font-semibold text-[color:var(--heading)]">
+                No Maps Found
+              </h3>
               <p className="text-sm text-muted">No maps match your current filters.</p>
             </div>
           ) : (
@@ -926,7 +934,9 @@ export const AdminMaps: React.FC = () => {
                           </div>
                         </td>
                         <td>
-                          <span className={getStatusBadge(map.status)}>{statusLabels[map.status]}</span>
+                          <span className={getStatusBadge(map.status)}>
+                            {statusLabels[map.status]}
+                          </span>
                         </td>
                         <td>
                           <div className="text-sm text-[color:var(--heading)]">
@@ -1001,7 +1011,9 @@ export const AdminMaps: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div className="modal w-full max-w-md">
               <div className="modal-header">
-                <h2 className="text-lg font-semibold text-[color:var(--heading)]">Edit Map Details</h2>
+                <h2 className="text-lg font-semibold text-[color:var(--heading)]">
+                  Edit Map Details
+                </h2>
               </div>
               <div className="modal-body space-y-4">
                 <div>
@@ -1061,7 +1073,10 @@ export const AdminMaps: React.FC = () => {
                       max="12"
                       value={editForm.minPlayers}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, minPlayers: Number.parseInt(e.target.value, 10) })
+                        setEditForm({
+                          ...editForm,
+                          minPlayers: Number.parseInt(e.target.value, 10),
+                        })
                       }
                       className="form-input"
                     />
@@ -1077,7 +1092,10 @@ export const AdminMaps: React.FC = () => {
                       max="12"
                       value={editForm.maxPlayers}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, maxPlayers: Number.parseInt(e.target.value, 10) })
+                        setEditForm({
+                          ...editForm,
+                          maxPlayers: Number.parseInt(e.target.value, 10),
+                        })
                       }
                       className="form-input"
                     />
@@ -1155,7 +1173,8 @@ export const AdminMaps: React.FC = () => {
               </div>
               <div className="modal-body">
                 <p className="text-sm text-muted">
-                  Are you sure you want to delete "{selectedMap.name}"? This action cannot be undone.
+                  Are you sure you want to delete "{selectedMap.name}"? This action cannot be
+                  undone.
                 </p>
               </div>
               <div className="modal-footer">
@@ -1241,7 +1260,9 @@ export const AdminMaps: React.FC = () => {
             >
               <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-3">
-                  <h2 className="text-3xl font-bold text-[color:var(--heading)]">{previewMap.name}</h2>
+                  <h2 className="text-3xl font-bold text-[color:var(--heading)]">
+                    {previewMap.name}
+                  </h2>
                   {previewMap.description && (
                     <p className="text-sm text-muted md:max-w-3xl">{previewMap.description}</p>
                   )}
@@ -1420,13 +1441,17 @@ export const AdminMaps: React.FC = () => {
 
                       {previewLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <span className="text-sm text-[color:var(--color-white)]">Loading map data…</span>
+                          <span className="text-sm text-[color:var(--color-white)]">
+                            Loading map data…
+                          </span>
                         </div>
                       )}
 
                       {previewError && !previewLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-4 text-center">
-                          <span className="text-sm text-[color:var(--color-danger)]">{previewError}</span>
+                          <span className="text-sm text-[color:var(--color-danger)]">
+                            {previewError}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1536,7 +1561,11 @@ export const AdminMaps: React.FC = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={closePreviewModal} className="btn btn-ghost btn-sm">
+                  <button
+                    type="button"
+                    onClick={closePreviewModal}
+                    className="btn btn-ghost btn-sm"
+                  >
                     Close Preview
                   </button>
                 </div>

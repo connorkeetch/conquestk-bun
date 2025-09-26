@@ -52,9 +52,9 @@
     "npm": ">=10.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.2",
-    "@playwright/test": "^1.55.0",
-    "@types/node": "^24.3.1",
+    "@biomejs/biome": "2.2.4",
+    "@playwright/test": "^1.55.1",
+    "@types/node": "^24.5.2",
     "concurrently": "^8.2.2"
   },
   "workspaces": [

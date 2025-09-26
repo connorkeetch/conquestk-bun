@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg'
 import { query, transaction } from '../config/database'
 import type {
   Clan,
+  ClanActivityEvent,
   ClanAnnouncement,
   ClanCreateRequest,
   ClanDetails,
@@ -10,7 +11,6 @@ import type {
   ClanMember,
   ClanMemberStatus,
   ClanMembershipContext,
-  ClanActivityEvent,
   ClanPrivacy,
   ClanRecruitmentPolicy,
   ClanRecruitmentStatus,

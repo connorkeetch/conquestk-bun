@@ -139,43 +139,25 @@ export default function Header() {
           <nav className="hidden lg:flex nav-tabs text-body-sm absolute left-1/2 transform -translate-x-1/2">
             {isAuthenticated ? (
               <>
-                <Link
-                  className={navTabClass(location.pathname === '/lobby')}
-                  to="/lobby"
-                >
+                <Link className={navTabClass(location.pathname === '/lobby')} to="/lobby">
                   Play
                 </Link>
-                <Link
-                  className={navTabClass(location.pathname === '/maps')}
-                  to="/maps"
-                >
+                <Link className={navTabClass(location.pathname === '/maps')} to="/maps">
                   Maps
                 </Link>
-                <Link
-                  className={navTabClass(location.pathname === '/community')}
-                  to="/community"
-                >
+                <Link className={navTabClass(location.pathname === '/community')} to="/community">
                   Community
                 </Link>
                 {clansEnabled && (
-                  <Link
-                    className={navTabClass(location.pathname.startsWith('/clans'))}
-                    to="/clans"
-                  >
+                  <Link className={navTabClass(location.pathname.startsWith('/clans'))} to="/clans">
                     Clans
                   </Link>
                 )}
-                <Link
-                  className={navTabClass(location.pathname === '/tutorial')}
-                  to="/tutorial"
-                >
+                <Link className={navTabClass(location.pathname === '/tutorial')} to="/tutorial">
                   How to Play
                 </Link>
                 {user?.isAdmin && (
-                  <Link
-                    className={navTabClass(location.pathname === '/admin')}
-                    to="/admin"
-                  >
+                  <Link className={navTabClass(location.pathname === '/admin')} to="/admin">
                     Admin
                   </Link>
                 )}
@@ -372,15 +354,15 @@ export default function Header() {
               </span>
             </span>
           </div>
-              <button
-                type="button"
-                onClick={() => setIsMenuOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="Close menu"
-              >
-                <svg
-                  width="20"
-                  height="20"
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen(false)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Close menu"
+          >
+            <svg
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               className="fill-white/70"
               aria-hidden="true"
