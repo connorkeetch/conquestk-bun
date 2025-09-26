@@ -1,7 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import type { Territory } from '@/types/game'
 import type { AppDispatch, RootState } from '../store'
 import { endTurn } from '../store/gameActions'
 import {
@@ -13,7 +12,7 @@ import {
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import { GameOverModal } from './GameOverModal'
 import { GamePhaseControls } from './GamePhaseControls'
-import type { TerritoryDisplayMap } from './RiskGameBoard'
+import { createTerritoryDisplayMap } from './game/territoryDisplay'
 import { SimpleMapSVG } from './SimpleMapSVG'
 import { TestMapSVG } from './TestMapSVG'
 
@@ -28,28 +27,6 @@ const TRAINING_GROUNDS_CONTINENTS: Record<string, { name: string; bonus: number;
     'southern-realms': { name: 'Southern Realms', bonus: 2, color: '#FF9800' },
     'eastern-empire': { name: 'Eastern Empire', bonus: 3, color: '#9C27B0' },
   }
-
-// Helper function to convert Redux territories to display format
-const createTerritoryDisplayMap = (territories: Territory[]): TerritoryDisplayMap => {
-  const displayMap: TerritoryDisplayMap = {}
-
-  territories.forEach((territory) => {
-    const coordinates = territory.coordinates
-    const armyPosition = coordinates ? { x: coordinates.x, y: coordinates.y } : { x: 0, y: 0 }
-
-    displayMap[territory.id] = {
-      id: territory.id,
-      name: territory.name,
-      continent: territory.continent ?? territory.continentId ?? 'unknown',
-      adjacentTerritories: territory.adjacentTerritories,
-      armyPosition,
-      owner: territory.ownerId ?? undefined,
-      armies: territory.armies,
-    }
-  })
-
-  return displayMap
-}
 
 export const SimpleRiskGameBoard: React.FC<SimpleRiskGameBoardProps> = ({ onTerritoryClick }) => {
   const dispatch = useDispatch<AppDispatch>()

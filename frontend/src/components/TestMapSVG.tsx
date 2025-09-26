@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useId } from 'react'
-import type { TerritoryDisplayMap } from './RiskGameBoard'
+import type { TerritoryDisplayMap } from './game/territoryDisplay'
 
 interface TestMapSVGProps {
   territories: TerritoryDisplayMap

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAppSelector } from '../../hooks/redux'
+import { useAppDispatch, useAppSelector } from '../../hooks/redux'
+import { ensureGameConversation, ensureTeamConversation, selectAllConversations } from '../../store/messagesSlice'
 import ChatContainer from './ChatContainer'
 
 interface ChatPlayer {
@@ -32,8 +33,50 @@ export default function TabbedGameChat({
   userTeamId,
   className = '',
 }: TabbedGameChatProps) {
+  const dispatch = useAppDispatch()
   const [activeTab, setActiveTab] = useState<string>('game')
-  const unreadCounts = useAppSelector((state) => state.chat.conversations)
+  const conversations = useAppSelector(selectAllConversations)
+
+  useEffect(() => {
+    void dispatch(ensureGameConversation(gameId))
+  }, [dispatch, gameId])
+
+  useEffect(() => {
+    if (userTeamId !== null && userTeamId !== undefined) {
+      void dispatch(ensureTeamConversation({ gameId, teamId: userTeamId }))
+    }
+  }, [dispatch, gameId, userTeamId])
+
+  const gameConversation = useMemo(
+    () => conversations.find((conversationEntity) => conversationEntity.kind === 'game' && conversationEntity.gameId === gameId),
+    [conversations, gameId],
+  )
+
+  const teamConversation = useMemo(() => {
+    if (userTeamId === null || userTeamId === undefined) {
+      return undefined
+    }
+    return conversations.find(
+      (conversationEntity) =>
+        conversationEntity.kind === 'team' &&
+        conversationEntity.gameId === gameId &&
+        Number(conversationEntity.metadata?.teamId) === userTeamId,
+    )
+  }, [conversations, gameId, userTeamId])
+
+  const directConversationByUserId = useMemo(() => {
+    const map = new Map<string, (typeof conversations)[number]>()
+    for (const conversationEntity of conversations) {
+      if (conversationEntity.kind !== 'direct') continue
+      if (!conversationEntity.memberIds.includes(currentUserId)) continue
+      for (const memberId of conversationEntity.memberIds) {
+        if (memberId !== currentUserId) {
+          map.set(memberId, conversationEntity)
+        }
+      }
+    }
+    return map
+  }, [conversations, currentUserId])
 
   // Build tabs
   const tabs = useMemo<ChatTab[]>(() => {
@@ -44,7 +87,7 @@ export default function TabbedGameChat({
       label: '🎮 Game',
       type: 'game',
       conversationId: gameId,
-      badge: unreadCounts[`game:${gameId}`]?.unreadCount || 0,
+      badge: gameConversation?.unreadCount ?? 0,
       enabled: true,
     })
 
@@ -54,7 +97,7 @@ export default function TabbedGameChat({
         label: '👥 Team',
         type: 'team',
         conversationId: `${gameId}:${userTeamId}`,
-        badge: unreadCounts[`team:${gameId}:${userTeamId}`]?.unreadCount || 0,
+        badge: teamConversation?.unreadCount ?? 0,
         enabled: true,
       })
     }
@@ -71,13 +114,13 @@ export default function TabbedGameChat({
           label: `💬 ${player.username}${teamIndicator}`,
           type: 'dm',
           conversationId: userId,
-          badge: unreadCounts[`dm:${userId}`]?.unreadCount || 0,
+          badge: directConversationByUserId.get(userId)?.unreadCount ?? 0,
           enabled: true,
         })
       })
 
     return builtTabs
-  }, [currentUserId, gameId, players, unreadCounts, userTeamId])
+  }, [currentUserId, gameId, players, userTeamId, gameConversation, teamConversation, directConversationByUserId])
 
   // Make sure active tab is valid
   useEffect(() => {

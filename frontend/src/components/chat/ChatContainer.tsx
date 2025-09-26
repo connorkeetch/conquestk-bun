@@ -3,25 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
 import {
-  addMessage,
-  deleteMessage,
-  editMessage,
-  loadChatHistory as legacyLoadChatHistory,
-  markMessagesAsRead,
-  setActiveConversation,
-  setTypingUser,
-  setUnreadCounts,
-} from '../../store/chatSlice'
-import {
+  ensureDirectConversation,
+  ensureGameConversation,
+  ensureTeamConversation,
   loadConversationMessages,
   messagesActions,
   refreshConversation,
   selectConversationById,
   selectHasMoreMessages,
   selectMessagesForConversation,
-  selectTypingUsers,
 } from '../../store/messagesSlice'
-import type { ChatMessage } from '../../store/chatSlice'
 import MessageInput from './MessageInput'
 import MessageList, { type DisplayMessage } from './MessageList'
 
@@ -31,150 +22,156 @@ type ChatContainerProps = {
   className?: string
 }
 
-export default function ChatContainer(props: ChatContainerProps) {
-  if (props.conversationType === 'dm') {
-    return <DirectMessageChat {...props} />
-  }
-
-  return <LegacyChat {...props} />
-}
-
-function DirectMessageChat({ conversationId: partnerId, className = '' }: ChatContainerProps) {
+export default function ChatContainer({ conversationType, conversationId, className = '' }: ChatContainerProps) {
   const dispatch = useAppDispatch()
-  const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null)
+  const [resolvedConversationId, setResolvedConversationId] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const conversation = useAppSelector((state) =>
-    conversationId ? selectConversationById(state, conversationId) : undefined,
+    resolvedConversationId ? selectConversationById(state, resolvedConversationId) : undefined,
   )
   const rawMessages = useAppSelector((state) =>
-    conversationId ? selectMessagesForConversation(state, conversationId) : [],
-  )
-  const typingUsersMap = useAppSelector((state) =>
-    conversationId ? selectTypingUsers(state, conversationId) : {},
+    resolvedConversationId ? selectMessagesForConversation(state, resolvedConversationId) : [],
   )
   const hasMore = useAppSelector((state) =>
-    conversationId ? selectHasMoreMessages(state, conversationId) : false,
+    resolvedConversationId ? selectHasMoreMessages(state, resolvedConversationId) : false,
   )
-  const isLoadingMessages = useAppSelector(
-    (state) => conversationId && state.messages.loadingMessages[conversationId],
+  const isLoadingMessages = useAppSelector((state) =>
+    resolvedConversationId ? Boolean(state.messages.loadingMessages[resolvedConversationId]) : false,
+  )
+  const typingUsers = useAppSelector((state) =>
+    resolvedConversationId ? Object.values(state.messages.typing[resolvedConversationId] ?? {}) : [],
   )
 
   useEffect(() => {
-    if (!partnerId || !currentUserId) {
-      return
-    }
-
-    if (!socketService.getSocket()) {
-      return
-    }
-
     let cancelled = false
-    setInitializing(true)
-    setError(null)
 
-    socketService.createConversation(
-      { kind: 'direct', targetUserId: partnerId },
-      (ack) => {
+    const ensureConversation = async () => {
+      setInitializing(true)
+      setError(null)
+      setResolvedConversationId(null)
+
+      try {
+        let detail:
+          | Awaited<ReturnType<typeof ensureDirectConversation>['unwrap']>
+          | Awaited<ReturnType<typeof ensureGameConversation>['unwrap']>
+          | Awaited<ReturnType<typeof ensureTeamConversation>['unwrap']>
+
+        switch (conversationType) {
+          case 'dm':
+            detail = await dispatch(ensureDirectConversation(conversationId)).unwrap()
+            break
+          case 'game':
+            detail = await dispatch(ensureGameConversation(conversationId)).unwrap()
+            break
+          case 'team': {
+            const [gameId, teamIdPart] = conversationId.split(':')
+            const teamId = Number(teamIdPart)
+            if (!gameId || Number.isNaN(teamId)) {
+              throw new Error('Invalid team conversation identifier')
+            }
+            detail = await dispatch(ensureTeamConversation({ gameId, teamId })).unwrap()
+            break
+          }
+          default:
+            throw new Error('Unsupported conversation type')
+        }
+
         if (cancelled) {
           return
         }
 
-        if (ack?.ok && ack.conversation) {
-          setConversationId(ack.conversation.id)
-          dispatch(refreshConversation(ack.conversation.id))
-        } else {
-          setError(ack?.error ?? 'Failed to open conversation')
+        const id = detail.conversation.id
+        setResolvedConversationId(id)
+        dispatch(messagesActions.setActiveConversationId(id))
+        dispatch(loadConversationMessages({ conversationId: id, limit: 50 }))
+        dispatch(refreshConversation(id))
+        socketService.markConversationReadViaSocket(id)
+      } catch (ensureError) {
+        if (!cancelled) {
+          setError(ensureError instanceof Error ? ensureError.message : 'Failed to load conversation')
         }
+      } finally {
+        if (!cancelled) {
+          setInitializing(false)
+        }
+      }
+    }
 
-        setInitializing(false)
-      },
-    )
+    void ensureConversation()
 
     return () => {
       cancelled = true
-      setConversationId(null)
+      setResolvedConversationId(null)
       dispatch(messagesActions.setActiveConversationId(null))
     }
-  }, [partnerId, currentUserId, dispatch])
+  }, [conversationType, conversationId, dispatch])
 
   useEffect(() => {
-    if (!conversationId || !currentUserId) {
-      return
+    if (rawMessages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-
-    dispatch(messagesActions.setActiveConversationId(conversationId))
-    dispatch(loadConversationMessages({ conversationId, limit: 50 }))
-    socketService.markConversationReadViaSocket(conversationId)
-  }, [conversationId, currentUserId, dispatch])
-
-  useEffect(() => {
-    if (!conversationId || rawMessages.length === 0) {
-      return
-    }
-    socketService.markConversationReadViaSocket(conversationId)
-  }, [conversationId, rawMessages.length])
-
-  useEffect(() => {
-    if (rawMessages.length === 0) {
-      return
-    }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [rawMessages.length])
 
-  const typingUsers = useMemo(() => Object.values(typingUsersMap), [typingUsersMap])
-
-  const loadOlder = useCallback(() => {
-    if (!conversationId || rawMessages.length === 0) {
+  useEffect(() => {
+    if (!resolvedConversationId || rawMessages.length === 0) {
       return
     }
-    const oldestMessage = rawMessages[0]
+    socketService.markConversationReadViaSocket(resolvedConversationId)
+  }, [resolvedConversationId, rawMessages.length])
+
+  const displayMessages: DisplayMessage[] = useMemo(() => {
+    const memberNameMap = new Map(
+      (conversation?.memberRoles ?? []).map((member) => [member.userId, member.username ?? member.userId]),
+    )
+
+    return rawMessages.map((message) => ({
+      id: message.id,
+      senderId: message.senderId,
+      senderName:
+        message.senderId === currentUserId
+          ? 'You'
+          : (typeof message.metadata?.senderName === 'string'
+              ? message.metadata.senderName
+              : message.senderId
+              ? memberNameMap.get(message.senderId) ?? 'Player'
+              : 'System'),
+      body: message.body,
+      createdAt: message.createdAt,
+      metadata: message.metadata,
+    }))
+  }, [conversation?.memberRoles, rawMessages, currentUserId])
+
+  const handleLoadOlder = useCallback(() => {
+    if (!resolvedConversationId) {
+      return
+    }
+    const existing = rawMessages
+    if (existing.length === 0) {
+      dispatch(loadConversationMessages({ conversationId: resolvedConversationId, limit: 50 }))
+      return
+    }
+    const oldest = existing[0]
     dispatch(
       loadConversationMessages({
-        conversationId,
-        before: oldestMessage.id,
+        conversationId: resolvedConversationId,
+        before: oldest.id,
         limit: 50,
       }),
     )
-  }, [conversationId, rawMessages, dispatch])
-
-  const messages: DisplayMessage[] = useMemo(
-    () =>
-      rawMessages.map((message) => ({
-        id: message.id,
-        senderId: message.senderId,
-        body: message.body,
-        createdAt: message.createdAt,
-        metadata: message.metadata,
-      })),
-    [rawMessages],
-  )
-
-  const partnerLabel = conversation?.metadata?.displayName ?? partnerId
-
-  const getDisplayName = useCallback(
-    (_message: DisplayMessage, isOwn: boolean) => {
-      if (isOwn) {
-        return 'You'
-      }
-      return partnerLabel
-    },
-    [partnerLabel],
-  )
+  }, [dispatch, rawMessages, resolvedConversationId])
 
   const sendMessage = useCallback(
     (text: string) => {
-      if (!conversationId || !text.trim()) {
+      if (!resolvedConversationId || !text.trim()) {
         return
       }
+
       socketService.sendConversationMessage(
-        {
-          conversationId,
-          body: text,
-        },
+        { conversationId: resolvedConversationId, body: text },
         (ack) => {
           if (!ack?.ok && ack?.error) {
             setError(ack.error)
@@ -182,316 +179,133 @@ function DirectMessageChat({ conversationId: partnerId, className = '' }: ChatCo
         },
       )
     },
-    [conversationId],
+    [resolvedConversationId],
   )
 
   const handleTyping = useCallback(
     (isTyping: boolean) => {
-      if (!conversationId) {
+      if (!resolvedConversationId) {
         return
       }
       if (isTyping) {
-        socketService.startConversationTyping(conversationId)
+        socketService.startConversationTyping(resolvedConversationId)
       } else {
-        socketService.stopConversationTyping(conversationId)
+        socketService.stopConversationTyping(resolvedConversationId)
       }
     },
-    [conversationId],
+    [resolvedConversationId],
   )
 
-  const headerTitle = conversation?.title || `Direct Message (${partnerLabel})`
+  const conversationTitle = useMemo(() => {
+    if (!conversation) {
+      return conversationType === 'dm'
+        ? 'Direct Message'
+        : conversationType === 'team'
+          ? 'Team Chat'
+          : 'Game Chat'
+    }
+
+    const metadataTitle = typeof conversation.metadata?.displayName === 'string'
+      ? (conversation.metadata.displayName as string)
+      : undefined
+
+    return conversation.title || metadataTitle ||
+      (conversation.kind === 'team'
+        ? 'Team Conversation'
+        : conversation.kind === 'game'
+          ? 'Game Conversation'
+          : 'Conversation')
+  }, [conversation, conversationType])
+
+  const conversationSubtitle = useMemo(() => {
+    if (!conversation) {
+      return null
+    }
+    switch (conversation.kind) {
+      case 'direct':
+        return 'Direct conversation'
+      case 'group':
+        return 'Group conversation'
+      case 'team':
+        return 'Team conversation'
+      case 'game':
+        return 'Game conversation'
+      default:
+        return null
+    }
+  }, [conversation])
+
   const unreadCount = conversation?.unreadCount ?? 0
 
+  if (initializing) {
+    return (
+      <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+        <div className="flex-1 flex items-center justify-center text-sm text-muted">Connecting…</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
+        <div className="flex-1 flex items-center justify-center text-sm text-red-400">{error}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
       <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
-        <h3 className="font-semibold text-white">{headerTitle}</h3>
+        <div>
+          <h3 className="font-semibold text-white">{conversationTitle}</h3>
+          {conversationSubtitle && <p className="text-xs text-muted">{conversationSubtitle}</p>}
+        </div>
         {unreadCount > 0 && (
-          <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
-            {unreadCount} unread
-          </span>
+          <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">{unreadCount} unread</span>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {initializing ? (
-          <div className="text-center text-muted py-4">Connecting to conversation…</div>
-        ) : error ? (
-          <div className="text-center text-red-400 py-4">{error}</div>
-        ) : conversationId === null ? (
-          <div className="text-center text-muted py-4">Preparing conversation…</div>
-        ) : messages.length === 0 && isLoadingMessages ? (
-          <div className="text-center text-muted py-4">Loading messages…</div>
-        ) : (
-          <>
-            {hasMore && (
-              <div className="text-center mb-4">
-                <button
-                  type="button"
-                  className="px-3 py-1 text-sm text-muted hover:text-white hover:bg-surface-2 rounded-md border border-border"
-                  onClick={loadOlder}
-                  disabled={Boolean(isLoadingMessages)}
-                >
-                  {isLoadingMessages ? 'Loading…' : 'Load older messages'}
-                </button>
-              </div>
-            )}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {hasMore && (
+          <div className="text-center">
+            <button
+              type="button"
+              className="px-3 py-1 text-xs text-muted border border-border rounded-md hover:text-white hover:bg-surface-2/60 transition"
+              onClick={handleLoadOlder}
+              disabled={isLoadingMessages}
+            >
+              {isLoadingMessages ? 'Loading…' : 'Load earlier messages'}
+            </button>
+          </div>
+        )}
 
-            {messages.length === 0 ? (
-              <div className="text-center text-muted py-4">
-                No messages yet. Start the conversation!
-              </div>
-            ) : (
-              <MessageList
-                messages={messages}
-                currentUserId={currentUserId}
-                getDisplayName={getDisplayName}
-              />
-            )}
-          </>
+        {displayMessages.length === 0 && !isLoadingMessages ? (
+          <div className="text-center text-muted py-6 text-sm">No messages yet.</div>
+        ) : (
+          <MessageList messages={displayMessages} currentUserId={currentUserId} />
         )}
 
         {typingUsers.length > 0 && (
-          <div className="text-sm text-muted italic mt-2">
-            {typingUsers.join(', ')}
-            {typingUsers.length === 1 ? ' is' : ' are'} typing…
+          <div className="text-sm text-muted italic">
+            {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      <MessageInput
-        onSendMessage={sendMessage}
-        onTyping={handleTyping}
-        placeholder="Send a direct message…"
-        maxLength={2000}
-      />
-    </div>
-  )
-}
-
-function LegacyChat({ conversationType, conversationId, className = '' }: ChatContainerProps) {
-  const dispatch = useAppDispatch()
-  const currentUserId = useAppSelector((state) => state.auth.user?.id)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const conversationKey = `${conversationType}:${conversationId}`
-  const conversation = useAppSelector((state) => state.chat.conversations[conversationKey])
-  const messages = conversation?.messages ?? []
-  const typingUsers = conversation?.typingUsers ?? []
-  const isLoadingHistory = conversation?.isLoading ?? false
-
-  const normalizeMessage = useCallback((message: ChatMessage): DisplayMessage => {
-    const linkPreviews =
-      message.link_previews && message.link_previews.length > 0
-        ? { linkPreviews: message.link_previews }
-        : undefined
-
-    return {
-      id: message.id,
-      senderId: message.sender_id,
-      senderName: message.sender_username,
-      body: message.message,
-      createdAt: message.created_at,
-      editedAt: message.edited_at ?? null,
-      deletedAt: message.deleted_at ?? null,
-      metadata: linkPreviews,
-    }
-  }, [])
-
-  const displayMessages = useMemo(() => messages.map(normalizeMessage), [messages, normalizeMessage])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  })
-
-  useEffect(() => {
-    if (!socketService.getSocket() || !currentUserId) return
-
-    const conversationChanged = conversation?.id !== conversationKey
-    if (conversationChanged) {
-      dispatch(legacyLoadChatHistory({
-        conversationId: conversationKey,
-        messages: [],
-        hasMore: true,
-      }))
-    }
-
-    dispatch(setActiveConversation(conversationKey))
-
-    if (!conversation) {
-      socketService.loadChatHistory({
-        messageType: conversationType,
-        conversationId,
-        limit: 50,
-        offset: 0,
-      })
-    }
-
-    const handleMessage = (messagePayload: ChatMessage) => {
-      if (conversationType === 'game' && messagePayload.game_id === conversationId) {
-        dispatch(addMessage({ message: messagePayload, currentUserId }))
-      } else if (conversationType === 'team') {
-        const [gameId, teamId] = conversationId.split(':')
-        if (
-          messagePayload.message_type === 'team' &&
-          messagePayload.game_id === gameId &&
-          messagePayload.team_id === parseInt(teamId, 10)
-        ) {
-          dispatch(addMessage({ message: messagePayload, currentUserId }))
-        }
-      }
-    }
-
-    const handleHistory = (data: { conversationId: string; messageType: ChatConversationType; messages: ChatMessage[] }) => {
-      if (data.conversationId === conversationId && data.messageType === conversationType) {
-        dispatch(
-          legacyLoadChatHistory({
-            conversationId: conversationKey,
-            messages: data.messages,
-            hasMore: data.messages.length === 50,
-          }),
-        )
-      }
-    }
-
-    const handleTyping = (data: { conversationType: ChatConversationType; conversationId: string; userId: string; username: string; isTyping: boolean }) => {
-      if (data.conversationType === conversationType && data.conversationId === conversationId) {
-        dispatch(
-          setTypingUser({
-            conversationId: conversationKey,
-            userId: data.userId,
-            username: data.username,
-            isTyping: data.isTyping,
-          }),
-        )
-      }
-    }
-
-    const handleUnreadCounts = (counts: Array<{ conversation_type: ChatConversationType; conversation_id: string; unread_count: number }>) => {
-      const formattedCounts = counts.map((c) => ({
-        conversationType: c.conversation_type,
-        conversationId: c.conversation_id,
-        unreadCount: c.unread_count,
-      }))
-      dispatch(setUnreadCounts(formattedCounts))
-    }
-
-    const handleMessageEdited = (data: { messageId: string; newMessage: string; editedAt: string | Date }) => {
-      dispatch(
-        editMessage({
-          messageId: data.messageId,
-          newMessage: data.newMessage,
-          editedAt: typeof data.editedAt === 'string' ? data.editedAt : data.editedAt.toISOString(),
-        }),
-      )
-    }
-
-    const handleMessageDeleted = (data: { messageId: string }) => {
-      dispatch(deleteMessage(data.messageId))
-    }
-
-    socketService.on('chat:message', handleMessage)
-    socketService.on('chat:history', handleHistory)
-    socketService.on('chat:user-typing', handleTyping)
-    socketService.on('chat:unread-counts', handleUnreadCounts)
-    socketService.on('chat:message-edited', handleMessageEdited)
-    socketService.on('chat:message-deleted', handleMessageDeleted)
-
-    socketService.markChatAsRead({ conversationType, conversationId })
-    dispatch(markMessagesAsRead(conversationKey))
-    socketService.getChatUnreadCounts()
-
-    return () => {
-      socketService.off('chat:message', handleMessage)
-      socketService.off('chat:history', handleHistory)
-      socketService.off('chat:user-typing', handleTyping)
-      socketService.off('chat:unread-counts', handleUnreadCounts)
-      socketService.off('chat:message-edited', handleMessageEdited)
-      socketService.off('chat:message-deleted', handleMessageDeleted)
-      dispatch(setActiveConversation(null))
-    }
-  }, [conversation, conversationId, conversationKey, conversationType, currentUserId, dispatch])
-
-  const sendMessage = (text: string) => {
-    if (!socketService.getSocket() || !text.trim()) return
-
-    let gameId: string | undefined
-    let teamId: number | undefined
-
-    if (conversationType === 'game') {
-      gameId = conversationId
-    } else if (conversationType === 'team') {
-      const [gId, tId] = conversationId.split(':')
-      gameId = gId
-      teamId = parseInt(tId, 10)
-    }
-
-    socketService.sendChatMessage({
-      message: text,
-      messageType: conversationType,
-      gameId,
-      teamId,
-    })
-  }
-
-  const handleTyping = (isTyping: boolean) => {
-    if (!socketService.getSocket()) return
-
-    socketService.sendTypingIndicator({
-      conversationType,
-      conversationId,
-      isTyping,
-    })
-  }
-
-  return (
-    <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
-      <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
-        <h3 className="font-semibold text-white">
-          {conversationType === 'game'
-            ? '🎮 Game Chat'
-            : conversationType === 'team'
-              ? '👥 Team Chat'
-              : '💬 Direct Message'}
-        </h3>
-        {conversation?.unreadCount > 0 && (
-          <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
-            {conversation.unreadCount} unread
-          </span>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {isLoadingHistory ? (
-          <div className="text-center text-muted py-4">Loading chat history...</div>
-        ) : displayMessages.length === 0 ? (
-          <div className="text-center text-muted py-4">
-            No messages yet. Start the conversation!
-          </div>
+      <div className="border-t border-border bg-surface-1/80">
+        {conversation?.isReadOnly ? (
+          <div className="px-4 py-3 text-sm text-muted">This conversation is read-only.</div>
         ) : (
-          <MessageList
-            messages={displayMessages}
-            currentUserId={currentUserId}
-            getDisplayName={(msg, isOwn) => (isOwn ? 'You' : msg.senderName)}
+          <MessageInput
+            onSendMessage={sendMessage}
+            onTyping={handleTyping}
+            placeholder={conversationType === 'game' ? 'Message everyone…' : 'Send a message…'}
+            maxLength={2000}
           />
         )}
-
-        {typingUsers.length > 0 && (
-          <div className="text-sm text-muted italic mt-2">
-            {typingUsers.map((u) => u.username).join(', ')}
-            {typingUsers.length === 1 ? ' is' : ' are'} typing...
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
       </div>
-
-      <MessageInput
-        onSendMessage={sendMessage}
-        onTyping={handleTyping}
-        placeholder={conversationType === 'game' ? 'Message everyone...' : 'Send a message...'}
-      />
     </div>
   )
 }

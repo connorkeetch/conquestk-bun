@@ -77,9 +77,9 @@ const deriveSummary = (
 }
 
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
-  <div className="p-6 rounded-xl border border-white/10 bg-white/5 text-center text-muted">
-    <div className="text-4xl mb-3">🛰️</div>
-    <p>{message}</p>
+  <div className="panel text-center space-y-2">
+    <div className="text-4xl">🛰️</div>
+    <p className="text-muted text-sm">{message}</p>
   </div>
 )
 
@@ -145,14 +145,14 @@ const UserStats: React.FC<UserStatsProps> = ({
 
   return (
     <div className="space-y-10">
-      <section className="glass-box-lg p-8">
+      <section className="panel space-y-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-[color:var(--heading)] flex items-center gap-3">
               <span>📊</span>
-              Battlefield Summary
+              Battlefield summary
             </h2>
-            <p className="text-muted text-sm">Tracking real matches from the ConquestK servers.</p>
+            <p className="text-sm text-muted">Tracking ranked matches from the ConquestK servers.</p>
           </div>
           {loading && (
             <div className="inline-flex items-center gap-2 text-sm text-muted">
@@ -163,79 +163,72 @@ const UserStats: React.FC<UserStatsProps> = ({
         </div>
 
         {error && (
-          <div className="mt-6 p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
+          <div className="panel-muted border-l-4 border-[color:var(--color-danger)] text-sm text-[color:var(--color-danger)]">
             {error}
           </div>
         )}
 
-        <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Games Played</h3>
-            <div className="text-4xl font-bold text-primary">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Games played</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-primary)]">
               {formatNumber(summary.gamesPlayed)}
             </div>
-            <p className="text-xs text-muted mt-1">
+            <p className="text-xs text-muted">
               Wins {formatNumber(summary.wins)} · Losses {formatNumber(summary.losses)}
             </p>
           </div>
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Win Rate</h3>
-            <div className="text-4xl font-bold text-emerald-400">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Win rate</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-success)]">
               {formatPercent(summary.winRate)}
             </div>
-            <p className="text-xs text-muted mt-1">Across all tracked matches</p>
+            <p className="text-xs text-muted">Across all tracked matches</p>
           </div>
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Win Streak</h3>
-            <div className="text-4xl font-bold text-amber-300">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Win streak</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-warning)]">
               {formatNumber(summary.longestWinStreak)}
             </div>
-            <p className="text-xs text-muted mt-1">
+            <p className="text-xs text-muted">
               Current streak: {formatNumber(summary.currentWinStreak)}
             </p>
           </div>
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Battle Impact</h3>
-            <div className="text-4xl font-bold text-fuchsia-300">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Battle impact</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-accent)]">
               {formatNumber(summary.eliminations)}
             </div>
-            <p className="text-xs text-muted mt-1">
-              Territories conquered: {formatNumber(summary.territoriesConquered)}
+            <p className="text-xs text-muted">
+              Territories captured {formatNumber(summary.territoriesConquered)}
             </p>
           </div>
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">
-              Territory Mastery
-            </h3>
-            <div className="text-4xl font-bold text-cyan-300">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Territory mastery</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-info)]">
               {formatNumber(summary.bestTerritories)}
             </div>
-            <p className="text-xs text-muted mt-1">Most territories held at once</p>
-            <p className="text-xs text-muted mt-1">
-              Strongest army: {formatNumber(summary.bestArmies)} units
-            </p>
+            <p className="text-xs text-muted">Most territories held at once</p>
+            <p className="text-xs text-muted">Largest army {formatNumber(summary.bestArmies)} units</p>
           </div>
-          <div className="glass-box p-5">
-            <h3 className="text-white/80 text-sm uppercase tracking-widest mb-3">Card Trades</h3>
-            <div className="text-4xl font-bold text-indigo-300">
+          <div className="panel-muted space-y-2">
+            <h3 className="text-xs uppercase tracking-widest text-muted">Card trades</h3>
+            <div className="text-4xl font-semibold text-[color:var(--color-primary)]">
               {formatNumber(summary.cardTrades)}
             </div>
-            <p className="text-xs text-muted mt-1">
-              Cards redeemed: {formatNumber(summary.cardsTraded)}
-            </p>
+            <p className="text-xs text-muted">Cards redeemed {formatNumber(summary.cardsTraded)}</p>
           </div>
         </div>
       </section>
 
       {!isOwnProfile && (
-        <section className="glass-box p-6 border border-dashed border-white/20">
-          <div className="flex gap-3 items-start">
+        <section className="panel-muted border border-dashed border-[color:var(--panel-border)]">
+          <div className="flex items-start gap-3">
             <div className="text-2xl">🔒</div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Detailed analytics are private</h3>
+              <h3 className="text-lg font-semibold text-[color:var(--heading)]">Detailed analytics are private</h3>
               <p className="text-sm text-muted">
-                {username ? `${username}'s` : "This commander's"} detailed breakdown is only visible
-                to them. Start a match to build your own statistics.
+                {username ? `${username}'s` : "This commander's"} detailed breakdown is only visible to them. Start a match to build your own statistics.
               </p>
             </div>
           </div>
@@ -244,11 +237,11 @@ const UserStats: React.FC<UserStatsProps> = ({
 
       {isOwnProfile && stats && (
         <>
-          <section className="glass-box-lg p-8 space-y-6">
+          <section className="panel space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
+              <h3 className="text-2xl font-semibold text-[color:var(--heading)] flex items-center gap-3">
                 <span>🗺️</span>
-                Map Performance
+                Map performance
               </h3>
               <span className="text-xs uppercase tracking-widest text-muted">
                 Updated{' '}
@@ -262,9 +255,9 @@ const UserStats: React.FC<UserStatsProps> = ({
             ) : (
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                 {stats.maps.map((map) => (
-                  <div key={map.mapName} className="glass-box p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-white">{map.mapName}</h4>
+                  <div key={map.mapName} className="panel-muted space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-[color:var(--heading)]">{map.mapName}</h4>
                       <span className="text-xs text-muted uppercase tracking-widest">
                         {formatPercent(computeWinRate(map.wins, map.gamesPlayed))}
                       </span>
@@ -272,7 +265,7 @@ const UserStats: React.FC<UserStatsProps> = ({
                     <p className="text-sm text-muted">
                       Games {formatNumber(map.gamesPlayed)} · Wins {formatNumber(map.wins)}
                     </p>
-                    <p className="text-xs text-muted/80 mt-2">
+                    <p className="text-xs text-muted">
                       Avg duration {formatDurationFromMinutes(map.averageGameLength)}
                     </p>
                   </div>
@@ -281,11 +274,11 @@ const UserStats: React.FC<UserStatsProps> = ({
             )}
           </section>
 
-          <section className="glass-box-lg p-8 space-y-6">
+          <section className="panel space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
+              <h3 className="text-2xl font-semibold text-[color:var(--heading)] flex items-center gap-3">
                 <span>🎮</span>
-                Game Modes
+                Game modes
               </h3>
             </div>
             {stats.gameModes.length === 0 ? (
@@ -293,14 +286,14 @@ const UserStats: React.FC<UserStatsProps> = ({
             ) : (
               <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 {stats.gameModes.map((mode) => (
-                  <div key={mode.mode} className="glass-box p-4">
-                    <h4 className="text-lg font-semibold text-white capitalize mb-1">
+                  <div key={mode.mode} className="panel-muted space-y-2">
+                    <h4 className="text-lg font-semibold text-[color:var(--heading)] capitalize">
                       {mode.mode.replace(/_/g, ' ')}
                     </h4>
                     <p className="text-sm text-muted">
                       Games {formatNumber(mode.gamesPlayed)} · Wins {formatNumber(mode.wins)}
                     </p>
-                    <p className="text-xs text-muted/80 mt-2">
+                    <p className="text-xs text-muted">
                       Avg duration {formatDurationFromMinutes(mode.averageGameLength)}
                     </p>
                   </div>
@@ -309,42 +302,40 @@ const UserStats: React.FC<UserStatsProps> = ({
             )}
           </section>
 
-          <section className="glass-box-lg p-8 space-y-4">
-            <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
+          <section className="panel space-y-4">
+            <h3 className="text-2xl font-semibold text-[color:var(--heading)] flex items-center gap-3">
               <span>📅</span>
-              Last 90 Days
+              Last 90 days
             </h3>
             {stats.timeline.length === 0 ? (
               <EmptyState message="Play matches to populate your recent history." />
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-muted uppercase tracking-widest text-xs">
-                      <th className="py-2 pr-4">Date</th>
-                      <th className="py-2 pr-4">Games</th>
-                      <th className="py-2 pr-4">Wins</th>
-                      <th className="py-2 pr-4">Win Rate</th>
-                      <th className="py-2 pr-4">Playtime</th>
+                <table className="table text-sm">
+                  <thead className="bg-[color:var(--panel-bg-alt)] text-[color:var(--heading)]">
+                    <tr>
+                      <th>Date</th>
+                      <th>Games</th>
+                      <th>Wins</th>
+                      <th>Win rate</th>
+                      <th>Playtime</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stats.timeline.map((entry) => (
-                      <tr key={entry.date} className="border-t border-white/5 text-white/80">
-                        <td className="py-2 pr-4">
+                      <tr key={entry.date} className="table-row">
+                        <td>
                           {new Date(entry.date).toLocaleDateString(undefined, {
                             month: 'short',
                             day: 'numeric',
                           })}
                         </td>
-                        <td className="py-2 pr-4">{formatNumber(entry.gamesPlayed)}</td>
-                        <td className="py-2 pr-4">{formatNumber(entry.wins)}</td>
-                        <td className="py-2 pr-4">
+                        <td>{formatNumber(entry.gamesPlayed)}</td>
+                        <td>{formatNumber(entry.wins)}</td>
+                        <td>
                           {formatPercent(computeWinRate(entry.wins, entry.gamesPlayed))}
                         </td>
-                        <td className="py-2 pr-4">
-                          {formatDurationFromMinutes(entry.playtimeMinutes)}
-                        </td>
+                        <td>{formatDurationFromMinutes(entry.playtimeMinutes)}</td>
                       </tr>
                     ))}
                   </tbody>

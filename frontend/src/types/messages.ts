@@ -5,6 +5,7 @@ export type ConversationKind = 'direct' | 'group' | 'game'
 export interface ConversationMemberRole extends ConversationMemberEvent {
   joinedAt: string
   shadowMuted: boolean
+  username?: string
 }
 
 export interface ConversationSummary {

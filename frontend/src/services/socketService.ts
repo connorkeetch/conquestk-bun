@@ -107,27 +107,6 @@ class SocketService {
     this.socket?.emit('endTurn', { roomId })
   }
 
-  // Chat methods
-  sendChatMessage(data: Parameters<ClientToServerEvents['chat:send']>[0]) {
-    this.socket?.emit('chat:send', data)
-  }
-
-  loadChatHistory(data: Parameters<ClientToServerEvents['chat:load-history']>[0]) {
-    this.socket?.emit('chat:load-history', data)
-  }
-
-  markChatAsRead(data: Parameters<ClientToServerEvents['chat:mark-read']>[0]) {
-    this.socket?.emit('chat:mark-read', data)
-  }
-
-  getChatUnreadCounts() {
-    this.socket?.emit('chat:get-unread')
-  }
-
-  sendTypingIndicator(data: Parameters<ClientToServerEvents['chat:typing']>[0]) {
-    this.socket?.emit('chat:typing', data)
-  }
-
   sendConversationMessage(payload: MessageSendPayload, callback?: (ack: MessageSendAck) => void) {
     this.socket?.emit('message.send', payload, callback)
   }
@@ -746,10 +725,6 @@ class SocketService {
     this.socket.on('typing.stop', (payload) => {
       const data = payload as Parameters<ServerToClientEvents['typing.stop']>[0]
       store.dispatch(messagesActions.typingStopped(data))
-    })
-
-    this.socket.on('chat-message', (_data) => {
-      // chat message handled elsewhere via dedicated listeners
     })
 
     this.socket.on('error', (_error) => {

@@ -1,7 +1,7 @@
 import type React from 'react'
 import type { Player } from '@/types/game'
-import type { TerritoryDisplayMap } from '../RiskGameBoard'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
+import type { TerritoryDisplayMap } from './territoryDisplay'
 
 interface TerritoryInfoPanelProps {
   hoveredTerritory: string | null

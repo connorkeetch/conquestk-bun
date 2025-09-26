@@ -23,7 +23,7 @@ const TutorialPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-primary-soft mb-2">How to Play</h1>
+        <h1 className="text-3xl font-bold text-[color:var(--color-primary)] mb-2">How to Play</h1>
         <p className="text-muted text-lg">
           Master the art of conquest with our comprehensive guides
         </p>
@@ -82,95 +82,100 @@ const TutorialPage: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="glass-box-lg min-h-[500px]">
+      <div className="panel min-h-[500px]">
         {activeTab === 'basics' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Getting Started</h2>
+          <div className="space-y-8">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Getting started</h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Understand the win condition, the three-part turn loop, and the controls you&apos;ll use in
+                every match.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Objective</h3>
-                <p className="text-muted">
-                  The goal is simple: conquer territories, build armies, and eliminate all opponents
-                  to achieve global domination.
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Objective</h3>
+              <p className="text-muted text-sm">
+                Conquer territories, build armies, and eliminate all opponents to achieve global
+                domination.
+              </p>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Turn phases</h3>
+                <p className="text-xs text-muted sm:text-sm max-w-xl">
+                  Each turn flows through three steps. Use them together to build momentum and secure
+                  the front lines.
                 </p>
               </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Turn Phases</h3>
-                <div className="space-y-3">
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-yellow-400">1. Reinforce</h4>
-                    <p className="text-muted mt-1">
-                      Place new troops on your territories. You receive troops based on the number
-                      of territories you control, plus bonuses for controlling entire continents. In
-                      team games you can station those reinforcements directly on a teammate's
-                      territory to boost their front lines.
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-red-400">2. Attack</h4>
-                    <p className="text-muted mt-1">
-                      Attack adjacent enemy territories. Roll dice to determine battle outcomes. The
-                      attacker can continue attacking until they choose to stop or run out of
-                      troops.
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-green-400">3. Fortify</h4>
-                    <p className="text-muted mt-1">
-                      Move troops from one of your territories to another connected territory to
-                      strengthen your defenses.
-                    </p>
-                  </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="panel-muted border-l-4 border-[color:var(--color-warning)]">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">1. Reinforce</h4>
+                  <p className="text-sm text-muted mt-2">
+                    Deploy new troops to friendly territory. Bonus soldiers arrive when you hold entire
+                    continents, and in team games you can reinforce an ally directly.
+                  </p>
+                </div>
+                <div className="panel-muted border-l-4 border-[color:var(--color-danger)]">
+                  <h4 className="font-semibold text-[color:var(--color-danger)]">2. Attack</h4>
+                  <p className="text-sm text-muted mt-2">
+                    Strike adjacent enemies. Dice rolls resolve battles, and you can chain attacks until
+                    you stop or run out of units.
+                  </p>
+                </div>
+                <div className="panel-muted border-l-4 border-[color:var(--color-success)]">
+                  <h4 className="font-semibold text-[color:var(--color-success)]">3. Fortify</h4>
+                  <p className="text-sm text-muted mt-2">
+                    Shift troops between connected territories to cover weak borders before the next
+                    player moves.
+                  </p>
                 </div>
               </div>
+            </section>
 
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Basic Controls</h3>
-                <ul className="text-muted space-y-2">
-                  <li>
-                    • Click on your territories (or a teammate's during reinforcement) to place
-                    troops
-                  </li>
-                  <li>• Click and drag from your territory to an enemy territory to attack</li>
-                  <li>• Use the mouse wheel or pinch to zoom the map</li>
-                  <li>• Click and drag to pan around the map</li>
-                </ul>
-              </div>
-            </div>
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Basic controls</h3>
+              <ul className="text-sm text-muted space-y-2">
+                <li>Click friendly territories (or a teammate&apos;s) to place reinforcements</li>
+                <li>Drag from your territory to an enemy territory to attack</li>
+                <li>Scroll or pinch to zoom the map, and drag to pan</li>
+                <li>Use right-click (or long press) to cancel the current action</li>
+              </ul>
+            </section>
           </div>
         )}
 
         {activeTab === 'gametypes' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Game Types</h2>
+          <div className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game types</h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Mix up the rules to keep matches fresh. These presets are available in matchmaking and
+                private lobbies.
+              </p>
+            </header>
 
-            <div className="grid gap-6">
-              <div className="glass-box">
-                <h3 className="text-xl font-semibold text-green-400 mb-2">Classic</h3>
-                <p className="text-muted">
-                  The traditional game mode. Eliminate all opponents to win. Start with territories
-                  distributed evenly among players and fight for world domination.
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-success)]">
+                <h3 className="text-lg font-semibold text-[color:var(--color-success)]">Classic</h3>
+                <p className="text-sm text-muted">
+                  The standard ConquestK experience—start with shared territory, push opponents off the
+                  board, and rule the map.
                 </p>
               </div>
-
-              <div className="glass-box">
-                <h3 className="text-xl font-semibold text-primary-soft mb-2">Capitals</h3>
-                <p className="text-muted">
-                  Each player starts with a designated capital territory. While you still win by
-                  eliminating all opponents, capitals provide strategic importance and are assigned
-                  fairly based on player count.
+              <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-primary)]">
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Capitals</h3>
+                <p className="text-sm text-muted">
+                  Each player defends a capital. Eliminating every rival still wins the war, but holding
+                  capitals creates strategic pressure.
                 </p>
               </div>
-
-              <div className="glass-box">
-                <h3 className="text-xl font-semibold text-purple-400 mb-2">Random Mode</h3>
-                <p className="text-muted">
-                  Let the game randomly select game settings for an unpredictable experience. Great
-                  for players who want variety and surprise in their matches.
+              <div className="panel-muted space-y-2 border-t-4 border-[color:var(--color-info)]">
+                <h3 className="text-lg font-semibold text-[color:var(--color-info)]">Random mode</h3>
+                <p className="text-sm text-muted">
+                  Shake up spoils, timers, fog, and more with a single click. Perfect for groups who want
+                  every match to feel different.
                 </p>
               </div>
             </div>
@@ -178,88 +183,92 @@ const TutorialPage: React.FC = () => {
         )}
 
         {activeTab === 'strategy' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Strategic Tips</h2>
+          <div className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Strategic tips</h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Positioning, timing, and resource management win campaigns. These fundamentals help at
+                every stage of the match.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Early Game</h3>
-                <ul className="text-muted space-y-2">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="panel-muted space-y-3">
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Early game</h3>
+                <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-yellow-400 mt-0.5" />
-                    <span>Focus on securing a continent early for bonus troops</span>
+                    <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                    <span>Secure an easily defended continent to earn bonus reinforcements.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-yellow-400 mt-0.5" />
-                    <span>Australia and South America are easier to defend with fewer borders</span>
+                    <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                    <span>Favor regions with fewer borders (Australia, South America) early on.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-yellow-400 mt-0.5" />
-                    <span>Don't spread your forces too thin - consolidate power</span>
+                    <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
+                    <span>Consolidate strength before expanding—spread troops too thin and you invite counterattacks.</span>
                   </li>
                 </ul>
               </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Mid Game</h3>
-                <ul className="text-muted space-y-2">
+              <div className="panel-muted space-y-3">
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Mid game</h3>
+                <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
-                    <Shield className="w-5 h-5 text-green-400 mt-0.5" />
-                    <span>Fortify your continent borders heavily</span>
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>Break enemy continents to choke off their bonus troops.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Shield className="w-5 h-5 text-green-400 mt-0.5" />
-                    <span>
-                      Form temporary alliances but remember - there can only be one winner
-                    </span>
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>Keep border territories stocked with at least 3–5 extra units.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Shield className="w-5 h-5 text-green-400 mt-0.5" />
-                    <span>Watch for players getting too powerful and coordinate to stop them</span>
+                    <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
+                    <span>Coordinate temporary alliances to check runaway leaders—but remember there&apos;s only one victor.</span>
                   </li>
                 </ul>
               </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Late Game</h3>
-                <ul className="text-muted space-y-2">
+              <div className="panel-muted space-y-3">
+                <h3 className="text-lg font-semibold text-[color:var(--color-primary)]">Late game</h3>
+                <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
-                    <Trophy className="w-5 h-5 text-purple-400 mt-0.5" />
-                    <span>Card sets become crucial - time your turn-ins wisely</span>
+                    <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
+                    <span>Time your card cash-ins to fuel decisive strikes.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Trophy className="w-5 h-5 text-purple-400 mt-0.5" />
-                    <span>Break enemy continents to reduce their reinforcement bonus</span>
+                    <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
+                    <span>Eliminate weakened opponents quickly to capture their cards.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Trophy className="w-5 h-5 text-purple-400 mt-0.5" />
-                    <span>Keep a strong defensive line while pushing for elimination</span>
+                    <Trophy className="h-4 w-4 text-[color:var(--color-info)] mt-0.5" />
+                    <span>Maintain a strong defensive line while pushing key objectives.</span>
                   </li>
                 </ul>
-              </div>
-
-              <div className="bg-surface-2 p-4 rounded-lg">
-                <h3 className="text-xl font-semibold text-red-400 mb-3">Combat Tips</h3>
-                <p className="text-muted">
-                  • Attackers roll up to 3 dice, defenders roll up to 2<br />• Higher rolls win,
-                  ties go to the defender
-                  <br />• Attack with at least 3:2 ratio for better odds
-                  <br />• Leave strong defenses - never leave just 1 troop
-                </p>
               </div>
             </div>
+
+            <section className="panel-muted space-y-2">
+              <h3 className="text-lg font-semibold text-[color:var(--color-danger)]">Combat odds at a glance</h3>
+              <ul className="text-sm text-muted space-y-1">
+                <li>Attackers roll up to 3 dice; defenders roll up to 2.</li>
+                <li>Higher dice win ties in favor of the defender.</li>
+                <li>Aim for at least a 3:2 troop ratio when launching major assaults.</li>
+                <li>Never leave a captured territory with a single troop—keep reserves in place.</li>
+              </ul>
+            </section>
           </div>
         )}
 
         {activeTab === 'rankings' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              The Conqueror's Path - Ranking System
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-[color:var(--heading)]">
+              The Conqueror's Path – ranking system
             </h2>
 
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">How ELO Works</h3>
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                  How ELO works
+                </h3>
                 <p className="text-muted">
                   The ELO rating system measures your skill level based on game results. Everyone
                   starts at 1000 ELO. Win against higher-rated players to gain more points, lose to
@@ -269,35 +278,35 @@ const TutorialPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">
-                  The Conqueror's Path
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
+                  The Conqueror&apos;s path
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">🛡️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.CHIEFTAIN.base }}>
                         Chieftain (0-599)
                       </div>
                       <div className="text-sm text-muted">
-                        Leads a tribe or small clan, fighting for survival • Example: Vercingetorix
+                        Leads a tribe or small clan, fighting for survival — Example: Vercingetorix
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">⚔️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.WARLORD.base }}>
                         Warlord (600-799)
                       </div>
                       <div className="text-sm text-muted">
-                        Rules by might, feared by neighboring villages • Example: Shaka Zulu
+                        Rules by might, feared by neighboring villages — Example: Shaka Zulu
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">⚓</span>
                     <div>
                       <div
@@ -307,72 +316,72 @@ const TutorialPage: React.FC = () => {
                         Raider King (800-999)
                       </div>
                       <div className="text-sm text-muted">
-                        Expands by plunder and coastal terror • Example: Ragnar Lothbrok
+                        Expands by plunder and coastal terror — Example: Ragnar Lothbrok
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">☪️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.SULTAN.base }}>
                         Sultan (1000-1199)
                       </div>
                       <div className="text-sm text-muted">
-                        Wields faith and politics alongside armies • Example: Saladin
+                        Wields faith and politics alongside armies — Example: Saladin
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">🦅</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.CAESAR.base }}>
                         Caesar (1200-1399)
                       </div>
                       <div className="text-sm text-muted">
-                        Transforms republic into empire • Example: Julius Caesar
+                        Transforms republic into empire — Example: Julius Caesar
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">🏹</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.KHAN.base }}>
                         Khan (1400-1599)
                       </div>
                       <div className="text-sm text-muted">
-                        Masters of cavalry and mobility • Example: Genghis Khan
+                        Masters of cavalry and mobility — Example: Genghis Khan
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">👑</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.EMPEROR.base }}>
                         Emperor (1600-1799)
                       </div>
                       <div className="text-sm text-muted">
-                        Commands massive armies • Example: Napoleon Bonaparte
+                        Commands massive armies — Example: Napoleon Bonaparte
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">☀️</span>
                     <div>
                       <div className="font-semibold" style={{ color: RANK_COLORS.GREAT_KING.base }}>
                         The Great King (1800-1999)
                       </div>
                       <div className="text-sm text-muted">
-                        Ruler of kings, empire spanning continents • Example: Alexander the Great
+                        Ruler of kings, empire spanning continents — Example: Alexander the Great
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">💀</span>
                     <div>
                       <div
@@ -385,12 +394,12 @@ const TutorialPage: React.FC = () => {
                         Overlord (2000-2199)
                       </div>
                       <div className="text-sm text-muted">
-                        Tyrant who demands tribute and burns resistance • Example: Attila the Hun
+                        Tyrant who demands tribute and burns resistance — Example: Attila the Hun
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 glass-box-sm">
+                  <div className="panel-muted flex items-center gap-3">
                     <span className="text-2xl">☄️</span>
                     <div>
                       <div
@@ -405,20 +414,20 @@ const TutorialPage: React.FC = () => {
                         Worldbreaker (2200+)
                       </div>
                       <div className="text-sm text-muted">
-                        Apocalyptic conqueror, remembered for brutality • Example: Tamerlane
+                        Apocalyptic conqueror, remembered for brutality — Example: Tamerlane
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Earning Points</h3>
-                <ul className="text-muted space-y-2">
-                  <li>• Win games to increase your rating</li>
-                  <li>• Performance matters - eliminating more players gives bonus points</li>
-                  <li>• Play ranked games for competitive matches</li>
-                  <li>• Casual games don't affect your ELO</li>
+              <div className="panel-muted space-y-2">
+                <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Earning points</h3>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                  <li>Win games to grow your rating</li>
+                  <li>Eliminations and decisive victories award bonus points</li>
+                  <li>Ranked games adjust ELO; casual matches are risk-free practice</li>
+                  <li>Consistency matters—stringing wins together accelerates progress</li>
                 </ul>
               </div>
             </div>
@@ -426,329 +435,240 @@ const TutorialPage: React.FC = () => {
         )}
 
         {activeTab === 'editor' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Map Editor Guide</h2>
+          <div className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Map editor guide</h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Create custom battlefields with the token-based editor and share them with the community.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Getting Started</h3>
-                <p className="text-muted mb-3">
-                  Create your own custom maps using our intuitive token-based map editor. Share your
-                  creations with the community!
-                </p>
-                <div className="glass-box-sm">
-                  <h4 className="font-semibold text-yellow-400 mb-2">Quick Start Steps:</h4>
-                  <ol className="text-muted space-y-1 list-decimal list-inside">
-                    <li>Upload a background image (400×300 minimum)</li>
-                    <li>Place territory tokens on strategic locations</li>
-                    <li>Create continents and assign territories (optional)</li>
-                    <li>Connect territories to define borders</li>
-                    <li>Set up capital positions for different player counts</li>
-                    <li>Save to database and submit for approval</li>
-                  </ol>
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Quick start steps</h3>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-muted">
+                <li>Upload a background image (minimum 400×300)</li>
+                <li>Place territory tokens on strategic locations</li>
+                <li>Assign continents and bonuses as needed</li>
+                <li>Connect territories to define borders</li>
+                <li>Set capital positions for each player count</li>
+                <li>Save your map and submit it for approval</li>
+              </ol>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Editor modes</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-success)]">🗺️ Territories mode</h4>
+                  <p className="text-sm text-muted">Place and reposition territory tokens. Select a continent first to auto-assign new territories.</p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">🌍 Continents mode</h4>
+                  <p className="text-sm text-muted">Group territories into continents, set bonus values, and choose highlight colors.</p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-info)]">🔗 Connections mode</h4>
+                  <p className="text-sm text-muted">Select a territory, then click neighbours to establish attack paths and adjacency.</p>
+                </div>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">👑 Capitals mode</h4>
+                  <p className="text-sm text-muted">Auto-generate or hand-pick balanced starting positions for 2–12 players.</p>
                 </div>
               </div>
+            </section>
 
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Editor Modes</h3>
-                <div className="grid gap-3">
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-green-400">🗺️ Territories Mode</h4>
-                    <p className="text-muted text-sm mt-1">
-                      Click to place territory tokens. Drag to reposition. Select a continent first
-                      to auto-assign new territories.
-                    </p>
-                  </div>
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Capital assignment system</h3>
+              <p className="text-sm text-muted">Balanced starting locations keep every match fair:</p>
+              <ul className="space-y-2 text-sm text-muted">
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-success)]">✨</span>
+                  <span><strong>Auto-generation:</strong> Maximises distance between capitals using a maximin algorithm.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-primary)]">🎯</span>
+                  <span><strong>Manual override:</strong> Click territories in Capitals mode to customise placements.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-info)]">👥</span>
+                  <span><strong>Player-specific sets:</strong> Generates optimal layouts for every supported player count.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-warning)]">⚖️</span>
+                  <span><strong>Fair play:</strong> Prevents unfair clustering or unreachable capitals.</span>
+                </li>
+              </ul>
+            </section>
 
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-primary-soft">🌍 Continents Mode</h4>
-                    <p className="text-muted text-sm mt-1">
-                      Create continent groups with bonus army values. Assign colors for visual
-                      distinction.
-                    </p>
-                  </div>
+            <section className="panel space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Map requirements</h3>
+              <table className="table text-sm">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th className="text-center">Minimum</th>
+                    <th className="text-center">Recommended</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Territories</td>
+                    <td className="text-center text-[color:var(--color-warning)]">2</td>
+                    <td className="text-center text-[color:var(--color-success)]">20–50</td>
+                  </tr>
+                  <tr>
+                    <td>Continents</td>
+                    <td className="text-center text-[color:var(--color-warning)]">Optional</td>
+                    <td className="text-center text-[color:var(--color-success)]">3–7</td>
+                  </tr>
+                  <tr>
+                    <td>Image size</td>
+                    <td className="text-center text-[color:var(--color-warning)]">400×300</td>
+                    <td className="text-center text-[color:var(--color-success)]">1200×800</td>
+                  </tr>
+                  <tr>
+                    <td>File size</td>
+                    <td className="text-center text-[color:var(--color-warning)]">&lt; 10 MB</td>
+                    <td className="text-center text-[color:var(--color-success)]">&lt; 2 MB</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
 
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-purple-400">🔗 Connections Mode</h4>
-                    <p className="text-muted text-sm mt-1">
-                      Click a territory, then click adjacent territories to create connections.
-                      These define attack paths.
-                    </p>
-                  </div>
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Getting maps approved</h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted">
+                <li><strong>Validation:</strong> Automatic checks confirm minimum requirements.</li>
+                <li><strong>Playability:</strong> All territories must be connected.</li>
+                <li><strong>Balance:</strong> Distribute territories and bonuses evenly.</li>
+                <li><strong>Quality:</strong> Ensure clear visuals and theme consistency.</li>
+                <li><strong>Community review:</strong> Gather feedback from playtesters.</li>
+                <li><strong>Admin approval:</strong> Final verification before publication.</li>
+              </ol>
+              <p className="text-sm text-muted">💡 Tip: Well-balanced maps with interesting themes move through review faster.</p>
+            </section>
 
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-yellow-400">👑 Capitals Mode</h4>
-                    <p className="text-muted text-sm mt-1">
-                      Auto-generate or manually assign starting positions for 2-12 players using our
-                      fair distribution system.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">
-                  Capital Assignment System
-                </h3>
-                <p className="text-muted mb-3">
-                  The new capital system ensures balanced starting positions for all player counts:
-                </p>
-                <ul className="text-muted space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-400">✨</span>
-                    <span>
-                      <strong>Auto-Generation:</strong> Uses maximin distance algorithm to maximize
-                      spacing between starting positions
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary-soft">🎯</span>
-                    <span>
-                      <strong>Manual Override:</strong> Click territories in Capitals mode to
-                      customize assignments
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400">👥</span>
-                    <span>
-                      <strong>Player-Specific:</strong> Different optimal configurations for 2-12
-                      players
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-400">⚖️</span>
-                    <span>
-                      <strong>Fair Play:</strong> Ensures no player has an unfair starting advantage
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Map Requirements</h3>
-                <table className="w-full text-muted">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2">Feature</th>
-                      <th className="text-center py-2">Minimum</th>
-                      <th className="text-center py-2">Recommended</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-border">
-                      <td className="py-2">Territories</td>
-                      <td className="text-center text-yellow-400">2</td>
-                      <td className="text-center text-green-400">20-50</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2">Continents</td>
-                      <td className="text-center text-yellow-400">0 (optional)</td>
-                      <td className="text-center text-green-400">3-7</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2">Image Size</td>
-                      <td className="text-center text-yellow-400">400×300</td>
-                      <td className="text-center text-green-400">1200×800</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2">File Size</td>
-                      <td className="text-center text-yellow-400">&lt; 10MB</td>
-                      <td className="text-center text-green-400">&lt; 2MB</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">
-                  Getting Maps Approved
-                </h3>
-                <div className="glass-box-sm">
-                  <h4 className="font-semibold text-green-400 mb-2">Approval Process:</h4>
-                  <ol className="text-muted space-y-2 list-decimal list-inside">
-                    <li>
-                      <strong>Validation:</strong> Automatic checks for minimum requirements
-                    </li>
-                    <li>
-                      <strong>Playability:</strong> All territories must be connected
-                    </li>
-                    <li>
-                      <strong>Balance:</strong> Fair distribution of territories and continents
-                    </li>
-                    <li>
-                      <strong>Quality:</strong> Clear visuals and appropriate theme
-                    </li>
-                    <li>
-                      <strong>Community Review:</strong> Players test and rate your map
-                    </li>
-                    <li>
-                      <strong>Admin Approval:</strong> Final check before publication
-                    </li>
-                  </ol>
-                  <p className="text-muted text-sm mt-3">
-                    💡 Tip: Well-balanced maps with interesting themes get approved faster!
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Features</h3>
-                <ul className="text-muted space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400">📏</span>
-                    <span>
-                      <strong>Grid Snap:</strong> Enable grid for precise territory placement
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary-soft">🔄</span>
-                    <span>
-                      <strong>Import/Export:</strong> Save work as JSON for backup or sharing
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-400">🎨</span>
-                    <span>
-                      <strong>Token Shapes:</strong> Choose hexagon, square, or circle tokens
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-400">🔍</span>
-                    <span>
-                      <strong>Image Scaling:</strong> Adjust background size (50%-150%)
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-red-400">✂️</span>
-                    <span>
-                      <strong>Smart Cropping:</strong> Crop images to perfect dimensions
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <section className="panel-muted space-y-2">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Advanced features</h3>
+              <ul className="space-y-2 text-sm text-muted">
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-info)]">📏</span>
+                  <span><strong>Grid snap:</strong> Toggle grid snapping for precise placement.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-primary)]">🔄</span>
+                  <span><strong>Import/export:</strong> Save maps as JSON for backup or collaboration.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-success)]">🎨</span>
+                  <span><strong>Token shapes:</strong> Choose hexagon, square, or circle tokens.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-warning)]">🔍</span>
+                  <span><strong>Image scaling:</strong> Adjust the background between 50% and 150%.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[color:var(--color-danger)]">✂️</span>
+                  <span><strong>Smart cropping:</strong> Trim images to the ideal dimensions.</span>
+                </li>
+              </ul>
+            </section>
           </div>
         )}
 
         {activeTab === 'options' && (
-          <div className="prose prose-invert max-w-none">
-            <h2 className="text-2xl font-bold text-white mb-4">Game Options</h2>
+          <div className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-semibold text-[color:var(--heading)]">Game options</h2>
+              <p className="text-sm text-muted max-w-2xl">
+                Dial in lobby rules to match your group&apos;s pace, playstyle, and competitive level.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Game Settings</h3>
-                <div className="space-y-4">
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-yellow-400">Turn Time Limit</h4>
-                    <p className="text-muted text-sm mt-1">
-                      Async games: 24 hours default (customizable from 30 minutes to 72 hours).
-                      Real-time games: Shorter limits for fast-paced action.
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-green-400">Players</h4>
-                    <p className="text-muted text-sm mt-1">
-                      2-12 players supported. Games can start with 2 players minimum. Use "Random"
-                      option to let anyone join up to the max player count.
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-primary-soft">Spoils Cards</h4>
-                    <p className="text-muted text-sm mt-1">
-                      • <strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... (exponential growth)
-                      <br />• <strong>Fixed:</strong> Always 10 armies per set
-                      <br />• <strong>Static:</strong> Custom value you choose (5-50 armies)
-                      <br />• <strong>Random:</strong> Let the game decide
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-blue-400">Fortification</h4>
-                    <p className="text-muted text-sm mt-1">
-                      • <strong>Adjacent:</strong> Move once to connected territory
-                      <br />• <strong>Adjacent Multi:</strong> Multiple moves to connected
-                      territories
-                      <br />• <strong>Chained:</strong> Move once through your territory chain
-                      <br />• <strong>Unlimited:</strong> Move multiple times through chains
-                    </p>
-                  </div>
-
-                  <div className="glass-box-sm">
-                    <h4 className="font-semibold text-purple-400">Fog of War</h4>
-                    <p className="text-muted text-sm mt-1">
-                      • <strong>Off:</strong> See entire map
-                      <br />• <strong>Adjacent:</strong> Only see neighboring territories
-                      <br />• <strong>Persistent:</strong> Remember previously seen territories
-                    </p>
-                  </div>
+            <section className="space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Game settings</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-warning)]">Turn time limit</h4>
+                  <p className="text-sm text-muted">
+                    Async games default to 24 hours (customisable from 30 minutes up to 72 hours).
+                    Real-time games use shorter limits for fast-paced play.
+                  </p>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Room Options</h3>
-                <ul className="text-muted space-y-2">
-                  <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span>
-                      <strong>Player Count:</strong> 2-12 players per game
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span>
-                      <strong>Game Visibility:</strong> Public (anyone can join), Private (invite
-                      code)
-                      {comingSoonUiEnabled ? ', or Tournament' : ''}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span>
-                      <strong>Teams:</strong> Create balanced teams (2v2, 3v3, 4v4, etc.) or
-                      free-for-all
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Users className="w-5 h-5 text-primary-soft mt-0.5" />
-                    <span>
-                      <strong>Game Type:</strong> Casual (for fun) or Ranked (affects ELO rating)
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-primary-soft mb-3">Advanced Options</h3>
-                <div className="glass-box-sm">
-                  <ul className="text-muted space-y-2">
-                    <li>
-                      • <strong>Territory Modifiers:</strong> Special territories with unique
-                      bonuses (Sparse/Balanced/Abundant)
-                    </li>
-                    <li>
-                      • <strong>Game Speed:</strong> Real-time (synchronous) or Async (play at your
-                      own pace)
-                    </li>
-                    <li>
-                      • <strong>Auto-naming:</strong> Smart game names based on settings (e.g., "6p
-                      Teams Fog Classic")
-                    </li>
-                    <li>
-                      • <strong>Color Selection:</strong> Choose from 12 standard colors or unlock
-                      premium colors
-                    </li>
-                    <li>
-                      • <strong>Map Selection:</strong> Classic World, custom community maps, or
-                      random selection
-                    </li>
+                <div className="panel-muted space-y-1">
+                  <h4 className="font-semibold text-[color:var(--color-success)]">Players</h4>
+                  <p className="text-sm text-muted">
+                    Support for 2–12 commanders. Enable the <em>Random</em> slot to let any player
+                    fill remaining seats.
+                  </p>
+                </div>
+                <div className="panel-muted space-y-2">
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">Spoils cards</h4>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li><strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... exponential payouts.</li>
+                    <li><strong>Fixed:</strong> A steady 10 armies per set.</li>
+                    <li><strong>Static:</strong> Choose a custom value between 5 and 50 armies.</li>
+                    <li><strong>Random:</strong> Let the game pick a spoils style each match.</li>
+                  </ul>
+                </div>
+                <div className="panel-muted space-y-2">
+                  <h4 className="font-semibold text-[color:var(--color-info)]">Fortification</h4>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li><strong>Adjacent:</strong> One move to a connected territory.</li>
+                    <li><strong>Adjacent multi:</strong> Multiple moves across adjacent spaces.</li>
+                    <li><strong>Chained:</strong> One move along your contiguous territory chain.</li>
+                    <li><strong>Unlimited:</strong> Reposition freely along owned chains.</li>
+                  </ul>
+                </div>
+                <div className="panel-muted space-y-2">
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">Fog of war</h4>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                    <li><strong>Off:</strong> Everyone sees the entire map.</li>
+                    <li><strong>Adjacent:</strong> Vision extends only to neighbouring territories.</li>
+                    <li><strong>Persistent:</strong> Previously scouted territories stay revealed.</li>
                   </ul>
                 </div>
               </div>
-            </div>
+            </section>
+
+            <section className="panel-muted space-y-3">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Room options</h3>
+              <ul className="space-y-2 text-sm text-muted">
+                <li className="flex items-start gap-2">
+                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
+                  <span><strong>Player count:</strong> Choose the roster size for the lobby.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
+                  <span>
+                    <strong>Visibility:</strong> Set the match to Public, Private (invite code)
+                    {comingSoonUiEnabled ? ' or Tournament' : ''}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
+                  <span><strong>Teams:</strong> Enable balanced teams or stick with free-for-all.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
+                  <span><strong>Game type:</strong> Casual matches for practice or Ranked for ELO stakes.</span>
+                </li>
+              </ul>
+            </section>
+
+            <section className="panel-muted space-y-2">
+              <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">Advanced options</h3>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+                <li><strong>Territory modifiers:</strong> Sparse, Balanced, or Abundant bonus layouts.</li>
+                <li><strong>Game speed:</strong> Real-time (synchronous) or Async (take turns over hours).</li>
+                <li><strong>Auto-naming:</strong> Generate descriptive lobby names from settings.</li>
+                <li><strong>Color selection:</strong> Pick from standard or premium player palettes.</li>
+                <li><strong>Map selection:</strong> Classic world, community creations, or random choice.</li>
+              </ul>
+            </section>
           </div>
         )}
+
       </div>
     </div>
   )

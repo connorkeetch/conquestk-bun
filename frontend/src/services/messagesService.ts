@@ -49,3 +49,30 @@ export async function fetchUnreadSummary(): Promise<UnreadSummaryEntry[]> {
   )
   return response.data.conversations ?? []
 }
+
+export async function ensureDirectConversation(targetUserId: string): Promise<ConversationDetail> {
+  const response = await apiClient.post<{ conversation: { id: string } }>(
+    '/messages/dm',
+    { targetUserId },
+  )
+  const conversationId = response.data.conversation.id
+  return fetchConversationDetail(conversationId, { markRead: false })
+}
+
+export async function ensureGameConversation(gameId: string): Promise<ConversationDetail> {
+  const response = await apiClient.post<ConversationDetail>('/messages/conversations/game', {
+    gameId,
+  })
+  return response.data
+}
+
+export async function ensureTeamConversation(
+  gameId: string,
+  teamId: number,
+): Promise<ConversationDetail> {
+  const response = await apiClient.post<ConversationDetail>('/messages/conversations/team', {
+    gameId,
+    teamId,
+  })
+  return response.data
+}

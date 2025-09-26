@@ -102,8 +102,8 @@ export default function AdminContent() {
     : 'content-action-notes'
 
   return (
-    <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="space-y-8">
         <AdminPageHeader
           title="Content Moderation"
           subtitle="Review submissions and keep the community healthy"
@@ -111,38 +111,38 @@ export default function AdminContent() {
         />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="glass-box p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="panel">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-yellow-400">
+                <div className="text-2xl font-semibold text-[color:var(--color-warning)]">
                   {totalItems.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted">Pending Reviews</div>
+                <p className="text-sm text-muted mt-1">Pending reviews</p>
               </div>
               <div className="text-3xl">⏳</div>
             </div>
           </div>
 
-          <div className="glass-box p-6">
+          <div className="panel">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-primary-soft">
+                <div className="text-2xl font-semibold text-[color:var(--color-primary)]">
                   {contentQueue.filter((item) => item.contentType === 'map').length}
                 </div>
-                <div className="text-sm text-muted">Maps to Review</div>
+                <p className="text-sm text-muted mt-1">Maps to review</p>
               </div>
               <div className="text-3xl">🗺️</div>
             </div>
           </div>
 
-          <div className="glass-box p-6">
+          <div className="panel">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-green-400">
+                <div className="text-2xl font-semibold text-[color:var(--color-success)]">
                   {contentQueue.filter((item) => item.contentType !== 'map').length}
                 </div>
-                <div className="text-sm text-muted">Other Content</div>
+                <p className="text-sm text-muted mt-1">Other content</p>
               </div>
               <div className="text-3xl">📝</div>
             </div>
@@ -150,14 +150,14 @@ export default function AdminContent() {
         </div>
 
         {/* Content Queue */}
-        <div className="glass-box overflow-hidden p-0">
-          <div className="p-6 border-b border-border">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Approval Queue</h2>
+        <div className="panel p-0 overflow-hidden">
+          <div className="border-b border-[color:var(--panel-border)] px-6 py-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[color:var(--heading)]">Approval queue</h2>
               <button
                 type="button"
                 onClick={() => void loadContentQueue()}
-                className="bg-primary hover:brightness-110 px-4 py-2 rounded text-sm"
+                className="btn-primary btn-sm"
               >
                 🔄 Refresh
               </button>
@@ -165,104 +165,108 @@ export default function AdminContent() {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4">⏳</div>
-              <div>Loading content queue...</div>
+            <div className="px-6 py-12 text-center space-y-2">
+              <div className="text-2xl">⏳</div>
+              <p className="text-sm text-muted">Loading content queue...</p>
             </div>
           ) : error ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4 text-red-400">❌</div>
-              <div className="text-red-400 mb-4">{error}</div>
+            <div className="px-6 py-12 text-center space-y-3">
+              <div className="text-2xl text-[color:var(--color-danger)]">❌</div>
+              <p className="text-sm text-[color:var(--color-danger)]">{error}</p>
               <button
                 type="button"
                 onClick={() => void loadContentQueue()}
-                className="bg-primary hover:brightness-110 px-4 py-2 rounded"
+                className="btn-primary btn-sm"
               >
                 Retry
               </button>
             </div>
           ) : contentQueue.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-2xl mb-4">🎉</div>
-              <div className="text-lg font-medium mb-2">All caught up!</div>
-              <div className="text-muted">No content pending review</div>
+            <div className="px-6 py-12 text-center space-y-3">
+              <div className="text-2xl">🎉</div>
+              <p className="text-lg font-medium text-[color:var(--heading)]">All caught up!</p>
+              <p className="text-sm text-muted">No content pending review</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-700">
+            <div className="divide-y divide-[color:var(--panel-border)]">
               {contentQueue.map((item) => (
-                <div key={item.id} className="p-6 hover:bg-gray-750">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
+                <div
+                  key={item.id}
+                  className="px-6 py-5 transition-colors hover:bg-[color:var(--hover-bg)]"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
                         <span className="text-2xl">
                           {adminService.formatContentType(item.contentType)}
                         </span>
                         <div>
-                          <div className="font-medium text-lg">
-                            {item.contentName || 'Unnamed Content'}
+                          <div className="text-lg font-semibold text-[color:var(--heading)]">
+                            {item.contentName || 'Unnamed content'}
                           </div>
-                          <div className="text-sm text-muted">
+                          <p className="text-sm text-muted">
                             by {item.submitterUsername} •{' '}
                             {new Date(item.submittedAt).toLocaleDateString()}
-                          </div>
+                          </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                         <div>
-                          <div className="text-muted">Content Type</div>
-                          <div className="capitalize">{item.contentType}</div>
+                          <p className="text-muted">Content type</p>
+                          <p className="capitalize text-[color:var(--text)]">{item.contentType}</p>
                         </div>
                         <div>
-                          <div className="text-muted">Submitted</div>
-                          <div>{new Date(item.submittedAt).toLocaleString()}</div>
+                          <p className="text-muted">Submitted</p>
+                          <p className="text-[color:var(--text)]">
+                            {new Date(item.submittedAt).toLocaleString()}
+                          </p>
                         </div>
                         <div>
-                          <div className="text-muted">Submitter</div>
-                          <div>{item.submitterUsername}</div>
+                          <p className="text-muted">Submitter</p>
+                          <p className="text-[color:var(--text)]">{item.submitterUsername}</p>
                         </div>
                         <div>
-                          <div className="text-muted">Status</div>
-                          <div className="capitalize text-yellow-400">{item.status}</div>
+                          <p className="text-muted">Status</p>
+                          <p className="capitalize text-[color:var(--color-warning)]">{item.status}</p>
                         </div>
                       </div>
 
-                      {/* Preview for maps */}
                       {item.contentType === 'map' && (
-                        <div className="mt-4 p-4 bg-surface-2 rounded-lg">
-                          <div className="text-sm text-muted mb-2">Map Preview</div>
-                          <div className="text-sm">
+                        <div className="panel-muted space-y-2">
+                          <p className="text-sm text-muted">Map preview</p>
+                          <div className="space-y-1 text-sm text-[color:var(--text)]">
                             <div>
                               <strong>Map ID:</strong> {item.contentId}
                             </div>
                             <div>
-                              <strong>Name:</strong> {item.contentName || 'Unnamed Map'}
+                              <strong>Name:</strong> {item.contentName || 'Unnamed map'}
                             </div>
                             <a
                               href={`/map-editor?id=${item.contentId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary-soft hover:text-primary-soft underline"
+                              className="text-[color:var(--color-primary)] hover:underline"
                             >
-                              View in Map Editor →
+                              View in map editor →
                             </a>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex space-x-2 ml-6">
+                    <div className="flex gap-2 lg:flex-col lg:items-end lg:gap-2">
                       <button
                         type="button"
                         onClick={() => openActionModal(item, 'approve')}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium"
+                        className="btn-success btn-sm"
                       >
                         ✅ Approve
                       </button>
                       <button
                         type="button"
                         onClick={() => openActionModal(item, 'reject')}
-                        className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-medium"
+                        className="btn-danger btn-sm"
                       >
                         ❌ Reject
                       </button>
@@ -273,31 +277,30 @@ export default function AdminContent() {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-border">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-muted">
-                  Showing {(currentPage - 1) * limit + 1} to{' '}
-                  {Math.min(currentPage * limit, totalItems)} of {totalItems} items
-                </div>
-                <div className="flex space-x-2">
+            <div className="border-t border-[color:var(--panel-border)] px-6 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm text-muted">
+                  Showing {(currentPage - 1) * limit + 1} to {Math.min(currentPage * limit, totalItems)} of{' '}
+                  {totalItems} items
+                </p>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="btn-secondary btn-sm"
                   >
                     Previous
                   </button>
-                  <span className="px-3 py-1">
+                  <span className="text-sm text-[color:var(--text)]">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     type="button"
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="bg-surface-2 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded"
+                    className="btn-secondary btn-sm"
                   >
                     Next
                   </button>
@@ -306,27 +309,33 @@ export default function AdminContent() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Action Modal */}
       {actionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-surface-2 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
-              {actionModal.action === 'approve' ? '✅ Approve Content' : '❌ Reject Content'}
-            </h3>
-
-            <div className="mb-4 p-4 bg-surface-2 rounded">
-              <div className="font-medium">{actionModal.item.contentName || 'Unnamed Content'}</div>
-              <div className="text-sm text-muted">
-                {adminService.formatContentType(actionModal.item.contentType)} by{' '}
-                {actionModal.item.submitterUsername}
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="modal w-full max-w-md space-y-5">
+            <div className="modal-header">
+              <h3 className="text-lg font-semibold text-[color:var(--heading)]">
+                {actionModal.action === 'approve' ? 'Approve content' : 'Reject content'}
+              </h3>
             </div>
 
-            <div className="space-y-4">
+            <div className="modal-body space-y-4">
+              <section className="panel-muted space-y-1">
+                <div className="font-medium text-[color:var(--heading)]">
+                  {actionModal.item.contentName || 'Unnamed content'}
+                </div>
+                <div className="text-sm text-muted">
+                  {adminService.formatContentType(actionModal.item.contentType)} by{' '}
+                  {actionModal.item.submitterUsername}
+                </div>
+              </section>
+
               <div>
-                <label htmlFor={notesFieldId} className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor={notesFieldId}
+                  className="mb-2 block text-sm font-medium text-[color:var(--heading)]"
+                >
                   {actionModal.action === 'approve'
                     ? 'Notes (optional)'
                     : 'Reason for rejection (required)'}
@@ -334,8 +343,8 @@ export default function AdminContent() {
                 <textarea
                   id={notesFieldId}
                   value={actionNotes}
-                  onChange={(e) => setActionNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-border rounded resize-none"
+                  onChange={(event) => setActionNotes(event.target.value)}
+                  className="w-full rounded border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] px-3 py-2 text-sm text-[color:var(--text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)]"
                   rows={4}
                   placeholder={
                     actionModal.action === 'approve'
@@ -344,15 +353,14 @@ export default function AdminContent() {
                   }
                 />
               </div>
+
+              {actionError && (
+                <p className="text-sm text-[color:var(--color-danger)]">{actionError}</p>
+              )}
             </div>
 
-            {actionError && <div className="mt-4 text-sm text-red-400">{actionError}</div>}
-            <div className="flex justify-end space-x-2 mt-6">
-              <button
-                type="button"
-                onClick={closeActionModal}
-                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded"
-              >
+            <div className="modal-footer">
+              <button type="button" onClick={closeActionModal} className="btn-secondary">
                 Cancel
               </button>
               <button
@@ -361,11 +369,7 @@ export default function AdminContent() {
                 disabled={
                   submittingAction || (actionModal.action === 'reject' && !actionNotes.trim())
                 }
-                className={`px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed ${
-                  actionModal.action === 'approve'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
+                className={actionModal.action === 'approve' ? 'btn-success' : 'btn-danger'}
               >
                 {submittingAction
                   ? 'Working...'
@@ -378,5 +382,6 @@ export default function AdminContent() {
         </div>
       )}
     </div>
-  )
+  </div>
+)
 }

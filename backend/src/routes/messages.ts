@@ -6,6 +6,8 @@ import {
   ConversationError,
   createGroupConversation,
   ensureDirectConversation,
+  ensureGameConversation,
+  ensureTeamConversation,
   getConversationDetail,
   getUnreadSummary,
   leaveConversation,
@@ -336,6 +338,55 @@ router.post(
     }
   },
 )
+
+router.post('/conversations/game', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId } = req.body ?? {}
+
+    if (!gameId || typeof gameId !== 'string') {
+      return res.status(400).json({ error: 'gameId is required' })
+    }
+
+    const conversation = await ensureGameConversation(gameId)
+    const detail = await getConversationDetail(conversation.id, req.userId)
+    return res.status(200).json(detail)
+  } catch (error) {
+    if (error instanceof ConversationError) {
+      const status = mapConversationErrorToStatus(error)
+      return res.status(status).json({ error: error.message, code: error.code })
+    }
+
+    handleRouteError(error, req, 'Failed to ensure game conversation')
+    return res.status(500).json({ error: 'Failed to ensure game conversation' })
+  }
+})
+
+router.post('/conversations/team', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId, teamId } = req.body ?? {}
+
+    if (!gameId || typeof gameId !== 'string') {
+      return res.status(400).json({ error: 'gameId is required' })
+    }
+
+    const parsedTeamId = Number(teamId)
+    if (!Number.isFinite(parsedTeamId)) {
+      return res.status(400).json({ error: 'teamId must be a number' })
+    }
+
+    const conversation = await ensureTeamConversation(gameId, parsedTeamId)
+    const detail = await getConversationDetail(conversation.id, req.userId)
+    return res.status(200).json(detail)
+  } catch (error) {
+    if (error instanceof ConversationError) {
+      const status = mapConversationErrorToStatus(error)
+      return res.status(status).json({ error: error.message, code: error.code })
+    }
+
+    handleRouteError(error, req, 'Failed to ensure team conversation')
+    return res.status(500).json({ error: 'Failed to ensure team conversation' })
+  }
+})
 
 router.get('/conversations', authenticateToken, async (req: Request, res: Response) => {
   try {
