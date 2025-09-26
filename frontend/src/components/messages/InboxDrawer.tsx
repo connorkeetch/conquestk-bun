@@ -18,7 +18,6 @@ import {
   selectMessagesForConversation,
   selectMessagesInboxError,
   selectMessagesInboxLoading,
-  selectTotalUnreadMessages,
 } from '@/store/messagesSlice'
 import type { Notification } from '@/types/notification'
 
@@ -52,7 +51,6 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const activeConversationId = useAppSelector(selectActiveConversationId)
   const inboxLoading = useAppSelector(selectMessagesInboxLoading)
   const inboxError = useAppSelector(selectMessagesInboxError)
-  const _totalUnreadMessages = useAppSelector(selectTotalUnreadMessages)
   const messagesByConversation = useAppSelector((s) => s.messages.messages)
   const loadingMessagesMap = useAppSelector((s) => s.messages.loadingMessages)
   const hasMoreMap = useAppSelector((s) => s.messages.hasMore)
