@@ -42,8 +42,6 @@ export default function GameRoom() {
   const [isRoomLoading, setIsRoomLoading] = useState(false)
   const [roomError, setRoomError] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(audioService.isMutedState())
-  const [readySubmitting, setReadySubmitting] = useState(false)
-  const [readyError, setReadyError] = useState<string | null>(null)
   const [teamUpdating, setTeamUpdating] = useState(false)
   const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
@@ -86,11 +84,11 @@ export default function GameRoom() {
 
   const isMember = Boolean(currentPlayer)
 
-  const readySummary = useMemo(() => {
-    const total = currentRoom?.players?.length ?? 0
-    const ready = currentRoom?.players?.filter((player) => player.isReady).length ?? 0
-    return { ready, total }
-  }, [currentRoom?.players])
+  const joinSummary = useMemo(() => {
+    const total = currentRoom?.maxPlayers ?? 0
+    const joined = currentRoom?.players?.length ?? 0
+    return { joined, total }
+  }, [currentRoom?.players, currentRoom?.maxPlayers])
 
   const isHost = currentRoom?.hostId === user?.id
 
@@ -386,11 +384,7 @@ export default function GameRoom() {
     return 'Join this lobby'
   })()
 
-  const canToggleReady = Boolean(
-    currentRoom &&
-      currentPlayer &&
-      (currentRoom.status === 'lobby' || currentRoom.status === 'initializing'),
-  )
+  // Ready-check removed; joining implies ready
 
   useEffect(() => {
     if (!roomId) {
@@ -486,36 +480,7 @@ export default function GameRoom() {
     setIsMuted(audioService.isMutedState())
   }
 
-  const handleToggleReady = async () => {
-    if (!roomId || !currentPlayer) {
-      return
-    }
-
-    try {
-      setReadySubmitting(true)
-      setReadyError(null)
-      await gameService.setReadyState(roomId, !currentPlayer.isReady)
-    } catch (error: unknown) {
-      let message = 'Failed to update ready status'
-      if (typeof error === 'object' && error !== null) {
-        if ('response' in error) {
-          const apiError = error as { response?: { data?: { message?: string } } }
-          message = apiError.response?.data?.message ?? message
-        } else if (
-          'message' in error &&
-          typeof (error as { message?: unknown }).message === 'string'
-        ) {
-          message = (error as { message: string }).message
-        }
-      } else if (error instanceof Error) {
-        message = error.message
-      }
-
-      setReadyError(message)
-    } finally {
-      setReadySubmitting(false)
-    }
-  }
+  // No ready toggle; start triggers when lobby is full
 
   const handleJoinLobby = useCallback(async () => {
     if (!roomId || isMember || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull) {
@@ -659,9 +624,7 @@ export default function GameRoom() {
             <span className="chip text-xs uppercase tracking-wide">
               Status: {getStatusLabel(currentRoom.status)}
             </span>
-            <span className="chip text-xs">
-              Ready {readySummary.ready}/{readySummary.total}
-            </span>
+            <span className="chip text-xs">Joined {joinSummary.joined}/{joinSummary.total}</span>
             <span className="chip text-xs">
               Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
@@ -692,20 +655,7 @@ export default function GameRoom() {
               {joinButtonLabel}
             </button>
           )}
-          {canToggleReady && (
-            <button
-              onClick={handleToggleReady}
-              disabled={readySubmitting}
-              type="button"
-              className={`btn ${currentPlayer?.isReady ? 'btn-success' : 'btn-primary'}`}
-            >
-              {readySubmitting
-                ? 'Updating...'
-                : currentPlayer?.isReady
-                  ? '✅ Ready'
-                  : '🔔 Mark Ready'}
-            </button>
-          )}
+          {/* Ready control removed; joining implies ready */}
           <button
             onClick={handleToggleMute}
             className="btn btn-ghost"
@@ -726,11 +676,7 @@ export default function GameRoom() {
         </div>
       )}
 
-      {readyError && (
-        <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
-          {readyError}
-        </div>
-      )}
+      {/* No ready errors expected */}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Game Board */}
@@ -773,20 +719,10 @@ export default function GameRoom() {
             </h3>
             <ul className="list">
               {currentRoom.players?.map((player) => {
-                const isReady = Boolean(player.isReady)
                 const isCurrentUser = player.userId === user?.id
-                const readyBadgeClass = isReady
-                  ? 'badge bg-[color:var(--color-success)] text-[color:var(--color-white)] border-[color:var(--color-success)]'
-                  : 'badge border-[color:var(--panel-border)] text-muted bg-[color:var(--panel-bg-alt)]'
                 return (
                   <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
-                    <span
-                      className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${
-                        isReady
-                          ? 'bg-[color:var(--color-success)]'
-                          : 'bg-[color:var(--panel-border)]'
-                      }`}
-                    ></span>
+                    <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-success)]"></span>
                     <span
                       className={`text-sm ${
                         isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
@@ -804,9 +740,6 @@ export default function GameRoom() {
                         Host
                       </span>
                     )}
-                    <span className={`${readyBadgeClass} ml-auto`}>
-                      {isReady ? 'Ready' : 'Not ready'}
-                    </span>
                   </li>
                 )
               })}

@@ -1047,8 +1047,8 @@ export class GameRoomService {
 
       const joinQuery = `
         INSERT INTO room_players (room_id, user_id, is_ready, ready_at)
-        VALUES ($1, $2, FALSE, NULL)
-        ON CONFLICT (room_id, user_id) DO UPDATE SET is_ready = EXCLUDED.is_ready, ready_at = NULL
+        VALUES ($1, $2, TRUE, NOW())
+        ON CONFLICT (room_id, user_id) DO UPDATE SET is_ready = TRUE, ready_at = NOW()
       `
       await client.query(joinQuery, [roomId, userId])
 

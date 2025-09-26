@@ -95,9 +95,8 @@ export class GameLifecycleService {
 
       const playerCount = players.length
       const requiredCount = Math.max(2, roomResult.rows[0].max_players ?? 2)
-      const readyCount = players.filter((player) => player.is_ready).length
-      // Require the lobby to be full and everyone ready
-      const allReady = playerCount === requiredCount && readyCount === playerCount
+      // Simplified: joining implies ready. Start when lobby is full.
+      const allReady = playerCount === requiredCount
 
       if (allReady && lifecycleStatus === 'lobby') {
         shouldStart = true
