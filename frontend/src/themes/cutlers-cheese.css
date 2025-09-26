@@ -39,6 +39,11 @@
 
   --surface-glass: rgba(26, 16, 4, 0.68);
   --surface-glass-light: rgba(40, 24, 6, 0.42);
+
+  /* Make generic panels match our glass aesthetic */
+  --panel-bg: var(--surface-glass);
+  --panel-bg-alt: var(--surface-glass-light);
+  --panel-border: var(--box-border);
 }
 
 @keyframes cutlers-cheese-bubble {
