@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FEATURE_FLAGS } from '../../constants/featureFlags'
 import { useFeatureFlag } from '../../hooks/useFeatureFlag'
+import { socketService } from '@/services/socketService'
+import friendsService from '@/services/friendsService'
 
 interface NavItem {
   path: string
@@ -25,6 +27,37 @@ const PrimaryNav: React.FC = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
+  const [pendingFriends, setPendingFriends] = useState(0)
+
+  // Fetch pending friend requests and subscribe to realtime changes
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const reqs = await friendsService.listRequests()
+        if (mounted) setPendingFriends(reqs.incoming.length)
+      } catch {
+        if (mounted) setPendingFriends(0)
+      }
+    }
+    void load()
+    const refresh = () => void load()
+    socketService.on('friend.request.received', refresh)
+    socketService.on('friend.request.accepted', refresh)
+    socketService.on('friend.request.declined', refresh)
+    socketService.on('friend.request.cancelled', refresh)
+    socketService.on('friend.added', refresh)
+    socketService.on('friend.removed', refresh)
+    return () => {
+      mounted = false
+      socketService.off('friend.request.received', refresh)
+      socketService.off('friend.request.accepted', refresh)
+      socketService.off('friend.request.declined', refresh)
+      socketService.off('friend.request.cancelled', refresh)
+      socketService.off('friend.added', refresh)
+      socketService.off('friend.removed', refresh)
+    }
+  }, [])
 
   // Navigation items with dropdowns
   const navItems: NavItem[] = useMemo(() => {
@@ -269,7 +302,14 @@ const PrimaryNav: React.FC = () => {
                   >
                     <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
                     <div className="flex-1">
-                      <div className="font-medium text-white">{dropdownItem.label}</div>
+                      <div className="font-medium text-white flex items-center gap-2">
+                        <span>{dropdownItem.label}</span>
+                        {dropdownItem.path === '/community/friends' && pendingFriends > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-primary/80 text-white">
+                            {pendingFriends}
+                          </span>
+                        )}
+                      </div>
                       {dropdownItem.description && (
                         <div className="text-xs text-muted mt-0.5">{dropdownItem.description}</div>
                       )}

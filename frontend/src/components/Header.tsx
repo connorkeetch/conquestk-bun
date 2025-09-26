@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import { notificationService } from '@/services/notificationService'
+import friendsService from '@/services/friendsService'
+import { socketService } from '@/services/socketService'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
@@ -13,7 +15,6 @@ import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
 // Consolidated inbox drawer (messages + notifications)
 import InboxDrawer from './messages/InboxDrawer'
-import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { closeInbox, openInbox } from '@/store/uiSlice'
 
 interface MenuItem {
@@ -31,6 +32,7 @@ export default function Header() {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   // Inbox is globally controlled via Redux
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [pendingFriends, setPendingFriends] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
   const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
@@ -47,6 +49,36 @@ export default function Header() {
     })
     setUnreadNotifications(notificationService.getUnreadCount())
     return unsub
+  }, [])
+
+  // Pending friend requests counter
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const reqs = await friendsService.listRequests()
+        if (mounted) setPendingFriends(reqs.incoming.length)
+      } catch {
+        if (mounted) setPendingFriends(0)
+      }
+    }
+    void load()
+    const refresh = () => void load()
+    socketService.on('friend.request.received', refresh)
+    socketService.on('friend.request.accepted', refresh)
+    socketService.on('friend.request.declined', refresh)
+    socketService.on('friend.request.cancelled', refresh)
+    socketService.on('friend.added', refresh)
+    socketService.on('friend.removed', refresh)
+    return () => {
+      mounted = false
+      socketService.off('friend.request.received', refresh)
+      socketService.off('friend.request.accepted', refresh)
+      socketService.off('friend.request.declined', refresh)
+      socketService.off('friend.request.cancelled', refresh)
+      socketService.off('friend.added', refresh)
+      socketService.off('friend.removed', refresh)
+    }
   }, [])
 
   const handleToggleMute = () => {
@@ -486,7 +518,14 @@ export default function Header() {
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium flex items-center gap-2">
+                    <span>{item.label}</span>
+                    {item.path === '/community' && pendingFriends > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary/80 text-white">
+                        {pendingFriends}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               ))}
             </div>
