@@ -20,6 +20,9 @@ export interface CreateRoomData {
     personalitySeed?: number | null
   }>
   treasureConfig?: unknown
+  movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  turnTimerSeconds?: number
 }
 
 interface GameRoomRow {
@@ -48,6 +51,7 @@ interface GameRoomRow {
   card_trade_mode?: string | null
   bonus_type?: string | null
   treasure_config?: unknown | null
+  movement_type?: string | null
   team_mode?: boolean | string | null
   number_of_teams?: number | null
   game_started?: boolean | null
@@ -436,6 +440,10 @@ export class GameRoomService {
       updatedAt: this.toDate(row.updated_at),
       mapId: (row.map_id ?? undefined) as string | undefined,
       gameMode: (row.game_mode ?? undefined) as string | undefined,
+      movementType:
+        typeof row.movement_type === 'string'
+          ? ((row.movement_type as GameRoom['movementType']) ?? undefined)
+          : undefined,
       allowTeamPlay:
         typeof row.team_mode === 'boolean'
           ? row.team_mode
@@ -536,6 +544,9 @@ export class GameRoomService {
           is_private,
           map_id,
           game_mode,
+          movement_type,
+          fog_of_war,
+          turn_timer,
           team_mode,
           number_of_teams,
           is_ranked,
@@ -543,7 +554,7 @@ export class GameRoomService {
           status,
           lifecycle_phase
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'lobby', 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'lobby', 'lobby')
         RETURNING *
       `
 
@@ -554,6 +565,11 @@ export class GameRoomService {
         roomData.isPrivate,
         roomData.mapId || null,
         roomData.gameMode || 'classic',
+        roomData.movementType || null,
+        roomData.fogOfWar || null,
+        typeof roomData.turnTimerSeconds === 'number' && Number.isFinite(roomData.turnTimerSeconds)
+          ? Math.trunc(roomData.turnTimerSeconds)
+          : null,
         allowTeamPlay,
         normalizedNumberOfTeams,
         roomData.isRanked || false,

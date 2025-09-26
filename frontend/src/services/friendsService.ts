@@ -25,6 +25,11 @@ export interface FriendRequestsResponse {
   outgoing: Array<{ requesterId: string; requesterName: string; requestedAt: string }>
 }
 
+export interface MutualFriendsResponse {
+  total: number
+  users: Array<{ userId: string; username: string }>
+}
+
 export const friendsService = {
   async listFriends(): Promise<FriendSummary[]> {
     const res = await apiClient.get<{ friends: FriendSummary[] }>('/friends')
@@ -58,6 +63,13 @@ export const friendsService = {
 
   async status(otherUserId: string): Promise<RelationshipInfo> {
     const res = await apiClient.get<RelationshipInfo>(`/friends/status/${otherUserId}`)
+    return res.data
+  },
+
+  async mutual(otherUserId: string, limit = 6): Promise<MutualFriendsResponse> {
+    const res = await apiClient.get<MutualFriendsResponse>(`/friends/mutual/${otherUserId}`, {
+      params: { limit },
+    })
     return res.data
   },
 }

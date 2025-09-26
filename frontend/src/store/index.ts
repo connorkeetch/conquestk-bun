@@ -3,6 +3,7 @@ import authSlice from './authSlice'
 import chatSlice from './chatSlice'
 import gameSlice from './gameSlice'
 import messagesReducer from './messagesSlice'
+import uiReducer from './uiSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
 
@@ -14,6 +15,7 @@ export const store = configureStore({
     settings: settingsSlice,
     chat: chatSlice,
     messages: messagesReducer,
+    ui: uiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

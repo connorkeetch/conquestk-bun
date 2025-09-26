@@ -371,6 +371,9 @@ const ProfilePage: React.FC = () => {
     try {
       const detail = await dispatch(ensureDirectConversation(profile.id)).unwrap()
       dispatch(messagesActions.setActiveConversationId(detail.conversation.id))
+      // Open the inbox drawer globally
+      const { openInbox } = await import('@/store/uiSlice')
+      dispatch(openInbox())
     } catch (_e) {
       // noop
     } finally {

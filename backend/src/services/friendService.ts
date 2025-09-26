@@ -390,3 +390,63 @@ export default {
   removeFriend,
   getRelationshipStatus,
 }
+
+export async function getMutualFriends(
+  userA: string,
+  userB: string,
+  limit = 6,
+): Promise<{ total: number; users: Array<{ userId: string; username: string }> }> {
+  const safeLimit = Math.max(1, Math.min(limit, 25))
+
+  // Build friend sets for each user (accepted in either direction), intersect, then count and sample
+  const countResult = await query<{ total: string }>(
+    `
+    WITH a_friends AS (
+      SELECT CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END AS fid
+      FROM friendships f
+      WHERE f.status = 'accepted' AND (f.user_id = $1 OR f.friend_id = $1)
+    ),
+    b_friends AS (
+      SELECT CASE WHEN f.user_id = $2 THEN f.friend_id ELSE f.user_id END AS fid
+      FROM friendships f
+      WHERE f.status = 'accepted' AND (f.user_id = $2 OR f.friend_id = $2)
+    )
+    SELECT COUNT(*)::INT AS total
+    FROM a_friends a
+    JOIN b_friends b ON a.fid = b.fid
+    WHERE a.fid <> $1 AND a.fid <> $2
+  `,
+    [userA, userB],
+  )
+
+  const total = Number(countResult.rows[0]?.total ?? 0)
+  if (total === 0) return { total: 0, users: [] }
+
+  const sample = await query<{ id: string; username: string }>(
+    `
+    WITH a_friends AS (
+      SELECT CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END AS fid
+      FROM friendships f
+      WHERE f.status = 'accepted' AND (f.user_id = $1 OR f.friend_id = $1)
+    ),
+    b_friends AS (
+      SELECT CASE WHEN f.user_id = $2 THEN f.friend_id ELSE f.user_id END AS fid
+      FROM friendships f
+      WHERE f.status = 'accepted' AND (f.user_id = $2 OR f.friend_id = $2)
+    )
+    SELECT u.id, u.username
+    FROM a_friends a
+    JOIN b_friends b ON a.fid = b.fid
+    JOIN users u ON u.id = a.fid
+    WHERE a.fid <> $1 AND a.fid <> $2
+    ORDER BY u.username ASC
+    LIMIT $3
+  `,
+    [userA, userB, safeLimit],
+  )
+
+  return {
+    total,
+    users: sample.rows.map((r) => ({ userId: r.id, username: r.username })),
+  }
+}

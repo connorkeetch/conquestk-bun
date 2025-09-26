@@ -75,10 +75,23 @@ Map selection
 What’s applied vs pending
 
 - Applied now (persisted + used in game):
-  - Public/Private, Casual/Ranked, Map, Game Mode, Teams, AI Opponents, Hidden Treasures.
+  - [x] Public/Private
+  - [x] Casual/Ranked (with server validation)
+  - [x] Map
+  - [x] Game Mode (Classic/Capitals)
+  - [x] Teams (validated on server)
+  - [x] AI Opponents (feature-flagged)
+  - [x] Hidden Treasures (full ruleset; see linked guide)
 
-- Pending wiring (UI-only today):
-  - Fortification type (movement), Spoils of War card settings, Fog of War, Turn Timer, Territory Modifiers toggle/distribution, Invite Code storage.
+- Pending wiring checklist (UI-only before these commits):
+- [x] Fortification type → movementType in engine (classic_adjacent, adjacent_multi, path_single, path_multi)
+  - [ ] Spoils of War (card trade) → either map to treasure presets or restore card rules
+- [x] Fog of War → stored on room (UI still pending engine filters)
+- [x] Turn Timer → stored on room (UI still pending enforcement per turn)
+  - [ ] Territory Modifiers → persist toggle + distribution (sparse/balanced/abundant)
+  - [ ] Private Invite Code → persist code and allow code-based join
+
+As items ship, check them off here so the guide stays accurate.
 
 Tips for hosts
 - For private matches, share the room URL with friends; that’s the most reliable way to join.
@@ -88,4 +101,3 @@ Tips for hosts
 Links
 - Hidden Treasures ruleset → [hidden-treasures.md](hidden-treasures.md)
 - Architecture overview → [../reference/architecture.md](../reference/architecture.md)
-

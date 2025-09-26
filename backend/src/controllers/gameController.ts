@@ -30,6 +30,9 @@ export class GameController {
         isPrivate,
         mapId,
         gameMode,
+        movementType,
+        fogOfWar,
+        turnTimerSeconds,
         teamMode,
         numberOfTeams,
         allowTeamPlay,
@@ -141,6 +144,21 @@ export class GameController {
         isPrivate: isPrivate || false,
         mapId: mapId ?? undefined,
         gameMode: gameMode || 'classic',
+        movementType:
+          movementType === 'classic_adjacent' ||
+          movementType === 'adjacent_multi' ||
+          movementType === 'path_single' ||
+          movementType === 'path_multi'
+            ? movementType
+            : undefined,
+        fogOfWar:
+          fogOfWar === 'off' || fogOfWar === 'adjacent' || fogOfWar === 'persistent'
+            ? fogOfWar
+            : undefined,
+        turnTimerSeconds:
+          typeof turnTimerSeconds === 'number' && Number.isFinite(turnTimerSeconds)
+            ? Math.max(10, Math.min(300, Math.trunc(turnTimerSeconds)))
+            : undefined,
         allowTeamPlay:
           allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),
         teamMode: normalizedTeamMode,
@@ -510,6 +528,9 @@ type CreateRoomRequestBody = {
   isPrivate?: boolean
   mapId?: string | null
   gameMode?: string
+  movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  turnTimerSeconds?: number
   teamMode?: 'none' | 'teams' | 'auto_balance' | boolean
   numberOfTeams?: number | string
   allowTeamPlay?: boolean
