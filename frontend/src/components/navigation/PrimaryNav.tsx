@@ -305,7 +305,7 @@ const PrimaryNav: React.FC = () => {
                   >
                     <span className="text-lg mt-0.5">{dropdownItem.icon}</span>
                     <div className="flex-1">
-                      <div className="font-medium text-white flex items-center gap-2">
+                      <div className="font-medium text-[color:var(--text)] flex items-center gap-2">
                         <span>{dropdownItem.label}</span>
                         {dropdownItem.path === '/community/friends' && pendingFriends > 0 && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-primary/80 text-white">

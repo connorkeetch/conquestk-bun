@@ -245,14 +245,15 @@ export default function Header() {
             <button
               type="button"
               aria-label="Menu"
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors focus-ring"
+              className="p-2 rounded-lg hover:bg-[color:var(--hover-bg)] transition-colors focus-ring"
               onClick={toggleMenu}
             >
               <svg
                 width="22"
                 height="22"
                 viewBox="0 0 24 24"
-                className="fill-white/70"
+                fill="currentColor"
+                className="opacity-70 text-[color:var(--text)]"
                 role="img"
                 aria-labelledby={menuTitleId}
               >
@@ -262,7 +263,7 @@ export default function Header() {
             </button>
             <Link
               to="/"
-              className="text-white/90 font-semibold tracking-wide flex items-center gap-2"
+              className="text-[color:var(--text)] font-semibold tracking-wide flex items-center gap-2"
             >
               <MountainLogo width={24} height={24} />
               <span className="hidden sm:inline">
@@ -491,7 +492,7 @@ export default function Header() {
         <div className="sidebar-header px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MountainLogo width={28} height={28} />
-            <span className="text-xl font-bold text-white">
+            <span className="text-xl font-bold text-[color:var(--text)]">
               CONQUEST{' '}
               <span
                 className="font-bold"
@@ -512,14 +513,15 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setIsMenuOpen(false)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-[color:var(--hover-bg)] rounded-lg transition-colors"
             aria-label="Close menu"
           >
             <svg
               width="20"
               height="20"
               viewBox="0 0 24 24"
-              className="fill-white/70"
+              fill="currentColor"
+              className="opacity-70 text-[color:var(--text)]"
               aria-hidden="true"
             >
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -561,7 +563,7 @@ export default function Header() {
               <div className="space-y-2">
                 <div className="px-3 py-2 text-sm text-muted">
                   Logged in as{' '}
-                  <span className="text-white font-medium">
+                  <span className="text-[color:var(--text)] font-medium">
                     {user?.username ? sanitizeText(user.username) : ''}
                   </span>
                 </div>

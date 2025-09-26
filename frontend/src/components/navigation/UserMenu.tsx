@@ -127,7 +127,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
           {getUserInitial()}
         </div>
         <div className="hidden lg:block text-left">
-          <div className="text-sm font-medium text-white">{user?.username}</div>
+          <div className="text-sm font-medium text-[color:var(--text)]">{user?.username}</div>
           <div className="text-xs text-muted">
             {isLoadingProfile ? 'Loading stats…' : (profileError ?? `Rank ${stats.rankName}`)}
           </div>
@@ -160,7 +160,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
                 {getUserInitial()}
               </div>
               <div className="flex-1">
-                <div className="font-medium text-white">{user?.username}</div>
+                <div className="font-medium text-[color:var(--text)]">{user?.username}</div>
                 <div className="text-sm text-muted">{user?.email}</div>
                 <div className="flex items-center space-x-4 mt-1 text-xs">
                   {profileSummary ? (
@@ -193,7 +193,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">{item.icon}</span>
-                <span className="font-medium text-gray-200">{item.label}</span>
+                <span className="font-medium text-[color:var(--text)]">{item.label}</span>
               </Link>
             ))}
           </div>
