@@ -404,7 +404,10 @@ export class MigrationRunner {
       }
 
       // Detect function blocks (outside of a DO block)
-      if (!inDoBlock && (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))) {
+      if (
+        !inDoBlock &&
+        (upper.includes('CREATE FUNCTION') || upper.includes('CREATE OR REPLACE FUNCTION'))
+      ) {
         inFunction = true
         pendingDoStart = false
       }
@@ -422,7 +425,11 @@ export class MigrationRunner {
           if (/\$(?:\$|[A-Za-z_][A-Za-z0-9_]*)\$/.test(trimmedLine)) {
             inDoBlock = true
             pendingDoStart = false
-          } else if (trimmedLine && !trimmedLine.startsWith('--') && !trimmedLine.startsWith('/*')) {
+          } else if (
+            trimmedLine &&
+            !trimmedLine.startsWith('--') &&
+            !trimmedLine.startsWith('/*')
+          ) {
             pendingDoStart = false
           }
         }

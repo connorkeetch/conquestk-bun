@@ -2,6 +2,7 @@ import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
+import type { ChatMessage } from '../../store/chatSlice'
 import {
   ensureDirectConversation,
   ensureGameConversation,

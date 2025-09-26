@@ -220,6 +220,7 @@ const sanitizeMetadata = (metadata: unknown): Record<string, unknown> | undefine
 }
 
 const sendConversationMessageForUser = async (
+  socket: SocketWithUser,
   options: MessageSendOptions,
 ): Promise<{
   message: ConversationMessageRecord
@@ -561,7 +562,7 @@ export const setupChatHandlers = (
 
         const metadata = sanitizeMetadata(data.metadata)
 
-        const { message } = await sendConversationMessageForUser({
+        const { message } = await sendConversationMessageForUser(socket, {
           ...data,
           metadata,
           userId,
