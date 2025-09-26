@@ -301,6 +301,12 @@ This allows themes to work with any color scheme!
 }
 
 @layer components {
+  /* Top navigation bar container */
+  .top-nav {
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--nav-border);
+  }
+
   .panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);

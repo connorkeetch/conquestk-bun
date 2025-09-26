@@ -26,6 +26,23 @@ _Last updated: January 2026_
 - Job idempotency helpers (`jobIdempotencyService.ts`) and metrics instrumentation (`metricsService.ts`) keep retries safe and observable.
 - Queue enablement is staged; modifier cleanup is live, while enabling DM/map review push notifications still requires additional fan-out validation (see Launch Caveats).
 
+### Real‑Time Game Deltas
+- Contract is defined once in the shared package at `shared/types/delta.ts` and re‑exported via `@shared/types` as `GameDelta`. All runtimes (backend + frontend) use this single contract.
+- Emission on the backend is centralized through the `DeltaBuilder` factory in `backend/src/types/deltaUpdates.ts:1`. It returns shared types (no local interfaces) and normalizes fields:
+  - `armies`, `turn`, `reinforcementArmies` are clamped to non‑negative integers
+  - `ownerId` is only included when a non‑empty string is provided
+- Where deltas are produced:
+  - Turn actions in `backend/src/workers/gameActionWorker.ts:1` (e.g., deploy/fortify/end_turn)
+  - Battle resolution in `backend/src/workers/battleWorker.ts:1`
+  - The Socket.io layer emits `game-delta` to `game:{gameId}` rooms
+- Fortify emits two `TERRITORY_UPDATE` deltas (source and destination territories) instead of a compound delta; consumers should handle sequential updates.
+- Frontend consumption:
+  - Socket listener in `frontend/src/services/socketService.ts:1` forwards payloads to Redux
+  - `gameSlice.applyDelta` in `frontend/src/store/gameSlice.ts:1` applies `TERRITORY_UPDATE`, `PLAYER_UPDATE`, `PHASE_CHANGE`, `BATTLE_RESULT`, and `GAME_END`
+- Testing & guardrails:
+  - A compatibility test (`backend/src/test/deltaTypesCompatibility.test.ts:1`) ensures `DeltaBuilder` outputs satisfy the shared `GameDelta` contract.
+  - Lint/typecheck enforce shared import usage; local delta interfaces on the backend have been removed to prevent drift.
+
 ### Frontend (React + Redux Toolkit)
 - Entry point `frontend/src/main.tsx` mounts the app shell defined in `App.tsx`. Routing is handled by React Router with pages under `frontend/src/pages`.
 - Global state lives in `frontend/src/store`, with slices for auth, gameplay, chat, map editing, and notifications.
