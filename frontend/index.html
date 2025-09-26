@@ -15,11 +15,7 @@
             'default',
             'dark',
             'light',
-            'red',
-            'violet',
-            'blue',
             'retrospace',
-            'green',
             // Light/Dark variants for color families
             'violet-dark',
             'violet-light',
@@ -36,7 +32,18 @@
             'metal',
             'cutlers-cheese',
           ]
-          const storedTheme = localStorage.getItem('colorTheme') || 'default'
+          let storedTheme = localStorage.getItem('colorTheme') || 'default'
+          // Migrate legacy single-variant color themes to their dark variants
+          const legacyMap = {
+            violet: 'violet-dark',
+            blue: 'blue-dark',
+            red: 'red-dark',
+            green: 'green-dark',
+          }
+          if (legacyMap[storedTheme]) {
+            storedTheme = legacyMap[storedTheme]
+            try { localStorage.setItem('colorTheme', storedTheme) } catch {}
+          }
           
           // Validate and apply theme
           const theme = validThemes.includes(storedTheme) ? storedTheme : 'default'

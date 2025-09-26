@@ -85,30 +85,6 @@ export const THEMES: ThemeDefinition[] = [
     description: 'Green accents on light surfaces',
   },
   {
-    id: 'violet',
-    name: 'Violet (Legacy)',
-    displayColor: '#7C3AED',
-    description: 'Legacy violet (single variant)',
-  },
-  {
-    id: 'red',
-    name: 'Red (Legacy)',
-    displayColor: '#DC2626',
-    description: 'Legacy red (single variant)',
-  },
-  {
-    id: 'blue',
-    name: 'Blue (Legacy)',
-    displayColor: '#2563EB',
-    description: 'Legacy blue (single variant)',
-  },
-  {
-    id: 'green',
-    name: 'Green (Legacy)',
-    displayColor: '#059669',
-    description: 'Legacy green (single variant)',
-  },
-  {
     id: 'black',
     name: 'Black',
     displayColor: '#1f2937',
