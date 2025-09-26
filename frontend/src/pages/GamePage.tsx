@@ -183,7 +183,6 @@ const GamePage: React.FC = () => {
         return Math.max(1, Math.min(50, Math.trunc(config.fixedValue ?? 8)))
       case 'none':
         return 0
-      case 'triangular':
       default:
         return computeTriangularPayout(idx)
     }
@@ -699,6 +698,7 @@ const GamePage: React.FC = () => {
                                     : 'bg-amber-700'
                             return (
                               <button
+                                // biome-ignore lint/suspicious/noArrayIndexKey: list items lack stable IDs in current data model
                                 key={`${metal}-${idx}`}
                                 type="button"
                                 onClick={() => toggleTreasureIndex(idx)}

@@ -217,6 +217,7 @@ const ProfilePage: React.FC = () => {
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const [relationship, setRelationship] = useState<RelationshipStatus>('none')
   const [friendSince, setFriendSince] = useState<string | undefined>(undefined)
+  const [mutual, setMutual] = useState<{ total: number; users: Array<{ userId: string; username: string }> } | null>(null)
   const [relBusy, setRelBusy] = useState<string>('')
   const dispatch = useAppDispatch()
 
@@ -292,9 +293,12 @@ const ProfilePage: React.FC = () => {
         const info: RelationshipInfo = await friendsService.status(profile.id)
         setRelationship(info.status)
         setFriendSince(info.since)
+        const mf = await friendsService.mutual(profile.id, 6)
+        setMutual(mf)
       } catch (_e) {
         setRelationship('none')
         setFriendSince(undefined)
+        setMutual(null)
       }
     }
     void run()
@@ -308,6 +312,8 @@ const ProfilePage: React.FC = () => {
       const info = await friendsService.status(profile.id)
       setRelationship(info.status)
       setFriendSince(info.since)
+      const mf = await friendsService.mutual(profile.id, 6)
+      setMutual(mf)
     } finally {
       setRelBusy('')
     }
@@ -321,6 +327,8 @@ const ProfilePage: React.FC = () => {
       const info = await friendsService.status(profile.id)
       setRelationship(info.status)
       setFriendSince(info.since)
+      const mf = await friendsService.mutual(profile.id, 6)
+      setMutual(mf)
     } finally {
       setRelBusy('')
     }
@@ -334,6 +342,8 @@ const ProfilePage: React.FC = () => {
       const info = await friendsService.status(profile.id)
       setRelationship(info.status)
       setFriendSince(info.since)
+      const mf = await friendsService.mutual(profile.id, 6)
+      setMutual(mf)
     } finally {
       setRelBusy('')
     }
@@ -347,6 +357,8 @@ const ProfilePage: React.FC = () => {
       const info = await friendsService.status(profile.id)
       setRelationship(info.status)
       setFriendSince(info.since)
+      const mf = await friendsService.mutual(profile.id, 6)
+      setMutual(mf)
     } finally {
       setRelBusy('')
     }
@@ -360,6 +372,8 @@ const ProfilePage: React.FC = () => {
       const info = await friendsService.status(profile.id)
       setRelationship(info.status)
       setFriendSince(info.since)
+      const mf = await friendsService.mutual(profile.id, 6)
+      setMutual(mf)
     } finally {
       setRelBusy('')
     }
@@ -681,6 +695,20 @@ const ProfilePage: React.FC = () => {
                       Unfriend
                     </button>
                   )}
+                </div>
+              )}
+              {!isOwnProfile && friendSince && (
+                <div className="mt-2 text-xs text-muted">Friends since {new Date(friendSince).toLocaleDateString()}</div>
+              )}
+              {!isOwnProfile && mutual?.total && mutual.total > 0 && (
+                <div className="mt-2 text-sm text-muted">
+                  Mutual friends ({mutual.total}):{' '}
+                  {mutual.users.map((u, i) => (
+                    <span key={u.userId}>
+                      {u.username}
+                      {i < mutual.users.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
