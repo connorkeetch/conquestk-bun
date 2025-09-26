@@ -486,6 +486,11 @@ export class GameRoomService {
   }
 
   async createRoom(roomData: CreateRoomData): Promise<GameRoom> {
+    // Enforce required map selection for game creation
+    if (!roomData.mapId || typeof roomData.mapId !== 'string') {
+      throw new Error('Please select a map to create a game')
+    }
+
     // Check if map is VIP-only
     if (roomData.mapId) {
       const mapResult = await query<{ is_vip_only: boolean | null }>(
@@ -563,13 +568,13 @@ export class GameRoomService {
         roomData.hostId,
         roomData.maxPlayers,
         roomData.isPrivate,
-        roomData.mapId || null,
+        roomData.mapId,
         roomData.gameMode || 'classic',
         roomData.movementType || null,
         roomData.fogOfWar || null,
         typeof roomData.turnTimerSeconds === 'number' && Number.isFinite(roomData.turnTimerSeconds)
           ? Math.trunc(roomData.turnTimerSeconds)
-          : null,
+          : 86400, // default to 24 hours
         allowTeamPlay,
         normalizedNumberOfTeams,
         roomData.isRanked || false,
