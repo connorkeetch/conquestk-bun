@@ -1,7 +1,8 @@
 import { type ComponentType, type LazyExoticComponent, lazy } from 'react'
 
-// Use ComponentType<unknown> to avoid explicit any while remaining flexible for props
-type ModuleFactory<T extends ComponentType<unknown>> = () => Promise<{ default: T }>
+// Use ComponentType<any> for factory compatibility across pages with props
+// biome-ignore lint/suspicious/noExplicitAny: generic wrapper mirrors React.lazy typing
+type ModuleFactory<T extends ComponentType<any>> = () => Promise<{ default: T }>
 
 type LazyWithRetryOptions = {
   retries?: number
@@ -25,7 +26,8 @@ const isChunkLoadError = (error: unknown) => {
   return chunkErrorSignatures.some((signature) => error.message.includes(signature))
 }
 
-export function lazyWithRetry<T extends ComponentType<unknown>>(
+// biome-ignore lint/suspicious/noExplicitAny: generic wrapper mirrors React.lazy typing
+export function lazyWithRetry<T extends ComponentType<any>>(
   factory: ModuleFactory<T>,
   options: LazyWithRetryOptions = {},
 ): LazyExoticComponent<T> {

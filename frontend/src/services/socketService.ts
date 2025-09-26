@@ -29,6 +29,7 @@ import {
   messagesActions,
   refreshConversation,
 } from '../store/messagesSlice'
+import type { LifecycleUpdatePayload } from '../store/roomSlice'
 import {
   addPlayerToRoom,
   applyLifecycleUpdate,
@@ -42,7 +43,7 @@ import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
 import { notificationService } from './notificationService'
 
-type RoomLifecyclePayload = Parameters<typeof applyLifecycleUpdate>[0]
+type RoomLifecyclePayload = LifecycleUpdatePayload
 
 class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
@@ -60,11 +61,12 @@ class SocketService {
       import.meta.env.VITE_SOCKET_URL ||
       (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5001')
 
-    this.socket = io<ServerToClientEvents, ClientToServerEvents>(socketUrl, {
+    // Cast to typed Socket to enable strong event typing without generics on io()
+    this.socket = io(socketUrl, {
       auth: {
         token,
       },
-    })
+    }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
 
     this.setupEventListeners()
   }
@@ -88,9 +90,12 @@ class SocketService {
     this.socket?.emit('game-action', data)
   }
 
-  // Game-specific emit methods
-  emit(event: string, data: unknown) {
-    this.socket?.emit(event, data)
+  // Generic emit for legacy/untyped events
+  // biome-ignore lint/suspicious/noExplicitAny: passthrough for custom events
+  emit(event: string, data: any) {
+    // Forward as-is for events not represented in our typed interface
+    // biome-ignore lint/suspicious/noExplicitAny: event passthrough to socket
+    this.socket?.emit(event as any, data as any)
   }
 
   deployArmies(roomId: string, territoryId: string, armies: number) {
@@ -143,13 +148,14 @@ class SocketService {
     this.socket?.emit('conversation.members.update', payload, callback)
   }
 
-  // Generic on/off for chat events
+  // Generic on/off wrappers for convenience in feature areas (typed via casts)
   on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
-    this.socket?.on(event, handler)
+    // biome-ignore lint/suspicious/noExplicitAny: event bridge surface for pages/modules
+    this.socket?.on(event as any, handler as any)
   }
-
   off<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
-    this.socket?.off(event, handler)
+    // biome-ignore lint/suspicious/noExplicitAny: event bridge surface for pages/modules
+    this.socket?.off(event as any, handler as any)
   }
 
   getSocket() {
@@ -225,7 +231,7 @@ class SocketService {
 
     // Delta update handler - efficient real-time updates
     this.socket.on('game-delta', (delta) => {
-      const payload = delta as GameDelta
+      const payload = delta as unknown as GameDelta
       const currentUserId = store.getState().auth.user?.id
 
       // Handle turn notifications for phase changes
@@ -290,8 +296,8 @@ class SocketService {
       store.dispatch(setGameState(typedGameState))
     })
 
-    this.socket.on('lifecycle:update', (lifecycle) => {
-      const payload = lifecycle as Parameters<ServerToClientEvents['lifecycle:update']>[0]
+    this.socket.on('lifecycle:update', (incoming) => {
+      const payload = incoming as Parameters<ServerToClientEvents['lifecycle:update']>[0]
 
       if (!payload?.roomId || !payload?.status) {
         return
@@ -307,8 +313,17 @@ class SocketService {
         audioService.playEffect('gamestart')
         audioService.playMusic()
       }
-
-      store.dispatch(applyLifecycleUpdate(payload))
+      const lifecyclePayload: RoomLifecyclePayload = {
+        roomId: payload.roomId,
+        status: payload.status,
+        lifecyclePhase: payload.lifecyclePhase,
+        turnNumber: payload.turnNumber,
+        currentTurnUserId: payload.currentTurnUserId,
+        turnExpiresAt: payload.turnExpiresAt,
+        readyCheckStartedAt: payload.readyCheckStartedAt,
+        readyStates: payload.readyStates,
+      }
+      store.dispatch(applyLifecycleUpdate(lifecyclePayload))
     })
 
     this.socket.on('room-update', (roomData) => {
@@ -360,9 +375,7 @@ class SocketService {
         turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
-        // The 'room-update' event may include a lightweight players array not matching RoomPlayer
-        // shape. Defer player updates to dedicated events or readyStates mapping.
-        players: undefined,
+        // 'players' omitted: room-update payload may not match RoomPlayer shape
       }
 
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))

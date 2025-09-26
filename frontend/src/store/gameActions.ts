@@ -221,11 +221,7 @@ export const deployArmies = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.emit('deployArmies', {
-        roomId: currentGame.roomId,
-        territoryId,
-        armies,
-      })
+      socketService.deployArmies(currentGame.roomId, territoryId, armies)
 
       dispatch(
         addTerritoryAction({
@@ -256,11 +252,7 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.emit('attack', {
-        roomId: currentGame.roomId,
-        fromTerritoryId,
-        toTerritoryId,
-      })
+      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
 
       dispatch(
         addTerritoryAction({
@@ -294,12 +286,7 @@ export const executeFortify = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.emit('fortify', {
-        roomId: currentGame.roomId,
-        fromTerritoryId,
-        toTerritoryId,
-        armies,
-      })
+      socketService.fortify(currentGame.roomId, fromTerritoryId, toTerritoryId, armies)
 
       dispatch(
         addTerritoryAction({
@@ -349,9 +336,7 @@ export const goBackToReinforcement = createAsyncThunk(
     if (currentGame.hasAttackedThisTurn) throw new Error('Cannot go back after attacking')
 
     try {
-      socketService.emit('goBackToReinforcement', {
-        roomId: currentGame.roomId,
-      })
+      socketService.emit('goBackToReinforcement', { roomId: currentGame.roomId })
 
       // Clear all selections when going back
       dispatch(selectTerritory(null))

@@ -16,7 +16,7 @@ const initialState: RoomState = {
   error: null,
 }
 
-interface LifecycleUpdatePayload {
+export interface LifecycleUpdatePayload {
   roomId: string
   status: GameRoom['status']
   lifecyclePhase?: GameRoom['lifecyclePhase']
