@@ -858,7 +858,9 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setGameMode('random')}
                 className={
                   choiceClass(gameMode === 'random', 'w-full p-3 text-left flex flex-col gap-1') +
-                  ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                  (gameMode === 'random'
+                    ? ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                    : '')
                 }
               >
                 <div className="font-medium">🎲 Random</div>
@@ -955,10 +957,15 @@ const CreateGamePage: React.FC = () => {
               {!isRanked && (
                 <button
                   type="button"
-                  className={`${choiceClass(
-                    playersOption === 'random',
-                    'p-3 text-center font-bold transition-all duration-200',
-                  )} bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white`}
+                  className={
+                    choiceClass(
+                      playersOption === 'random',
+                      'p-3 text-center font-bold transition-all duration-200',
+                    ) +
+                    (playersOption === 'random'
+                      ? ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                      : '')
+                  }
                   onClick={() => setPlayersOption('random')}
                 >
                   🎲
@@ -1100,7 +1107,9 @@ const CreateGamePage: React.FC = () => {
                 onClick={() => setTeams('random')}
                 className={
                   choiceClass(teams === 'random', 'w-full p-3 text-left flex flex-col gap-1') +
-                  ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                  (teams === 'random'
+                    ? ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                    : '')
                 }
               >
                 <div className="font-medium text-sm">🎲 Random Teams</div>
@@ -1169,10 +1178,15 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFortification('random')}
-                className={`${choiceClass(
-                  fortification === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1',
-                )} bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white`}
+                className={
+                  choiceClass(
+                    fortification === 'random',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  ) +
+                  (fortification === 'random'
+                    ? ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                    : '')
+                }
               >
                 <div className="font-medium text-sm">🎲 Random</div>
                 <p className="text-xs opacity-90">Fortification type chosen when game starts</p>
@@ -1472,9 +1486,7 @@ const CreateGamePage: React.FC = () => {
                             ? map.id === 'random'
                               ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
                               : 'theme-selected shadow-lg'
-                            : map.id === 'random'
-                              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white/90 hover:opacity-95'
-                              : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                            : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                         }`}
                         onClick={() => setSelectedMap(map.id)}
                       >
