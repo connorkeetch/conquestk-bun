@@ -33,11 +33,17 @@ function getGameChannel(roomId: string): string {
   return `game:${roomId}`
 }
 
-function filterGameStateForPlayer(state: GameState, viewerId: string): GameState {
+function filterGameStateForPlayer(
+  state: GameState | SerializedGameState | null | undefined,
+  viewerId: string,
+): GameState {
+  // Gracefully handle missing state during lobby/initialization
+  if (!state) return state as unknown as GameState
+
   const fogMode =
     (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar ?? 'off'
   const fogEnabled = fogMode !== 'off'
-  if (!fogEnabled) return state
+  if (!fogEnabled) return state as GameState
 
   const owned = new Set<string>()
   for (const t of state.board) {
@@ -61,7 +67,7 @@ function filterGameStateForPlayer(state: GameState, viewerId: string): GameState
     }
   })
 
-  return { ...state, board: filteredBoard }
+  return { ...(state as GameState), board: filteredBoard }
 }
 
 function serializeGameStateForClient(
@@ -211,7 +217,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         const channel = getGameChannel(roomId)
+        // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
         await socket.join(channel)
+        await socket.join(roomId)
 
         if (!socket.joinedGameRooms) {
           socket.joinedGameRooms = new Set()
@@ -252,13 +260,20 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         if (!serializedState) {
           const freshState = await gameService.getGameState(roomId)
-          const filtered = filterGameStateForPlayer(freshState as GameState, userId)
-          serializedState = serializeGameStateForClient(filtered)
+          if (freshState) {
+            const filtered = filterGameStateForPlayer(freshState, userId)
+            serializedState = serializeGameStateForClient(filtered)
+          } else {
+            serializedState = null
+          }
         }
 
         if (serializedState) {
           // Apply fog-of-war filtering for the viewer
-          const filtered = filterGameStateForPlayer(serializedState as unknown as GameState, userId)
+          const filtered = filterGameStateForPlayer(
+            (serializedState as unknown as GameState) ?? null,
+            userId,
+          )
           const finalState = serializeGameStateForClient(filtered)
           if (finalState) {
             socket.emit('game-update', finalState)
@@ -282,6 +297,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const player = await gameRoomService.getPlayer(roomId, userId).catch(() => null)
 
         await socket.leave(channel)
+        await socket.leave(roomId)
         socket.joinedGameRooms?.delete(roomId)
 
         socket.to(channel).emit('player-left', {

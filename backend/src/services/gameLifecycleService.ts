@@ -48,7 +48,8 @@ export class GameLifecycleService {
       const roomResult = await client.query<{
         status: string
         turn_timer: number | null
-      }>('SELECT status, turn_timer FROM game_rooms WHERE id = $1 FOR UPDATE', [roomId])
+        max_players: number | null
+      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [roomId])
 
       if (roomResult.rowCount === 0) {
         throw new Error('Room not found')
@@ -93,8 +94,10 @@ export class GameLifecycleService {
       players = playersResult.rows
 
       const playerCount = players.length
+      const requiredCount = Math.max(2, roomResult.rows[0].max_players ?? 2)
       const readyCount = players.filter((player) => player.is_ready).length
-      const allReady = playerCount >= 2 && readyCount === playerCount
+      // Require the lobby to be full and everyone ready
+      const allReady = playerCount === requiredCount && readyCount === playerCount
 
       if (allReady && lifecycleStatus === 'lobby') {
         shouldStart = true

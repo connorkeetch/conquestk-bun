@@ -1,4 +1,4 @@
-import { Bell, MessageSquare, Volume2, VolumeX } from 'lucide-react'
+import { Bell, MessageSquare } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -11,7 +11,7 @@ import { closeInbox, openInbox } from '@/store/uiSlice'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import audioService from '../services/audioService'
+// import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
 import { selectTotalUnreadMessages } from '../store/messagesSlice'
 import { sanitizeText } from '../utils/sanitizer'
@@ -42,7 +42,7 @@ export default function Header() {
   // Inbox is globally controlled via Redux
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [pendingFriends, setPendingFriends] = useState(0)
-  const [isMuted, setIsMuted] = useState(false)
+  // const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
   const unreadMessages = useAppSelector(selectTotalUnreadMessages)
 
@@ -56,10 +56,7 @@ export default function Header() {
     ? ({ backgroundImage: resolvedPreferred, color: bubbleText } as React.CSSProperties)
     : ({ backgroundColor: resolvedPreferred, color: bubbleText } as React.CSSProperties)
 
-  useEffect(() => {
-    // Check initial mute state
-    setIsMuted(audioService.isMutedState())
-  }, [])
+  // Navbar-level mute control removed; use in-context controls instead
 
   useEffect(() => {
     const unsub = notificationService.subscribe(() => {
@@ -99,10 +96,7 @@ export default function Header() {
     }
   }, [])
 
-  const handleToggleMute = () => {
-    audioService.toggleMute()
-    setIsMuted(!isMuted)
-  }
+  // const handleToggleMute = () => {}
 
   // Simplified flat menu structure
   const menuItems: MenuItem[] = [
@@ -231,10 +225,7 @@ export default function Header() {
   const userInitial = sanitizedUsername ? sanitizedUsername.charAt(0).toUpperCase() : '👤'
 
   // Show mute only in game/editor contexts
-  const showMute =
-    location.pathname.startsWith('/room') ||
-    location.pathname.startsWith('/game') ||
-    location.pathname.startsWith('/map-editor')
+  // const showMute = false
 
   return (
     <>
@@ -316,22 +307,7 @@ export default function Header() {
           <div className="flex items-center gap-1 sm:gap-2">
             {isAuthenticated ? (
               <>
-                {/* Audio Mute Button */}
-                {showMute && (
-                  <button
-                    type="button"
-                    onClick={handleToggleMute}
-                    className="btn-ghost btn-icon"
-                    title={isMuted ? 'Unmute audio' : 'Mute audio'}
-                    aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-                  >
-                    {isMuted ? (
-                      <VolumeX className="w-6 h-6 text-[color:var(--color-danger)]" />
-                    ) : (
-                      <Volume2 className="w-6 h-6 text-muted" />
-                    )}
-                  </button>
-                )}
+                {/* Audio Mute Button removed from navbar; use in-context controls instead */}
 
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
