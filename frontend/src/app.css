@@ -47,20 +47,7 @@ Variables are named by PURPOSE, not color:
 This allows themes to work with any color scheme!
 */
 
-@import "./themes/default.css";
-@import "./themes/dark.css";
-@import "./themes/light.css";
-@import "./themes/red.css";
-@import "./themes/violet.css";
-@import "./themes/blue.css";
-@import "./themes/retrospace.css";
-@import "./themes/green.css";
-@import "./themes/frontier.css";
-@import "./themes/black.css";
-@import "./themes/highcontrast.css";
-@import "./themes/cutlers-cheese.css";
-@import "./themes/metal.css";
-@import "./themes/halloween.css";
+/* Theme overrides are imported AFTER base tokens so they can override variables. */
 
 /* ===== ROOT BASELINE (LIGHT-FIRST) ===== */
 /* These neutral tokens are the source of truth that themes override */
@@ -245,6 +232,22 @@ This allows themes to work with any color scheme!
   --color-text-muted: #94a3b8;
   --color-border: #334155;
 }
+
+/* Import theme overrides (must come after base tokens) */
+@import "./themes/default.css";
+@import "./themes/dark.css";
+@import "./themes/light.css";
+@import "./themes/red.css";
+@import "./themes/violet.css";
+@import "./themes/blue.css";
+@import "./themes/retrospace.css";
+@import "./themes/green.css";
+@import "./themes/frontier.css";
+@import "./themes/black.css";
+@import "./themes/highcontrast.css";
+@import "./themes/cutlers-cheese.css";
+@import "./themes/metal.css";
+@import "./themes/halloween.css";
 
 /* Default grid for most themes */
 :root body::after {
