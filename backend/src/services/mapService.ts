@@ -1324,20 +1324,28 @@ export class MapService {
   }
 
   /**
-   * Safely parse JSON with fallback to default value
+   * Safely parse JSON-like inputs with fallback to default value.
+   * Accepts strings (JSON text) or already-parsed objects/arrays from JSONB columns.
    */
-  private safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
-    if (!json) return defaultValue
-    try {
-      return JSON.parse(json)
-    } catch (error) {
-      logger.warn('Failed to parse JSON:', { json, error })
-      return defaultValue
+  private safeJsonParse<T>(json: unknown, defaultValue: T): T {
+    if (json === null || json === undefined) return defaultValue
+    if (typeof json === 'string') {
+      try {
+        return JSON.parse(json) as T
+      } catch (error) {
+        logger.warn('Failed to parse JSON:', { json, error })
+        return defaultValue
+      }
     }
+    if (typeof json === 'object') {
+      // Already parsed from a JSONB column
+      return json as T
+    }
+    return defaultValue
   }
 
-  private parseOptionalJson<T>(value: string | null | undefined): T | undefined {
-    if (!value) return undefined
+  private parseOptionalJson<T>(value: unknown): T | undefined {
+    if (value === null || value === undefined) return undefined
     return this.safeJsonParse<T | undefined>(value, undefined)
   }
 
