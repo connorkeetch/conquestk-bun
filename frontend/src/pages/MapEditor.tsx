@@ -1230,7 +1230,7 @@ export default function MapEditor() {
   }, [state.selectedTool, state.isDrawing, state.currentPolygon, finishTerritory])
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-6 relative">
+    <div className="min-h-screen p-6 relative text-[color:var(--text)]">
       {/* Terms Modal */}
       {showTermsModal && termsContent && (
         <TermsModal
@@ -1243,16 +1243,16 @@ export default function MapEditor() {
       )}
 
       {!polygonEditorEnabled && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
+        <div className="absolute inset-0 z-50 bg-[color:color-mix(in srgb, var(--color-black) 90%, transparent)] flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-4">🚧 Coming Soon</h1>
+            <h1 className="text-4xl font-bold text-[color:var(--heading)] mb-4">🚧 Coming Soon</h1>
             <p className="text-xl text-muted mb-6">
               The polygon-based map editor is currently under development
             </p>
             <button
               type="button"
               onClick={() => window.location.assign('/map-editor')}
-              className="bg-primary hover:bg-primary px-6 py-3 rounded-lg font-medium text-white"
+              className="btn-primary px-6 py-3"
             >
               Return to Current Map Editor
             </button>
@@ -1262,26 +1262,26 @@ export default function MapEditor() {
 
       {/* Image Options Dialog */}
       {showImageOptions && tempImageUrl && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[color:color-mix(in srgb, var(--color-black) 80%, transparent)] z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Image Import Options</h2>
+            <h2 className="text-xl font-bold text-[color:var(--heading)] mb-4">Image Import Options</h2>
             <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={handleUseFullImage}
-                className="w-full px-4 py-3 bg-primary hover:bg-primary rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 btn-primary rounded-lg font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
-                <span className="text-sm text-blue-200">No cropping</span>
+                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">No cropping</span>
               </button>
               <button
                 type="button"
                 onClick={handleCropImage}
-                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium flex items-center justify-between"
+                className="w-full px-4 py-3 btn-success rounded-lg font-medium flex items-center justify-between"
               >
                 <span>Crop Image</span>
-                <span className="text-sm text-green-200">Select area</span>
+                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">Select area</span>
               </button>
               <button
                 type="button"
@@ -1289,7 +1289,7 @@ export default function MapEditor() {
                   setShowImageOptions(false)
                   setTempImageUrl(null)
                 }}
-                className="w-full px-4 py-3 bg-surface-2 hover:bg-gray-600 rounded-lg text-white font-medium"
+                className="w-full px-4 py-3 btn-secondary rounded-lg font-medium"
               >
                 Cancel
               </button>
@@ -1954,8 +1954,8 @@ export default function MapEditor() {
                         key={territory.id}
                         className={`text-sm p-2 rounded border ${
                           state.selectedTerritory === territory.id
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-surface-2 hover:bg-gray-600 border-border'
+                            ? 'bg-primary text-[color:var(--color-white)] border-[color:var(--color-primary)]'
+                            : 'bg-surface-2 hover:bg-[color:var(--hover-bg)] border-border'
                         }`}
                       >
                         <button
@@ -1998,7 +1998,7 @@ export default function MapEditor() {
                                   e.target.value || undefined,
                                 )
                               }
-                              className="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-xs"
+                              className="w-full px-2 py-1 bg-[color:var(--panel-bg-alt)] border border-[color:var(--panel-border)] text-[color:var(--text)] rounded text-xs"
                             >
                               <option value="">No continent</option>
                               {state.continents.map((continent) => (
@@ -2023,14 +2023,14 @@ export default function MapEditor() {
                 <button
                   type="button"
                   onClick={validateMap}
-                  className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
+                  className="w-full bg-[color:var(--color-surface-2)] hover:bg-[color:var(--hover-bg)] text-[color:var(--text)] px-3 py-2 rounded text-sm"
                 >
                   🔍 Validate Map
                 </button>
                 <button
                   type="button"
                   onClick={clearMap}
-                  className="w-full bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm"
+                  className="w-full bg-[color:var(--color-surface-2)] hover:bg-[color:var(--hover-bg)] text-[color:var(--text)] px-3 py-2 rounded text-sm"
                 >
                   🗑️ Clear Map
                 </button>
