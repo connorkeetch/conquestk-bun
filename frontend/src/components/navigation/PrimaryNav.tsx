@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import friendsService from '@/services/friendsService'
 import { socketService } from '@/services/socketService'
+import { useAppSelector } from '@/hooks/redux'
 
 // AI menu entries are now generally visible
 
@@ -27,9 +28,15 @@ const PrimaryNav: React.FC = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [pendingFriends, setPendingFriends] = useState(0)
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated)
 
-  // Fetch pending friend requests and subscribe to realtime changes
+  // Fetch pending friend requests and subscribe to realtime changes (auth only)
   useEffect(() => {
+    if (!isAuthenticated) {
+      setPendingFriends(0)
+      return
+    }
+
     let mounted = true
     const load = async () => {
       try {
@@ -56,7 +63,7 @@ const PrimaryNav: React.FC = () => {
       socketService.off('friend.added', refresh)
       socketService.off('friend.removed', refresh)
     }
-  }, [])
+  }, [isAuthenticated])
 
   // Navigation items with dropdowns
   const navItems: NavItem[] = useMemo(() => {

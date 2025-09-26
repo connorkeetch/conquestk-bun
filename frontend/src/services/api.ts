@@ -20,13 +20,32 @@ apiClient.interceptors.request.use((config) => {
 })
 
 // Handle auth errors
+// Prevent runaway redirect loops on 401s
+let isRedirectingOn401 = false
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
+      const token = localStorage.getItem('token')
+      // Always clear any bad token
+      if (token) localStorage.removeItem('token')
+
+      // Only redirect if we previously had a token (i.e., user was logged in),
+      // we're not already on an auth page, and we haven't redirected yet.
+      const path = typeof window !== 'undefined' ? window.location.pathname : ''
+      const isAuthRoute =
+        path.startsWith('/login') ||
+        path.startsWith('/register') ||
+        path.startsWith('/forgot-password') ||
+        path.startsWith('/reset-password')
+
+      if (token && !isAuthRoute && !isRedirectingOn401) {
+        isRedirectingOn401 = true
+        // Use assign to avoid polluting history with unnecessary entries
+        window.location.assign('/login')
+      }
     }
     return Promise.reject(error)
   },

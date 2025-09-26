@@ -66,8 +66,13 @@ export default function Header() {
     return unsub
   }, [])
 
-  // Pending friend requests counter
+  // Pending friend requests counter (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) {
+      setPendingFriends(0)
+      return
+    }
+
     let mounted = true
     const load = async () => {
       try {
@@ -94,7 +99,7 @@ export default function Header() {
       socketService.off('friend.added', refresh)
       socketService.off('friend.removed', refresh)
     }
-  }, [])
+  }, [isAuthenticated])
 
   // const handleToggleMute = () => {}
 
