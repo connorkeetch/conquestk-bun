@@ -168,9 +168,9 @@ This allows themes to work with any color scheme!
    - Being the explicit "light" theme id
    - Being listed here as a one-off light theme (e.g. retrospace)
    To add another light-only theme id, include it in the :not(...) list below. */
-  :root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not(
-      [data-theme="light"]
-    ) {
+:root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not(
+    [data-theme="light"]
+  ) {
     --text: #f9fafb;
     --text-muted: #94a3b8;
     --heading: #f9fafb;
@@ -179,9 +179,10 @@ This allows themes to work with any color scheme!
     --surface-0: #010409;
     --surface-1: #0f172a;
     --surface-2: #1e293b;
-    --panel-bg: rgba(15, 23, 42, 0.9);
-    --panel-border: rgba(51, 65, 85, 0.6);
-    --panel-bg-alt: color-mix(in srgb, #1e293b 85%, transparent);
+  /* Use glass-style panels by default for dark themes */
+  --panel-bg: var(--glass-bg);
+  --panel-border: var(--glass-border);
+  --panel-bg-alt: var(--glass-bg-light);
 
     --nav-bg: rgba(15, 23, 42, 0.75);
     --nav-border: rgba(51, 65, 85, 0.6);
@@ -216,9 +217,9 @@ This allows themes to work with any color scheme!
     --panel-radius: var(--radius-surface);
     --panel-padding: 1.5rem;
 
-    --box-bg: rgba(30, 41, 59, 0.5);
-    --box-bg-solid: #1e293b;
-    --box-border: rgba(71, 85, 105, 0.5);
+  --box-bg: rgba(30, 41, 59, 0.5);
+  --box-bg-solid: #1e293b;
+  --box-border: rgba(71, 85, 105, 0.5);
     --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     --box-blur: 12px;
     --box-radius: 0.625rem;
@@ -233,6 +234,15 @@ This allows themes to work with any color scheme!
     --color-text-muted: #94a3b8;
     --color-border: #334155;
   }
+}
+
+/* ===== LIGHT THEME PANEL GLASS DEFAULTS ===== */
+/* Make panels glassy for all light variants; RetroSpace overrides its own panel tokens. */
+:root[data-theme="light"],
+:root[data-theme$="-light"] {
+  --panel-bg: var(--glass-bg);
+  --panel-bg-alt: var(--glass-bg-light);
+  --panel-border: var(--glass-border);
 }
 
 /* Import theme overrides (must come after base tokens) */
