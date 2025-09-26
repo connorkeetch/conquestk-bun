@@ -49,7 +49,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">3. Data Sharing</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                3. Data Sharing
+              </h2>
               <p className="text-muted mb-2">
                 <strong>We do NOT sell your personal data.</strong>
               </p>
@@ -81,7 +83,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">5. Data Security</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                5. Data Security
+              </h2>
               <p className="text-muted">We protect your data with:</p>
               <ul className="list-disc list-inside text-muted space-y-1 mt-2">
                 <li>Encrypted passwords (bcrypt)</li>
@@ -94,7 +98,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">6. Your Rights</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                6. Your Rights
+              </h2>
               <p className="text-muted">You can:</p>
               <ul className="list-disc list-inside text-muted space-y-1 mt-2">
                 <li>Access your data (in your profile)</li>
@@ -105,7 +111,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">7. Children's Privacy</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                7. Children's Privacy
+              </h2>
               <p className="text-muted">
                 Users must be 13+ to play. We don't knowingly collect data from children under 13.
                 If you're a parent and believe your child under 13 has created an account, contact
@@ -114,7 +122,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">8. Data Retention</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                8. Data Retention
+              </h2>
               <p className="text-muted">
                 We keep your data as long as your account is active. When you delete your account,
                 we remove your personal info within 30 days. Some data may be kept anonymized for
@@ -123,7 +133,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">9. International Users</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                9. International Users
+              </h2>
               <p className="text-muted">
                 The game is hosted in the United States. By playing, you agree to data transfer to
                 the US.
@@ -141,7 +153,9 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">11. Contact Us</h2>
+              <h2 className="text-xl font-semibold text-[color:var(--heading)] mb-3">
+                11. Contact Us
+              </h2>
               <p className="text-muted">
                 Privacy questions? Email{' '}
                 <a

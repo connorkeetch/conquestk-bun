@@ -250,11 +250,7 @@ export const MapVersionManager: React.FC = () => {
             Manage different versions of your map and track their approval status
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary"
-        >
+        <button type="button" onClick={() => setShowCreateModal(true)} className="btn-primary">
           Create New Version
         </button>
       </div>
@@ -276,7 +272,9 @@ export const MapVersionManager: React.FC = () => {
         {versions.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-muted text-6xl mb-4">📝</div>
-            <h3 className="text-lg font-medium text-[color:var(--heading)] mb-2">No Versions Yet</h3>
+            <h3 className="text-lg font-medium text-[color:var(--heading)] mb-2">
+              No Versions Yet
+            </h3>
             <p className="text-muted mb-6">
               Create your first version to start managing your map's development.
             </p>
@@ -337,7 +335,9 @@ export const MapVersionManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-[color:var(--text)]">{version.name}</div>
+                        <div className="text-sm font-medium text-[color:var(--text)]">
+                          {version.name}
+                        </div>
                         {version.description && (
                           <div className="text-sm text-muted">{version.description}</div>
                         )}
@@ -345,7 +345,9 @@ export const MapVersionManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(version)}</td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-[color:var(--text)]">{formatDate(version.createdAt)}</div>
+                      <div className="text-sm text-[color:var(--text)]">
+                        {formatDate(version.createdAt)}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-[color:var(--text)]">
@@ -391,8 +393,10 @@ export const MapVersionManager: React.FC = () => {
       {/* Create Version Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-[color:var(--panel-bg)] border border-[color:var(--panel-border)] rounded-lg p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold text-[color:var(--heading)] mb-4">Create New Version</h3>
+          <div className="bg-[color:var(--panel-bg)] border border-[color:var(--panel-border)] rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-[color:var(--heading)] mb-4">
+              Create New Version
+            </h3>
 
             <div className="space-y-4">
               <div>

@@ -23,11 +23,22 @@
 
   --ck-glow: #ff6b35;
 
-  /* Box/Card overrides - spooky dark */
-  --box-bg: rgba(26, 15, 23, 0.7);
-  --box-bg-solid: #1a0f17;
-  --box-border: rgba(139, 21, 56, 0.5);
-  --box-shadow: 0 10px 40px rgba(139, 21, 56, 0.3);
+  /* Align box/glass tokens with Halloween palette for consistent components */
+  --glass-bg: rgba(26, 15, 23, 0.6);
+  --glass-bg-light: rgba(26, 15, 23, 0.45);
+  --glass-border: rgba(139, 21, 56, 0.5);
+  --glass-shadow: 0 10px 40px rgba(139, 21, 56, 0.3);
+  --glass-radius-sm: 10px;
+  --glass-radius-lg: 14px;
+
+  --panel-bg: color-mix(in srgb, var(--color-surface-1) 92%, transparent);
+  --panel-bg-alt: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
+  --panel-border: color-mix(in srgb, var(--color-border) 65%, transparent);
+
+  --box-bg: var(--glass-bg);
+  --box-bg-solid: var(--color-surface-1);
+  --box-border: var(--panel-border);
+  --box-shadow: var(--glass-shadow);
   --box-blur: 12px;
   --box-radius: 0.75rem;
   --box-padding: 1.5rem;
@@ -242,33 +253,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-[data-theme="halloween"] .glass-box,
-[data-theme="halloween"] .glass-box-sm,
-[data-theme="halloween"] .glass-box-lg,
-[data-theme="halloween"] .glass-box-xl,
-[data-theme="halloween"] .box1,
-[data-theme="halloween"] .solid-box {
-  background-color: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
-  border-color: color-mix(in srgb, #ff6b35 45%, transparent);
-  box-shadow:
-    0 20px 45px rgba(139, 21, 56, 0.35),
-    0 0 0 1px rgba(255, 107, 53, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  position: relative;
-}
-
-[data-theme="halloween"] .glass-box::after,
-[data-theme="halloween"] .glass-box-lg::after,
-[data-theme="halloween"] .glass-box-xl::after,
-[data-theme="halloween"] .box1::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 1px dashed rgba(255, 107, 53, 0.15);
-  -webkit-mask: radial-gradient(circle at top left, transparent 0, transparent 18px, black 18px);
-  mask: radial-gradient(circle at top left, transparent 0, transparent 18px, black 18px);
-}
+/* Inherit component box styles from tokens for consistent look */
 
 /* Pulsing glow for important elements */
 [data-theme="halloween"] .btn-primary,

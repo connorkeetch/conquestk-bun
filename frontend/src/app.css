@@ -52,185 +52,187 @@ This allows themes to work with any color scheme!
 /* ===== ROOT BASELINE (LIGHT-FIRST) ===== */
 /* These neutral tokens are the source of truth that themes override */
 
-:root {
-  --font-family-base: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+@layer base {
+  :root {
+    --font-family-base: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 
-  /* Text palette */
-  --text: #0f172a;
-  --text-muted: #475569;
-  --heading: #0b1220;
-  --link: #1d4ed8;
+    /* Text palette */
+    --text: #0f172a;
+    --text-muted: #475569;
+    --heading: #0b1220;
+    --link: #1d4ed8;
 
-  /* Neutral foundation colors */
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-gray-100: #f8fafc;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5f5;
-  --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
+    /* Neutral foundation colors */
+    --color-black: #000000;
+    --color-white: #ffffff;
+    --color-gray-100: #f8fafc;
+    --color-gray-200: #e2e8f0;
+    --color-gray-300: #cbd5f5;
+    --color-gray-400: #94a3b8;
+    --color-gray-500: #64748b;
+    --color-gray-600: #475569;
+    --color-gray-700: #334155;
+    --color-gray-800: #1e293b;
+    --color-gray-900: #0f172a;
 
-  /* Surface palette */
-  --surface-0: #f8fafc;
-  --surface-1: #ffffff;
-  --surface-2: #e2e8f0;
-  --panel-bg: #ffffff;
-  --panel-border: rgba(15, 23, 42, 0.08);
-  --panel-bg-alt: #f1f5f9;
+    /* Surface palette */
+    --surface-0: #f8fafc;
+    --surface-1: #ffffff;
+    --surface-2: #e2e8f0;
+    --panel-bg: #ffffff;
+    --panel-border: rgba(15, 23, 42, 0.08);
+    --panel-bg-alt: #f1f5f9;
 
-  /* Chrome */
-  --nav-bg: #ffffff;
-  --nav-border: rgba(15, 23, 42, 0.1);
-  --footer-bg: #f1f5f9;
-  --modal-bg: #ffffff;
-  --modal-border: rgba(15, 23, 42, 0.12);
+    /* Chrome */
+    --nav-bg: #ffffff;
+    --nav-border: rgba(15, 23, 42, 0.1);
+    --footer-bg: #f1f5f9;
+    --modal-bg: #ffffff;
+    --modal-border: rgba(15, 23, 42, 0.12);
 
-  /* Interaction tokens */
-  --hover-bg: rgba(15, 23, 42, 0.04);
-  --hover-border: rgba(15, 23, 42, 0.08);
+    /* Interaction tokens */
+    --hover-bg: rgba(15, 23, 42, 0.04);
+    --hover-border: rgba(15, 23, 42, 0.08);
 
-  /* Radius scale */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-surface: 10px;
+    /* Radius scale */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-surface: 10px;
 
-  /* Elevation */
-  --shadow-0: none;
-  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.12);
-  --shadow-2: 0 10px 30px rgba(15, 23, 42, 0.18);
-  --shadow-modal: 0 24px 60px rgba(15, 23, 42, 0.25);
+    /* Elevation */
+    --shadow-0: none;
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.12);
+    --shadow-2: 0 10px 30px rgba(15, 23, 42, 0.18);
+    --shadow-modal: 0 24px 60px rgba(15, 23, 42, 0.25);
 
-  /* Section spacing */
-  --section-spacing: 3rem;
-  --section-spacing-sm: 2rem;
+    /* Section spacing */
+    --section-spacing: 3rem;
+    --section-spacing-sm: 2rem;
 
-  /* Theme colors */
-  --color-primary: #2563eb;
-  --color-primary-soft: #3b82f6;
-  --color-secondary: #ffd700;
-  --color-accent: #dc2626;
+    /* Theme colors */
+    --color-primary: #2563eb;
+    --color-primary-soft: #3b82f6;
+    --color-secondary: #ffd700;
+    --color-accent: #dc2626;
 
-  /* Semantic states */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #b22222;
-  --color-info: #06b6d4;
+    /* Semantic states */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #b22222;
+    --color-info: #06b6d4;
 
-  /* Background treatments */
-  --ck-bg-gradient: linear-gradient(180deg, #e8ecf7 0%, #ffffff 100%);
-  --ck-glow: var(--color-primary-soft);
-  --body-bg-image: var(--ck-bg-gradient);
-  --body-bg-attachment: fixed;
+    /* Background treatments */
+    --ck-bg-gradient: linear-gradient(180deg, #e8ecf7 0%, #ffffff 100%);
+    --ck-glow: var(--color-primary-soft);
+    --body-bg-image: var(--ck-bg-gradient);
+    --body-bg-attachment: fixed;
 
-  /* Glass system */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-bg-light: rgba(255, 255, 255, 0.5);
-  --glass-border: rgba(15, 23, 42, 0.08);
-  --glass-blur: 18px;
-  --glass-shadow: var(--shadow-2);
-  --glass-radius-sm: 8px;
-  --glass-radius-lg: 14px;
+    /* Glass system */
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-bg-light: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(15, 23, 42, 0.08);
+    --glass-blur: 18px;
+    --glass-shadow: var(--shadow-2);
+    --glass-radius-sm: 8px;
+    --glass-radius-lg: 14px;
 
-  /* Panel tokens */
-  --panel-radius: var(--radius-surface);
-  --panel-padding: 1.5rem;
+    /* Panel tokens */
+    --panel-radius: var(--radius-surface);
+    --panel-padding: 1.5rem;
 
-  /* Legacy aliases (to be migrated) */
-  --surface-glass: var(--glass-bg);
-  --surface-glass-light: var(--glass-bg-light);
-  --box-bg: var(--panel-bg);
-  --box-bg-solid: var(--panel-bg);
-  --box-border: var(--panel-border);
-  --box-shadow: var(--shadow-2);
-  --box-blur: var(--glass-blur);
-  --box-radius: var(--radius-surface);
-  --box-padding: var(--panel-padding);
-  --color-bg-deep: var(--surface-0);
-  --color-bg-alt: var(--surface-2);
-  --color-bg-void: var(--surface-0);
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-border: var(--panel-border);
-}
+    /* Legacy aliases (to be migrated) */
+    --surface-glass: var(--glass-bg);
+    --surface-glass-light: var(--glass-bg-light);
+    --box-bg: var(--panel-bg);
+    --box-bg-solid: var(--panel-bg);
+    --box-border: var(--panel-border);
+    --box-shadow: var(--shadow-2);
+    --box-blur: var(--glass-blur);
+    --box-radius: var(--radius-surface);
+    --box-padding: var(--panel-padding);
+    --color-bg-deep: var(--surface-0);
+    --color-bg-alt: var(--surface-2);
+    --color-bg-void: var(--surface-0);
+    --color-surface-1: var(--surface-1);
+    --color-surface-2: var(--surface-2);
+    --color-text: var(--text);
+    --color-text-muted: var(--text-muted);
+    --color-border: var(--panel-border);
+  }
 
-/* ===== DARK THEME OVERRIDES ===== */
-/* Default to dark for all themes unless explicitly light.
+  /* ===== DARK THEME OVERRIDES ===== */
+  /* Default to dark for all themes unless explicitly light.
    Light themes opt in by:
    - Using the name suffix "-light" (e.g. "violet-light")
    - Being the explicit "light" theme id
    - Being listed here as a one-off light theme (e.g. retrospace)
    To add another light-only theme id, include it in the :not(...) list below. */
-:root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not(
-    [data-theme="light"]
-  ) {
-  --text: #f9fafb;
-  --text-muted: #94a3b8;
-  --heading: #f9fafb;
-  --link: #93c5fd;
+  :root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not(
+      [data-theme="light"]
+    ) {
+    --text: #f9fafb;
+    --text-muted: #94a3b8;
+    --heading: #f9fafb;
+    --link: #93c5fd;
 
-  --surface-0: #010409;
-  --surface-1: #0f172a;
-  --surface-2: #1e293b;
-  --panel-bg: rgba(15, 23, 42, 0.9);
-  --panel-border: rgba(51, 65, 85, 0.6);
-  --panel-bg-alt: color-mix(in srgb, #1e293b 85%, transparent);
+    --surface-0: #010409;
+    --surface-1: #0f172a;
+    --surface-2: #1e293b;
+    --panel-bg: rgba(15, 23, 42, 0.9);
+    --panel-border: rgba(51, 65, 85, 0.6);
+    --panel-bg-alt: color-mix(in srgb, #1e293b 85%, transparent);
 
-  --nav-bg: rgba(15, 23, 42, 0.75);
-  --nav-border: rgba(51, 65, 85, 0.6);
-  --footer-bg: rgba(2, 6, 23, 0.85);
-  --modal-bg: rgba(15, 23, 42, 0.95);
-  --modal-border: rgba(51, 65, 85, 0.65);
+    --nav-bg: rgba(15, 23, 42, 0.75);
+    --nav-border: rgba(51, 65, 85, 0.6);
+    --footer-bg: rgba(2, 6, 23, 0.85);
+    --modal-bg: rgba(15, 23, 42, 0.95);
+    --modal-border: rgba(51, 65, 85, 0.65);
 
-  --hover-bg: rgba(148, 163, 184, 0.08);
-  --hover-border: rgba(148, 163, 184, 0.2);
+    --hover-bg: rgba(148, 163, 184, 0.08);
+    --hover-border: rgba(148, 163, 184, 0.2);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-surface: 10px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-surface: 10px;
 
-  --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.6);
-  --shadow-2: 0 16px 45px rgba(2, 6, 23, 0.55);
-  --shadow-modal: 0 30px 80px rgba(2, 6, 23, 0.7);
+    --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.6);
+    --shadow-2: 0 16px 45px rgba(2, 6, 23, 0.55);
+    --shadow-modal: 0 30px 80px rgba(2, 6, 23, 0.7);
 
-  /* Do not set background gradient or attachment here.
+    /* Do not set background gradient or attachment here.
      Each theme (including `default` and `dark`) defines its own
      --ck-bg-gradient/--body-bg-image to avoid unintended tint bleed. */
 
-  --glass-bg: rgba(15, 23, 42, 0.55);
-  --glass-bg-light: rgba(17, 24, 39, 0.4);
-  --glass-border: rgba(71, 85, 105, 0.5);
-  --glass-blur: 12px;
-  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  --glass-radius-sm: 8px;
-  --glass-radius-lg: 16px;
+    --glass-bg: rgba(15, 23, 42, 0.55);
+    --glass-bg-light: rgba(17, 24, 39, 0.4);
+    --glass-border: rgba(71, 85, 105, 0.5);
+    --glass-blur: 12px;
+    --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    --glass-radius-sm: 8px;
+    --glass-radius-lg: 16px;
 
-  --panel-radius: var(--radius-surface);
-  --panel-padding: 1.5rem;
+    --panel-radius: var(--radius-surface);
+    --panel-padding: 1.5rem;
 
-  --box-bg: rgba(30, 41, 59, 0.5);
-  --box-bg-solid: #1e293b;
-  --box-border: rgba(71, 85, 105, 0.5);
-  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  --box-blur: 12px;
-  --box-radius: 0.625rem;
-  --box-padding: 1.5rem;
+    --box-bg: rgba(30, 41, 59, 0.5);
+    --box-bg-solid: #1e293b;
+    --box-border: rgba(71, 85, 105, 0.5);
+    --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    --box-blur: 12px;
+    --box-radius: 0.625rem;
+    --box-padding: 1.5rem;
 
-  --color-bg-deep: #000000;
-  --color-bg-alt: #050505;
-  --color-bg-void: #030303;
-  --color-surface-1: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-text: #f9fafb;
-  --color-text-muted: #94a3b8;
-  --color-border: #334155;
+    --color-bg-deep: #000000;
+    --color-bg-alt: #050505;
+    --color-bg-void: #030303;
+    --color-surface-1: #0f172a;
+    --color-surface-2: #1e293b;
+    --color-text: #f9fafb;
+    --color-text-muted: #94a3b8;
+    --color-border: #334155;
+  }
 }
 
 /* Import theme overrides (must come after base tokens) */
