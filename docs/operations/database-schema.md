@@ -1,6 +1,6 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-26T16:35:20.818Z
+Generated on 2025-09-26T17:12:37.526Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
@@ -38,8 +38,8 @@ Generated on 2025-09-26T16:35:20.818Z
 | `conversation_messages` | 10 | 0 |
 | `conversations` | 10 | 0 |
 | `email_verification_logs` | 7 | 2 |
-| `events` | 8 | 3 |
-| `feature_flag_audit` | 8 | 74 |
+| `events` | 8 | 5 |
+| `feature_flag_audit` | 8 | 70 |
 | `feature_flags` | 13 | 9 |
 | `friendships` | 6 | 0 |
 | `game_moves` | 9 | 0 |
@@ -48,7 +48,7 @@ Generated on 2025-09-26T16:35:20.818Z
 | `game_states` | 13 | 0 |
 | `game_territory_modifiers` | 8 | 0 |
 | `game_variants` | 11 | 0 |
-| `map_asset_purge_runs` | 10 | 497 |
+| `map_asset_purge_runs` | 10 | 501 |
 | `map_collaborators` | 5 | 0 |
 | `map_continents` | 6 | 0 |
 | `map_drafts` | 24 | 0 |
@@ -70,7 +70,7 @@ Generated on 2025-09-26T16:35:20.818Z
 | `player_stats` | 12 | 0 |
 | `rating_history` | 8 | 0 |
 | `room_players` | 16 | 0 |
-| `schema_migrations` | 8 | 37 |
+| `schema_migrations` | 8 | 38 |
 | `seasons` | 9 | 0 |
 | `skill_leaderboard_cache` | 6 | 0 |
 | `territory_adjacencies` | 4 | 0 |
@@ -89,7 +89,7 @@ Generated on 2025-09-26T16:35:20.818Z
 | `user_profiles` | 10 | 0 |
 | `user_reports` | 11 | 0 |
 | `user_seasonal_stats` | 13 | 0 |
-| `user_sessions` | 9 | 3 |
+| `user_sessions` | 9 | 5 |
 | `user_settings` | 8 | 0 |
 | `user_terms_acceptance` | 6 | 0 |
 | `users` | 32 | 14 |

@@ -14,9 +14,9 @@ import {
   hexToRgba,
   isGradientValue,
   lightenColor,
-  mixColors,
+  pickTextOnColor,
+  // mixColors,
 } from '@/utils/color'
-
 import {
   getColorDisplayName,
   getColorValue,
@@ -31,7 +31,6 @@ import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
-import { pickTextOnColor } from '@/utils/color'
 
 type TabType = 'overview' | 'stats' | 'friends' | 'matches' | 'achievements'
 
@@ -67,8 +66,8 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
         backgroundImage: `radial-gradient(circle at 30% 30%, ${hexToRgba(signatureHex, 0.45)} 0%, transparent 70%)`,
       }
 
-  const heroGradientOverlay =
-    'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
+  // const heroGradientOverlay =
+  //   'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
 
   // Neutralize hero background; avoid tinting whole card with signature color
   const heroBackgroundStyle: React.CSSProperties = {
@@ -238,17 +237,16 @@ const ProfilePage: React.FC = () => {
   const [relBusy, setRelBusy] = useState<string>('')
   const dispatch = useAppDispatch()
   const [friendsTabLoading, setFriendsTabLoading] = useState(false)
-  const [friendsList, setFriendsList] = useState<Array<{ userId: string; username: string; since?: string }>>([])
-  const [compareFriend, setCompareFriend] = useState<
-    | {
-        userId: string
-        username: string
-        loading: boolean
-        error?: string | null
-        profile?: ProfileSummary | null
-      }
-    | null
-  >(null)
+  const [friendsList, setFriendsList] = useState<
+    Array<{ userId: string; username: string; since?: string }>
+  >([])
+  const [compareFriend, setCompareFriend] = useState<{
+    userId: string
+    username: string
+    loading: boolean
+    error?: string | null
+    profile?: ProfileSummary | null
+  } | null>(null)
 
   const isOwnProfile = currentUser?.username === username
 
@@ -345,8 +343,14 @@ const ProfilePage: React.FC = () => {
     try {
       const other = await profileService.getProfileByUsername(username)
       setCompareFriend({ userId, username, loading: false, error: null, profile: other })
-    } catch (e) {
-      setCompareFriend({ userId, username, loading: false, error: 'Failed to load profile', profile: null })
+    } catch (_e) {
+      setCompareFriend({
+        userId,
+        username,
+        loading: false,
+        error: 'Failed to load profile',
+        profile: null,
+      })
     }
   }
 
@@ -538,7 +542,6 @@ const ProfilePage: React.FC = () => {
   const {
     signatureCrestStyle,
     signatureColorSwatchStyle,
-    signatureGlowStyle,
     heroBackgroundStyle,
     heroBorderColor,
     preferredColorDisplayName,
@@ -1014,7 +1017,11 @@ const ProfilePage: React.FC = () => {
                         {profile.username} vs {compareFriend.username}
                       </div>
                     </div>
-                    <button type="button" className="btn btn-tertiary btn-sm" onClick={closeCompare}>
+                    <button
+                      type="button"
+                      className="btn btn-tertiary btn-sm"
+                      onClick={closeCompare}
+                    >
                       ✖ Close
                     </button>
                   </div>
@@ -1025,7 +1032,9 @@ const ProfilePage: React.FC = () => {
                   ) : compareFriend.profile ? (
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
                       {(() => {
-                        const other = compareFriend.profile!
+                        const other = compareFriend.profile as NonNullable<
+                          typeof compareFriend.profile
+                        >
                         const base = profile
                         const metric = (
                           label: string,
@@ -1038,12 +1047,17 @@ const ProfilePage: React.FC = () => {
                           const same = delta === 0
                           return (
                             <div className="p-3 rounded-lg bg-surface-3/40 border border-white/10">
-                              <div className="text-xs uppercase tracking-wide text-muted mb-1">{label}</div>
+                              <div className="text-xs uppercase tracking-wide text-muted mb-1">
+                                {label}
+                              </div>
                               <div className="text-white text-sm font-semibold">
-                                {formatter(lhs)} <span className="text-white/40">→</span> {formatter(rhs)}
+                                {formatter(lhs)} <span className="text-white/40">→</span>{' '}
+                                {formatter(rhs)}
                               </div>
                               {!same && (
-                                <div className={up ? 'text-green-400 text-xs' : 'text-red-400 text-xs'}>
+                                <div
+                                  className={up ? 'text-green-400 text-xs' : 'text-red-400 text-xs'}
+                                >
                                   {up ? '▲' : '▼'} {formatter(Math.abs(delta))}
                                 </div>
                               )}
@@ -1073,22 +1087,32 @@ const ProfilePage: React.FC = () => {
                 <div className="text-center text-muted py-8">Loading friends...</div>
               ) : friendsList.length === 0 ? (
                 <div className="text-center text-muted py-8">
-                  {isOwnProfile ? 'No friends yet. Find players in the Community tab!' : 'No mutual friends to show.'}
+                  {isOwnProfile
+                    ? 'No friends yet. Find players in the Community tab!'
+                    : 'No mutual friends to show.'}
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {friendsList.map((f) => (
-                    <div key={f.userId} className="glass-box-sm flex items-center justify-between p-3 border border-white/10 bg-surface-2/70">
+                    <div
+                      key={f.userId}
+                      className="glass-box-sm flex items-center justify-between p-3 border border-white/10 bg-surface-2/70"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-surface-3 text-xs flex items-center justify-center border border-white/10">
                           {f.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <Link to={`/profile/${f.username}`} className="font-semibold hover:underline">
+                          <Link
+                            to={`/profile/${f.username}`}
+                            className="font-semibold hover:underline"
+                          >
                             {f.username}
                           </Link>
                           {f.since && (
-                            <div className="text-[11px] text-muted">Since {new Date(f.since).toLocaleDateString()}</div>
+                            <div className="text-[11px] text-muted">
+                              Since {new Date(f.since).toLocaleDateString()}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1109,17 +1133,27 @@ const ProfilePage: React.FC = () => {
                           ⚖️ Compare
                         </button>
                         {isOwnProfile && (
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
-                            // lazy open DM via existing helper
-                            void (async () => {
-                              try {
-                                const detail = await dispatch(ensureDirectConversation(f.userId)).unwrap()
-                                dispatch(messagesActions.setActiveConversationId(detail.conversation.id))
-                                const { openInbox } = await import('@/store/uiSlice')
-                                dispatch(openInbox())
-                              } catch {}
-                            })()
-                          }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              // lazy open DM via existing helper
+                              void (async () => {
+                                try {
+                                  const detail = await dispatch(
+                                    ensureDirectConversation(f.userId),
+                                  ).unwrap()
+                                  dispatch(
+                                    messagesActions.setActiveConversationId(detail.conversation.id),
+                                  )
+                                  const { openInbox } = await import('@/store/uiSlice')
+                                  dispatch(openInbox())
+                                } catch {
+                                  // ignore failures to open inbox
+                                }
+                              })()
+                            }}
+                          >
                             💬 Message
                           </button>
                         )}

@@ -17,7 +17,7 @@ const CreateGamePage = lazyWithRetry(() => import('./pages/CreateGamePage'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 const FriendsPage = lazyWithRetry(() => import('./pages/FriendsPage'))
 
-const ClanDirectoryPage = lazyWithRetry(() => import('./pages/ClanDirectoryPage'))
+// const ClanDirectoryPage = lazyWithRetry(() => import('./pages/ClanDirectoryPage'))
 const ClanDetailPage = lazyWithRetry(() => import('./pages/ClanDetailPage'))
 
 import ForgotPassword from './pages/ForgotPassword'
@@ -229,6 +229,22 @@ function App() {
             }
           />
           <Route
+            path="/community/:section"
+            element={
+              <AuthGuard requireAuth={false}>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <CommunityPage />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route
             path="/community/friends"
             element={
               <AuthGuard>
@@ -244,22 +260,7 @@ function App() {
               </AuthGuard>
             }
           />
-          <Route
-            path="/clans"
-            element={
-              <AuthGuard requireAuth={false}>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <ClanDirectoryPage />
-                </Suspense>
-              </AuthGuard>
-            }
-          />
+          <Route path="/clans" element={<Navigate to="/community/clans" replace />} />
           <Route
             path="/clans/:slug"
             element={
@@ -276,7 +277,23 @@ function App() {
               </AuthGuard>
             }
           />
-          <Route path="/leaderboard" element={<Navigate to="/community" replace />} />
+          <Route
+            path="/community/clans/:slug"
+            element={
+              <AuthGuard requireAuth={false}>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <ClanDetailPage />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route path="/leaderboard" element={<Navigate to="/community/leaderboards" replace />} />
           <Route
             path="/tutorial"
             element={
