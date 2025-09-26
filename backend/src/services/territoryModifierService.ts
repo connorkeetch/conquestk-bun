@@ -110,34 +110,26 @@ export class TerritoryModifierService {
   }
 
   /**
-   * Initialize modifiers for a new game
-   * @param gameId - The game room ID
-   * @param mapId - The map being used
-   * @param distribution - How modifiers should be distributed (none, sparse, balanced, abundant)
+   * Initialize modifiers for a new game using map-defined modifiers only.
+   * If the selected map defines no modifiers, nothing is applied.
    */
   async initializeGameModifiers(
     gameId: string,
     mapId: string,
-    distribution: string,
-    territories: string[],
+    _territories: string[],
   ): Promise<void> {
     try {
-      // Always prefer map-defined modifiers
+      // Always use map-defined modifiers only
       const mapModifiers = await this.getMapModifiers(mapId)
 
       if (mapModifiers.length > 0) {
         await this.applyMapModifiers(gameId, mapModifiers)
-      } else if (distribution !== 'none') {
-        // Only generate random modifiers if explicitly requested
-        await this.generateRandomModifiers(gameId, territories, distribution)
       } else {
         logger.info(`No territory modifiers applied for game ${gameId}`)
         return
       }
 
-      logger.info(
-        `Initialized territory modifiers for game ${gameId} with distribution: ${distribution}`,
-      )
+      logger.info(`Initialized territory modifiers for game ${gameId} from map definitions`)
     } catch (error) {
       logger.error('Failed to initialize game modifiers:', error)
       throw error
@@ -189,52 +181,7 @@ export class TerritoryModifierService {
     logger.info(`Batch inserted ${mapModifiers.length} map modifiers for game ${gameId}`)
   }
 
-  /**
-   * Generate random modifiers for territories
-   */
-  private async generateRandomModifiers(
-    gameId: string,
-    territories: string[],
-    distribution: string,
-  ): Promise<void> {
-    // Get all modifier templates
-    const templates = await this.getModifierTemplates()
-    if (templates.length === 0) return
-
-    // Determine how many territories should have modifiers
-    const modifierPercentage =
-      {
-        sparse: 0.15, // 15% of territories
-        balanced: 0.3, // 30% of territories
-        abundant: 0.5, // 50% of territories
-      }[distribution] || 0.3
-
-    const numModifiers = Math.floor(territories.length * modifierPercentage)
-
-    // Randomly select territories to modify
-    const shuffled = [...territories].sort(() => Math.random() - 0.5)
-    const selectedTerritories = shuffled.slice(0, numModifiers)
-
-    // Prepare batch insert data
-    const modifiersToInsert: GameTerritoryModifier[] = []
-    for (const territoryId of selectedTerritories) {
-      const template = templates[Math.floor(Math.random() * templates.length)]
-      modifiersToInsert.push({
-        territory_id: territoryId,
-        defense_bonus: template.defense_bonus,
-        attack_bonus: template.attack_bonus,
-        troop_generation_bonus: template.troop_generation_bonus,
-        movement_restriction: template.movement_restriction,
-        supply_line_bonus: template.supply_line_bonus,
-        icon: template.icon,
-        color: template.color,
-        name: template.name,
-      })
-    }
-
-    // Use the same batch insert logic
-    await this.applyMapModifiers(gameId, modifiersToInsert)
-  }
+  // Random generation removed – modifiers are map-defined only
 
   /**
    * Get all modifiers for a specific game (cached)

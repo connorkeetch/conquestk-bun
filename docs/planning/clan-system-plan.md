@@ -193,7 +193,7 @@
 
 ### Phase 0 — Foundations (Schema & Services)
 
-**Deliverables**: Migrations for core tables; `clanService` + membership basics; CRUD endpoints; auth/session payload includes clan membership; unit/integration tests; feature flag `clans_enabled`.
+**Deliverables**: Migrations for core tables; `clanService` + membership basics; CRUD endpoints; auth/session payload includes clan membership; unit/integration tests.
 **AC**: Create → Apply → Approve cycle verified via API; clan appears in `/api/clans` with roster; cache warms; logs written.
 
 ### Phase 1 — Frontend MVP (Discovery & Detail)
@@ -254,7 +254,7 @@
 ## 15) Next Steps (2‑week sprint plan)
 
 * Break Phase 0 into tickets: schema migration, service scaffolding, API contracts, caching layer, tests.
-* Feature flag scaffolding (`clans_enabled`, `clans.beta`).
+* Feature flag scaffolding was used during rollout; clans are now generally available and no longer gated by `clans_enabled`.
 * Design sprint for Community Hub & Clan Detail.
 * Seed scripts for demo clans; fixtures for wars/objectives.
 * Analytics taxonomy finalized before implementation.

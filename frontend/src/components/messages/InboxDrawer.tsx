@@ -55,6 +55,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const loadingMessagesMap = useAppSelector((s) => s.messages.loadingMessages)
   const hasMoreMap = useAppSelector((s) => s.messages.hasMore)
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? null)
+  const unreadSummaryFetched = useAppSelector((s) => s.messages.unreadSummaryFetched)
 
   const [sendError, setSendError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
@@ -72,13 +73,19 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   // Active tab: messages vs notifications
   const [tab, setTab] = useState<'messages' | 'notifications'>('messages')
 
+  // Ensure we fetch inbox/unread exactly once per drawer open to avoid loops
+  const fetchedOnOpenRef = useRef(false)
   useEffect(() => {
-    if (!isOpen) return
-    if (!inboxLoading && conversations.length === 0) {
-      dispatch(loadInbox())
+    if (!isOpen) {
+      fetchedOnOpenRef.current = false
+      return
     }
-    dispatch(loadUnreadSummary())
-  }, [isOpen, inboxLoading, conversations.length, dispatch])
+    if (!fetchedOnOpenRef.current) {
+      dispatch(loadInbox())
+      if (!unreadSummaryFetched) dispatch(loadUnreadSummary())
+      fetchedOnOpenRef.current = true
+    }
+  }, [isOpen, dispatch, unreadSummaryFetched])
 
   useEffect(() => {
     if (!isOpen) return

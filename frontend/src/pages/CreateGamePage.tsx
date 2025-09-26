@@ -216,30 +216,22 @@ const CreateGamePage: React.FC = () => {
   >('adjacent')
   const [selectedColor, setSelectedColor] = useState<PlayerColor>(preferredColor)
   const [turnTimeLimit, setTurnTimeLimit] = useState(24 * 60) // in minutes
-  const [spoilsType, setSpoilsType] = useState<'escalating' | 'fixed' | 'static' | 'random'>(
-    'escalating',
-  )
   const [useTerritoryModifiers, setUseTerritoryModifiers] = useState<boolean>(false)
-  const [modifierDistribution, setModifierDistribution] = useState<
-    'sparse' | 'balanced' | 'abundant'
-  >('balanced')
   // Hidden Treasures (new ruleset) UI state
-  const [treasureEnabled, setTreasureEnabled] = useState(true)
   const [treasurePayoutMode, setTreasurePayoutMode] = useState<
     'classic' | 'fixed' | 'none' | 'triangular'
   >('triangular')
-  // percentage slider (0-25%), stored as whole percent for UX, converted to 0..1 for API
-  const [diamondsPercentUi, setDiamondsPercentUi] = useState<number>(7)
+  // Diamond chance is fixed at 8% per new rules
+  const DIAMOND_PERCENT = 0.08
   const [fixedTreasureValue, setFixedTreasureValue] = useState<number>(8)
-  const [treasureHandCap, setTreasureHandCap] = useState<number>(5)
-  const [diamondSetBonus, setDiamondSetBonus] = useState<number>(3)
+  // Hand cap and diamond set bonus are fixed constants per new rules
+  const TREASURE_HAND_CAP = 5
+  const DIAMOND_SET_BONUS = 3
   const [isRanked, setIsRanked] = useState(initialMode === 'ranked')
 
   // Accessible, unique IDs for form controls
   const fixedPayoutId = useId()
-  const diamondChanceId = useId()
-  const treasureHandCapId = useId()
-  const diamondSetBonusId = useId()
+  // no-op ids removed with simplified UI
   const [gameType, setGameType] = useState<'casual' | 'ranked'>(initialMode)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -378,15 +370,10 @@ const CreateGamePage: React.FC = () => {
   const modeParam = searchParams.get('mode')
 
   useEffect(() => {
-    if (!territoryModifiersEnabled) {
-      if (useTerritoryModifiers) {
-        setUseTerritoryModifiers(false)
-      }
-      if (modifierDistribution !== 'balanced') {
-        setModifierDistribution('balanced')
-      }
+    if (!territoryModifiersEnabled && useTerritoryModifiers) {
+      setUseTerritoryModifiers(false)
     }
-  }, [territoryModifiersEnabled, useTerritoryModifiers, modifierDistribution])
+  }, [territoryModifiersEnabled, useTerritoryModifiers])
 
   useEffect(() => {
     const normalizedMode =
@@ -456,7 +443,6 @@ const CreateGamePage: React.FC = () => {
           playersOption === 'random' ||
           teams === 'random' ||
           fortification === 'random' ||
-          spoilsType === 'random' ||
           selectedMap === 'random')
       ) {
         return '(autoname)'
@@ -498,7 +484,7 @@ const CreateGamePage: React.FC = () => {
         else specialRules.push(`${Math.floor(turnTimeLimit / 60)}h`)
       }
       if (territoryModifiersEnabled && useTerritoryModifiers) specialRules.push('Modifiers')
-      if (spoilsType === 'random') specialRules.push('RND-Spoils')
+      // Spoils removed; Hidden Treasures is configured separately
 
       if (specialRules.length > 0) {
         elements.push(`[${specialRules.join('+')}]`)
@@ -511,7 +497,6 @@ const CreateGamePage: React.FC = () => {
       playersOption,
       teams,
       fortification,
-      spoilsType,
       selectedMap,
       maps,
       isRanked,
@@ -555,19 +540,9 @@ const CreateGamePage: React.FC = () => {
       if (gameMode === 'random') setGameMode('classic')
       if (teams === 'random') setTeams(0)
       if (fortification === 'random') setFortification('adjacent')
-      if (spoilsType === 'random') setSpoilsType('escalating')
       if (playersOption === 'random') setPlayersOption(6)
     }
-  }, [
-    isRanked,
-    maxPlayers,
-    gameVisibility,
-    teams,
-    gameMode,
-    fortification,
-    spoilsType,
-    playersOption,
-  ])
+  }, [isRanked, maxPlayers, gameVisibility, teams, gameMode, fortification, playersOption])
 
   // Save invite code when it changes
   useEffect(() => {
@@ -643,16 +618,12 @@ const CreateGamePage: React.FC = () => {
 
       // Attach Hidden Treasures configuration
       gameData.treasureConfig = {
-        enabled: treasureEnabled,
+        enabled: treasurePayoutMode !== 'none',
         payoutMode: treasurePayoutMode,
-        // Convert UI percent (0-100) to decimal (0-1), clamp 0..1, 2 decimals precision
-        diamondsPercent: Math.max(
-          0,
-          Math.min(1, Math.round((diamondsPercentUi / 100) * 100) / 100),
-        ),
+        diamondsPercent: DIAMOND_PERCENT,
         fixedValue: fixedTreasureValue,
-        handCap: treasureHandCap,
-        diamondSetBonus,
+        handCap: TREASURE_HAND_CAP,
+        diamondSetBonus: DIAMOND_SET_BONUS,
       }
 
       if (aiOpponentsPayload.length > 0) {
@@ -1207,229 +1178,89 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 7. Spoils of War Card */}
-        <OptionCard number={getStepNumber(7)} title="Spoils of War">
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => setSpoilsType('escalating')}
-              className={choiceClass(
-                spoilsType === 'escalating',
-                'w-full p-3 text-left flex flex-col gap-1',
-              )}
-            >
-              <div className="font-medium text-sm text-[color:var(--heading)]">📈 Escalating</div>
-              <p className="text-xs text-muted">Card values increase each turn (2,4,6,8...)</p>
-            </button>
+        {/* Spoils of War removed; Hidden Treasures replaces it */}
 
-            <button
-              type="button"
-              onClick={() => setSpoilsType('fixed')}
-              className={choiceClass(
-                spoilsType === 'fixed',
-                'w-full p-3 text-left flex flex-col gap-1',
-              )}
-            >
-              <div className="font-medium text-sm text-[color:var(--heading)]">⚖️ Fixed Value</div>
-              <p className="text-xs text-muted">Cards always worth the same amount</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSpoilsType('static')}
-              className={choiceClass(
-                spoilsType === 'static',
-                'w-full p-3 text-left flex flex-col gap-1',
-              )}
-            >
-              <div className="font-medium text-sm text-[color:var(--heading)]">🔒 Static</div>
-              <p className="text-xs text-muted">No card bonuses, pure strategy</p>
-            </button>
-
-            {!isRanked && (
-              <button
-                type="button"
-                onClick={() => setSpoilsType('random')}
-                className={choiceClass(
-                  spoilsType === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1',
-                )}
-              >
-                <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
-                <p className="text-xs text-muted">Card bonus type chosen when game starts</p>
-              </button>
-            )}
-          </div>
-        </OptionCard>
-
-        {/* 8. Hidden Treasures Card */}
-        <OptionCard number={getStepNumber(8)} title="Hidden Treasures">
+        {/* 7. Hidden Treasures Card */}
+        <OptionCard number={getStepNumber(7)} title="Hidden Treasures">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-[color:var(--heading)]">
-                  Enable Hidden Treasures
-                </h4>
-                <p className="text-xs text-muted">
-                  Draw treasures on conquest and trade sets for troops
-                </p>
+            <div>
+              <p className="text-xs text-muted mb-2">Payout Mode</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={choiceClass(
+                    treasurePayoutMode === 'triangular',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  )}
+                  onClick={() => setTreasurePayoutMode('triangular')}
+                >
+                  <div className="text-sm text-[color:var(--heading)]">📈 Triangular</div>
+                  <p className="text-xs text-muted">4, 6, 9, 13, 18, ...</p>
+                </button>
+                <button
+                  type="button"
+                  className={choiceClass(
+                    treasurePayoutMode === 'classic',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  )}
+                  onClick={() => setTreasurePayoutMode('classic')}
+                >
+                  <div className="text-sm text-[color:var(--heading)]">📜 Classic</div>
+                  <p className="text-xs text-muted">4, 6, 8, 10, 12, 15, ...</p>
+                </button>
+                <button
+                  type="button"
+                  className={choiceClass(
+                    treasurePayoutMode === 'fixed',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  )}
+                  onClick={() => setTreasurePayoutMode('fixed')}
+                >
+                  <div className="text-sm text-[color:var(--heading)]">⚖️ Fixed</div>
+                  <p className="text-xs text-muted">Same troops every set</p>
+                </button>
+                <button
+                  type="button"
+                  className={choiceClass(
+                    treasurePayoutMode === 'none',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  )}
+                  onClick={() => setTreasurePayoutMode('none')}
+                >
+                  <div className="text-sm text-[color:var(--heading)]">🚫 Disabled</div>
+                  <p className="text-xs text-muted">No set payouts</p>
+                </button>
               </div>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mr-2 accent-violet"
-                  checked={treasureEnabled}
-                  onChange={(e) => setTreasureEnabled(e.target.checked)}
-                />
-                <span className="text-sm">{treasureEnabled ? 'On' : 'Off'}</span>
-              </label>
             </div>
 
-            <fieldset
-              className="space-y-2"
-              disabled={!treasureEnabled}
-              aria-disabled={!treasureEnabled}
-            >
-              <div>
-                <p className="text-xs text-muted mb-2">Payout Mode</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className={choiceClass(
-                      treasurePayoutMode === 'triangular',
-                      'w-full p-3 text-left flex flex-col gap-1',
-                    )}
-                    onClick={() => setTreasurePayoutMode('triangular')}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">📈 Triangular</div>
-                    <p className="text-xs text-muted">4, 6, 9, 13, 18, ...</p>
-                  </button>
-                  <button
-                    type="button"
-                    className={choiceClass(
-                      treasurePayoutMode === 'classic',
-                      'w-full p-3 text-left flex flex-col gap-1',
-                    )}
-                    onClick={() => setTreasurePayoutMode('classic')}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">📜 Classic</div>
-                    <p className="text-xs text-muted">4, 6, 8, 10, 12, 15, ...</p>
-                  </button>
-                  <button
-                    type="button"
-                    className={choiceClass(
-                      treasurePayoutMode === 'fixed',
-                      'w-full p-3 text-left flex flex-col gap-1',
-                    )}
-                    onClick={() => setTreasurePayoutMode('fixed')}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">⚖️ Fixed</div>
-                    <p className="text-xs text-muted">Same troops every set</p>
-                  </button>
-                  <button
-                    type="button"
-                    className={choiceClass(
-                      treasurePayoutMode === 'none',
-                      'w-full p-3 text-left flex flex-col gap-1',
-                    )}
-                    onClick={() => setTreasurePayoutMode('none')}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">🚫 Disabled</div>
-                    <p className="text-xs text-muted">No set payouts</p>
-                  </button>
-                </div>
-              </div>
-
-              {treasurePayoutMode === 'fixed' && (
-                <div className="flex items-center gap-3">
-                  <label
-                    htmlFor={fixedPayoutId}
-                    className="text-sm text-[color:var(--heading)] w-40"
-                  >
-                    Fixed payout
-                  </label>
-                  <input
-                    id={fixedPayoutId}
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={fixedTreasureValue}
-                    onChange={(e) =>
-                      setFixedTreasureValue(Math.max(1, Math.min(50, Number(e.target.value) || 0)))
-                    }
-                    className="form-input w-28"
-                  />
-                  <span className="text-xs text-muted">troops</span>
-                </div>
-              )}
-
+            {treasurePayoutMode === 'fixed' && (
               <div className="flex items-center gap-3">
-                <label
-                  htmlFor={diamondChanceId}
-                  className="text-sm text-[color:var(--heading)] w-40"
-                >
-                  Diamond chance
+                <label htmlFor={fixedPayoutId} className="text-sm text-[color:var(--heading)] w-40">
+                  Fixed payout
                 </label>
                 <input
-                  id={diamondChanceId}
-                  type="range"
-                  min={0}
-                  max={25}
-                  step={1}
-                  value={diamondsPercentUi}
-                  onChange={(e) => setDiamondsPercentUi(Number(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="text-sm text-muted w-12 text-right">{diamondsPercentUi}%</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <label
-                  htmlFor={treasureHandCapId}
-                  className="text-sm text-[color:var(--heading)] w-40"
-                >
-                  Hand limit
-                </label>
-                <input
-                  id={treasureHandCapId}
+                  id={fixedPayoutId}
                   type="number"
                   min={1}
-                  max={12}
-                  value={treasureHandCap}
+                  max={50}
+                  value={fixedTreasureValue}
                   onChange={(e) =>
-                    setTreasureHandCap(Math.max(1, Math.trunc(Number(e.target.value) || 0)))
+                    setFixedTreasureValue(Math.max(1, Math.min(50, Number(e.target.value) || 0)))
                   }
-                  className="form-input w-20"
+                  className="form-input w-28"
                 />
-                <span className="text-xs text-muted">cards before forced cash-in</span>
+                <span className="text-xs text-muted">troops</span>
               </div>
+            )}
 
-              <div className="flex items-center gap-3">
-                <label
-                  htmlFor={diamondSetBonusId}
-                  className="text-sm text-[color:var(--heading)] w-40"
-                >
-                  Diamond set bonus
-                </label>
-                <input
-                  id={diamondSetBonusId}
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={diamondSetBonus}
-                  onChange={(e) =>
-                    setDiamondSetBonus(Math.max(0, Math.trunc(Number(e.target.value) || 0)))
-                  }
-                  className="form-input w-20"
-                />
-                <span className="text-xs text-muted">extra troops when set includes a diamond</span>
-              </div>
-            </fieldset>
+            <div className="text-xs text-muted">
+              Diamond chance is fixed at 8%. Hand limit is 5 and Diamond set bonus is +3.
+            </div>
           </div>
         </OptionCard>
 
         {/* 9. Advanced Options Card */}
-        <OptionCard number={getStepNumber(9)} title="Advanced Options">
+        <OptionCard number={getStepNumber(8)} title="Advanced Options">
           <div className="space-y-4">
             {/* Territory Modifiers toggle (map-defined only) */}
             <div className="space-y-2">
@@ -1475,79 +1306,7 @@ const CreateGamePage: React.FC = () => {
               </p>
             </div>
 
-            {/* Territory Modifiers Section */}
-            {territoryModifiersEnabled && (
-              <div className="pt-3 border-t border-border">
-                <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">
-                  Territory Modifiers
-                </h4>
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setUseTerritoryModifiers(false)}
-                    className={choiceClass(
-                      !useTerritoryModifiers,
-                      'w-full px-3 py-2 text-left flex flex-col gap-1',
-                    )}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">❌ Disabled</div>
-                    <p className="text-xs text-muted">Standard territories only</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUseTerritoryModifiers(true)}
-                    className={choiceClass(
-                      useTerritoryModifiers,
-                      'w-full px-3 py-2 text-left flex flex-col gap-1',
-                    )}
-                  >
-                    <div className="text-sm text-[color:var(--heading)]">⚡ Enabled</div>
-                    <p className="text-xs text-muted">Territories have special properties</p>
-                  </button>
-                </div>
-
-                {useTerritoryModifiers && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-sm text-muted mb-2">Distribution:</p>
-                    <div className="space-y-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setModifierDistribution('sparse')}
-                        className={choiceClass(
-                          modifierDistribution === 'sparse',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1',
-                        )}
-                      >
-                        <div className="text-sm text-[color:var(--heading)]">Sparse (15%)</div>
-                        <p className="text-xs text-muted">Few strategic territories</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setModifierDistribution('balanced')}
-                        className={choiceClass(
-                          modifierDistribution === 'balanced',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1',
-                        )}
-                      >
-                        <div className="text-sm text-[color:var(--heading)]">Balanced (30%)</div>
-                        <p className="text-xs text-muted">Moderate strategic depth</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setModifierDistribution('abundant')}
-                        className={choiceClass(
-                          modifierDistribution === 'abundant',
-                          'w-full px-3 py-2 text-left flex flex-col gap-1',
-                        )}
-                      >
-                        <div className="text-sm text-[color:var(--heading)]">Abundant (50%)</div>
-                        <p className="text-xs text-muted">Many strategic territories</p>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Territory Modifiers distribution options removed; map-defined only via checkbox above */}
           </div>
         </OptionCard>
 

@@ -38,18 +38,13 @@ Gameplay options
   - Current status: UI-only. The server defaults to classic adjacent movement for now.
   - Roadmap: Persist selection and pass through to the engine’s movementType.
 
-- Spoils of War (Escalating / Fixed / Static / Random)
-  - Current status: UI-only. The live spoils system is Hidden Treasures (see below).
-  - Roadmap: Either map these to treasure presets or restore classic card-trade rules behind a separate switch.
-
-- Hidden Treasures (Enabled + Options)
+- Hidden Treasures (Payout Mode)
   - Status: Fully wired.
   - Configure in the “Hidden Treasures” panel:
-    - Enabled: On/Off
-    - Payout mode: Triangular, Classic, Fixed, None
-    - Diamond chance (%): Probability that a draw is a diamond
-    - Hand limit: Forced cash-in threshold
-    - Diamond set bonus: Extra troops for sets containing a diamond
+    - Payout mode: Triangular, Classic, Fixed, Disabled
+    - Diamond chance is fixed at 8%
+    - Hand limit is fixed at 5
+    - Diamond set bonus is fixed at +3
   - Engine behavior: Draws occur on conquest; redeem sets of 3 for troops; forced cash-in when at or above hand limit. See guides/hidden-treasures.md for full details.
 
 - Fog of War (Off / Adjacent / Persistent)
@@ -65,8 +60,8 @@ Gameplay options
   - Difficulties: Recruit, Commander, Grandmaster.
 
 - Territory Modifiers (feature-flagged)
-  - Current status: UI-only from the Create Game page.
-  - Engine support exists (modifiers can be generated and applied), but the selection isn’t saved yet for new rooms.
+  - Status: Toggle is wired.
+  - Behavior: When enabled, games use map-defined territory modifiers only. No random distribution.
 
 Map selection
 - Choose a specific map or “Random Map” (picks at game start).
@@ -84,11 +79,10 @@ What’s applied vs pending
   - [x] Hidden Treasures (full ruleset; see linked guide)
 
 - Pending wiring checklist (UI-only before these commits):
-- [x] Fortification type → movementType in engine (classic_adjacent, adjacent_multi, path_single, path_multi)
-  - [ ] Spoils of War (card trade) → either map to treasure presets or restore card rules
-- [x] Fog of War → stored on room (UI still pending engine filters)
-- [x] Turn Timer → stored on room (UI still pending enforcement per turn)
-  - [ ] Territory Modifiers → persist toggle + distribution (sparse/balanced/abundant)
+  - [x] Fortification type → movementType in engine (classic_adjacent, adjacent_multi, path_single, path_multi)
+  - [x] Fog of War → stored on room (UI still pending engine filters)
+  - [x] Turn Timer → stored on room (UI still pending enforcement per turn)
+  - [x] Territory Modifiers → persist toggle (map-defined only; no distribution)
   - [ ] Private Invite Code → persist code and allow code-based join
 
 As items ship, check them off here so the guide stays accurate.
