@@ -40,6 +40,9 @@ export interface CreateGameData {
   }>
   // Optional Hidden Treasures configuration for the game
   treasureConfig?: Partial<TreasureConfig>
+  // Additional room options persisted to DB
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
+  turnTimerSeconds?: number
 }
 
 export interface JoinGameResponse {

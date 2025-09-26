@@ -13,6 +13,8 @@ import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
 // Consolidated inbox drawer (messages + notifications)
 import InboxDrawer from './messages/InboxDrawer'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { closeInbox, openInbox } from '@/store/uiSlice'
 
 interface MenuItem {
   path: string
@@ -22,11 +24,12 @@ interface MenuItem {
 
 export default function Header() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth)
+  const inboxOpen = useAppSelector((s) => s.ui.inboxOpen)
   const dispatch = useAppDispatch()
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
-  const [isInboxOpen, setIsInboxOpen] = useState(false)
+  // Inbox is globally controlled via Redux
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
@@ -311,7 +314,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsInboxOpen(true)
+                    dispatch(openInbox())
                     setIsUserDropdownOpen(false)
                   }}
                   className="btn-ghost btn-icon relative"
@@ -525,7 +528,7 @@ export default function Header() {
         </div>
       </div>
 
-      <InboxDrawer isOpen={isInboxOpen} onClose={() => setIsInboxOpen(false)} />
+      <InboxDrawer isOpen={inboxOpen} onClose={() => dispatch(closeInbox())} />
     </>
   )
 }

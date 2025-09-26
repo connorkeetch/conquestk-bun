@@ -6,6 +6,7 @@ import {
   cancelOutgoingRequest,
   declineFriendRequest,
   FriendshipError,
+  getMutualFriends,
   getRelationshipStatus,
   listFriends,
   listPendingRequests,
@@ -59,6 +60,18 @@ router.get('/status/:otherUserId', async (req: Request, res: Response) => {
   } catch (error) {
     handleRouteError(error, req, 'Failed to get relationship status')
     return res.status(500).json({ error: 'Failed to get relationship status' })
+  }
+})
+
+router.get('/mutual/:otherUserId', async (req: Request, res: Response) => {
+  try {
+    const { otherUserId } = req.params
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 6, 25))
+    const result = await getMutualFriends(req.userId, otherUserId, limit)
+    return res.json(result)
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to fetch mutual friends')
+    return res.status(500).json({ error: 'Failed to fetch mutual friends' })
   }
 })
 

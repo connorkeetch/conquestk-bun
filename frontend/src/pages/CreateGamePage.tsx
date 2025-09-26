@@ -640,6 +640,8 @@ const CreateGamePage: React.FC = () => {
         gameType: 'custom',
         mapId: finalMap,
         movementType: fortificationToMovementType(finalFortification),
+        fogOfWar,
+        turnTimerSeconds: typeof turnTimeLimit === 'number' ? Math.trunc(turnTimeLimit * 60) : undefined,
         allowTeamPlay: finalTeams > 0,
         teamMode: finalTeams > 0 ? 'teams' : 'none',
         numberOfTeams: finalTeams > 0 ? finalTeams : undefined,

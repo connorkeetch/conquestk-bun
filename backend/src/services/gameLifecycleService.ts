@@ -275,6 +275,11 @@ export class GameLifecycleService {
       configOverrides.gameMode = room.gameMode
     }
 
+    // Movement type (fortification rules)
+    if (room?.movementType) {
+      configOverrides.movementType = room.movementType
+    }
+
     // Inject Hidden Treasures configuration if provided at room creation (DB-backed)
     try {
       const { normalizeTreasureConfig } = await import('../game/hiddenTreasures')

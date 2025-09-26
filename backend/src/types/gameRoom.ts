@@ -1,4 +1,4 @@
-import type { GamePhase, TreasureConfig } from './game'
+import type { GamePhase, MovementType, TreasureConfig } from './game'
 
 export type GameLifecycleStatus =
   | 'lobby'
@@ -46,6 +46,7 @@ export interface GameRoom {
   cardTradeMode?: string | null
   bonusType?: string | null
   treasureConfig?: TreasureConfig | null
+  movementType?: MovementType
   players?: Player[]
 }
 
