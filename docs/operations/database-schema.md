@@ -1,6 +1,6 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-26T17:16:29.836Z
+Generated on 2025-09-26T17:33:47.346Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
@@ -48,7 +48,7 @@ Generated on 2025-09-26T17:16:29.836Z
 | `game_states` | 13 | 0 |
 | `game_territory_modifiers` | 8 | 0 |
 | `game_variants` | 11 | 0 |
-| `map_asset_purge_runs` | 10 | 501 |
+| `map_asset_purge_runs` | 10 | 503 |
 | `map_collaborators` | 5 | 0 |
 | `map_continents` | 6 | 0 |
 | `map_drafts` | 24 | 0 |
@@ -94,6 +94,26 @@ Generated on 2025-09-26T17:16:29.836Z
 | `user_terms_acceptance` | 6 | 0 |
 | `users` | 32 | 14 |
 | `web_push_subscriptions` | 13 | 1 |
+
+## Enum Types
+
+### `conversation_kind`
+
+| Value | Order |
+| --- | ---: |
+| `game` | 1 |
+| `direct` | 2 |
+| `group` | 3 |
+| `team` | 4 |
+
+### `conversation_member_role`
+
+| Value | Order |
+| --- | ---: |
+| `owner` | 1 |
+| `admin` | 2 |
+| `member` | 3 |
+
 
 ## Tables
 
@@ -2890,4 +2910,43 @@ Generated on 2025-09-26T17:16:29.836Z
 | `user_terms_acceptance_user_id_fkey` | `user_terms_acceptance` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `users_vip_granted_by_fkey` | `users` | `vip_granted_by` | `users` | `id` | NO ACTION | NO ACTION |
 | `web_push_subscriptions_user_id_fkey` | `web_push_subscriptions` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+
+## Triggers
+
+| Trigger | Table | Definition |
+| --- | --- | --- |
+| `update_achievement_progress_updated_at` | `achievement_progress` | CREATE TRIGGER update_achievement_progress_updated_at BEFORE UPDATE ON achievement_progress FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_admin_roles_updated_at` | `admin_roles` | CREATE TRIGGER update_admin_roles_updated_at BEFORE UPDATE ON admin_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_announcements_updated_at` | `clan_announcements` | CREATE TRIGGER trg_clan_announcements_updated_at BEFORE UPDATE ON clan_announcements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_applications_updated_at` | `clan_applications` | CREATE TRIGGER trg_clan_applications_updated_at BEFORE UPDATE ON clan_applications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_invitations_updated_at` | `clan_invitations` | CREATE TRIGGER trg_clan_invitations_updated_at BEFORE UPDATE ON clan_invitations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_members_updated_at` | `clan_members` | CREATE TRIGGER trg_clan_members_updated_at BEFORE UPDATE ON clan_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_objectives_updated_at` | `clan_objectives` | CREATE TRIGGER trg_clan_objectives_updated_at BEFORE UPDATE ON clan_objectives FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_roles_updated_at` | `clan_roles` | CREATE TRIGGER trg_clan_roles_updated_at BEFORE UPDATE ON clan_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_war_matches_updated_at` | `clan_war_matches` | CREATE TRIGGER trg_clan_war_matches_updated_at BEFORE UPDATE ON clan_war_matches FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clan_wars_updated_at` | `clan_wars` | CREATE TRIGGER trg_clan_wars_updated_at BEFORE UPDATE ON clan_wars FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_clans_updated_at` | `clans` | CREATE TRIGGER trg_clans_updated_at BEFORE UPDATE ON clans FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `conversation_members_set_updated_at` | `conversation_members` | CREATE TRIGGER conversation_members_set_updated_at BEFORE UPDATE ON conversation_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `conversation_messages_set_updated_at` | `conversation_messages` | CREATE TRIGGER conversation_messages_set_updated_at BEFORE UPDATE ON conversation_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `conversations_set_updated_at` | `conversations` | CREATE TRIGGER conversations_set_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `feature_flag_audit_trigger` | `feature_flags` | CREATE TRIGGER feature_flag_audit_trigger AFTER INSERT OR DELETE OR UPDATE ON feature_flags FOR EACH ROW EXECUTE FUNCTION log_feature_flag_change() |
+| `update_feature_flags_updated_at` | `feature_flags` | CREATE TRIGGER update_feature_flags_updated_at BEFORE UPDATE ON feature_flags FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_game_rooms_updated_at` | `game_rooms` | CREATE TRIGGER update_game_rooms_updated_at BEFORE UPDATE ON game_rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_game_variants_updated_at` | `game_variants` | CREATE TRIGGER update_game_variants_updated_at BEFORE UPDATE ON game_variants FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_map_drafts_updated_at` | `map_drafts` | CREATE TRIGGER trg_map_drafts_updated_at BEFORE UPDATE ON map_drafts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_map_images_staging_updated_at` | `map_images_staging` | CREATE TRIGGER trg_map_images_staging_updated_at BEFORE UPDATE ON map_images_staging FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_map_ratings_updated_at` | `map_ratings` | CREATE TRIGGER update_map_ratings_updated_at BEFORE UPDATE ON map_ratings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_map_reviews_updated_at` | `map_reviews` | CREATE TRIGGER trg_map_reviews_updated_at BEFORE UPDATE ON map_reviews FOR EACH ROW EXECUTE FUNCTION update_map_reviews_updated_at() |
+| `trg_map_submissions_updated_at` | `map_submissions` | CREATE TRIGGER trg_map_submissions_updated_at BEFORE UPDATE ON map_submissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_maps_updated_at` | `maps` | CREATE TRIGGER update_maps_updated_at BEFORE UPDATE ON maps FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_player_stats_updated_at` | `player_stats` | CREATE TRIGGER update_player_stats_updated_at BEFORE UPDATE ON player_stats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_user_behavior_patterns_updated_at` | `user_behavior_patterns` | CREATE TRIGGER update_user_behavior_patterns_updated_at BEFORE UPDATE ON user_behavior_patterns FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `trg_user_clan_preferences_updated_at` | `user_clan_preferences` | CREATE TRIGGER trg_user_clan_preferences_updated_at BEFORE UPDATE ON user_clan_preferences FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_user_preferences_updated_at` | `user_preferences` | CREATE TRIGGER update_user_preferences_updated_at BEFORE UPDATE ON user_preferences FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `user_preferences_updated_at` | `user_preferences` | CREATE TRIGGER user_preferences_updated_at BEFORE UPDATE ON user_preferences FOR EACH ROW EXECUTE FUNCTION update_user_preferences_updated_at() |
+| `update_user_profiles_updated_at` | `user_profiles` | CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_user_seasonal_stats_updated_at` | `user_seasonal_stats` | CREATE TRIGGER update_user_seasonal_stats_updated_at BEFORE UPDATE ON user_seasonal_stats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_user_settings_updated_at` | `user_settings` | CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `update_users_updated_at` | `users` | CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column() |
+| `web_push_subscriptions_updated_at` | `web_push_subscriptions` | CREATE TRIGGER web_push_subscriptions_updated_at BEFORE UPDATE ON web_push_subscriptions FOR EACH ROW EXECUTE FUNCTION update_web_push_subscriptions_updated_at() |
 

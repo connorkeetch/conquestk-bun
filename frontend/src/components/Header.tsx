@@ -1,5 +1,5 @@
 import { Bell, MessageSquare, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { getColorValue, PLAYER_COLORS, type PlayerColor } from '@/constants/colors'
@@ -38,6 +38,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false)
+  const notifBtnRef = useRef<HTMLButtonElement | null>(null)
   // Inbox is globally controlled via Redux
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [pendingFriends, setPendingFriends] = useState(0)
@@ -336,6 +337,7 @@ export default function Header() {
 
                 {/* Notifications (bell) */}
                 <button
+                  ref={notifBtnRef}
                   type="button"
                   onClick={() => {
                     setIsNotifDropdownOpen((v) => !v)
@@ -358,6 +360,7 @@ export default function Header() {
                     setIsNotifDropdownOpen(false)
                     dispatch(openInbox())
                   }}
+                  triggerRef={notifBtnRef}
                 />
 
                 {/* Messages (chat) */}

@@ -1,0 +1,44 @@
+name: Update Schema Doc
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'backend/migrations/**'
+      - 'backend/src/scripts/checkSchema.ts'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Generate database schema doc
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run docs:schema
+
+      - name: Commit and push changes (if any)
+        run: |
+          if [[ -n $(git status --porcelain docs/operations/database-schema.md) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/operations/database-schema.md
+            git commit -m "chore(docs): update database schema [skip ci]"
+            git push
+          else
+            echo "No schema doc changes detected."
+          fi
+
