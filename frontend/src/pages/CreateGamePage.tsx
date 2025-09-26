@@ -647,7 +647,6 @@ const CreateGamePage: React.FC = () => {
         numberOfTeams: finalTeams > 0 ? finalTeams : undefined,
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,
-        modifierDistribution: finalModifiers ? modifierDistribution : 'none',
       }
 
       // Attach Hidden Treasures configuration
@@ -1440,6 +1439,23 @@ const CreateGamePage: React.FC = () => {
         {/* 9. Advanced Options Card */}
         <OptionCard number={getStepNumber(9)} title="Advanced Options">
           <div className="space-y-4">
+            {/* Territory Modifiers toggle (map-defined only) */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-[color:var(--heading)]">Territory Modifiers</h4>
+              <p className="text-xs text-muted">
+                When enabled, the game uses any modifiers predefined on the selected map (no random
+                distribution).
+              </p>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-violet"
+                  checked={useTerritoryModifiers}
+                  onChange={(e) => setUseTerritoryModifiers(e.target.checked)}
+                />
+                <span className="text-sm">Use map-defined territory modifiers</span>
+              </label>
+            </div>
             {/* Fog of War Section */}
             <div>
               <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">Fog of War</h4>

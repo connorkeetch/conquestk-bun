@@ -973,7 +973,6 @@ router.patch(
   body('description').optional().isString(),
   body('accessLevel').optional().isIn(['disabled', 'internal', 'beta', 'public']),
   body('category').optional().isString(),
-  body('rolloutPercentage').optional().isInt({ min: 0, max: 100 }),
   body('config').optional().isObject(),
   body('dependencies').optional().isArray(),
   body('dependencies.*').optional().isString(),
@@ -982,15 +981,7 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const { flagName } = req.params
-      const {
-        description,
-        accessLevel,
-        category,
-        rolloutPercentage,
-        config,
-        dependencies,
-        reason,
-      } = req.body
+      const { description, accessLevel, category, config, dependencies, reason } = req.body
 
       const updated = await adminService.updateFeatureFlagSettings(
         flagName,
@@ -998,7 +989,6 @@ router.patch(
           description,
           accessLevel,
           category,
-          rolloutPercentage,
           config,
           dependencies,
         },

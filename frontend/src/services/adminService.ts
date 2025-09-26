@@ -48,7 +48,6 @@ export interface FeatureFlag {
   config: Record<string, unknown>
   accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
   category: string | null
-  rolloutPercentage: number
   dependencies: string[]
   createdBy: string
   createdAt: string
@@ -59,7 +58,6 @@ export interface FeatureFlagSettingsUpdate {
   description?: string | null
   accessLevel?: FeatureFlag['accessLevel']
   category?: string | null
-  rolloutPercentage?: number
   config?: Record<string, unknown>
   dependencies?: string[]
   reason?: string
@@ -71,7 +69,6 @@ export interface UserFeatureFlagAssignment {
   isEnabled: boolean
   accessLevel: FeatureFlag['accessLevel']
   category?: string | null
-  rolloutPercentage: number
   config: Record<string, unknown>
   userOverride: boolean | null
   effectiveValue: boolean | null

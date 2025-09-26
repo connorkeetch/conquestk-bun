@@ -46,7 +46,6 @@ export default function AdminDashboard() {
   const [editDescription, setEditDescription] = useState('')
   const [editAccessLevel, setEditAccessLevel] = useState<FeatureFlag['accessLevel']>('disabled')
   const [editCategory, setEditCategory] = useState<string>('')
-  const [editRollout, setEditRollout] = useState(0)
   const [editConfig, setEditConfig] = useState('')
   const [editDependencies, setEditDependencies] = useState('')
   const [editReason, setEditReason] = useState('')
@@ -183,7 +182,6 @@ export default function AdminDashboard() {
           updatedAt: new Date().toISOString(),
           accessLevel: 'disabled' as FeatureFlag['accessLevel'],
           category: null,
-          rolloutPercentage: isEnabled ? 100 : 0,
           dependencies: [],
         }))
         .sort((a, b) => a.flagName.localeCompare(b.flagName))
@@ -261,7 +259,6 @@ export default function AdminDashboard() {
     setEditDescription(flag.description ?? '')
     setEditAccessLevel(flag.accessLevel)
     setEditCategory(flag.category ?? '')
-    setEditRollout(flag.rolloutPercentage)
     setEditConfig(JSON.stringify(flag.config ?? {}, null, 2))
     setEditDependencies(flag.dependencies?.join(', ') ?? '')
     setEditReason('')
@@ -299,7 +296,6 @@ export default function AdminDashboard() {
         description: editDescription.trim() || null,
         accessLevel: editAccessLevel,
         category: editCategory.trim() || null,
-        rolloutPercentage: editRollout,
         config: parsedConfig,
         dependencies,
         reason: editReason.trim() || undefined,
@@ -555,12 +551,7 @@ export default function AdminDashboard() {
                         </div>
                       )}
                       {'accessLevel' in flag && (
-                        <div className="text-xs text-muted mt-1">
-                          Scope: {flag.accessLevel}{' '}
-                          {flag.rolloutPercentage != null && flag.rolloutPercentage < 100
-                            ? `(${flag.rolloutPercentage}% rollout)`
-                            : ''}
-                        </div>
+                        <div className="text-xs text-muted mt-1">Scope: {flag.accessLevel}</div>
                       )}
                     </div>
                     <label
@@ -652,7 +643,7 @@ export default function AdminDashboard() {
                   Manage Flag: {formatFlagName(editingFlag.flagName)}
                 </h3>
                 <p className="text-sm text-muted mt-1">
-                  Adjust targeting scope, rollout, and overrides for this feature.
+                  Adjust targeting scope and overrides for this feature.
                 </p>
               </div>
               <button
@@ -699,24 +690,6 @@ export default function AdminDashboard() {
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value)}
                       placeholder="gameplay, ui, experimental..."
-                      className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                    />
-                  </label>
-                  <label className="flex flex-col text-sm">
-                    <span className="text-muted mb-1">Rollout Percentage</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={editRollout}
-                      onChange={(e) => {
-                        const next = Number(e.target.value)
-                        if (Number.isNaN(next)) {
-                          setEditRollout(0)
-                        } else {
-                          setEditRollout(Math.max(0, Math.min(100, next)))
-                        }
-                      }}
                       className="bg-surface-2 text-white rounded px-3 py-2 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/60"
                     />
                   </label>

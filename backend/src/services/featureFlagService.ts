@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 
@@ -122,15 +121,6 @@ export class FeatureFlagService {
       return false
     }
 
-    // Apply rollout percentage
-    if (flag.rollout_percentage < 100) {
-      return this.isInRolloutPercentage(
-        user?.id || 'anonymous',
-        flag.flag_name,
-        flag.rollout_percentage,
-      )
-    }
-
     return true
   }
 
@@ -210,18 +200,6 @@ export class FeatureFlagService {
 
     // Add more criteria checks as needed
     return true
-  }
-
-  /**
-   * Consistent hash-based rollout percentage
-   */
-  private isInRolloutPercentage(userId: string, flagName: string, percentage: number): boolean {
-    const hash = crypto.createHash('md5').update(`${userId}:${flagName}`).digest('hex')
-
-    const hashValue = parseInt(hash.substring(0, 8), 16)
-    const userPercentage = (hashValue / 0xffffffff) * 100
-
-    return userPercentage < percentage
   }
 
   /**
@@ -307,6 +285,8 @@ export class FeatureFlagService {
       if (updates.is_enabled !== undefined) {
         updateFields.push(`is_enabled = $${paramCount++}`)
         values.push(updates.is_enabled)
+        updateFields.push(`rollout_percentage = $${paramCount++}`)
+        values.push(updates.is_enabled ? 100 : 0)
       }
       if (updates.access_level !== undefined) {
         updateFields.push(`access_level = $${paramCount++}`)
@@ -319,10 +299,6 @@ export class FeatureFlagService {
       if (updates.category !== undefined) {
         updateFields.push(`category = $${paramCount++}`)
         values.push(updates.category)
-      }
-      if (updates.rollout_percentage !== undefined) {
-        updateFields.push(`rollout_percentage = $${paramCount++}`)
-        values.push(updates.rollout_percentage)
       }
       if (updates.target_criteria !== undefined) {
         updateFields.push(`target_criteria = $${paramCount++}`)
