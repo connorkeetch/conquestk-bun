@@ -1,8 +1,9 @@
-import { Volume2, VolumeX } from 'lucide-react'
+import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+import { notificationService } from '@/services/notificationService'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
@@ -10,8 +11,8 @@ import { selectTotalUnreadMessages } from '../store/messagesSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
-import MessagesDrawer from './messages/MessagesDrawer'
-import NotificationDropdown from './NotificationDropdown'
+// Consolidated inbox drawer (messages + notifications)
+import InboxDrawer from './messages/InboxDrawer'
 
 interface MenuItem {
   path: string
@@ -25,7 +26,8 @@ export default function Header() {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false)
+  const [isInboxOpen, setIsInboxOpen] = useState(false)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
   const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
@@ -34,6 +36,14 @@ export default function Header() {
   useEffect(() => {
     // Check initial mute state
     setIsMuted(audioService.isMutedState())
+  }, [])
+
+  useEffect(() => {
+    const unsub = notificationService.subscribe(() => {
+      setUnreadNotifications(notificationService.getUnreadCount())
+    })
+    setUnreadNotifications(notificationService.getUnreadCount())
+    return unsub
   }, [])
 
   const handleToggleMute = () => {
@@ -70,6 +80,12 @@ export default function Header() {
   }
 
   const navTabClass = (active: boolean) => `nav-tab${active ? ' is-active' : ''}`
+
+  // Show mute only in game/editor contexts
+  const showMute =
+    location.pathname.startsWith('/room') ||
+    location.pathname.startsWith('/game') ||
+    location.pathname.startsWith('/map-editor')
 
   return (
     <>
@@ -193,45 +209,44 @@ export default function Header() {
             {isAuthenticated ? (
               <>
                 {/* Audio Mute Button */}
-                <button
-                  type="button"
-                  onClick={handleToggleMute}
-                  className="group relative p-2 rounded-lg hover:bg-surface-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                  title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-                  aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-                >
-                  {isMuted ? (
-                    <VolumeX className="w-6 h-6 text-danger transition-colors group-hover:text-danger group-focus-visible:text-danger" />
-                  ) : (
-                    <Volume2 className="w-6 h-6 text-muted transition-colors group-hover:text-primary group-focus-visible:text-primary" />
-                  )}
-                </button>
+                {showMute && (
+                  <button
+                    type="button"
+                    onClick={handleToggleMute}
+                    className="btn-ghost btn-icon"
+                    title={isMuted ? 'Unmute audio' : 'Mute audio'}
+                    aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-6 h-6 text-[color:var(--color-danger)]" />
+                    ) : (
+                      <Volume2 className="w-6 h-6 text-muted" />
+                    )}
+                  </button>
+                )}
 
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
 
-                {/* Messages */}
+                {/* Inbox (Messages + Notifications) */}
                 <button
                   type="button"
                   onClick={() => {
-                    setIsMessagesOpen(true)
+                    setIsInboxOpen(true)
                     setIsUserDropdownOpen(false)
                   }}
-                  className="relative p-2 rounded-lg hover:bg-surface-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                  aria-label="Open messages"
+                  className="btn-ghost btn-icon relative"
+                  aria-label="Open inbox"
                 >
-                  <span role="img" aria-hidden="true" className="text-lg">
-                    💬
-                  </span>
-                  {unreadMessages > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 rounded-full bg-primary text-[10px] font-semibold text-white text-center">
-                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                  <MessageSquare className="w-6 h-6 text-muted" />
+                  {unreadMessages + unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 rounded-full bg-[color:var(--color-primary)] text-[10px] font-semibold text-white text-center">
+                      {unreadMessages + unreadNotifications > 99
+                        ? '99+'
+                        : unreadMessages + unreadNotifications}
                     </span>
                   )}
                 </button>
-
-                {/* Notification Dropdown */}
-                <NotificationDropdown />
 
                 {/* User Dropdown */}
                 <div className="relative">
@@ -429,7 +444,7 @@ export default function Header() {
         </div>
       </div>
 
-      <MessagesDrawer isOpen={isMessagesOpen} onClose={() => setIsMessagesOpen(false)} />
+      <InboxDrawer isOpen={isInboxOpen} onClose={() => setIsInboxOpen(false)} />
     </>
   )
 }
