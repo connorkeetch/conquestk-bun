@@ -68,15 +68,11 @@ export default function ChatContainer({
 
         switch (conversationType) {
           case 'dm': {
-            const action = await dispatch(ensureDirectConversation(conversationId))
-            if ('payload' in action && action.payload) detail = action.payload as any
-            else throw new Error('Failed to start direct conversation')
+            detail = await dispatch(ensureDirectConversation(conversationId)).unwrap()
             break
           }
           case 'game': {
-            const action = await dispatch(ensureGameConversation(conversationId))
-            if ('payload' in action && action.payload) detail = action.payload as any
-            else throw new Error('Failed to ensure game conversation')
+            detail = await dispatch(ensureGameConversation(conversationId)).unwrap()
             break
           }
           case 'team': {
@@ -85,9 +81,7 @@ export default function ChatContainer({
             if (!gameId || Number.isNaN(teamId)) {
               throw new Error('Invalid team conversation identifier')
             }
-            const action = await dispatch(ensureTeamConversation({ gameId, teamId }))
-            if ('payload' in action && action.payload) detail = action.payload as any
-            else throw new Error('Failed to ensure team conversation')
+            detail = await dispatch(ensureTeamConversation({ gameId, teamId })).unwrap()
             break
           }
           default:
