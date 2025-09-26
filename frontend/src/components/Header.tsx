@@ -1,4 +1,4 @@
-import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
+import { Bell, MessageSquare, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -334,7 +334,7 @@ export default function Header() {
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
 
-                {/* Notifications dropdown + Messages drawer entry */}
+                {/* Notifications (bell) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -344,20 +344,40 @@ export default function Header() {
                   className="btn-ghost btn-icon relative"
                   aria-label="Open notifications"
                 >
-                  <MessageSquare className="w-6 h-6 text-muted" />
-                  {unreadMessages + unreadNotifications > 0 && (
+                  <Bell className="w-6 h-6 text-muted" />
+                  {unreadNotifications > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 rounded-full bg-[color:var(--color-primary)] text-[10px] font-semibold text-white text-center">
-                      {unreadMessages + unreadNotifications > 99
-                        ? '99+'
-                        : unreadMessages + unreadNotifications}
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
                     </span>
                   )}
                 </button>
                 <NotificationDropdown
                   isOpen={isNotifDropdownOpen}
                   onClose={() => setIsNotifDropdownOpen(false)}
-                  onOpenMessages={() => dispatch(openInbox())}
+                  onOpenMessages={() => {
+                    setIsNotifDropdownOpen(false)
+                    dispatch(openInbox())
+                  }}
                 />
+
+                {/* Messages (chat) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNotifDropdownOpen(false)
+                    dispatch(openInbox())
+                    setIsUserDropdownOpen(false)
+                  }}
+                  className="btn-ghost btn-icon relative"
+                  aria-label="Open messages"
+                >
+                  <MessageSquare className="w-6 h-6 text-muted" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 py-0.5 rounded-full bg-[color:var(--color-primary)] text-[10px] font-semibold text-white text-center">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
 
                 {/* User Dropdown */}
                 <div className="relative">
