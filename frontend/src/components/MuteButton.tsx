@@ -21,7 +21,7 @@ export default function MuteButton() {
       onClick={handleToggleMute}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="fixed top-4 right-4 z-50 p-3 bg-slate-800/90 hover:bg-slate-700 backdrop-blur-sm border border-slate-600 rounded-full transition-all hover:scale-110 group"
+      className="fixed top-4 right-4 z-50 p-3 bg-[color:var(--panel-bg)] hover:bg-[color:var(--hover-bg)] backdrop-blur-sm border border-[color:var(--panel-border)] rounded-full transition-all hover:scale-110 group"
       title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
       aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
     >
@@ -35,7 +35,7 @@ export default function MuteButton() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`transition-colors ${isMuted ? 'text-red-400' : 'text-green-400'}`}
+        className={`transition-colors ${isMuted ? 'text-[color:var(--color-danger)]' : 'text-[color:var(--color-success)]'}`}
         aria-hidden="true"
       >
         <title>{isMuted ? 'Audio muted' : 'Audio playing'}</title>
@@ -64,17 +64,17 @@ export default function MuteButton() {
 
       {/* Tooltip */}
       {isHovered && (
-        <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-slate-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-[color:var(--panel-bg)] border border-[color:var(--panel-border)] text-[color:var(--text)] text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
           <div className="font-semibold">{isMuted ? 'Audio Muted' : 'Audio Enabled'}</div>
           <div className="text-xs text-muted mt-1">Click to {isMuted ? 'unmute' : 'mute'}</div>
           {/* Arrow pointing up */}
-          <div className="absolute -top-1 right-4 w-2 h-2 bg-slate-900 transform rotate-45" />
+          <div className="absolute -top-1 right-4 w-2 h-2 bg-[color:var(--panel-bg)] border-t border-l border-[color:var(--panel-border)] transform rotate-45" />
         </div>
       )}
 
       {/* Visual feedback ring */}
       {isMuted && (
-        <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping pointer-events-none" />
+        <div className="absolute inset-0 rounded-full border-2 border-[color:var(--color-danger)] animate-ping pointer-events-none" />
       )}
     </button>
   )
