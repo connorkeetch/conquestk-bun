@@ -535,52 +535,54 @@ export default function AdminDashboard() {
                 {sortedFeatureFlags
                   .filter((flag) => flag.flagName !== 'clans_enabled')
                   .map((flag) => (
-                  <div
-                    key={flag.flagName}
-                    className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
-                  >
-                    <div className="flex-1 pr-4">
-                      <div className="font-medium capitalize">{formatFlagName(flag.flagName)}</div>
-                      {flag.description && (
-                        <div className="text-sm text-muted">{flag.description}</div>
-                      )}
-                      <div className="text-xs text-muted mt-1">
-                        Status: {formatFlagStatus(flag.flagName, flag.isEnabled)}
-                      </div>
-                      {'updatedAt' in flag && flag.updatedAt && (
-                        <div className="text-xs text-muted mt-1">
-                          Last updated: {new Date(flag.updatedAt).toLocaleString()}
+                    <div
+                      key={flag.flagName}
+                      className="flex items-center justify-between bg-surface-2 rounded-lg p-4"
+                    >
+                      <div className="flex-1 pr-4">
+                        <div className="font-medium capitalize">
+                          {formatFlagName(flag.flagName)}
                         </div>
-                      )}
-                      {'accessLevel' in flag && (
-                        <div className="text-xs text-muted mt-1">Scope: {flag.accessLevel}</div>
+                        {flag.description && (
+                          <div className="text-sm text-muted">{flag.description}</div>
+                        )}
+                        <div className="text-xs text-muted mt-1">
+                          Status: {formatFlagStatus(flag.flagName, flag.isEnabled)}
+                        </div>
+                        {'updatedAt' in flag && flag.updatedAt && (
+                          <div className="text-xs text-muted mt-1">
+                            Last updated: {new Date(flag.updatedAt).toLocaleString()}
+                          </div>
+                        )}
+                        {'accessLevel' in flag && (
+                          <div className="text-xs text-muted mt-1">Scope: {flag.accessLevel}</div>
+                        )}
+                      </div>
+                      <label
+                        className={`toggle ${
+                          updatingFlag === flag.flagName ? 'opacity-50 pointer-events-none' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={flag.isEnabled}
+                          onChange={(e) => toggleFeatureFlag(flag.flagName, e.target.checked)}
+                          disabled={updatingFlag === flag.flagName}
+                          aria-label={`Toggle ${formatFlagName(flag.flagName)}`}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                      {featureFlags.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(flag as FeatureFlag)}
+                          className="ml-4 px-3 py-2 text-sm bg-surface-1 border border-border rounded hover:bg-surface-1/70 transition-colors"
+                        >
+                          Manage
+                        </button>
                       )}
                     </div>
-                    <label
-                      className={`toggle ${
-                        updatingFlag === flag.flagName ? 'opacity-50 pointer-events-none' : ''
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={flag.isEnabled}
-                        onChange={(e) => toggleFeatureFlag(flag.flagName, e.target.checked)}
-                        disabled={updatingFlag === flag.flagName}
-                        aria-label={`Toggle ${formatFlagName(flag.flagName)}`}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                    {featureFlags.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(flag as FeatureFlag)}
-                        className="ml-4 px-3 py-2 text-sm bg-surface-1 border border-border rounded hover:bg-surface-1/70 transition-colors"
-                      >
-                        Manage
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>

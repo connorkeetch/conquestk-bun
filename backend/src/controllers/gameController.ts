@@ -85,7 +85,10 @@ export class GameController {
           if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty)) continue
 
           let personalitySeed: number | null | undefined
-          if (typeof opponent.personalitySeed === 'number' && Number.isFinite(opponent.personalitySeed)) {
+          if (
+            typeof opponent.personalitySeed === 'number' &&
+            Number.isFinite(opponent.personalitySeed)
+          ) {
             personalitySeed = Math.trunc(opponent.personalitySeed)
           }
 

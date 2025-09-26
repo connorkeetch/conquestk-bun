@@ -1,9 +1,9 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAppDispatch, useAppSelector } from '../../hooks/redux'
-import { PLAYER_COLORS, getColorValue, type PlayerColor } from '@/constants/colors'
+import { getColorValue, PLAYER_COLORS, type PlayerColor } from '@/constants/colors'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
+import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { type ProfileSummary, profileService } from '../../services/profileService'
 import { logout } from '../../store/authSlice'
 
@@ -106,9 +106,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
     (s) => s.settings.game?.preferredColor || PLAYER_COLORS[0],
   )
   const resolved = getColorValue(preferredColor)
-  const baseHex = isGradientValue(resolved)
-    ? extractFirstHexColor(resolved) || '#000000'
-    : resolved
+  const baseHex = isGradientValue(resolved) ? extractFirstHexColor(resolved) || '#000000' : resolved
   const textColor = pickTextOnColor(baseHex)
   const badgeStyle: React.CSSProperties = isGradientValue(resolved)
     ? ({ backgroundImage: resolved, color: textColor } as React.CSSProperties)

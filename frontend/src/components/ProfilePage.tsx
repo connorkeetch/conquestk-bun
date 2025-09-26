@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 
 import friendsService, {
   type RelationshipInfo,
@@ -31,8 +31,9 @@ import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
+import { pickTextOnColor } from '@/utils/color'
 
-type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
+type TabType = 'overview' | 'stats' | 'friends' | 'matches' | 'achievements'
 
 // color helpers moved to '@/utils/color'
 
@@ -69,18 +70,13 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
   const heroGradientOverlay =
     'linear-gradient(160deg, rgba(15, 17, 23, 0.92) 0%, rgba(11, 14, 23, 0.78) 60%, rgba(9, 11, 18, 0.72) 100%)'
 
-  const heroBackgroundStyle: React.CSSProperties = signatureIsGradient
-    ? {
-        backgroundImage: `${heroGradientOverlay}, ${resolvedPreferredColor}`,
-      }
-    : {
-        backgroundImage: `linear-gradient(155deg, ${hexToRgba(signatureHex, 0.88)} 0%, ${hexToRgba(
-          mixColors(signatureHex, '#0f1117', 0.4),
-          0.92,
-        )} 55%, ${hexToRgba(mixColors(signatureHex, '#090b12', 0.7), 0.95)} 100%)`,
-      }
+  // Neutralize hero background; avoid tinting whole card with signature color
+  const heroBackgroundStyle: React.CSSProperties = {
+    backgroundImage:
+      'linear-gradient(160deg, rgba(15,17,23,0.92) 0%, rgba(11,14,23,0.86) 60%, rgba(9,11,18,0.82) 100%)',
+  }
 
-  const heroBorderColor = hexToRgba(ensureReadableOnDark(signatureHex), 0.45)
+  const heroBorderColor = 'rgba(255,255,255,0.08)'
 
   const preferredColorDisplayName = getColorDisplayName(preferredColorSource)
 
@@ -107,6 +103,7 @@ const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootSta
   return {
     signatureCrestStyle,
     signatureColorSwatchStyle,
+    // Keep crest glow available for internal badges only; not used on hero
     signatureGlowStyle,
     heroBackgroundStyle,
     heroBorderColor,
@@ -224,6 +221,7 @@ const buildRankVisuals = (profile: ProfileSummary) => {
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAppSelector((state) => state.auth)
+  const [searchParams] = useSearchParams()
   const settings = useAppSelector((state) => state.settings)
   const [profile, setProfile] = useState<ProfileSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -239,6 +237,18 @@ const ProfilePage: React.FC = () => {
   } | null>(null)
   const [relBusy, setRelBusy] = useState<string>('')
   const dispatch = useAppDispatch()
+  const [friendsTabLoading, setFriendsTabLoading] = useState(false)
+  const [friendsList, setFriendsList] = useState<Array<{ userId: string; username: string; since?: string }>>([])
+  const [compareFriend, setCompareFriend] = useState<
+    | {
+        userId: string
+        username: string
+        loading: boolean
+        error?: string | null
+        profile?: ProfileSummary | null
+      }
+    | null
+  >(null)
 
   const isOwnProfile = currentUser?.username === username
 
@@ -294,11 +304,53 @@ const ProfilePage: React.FC = () => {
     }
   }, [fetchProfile])
 
+  // Pick initial tab from query string if provided
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t === 'overview' || t === 'stats' || t === 'friends') {
+      setActiveTab(t)
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (!comingSoonUiEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
       setActiveTab('overview')
     }
   }, [comingSoonUiEnabled, activeTab])
+
+  // Load friends/followers data for Friends tab
+  useEffect(() => {
+    const load = async () => {
+      if (activeTab !== 'friends' || !profile) return
+      setFriendsTabLoading(true)
+      try {
+        if (isOwnProfile) {
+          const friends = await friendsService.listFriends()
+          setFriendsList(friends)
+        } else {
+          const mf = await friendsService.mutual(profile.id, 50)
+          setFriendsList(mf.users.map((u) => ({ userId: u.userId, username: u.username })))
+        }
+      } catch (_e) {
+        setFriendsList([])
+      } finally {
+        setFriendsTabLoading(false)
+      }
+    }
+    void load()
+  }, [activeTab, isOwnProfile, profile])
+
+  const handleCompare = async (userId: string, username: string) => {
+    setCompareFriend({ userId, username, loading: true, error: null, profile: null })
+    try {
+      const other = await profileService.getProfileByUsername(username)
+      setCompareFriend({ userId, username, loading: false, error: null, profile: other })
+    } catch (e) {
+      setCompareFriend({ userId, username, loading: false, error: 'Failed to load profile', profile: null })
+    }
+  }
+
+  const closeCompare = () => setCompareFriend(null)
 
   const handleRefreshProfile = useCallback(() => {
     void fetchProfile()
@@ -492,9 +544,11 @@ const ProfilePage: React.FC = () => {
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
-    signatureCardStyle,
     signatureCallToActionStyle,
   } = signatureVisuals
+  const signatureColorName = premiumColorEntry
+    ? getColorDisplayName(premiumColorEntry[1].solid)
+    : preferredColorDisplayName
 
   const {
     rankDetails,
@@ -509,18 +563,19 @@ const ProfilePage: React.FC = () => {
 
   // Removed header rank badge; rank appears only on the dedicated card
 
-  // Shift avatar/card accents to signature color to reduce rank dominance
+  // Neutral avatar ring; avoid large signature color usage
   const avatarRingStyle: React.CSSProperties = {
-    borderColor: ensureReadableOnDark(signatureHex),
-    boxShadow: `0 12px 32px ${hexToRgba(signatureHex, 0.28)}`,
-    background: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.22)} 0%, transparent 70%)`,
+    borderColor: 'rgba(255,255,255,0.15)',
+    boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, transparent 70%)',
   }
 
-  const _cardStyleNeutralToSignature: React.CSSProperties = signatureCardStyle
+  // signatureCardStyle applied inline where needed; remove unused local alias
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
     { id: 'stats', label: 'Statistics', icon: '📊', available: true },
+    { id: 'friends', label: 'Friends', icon: '🤝', available: true },
   ]
 
   if (comingSoonUiEnabled) {
@@ -538,22 +593,15 @@ const ProfilePage: React.FC = () => {
           className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden border"
           style={{ ...heroBackgroundStyle, borderColor: heroBorderColor }}
         >
-          <div
-            className="absolute inset-0 opacity-80 pointer-events-none"
-            style={signatureGlowStyle}
-          />
+          {/* Removed signature glow across whole hero for clarity */}
           <div
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-35 pointer-events-none"
-            style={{ background: hexToRgba(signatureHex, 0.4) }}
+            style={{ background: 'rgba(255,255,255,0.03)' }}
           />
           <div className="relative flex flex-col sm:flex-row gap-6">
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
               <div className="relative group">
-                <div
-                  className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-                  style={signatureGlowStyle}
-                />
                 <div
                   className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
                   style={avatarRingStyle}
@@ -574,20 +622,7 @@ const ProfilePage: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-3/70 backdrop-blur-md border border-white/10 shadow-inner">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    ...signatureColorSwatchStyle,
-                    boxShadow: `0 0 12px ${hexToRgba(signatureHex, 0.6)}`,
-                  }}
-                />
-                <span className="text-[11px] font-semibold tracking-[0.45em] uppercase text-muted">
-                  {premiumColorEntry
-                    ? `${premiumColorEntry[0]} Colorway`
-                    : preferredColorDisplayName}
-                </span>
-              </div>
+              {/* Removed separate signature color chip; moved inline with stats below */}
             </div>
 
             {/* Profile Info */}
@@ -620,6 +655,30 @@ const ProfilePage: React.FC = () => {
                 <span className="flex items-center gap-1">
                   <span className="text-lg">🌠</span>
                   Peak {profile.peakRating}
+                </span>
+                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-lg">🎨</span>
+                  <span
+                    className="px-2 py-0.5 rounded-full border text-[10px] tracking-wide"
+                    style={(() => {
+                      const text = pickTextOnColor(ensureReadableOnDark(signatureHex))
+                      return signatureColorSwatchStyle.backgroundImage
+                        ? ({
+                            // gradient signature color
+                            backgroundImage: signatureColorSwatchStyle.backgroundImage,
+                            color: text,
+                            borderColor: hexToRgba(ensureReadableOnDark(signatureHex), 0.4),
+                          } as React.CSSProperties)
+                        : ({
+                            backgroundColor: signatureHex,
+                            color: text,
+                            borderColor: hexToRgba(ensureReadableOnDark(signatureHex), 0.4),
+                          } as React.CSSProperties)
+                    })()}
+                  >
+                    Signature Color: {signatureColorName}
+                  </span>
                 </span>
               </div>
 
@@ -933,6 +992,143 @@ const ProfilePage: React.FC = () => {
               isOwnProfile={isOwnProfile}
               username={profile?.username ?? username ?? undefined}
             />
+          )}
+
+          {activeTab === 'friends' && (
+            <div className="relative glass-box-xl shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>🤝</span>
+                  {isOwnProfile ? 'Your Friends' : `Friends with ${profile.username}`}
+                </h2>
+                {!isOwnProfile && mutual?.total !== undefined && (
+                  <span className="text-sm text-muted">Mutual: {mutual?.total ?? 0}</span>
+                )}
+              </div>
+              {compareFriend && (
+                <div className="mb-4 glass-box-sm border border-white/10 bg-surface-2/70 p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-muted">Comparing</div>
+                      <div className="text-lg font-semibold text-white">
+                        {profile.username} vs {compareFriend.username}
+                      </div>
+                    </div>
+                    <button type="button" className="btn btn-tertiary btn-sm" onClick={closeCompare}>
+                      ✖ Close
+                    </button>
+                  </div>
+                  {compareFriend.loading ? (
+                    <div className="text-muted mt-3">Loading comparison…</div>
+                  ) : compareFriend.error ? (
+                    <div className="text-danger mt-3">{compareFriend.error}</div>
+                  ) : compareFriend.profile ? (
+                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {(() => {
+                        const other = compareFriend.profile!
+                        const base = profile
+                        const metric = (
+                          label: string,
+                          lhs: number,
+                          rhs: number,
+                          formatter: (n: number) => string = (n) => String(n),
+                        ) => {
+                          const delta = rhs - lhs
+                          const up = delta > 0
+                          const same = delta === 0
+                          return (
+                            <div className="p-3 rounded-lg bg-surface-3/40 border border-white/10">
+                              <div className="text-xs uppercase tracking-wide text-muted mb-1">{label}</div>
+                              <div className="text-white text-sm font-semibold">
+                                {formatter(lhs)} <span className="text-white/40">→</span> {formatter(rhs)}
+                              </div>
+                              {!same && (
+                                <div className={up ? 'text-green-400 text-xs' : 'text-red-400 text-xs'}>
+                                  {up ? '▲' : '▼'} {formatter(Math.abs(delta))}
+                                </div>
+                              )}
+                              {same && <div className="text-muted text-xs">No change</div>}
+                            </div>
+                          )
+                        }
+                        return (
+                          <>
+                            {metric('ELO', base.elo, other.elo)}
+                            {metric(
+                              'Win Rate %',
+                              Math.round(base.winRate),
+                              Math.round(other.winRate),
+                              (n) => `${n}%`,
+                            )}
+                            {metric('Games Played', base.gamesPlayed, other.gamesPlayed)}
+                            {metric('Peak ELO', base.peakRating, other.peakRating)}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              {friendsTabLoading ? (
+                <div className="text-center text-muted py-8">Loading friends...</div>
+              ) : friendsList.length === 0 ? (
+                <div className="text-center text-muted py-8">
+                  {isOwnProfile ? 'No friends yet. Find players in the Community tab!' : 'No mutual friends to show.'}
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {friendsList.map((f) => (
+                    <div key={f.userId} className="glass-box-sm flex items-center justify-between p-3 border border-white/10 bg-surface-2/70">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-surface-3 text-xs flex items-center justify-center border border-white/10">
+                          {f.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <Link to={`/profile/${f.username}`} className="font-semibold hover:underline">
+                            {f.username}
+                          </Link>
+                          {f.since && (
+                            <div className="text-[11px] text-muted">Since {new Date(f.since).toLocaleDateString()}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/profile/${f.username}?tab=stats`}
+                          className="btn btn-tertiary btn-sm"
+                          title="View stats"
+                        >
+                          📊 Stats
+                        </Link>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleCompare(f.userId, f.username)}
+                          title={`Compare ${profile.username} with ${f.username}`}
+                        >
+                          ⚖️ Compare
+                        </button>
+                        {isOwnProfile && (
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
+                            // lazy open DM via existing helper
+                            void (async () => {
+                              try {
+                                const detail = await dispatch(ensureDirectConversation(f.userId)).unwrap()
+                                dispatch(messagesActions.setActiveConversationId(detail.conversation.id))
+                                const { openInbox } = await import('@/store/uiSlice')
+                                dispatch(openInbox())
+                              } catch {}
+                            })()
+                          }}>
+                            💬 Message
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {comingSoonUiEnabled && activeTab === 'matches' && (

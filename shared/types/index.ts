@@ -255,41 +255,71 @@ export type ModifierDistribution = 'none' | 'sparse' | 'balanced' | 'abundant' |
 
 export type GameSettings = GameConfiguration
 
-export interface GameAction {
-  type: 'deploy' | 'attack' | 'fortify' | 'end_turn' | 'trade_cards'
+// Align GameAction and subtypes with backend/src/types/game.ts
+export type GameAction =
+  | DeployAction
+  | AttackAction
+  | FortifyAction
+  | EndTurnAction
+  | BeginTurnAction
+  | TradeCardsAction
+  | GoBackToReinforcementAction
+
+type GameActionType =
+  | 'deploy'
+  | 'attack'
+  | 'fortify'
+  | 'end_turn'
+  | 'begin_turn'
+  | 'trade_cards'
+  | 'go_back_to_reinforcement'
+
+type ActionBase<T extends GameActionType> = {
+  type: T
+  roomId: string
   playerId: string
-  timestamp: Date | string
-  data: DeployAction | AttackAction | FortifyAction | EndTurnAction | TradeCardsAction
 }
 
-export interface DeployAction {
-  territoryId: string
-  armies: number
+export type DeployAction = ActionBase<'deploy'> & {
+  payload: {
+    territoryId: string
+    armies: number
+  }
 }
 
-export interface AttackAction {
-  fromTerritoryId: string
-  toTerritoryId: string
-  attackerDice?: number[]
-  defenderDice?: number[]
-  attackerLosses?: number
-  defenderLosses?: number
-  conquered?: boolean
+export type AttackAction = ActionBase<'attack'> & {
+  payload: {
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies?: number
+  }
 }
 
-export interface FortifyAction {
-  fromTerritoryId: string
-  toTerritoryId: string
-  armies: number
+export type FortifyAction = ActionBase<'fortify'> & {
+  payload: {
+    fromTerritoryId: string
+    toTerritoryId: string
+    armies: number
+  }
 }
 
-export interface EndTurnAction {
-  cardsEarned?: number
+export type EndTurnAction = ActionBase<'end_turn'> & {
+  payload?: undefined
 }
 
-export interface TradeCardsAction {
-  cardIds: string[]
-  bonusArmies: number
+export type BeginTurnAction = ActionBase<'begin_turn'> & {
+  payload?: undefined
+}
+
+export type TradeCardsAction = ActionBase<'trade_cards'> & {
+  payload?: {
+    cards?: string[]
+    treasureSet?: [number, number, number] | number[]
+  }
+}
+
+export type GoBackToReinforcementAction = ActionBase<'go_back_to_reinforcement'> & {
+  payload?: undefined
 }
 
 // ============================================
@@ -537,6 +567,13 @@ export interface ServerToClientEvents {
   'typing.start': (payload: TypingEventResponse) => void
   'typing.stop': (payload: TypingEventResponse) => void
   'notification:new': (payload: RealtimeNotification) => void
+  // Friends events (align with backend)
+  'friend.request.received': (payload: { requesterId: string; requestedAt: string }) => void
+  'friend.request.accepted': (payload: { userId: string; acceptedAt: string }) => void
+  'friend.request.declined': (payload: { userId: string; at: string }) => void
+  'friend.request.cancelled': (payload: { userId: string; at: string }) => void
+  'friend.added': (payload: { userId: string; at: string }) => void
+  'friend.removed': (payload: { userId: string; at: string }) => void
   phaseChanged: (data: {
     phase: GamePhase
     currentPlayer: string

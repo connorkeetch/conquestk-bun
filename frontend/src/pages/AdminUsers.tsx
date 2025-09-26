@@ -152,7 +152,8 @@ const AdminUsers: React.FC = () => {
       setUserFlagsLoading(true)
       setUserFlagsError(null)
       const flags = await adminService.getUserFeatureFlags(userId)
-      setUserFeatureFlags(flags)
+      // Hide deprecated clans flag from per-user view
+      setUserFeatureFlags(flags.filter((f) => f.flagName !== 'clans_enabled'))
     } catch (err) {
       const message = getErrorMessage(err)
       setUserFlagsError(message)

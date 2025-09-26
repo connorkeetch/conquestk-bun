@@ -68,6 +68,7 @@ const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
 
 import { applyTheme, getStoredTheme } from './config/themes.config'
 import { FEATURE_FLAGS } from './constants/featureFlags'
+import { useFeatureFlag } from './hooks/useFeatureFlag'
 import { checkAuth } from './store/authSlice'
 
 const SuspenseFallback = () => (

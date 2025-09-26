@@ -114,7 +114,11 @@ function ColorDropdown({
                     const count = Math.max(1, stops.length)
                     return stops.length > 0
                       ? stops.map((c, idx) => (
-                          <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                          <stop
+                            key={c}
+                            offset={`${(idx / (count - 1 || 1)) * 100}%`}
+                            style={{ stopColor: c }}
+                          />
                         ))
                       : [
                           <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
@@ -208,13 +212,23 @@ function ColorDropdown({
                     />
                     {hasGradient && (
                       <defs>
-                        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient
+                          id={`gradient-${color}`}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
                           {(() => {
                             const stops = parseGradientStops(swatchStr)
                             const count = Math.max(1, stops.length)
                             return stops.length > 0
                               ? stops.map((c, idx) => (
-                                  <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                                  <stop
+                                    key={c}
+                                    offset={`${(idx / (count - 1 || 1)) * 100}%`}
+                                    style={{ stopColor: c }}
+                                  />
                                 ))
                               : [
                                   <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
@@ -296,18 +310,29 @@ function ColorDropdown({
                           fill: hasGradient ? `url(#gradient-${color})` : swatchStr,
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
-                          filter: color === 'NeonGreen' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
+                          filter:
+                            color === 'NeonGreen' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
                       {hasGradient && (
                         <defs>
-                          <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <linearGradient
+                            id={`gradient-${color}`}
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
                             {(() => {
                               const stops = parseGradientStops(swatchStr)
                               const count = Math.max(1, stops.length)
                               return stops.length > 0
                                 ? stops.map((c, idx) => (
-                                    <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                                    <stop
+                                      key={c}
+                                      offset={`${(idx / (count - 1 || 1)) * 100}%`}
+                                      style={{ stopColor: c }}
+                                    />
                                   ))
                                 : [
                                     <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
