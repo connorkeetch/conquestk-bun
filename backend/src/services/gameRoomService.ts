@@ -554,7 +554,7 @@ export class GameRoomService {
           status,
           lifecycle_phase
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'lobby', 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'lobby', 'lobby')
         RETURNING *
       `
 
