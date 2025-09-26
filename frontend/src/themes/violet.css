@@ -1,5 +1,5 @@
-/* Violet Theme */
-:root[data-theme="violet"] {
+/* Violet Theme - applies to violet, violet-dark, violet-light */
+:root[data-theme^="violet"] {
   --color-primary: #7c3aed; /* Violet primary */
   --color-primary-soft: #8b5cf6; /* Lighter violet for hover */
   --color-secondary: #ffd700; /* Gold secondary */

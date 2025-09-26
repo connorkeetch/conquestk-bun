@@ -1,5 +1,5 @@
-/* Blue Theme */
-:root[data-theme="blue"] {
+/* Blue Theme - applies to blue, blue-dark, blue-light */
+:root[data-theme^="blue"] {
   --color-primary: #2563eb; /* Blue primary */
   --color-primary-soft: #3b82f6; /* Lighter blue for hover */
   --color-secondary: #ffd700; /* Gold secondary */

@@ -48,6 +48,8 @@ This allows themes to work with any color scheme!
 */
 
 @import "./themes/default.css";
+@import "./themes/dark.css";
+@import "./themes/light.css";
 @import "./themes/red.css";
 @import "./themes/violet.css";
 @import "./themes/blue.css";
@@ -172,8 +174,13 @@ This allows themes to work with any color scheme!
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
-:root[data-theme="default"],
-:root[data-theme="dark"] {
+/* Default to dark for all themes unless explicitly light.
+   Light themes opt in by:
+   - Using the name suffix "-light" (e.g. "violet-light")
+   - Being the explicit "light" theme id
+   - Being listed here as a one-off light theme (e.g. retrospace)
+   To add another light-only theme id, include it in the :not(...) list below. */
+:root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not([data-theme="light"]) {
   --text: #f9fafb;
   --text-muted: #94a3b8;
   --heading: #f9fafb;
