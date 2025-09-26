@@ -266,17 +266,26 @@ export class BattleWorker {
           if (attackerTeam && attackerTeam > 0) {
             updatedState.players
               .filter((p) => p.teamId === attackerTeam)
-              .forEach((p) => viewers.add(p.id))
+              .forEach((p) => {
+                viewers.add(p.id)
+              })
           }
           if (defenderTeam && defenderTeam > 0) {
             updatedState.players
               .filter((p) => p.teamId === defenderTeam)
-              .forEach((p) => viewers.add(p.id))
+              .forEach((p) => {
+                viewers.add(p.id)
+              })
           }
         }
 
         for (const viewerId of viewers) {
-          await emitRevealSnapshot(this.io as unknown as Server, gameId, viewerId, updatedState ?? undefined)
+          await emitRevealSnapshot(
+            this.io as unknown as Server,
+            gameId,
+            viewerId,
+            updatedState ?? undefined,
+          )
         }
       }
 

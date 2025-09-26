@@ -34,7 +34,7 @@ const ClanSummaryCard = ({ clan }: { clan: ClanSummary }) => {
   const createdAt = useMemo(() => new Date(clan.createdAt), [clan.createdAt])
 
   return (
-    <Link to={`/clans/${clan.slug}`} className="block group">
+    <Link to={`/community/clans/${clan.slug}`} className="block group">
       <div className="glass-box-lg p-6 h-full transition-all group-hover:border-primary/40 group-hover:shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>

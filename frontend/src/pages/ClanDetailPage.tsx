@@ -589,7 +589,7 @@ const ClanDetailPage = () => {
           <p className="text-muted mb-6">
             {error ?? 'The clan dossier may have been removed or renamed.'}
           </p>
-          <Link to="/clans" className="btn-primary inline-flex items-center gap-2">
+          <Link to="/community/clans" className="btn-primary inline-flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" /> Back to clan directory
           </Link>
         </div>
@@ -722,7 +722,7 @@ const ClanDetailPage = () => {
         </section>
 
         <div>
-          <Link to="/clans" className="btn-secondary inline-flex items-center gap-2">
+          <Link to="/community/clans" className="btn-secondary inline-flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" /> Back to clan directory
           </Link>
         </div>

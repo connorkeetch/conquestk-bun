@@ -1,0 +1,163 @@
+import { Bell, MessageSquare } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { notificationService } from '@/services/notificationService'
+import type { Notification } from '@/types/notification'
+
+interface NotificationDropdownProps {
+  isOpen: boolean
+  onClose: () => void
+  onOpenMessages: () => void
+}
+
+const formatRelativeTime = (date: Date) => {
+  const diffMs = Date.now() - date.getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m`
+  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h`
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+export default function NotificationDropdown({
+  isOpen,
+  onClose,
+  onOpenMessages,
+}: NotificationDropdownProps) {
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unread, setUnread] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const unsub = notificationService.subscribe((list) => {
+      setNotifications(list)
+      setUnread(notificationService.getUnreadCount())
+    })
+    // initialize
+    setNotifications(notificationService.getNotifications())
+    setUnread(notificationService.getUnreadCount())
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (!containerRef.current) return
+      const target = e.target as Node
+      if (!containerRef.current.contains(target)) {
+        onClose()
+      }
+    }
+    window.addEventListener('mousedown', onClick)
+    return () => window.removeEventListener('mousedown', onClick)
+  }, [isOpen, onClose])
+
+  const handleNotificationClick = (n: Notification) => {
+    notificationService.markAsRead(n.id)
+    if (n.actionUrl) {
+      window.location.href = n.actionUrl
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-[80] pointer-events-none">
+      {/* Dropdown panel */}
+      <div
+        ref={containerRef}
+        className="pointer-events-auto absolute right-2 top-16 w-[360px] max-h-[70vh] overflow-hidden rounded-lg shadow-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)]"
+      >
+        <div className="px-4 py-3 border-b border-[color:var(--panel-border)] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-muted" />
+            <h3 className="text-sm font-semibold text-[color:var(--heading)]">Notifications</h3>
+            {unread > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] bg-[color:var(--color-primary)] text-white">
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {unread > 0 && (
+              <button
+                type="button"
+                className="btn-secondary btn-xs"
+                onClick={() => notificationService.markAllAsRead()}
+                title="Mark all as read"
+              >
+                Mark all
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                className="btn-outline btn-xs"
+                onClick={() => notificationService.clearAll()}
+                title="Clear all notifications"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {notifications.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm text-muted">No notifications yet</div>
+        ) : (
+          <div className="max-h-[50vh] overflow-y-auto divide-y divide-[color:var(--panel-border)]">
+            {notifications.slice(0, 12).map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => handleNotificationClick(n)}
+                className={`w-full text-left px-4 py-3 hover:bg-[color:var(--hover-bg)] transition ${
+                  n.read ? '' : 'bg-[color:var(--panel-bg-alt)]'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-xl leading-none">{n.icon || '🔔'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm ${n.read ? 'text-muted' : 'text-[color:var(--heading)]'} truncate`}
+                    >
+                      {n.title}
+                    </p>
+                    <p className="text-xs text-muted truncate">{n.message}</p>
+                  </div>
+                  <span className="text-[10px] text-muted whitespace-nowrap">
+                    {formatRelativeTime(n.timestamp)}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="px-4 py-3 border-t border-[color:var(--panel-border)] flex items-center justify-between">
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
+            Close
+          </button>
+          <button
+            type="button"
+            className="btn-primary btn-sm inline-flex items-center gap-1"
+            onClick={() => {
+              onClose()
+              onOpenMessages()
+            }}
+            title="Open messages"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Open Messages
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

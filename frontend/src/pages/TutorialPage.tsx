@@ -709,7 +709,9 @@ const TutorialPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="panel-muted space-y-2">
-                  <h4 className="font-semibold text-[color:var(--color-primary)]">Hidden Treasures</h4>
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">
+                    Hidden Treasures
+                  </h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>
                       <strong>Triangular:</strong> 4, 6, 9, 13, 18, … increasing payouts per set.

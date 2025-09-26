@@ -2,13 +2,13 @@ import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
-import { PLAYER_COLORS, getColorValue, type PlayerColor } from '@/constants/colors'
-import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
+import { getColorValue, PLAYER_COLORS, type PlayerColor } from '@/constants/colors'
 // Clans are now generally available; no feature flag gating
 import friendsService from '@/services/friendsService'
 import { notificationService } from '@/services/notificationService'
 import { socketService } from '@/services/socketService'
 import { closeInbox, openInbox } from '@/store/uiSlice'
+import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
@@ -19,6 +19,7 @@ import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
 // Consolidated inbox drawer (messages + notifications)
 import InboxDrawer from './messages/InboxDrawer'
+import NotificationDropdown from './notifications/NotificationDropdown'
 
 interface MenuItem {
   path: string
@@ -28,18 +29,20 @@ interface MenuItem {
 
 export default function Header() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth)
-  const preferredColor: PlayerColor = useAppSelector((s) => s.settings.game?.preferredColor || PLAYER_COLORS[0])
+  const preferredColor: PlayerColor = useAppSelector(
+    (s) => s.settings.game?.preferredColor || PLAYER_COLORS[0],
+  )
   const inboxOpen = useAppSelector((s) => s.ui.inboxOpen)
   const dispatch = useAppDispatch()
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false)
   // Inbox is globally controlled via Redux
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [pendingFriends, setPendingFriends] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
-  const clansEnabled = true
   const unreadMessages = useAppSelector(selectTotalUnreadMessages)
 
   // Derive a small bubble style using the user's preferred color
@@ -107,7 +110,6 @@ export default function Header() {
     { path: '/maps', label: 'Maps', icon: '🗺️' },
     { path: '/map-editor', label: 'Map Editor', icon: '✏️' },
     { path: '/community', label: 'Community', icon: '👥' },
-    { path: '/clans', label: 'Clans', icon: '🛡️' },
     { path: '/tutorial', label: 'How to Play', icon: '📚' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
@@ -120,6 +122,13 @@ export default function Header() {
     dispatch(logout())
     setIsMenuOpen(false)
   }
+
+  // Close notification dropdown on route change
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: run on route changes */
+  useEffect(() => {
+    setIsNotifDropdownOpen(false)
+    // Only depends on path changes
+  }, [location])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -159,12 +168,7 @@ export default function Header() {
         },
       )
 
-      base.push({
-        to: '/clans',
-        label: 'Clans',
-        icon: '🛡️',
-        isActive: location.pathname.startsWith('/clans'),
-      })
+      // Clans moved under Community hub; remove from primary nav
 
       base.push({
         to: '/tutorial',
@@ -209,12 +213,7 @@ export default function Header() {
         },
       )
 
-      base.push({
-        to: '/clans',
-        label: 'Clans',
-        icon: '🛡️',
-        isActive: location.pathname.startsWith('/clans'),
-      })
+      // Clans moved under Community hub; remove from primary nav
 
       base.push({
         to: '/tutorial',
@@ -335,15 +334,15 @@ export default function Header() {
                 {/* Active Games Dropdown */}
                 <ActiveGamesDropdown />
 
-                {/* Inbox (Messages + Notifications) */}
+                {/* Notifications dropdown + Messages drawer entry */}
                 <button
                   type="button"
                   onClick={() => {
-                    dispatch(openInbox())
+                    setIsNotifDropdownOpen((v) => !v)
                     setIsUserDropdownOpen(false)
                   }}
                   className="btn-ghost btn-icon relative"
-                  aria-label="Open inbox"
+                  aria-label="Open notifications"
                 >
                   <MessageSquare className="w-6 h-6 text-muted" />
                   {unreadMessages + unreadNotifications > 0 && (
@@ -354,6 +353,11 @@ export default function Header() {
                     </span>
                   )}
                 </button>
+                <NotificationDropdown
+                  isOpen={isNotifDropdownOpen}
+                  onClose={() => setIsNotifDropdownOpen(false)}
+                  onOpenMessages={() => dispatch(openInbox())}
+                />
 
                 {/* User Dropdown */}
                 <div className="relative">

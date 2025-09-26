@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import friendsService from '@/services/friendsService'
 import { socketService } from '@/services/socketService'
+
 // AI menu entries are now generally visible
 
 interface NavItem {
@@ -141,6 +142,12 @@ const PrimaryNav: React.FC = () => {
             label: 'Leaderboards',
             icon: '🏆',
             description: 'Top players',
+          },
+          {
+            path: '/community/clans',
+            label: 'Clans',
+            icon: '🛡️',
+            description: 'Find and join clans',
           },
           {
             path: '/community/friends',

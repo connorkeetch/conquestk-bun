@@ -1,10 +1,7 @@
 import type { GameDelta } from '@risk-game/shared/types'
-import type { SerializedGameState } from '../types/game'
-import type { Server, Socket } from 'socket.io'
+import type { Server } from 'socket.io'
+import type { GameState, SerializedGameState } from '../types/game'
 import { GameService } from './gameService'
-import type { GameState } from '../types/game'
-
-type AuthSocket = Socket & { userId?: string }
 
 const ROOM_PREFIX = 'game:'
 
@@ -167,6 +164,7 @@ export async function emitRevealSnapshot(
     return
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: RemoteSocket .data is generic at runtime
   const target = sockets.find((s) => (s as any).data?.userId === viewerId)
   if (!target) return
 
