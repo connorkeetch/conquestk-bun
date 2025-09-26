@@ -186,23 +186,25 @@ export const MapVersionManager: React.FC = () => {
 
   const getStatusBadge = (version: MapVersion) => {
     const getStatusColor = (statusName: string) => {
+      const baseNeutral =
+        'border border-[color:var(--panel-border)] text-muted bg-[color:var(--panel-bg-alt)]'
       switch (statusName) {
         case 'draft':
-          return 'bg-gray-100 text-gray-800'
+          return baseNeutral
         case 'submitted':
-          return 'bg-blue-100 text-blue-800'
+          return 'border border-[color:var(--color-info)] text-[color:var(--color-info)] bg-[color:color-mix(in srgb, var(--color-info) 15%, transparent)]'
         case 'under_review':
-          return 'bg-yellow-100 text-yellow-800'
+          return 'border border-[color:var(--color-warning)] text-[color:var(--color-warning)] bg-[color:color-mix(in srgb, var(--color-warning) 15%, transparent)]'
         case 'approved':
-          return 'bg-green-100 text-green-800'
+          return 'border border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:color-mix(in srgb, var(--color-success) 12%, transparent)]'
         case 'published':
-          return 'bg-green-200 text-green-900 font-semibold'
+          return 'border border-[color:var(--color-success)] text-[color:var(--color-success)] bg-[color:color-mix(in srgb, var(--color-success) 18%, transparent)] font-semibold'
         case 'rejected':
-          return 'bg-red-100 text-red-800'
+          return 'border border-[color:var(--color-danger)] text-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]'
         case 'archived':
-          return 'bg-gray-200 text-gray-600'
+          return baseNeutral
         default:
-          return 'bg-gray-100 text-gray-800'
+          return baseNeutral
       }
     }
 
@@ -232,7 +234,7 @@ export const MapVersionManager: React.FC = () => {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading versions...</p>
+          <p className="text-muted">Loading versions...</p>
         </div>
       </div>
     )
@@ -243,45 +245,45 @@ export const MapVersionManager: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Version Management</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-xl font-semibold text-[color:var(--heading)]">Version Management</h2>
+          <p className="text-sm text-muted mt-1">
             Manage different versions of your map and track their approval status
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary text-white px-4 py-2 rounded-lg font-medium"
+          className="btn-primary"
         >
           Create New Version
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-[color:color-mix(in srgb, var(--color-danger) 10%, transparent)] border border-[color:var(--color-danger)] rounded-lg p-4">
           <div className="flex">
-            <div className="text-red-400 mr-3">⚠️</div>
+            <div className="text-[color:var(--color-danger)] opacity-80 mr-3">⚠️</div>
             <div>
-              <h3 className="text-red-800 font-medium">Error</h3>
-              <p className="text-red-700 text-sm mt-1">{error}</p>
+              <h3 className="text-[color:var(--color-danger)] font-medium">Error</h3>
+              <p className="text-[color:var(--color-danger)] text-sm mt-1">{error}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Versions List */}
-      <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-600">
+      <div className="bg-[color:var(--panel-bg)] rounded-lg shadow-sm border border-[color:var(--panel-border)]">
         {versions.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-muted text-6xl mb-4">📝</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Versions Yet</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg font-medium text-[color:var(--heading)] mb-2">No Versions Yet</h3>
+            <p className="text-muted mb-6">
               Create your first version to start managing your map's development.
             </p>
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="bg-primary hover:bg-primary text-white px-6 py-3 rounded-lg font-medium"
+              className="btn-primary px-6 py-3"
             >
               Create Version 1.0.0
             </button>
@@ -289,7 +291,7 @@ export const MapVersionManager: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[color:var(--panel-bg-alt)]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Version
@@ -311,19 +313,23 @@ export const MapVersionManager: React.FC = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-slate-800 divide-y divide-slate-600">
+              <tbody className="bg-[color:var(--panel-bg)] divide-y divide-[color:var(--panel-border)]">
                 {versions.map((version) => (
                   <tr
                     key={version.id}
-                    className={version.isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                    className={
+                      version.isCurrent
+                        ? 'bg-[color:color-mix(in srgb, var(--color-primary) 12%, transparent)]'
+                        : 'hover:bg-[color:var(--hover-bg)]'
+                    }
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-[color:var(--text)]">
                           v{version.versionNumber}
                         </div>
                         {version.isCurrent && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[color:color-mix(in srgb, var(--color-primary) 15%, transparent)] text-[color:var(--color-primary)]">
                             Current
                           </span>
                         )}
@@ -331,7 +337,7 @@ export const MapVersionManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{version.name}</div>
+                        <div className="text-sm font-medium text-[color:var(--text)]">{version.name}</div>
                         {version.description && (
                           <div className="text-sm text-muted">{version.description}</div>
                         )}
@@ -339,10 +345,10 @@ export const MapVersionManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(version)}</td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{formatDate(version.createdAt)}</div>
+                      <div className="text-sm text-[color:var(--text)]">{formatDate(version.createdAt)}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-[color:var(--text)]">
                         {version.publishedAt ? formatDate(version.publishedAt) : '—'}
                       </div>
                     </td>
@@ -352,7 +358,7 @@ export const MapVersionManager: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleSetCurrent(version.id)}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            className="text-[color:var(--color-primary)] hover:underline text-sm font-medium"
                           >
                             Set Current
                           </button>
@@ -361,7 +367,7 @@ export const MapVersionManager: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleSubmitForApproval(version.id)}
-                            className="text-green-600 hover:text-green-800 text-sm font-medium"
+                            className="text-[color:var(--color-success)] hover:underline text-sm font-medium"
                           >
                             Submit for Approval
                           </button>
@@ -385,14 +391,14 @@ export const MapVersionManager: React.FC = () => {
       {/* Create Version Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Version</h3>
+        <div className="bg-[color:var(--panel-bg)] border border-[color:var(--panel-border)] rounded-lg p-6 w-full max-w-md mx-4">
+          <h3 className="text-lg font-semibold text-[color:var(--heading)] mb-4">Create New Version</h3>
 
             <div className="space-y-4">
               <div>
                 <label
                   htmlFor={fieldIds.versionType}
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
                 >
                   Version Type
                 </label>
@@ -405,7 +411,7 @@ export const MapVersionManager: React.FC = () => {
                       versionType: e.target.value as 'major' | 'minor' | 'patch',
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] text-[color:var(--text)] rounded-md focus:ring-primary focus:border-primary"
                 >
                   <option value="patch">Patch (bug fixes, minor changes)</option>
                   <option value="minor">Minor (new features, improvements)</option>
@@ -416,7 +422,7 @@ export const MapVersionManager: React.FC = () => {
               <div>
                 <label
                   htmlFor={fieldIds.versionName}
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
                 >
                   Version Name
                 </label>
@@ -425,7 +431,7 @@ export const MapVersionManager: React.FC = () => {
                   id={fieldIds.versionName}
                   value={newVersionData.name}
                   onChange={(e) => setNewVersionData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] text-[color:var(--text)] rounded-md focus:ring-primary focus:border-primary"
                   placeholder="e.g., Updated Europe layout"
                   required
                 />
@@ -434,7 +440,7 @@ export const MapVersionManager: React.FC = () => {
               <div>
                 <label
                   htmlFor={fieldIds.description}
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
                 >
                   Description (optional)
                 </label>
@@ -444,7 +450,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] text-[color:var(--text)] rounded-md focus:ring-primary focus:border-primary"
                   rows={2}
                   placeholder="Brief description of this version..."
                 />
@@ -453,7 +459,7 @@ export const MapVersionManager: React.FC = () => {
               <div>
                 <label
                   htmlFor={fieldIds.changelog}
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-[color:var(--heading)] mb-2"
                 >
                   Changelog
                 </label>
@@ -463,7 +469,7 @@ export const MapVersionManager: React.FC = () => {
                   onChange={(e) =>
                     setNewVersionData((prev) => ({ ...prev, changelog: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                  className="w-full px-3 py-2 border border-[color:var(--panel-border)] bg-[color:var(--panel-bg-alt)] text-[color:var(--text)] rounded-md focus:ring-primary focus:border-primary"
                   rows={3}
                   placeholder="- Fixed territory adjacency issues&#10;- Improved continent balance&#10;- Added new special abilities"
                 />
@@ -474,7 +480,7 @@ export const MapVersionManager: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-[color:var(--panel-border)] rounded-md text-[color:var(--text)] hover:bg-[color:var(--hover-bg)]"
                 disabled={creating}
               >
                 Cancel
@@ -483,7 +489,7 @@ export const MapVersionManager: React.FC = () => {
                 type="button"
                 onClick={handleCreateVersion}
                 disabled={creating || !newVersionData.name.trim()}
-                className="px-4 py-2 bg-primary hover:bg-primary text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? 'Creating...' : 'Create Version'}
               </button>
