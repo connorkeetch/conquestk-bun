@@ -365,7 +365,8 @@ export default function Header() {
                   type="button"
                   onClick={() => {
                     setIsNotifDropdownOpen(false)
-                    dispatch(openInbox())
+                    if (inboxOpen) dispatch(closeInbox())
+                    else dispatch(openInbox())
                     setIsUserDropdownOpen(false)
                   }}
                   className="btn-ghost btn-icon relative"
@@ -384,7 +385,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
+                    className="btn-ghost flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white transition"
                     aria-label={sanitizedUsername ? `${sanitizedUsername} menu` : 'Account menu'}
                   >
                     <span className="hidden sm:inline">{sanitizedUsername}</span>

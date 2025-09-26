@@ -459,6 +459,49 @@ async function getSchemaMetadata(): Promise<SchemaMetadata> {
   }
 }
 
+type EnumValue = { label: string; order: number }
+type EnumType = { name: string; values: EnumValue[] }
+
+async function getEnumTypes(): Promise<EnumType[]> {
+  const result = await query<{ enum_type: string; enum_label: string; enumsortorder: number }>(
+    `SELECT t.typname AS enum_type, e.enumlabel AS enum_label, e.enumsortorder
+       FROM pg_type t
+       JOIN pg_enum e ON t.oid = e.enumtypid
+       JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public'
+      ORDER BY t.typname, e.enumsortorder`,
+  )
+
+  const byType = new Map<string, EnumValue[]>()
+  for (const row of result.rows) {
+    const arr = byType.get(row.enum_type) ?? []
+    arr.push({ label: row.enum_label, order: row.enumsortorder })
+    byType.set(row.enum_type, arr)
+  }
+
+  return Array.from(byType.entries()).map(([name, values]) => ({ name, values }))
+}
+
+type TriggerInfo = { table: string; name: string; definition: string }
+
+async function getTriggers(): Promise<TriggerInfo[]> {
+  const result = await query<{ trigger_name: string; table_name: string; definition: string }>(
+    `SELECT t.tgname AS trigger_name, c.relname AS table_name, pg_get_triggerdef(t.oid, true) AS definition
+       FROM pg_trigger t
+       JOIN pg_class c ON t.tgrelid = c.oid
+       JOIN pg_namespace n ON c.relnamespace = n.oid
+      WHERE n.nspname = 'public'
+        AND NOT t.tgisinternal
+      ORDER BY c.relname, t.tgname`,
+  )
+
+  return result.rows.map((row) => ({
+    table: row.table_name,
+    name: row.trigger_name,
+    definition: row.definition,
+  }))
+}
+
 async function getTableNames(): Promise<string[]> {
   const result = await query<{ table_name: string }>(
     `SELECT table_name
@@ -748,9 +791,11 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
 
   logger.info(`📝 Exporting database schema to ${resolvedOutputPath}`)
 
-  const [metadata, tables] = await Promise.all([
+  const [metadata, tables, enums, triggers] = await Promise.all([
     getSchemaMetadata(),
     getTableInfos(options.includeRowCounts),
+    getEnumTypes(),
+    getTriggers(),
   ])
 
   const generatedAt = new Date()
@@ -803,6 +848,22 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
     )
   }
 
+  if (enums.length > 0) {
+    lines.push('')
+    lines.push('## Enum Types')
+    lines.push('')
+    for (const et of enums) {
+      lines.push(`### \`${et.name}\``)
+      lines.push('')
+      lines.push('| Value | Order |')
+      lines.push('| --- | ---: |')
+      for (const v of et.values) {
+        lines.push(`| \`${escapeMarkdown(v.label)}\` | ${v.order} |`)
+      }
+      lines.push('')
+    }
+  }
+
   lines.push('')
   lines.push('## Tables')
   lines.push('')
@@ -821,6 +882,19 @@ async function exportSchemaCatalog(options: SchemaExportOptions): Promise<void> 
       const deleteRule = relationship.deleteRule ?? '—'
       lines.push(
         `| \`${relationship.constraint}\` | \`${relationship.fromTable}\` | \`${relationship.fromColumns.join('`, `')}\` | \`${relationship.toTable}\` | \`${relationship.toColumns.join('`, `')}\` | ${updateRule} | ${deleteRule} |`,
+      )
+    }
+    lines.push('')
+  }
+
+  if (triggers.length > 0) {
+    lines.push('## Triggers')
+    lines.push('')
+    lines.push('| Trigger | Table | Definition |')
+    lines.push('| --- | --- | --- |')
+    for (const tg of triggers) {
+      lines.push(
+        `| \`${escapeMarkdown(tg.name)}\` | \`${escapeMarkdown(tg.table)}\` | ${escapeMarkdown(tg.definition)} |`,
       )
     }
     lines.push('')

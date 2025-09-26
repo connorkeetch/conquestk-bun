@@ -56,7 +56,7 @@ const ActiveGamesDropdown: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative p-2 rounded-lg hover:bg-surface-1 transition-colors"
+        className="btn-ghost btn-icon relative"
         title="My Games"
         aria-haspopup="true"
         aria-expanded={isOpen}
