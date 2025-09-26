@@ -124,7 +124,7 @@ export class GameController {
             : undefined,
         turnTimerSeconds:
           typeof turnTimerSeconds === 'number' && Number.isFinite(turnTimerSeconds)
-            ? Math.max(10, Math.min(300, Math.trunc(turnTimerSeconds)))
+            ? Math.max(10, Math.min(86400, Math.trunc(turnTimerSeconds)))
             : undefined,
         allowTeamPlay:
           allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),

@@ -1,5 +1,6 @@
 import type Bull from 'bull'
 import { CacheService } from '../services/cacheService'
+import { GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
 import type { JobIdempotencyService } from '../services/jobIdempotencyService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
@@ -46,12 +47,14 @@ export class CleanupWorker {
   private gameService: GameService
   private cacheService: CacheService
   private idempotencyService: JobIdempotencyService
+  private gameRoomService: GameRoomService
 
   constructor(dependencies: CleanupWorkerDependencies = {}) {
     this.gameService = dependencies.gameService ?? new GameService()
     this.cacheService = dependencies.cacheService ?? new CacheService()
     this.queue = dependencies.queue ?? queueService.getCleanupQueue()
     this.idempotencyService = dependencies.idempotencyService ?? jobIdempotencyService
+    this.gameRoomService = new GameRoomService()
   }
 
   async initialize(): Promise<void> {
@@ -78,7 +81,22 @@ export class CleanupWorker {
     // Schedule periodic cleanup for abandoned games
     setInterval(() => this.scheduleAbandonedGameCleanup(), 5 * 60 * 1000) // Every 5 minutes
 
+    // Schedule periodic prune for stale lobbies (never started within 30 days)
+    // Run every 6 hours
+    setInterval(() => this.pruneStaleLobbies(), 6 * 60 * 60 * 1000)
+
     logger.info('✅ CleanupWorker initialized')
+  }
+
+  private async pruneStaleLobbies(): Promise<void> {
+    try {
+      const deleted = await this.gameRoomService.pruneStaleRooms()
+      if (deleted > 0) {
+        logger.info('🗑️ Pruned stale lobbies', { count: deleted })
+      }
+    } catch (error) {
+      logger.error('❌ Failed to prune stale lobbies', { error })
+    }
   }
 
   private async cleanupGame(job: Bull.Job<GameCleanupJob>): Promise<CleanupResult> {

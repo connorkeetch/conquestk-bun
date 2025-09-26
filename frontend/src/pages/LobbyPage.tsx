@@ -934,6 +934,25 @@ const LobbyPage: React.FC = () => {
 
                     const uniqueDetailBadges = Array.from(new Set(detailBadges))
 
+                    const expiresAt = (() => {
+                      if (game.expiresAt) return new Date(game.expiresAt)
+                      const created = new Date(game.createdAt)
+                      // Fallback: 30 days after creation if backend didn't provide expiresAt
+                      return new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000)
+                    })()
+
+                    const formatTimeUntil = (target: Date) => {
+                      const now = Date.now()
+                      const ms = target.getTime() - now
+                      if (ms <= 0) return 'Expired'
+                      const days = Math.floor(ms / (24 * 60 * 60 * 1000))
+                      if (days >= 1) return `Expires in ${days} day${days === 1 ? '' : 's'}`
+                      const hours = Math.floor(ms / (60 * 60 * 1000))
+                      if (hours >= 1) return `Expires in ${hours}h`
+                      const minutes = Math.floor(ms / (60 * 1000))
+                      return `Expires in ${minutes}m`
+                    }
+
                     return (
                       <Link
                         key={game.id}
@@ -948,6 +967,9 @@ const LobbyPage: React.FC = () => {
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted mt-1">
                               <span className={statusClass}>{statusLabel}</span>
                               <span>• Created {formatTimeAgo(game.createdAt)}</span>
+                              {isLobbyStatus(game.status) && (
+                                <span>• {formatTimeUntil(expiresAt)}</span>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
