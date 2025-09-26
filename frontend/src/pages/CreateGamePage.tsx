@@ -25,6 +25,7 @@ interface GameMap {
   is_vip_only?: boolean
   creator_name?: string
   play_count?: number
+  play_count_30d?: number
   rating_average?: number
   rating_count?: number
   tags?: string[]
@@ -250,6 +251,9 @@ const CreateGamePage: React.FC = () => {
   const [playersOption, setPlayersOption] = useState<number | 'random'>(6)
   const [createAndStay, setCreateAndStay] = useState(false)
   const [mapSearch, setMapSearch] = useState('')
+  const [mapSizeFilter, setMapSizeFilter] = useState<
+    '' | 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive'
+  >('')
   const [aiCounts, setAiCounts] = useState<Record<AIDifficulty, number>>({
     recruit: 0,
     commander: 0,
@@ -1426,6 +1430,20 @@ const CreateGamePage: React.FC = () => {
                 onChange={(e) => setMapSearch(e.target.value)}
                 className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-white placeholder-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
               />
+              <div className="flex items-center gap-2 mb-2">
+                <select
+                  value={mapSizeFilter}
+                  onChange={(e) => setMapSizeFilter(e.target.value as typeof mapSizeFilter)}
+                  className="bg-surface-2 border border-border rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">All Sizes</option>
+                  <option value="Small">Small (≤35)</option>
+                  <option value="Medium">Medium (36–45)</option>
+                  <option value="Large">Large (46–65)</option>
+                  <option value="Very Large">Very Large (66–90)</option>
+                  <option value="Massive">Massive (91+)</option>
+                </select>
+              </div>
               <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface-2">
                 {mapsLoading ? (
                   <div className="text-center py-4 text-muted">
@@ -1434,15 +1452,17 @@ const CreateGamePage: React.FC = () => {
                   </div>
                 ) : (
                   maps
-                    .filter(
-                      (map) =>
+                    .filter((map) => {
+                      const matchesSearch =
                         mapSearch === '' ||
                         map.name.toLowerCase().includes(mapSearch.toLowerCase()) ||
                         map.description?.toLowerCase().includes(mapSearch.toLowerCase()) ||
-                        map.tags?.some((tag) =>
-                          tag.toLowerCase().includes(mapSearch.toLowerCase()),
-                        ),
-                    )
+                        map.tags?.some((tag) => tag.toLowerCase().includes(mapSearch.toLowerCase()))
+                      const matchesSize =
+                        mapSizeFilter === '' ||
+                        computeMapSizeFromCounts(map.territory_count) === mapSizeFilter
+                      return matchesSearch && matchesSize
+                    })
                     .map((map) => (
                       <button
                         key={map.id}
@@ -1581,7 +1601,12 @@ const CreateGamePage: React.FC = () => {
                             </div>
                             <div>
                               <dt className="text-muted">Games Last Month</dt>
-                              <dd className="text-white">—</dd>
+                              <dd className="text-white">
+                                {selectedMapData.play_count_30d &&
+                                selectedMapData.play_count_30d > 0
+                                  ? selectedMapData.play_count_30d
+                                  : '—'}
+                              </dd>
                             </div>
                             <div>
                               <dt className="text-muted">Games Played</dt>
