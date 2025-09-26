@@ -30,8 +30,7 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "clean": "rmdir /s /q backend\\node_modules frontend\\node_modules 2>nul || true",
     "clean:install": "npm run clean && npm run install:all",
-    "test:ci": "npm run test:backend && npm run test:frontend"
-    ,
+    "test:ci": "npm run test:backend && npm run test:frontend",
     "docs:schema": "cd backend && NODE_ENV=production npm run check:schema -- --skip-validation --skip-row-counts --export ../docs/operations/database-schema.md"
   },
   "repository": {
