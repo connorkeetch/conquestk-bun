@@ -1,0 +1,91 @@
+# Create Game & Options Guide
+
+Last updated: January 2026
+
+This guide explains every option on the Create Game page, what it does in the game today, and any items that are planned but not yet wired to the backend. The goal is plain-language clarity so hosts know exactly how their choices affect a match.
+
+Quick start
+- Open “Create Game” from the Lobby.
+- Choose Public or Private, pick a map, set the player count, and configure gameplay options.
+- Click “Create & Join Game” to open the lobby for others.
+
+Gameplay options
+
+- Visibility (Public / Private)
+  - Public: Appears in the Lobby’s public list.
+  - Private: Hidden from public list; share the room link to invite friends.
+  - Note: The “Invite Code” box is UI-only today. Joining by code uses the room’s ID; sharing the URL is the reliable path.
+
+- Game Type (Casual / Ranked)
+  - Casual: No restrictions.
+  - Ranked: Enforced server-side (room creation fails if invalid):
+    - Must be Public (not Private)
+    - Minimum 3 players
+    - Team play disabled
+    - No AI opponents
+
+- Game Mode (Classic / Capitals / Random)
+  - Classic: Conquer the map to win.
+  - Capitals: Each player has a capital; keep yours alive.
+  - Random: Picks Classic or Capitals at game start.
+
+- Teams (Free-for-all or Fixed teams)
+  - Free-for-all: Everyone vs everyone.
+  - Teams: Pick 2–6 teams; only valid sizes that evenly divide the max players are allowed (e.g., 6 players → 2 or 3 teams).
+  - Enforced server-side; invalid setups are rejected with an error.
+
+- Fortification (Adjacent / Adjacent Multi / Chained / Unlimited / Random)
+  - Current status: UI-only. The server defaults to classic adjacent movement for now.
+  - Roadmap: Persist selection and pass through to the engine’s movementType.
+
+- Spoils of War (Escalating / Fixed / Static / Random)
+  - Current status: UI-only. The live spoils system is Hidden Treasures (see below).
+  - Roadmap: Either map these to treasure presets or restore classic card-trade rules behind a separate switch.
+
+- Hidden Treasures (Enabled + Options)
+  - Status: Fully wired.
+  - Configure in the “Hidden Treasures” panel:
+    - Enabled: On/Off
+    - Payout mode: Triangular, Classic, Fixed, None
+    - Diamond chance (%): Probability that a draw is a diamond
+    - Hand limit: Forced cash-in threshold
+    - Diamond set bonus: Extra troops for sets containing a diamond
+  - Engine behavior: Draws occur on conquest; redeem sets of 3 for troops; forced cash-in when at or above hand limit. See guides/hidden-treasures.md for full details.
+
+- Fog of War (Off / Adjacent / Persistent)
+  - Current status: UI-only from the Create Game page; not applied to engine yet.
+  - Roadmap: Persist selection in game_rooms and filter visible territories server-side per mode.
+
+- Turn Timer
+  - Current status: UI-only from the Create Game page; server uses its default timer setting for now.
+  - Roadmap: Persist and apply at game start to set per-turn deadlines.
+
+- AI Opponents (feature-flagged)
+  - Status: Wired in lobby management (host can add AI seats if allowed by feature flags and if not Ranked). Stored in room seats as AI players.
+  - Difficulties: Recruit, Commander, Grandmaster.
+
+- Territory Modifiers (feature-flagged)
+  - Current status: UI-only from the Create Game page.
+  - Engine support exists (modifiers can be generated and applied), but the selection isn’t saved yet for new rooms.
+
+Map selection
+- Choose a specific map or “Random Map” (picks at game start).
+- Map details show territory count, continents, rating, and creator.
+
+What’s applied vs pending
+
+- Applied now (persisted + used in game):
+  - Public/Private, Casual/Ranked, Map, Game Mode, Teams, AI Opponents, Hidden Treasures.
+
+- Pending wiring (UI-only today):
+  - Fortification type (movement), Spoils of War card settings, Fog of War, Turn Timer, Territory Modifiers toggle/distribution, Invite Code storage.
+
+Tips for hosts
+- For private matches, share the room URL with friends; that’s the most reliable way to join.
+- Hidden Treasures pairs nicely with Capitals—forced cash-ins can reshape late-game pushes.
+- Ranked games require at least 3 human players and no teams/AI; the “Ranked requirements” callout in the Create Game page summarizes constraints.
+
+Links
+- Hidden Treasures ruleset → [hidden-treasures.md](hidden-treasures.md)
+- Architecture overview → [../reference/architecture.md](../reference/architecture.md)
+

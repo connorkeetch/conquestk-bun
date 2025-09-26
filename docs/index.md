@@ -39,6 +39,7 @@ Use this index to jump directly to the information you need.
 - [guides/playwright-mcp.md](guides/playwright-mcp.md) – end-to-end testing harness overview
 
 ### Feature & product deep dives
+- [guides/game-options.md](guides/game-options.md) – Create Game options and what they do today
 - [guides/map-format.md](guides/map-format.md) – map JSON schema and editor workflow
 - [guides/theme-system.md](guides/theme-system.md) – design tokens and theming strategy
 - [guides/email-verification.md](guides/email-verification.md) – verification, password reset, and notifications

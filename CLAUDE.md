@@ -118,6 +118,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - `docs/reference/deployment.md` – deployment procedures.
 - `docs/guides/coding-standards.md` – code quality principles.
 - `docs/guides/theme-system.md` – theme architecture.
+- `docs/guides/game-options.md` – Create Game options and how they map to gameplay.
 - `docs/guides/map-format.md` – map editor format specification.
 - `docs/guides/email-verification.md` – email verification workflow.
 - `docs/guides/hidden-treasures.md` – Hidden Treasures ruleset and configuration.
