@@ -11,8 +11,8 @@
   --color-surface-1: #ffffff; /* Card backgrounds */
   --color-surface-2: #f3f6ff; /* Raised surfaces */
 
-  --color-text: #1f2937; /* Dark slate text */
-  --color-text-muted: #4b5563; /* Muted gray */
+  --color-text: #111111; /* Prefer near-black text for readability */
+  --color-text-muted: #333333; /* Muted dark gray */
   --color-border: #b3c1d9; /* Soft blue-gray borders */
 
   /* Typography tokens */
@@ -28,7 +28,8 @@
   --panel-bg: #ffffff;
   --panel-border: #b3c1d9;
   --panel-bg-alt: #f1f4ff;
-  --nav-bg: #0b3aa7;
+  /* Lighten nav for black text contrast */
+  --nav-bg: #e7ecff;
   --nav-border: #0b2f84;
   --footer-bg: #e7ecff;
   --modal-bg: #ffffff;
@@ -99,7 +100,7 @@
 [data-theme="retrospace"] input,
 [data-theme="retrospace"] select,
 [data-theme="retrospace"] textarea {
-  font-family: "Verdana", "Geneva", "Tahoma", sans-serif;
+  font-family: "Verdana", "Tahoma", "Trebuchet MS", Arial, sans-serif;
   letter-spacing: 0.01em;
 }
 
