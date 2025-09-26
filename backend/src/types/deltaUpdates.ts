@@ -28,9 +28,7 @@ export const DeltaBuilder = {
     const normalizedOwner =
       typeof changes.ownerId === 'string' && changes.ownerId.trim().length > 0
         ? changes.ownerId
-        : changes.ownerId === undefined
-          ? undefined
-          : null
+        : undefined
     return {
       type: 'TERRITORY_UPDATE',
       roomId,
