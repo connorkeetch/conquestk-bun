@@ -48,7 +48,7 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
         {preview.title && (
           <h4
             className={`font-semibold text-sm mb-1 line-clamp-2 ${
-              isOwnMessage ? 'text-white' : 'text-gray-200'
+              isOwnMessage ? 'text-[color:var(--color-white)]' : 'text-[color:var(--text)]'
             }`}
           >
             {preview.title}
@@ -57,7 +57,11 @@ export default function LinkPreviewComponent({ preview, isOwnMessage = false }: 
 
         {preview.description && (
           <p
-            className={`text-xs line-clamp-2 mb-2 ${isOwnMessage ? 'text-blue-100' : 'text-muted'}`}
+            className={`text-xs line-clamp-2 mb-2 ${
+              isOwnMessage
+                ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]'
+                : 'text-muted'
+            }`}
           >
             {preview.description}
           </p>

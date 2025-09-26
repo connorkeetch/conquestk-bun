@@ -95,7 +95,9 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
           >
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                isOwnMessage ? 'bg-primary text-white' : 'bg-surface-2 text-gray-200'
+                isOwnMessage
+                  ? 'bg-primary text-[color:var(--color-white)]'
+                  : 'bg-surface-2 text-[color:var(--text)]'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
               {!isOwnMessage && senderLabel && (
@@ -120,7 +122,7 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
 
               <div
                 className={`text-xs mt-1 flex items-center gap-2 ${
-                  isOwnMessage ? 'text-blue-200' : 'text-muted'
+                  isOwnMessage ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]' : 'text-muted'
                 }`}
               >
                 <span>{formatTime(message.createdAt)}</span>

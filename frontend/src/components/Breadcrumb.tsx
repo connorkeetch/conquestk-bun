@@ -111,13 +111,13 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
               {linkPath && !isLast ? (
                 <Link
                   to={linkPath}
-                  className="flex items-center space-x-1 text-muted hover:text-white transition-colors"
+                  className="flex items-center space-x-1 text-muted hover:text-[color:var(--text)] transition-colors"
                 >
                   {item.icon && <span>{item.icon}</span>}
                   <span>{item.label}</span>
                 </Link>
               ) : (
-                <div className="flex items-center space-x-1 text-white">
+                <div className="flex items-center space-x-1 text-[color:var(--text)]">
                   {item.icon && <span>{item.icon}</span>}
                   <span>{item.label}</span>
                 </div>
@@ -127,7 +127,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
             {/* Separator */}
             {!isLast && (
               <svg
-                className="w-4 h-4 text-gray-600 flex-shrink-0"
+                className="w-4 h-4 text-muted flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
