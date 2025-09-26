@@ -247,6 +247,12 @@ export class BattleWorker {
         attackingArmiesCommitted: attackingArmies,
       })
 
+      // If visibility may have expanded (on conquest), send a filtered snapshot to the attacker
+      if (battleResult.territoryConquered && attackerOwnerId) {
+        const { emitRevealSnapshot } = await import('../services/fogService')
+        await emitRevealSnapshot(this.io as unknown as Server, gameId, attackerOwnerId)
+      }
+
       await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, battleResult, 60 * 60)
 
       return battleResult
