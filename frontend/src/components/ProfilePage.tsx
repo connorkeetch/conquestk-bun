@@ -717,7 +717,9 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
               {!isOwnProfile && friendSince && (
-                <div className="mt-2 text-xs text-muted">Friends since {new Date(friendSince).toLocaleDateString()}</div>
+                <div className="mt-2 text-xs text-muted">
+                  Friends since {new Date(friendSince).toLocaleDateString()}
+                </div>
               )}
               {!isOwnProfile && mutual?.total && mutual.total > 0 && (
                 <div className="mt-2 text-sm text-muted">

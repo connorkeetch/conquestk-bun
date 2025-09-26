@@ -1059,83 +1059,83 @@ const AdminUsers: React.FC = () => {
               <table className="table min-w-[1024px]">
                 <thead className="bg-[color:var(--panel-bg-alt)] text-[color:var(--heading)]">
                   <tr>
-                  <th className="text-left">Username</th>
-                  <th className="text-left">Email</th>
-                  <th className="text-left">Status</th>
-                  <th className="text-left">Verified</th>
-                  <th className="text-left">Admin</th>
-                  <th className="text-left">VIP</th>
-                  <th className="text-left">Beta</th>
-                  <th className="text-left">Premium</th>
-                  <th className="text-left">Games</th>
-                  <th className="text-left">ELO</th>
-                  <th className="text-left">Last Login</th>
-                  <th className="text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isRefreshing && (
-                  <tr>
-                    <td colSpan={12} className="px-4 py-4 text-center text-sm text-muted">
-                      Updating results...
-                    </td>
+                    <th className="text-left">Username</th>
+                    <th className="text-left">Email</th>
+                    <th className="text-left">Status</th>
+                    <th className="text-left">Verified</th>
+                    <th className="text-left">Admin</th>
+                    <th className="text-left">VIP</th>
+                    <th className="text-left">Beta</th>
+                    <th className="text-left">Premium</th>
+                    <th className="text-left">Games</th>
+                    <th className="text-left">ELO</th>
+                    <th className="text-left">Last Login</th>
+                    <th className="text-left">Actions</th>
                   </tr>
-                )}
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="table-row hover:bg-[color:var(--hover-bg)]">
-                    <td className="font-medium text-[color:var(--heading)]">{user.username}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <span className={badgeTone(getStatusTone(user.status))}>
-                        {formatStatusLabel(user.status)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={badgeTone(user.emailVerified ? 'success' : 'danger')}>
-                        {user.emailVerified ? 'Verified' : 'Unverified'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={badgeTone(user.isAdmin ? 'danger' : 'muted')}>
-                        {user.isAdmin ? 'Admin' : 'User'}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={badgeTone(user.isVip ? 'primary' : 'muted')}
-                        title={user.vipReason || undefined}
-                      >
-                        {user.isVip ? 'VIP' : 'Standard'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={badgeTone(user.isBetaUser ? 'info' : 'muted')}>
-                        {user.isBetaUser ? 'Tester' : 'Standard'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={badgeTone(getPremiumTone(user.premiumTier))}>
-                        {formatPremiumTier(user.premiumTier)}
-                      </span>
-                    </td>
-                    <td>{user.gamesPlayed || 0}</td>
-                    <td>{user.elo || 1000}</td>
-                    <td>
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => openUserModal(user)}
-                        className="btn-secondary"
-                      >
-                        Manage
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {isRefreshing && (
+                    <tr>
+                      <td colSpan={12} className="px-4 py-4 text-center text-sm text-muted">
+                        Updating results...
+                      </td>
+                    </tr>
+                  )}
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="table-row hover:bg-[color:var(--hover-bg)]">
+                      <td className="font-medium text-[color:var(--heading)]">{user.username}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <span className={badgeTone(getStatusTone(user.status))}>
+                          {formatStatusLabel(user.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={badgeTone(user.emailVerified ? 'success' : 'danger')}>
+                          {user.emailVerified ? 'Verified' : 'Unverified'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={badgeTone(user.isAdmin ? 'danger' : 'muted')}>
+                          {user.isAdmin ? 'Admin' : 'User'}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={badgeTone(user.isVip ? 'primary' : 'muted')}
+                          title={user.vipReason || undefined}
+                        >
+                          {user.isVip ? 'VIP' : 'Standard'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={badgeTone(user.isBetaUser ? 'info' : 'muted')}>
+                          {user.isBetaUser ? 'Tester' : 'Standard'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={badgeTone(getPremiumTone(user.premiumTier))}>
+                          {formatPremiumTier(user.premiumTier)}
+                        </span>
+                      </td>
+                      <td>{user.gamesPlayed || 0}</td>
+                      <td>{user.elo || 1000}</td>
+                      <td>
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => openUserModal(user)}
+                          className="btn-secondary"
+                        >
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
