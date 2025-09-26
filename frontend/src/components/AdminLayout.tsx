@@ -79,7 +79,7 @@ const AdminLayout: React.FC = () => {
     <div className="min-h-screen bg-surface-1">
       {/* Admin Header */}
       <div className="bg-gradient-to-r from-purple-800 to-red-800 text-white p-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8" />
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
@@ -90,7 +90,7 @@ const AdminLayout: React.FC = () => {
 
       {/* Secondary Navigation */}
       <div className="bg-surface-2 border-b border-border">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-screen-2xl mx-auto">
           <nav className="flex gap-1 p-2">
             {navItems.map((item) => (
               <NavLink
@@ -115,7 +115,7 @@ const AdminLayout: React.FC = () => {
       </div>
 
       {/* Page Content */}
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <Outlet />
       </div>
     </div>

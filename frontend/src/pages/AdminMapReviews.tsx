@@ -159,7 +159,7 @@ export const AdminMapReviews: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-surface-1 text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-screen-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-surface-2 rounded-lg border border-border p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
