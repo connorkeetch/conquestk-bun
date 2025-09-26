@@ -94,20 +94,18 @@ const roomSlice = createSlice({
 
       if (state.currentRoom && state.currentRoom.id === roomId) {
         state.currentRoom.players =
-          state.currentRoom.players?.filter(
-            (player) => {
-              if (player.id === playerSlotId) {
-                return false
-              }
-              if (userId && player.userId === userId) {
-                return false
-              }
-              if (aiPlayerId && player.aiPlayerId === aiPlayerId) {
-                return false
-              }
-              return true
-            },
-          ) || []
+          state.currentRoom.players?.filter((player) => {
+            if (player.id === playerSlotId) {
+              return false
+            }
+            if (userId && player.userId === userId) {
+              return false
+            }
+            if (aiPlayerId && player.aiPlayerId === aiPlayerId) {
+              return false
+            }
+            return true
+          }) || []
       }
     },
     applyLifecycleUpdate: (state, action: PayloadAction<LifecycleUpdatePayload>) => {

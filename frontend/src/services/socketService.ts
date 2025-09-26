@@ -11,7 +11,6 @@ import type {
 } from '@shared/types'
 import { io, type Socket } from 'socket.io-client'
 import { store } from '../store'
-import { loadInbox, loadUnreadSummary, messagesActions, refreshConversation } from '../store/messagesSlice'
 import {
   applyDelta,
   selectTargetTerritory,
@@ -24,6 +23,12 @@ import {
   updateGameState,
   updateTerritory,
 } from '../store/gameSlice'
+import {
+  loadInbox,
+  loadUnreadSummary,
+  messagesActions,
+  refreshConversation,
+} from '../store/messagesSlice'
 import {
   addPlayerToRoom,
   applyLifecycleUpdate,
@@ -111,10 +116,7 @@ class SocketService {
     this.socket?.emit('message.send', payload, callback)
   }
 
-  markConversationReadViaSocket(
-    conversationId: string,
-    callback?: (ack: ReceiptReadAck) => void,
-  ) {
+  markConversationReadViaSocket(conversationId: string, callback?: (ack: ReceiptReadAck) => void) {
     this.socket?.emit('receipt.read', { conversationId }, callback)
   }
 
@@ -189,8 +191,9 @@ class SocketService {
         isAi: payload.player.isAi,
         aiDifficulty: payload.player.aiDifficulty ?? undefined,
         aiPersonalitySeed:
-          payload.player.aiPersonalitySeed === null || payload.player.aiPersonalitySeed === undefined
-            ? payload.player.aiPersonalitySeed ?? undefined
+          payload.player.aiPersonalitySeed === null ||
+          payload.player.aiPersonalitySeed === undefined
+            ? (payload.player.aiPersonalitySeed ?? undefined)
             : payload.player.aiPersonalitySeed,
       }
 

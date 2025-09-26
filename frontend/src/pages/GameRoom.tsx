@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
+import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
@@ -10,7 +11,6 @@ import { gameService } from '../services/gameService'
 import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
 import type { AIDifficulty } from '../types/game'
 import type { GameRoom as GameRoomType } from '../types/gameRoom'
 
@@ -171,7 +171,7 @@ export default function GameRoom() {
   }, [flaggedAiDifficulties, existingAiCounts])
 
   const humanPlayersCount = useMemo(
-    () => (currentRoom?.players?.filter((player) => !player.isAi)?.length ?? 0),
+    () => currentRoom?.players?.filter((player) => !player.isAi)?.length ?? 0,
     [currentRoom?.players],
   )
 
@@ -183,11 +183,7 @@ export default function GameRoom() {
 
   const roomIsRanked = Boolean(currentRoom?.isRanked ?? currentRoom?.is_ranked ?? false)
   const showAiControls =
-    aiPlayersEnabled &&
-    aiLobbyEnabled &&
-    isHost &&
-    !roomIsRanked &&
-    currentRoom?.status === 'lobby'
+    aiPlayersEnabled && aiLobbyEnabled && isHost && !roomIsRanked && currentRoom?.status === 'lobby'
 
   const normalizeAiDraftCounts = useCallback(
     (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
@@ -248,7 +244,13 @@ export default function GameRoom() {
     if (!aiDraftDirty) {
       setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
     }
-  }, [aiDraftDirty, aiPlayersInRoom.length, existingAiCounts, normalizeAiDraftCounts, showAiControls])
+  }, [
+    aiDraftDirty,
+    aiPlayersInRoom.length,
+    existingAiCounts,
+    normalizeAiDraftCounts,
+    showAiControls,
+  ])
 
   const draftTotalAi = allowedAiDifficulties.reduce(
     (sum, difficulty) => sum + (aiDraftCounts[difficulty] ?? 0),
@@ -583,11 +585,7 @@ export default function GameRoom() {
           <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-[color:var(--color-danger)]">
             {roomError}
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/lobby')}
-            className="btn btn-primary"
-          >
+          <button type="button" onClick={() => navigate('/lobby')} className="btn btn-primary">
             Return to Lobby
           </button>
         </div>
@@ -610,7 +608,9 @@ export default function GameRoom() {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="panel space-y-2 text-center">
-          <div className="text-lg font-semibold text-[color:var(--heading)]">Loading game state...</div>
+          <div className="text-lg font-semibold text-[color:var(--heading)]">
+            Loading game state...
+          </div>
           <p className="text-sm text-muted">Preparing the board...</p>
         </div>
       </div>
@@ -678,11 +678,7 @@ export default function GameRoom() {
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
           </button>
-          <button
-            onClick={handleLeaveRoom}
-            type="button"
-            className="btn btn-danger"
-          >
+          <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
             Leave Room
           </button>
         </div>
@@ -795,7 +791,8 @@ export default function GameRoom() {
               ) : (
                 <>
                   <p className="text-xs text-muted">
-                    Reserve seats for AI. {aiSlotsRemaining > 0
+                    Reserve seats for AI.{' '}
+                    {aiSlotsRemaining > 0
                       ? `${aiSlotsRemaining} open slot${aiSlotsRemaining === 1 ? '' : 's'} remaining.`
                       : 'All available AI slots are reserved. Remove one or free a player seat to add more.'}
                   </p>
@@ -892,7 +889,9 @@ export default function GameRoom() {
                 onTeamChange={handleTeamChange}
               />
               {teamUpdating && (
-                <p className="text-xs text-[color:var(--color-primary-soft)]">Updating team assignments...</p>
+                <p className="text-xs text-[color:var(--color-primary-soft)]">
+                  Updating team assignments...
+                </p>
               )}
               {teamUpdateError && (
                 <p className="text-xs text-[color:var(--color-danger)]">{teamUpdateError}</p>

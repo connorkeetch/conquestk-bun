@@ -113,7 +113,9 @@ export default function GameLobby() {
         {isLoading ? (
           <div className="text-center">Loading rooms...</div>
         ) : rooms.length === 0 ? (
-          <div className="panel text-center text-muted">No rooms available. Create one to get started!</div>
+          <div className="panel text-center text-muted">
+            No rooms available. Create one to get started!
+          </div>
         ) : (
           rooms.map((room) => (
             <div key={room.id} className="panel">

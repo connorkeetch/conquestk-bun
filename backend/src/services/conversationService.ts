@@ -956,7 +956,10 @@ export async function setConversationArchived(
 
     const actorRole = actorResult.rows[0].role
     if (actorRole !== 'owner' && actorRole !== 'admin') {
-      throw new ConversationError('FORBIDDEN', 'You do not have permission to archive this conversation')
+      throw new ConversationError(
+        'FORBIDDEN',
+        'You do not have permission to archive this conversation',
+      )
     }
 
     if (conversationRow.is_archived === archived) {

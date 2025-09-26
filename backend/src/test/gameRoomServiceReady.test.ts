@@ -70,16 +70,12 @@ describe('GameRoomService.ensureAiReadyStates', () => {
 
     const room = await service.getRoomById('room-99')
 
-    expect(mockQuery).toHaveBeenNthCalledWith(
-      1,
-      expect.stringContaining('UPDATE room_players'),
-      ['room-99'],
-    )
-    expect(mockQuery).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('SELECT gr.*'),
-      ['room-99'],
-    )
+    expect(mockQuery).toHaveBeenNthCalledWith(1, expect.stringContaining('UPDATE room_players'), [
+      'room-99',
+    ])
+    expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('SELECT gr.*'), [
+      'room-99',
+    ])
 
     expect(room?.players?.[0]).toMatchObject({
       id: 'slot-ai',

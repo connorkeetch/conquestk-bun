@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import roomReducer, {
-  addPlayerToRoom,
-  removePlayerFromRoom,
-} from './roomSlice'
 import type { GameRoom } from '../types/gameRoom'
+import roomReducer, { addPlayerToRoom, removePlayerFromRoom } from './roomSlice'
 
 describe('roomSlice reducers', () => {
   const emptyRoom: GameRoom = {

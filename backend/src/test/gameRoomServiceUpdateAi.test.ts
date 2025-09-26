@@ -134,7 +134,7 @@ describe('GameRoomService.updateAiOpponents', () => {
 
     expect(mockClientQuery).toHaveBeenCalledWith('BEGIN')
     const insertCalls = mockClientQuery.mock.calls.filter(
-      ([sql]) => typeof sql === 'string' && sql.includes('INSERT INTO room_players')
+      ([sql]) => typeof sql === 'string' && sql.includes('INSERT INTO room_players'),
     )
     expect(insertCalls).toHaveLength(2)
     expect(mockClientQuery).toHaveBeenCalledWith('COMMIT')

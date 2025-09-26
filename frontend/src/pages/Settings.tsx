@@ -7,8 +7,8 @@ import {
   getBackgroundMotionPreference,
   getStoredTheme,
   PREMIUM_THEMES,
-  setBackgroundMotionPreference,
   STANDARD_THEMES,
+  setBackgroundMotionPreference,
   storeTheme,
   THEMES,
 } from '../config/themes.config'
@@ -396,8 +396,8 @@ export default function Settings() {
 
   // Get current color theme from centralized config
   const [currentColorTheme, setCurrentColorTheme] = useState<string>(() => getStoredTheme())
-  const [backgroundMotionEnabled, setBackgroundMotionEnabled] = useState<boolean>(
-    () => getBackgroundMotionPreference(),
+  const [backgroundMotionEnabled, setBackgroundMotionEnabled] = useState<boolean>(() =>
+    getBackgroundMotionPreference(),
   )
   // State for theme dropdown (moved here to avoid re-declaration)
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)

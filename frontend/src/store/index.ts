@@ -1,8 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authSlice from './authSlice'
 import chatSlice from './chatSlice'
-import messagesReducer from './messagesSlice'
 import gameSlice from './gameSlice'
+import messagesReducer from './messagesSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
 
