@@ -227,8 +227,9 @@ export class BattleWorker {
         changes: deltas,
       }
 
-      // Broadcast battle results
-      this.io.to(`game:${gameId}`).emit('game-delta', battleDelta)
+      // Broadcast battle results with fog-of-war filtering per viewer
+      const { emitFogFilteredDelta } = await import('../services/fogService')
+      await emitFogFilteredDelta(this.io as unknown as Server, gameId, battleDelta)
 
       // Update persistent game state
       await this.gameService.applyBattleResult(gameId, {

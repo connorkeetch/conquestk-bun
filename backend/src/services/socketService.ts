@@ -155,6 +155,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
       }
       socket.userId = decoded.userId
       socket.username = decoded.username
+      // Mirror userId/username into socket.data for fetchSockets()
+      // so RemoteSocket instances can access them via .data
+      // biome-ignore lint/suspicious/noExplicitAny: socket data is a generic record
+      ;(socket as any).data = { ...(socket as any).data, userId: decoded.userId, username: decoded.username }
       next()
     } catch (_error) {
       next(new Error('Authentication error'))

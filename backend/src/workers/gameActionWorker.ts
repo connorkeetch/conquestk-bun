@@ -159,7 +159,8 @@ export class GameActionWorker {
 
       // Broadcast delta update if needed
       if (shouldBroadcast && delta) {
-        this.io.to(`game:${gameId}`).emit('game-delta', delta)
+        const { emitFogFilteredDelta } = await import('../services/fogService')
+        await emitFogFilteredDelta(this.io as unknown as Server, gameId, delta)
       }
 
       const result: ProcessGameActionResult = {
@@ -248,7 +249,10 @@ export class GameActionWorker {
     })
 
     // Broadcast first update immediately; caller will broadcast returned delta
-    this.io.to(`game:${gameId}`).emit('game-delta', fromDelta)
+    {
+      const { emitFogFilteredDelta } = await import('../services/fogService')
+      await emitFogFilteredDelta(this.io as unknown as Server, gameId, fromDelta)
+    }
     return toDelta
   }
 

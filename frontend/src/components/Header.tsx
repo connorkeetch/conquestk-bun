@@ -3,6 +3,8 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
+import { PLAYER_COLORS, getColorValue, type PlayerColor } from '@/constants/colors'
+import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import friendsService from '@/services/friendsService'
 import { notificationService } from '@/services/notificationService'
@@ -27,6 +29,7 @@ interface MenuItem {
 
 export default function Header() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth)
+  const preferredColor: PlayerColor = useAppSelector((s) => s.settings.game?.preferredColor || PLAYER_COLORS[0])
   const inboxOpen = useAppSelector((s) => s.ui.inboxOpen)
   const dispatch = useAppDispatch()
   const location = useLocation()
@@ -39,6 +42,16 @@ export default function Header() {
   const menuTitleId = useId()
   const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
   const unreadMessages = useAppSelector(selectTotalUnreadMessages)
+
+  // Derive a small bubble style using the user's preferred color
+  const resolvedPreferred = getColorValue(preferredColor)
+  const bubbleBaseHex = isGradientValue(resolvedPreferred)
+    ? extractFirstHexColor(resolvedPreferred) || '#000000'
+    : resolvedPreferred
+  const bubbleText = pickTextOnColor(bubbleBaseHex)
+  const userBubbleStyle: React.CSSProperties = isGradientValue(resolvedPreferred)
+    ? ({ backgroundImage: resolvedPreferred, color: bubbleText } as React.CSSProperties)
+    : ({ backgroundColor: resolvedPreferred, color: bubbleText } as React.CSSProperties)
 
   useEffect(() => {
     // Check initial mute state
@@ -359,7 +372,10 @@ export default function Header() {
                     aria-label={sanitizedUsername ? `${sanitizedUsername} menu` : 'Account menu'}
                   >
                     <span className="hidden sm:inline">{sanitizedUsername}</span>
-                    <span className="sm:hidden flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+                    <span
+                      className="sm:hidden flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shadow-inner"
+                      style={userBubbleStyle}
+                    >
                       {userInitial}
                     </span>
                     <svg
