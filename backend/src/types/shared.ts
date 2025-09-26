@@ -3,8 +3,8 @@
  * These are the core types that both frontend and backend use
  */
 
+import type { GameDelta } from '@risk-game/shared/types'
 import type { ClanProgressionSocketPayload } from './clans'
-import type { GameDelta } from './deltaUpdates'
 import type { BattleResult, GameAction, SerializedGameState } from './game'
 import type { Player as RoomPlayer } from './gameRoom'
 

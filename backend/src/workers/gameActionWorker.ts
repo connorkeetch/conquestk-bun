@@ -1,3 +1,4 @@
+import type { GameDelta } from '@risk-game/shared/types'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
@@ -7,7 +8,7 @@ import {
   type GameActionJob,
   queueService,
 } from '../services/queueService'
-import { type CompoundDelta, DeltaBuilder, type GameDelta } from '../types/deltaUpdates'
+import { DeltaBuilder } from '../types/deltaUpdates'
 import type {
   AttackAction,
   DeployAction,
@@ -238,21 +239,17 @@ export class GameActionWorker {
       playerId,
     })
 
-    // Return compound delta for both territories
-    const compoundDelta: CompoundDelta = {
-      type: 'COMPOUND',
-      roomId: gameId,
-      timestamp: Date.now(),
-      changes: [
-        DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritoryId || '', {
-          armies: result.fromArmies,
-        }),
-        DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritoryId || '', {
-          armies: result.toArmies,
-        }),
-      ],
-    }
-    return compoundDelta
+    // Emit separate territory updates to align with shared GameDelta union
+    const fromDelta = DeltaBuilder.territoryUpdate(gameId, action.payload?.fromTerritoryId || '', {
+      armies: result.fromArmies,
+    })
+    const toDelta = DeltaBuilder.territoryUpdate(gameId, action.payload?.toTerritoryId || '', {
+      armies: result.toArmies,
+    })
+
+    // Broadcast first update immediately; caller will broadcast returned delta
+    this.io.to(`game:${gameId}`).emit('game-delta', fromDelta)
+    return toDelta
   }
 
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {

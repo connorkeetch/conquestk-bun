@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('\u2705 Copied migrations to dist/migrations'); } else { console.error('\u274c Warning: migrations directory not found'); }\"",
     "start": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/index.js",
+    "start:sync-flags": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/scripts/checkFeatureFlags.js --apply && node dist/index.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "lint": "biome check .",
@@ -27,7 +28,9 @@
     "notify": "ts-node src/scripts/notify.ts",
     "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts",
     "flags:check": "ts-node src/scripts/checkFeatureFlags.ts",
-    "flags:sync": "ts-node src/scripts/checkFeatureFlags.ts --apply"
+    "flags:sync": "ts-node src/scripts/checkFeatureFlags.ts --apply",
+    "flags:check:runtime": "node dist/scripts/checkFeatureFlags.js",
+    "flags:sync:runtime": "node dist/scripts/checkFeatureFlags.js --apply"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",
