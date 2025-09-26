@@ -1,8 +1,7 @@
 import { Compass, Filter, Loader2, MapPin, Search, Shield, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FEATURE_FLAGS } from '@/constants/featureFlags'
-import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+// Clans directory is always enabled
 import { clanApi } from '@/services/clanService'
 import type { ClanListFilters, ClanListResponse, ClanSummary } from '@/types/clans'
 import { logger } from '@/utils/logger'
@@ -111,7 +110,6 @@ const extractErrorMessage = (error: unknown): string => {
 }
 
 const ClanDirectoryPage = () => {
-  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
   const [search, setSearch] = useState('')
   const [region, setRegion] = useState('')
   const [recruitmentStatus, setRecruitmentStatus] = useState<ClanListFilters['recruitmentStatus']>()
@@ -200,20 +198,7 @@ const ClanDirectoryPage = () => {
     setIsLoadingMore(false)
   }
 
-  if (!clansEnabled) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="glass-box-lg p-10 text-center max-w-2xl mx-auto">
-          <Shield className="w-12 h-12 text-primary-soft mx-auto mb-4" />
-          <h1 className="text-3xl font-semibold text-white mb-2">Clans are assembling</h1>
-          <p className="text-muted text-lg">
-            The clan system is in closed testing right now. Keep an eye on the Community Hub for
-            launch updates.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  // No feature gating
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">

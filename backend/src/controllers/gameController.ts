@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express'
-import { featureFlagService } from '../services/featureFlagService'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
@@ -78,57 +77,22 @@ export class GameController {
       }> = []
 
       if (requestedAiOpponents.length > 0 && !normalizedIsRanked) {
-        const aiLobbyEnabled = await featureFlagService.evaluateFlagByName(
-          'experimental_ai_lobby_options',
-          req.user ?? undefined,
-        )
+        const allowedDifficulties = new Set(['recruit', 'commander', 'grandmaster'])
+        for (const opponent of requestedAiOpponents) {
+          if (!opponent || typeof opponent !== 'object') continue
+          const rawDifficulty =
+            typeof opponent.difficulty === 'string' ? opponent.difficulty.toLowerCase() : null
+          if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty)) continue
 
-        if (aiLobbyEnabled) {
-          const recruitEnabled = await featureFlagService.evaluateFlagByName(
-            'experimental_ai_recruit',
-            req.user ?? undefined,
-          )
-          const commanderEnabled = await featureFlagService.evaluateFlagByName(
-            'experimental_ai_commander',
-            req.user ?? undefined,
-          )
-          const grandmasterEnabled = await featureFlagService.evaluateFlagByName(
-            'experimental_ai_grandmaster',
-            req.user ?? undefined,
-          )
-
-          const allowedDifficulties = new Set<string>()
-          if (recruitEnabled) allowedDifficulties.add('recruit')
-          if (commanderEnabled) allowedDifficulties.add('commander')
-          if (grandmasterEnabled) allowedDifficulties.add('grandmaster')
-
-          if (allowedDifficulties.size > 0) {
-            for (const opponent of requestedAiOpponents) {
-              if (!opponent || typeof opponent !== 'object') {
-                continue
-              }
-
-              const rawDifficulty =
-                typeof opponent.difficulty === 'string' ? opponent.difficulty.toLowerCase() : null
-
-              if (!rawDifficulty || !allowedDifficulties.has(rawDifficulty)) {
-                continue
-              }
-
-              let personalitySeed: number | null | undefined
-              if (
-                typeof opponent.personalitySeed === 'number' &&
-                Number.isFinite(opponent.personalitySeed)
-              ) {
-                personalitySeed = Math.trunc(opponent.personalitySeed)
-              }
-
-              normalizedAiOpponents.push({
-                difficulty: rawDifficulty as 'recruit' | 'commander' | 'grandmaster',
-                personalitySeed: personalitySeed ?? undefined,
-              })
-            }
+          let personalitySeed: number | null | undefined
+          if (typeof opponent.personalitySeed === 'number' && Number.isFinite(opponent.personalitySeed)) {
+            personalitySeed = Math.trunc(opponent.personalitySeed)
           }
+
+          normalizedAiOpponents.push({
+            difficulty: rawDifficulty as 'recruit' | 'commander' | 'grandmaster',
+            personalitySeed: personalitySeed ?? undefined,
+          })
         }
       }
 
@@ -360,26 +324,12 @@ export class GameController {
         return res.status(400).json({ message: 'aiOpponents must be an array' })
       }
 
-      const aiLobbyEnabled = await featureFlagService.evaluateFlagByName(
-        'experimental_ai_lobby_options',
-        req.user ?? undefined,
-      )
-
-      if (!aiLobbyEnabled) {
-        return res.status(403).json({ message: 'AI opponent controls are disabled' })
-      }
-
-      const [recruitEnabled, commanderEnabled, grandmasterEnabled] = await Promise.all([
-        featureFlagService.evaluateFlagByName('experimental_ai_recruit', req.user ?? undefined),
-        featureFlagService.evaluateFlagByName('experimental_ai_commander', req.user ?? undefined),
-        featureFlagService.evaluateFlagByName('experimental_ai_grandmaster', req.user ?? undefined),
-      ])
-
       type NormalizedDifficulty = 'recruit' | 'commander' | 'grandmaster'
-      const allowedDifficulties = new Set<NormalizedDifficulty>()
-      if (recruitEnabled) allowedDifficulties.add('recruit')
-      if (commanderEnabled) allowedDifficulties.add('commander')
-      if (grandmasterEnabled) allowedDifficulties.add('grandmaster')
+      const allowedDifficulties = new Set<NormalizedDifficulty>([
+        'recruit',
+        'commander',
+        'grandmaster',
+      ])
 
       const sanitizedRequest: Array<{
         difficulty: NormalizedDifficulty

@@ -192,11 +192,6 @@ const CreateGamePage: React.FC = () => {
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
-  const aiPlayersEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
-  const aiLobbyEnabled = useFeatureFlag(FEATURE_FLAGS.AI_LOBBY_OPTIONS)
-  const aiRecruitEnabled = useFeatureFlag(FEATURE_FLAGS.AI_RECRUIT)
-  const aiCommanderEnabled = useFeatureFlag(FEATURE_FLAGS.AI_COMMANDER)
-  const aiGrandmasterEnabled = useFeatureFlag(FEATURE_FLAGS.AI_GRANDMASTER)
   const [searchParams] = useSearchParams()
 
   const initialMode: 'casual' | 'ranked' =
@@ -263,13 +258,10 @@ const CreateGamePage: React.FC = () => {
   const [mapsLoading, setMapsLoading] = useState(true)
   const [mapDetailModalId, setMapDetailModalId] = useState<string | null>(null)
 
-  const allowedAiDifficulties = useMemo(() => {
-    const difficulties: AIDifficulty[] = []
-    if (aiRecruitEnabled) difficulties.push('recruit')
-    if (aiCommanderEnabled) difficulties.push('commander')
-    if (aiGrandmasterEnabled) difficulties.push('grandmaster')
-    return difficulties
-  }, [aiRecruitEnabled, aiCommanderEnabled, aiGrandmasterEnabled])
+  const allowedAiDifficulties = useMemo(
+    () => ['recruit', 'commander', 'grandmaster'] as AIDifficulty[],
+    [],
+  )
 
   const maxAiSlots = useMemo(() => Math.max(0, maxPlayers - 1), [maxPlayers])
 
@@ -281,7 +273,7 @@ const CreateGamePage: React.FC = () => {
         grandmaster: 0,
       }
 
-      if (!aiPlayersEnabled || !aiLobbyEnabled || isRanked || allowedAiDifficulties.length === 0) {
+      if (isRanked || allowedAiDifficulties.length === 0) {
         return baseline
       }
 
@@ -312,7 +304,7 @@ const CreateGamePage: React.FC = () => {
 
       return sanitized
     },
-    [aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties, isRanked, maxAiSlots],
+    [allowedAiDifficulties, isRanked, maxAiSlots],
   )
 
   useEffect(() => {
@@ -325,19 +317,17 @@ const CreateGamePage: React.FC = () => {
     })
   }, [normalizeAiCounts])
 
-  const totalAiOpponents = useMemo(() => {
-    if (!aiPlayersEnabled || !aiLobbyEnabled) {
-      return 0
-    }
-    return allowedAiDifficulties.reduce((sum, difficulty) => sum + (aiCounts[difficulty] ?? 0), 0)
-  }, [aiCounts, aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties])
+  const totalAiOpponents = useMemo(
+    () => allowedAiDifficulties.reduce((sum, difficulty) => sum + (aiCounts[difficulty] ?? 0), 0),
+    [aiCounts, allowedAiDifficulties],
+  )
 
   const remainingAiSlots = Math.max(0, maxAiSlots - totalAiOpponents)
 
   const buildAiOpponentPayload = useCallback(
     (counts: Record<AIDifficulty, number>) => {
       const payload: Array<{ difficulty: AIDifficulty; personalitySeed?: number | null }> = []
-      if (!aiPlayersEnabled || !aiLobbyEnabled || isRanked) {
+      if (isRanked) {
         return payload
       }
 
@@ -350,7 +340,7 @@ const CreateGamePage: React.FC = () => {
 
       return payload
     },
-    [aiLobbyEnabled, aiPlayersEnabled, allowedAiDifficulties, isRanked],
+    [allowedAiDifficulties, isRanked],
   )
 
   const handleAiCountChange = useCallback(
@@ -369,7 +359,7 @@ const CreateGamePage: React.FC = () => {
     [normalizeAiCounts],
   )
 
-  const showAiOpponentCard = aiPlayersEnabled && aiLobbyEnabled && !isRanked
+  const showAiOpponentCard = !isRanked
 
   const getStepNumber = useCallback(
     (base: number) => {

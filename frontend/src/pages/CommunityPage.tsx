@@ -2,8 +2,7 @@ import { Calendar, Crown, Medal, TrendingUp, Trophy, Users } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FEATURE_FLAGS } from '@/constants/featureFlags'
-import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+// Clans: general availability (no feature flag)
 import { logger } from '@/utils/logger'
 import api from '../services/api'
 
@@ -19,7 +18,7 @@ interface LeaderboardEntry {
 }
 
 const CommunityPage: React.FC = () => {
-  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
+  const clansEnabled = true
   const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'monthly' | 'friends'>('global')
   const [globalLeaderboard, setGlobalLeaderboard] = useState<LeaderboardEntry[]>([])
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])

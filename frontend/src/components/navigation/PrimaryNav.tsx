@@ -3,8 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import friendsService from '@/services/friendsService'
 import { socketService } from '@/services/socketService'
-import { FEATURE_FLAGS } from '../../constants/featureFlags'
-import { useFeatureFlag } from '../../hooks/useFeatureFlag'
+// AI menu entries are now generally visible
 
 interface NavItem {
   path: string
@@ -26,7 +25,6 @@ const PrimaryNav: React.FC = () => {
   const location = useLocation()
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
   const [pendingFriends, setPendingFriends] = useState(0)
 
   // Fetch pending friend requests and subscribe to realtime changes
@@ -79,15 +77,13 @@ const PrimaryNav: React.FC = () => {
       { path: '/tutorial', label: 'Tutorial', icon: '📚', description: 'Learn to play' },
     ]
 
-    if (aiEnabled) {
-      playDropdown.splice(4, 0, {
-        path: '/play/ai',
-        label: 'vs AI',
-        icon: '🤖',
-        description: 'Single player practice',
-        comingSoon: true,
-      })
-    }
+    playDropdown.splice(4, 0, {
+      path: '/play/ai',
+      label: 'vs AI',
+      icon: '🤖',
+      description: 'Single player practice',
+      comingSoon: true,
+    })
 
     const nav: NavItem[] = [
       {
@@ -175,7 +171,7 @@ const PrimaryNav: React.FC = () => {
     ]
 
     return nav
-  }, [aiEnabled])
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
