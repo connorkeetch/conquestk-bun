@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { BattleResultDelta, GameDelta } from '@shared/types'
 import { gameService } from '../services/gameService'
-import type { BattleResultDelta, GameDelta } from '../types/deltaUpdates'
 import type { BattleResult, GameState } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 

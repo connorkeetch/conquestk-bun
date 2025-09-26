@@ -1,0 +1,83 @@
+/**
+ * Shared delta update types for real-time game updates
+ * Consolidated so frontend and backend share the same payload contracts
+ */
+
+export interface DeltaBase {
+  type: string
+  roomId: string
+  timestamp: number
+}
+
+export interface TerritoryDelta extends DeltaBase {
+  type: 'TERRITORY_UPDATE'
+  territoryId: string
+  changes: {
+    armies?: number
+    ownerId?: string
+  }
+}
+
+export interface PlayerDelta extends DeltaBase {
+  type: 'PLAYER_UPDATE'
+  playerId: string
+  changes: {
+    armies?: number
+    territories?: string[]
+    isEliminated?: boolean
+  }
+}
+
+import type { GamePhase } from './index'
+
+export interface PhaseChangeDelta extends DeltaBase {
+  type: 'PHASE_CHANGE'
+  phase: GamePhase
+  currentPlayer: string
+  turn?: number
+  reinforcementArmies?: number
+}
+
+export interface BattleResultDelta extends DeltaBase {
+  type: 'BATTLE_RESULT'
+  battleResult: {
+    fromTerritory: {
+      id: string
+      armies: number
+    }
+    toTerritory: {
+      id: string
+      armies: number
+      ownerId?: string | null
+    }
+    conquered: boolean
+    attackerDice: number[]
+    defenderDice: number[]
+    attackerLosses: number
+    defenderLosses: number
+    gameEnded?: boolean
+    winner?: string
+    eliminatedPlayers?: string[]
+    capitalElimination?: {
+      conqueror: string
+      eliminated: string
+      capitalTerritory: string
+      territoriesGained: number
+      troopsGained: number
+    }
+    gameState?: unknown
+  }
+}
+
+export interface GameEndDelta extends DeltaBase {
+  type: 'GAME_END'
+  winner: string
+  eliminatedPlayers: string[]
+}
+
+export type GameDelta =
+  | TerritoryDelta
+  | PlayerDelta
+  | PhaseChangeDelta
+  | BattleResultDelta
+  | GameEndDelta
