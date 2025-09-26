@@ -145,6 +145,18 @@ const averagePoints = (points: unknown): TokenPosition | null => {
   }
 }
 
+const computeMapSizeFromCounts = (
+  territoryCount?: number,
+): 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive' | 'N/A' => {
+  const count = typeof territoryCount === 'number' ? territoryCount : NaN
+  if (!Number.isFinite(count) || count <= 0) return 'N/A'
+  if (count <= 35) return 'Small'
+  if (count <= 45) return 'Medium'
+  if (count <= 65) return 'Large'
+  if (count <= 90) return 'Very Large'
+  return 'Massive'
+}
+
 const toFiniteNumberOrNull = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -936,7 +948,7 @@ export const AdminMaps: React.FC = () => {
                         </td>
                         <td>
                           <div className="text-sm text-muted">
-                            {map.minPlayers}-{map.maxPlayers}
+                            {computeMapSizeFromCounts(map.territoryCount)}
                           </div>
                         </td>
                         <td>

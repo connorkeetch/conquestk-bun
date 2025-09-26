@@ -3098,9 +3098,9 @@ export default function MapEditorTokens() {
       case 'properties':
         return (
           <span>
-            <strong>Properties:</strong> Name your map, describe the gameplay style, set player
-            counts, and manage your background image and canvas size. Drafts auto-save frequently so
-            you can explore without losing progress.
+            <strong>Properties:</strong> Name your map, describe the gameplay style, see the auto
+            map size (based on territory count), and manage your background image and canvas size.
+            Drafts auto-save frequently so you can explore without losing progress.
           </span>
         )
       case 'territories':
