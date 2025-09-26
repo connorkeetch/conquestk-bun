@@ -1483,9 +1483,7 @@ export const AdminMaps: React.FC = () => {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      window.open(`/map-editor-tokens?edit=${previewMap.id}`, '_blank')
-                    }
+                    onClick={() => window.open(`/map-editor?edit=${previewMap.id}`, '_blank')}
                     className="btn btn-primary btn-sm"
                   >
                     Open Map Editor
