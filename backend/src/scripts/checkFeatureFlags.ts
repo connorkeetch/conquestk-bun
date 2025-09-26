@@ -43,8 +43,7 @@ function scanFiles(): ScanResult {
     if (objectLiteralMatch) {
       const body = objectLiteralMatch[1]
       const entryRegex = /(\w+)\s*:\s*'([^']+)'/g
-      let m: RegExpExecArray | null
-      while ((m = entryRegex.exec(body)) != null) {
+      for (const m of body.matchAll(entryRegex)) {
         constantsMap.set(m[1], m[2])
       }
     }
@@ -61,16 +60,15 @@ function scanFiles(): ScanResult {
   for (const file of allFiles) {
     const text = fs.readFileSync(file, 'utf8')
 
-    let m: RegExpExecArray | null
-    while ((m = feFeatureRef.exec(text)) != null) {
+    for (const m of text.matchAll(feFeatureRef)) {
       const key = m[1]
       const name = constantsMap.get(key)
       if (name) usedFromCalls.add(name)
     }
-    while ((m = feLiteralRef.exec(text)) != null) {
+    for (const m of text.matchAll(feLiteralRef)) {
       usedFromCalls.add(m[1])
     }
-    while ((m = beLiteralRef.exec(text)) != null) {
+    for (const m of text.matchAll(beLiteralRef)) {
       usedFromCalls.add(m[1])
     }
   }
@@ -142,7 +140,9 @@ async function main() {
   if (missing.length > 0) {
     // eslint-disable-next-line no-console
     console.log('\nMissing in DB (required by code):')
-    missing.sort().forEach((f) => console.log(`  - ${f}`))
+    missing.sort().forEach((f) => {
+      console.log(`  - ${f}`)
+    })
   } else {
     // eslint-disable-next-line no-console
     console.log('\nNo missing flags detected.')
@@ -151,7 +151,9 @@ async function main() {
   if (orphans.length > 0) {
     // eslint-disable-next-line no-console
     console.log('\nOrphaned in DB (not referenced in code):')
-    orphans.sort().forEach((f) => console.log(`  - ${f}`))
+    orphans.sort().forEach((f) => {
+      console.log(`  - ${f}`)
+    })
   } else {
     // eslint-disable-next-line no-console
     console.log('\nNo orphaned flags detected.')
