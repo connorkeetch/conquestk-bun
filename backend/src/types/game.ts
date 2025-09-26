@@ -1,9 +1,4 @@
-import type {
-  AIDifficulty,
-  Metal,
-  TreasureConfig,
-  TreasureState,
-} from '@risk-game/shared/types'
+import type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
 
 export type { AIDifficulty, Metal, TreasureConfig, TreasureState } from '@risk-game/shared/types'
 

@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MapDetailModal from '@/components/MapDetailModal'
 import { logger } from '@/utils/logger'
@@ -227,7 +227,23 @@ const CreateGamePage: React.FC = () => {
   const [modifierDistribution, setModifierDistribution] = useState<
     'sparse' | 'balanced' | 'abundant'
   >('balanced')
+  // Hidden Treasures (new ruleset) UI state
+  const [treasureEnabled, setTreasureEnabled] = useState(true)
+  const [treasurePayoutMode, setTreasurePayoutMode] = useState<
+    'classic' | 'fixed' | 'none' | 'triangular'
+  >('triangular')
+  // percentage slider (0-25%), stored as whole percent for UX, converted to 0..1 for API
+  const [diamondsPercentUi, setDiamondsPercentUi] = useState<number>(7)
+  const [fixedTreasureValue, setFixedTreasureValue] = useState<number>(8)
+  const [treasureHandCap, setTreasureHandCap] = useState<number>(5)
+  const [diamondSetBonus, setDiamondSetBonus] = useState<number>(3)
   const [isRanked, setIsRanked] = useState(initialMode === 'ranked')
+
+  // Accessible, unique IDs for form controls
+  const fixedPayoutId = useId()
+  const diamondChanceId = useId()
+  const treasureHandCapId = useId()
+  const diamondSetBonusId = useId()
   const [gameType, setGameType] = useState<'casual' | 'ranked'>(initialMode)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -630,6 +646,20 @@ const CreateGamePage: React.FC = () => {
         capitalsEnabled: finalGameMode === 'capitals',
         useTerritoryModifiers: finalModifiers,
         modifierDistribution: finalModifiers ? modifierDistribution : 'none',
+      }
+
+      // Attach Hidden Treasures configuration
+      gameData.treasureConfig = {
+        enabled: treasureEnabled,
+        payoutMode: treasurePayoutMode,
+        // Convert UI percent (0-100) to decimal (0-1), clamp 0..1, 2 decimals precision
+        diamondsPercent: Math.max(
+          0,
+          Math.min(1, Math.round((diamondsPercentUi / 100) * 100) / 100),
+        ),
+        fixedValue: fixedTreasureValue,
+        handCap: treasureHandCap,
+        diamondSetBonus,
       }
 
       if (aiOpponentsPayload.length > 0) {
@@ -1239,8 +1269,174 @@ const CreateGamePage: React.FC = () => {
           </div>
         </OptionCard>
 
-        {/* 8. Advanced Options Card */}
-        <OptionCard number={getStepNumber(8)} title="Advanced Options">
+        {/* 8. Hidden Treasures Card */}
+        <OptionCard number={getStepNumber(8)} title="Hidden Treasures">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-[color:var(--heading)]">
+                  Enable Hidden Treasures
+                </h4>
+                <p className="text-xs text-muted">
+                  Draw treasures on conquest and trade sets for troops
+                </p>
+              </div>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mr-2 accent-violet"
+                  checked={treasureEnabled}
+                  onChange={(e) => setTreasureEnabled(e.target.checked)}
+                />
+                <span className="text-sm">{treasureEnabled ? 'On' : 'Off'}</span>
+              </label>
+            </div>
+
+            <fieldset
+              className="space-y-2"
+              disabled={!treasureEnabled}
+              aria-disabled={!treasureEnabled}
+            >
+              <div>
+                <p className="text-xs text-muted mb-2">Payout Mode</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={choiceClass(
+                      treasurePayoutMode === 'triangular',
+                      'w-full p-3 text-left flex flex-col gap-1',
+                    )}
+                    onClick={() => setTreasurePayoutMode('triangular')}
+                  >
+                    <div className="text-sm text-[color:var(--heading)]">📈 Triangular</div>
+                    <p className="text-xs text-muted">4, 6, 9, 13, 18, ...</p>
+                  </button>
+                  <button
+                    type="button"
+                    className={choiceClass(
+                      treasurePayoutMode === 'classic',
+                      'w-full p-3 text-left flex flex-col gap-1',
+                    )}
+                    onClick={() => setTreasurePayoutMode('classic')}
+                  >
+                    <div className="text-sm text-[color:var(--heading)]">📜 Classic</div>
+                    <p className="text-xs text-muted">4, 6, 8, 10, 12, 15, ...</p>
+                  </button>
+                  <button
+                    type="button"
+                    className={choiceClass(
+                      treasurePayoutMode === 'fixed',
+                      'w-full p-3 text-left flex flex-col gap-1',
+                    )}
+                    onClick={() => setTreasurePayoutMode('fixed')}
+                  >
+                    <div className="text-sm text-[color:var(--heading)]">⚖️ Fixed</div>
+                    <p className="text-xs text-muted">Same troops every set</p>
+                  </button>
+                  <button
+                    type="button"
+                    className={choiceClass(
+                      treasurePayoutMode === 'none',
+                      'w-full p-3 text-left flex flex-col gap-1',
+                    )}
+                    onClick={() => setTreasurePayoutMode('none')}
+                  >
+                    <div className="text-sm text-[color:var(--heading)]">🚫 Disabled</div>
+                    <p className="text-xs text-muted">No set payouts</p>
+                  </button>
+                </div>
+              </div>
+
+              {treasurePayoutMode === 'fixed' && (
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor={fixedPayoutId}
+                    className="text-sm text-[color:var(--heading)] w-40"
+                  >
+                    Fixed payout
+                  </label>
+                  <input
+                    id={fixedPayoutId}
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={fixedTreasureValue}
+                    onChange={(e) =>
+                      setFixedTreasureValue(Math.max(1, Math.min(50, Number(e.target.value) || 0)))
+                    }
+                    className="form-input w-28"
+                  />
+                  <span className="text-xs text-muted">troops</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor={diamondChanceId}
+                  className="text-sm text-[color:var(--heading)] w-40"
+                >
+                  Diamond chance
+                </label>
+                <input
+                  id={diamondChanceId}
+                  type="range"
+                  min={0}
+                  max={25}
+                  step={1}
+                  value={diamondsPercentUi}
+                  onChange={(e) => setDiamondsPercentUi(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="text-sm text-muted w-12 text-right">{diamondsPercentUi}%</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor={treasureHandCapId}
+                  className="text-sm text-[color:var(--heading)] w-40"
+                >
+                  Hand limit
+                </label>
+                <input
+                  id={treasureHandCapId}
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={treasureHandCap}
+                  onChange={(e) =>
+                    setTreasureHandCap(Math.max(1, Math.trunc(Number(e.target.value) || 0)))
+                  }
+                  className="form-input w-20"
+                />
+                <span className="text-xs text-muted">cards before forced cash-in</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor={diamondSetBonusId}
+                  className="text-sm text-[color:var(--heading)] w-40"
+                >
+                  Diamond set bonus
+                </label>
+                <input
+                  id={diamondSetBonusId}
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={diamondSetBonus}
+                  onChange={(e) =>
+                    setDiamondSetBonus(Math.max(0, Math.trunc(Number(e.target.value) || 0)))
+                  }
+                  className="form-input w-20"
+                />
+                <span className="text-xs text-muted">extra troops when set includes a diamond</span>
+              </div>
+            </fieldset>
+          </div>
+        </OptionCard>
+
+        {/* 9. Advanced Options Card */}
+        <OptionCard number={getStepNumber(9)} title="Advanced Options">
           <div className="space-y-4">
             {/* Fog of War Section */}
             <div>

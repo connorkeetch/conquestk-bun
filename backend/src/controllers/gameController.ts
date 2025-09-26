@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express'
+import { cacheService } from '../services/cacheService'
 import { featureFlagService } from '../services/featureFlagService'
 import { GameLifecycleService } from '../services/gameLifecycleService'
 import { type CreateRoomData, GameRoomService } from '../services/gameRoomService'
 import { GameService } from '../services/gameService'
 import type { AuthenticatedRequest } from '../types/express'
+import type { TreasureConfig } from '../types/game'
 import { logger } from '../utils/logger'
 
 export class GameController {
@@ -34,6 +36,7 @@ export class GameController {
         allowTeamPlay,
         isRanked,
         aiOpponents,
+        treasureConfig,
       } = req.body as CreateRoomRequestBody
       const hostId = req.userId
 
@@ -151,6 +154,18 @@ export class GameController {
       }
 
       const room = await this.gameRoomService.createRoom(roomData)
+
+      // Persist optional Hidden Treasures configuration in cache until game start
+      if (treasureConfig && typeof treasureConfig === 'object') {
+        try {
+          await cacheService.set(`room:treasure-config:${room.id}`, treasureConfig, 60 * 60 * 24)
+        } catch (err) {
+          logger.warn('Failed to cache treasureConfig for room', {
+            roomId: room.id,
+            error: err instanceof Error ? err.message : err,
+          })
+        }
+      }
 
       // Ensure host is part of the room immediately after creation
       try {
@@ -515,4 +530,5 @@ type CreateRoomRequestBody = {
     difficulty?: string
     personalitySeed?: number
   }>
+  treasureConfig?: Partial<TreasureConfig>
 }

@@ -1,7 +1,7 @@
+import { treasureMetrics } from '../services/metricsService'
 import territoryModifierService, {
   type GameTerritoryModifier,
 } from '../services/territoryModifierService'
-import { treasureMetrics } from '../services/metricsService'
 import type {
   AttackAction,
   BattleResult,
@@ -12,10 +12,10 @@ import type {
   GameConfiguration,
   GamePlayer,
   GameState,
-  TradeCardsAction,
+  Metal,
   ProcessActionResult,
   Territory,
-  Metal,
+  TradeCardsAction,
   TreasureConfig,
 } from '../types/game'
 import {
@@ -597,7 +597,12 @@ export class GameEngine {
 
     const tuple = [indices[0], indices[1], indices[2]] as [number, number, number]
     const treasureState = ensureTreasureState(gameState.treasureState)
-    const result = redeemSet(this.getPlayerTreasureHand(player), tuple, treasureConfig, treasureState)
+    const result = redeemSet(
+      this.getPlayerTreasureHand(player),
+      tuple,
+      treasureConfig,
+      treasureState,
+    )
 
     player.treasures = result.updatedHand
     player.armies += result.troops
