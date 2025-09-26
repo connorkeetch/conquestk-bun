@@ -2,6 +2,7 @@
  * Delta update types for efficient real-time broadcasting
  * Instead of sending full game state, send only what changed
  */
+import type { GamePhase } from '@risk-game/shared/types'
 
 export interface BaseDelta {
   type: string
@@ -30,7 +31,7 @@ export interface PlayerUpdateDelta extends BaseDelta {
 
 export interface PhaseChangeDelta extends BaseDelta {
   type: 'PHASE_CHANGE'
-  phase: string
+  phase: GamePhase
   currentPlayer: string
   turn?: number
   reinforcementArmies?: number
@@ -114,7 +115,7 @@ export const DeltaBuilder = {
 
   phaseChange(
     roomId: string,
-    phase: string,
+    phase: GamePhase,
     currentPlayer: string,
     turn?: number,
     reinforcementArmies?: number,

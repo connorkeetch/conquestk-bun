@@ -73,7 +73,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 glass border-b border-white/10">
+      <header className="sticky top-0 z-50 bg-[color:var(--nav-bg)] border-b border-[color:var(--nav-border)]">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between relative">
           {/* Left */}
           <div className="flex items-center gap-2 sm:gap-3">

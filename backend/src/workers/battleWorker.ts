@@ -1,14 +1,10 @@
+import type { BattleResultDelta, GameDelta, GameEndDelta } from '@risk-game/shared/types'
 import type Bull from 'bull'
 import type { Server } from 'socket.io'
 import { GameService } from '../services/gameService'
 import { jobIdempotencyService } from '../services/jobIdempotencyService'
 import { type BattleSimulationJob, queueService } from '../services/queueService'
-import {
-  type BattleResultDelta,
-  DeltaBuilder,
-  type GameDelta,
-  type GameEndDelta,
-} from '../types/deltaUpdates'
+import { DeltaBuilder } from '../types/deltaUpdates'
 import type { GameState } from '../types/game'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/shared'
 import { logger } from '../utils/logger'
