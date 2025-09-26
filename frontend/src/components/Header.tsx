@@ -389,7 +389,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                    className="btn-ghost flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white transition"
+                    className="btn-ghost flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-[color:var(--text)] hover:text-[color:var(--text)] transition"
                     aria-label={sanitizedUsername ? `${sanitizedUsername} menu` : 'Account menu'}
                   >
                     <span className="hidden sm:inline">{sanitizedUsername}</span>
@@ -455,7 +455,7 @@ export default function Header() {
               <>
                 <Link
                   to="/login"
-                  className="px-3 py-1.5 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition"
+                  className="px-3 py-1.5 rounded-md text-sm text-[color:var(--text)] hover:bg-[color:var(--hover-bg)] transition"
                 >
                   Login
                 </Link>
