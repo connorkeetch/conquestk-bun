@@ -36,6 +36,7 @@ import {
   updateRoom,
 } from '../store/roomSlice'
 import type { BattleResult, GameState } from '../types/game'
+import type { GameDelta } from '../types/deltaUpdates'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
 import audioService from './audioService'
@@ -359,7 +360,9 @@ class SocketService {
         turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
-        players: Array.isArray(payload.players) ? (payload.players as RoomPlayer[]) : undefined,
+        // The 'room-update' event may include a lightweight players array not matching RoomPlayer
+        // shape. Defer player updates to dedicated events or readyStates mapping.
+        players: undefined,
       }
 
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
@@ -377,97 +380,7 @@ class SocketService {
       store.dispatch(updateRoom(roomUpdate))
     })
 
-    // Game-specific event listeners
-    this.socket.on('territoryUpdated', (data: unknown) => {
-      const payload = data as { territoryId?: string; armies?: number; ownerId?: string }
-      if (!payload?.territoryId) {
-        return
-      }
-
-      store.dispatch(
-        updateTerritory({
-          territoryId: payload.territoryId,
-          armies: payload.armies,
-          ownerId: payload.ownerId,
-        }),
-      )
-    })
-
-    this.socket.on('gamePhaseChanged', (data: unknown) => {
-      const payload = data as {
-        roomId?: string
-        phase?: GameState['phase']
-        currentPlayer?: string
-        reinforcementArmies?: number
-      }
-
-      const previousState = store.getState().game.currentGame
-      const currentUserId = store.getState().auth.user?.id
-
-      // Play phase transition sound
-      audioService.playEffect('swoosh')
-
-      // Check if it's now the current user's turn (player changed)
-      if (
-        currentUserId &&
-        payload.currentPlayer &&
-        previousState?.currentPlayer !== currentUserId &&
-        payload.currentPlayer === currentUserId &&
-        payload.phase !== 'finished'
-      ) {
-        // Add a turn reminder notification
-        const roomId = store.getState().room.currentRoom?.id
-        notificationService.addNotification({
-          type: 'turn_reminder',
-          title: "It's your turn!",
-          message: `It's your turn in the game - ${payload.phase} phase`,
-          read: false,
-          actionUrl: roomId ? `/game/${roomId}` : '/lobby',
-          actionLabel: 'Go to game',
-          metadata: {
-            gameId: roomId,
-          },
-        })
-
-        // Play turn notification sound
-        audioService.playEffect('turn')
-      }
-
-      store.dispatch(
-        updateGameState({
-          phase: payload.phase ?? previousState?.phase ?? 'reinforcement',
-          currentPlayer: payload.currentPlayer ?? previousState?.currentPlayer ?? '',
-        }),
-      )
-
-      // Clear selections when phase changes
-      store.dispatch(selectTerritory(null))
-      store.dispatch(selectTargetTerritory(null))
-      store.dispatch(setPendingAction(null))
-    })
-
-    this.socket.on('playerTurnChanged', (data: unknown) => {
-      const payload = data as { currentPlayer?: string; turn?: number }
-      const currentUserId = store.getState().auth.user?.id
-
-      // Play sound if it's now the current user's turn
-      if (payload.currentPlayer && payload.currentPlayer === currentUserId) {
-        audioService.playEffect('turn')
-      }
-
-      store.dispatch(
-        updateGameState({
-          currentPlayer:
-            payload.currentPlayer ?? store.getState().game.currentGame?.currentPlayer ?? '',
-          turn: payload.turn ?? store.getState().game.currentGame?.turn ?? 0,
-        }),
-      )
-
-      // Clear selections when turn changes
-      store.dispatch(selectTerritory(null))
-      store.dispatch(selectTargetTerritory(null))
-      store.dispatch(setPendingAction(null))
-    })
+    // Game-specific legacy events removed in favor of game-delta and phaseChanged
 
     this.socket.on('armiesDeployed', (data: unknown) => {
       const payload = data as { territoryId?: string; armies?: number }

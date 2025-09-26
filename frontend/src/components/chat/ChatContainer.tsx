@@ -2,7 +2,6 @@ import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
-import type { ChatMessage } from '../../store/chatSlice'
 import {
   ensureDirectConversation,
   ensureGameConversation,
@@ -64,25 +63,30 @@ export default function ChatContainer({
       setResolvedConversationId(null)
 
       try {
-        let detail:
-          | Awaited<ReturnType<typeof ensureDirectConversation>['unwrap']>
-          | Awaited<ReturnType<typeof ensureGameConversation>['unwrap']>
-          | Awaited<ReturnType<typeof ensureTeamConversation>['unwrap']>
+        let detail: Awaited<ReturnType<typeof ensureDirectConversationRequest>>
 
         switch (conversationType) {
-          case 'dm':
-            detail = await dispatch(ensureDirectConversation(conversationId)).unwrap()
+          case 'dm': {
+            const action = await dispatch(ensureDirectConversation(conversationId))
+            if ('payload' in action && action.payload) detail = action.payload as any
+            else throw new Error('Failed to start direct conversation')
             break
-          case 'game':
-            detail = await dispatch(ensureGameConversation(conversationId)).unwrap()
+          }
+          case 'game': {
+            const action = await dispatch(ensureGameConversation(conversationId))
+            if ('payload' in action && action.payload) detail = action.payload as any
+            else throw new Error('Failed to ensure game conversation')
             break
+          }
           case 'team': {
             const [gameId, teamIdPart] = conversationId.split(':')
             const teamId = Number(teamIdPart)
             if (!gameId || Number.isNaN(teamId)) {
               throw new Error('Invalid team conversation identifier')
             }
-            detail = await dispatch(ensureTeamConversation({ gameId, teamId })).unwrap()
+            const action = await dispatch(ensureTeamConversation({ gameId, teamId }))
+            if ('payload' in action && action.payload) detail = action.payload as any
+            else throw new Error('Failed to ensure team conversation')
             break
           }
           default:
