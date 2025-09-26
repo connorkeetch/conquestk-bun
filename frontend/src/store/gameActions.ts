@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { socketService } from '../services/socketService'
 import type { GameState } from '../types/game'
+import type { TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,
@@ -323,6 +324,29 @@ export const endTurn = createAsyncThunk('game/endTurn', async (_, { getState, di
     dispatch(setError('Failed to end turn'))
   }
 })
+
+// Trade a treasure set (three indices from the current player's hand)
+export const tradeTreasureSet = createAsyncThunk(
+  'game/tradeTreasureSet',
+  async (indices: [number, number, number], { getState, dispatch }) => {
+    const state = getState() as RootState
+    const { currentGame } = state.game
+
+    if (!currentGame) throw new Error('No active game')
+
+    try {
+      const action: TradeCardsAction = {
+        type: 'trade_cards',
+        roomId: currentGame.roomId,
+        playerId: state.auth.user?.id || '',
+        payload: { treasureSet: indices },
+      }
+      socketService.sendGameAction({ roomId: currentGame.roomId, action })
+    } catch (_error) {
+      dispatch(setError('Failed to trade treasures'))
+    }
+  },
+)
 
 // Go back to reinforcement phase action
 export const goBackToReinforcement = createAsyncThunk(

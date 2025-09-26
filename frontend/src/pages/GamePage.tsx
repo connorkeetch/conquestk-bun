@@ -12,7 +12,7 @@ import { setCurrentRoom } from '../store/roomSlice'
 
 const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>()
-  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'stats'>('board')
+  const [activeTab, setActiveTab] = useState<'board' | 'chat' | 'stats' | 'treasures'>('board')
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [isLoadingRoom, setIsLoadingRoom] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
@@ -144,6 +144,16 @@ const GamePage: React.FC = () => {
 
     return currentGame.players.find((player) => player.userId === authUser.id) ?? null
   }, [authUser, currentGame])
+
+  // Hidden Treasures UI selection state
+  const [selectedTreasureIndices, setSelectedTreasureIndices] = useState<number[]>([])
+  const toggleTreasureIndex = (idx: number) => {
+    setSelectedTreasureIndices((prev) => {
+      if (prev.includes(idx)) return prev.filter((v) => v !== idx)
+      if (prev.length >= 3) return prev
+      return [...prev, idx]
+    })
+  }
 
   const isUsersTurn = Boolean(
     viewerPlayer && currentGame && viewerPlayer.id === currentGame.currentPlayer,
@@ -477,6 +487,15 @@ const GamePage: React.FC = () => {
               >
                 Stats
               </button>
+              <button
+                type="button"
+                className={`flex-1 py-3 px-4 text-sm font-medium ${
+                  activeTab === 'treasures' ? 'bg-primary text-white' : 'text-muted hover:text-white'
+                }`}
+                onClick={() => setActiveTab('treasures')}
+              >
+                Treasures
+              </button>
             </div>
 
             <div className="flex-1 p-4">
@@ -582,6 +601,78 @@ const GamePage: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!showLoadingState && activeTab === 'treasures' && (
+                <div className="space-y-4">
+                  <h3 className="font-bold mb-2">Treasure Hand</h3>
+                  {!viewerPlayer ? (
+                    <div className="text-sm text-muted">Join the game to view your treasures.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {viewerPlayer.mustCashInTreasures && (
+                        <div className="p-2 rounded bg-warning-soft text-warning text-sm">
+                          You must cash in treasures before continuing your turn.
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {(viewerPlayer.treasures ?? []).length === 0 ? (
+                          <span className="text-sm text-muted">No treasures yet.</span>
+                        ) : (
+                          (viewerPlayer.treasures ?? []).map((metal, idx) => {
+                            const selected = selectedTreasureIndices.includes(idx)
+                            const color =
+                              metal === 'diamond'
+                                ? 'bg-purple-600'
+                                : metal === 'gold'
+                                  ? 'bg-yellow-600'
+                                  : metal === 'silver'
+                                    ? 'bg-gray-400'
+                                    : 'bg-amber-700'
+                            return (
+                              <button
+                                key={`${metal}-${idx}`}
+                                type="button"
+                                onClick={() => toggleTreasureIndex(idx)}
+                                className={`px-2 py-1 rounded text-xs font-medium border ${selected ? 'ring-2 ring-primary' : ''} ${color} text-white`}
+                                title={`Index ${idx}`}
+                              >
+                                {metal}
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={selectedTreasureIndices.length !== 3}
+                          onClick={() => {
+                            const sorted = [...selectedTreasureIndices]
+                              .map((n) => Number(n))
+                              .filter((n) => Number.isInteger(n))
+                              .sort((a, b) => a - b) as [number, number, number]
+                            import('../store/gameActions').then(({ tradeTreasureSet }) => {
+                              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                              (dispatch as any)(tradeTreasureSet(sorted))
+                              setSelectedTreasureIndices([])
+                            })
+                          }}
+                          className={`btn btn-primary btn-sm ${selectedTreasureIndices.length !== 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          Redeem Selected (3)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTreasureIndices([])}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Clear
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

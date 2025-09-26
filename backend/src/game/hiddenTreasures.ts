@@ -1,3 +1,36 @@
+/**
+ * Hidden Treasures – gameplay helpers
+ *
+ * Overview
+ * - Players can draw treasures (bronze, silver, gold, diamond) on conquest.
+ * - Trading a valid set (three of a kind, one of each, or any set containing a diamond)
+ *   grants reinforcement troops based on a payout mode. Sets containing a diamond also
+ *   receive an additional diamondSetBonus.
+ * - Hands are capped by `handCap`; reaching the cap forces a cash-in.
+ *
+ * Configuration (TreasureConfig)
+ * - enabled: toggle treasures on/off.
+ * - diamondsPercent: probability (0..1) that a draw is a diamond; other metals split evenly.
+ * - payoutMode: 'triangular' | 'classic' | 'fixed' | 'none'
+ *   - triangular: 4, 6, 9, 13, 18, ... (increasing gaps)
+ *   - classic: 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5 per set
+ *   - fixed: constant payout defined by fixedValue (clamped: 1..50)
+ *   - none: 0 payout when cashing sets
+ * - fixedValue: troops when payoutMode='fixed'
+ * - handCap: max cards in hand before forced cash-in (>=1)
+ * - diamondSetBonus: extra troops if redeemed set includes a diamond (>=0)
+ *
+ * Primary APIs
+ * - normalizeTreasureConfig: merges defaults and clamps values
+ * - drawTreasure: RNG-based draw per config
+ * - findRedeemableSets: enumerate valid sets in a hand
+ * - redeemSet: apply payout + diamond bonus, remove cards, and advance state
+ *
+ * Engine integration
+ * - GameEngine.initializeGame attaches treasureState when enabled.
+ * - Conquest draws occur after successful territory capture.
+ * - `trade_cards` with `treasureSet` indexes is validated then redeemed.
+ */
 import type { Metal, TreasureConfig, TreasureState } from '../types/game'
 
 export type TreasureSetPattern = 'three_of_a_kind' | 'one_of_each' | 'diamond_combo'
@@ -37,6 +70,9 @@ export const clampDiamondsPercent = (value: number): number => {
   return value
 }
 
+/**
+ * Merge a partial config with defaults and clamp values to safe ranges.
+ */
 export function normalizeTreasureConfig(config?: Partial<TreasureConfig>): TreasureConfig {
   const merged: TreasureConfig = {
     ...DEFAULT_CONFIG,
@@ -65,6 +101,10 @@ export function normalizeTreasureConfig(config?: Partial<TreasureConfig>): Treas
   return merged
 }
 
+/**
+ * Draw a treasure according to configured probabilities.
+ * Diamonds consume `diamondsPercent`; remaining probability mass is split evenly.
+ */
 export function drawTreasure(config: TreasureConfig): Metal {
   const roll = Math.random()
   if (roll < config.diamondsPercent) {
@@ -86,6 +126,9 @@ export function drawTreasure(config: TreasureConfig): Metal {
   return 'gold'
 }
 
+/**
+ * Compute the troop payout for the next redeemed set and return the updated state.
+ */
 export function getPayout(
   state: TreasureState,
   config: TreasureConfig,
@@ -125,6 +168,9 @@ export function getPayout(
   return { amount, state: nextState }
 }
 
+/**
+ * Triangular-like increasing payout sequence starting at 4.
+ */
 function computeTriangularPayout(index: number): number {
   if (index <= 0) {
     return 4
@@ -139,6 +185,9 @@ function computeTriangularPayout(index: number): number {
   return payout
 }
 
+/**
+ * Identify redeem pattern for three metals: 'three_of_a_kind', 'one_of_each', or 'diamond_combo'.
+ */
 function classifySet(metals: [Metal, Metal, Metal]): TreasureSetPattern | null {
   const [a] = metals
   const set = new Set(metals)
@@ -165,6 +214,9 @@ function classifySet(metals: [Metal, Metal, Metal]): TreasureSetPattern | null {
   return null
 }
 
+/**
+ * Return all redeemable 3-card sets in a hand with their indices and pattern.
+ */
 export function findRedeemableSets(hand: Metal[]): TreasureSetMatch[] {
   const matches: TreasureSetMatch[] = []
 
@@ -188,6 +240,10 @@ export function findRedeemableSets(hand: Metal[]): TreasureSetMatch[] {
   return matches
 }
 
+/**
+ * Redeem a valid set by indices from the given hand.
+ * Throws on invalid indices or non-redeemable combinations.
+ */
 export function redeemSet(
   hand: Metal[],
   indices: [number, number, number],
@@ -223,6 +279,9 @@ export function redeemSet(
   }
 }
 
+/**
+ * Initialize or return an existing TreasureState.
+ */
 export function ensureTreasureState(state?: TreasureState): TreasureState {
   if (!state) {
     return {

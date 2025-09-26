@@ -27,7 +27,11 @@ const REQUIRED_TABLES = [
   'admin_activity_logs',
   'admin_roles',
   'capital_eliminations',
-  'chat_messages',
+  // Conversations-based messaging (required)
+  'conversations',
+  'conversation_members',
+  'conversation_messages',
+  'message_read_receipts',
   'email_verification_logs',
   'events',
   'feature_flags',
@@ -44,8 +48,6 @@ const REQUIRED_TABLES = [
   'map_territory_modifiers',
   'maps',
   'matchmaking_queue',
-  'message_link_previews',
-  'message_reactions',
   'notifications',
   'password_reset_tokens',
   'player_stats',
@@ -57,7 +59,6 @@ const REQUIRED_TABLES = [
   'territory_adjacencies',
   'territory_modifier_templates',
   'transactions',
-  'unread_message_counts',
   'user_account_status',
   'user_achievements',
   'user_admin_roles',
@@ -73,6 +74,7 @@ const REQUIRED_TABLES = [
   'user_settings',
   'user_terms_acceptance',
   'users',
+  'user_blocks',
 ]
 
 // Tables that are being tracked for future features but are not present in production
@@ -95,6 +97,11 @@ const OPTIONAL_TABLES = [
   'map_usage_stats',
   'player_game_stats',
   'private_messages',
+  // Legacy chat tables retained optionally for old snapshots
+  'chat_messages',
+  'message_link_previews',
+  'message_reactions',
+  'unread_message_counts',
   'ranking_history',
   'sessions',
   'territory_events',
@@ -103,7 +110,6 @@ const OPTIONAL_TABLES = [
   'tournament_participants',
   'tournaments',
   'user_activity',
-  'user_blocks',
 ]
 
 interface CliOptions {

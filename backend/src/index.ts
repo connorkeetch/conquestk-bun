@@ -291,8 +291,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next()
 })
 
-// Apply general rate limiting to all API routes
-app.use('/api', generalApiLimiter)
+// Apply general rate limiting to all API routes, but skip lightweight admin status checks
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  // Skip rate limiting for admin status probe used by the frontend shell
+  if (req.path === '/admin/status') {
+    return next()
+  }
+  return generalApiLimiter(req, res, next)
+})
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))

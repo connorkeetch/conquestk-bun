@@ -261,6 +261,17 @@ router.delete(
   },
 )
 
+// Place the unread summary route before parameterized routes to avoid matching "unread" as an ID
+router.get('/conversations/unread', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const summary = await getUnreadSummary(req.userId)
+    return res.json({ conversations: summary })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to load unread summary')
+    return res.status(500).json({ error: 'Failed to load unread summary' })
+  }
+})
+
 router.get(
   '/conversations/:conversationId',
   authenticateToken,
@@ -289,16 +300,6 @@ router.get(
     }
   },
 )
-
-router.get('/conversations/unread', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const summary = await getUnreadSummary(req.userId)
-    return res.json({ conversations: summary })
-  } catch (error) {
-    handleRouteError(error, req, 'Failed to load unread summary')
-    return res.status(500).json({ error: 'Failed to load unread summary' })
-  }
-})
 
 router.post(
   '/conversations/:conversationId/messages',

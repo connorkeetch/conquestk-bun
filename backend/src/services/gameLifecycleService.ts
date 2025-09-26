@@ -275,16 +275,24 @@ export class GameLifecycleService {
       configOverrides.gameMode = room.gameMode
     }
 
-    // Inject Hidden Treasures configuration if provided at room creation
+    // Inject Hidden Treasures configuration if provided at room creation (DB-backed)
     try {
-      const { cacheService } = await import('./cacheService')
       const { normalizeTreasureConfig } = await import('../game/hiddenTreasures')
-      const cached = await cacheService.get<Partial<GameConfiguration['treasureConfig']>>(
-        `room:treasure-config:${roomId}`,
-      )
-      if (cached && typeof cached === 'object') {
-        configOverrides.treasureConfig = normalizeTreasureConfig(cached ?? undefined)
-        await cacheService.delete(`room:treasure-config:${roomId}`)
+      // Prefer DB value
+      // biome-ignore lint/suspicious/noExplicitAny: room is a DTO
+      const roomTreasure: any = (room as any)?.treasureConfig
+      if (roomTreasure && typeof roomTreasure === 'object') {
+        configOverrides.treasureConfig = normalizeTreasureConfig(roomTreasure)
+      } else {
+        // Backward compatibility: fallback to cache if set before migration
+        const { cacheService } = await import('./cacheService')
+        const cached = await cacheService.get<Partial<GameConfiguration['treasureConfig']>>(
+          `room:treasure-config:${roomId}`,
+        )
+        if (cached && typeof cached === 'object') {
+          configOverrides.treasureConfig = normalizeTreasureConfig(cached)
+          await cacheService.delete(`room:treasure-config:${roomId}`)
+        }
       }
     } catch (_error) {
       // Non-fatal: continue with defaults

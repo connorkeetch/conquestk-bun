@@ -120,6 +120,7 @@ cd backend && npm run make-admin   # promote an account interactively
 - `docs/guides/theme-system.md` – theme architecture.
 - `docs/guides/map-format.md` – map editor format specification.
 - `docs/guides/email-verification.md` – email verification workflow.
+- `docs/guides/hidden-treasures.md` – Hidden Treasures ruleset and configuration.
 - `docs/operations/troubleshooting.md` – common operational fixes.
 - `docs/planning/roadmap.md` & `docs/planning/go-live-plan.md` – active priorities and launch blockers.
 - `docs/planning/codebase-cleanup.md` – technical-debt backlog.

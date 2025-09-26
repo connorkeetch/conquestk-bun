@@ -13,6 +13,7 @@ _Last updated: January 2026_
 ### Backend (Express + Socket.io)
 - Routes live under `backend/src/routes`. Each route composes request validation, middleware (`backend/src/middleware`), and concrete services.
 - Core game orchestration resides in `backend/src/services/gameService.ts` and `backend/src/game/gameEngine.ts`, which persist lifecycle transitions, enforce phase rules, and emit Socket.io deltas.
+  - Hidden Treasures (optional spoils system) is implemented in `backend/src/game/hiddenTreasures.ts`. The engine handles conquest draws, forced cash-in gating, elimination transfers, and trade redemption. Configuration is applied at game start via room-level cache; see `docs/guides/hidden-treasures.md`.
 - Completed matches now flow through `gameService.finalizeCompletedGame`, which archives results, adjusts ELO, and calls the clan progression service (`clanProgressionService.awardContribution`) when the `clans_enabled` flag is active. XP grants use the v1 formula (400 base + per-placement bonus + 5 × territories held, capped at +150) and log activity events for analytics.
 - Map workflows span `mapService.ts`, `mapWorkflowService.ts`, and `mapApprovalService.ts`, with permission checks centralized in `mapPermissionService.ts` so creator, collaborator, and admin roles stay consistent.
 - Authentication combines session cookies and JWT validation in `backend/src/middleware/auth.ts`; request-scoped user context is required for any mutating route.
@@ -71,6 +72,7 @@ _Last updated: January 2026_
 - Production (https://conquestk.com) and staging (Railway dev branch) deploy from the monorepo via npm scripts. `npm run build` produces frontend + backend bundles; `npm start` runs migrations then boots Express.
 - Logging centralizes through `backend/src/utils/logger.ts`, emitting structured JSON with request IDs. Health probes cover `/healthz` and `/readyz` endpoints.
 - Observability currently includes metrics for battle application, queue health, and cleanup runs (`metricsService.ts`). Frontend errors ship to the log pipeline via REST until telemetry dashboards arrive.
+  - Hidden Treasures emits counters for draw, cash, and selected payout mode.
 
 ## Launch Readiness Caveats
 - **B2 – Creator & reviewer notifications:** Web push storage and gameplay turn pushes are live; map approval + DM push fan-out is under active development and must be validated end-to-end.
