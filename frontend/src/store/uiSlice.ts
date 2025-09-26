@@ -26,4 +26,3 @@ const uiSlice = createSlice({
 
 export const { setInboxOpen, openInbox, closeInbox } = uiSlice.actions
 export default uiSlice.reducer
-

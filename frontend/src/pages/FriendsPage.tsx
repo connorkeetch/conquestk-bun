@@ -3,6 +3,7 @@ import api from '@/services/api'
 import friendsService, {
   type FriendRequestsResponse,
   type FriendSummary,
+  type MutualFriendsResponse,
 } from '@/services/friendsService'
 import { socketService } from '@/services/socketService'
 import { logger } from '@/utils/logger'
@@ -22,6 +23,8 @@ export default function FriendsPage() {
   const [usernameToAdd, setUsernameToAdd] = useState('')
   const [suggestions, setSuggestions] = useState<UserProfileLookup[]>([])
   const [actionBusy, setActionBusy] = useState<string>('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [mutualMap, setMutualMap] = useState<Record<string, MutualFriendsResponse | null>>({})
 
   const load = useCallback(async () => {
     setState('loading')
@@ -169,6 +172,18 @@ export default function FriendsPage() {
     }
   }, [load])
 
+  const toggleMutual = async (userId: string) => {
+    setExpanded((e) => ({ ...e, [userId]: !e[userId] }))
+    if (!mutualMap[userId]) {
+      try {
+        const data = await friendsService.mutual(userId, 6)
+        setMutualMap((m) => ({ ...m, [userId]: data }))
+      } catch {
+        setMutualMap((m) => ({ ...m, [userId]: { total: 0, users: [] } }))
+      }
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -234,18 +249,49 @@ export default function FriendsPage() {
           ) : (
             <ul className="divide-y divide-border">
               {friends.map((f) => (
-                <li key={f.userId} className="flex items-center justify-between py-3">
-                  <div className="text-white">{f.username}</div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => unfriend(f.userId)}
-                      disabled={actionBusy === `unfriend:${f.userId}`}
-                    >
-                      Remove
-                    </button>
+                <li key={f.userId} className="py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-white flex items-center gap-2">
+                      <span>{f.username}</span>
+                      <button
+                        type="button"
+                        className="btn btn-tertiary btn-xs"
+                        onClick={() => toggleMutual(f.userId)}
+                      >
+                        {expanded[f.userId] ? 'Hide mutual' : 'Show mutual'}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => unfriend(f.userId)}
+                        disabled={actionBusy === `unfriend:${f.userId}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
+                  {expanded[f.userId] && (
+                    <div className="mt-2 text-sm text-muted">
+                      {(() => {
+                        const mf = mutualMap[f.userId]
+                        if (!mf) return <span>Loading…</span>
+                        if (mf.total === 0) return <span>No mutual friends</span>
+                        return (
+                          <>
+                            Mutual friends ({mf.total}):{' '}
+                            {mf.users.map((u, i) => (
+                              <span key={u.userId}>
+                                {u.username}
+                                {i < mf.users.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -261,26 +307,57 @@ export default function FriendsPage() {
             ) : (
               <ul className="space-y-2 mb-4">
                 {requests.incoming.map((r) => (
-                  <li key={r.requesterId} className="flex items-center justify-between">
-                    <span className="text-white">{r.requesterName}</span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={() => accept(r.requesterId)}
-                        disabled={actionBusy === `accept:${r.requesterId}`}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => decline(r.requesterId)}
-                        disabled={actionBusy === `decline:${r.requesterId}`}
-                      >
-                        Decline
-                      </button>
+                  <li key={r.requesterId} className="py-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-white flex items-center gap-2">
+                        <span>{r.requesterName}</span>
+                        <button
+                          type="button"
+                          className="btn btn-tertiary btn-xs"
+                          onClick={() => toggleMutual(r.requesterId)}
+                        >
+                          {expanded[r.requesterId] ? 'Hide mutual' : 'Show mutual'}
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => accept(r.requesterId)}
+                          disabled={actionBusy === `accept:${r.requesterId}`}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => decline(r.requesterId)}
+                          disabled={actionBusy === `decline:${r.requesterId}`}
+                        >
+                          Decline
+                        </button>
+                      </div>
                     </div>
+                    {expanded[r.requesterId] && (
+                      <div className="mt-2 text-sm text-muted">
+                        {(() => {
+                          const mf = mutualMap[r.requesterId]
+                          if (!mf) return <span>Loading…</span>
+                          if (mf.total === 0) return <span>No mutual friends</span>
+                          return (
+                            <>
+                              Mutual friends ({mf.total}):{' '}
+                              {mf.users.map((u, i) => (
+                                <span key={u.userId}>
+                                  {u.username}
+                                  {i < mf.users.length - 1 ? ', ' : ''}
+                                </span>
+                              ))}
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -292,16 +369,47 @@ export default function FriendsPage() {
             ) : (
               <ul className="space-y-2">
                 {requests.outgoing.map((r) => (
-                  <li key={r.requesterId} className="flex items-center justify-between">
-                    <span className="text-white">{r.requesterName}</span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => cancel(r.requesterId)}
-                      disabled={actionBusy === `cancel:${r.requesterId}`}
-                    >
-                      Cancel
-                    </button>
+                  <li key={r.requesterId} className="py-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-white flex items-center gap-2">
+                        <span>{r.requesterName}</span>
+                        <button
+                          type="button"
+                          className="btn btn-tertiary btn-xs"
+                          onClick={() => toggleMutual(r.requesterId)}
+                        >
+                          {expanded[r.requesterId] ? 'Hide mutual' : 'Show mutual'}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => cancel(r.requesterId)}
+                        disabled={actionBusy === `cancel:${r.requesterId}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {expanded[r.requesterId] && (
+                      <div className="mt-2 text-sm text-muted">
+                        {(() => {
+                          const mf = mutualMap[r.requesterId]
+                          if (!mf) return <span>Loading…</span>
+                          if (mf.total === 0) return <span>No mutual friends</span>
+                          return (
+                            <>
+                              Mutual friends ({mf.total}):{' '}
+                              {mf.users.map((u, i) => (
+                                <span key={u.userId}>
+                                  {u.username}
+                                  {i < mf.users.length - 1 ? ', ' : ''}
+                                </span>
+                              ))}
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

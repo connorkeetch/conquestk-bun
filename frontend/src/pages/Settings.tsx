@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { logger } from '@/utils/logger'
 import { API_URL } from '../config'
 import {
@@ -53,6 +54,14 @@ function ColorDropdown({
   const titleId = useId()
   const gradientId = useId()
 
+  // Derive stroke color for selected swatch to ensure contrast
+  const selectedValueStr = COLOR_HEX_VALUES[value] ?? '#000000'
+  const selectedHasGradient = isGradientValue(selectedValueStr)
+  const selectedBaseHex = selectedHasGradient
+    ? extractFirstHexColor(selectedValueStr) || '#000000'
+    : selectedValueStr
+  const selectedStrokeColor = isPremiumColor(value) ? '#FBBF24' : pickTextOnColor(selectedBaseHex)
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -87,14 +96,12 @@ function ColorDropdown({
             <polygon
               points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
               style={{
-                fill: COLOR_HEX_VALUES[value]?.includes('gradient')
-                  ? `url(#${gradientId})`
-                  : COLOR_HEX_VALUES[value],
-                stroke: isPremiumColor(value) ? '#FBBF24' : '#ffffff50',
+                fill: selectedHasGradient ? `url(#${gradientId})` : selectedValueStr,
+                stroke: selectedStrokeColor,
                 strokeWidth: '1.5',
               }}
             />
-            {COLOR_HEX_VALUES[value]?.includes('gradient') && (
+            {selectedHasGradient && (
               <defs>
                 <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
@@ -150,6 +157,10 @@ function ColorDropdown({
             </div>
             {STANDARD_COLORS.map((color) => {
               const isSelected = value === color
+              const swatchStr = COLOR_HEX_VALUES[color] ?? '#000000'
+              const hasGradient = isGradientValue(swatchStr)
+              const baseHex = hasGradient ? extractFirstHexColor(swatchStr) || '#000000' : swatchStr
+              const strokeColor = isSelected ? pickTextOnColor(baseHex) : '#ffffff30'
               return (
                 <button
                   type="button"
@@ -176,14 +187,12 @@ function ColorDropdown({
                     <polygon
                       points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                       style={{
-                        fill: COLOR_HEX_VALUES[color]?.includes('gradient')
-                          ? `url(#gradient-${color})`
-                          : COLOR_HEX_VALUES[color],
-                        stroke: isSelected ? '#ffffff' : '#ffffff30',
+                        fill: hasGradient ? `url(#gradient-${color})` : swatchStr,
+                        stroke: strokeColor,
                         strokeWidth: '1.5',
                       }}
                     />
-                    {COLOR_HEX_VALUES[color]?.includes('gradient') && (
+                    {hasGradient && (
                       <defs>
                         <linearGradient
                           id={`gradient-${color}`}
@@ -238,6 +247,8 @@ function ColorDropdown({
             </div>
             {PREMIUM_COLORS.map((color) => {
               const isSelected = value === color
+              const swatchStr = COLOR_HEX_VALUES[color] ?? '#000000'
+              const hasGradient = isGradientValue(swatchStr)
               return (
                 <button
                   type="button"
@@ -265,15 +276,13 @@ function ColorDropdown({
                       <polygon
                         points="12,2 20.4,7 20.4,17 12,22 3.6,17 3.6,7"
                         style={{
-                          fill: COLOR_HEX_VALUES[color]?.includes('gradient')
-                            ? `url(#gradient-${color})`
-                            : COLOR_HEX_VALUES[color],
+                          fill: hasGradient ? `url(#gradient-${color})` : swatchStr,
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
                           filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
-                      {COLOR_HEX_VALUES[color]?.includes('gradient') && (
+                      {hasGradient && (
                         <defs>
                           <linearGradient
                             id={`gradient-${color}`}

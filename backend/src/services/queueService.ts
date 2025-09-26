@@ -307,6 +307,36 @@ export class QueueService {
     })
   }
 
+  // Schedule a delayed game action (e.g., auto end-turn). Attempts set to 1 by default.
+  async addDelayedGameAction(
+    job: GameActionJob,
+    delayMs: number,
+    options?: { idempotencyKey?: string; priority?: number },
+  ): Promise<Bull.Job<GameActionJob> | null> {
+    if (!this.redis || !this.isInitialized) {
+      logger.warn('QueueService not available, skipping delayed game action')
+      return null
+    }
+
+    const queue = this.queues.get('gameActions')
+    if (!queue) throw new Error('Game actions queue not initialized')
+
+    const idempotencyKey = options?.idempotencyKey ?? job.idempotencyKey ?? randomUUID()
+    const payload: GameActionJob = {
+      ...job,
+      idempotencyKey,
+    }
+
+    return queue.add('process-game-action', payload, {
+      jobId: idempotencyKey,
+      delay: Math.max(0, Math.trunc(delayMs)),
+      attempts: 1,
+      removeOnFail: true,
+      removeOnComplete: 10,
+      priority: options?.priority ?? this.getActionPriority(job.action),
+    })
+  }
+
   // Battle Simulation Queue
   async addBattleSimulation(
     job: BattleSimulationJob,

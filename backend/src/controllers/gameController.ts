@@ -479,9 +479,31 @@ export class GameController {
         return res.status(403).json({ message: 'You are not part of this room' })
       }
 
-      const gameState = await this.gameService.getGameState(roomId)
+      let gameState = await this.gameService.getGameState(roomId)
       if (!gameState) {
         return res.status(404).json({ message: 'Game state not initialized yet' })
+      }
+
+      // Apply Fog of War filtering for non-spectators (adjacent, non-persistent)
+      try {
+        if (!isAdminSpectator && room.fogOfWar && room.fogOfWar !== 'off') {
+          const owned = new Set<string>(
+            gameState.board.filter((t) => t.ownerId === userId).map((t) => t.id),
+          )
+          const visible = new Set<string>(owned)
+          for (const t of gameState.board) {
+            if (!owned.has(t.id)) continue
+            for (const adj of t.adjacentTerritories) visible.add(adj)
+          }
+          gameState = {
+            ...gameState,
+            board: gameState.board.map((t) =>
+              visible.has(t.id) ? t : { ...t, ownerId: null, armies: 0 },
+            ),
+          }
+        }
+      } catch {
+        // Fallback on any error
       }
 
       return res.json({ game: gameState })

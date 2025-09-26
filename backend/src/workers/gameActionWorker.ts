@@ -255,6 +255,32 @@ export class GameActionWorker {
   private async processEndTurn(gameId: string, playerId: string): Promise<GameDelta> {
     const nextPlayer = await this.gameService.processEndTurn(gameId, playerId)
 
+    // Schedule next auto end-turn if timer configured
+    try {
+      const { GameRoomService } = await import('../services/gameRoomService')
+      const roomService = new GameRoomService()
+      const room = await roomService.getRoomById(gameId)
+      const seconds = room?.turnTimerSeconds ?? 0
+      if (seconds && seconds > 0) {
+        const idKey = `auto-end:${gameId}:turn:next:${Date.now()}`
+        await queueService.addDelayedGameAction(
+          {
+            gameId,
+            playerId: nextPlayer.id,
+            action: { type: 'end_turn', playerId: nextPlayer.id, roomId: gameId },
+            idempotencyKey: idKey,
+          },
+          seconds * 1000,
+          { idempotencyKey: idKey, priority: 10 },
+        )
+      }
+    } catch (error) {
+      logger.warn('Failed to schedule auto end-turn for next player', {
+        roomId: gameId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
     return DeltaBuilder.phaseChange(gameId, 'reinforcement', nextPlayer.id, 0, 0)
   }
 

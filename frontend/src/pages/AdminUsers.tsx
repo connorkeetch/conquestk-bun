@@ -1054,10 +1054,11 @@ const AdminUsers: React.FC = () => {
             <p className="text-muted">No users match your search criteria.</p>
           </div>
         ) : (
-          <div className="panel overflow-hidden p-0">
-            <table className="table">
-              <thead className="bg-[color:var(--panel-bg-alt)] text-[color:var(--heading)]">
-                <tr>
+          <div className="panel p-0">
+            <div className="overflow-x-auto">
+              <table className="table min-w-[1024px]">
+                <thead className="bg-[color:var(--panel-bg-alt)] text-[color:var(--heading)]">
+                  <tr>
                   <th className="text-left">Username</th>
                   <th className="text-left">Email</th>
                   <th className="text-left">Status</th>
@@ -1135,6 +1136,7 @@ const AdminUsers: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

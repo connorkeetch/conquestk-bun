@@ -2,6 +2,7 @@ import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MapDetailModal from '@/components/MapDetailModal'
+import { extractFirstHexColor, pickTextOnColor } from '@/utils/color'
 import { logger } from '@/utils/logger'
 import { PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
@@ -641,7 +642,8 @@ const CreateGamePage: React.FC = () => {
         mapId: finalMap,
         movementType: fortificationToMovementType(finalFortification),
         fogOfWar,
-        turnTimerSeconds: typeof turnTimeLimit === 'number' ? Math.trunc(turnTimeLimit * 60) : undefined,
+        turnTimerSeconds:
+          typeof turnTimeLimit === 'number' ? Math.trunc(turnTimeLimit * 60) : undefined,
         allowTeamPlay: finalTeams > 0,
         teamMode: finalTeams > 0 ? 'teams' : 'none',
         numberOfTeams: finalTeams > 0 ? finalTeams : undefined,
@@ -1441,7 +1443,9 @@ const CreateGamePage: React.FC = () => {
           <div className="space-y-4">
             {/* Territory Modifiers toggle (map-defined only) */}
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-[color:var(--heading)]">Territory Modifiers</h4>
+              <h4 className="text-sm font-medium text-[color:var(--heading)]">
+                Territory Modifiers
+              </h4>
               <p className="text-xs text-muted">
                 When enabled, the game uses any modifiers predefined on the selected map (no random
                 distribution).
@@ -1456,44 +1460,29 @@ const CreateGamePage: React.FC = () => {
                 <span className="text-sm">Use map-defined territory modifiers</span>
               </label>
             </div>
-            {/* Fog of War Section */}
+            {/* Fog of War Section (On/Off, adjacent only) */}
             <div>
               <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">Fog of War</h4>
-              <div className="space-y-1.5">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setFogOfWar('off')}
-                  className={choiceClass(
-                    fogOfWar === 'off',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1',
-                  )}
+                  className={choiceClass(fogOfWar === 'off', 'flex-1 px-3 py-2 text-left')}
                 >
-                  <div className="text-sm text-[color:var(--heading)]">☀️ No Fog</div>
-                  <p className="text-xs text-muted">See entire map</p>
+                  ☀️ Off
                 </button>
                 <button
                   type="button"
                   onClick={() => setFogOfWar('adjacent')}
-                  className={choiceClass(
-                    fogOfWar === 'adjacent',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1',
-                  )}
+                  className={choiceClass(fogOfWar === 'adjacent', 'flex-1 px-3 py-2 text-left')}
                 >
-                  <div className="text-sm text-[color:var(--heading)]">🔗 Adjacent</div>
-                  <p className="text-xs text-muted">See neighbors only</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFogOfWar('persistent')}
-                  className={choiceClass(
-                    fogOfWar === 'persistent',
-                    'w-full px-3 py-2 text-left flex flex-col gap-1',
-                  )}
-                >
-                  <div className="text-sm text-[color:var(--heading)]">🗺️ Persistent</div>
-                  <p className="text-xs text-muted">Once revealed, stays visible</p>
+                  🔗 On (Adjacent)
                 </button>
               </div>
+              <p className="text-xs text-muted mt-2">
+                When enabled, you see your territories and their neighbors. Visibility is not
+                persistent across turns.
+              </p>
             </div>
 
             {/* Territory Modifiers Section */}
@@ -1602,7 +1591,11 @@ const CreateGamePage: React.FC = () => {
                       title={colorName}
                     >
                       {selectedColor === hexColor && (
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">
+                        <span
+                          className="absolute inset-0 flex items-center justify-center text-lg font-bold drop-shadow-lg"
+                          style={{ color: pickTextOnColor(hexColor) }}
+                          aria-hidden
+                        >
                           ✓
                         </span>
                       )}
@@ -1620,6 +1613,9 @@ const CreateGamePage: React.FC = () => {
                   const hasGradient = 'gradient' in colorData
                   const colorValue = hasGradient ? colorData.gradient : colorData.solid
                   const colorName = getColorName(key)
+                  const checkHex = hasGradient
+                    ? extractFirstHexColor(colorValue) || '#000000'
+                    : colorValue
 
                   return (
                     <button
@@ -1638,7 +1634,11 @@ const CreateGamePage: React.FC = () => {
                       title={colorName}
                     >
                       {selectedColor === key && (
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-lg font-bold drop-shadow-lg">
+                        <span
+                          className="absolute inset-0 flex items-center justify-center text-lg font-bold drop-shadow-lg"
+                          style={{ color: pickTextOnColor(checkHex) }}
+                          aria-hidden
+                        >
                           ✓
                         </span>
                       )}

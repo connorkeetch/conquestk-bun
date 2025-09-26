@@ -1,12 +1,29 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+
 import friendsService, {
   type RelationshipInfo,
   type RelationshipStatus,
 } from '@/services/friendsService'
 import { ensureDirectConversation, messagesActions } from '@/store/messagesSlice'
-import { getColorDisplayName, getColorValue, PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
+import {
+  ensureReadableOnDark,
+  extractFirstHexColor,
+  getRelativeLuminance,
+  hexToRgba,
+  isGradientValue,
+  lightenColor,
+  mixColors,
+} from '@/utils/color'
+
+import {
+  getColorDisplayName,
+  getColorValue,
+  PLAYER_COLORS,
+  type PlayerColor,
+  PREMIUM_PLAYER_COLORS,
+} from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
@@ -14,7 +31,6 @@ import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
-import { ensureReadableOnDark, extractFirstHexColor, getRelativeLuminance, hexToRgba, isGradientValue, lightenColor, mixColors } from '@/utils/color'
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
 
@@ -217,7 +233,10 @@ const ProfilePage: React.FC = () => {
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const [relationship, setRelationship] = useState<RelationshipStatus>('none')
   const [friendSince, setFriendSince] = useState<string | undefined>(undefined)
-  const [mutual, setMutual] = useState<{ total: number; users: Array<{ userId: string; username: string }> } | null>(null)
+  const [mutual, setMutual] = useState<{
+    total: number
+    users: Array<{ userId: string; username: string }>
+  } | null>(null)
   const [relBusy, setRelBusy] = useState<string>('')
   const dispatch = useAppDispatch()
 
@@ -473,7 +492,6 @@ const ProfilePage: React.FC = () => {
     preferredColorDisplayName,
     premiumColorEntry,
     signatureHex,
-    signatureHeaderAccentStyle,
     signatureCardStyle,
     signatureCallToActionStyle,
   } = signatureVisuals
@@ -481,16 +499,12 @@ const ProfilePage: React.FC = () => {
   const {
     rankDetails,
     nextRank,
-    rawRankColor,
-    rankColorIsGradient,
     rankAccentColor,
-    rankAccentSoft,
-    rankGlowStyle,
+    rankHeaderAccentStyle,
     rankProgressFill,
     rankProgress,
     ratingToNextRank,
     rankPrimaryHex,
-    rankTextColor,
   } = rankVisuals
 
   // Removed header rank badge; rank appears only on the dedicated card
@@ -502,7 +516,7 @@ const ProfilePage: React.FC = () => {
     background: `linear-gradient(145deg, ${hexToRgba(signatureHex, 0.22)} 0%, transparent 70%)`,
   }
 
-  const cardStyleNeutralToSignature: React.CSSProperties = signatureCardStyle
+  const _cardStyleNeutralToSignature: React.CSSProperties = signatureCardStyle
 
   const tabs: { id: TabType; label: string; icon: string; available: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: '👤', available: true },
@@ -524,7 +538,10 @@ const ProfilePage: React.FC = () => {
           className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden border"
           style={{ ...heroBackgroundStyle, borderColor: heroBorderColor }}
         >
-                <div className="absolute inset-0 opacity-80 pointer-events-none" style={signatureGlowStyle} />
+          <div
+            className="absolute inset-0 opacity-80 pointer-events-none"
+            style={signatureGlowStyle}
+          />
           <div
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-35 pointer-events-none"
             style={{ background: hexToRgba(signatureHex, 0.4) }}
@@ -533,7 +550,10 @@ const ProfilePage: React.FC = () => {
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
               <div className="relative group">
-                <div className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60" style={signatureGlowStyle} />
+                <div
+                  className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
+                  style={signatureGlowStyle}
+                />
                 <div
                   className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
                   style={avatarRingStyle}
@@ -590,7 +610,6 @@ const ProfilePage: React.FC = () => {
                     : 'Commander of the Conquest Realms'}
                 </p>
               </div>
-
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
                 <span className="flex items-center gap-1">

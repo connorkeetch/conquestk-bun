@@ -1,5 +1,5 @@
-import type { AIDifficulty, GamePhase } from './game'
 import type { TreasureConfig } from '@shared/types'
+import type { AIDifficulty, GamePhase } from './game'
 
 export type GameLifecycleStatus =
   | 'lobby'

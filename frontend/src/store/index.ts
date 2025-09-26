@@ -3,9 +3,9 @@ import authSlice from './authSlice'
 import chatSlice from './chatSlice'
 import gameSlice from './gameSlice'
 import messagesReducer from './messagesSlice'
-import uiReducer from './uiSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
+import uiReducer from './uiSlice'
 
 export const store = configureStore({
   reducer: {

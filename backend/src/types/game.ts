@@ -173,6 +173,7 @@ export interface GameConfiguration {
   continentBonuses?: ContinentBonus[]
   useTerritoryModifiers?: boolean
   modifierDistribution?: ModifierDistribution
+  fogOfWar?: 'off' | 'adjacent' | 'persistent'
   treasureConfig?: TreasureConfig
 }
 

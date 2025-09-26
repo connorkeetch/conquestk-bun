@@ -4,8 +4,9 @@ import {
   ensureReadableOnDark,
   getRelativeLuminance,
   hexToRgb,
-  rgbToHex,
   isGradientValue,
+  pickTextOnColor,
+  rgbToHex,
 } from './color'
 
 describe('color utils', () => {
@@ -34,5 +35,9 @@ describe('color utils', () => {
     expect(isGradientValue('linear-gradient(90deg, #000, #fff)')).toBe(true)
     expect(isGradientValue('#ff0000')).toBe(false)
   })
-})
 
+  it('pickTextOnColor chooses contrasting text', () => {
+    expect(pickTextOnColor('#ffffff')).toBe('#0f172a')
+    expect(pickTextOnColor('#000000')).toBe('#F8FAFC')
+  })
+})

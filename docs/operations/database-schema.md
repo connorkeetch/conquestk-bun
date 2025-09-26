@@ -1,15 +1,15 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-20T01:41:14.730Z
+Generated on 2025-09-26T15:49:52.574Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
 ## Overview
 
-- Database: `risk_game`
+- Database: `railway`
 - Schema: `public`
-- PostgreSQL: PostgreSQL 16.10
-- Tables: 60
+- PostgreSQL: PostgreSQL 17.6
+- Tables: 78
 - Row counts reflect the snapshot captured when this file was generated.
 
 ## Table Summary
@@ -18,25 +18,41 @@ Generated on 2025-09-20T01:41:14.730Z
 | --- | ---: | ---: |
 | `achievement_progress` | 8 | 0 |
 | `achievements` | 10 | 6 |
-| `admin_activity_logs` | 9 | 0 |
-| `admin_notifications` | 9 | 0 |
-| `admin_roles` | 7 | 3 |
+| `admin_activity_logs` | 9 | 121 |
+| `admin_notifications` | 9 | 1 |
+| `admin_roles` | 7 | 4 |
 | `capital_eliminations` | 6 | 0 |
-| `chat_messages` | 10 | 0 |
+| `clan_activity_log` | 7 | 0 |
+| `clan_announcements` | 9 | 0 |
+| `clan_applications` | 9 | 0 |
+| `clan_chat_messages` | 8 | 0 |
+| `clan_invitations` | 9 | 0 |
+| `clan_members` | 13 | 0 |
+| `clan_objectives` | 10 | 0 |
+| `clan_roles` | 8 | 0 |
+| `clan_war_matches` | 10 | 0 |
+| `clan_wars` | 12 | 0 |
+| `clans` | 22 | 0 |
 | `content_approval_queue` | 10 | 0 |
-| `email_verification_logs` | 7 | 0 |
-| `events` | 8 | 0 |
-| `feature_flag_audit` | 8 | 0 |
-| `feature_flags` | 13 | 6 |
+| `conversation_members` | 11 | 0 |
+| `conversation_messages` | 10 | 0 |
+| `conversations` | 10 | 0 |
+| `email_verification_logs` | 7 | 2 |
+| `events` | 8 | 2 |
+| `feature_flag_audit` | 8 | 71 |
+| `feature_flags` | 13 | 9 |
 | `friendships` | 6 | 0 |
 | `game_moves` | 9 | 0 |
-| `game_rooms` | 22 | 0 |
+| `game_results` | 9 | 0 |
+| `game_rooms` | 30 | 0 |
 | `game_states` | 13 | 0 |
 | `game_territory_modifiers` | 8 | 0 |
 | `game_variants` | 11 | 0 |
+| `map_asset_purge_runs` | 10 | 491 |
+| `map_collaborators` | 5 | 0 |
 | `map_continents` | 6 | 0 |
 | `map_drafts` | 24 | 0 |
-| `map_images_staging` | 15 | 0 |
+| `map_images_staging` | 19 | 0 |
 | `map_ratings` | 7 | 0 |
 | `map_review_queue` | 9 | 0 |
 | `map_reviews` | 10 | 0 |
@@ -45,37 +61,39 @@ Generated on 2025-09-20T01:41:14.730Z
 | `map_territories` | 8 | 0 |
 | `map_territory_modifiers` | 5 | 0 |
 | `map_versions` | 10 | 0 |
-| `maps` | 25 | 2 |
+| `maps` | 33 | 0 |
 | `matchmaking_queue` | 9 | 0 |
-| `message_link_previews` | 8 | 0 |
-| `message_reactions` | 5 | 0 |
-| `notifications` | 8 | 0 |
+| `message_read_receipts` | 3 | 0 |
+| `notifications` | 8 | 1 |
 | `password_reset_tokens` | 6 | 0 |
+| `player_game_results` | 13 | 0 |
 | `player_stats` | 12 | 0 |
 | `rating_history` | 8 | 0 |
-| `room_players` | 10 | 0 |
-| `schema_migrations` | 4 | 1 |
+| `room_players` | 16 | 0 |
+| `schema_migrations` | 8 | 37 |
 | `seasons` | 9 | 0 |
 | `skill_leaderboard_cache` | 6 | 0 |
 | `territory_adjacencies` | 4 | 0 |
 | `territory_modifier_templates` | 8 | 0 |
 | `transactions` | 12 | 0 |
-| `unread_message_counts` | 7 | 0 |
 | `user_account_status` | 7 | 0 |
 | `user_achievements` | 5 | 0 |
-| `user_admin_roles` | 7 | 0 |
+| `user_admin_roles` | 7 | 1 |
 | `user_bans` | 8 | 0 |
 | `user_behavior_patterns` | 9 | 0 |
-| `user_feature_flags` | 4 | 0 |
+| `user_blocks` | 4 | 0 |
+| `user_clan_preferences` | 5 | 0 |
+| `user_feature_flags` | 4 | 1 |
 | `user_inventory` | 8 | 0 |
-| `user_preferences` | 28 | 0 |
+| `user_preferences` | 32 | 1 |
 | `user_profiles` | 10 | 0 |
 | `user_reports` | 11 | 0 |
 | `user_seasonal_stats` | 13 | 0 |
-| `user_sessions` | 9 | 0 |
+| `user_sessions` | 9 | 2 |
 | `user_settings` | 8 | 0 |
 | `user_terms_acceptance` | 6 | 0 |
-| `users` | 31 | 0 |
+| `users` | 32 | 14 |
+| `web_push_subscriptions` | 13 | 1 |
 
 ## Tables
 
@@ -258,19 +276,16 @@ Generated on 2025-09-20T01:41:14.730Z
 **Indexes:**
 - `capital_eliminations_pkey`: CREATE UNIQUE INDEX capital_eliminations_pkey ON public.capital_eliminations USING btree (id)
 
-### `chat_messages`
+### `clan_activity_log`
 
 | Column | Type | Nullable | Default |
 | --- | --- | --- | --- |
 | `id` | `uuid` | No | `uuid_generate_v4()` |
-| `room_id` | `uuid` | Yes | — |
-| `sender_id` | `uuid` | No | — |
-| `recipient_id` | `uuid` | Yes | — |
-| `message` | `text` | No | — |
-| `message_type` | `varchar(20)` | No | `'text'` |
-| `is_system` | `boolean` | No | `false` |
+| `clan_id` | `uuid` | No | — |
+| `actor_user_id` | `uuid` | Yes | — |
+| `action_type` | `text` | No | — |
 | `metadata` | `jsonb` | No | `'{}'` |
-| `edited_at` | `timestamp` | Yes | — |
+| `target_id` | `uuid` | Yes | — |
 | `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 
 **Primary key:** `id`
@@ -279,22 +294,368 @@ Generated on 2025-09-20T01:41:14.730Z
 - —
 
 **Foreign keys:**
-- `chat_messages_recipient_id_fkey`: (`recipient_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `chat_messages_room_id_fkey`: (`room_id`) → `game_rooms` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `chat_messages_sender_id_fkey`: (`sender_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_activity_log_actor_user_id_fkey`: (`actor_user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_activity_log_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 
 **Check constraints:**
-- `chat_message_length_check`: CHECK (length(message) <= 1000)
-- `chat_message_type_check`: CHECK (message_type::text = ANY (ARRAY['text'::character varying, 'system'::character varying, 'emote'::character varying, 'link'::character varying]::text[]))
-- `chat_room_or_dm`: CHECK (room_id IS NOT NULL AND recipient_id IS NULL OR room_id IS NULL AND recipient_id IS NOT NULL)
+- —
 
 **Indexes:**
-- `chat_messages_pkey`: CREATE UNIQUE INDEX chat_messages_pkey ON public.chat_messages USING btree (id)
-- `idx_chat_messages_created_at`: CREATE INDEX idx_chat_messages_created_at ON public.chat_messages USING btree (created_at DESC)
-- `idx_chat_messages_metadata_gin`: CREATE INDEX idx_chat_messages_metadata_gin ON public.chat_messages USING gin (metadata)
-- `idx_chat_messages_recipient_id`: CREATE INDEX idx_chat_messages_recipient_id ON public.chat_messages USING btree (recipient_id)
-- `idx_chat_messages_room_id`: CREATE INDEX idx_chat_messages_room_id ON public.chat_messages USING btree (room_id)
-- `idx_chat_messages_sender_id`: CREATE INDEX idx_chat_messages_sender_id ON public.chat_messages USING btree (sender_id)
+- `clan_activity_log_pkey`: CREATE UNIQUE INDEX clan_activity_log_pkey ON public.clan_activity_log USING btree (id)
+- `idx_clan_activity_action`: CREATE INDEX idx_clan_activity_action ON public.clan_activity_log USING btree (action_type)
+- `idx_clan_activity_clan_created_at`: CREATE INDEX idx_clan_activity_clan_created_at ON public.clan_activity_log USING btree (clan_id, created_at DESC)
+
+### `clan_announcements`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `author_user_id` | `uuid` | No | — |
+| `title` | `varchar(80)` | No | — |
+| `body_markdown` | `text` | No | — |
+| `pinned` | `boolean` | No | `false` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `expires_at` | `timestamp` | Yes | — |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_announcements_author_user_id_fkey`: (`author_user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_announcements_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `clan_announcements_pkey`: CREATE UNIQUE INDEX clan_announcements_pkey ON public.clan_announcements USING btree (id)
+- `idx_clan_announcements_clan`: CREATE INDEX idx_clan_announcements_clan ON public.clan_announcements USING btree (clan_id)
+- `idx_clan_announcements_pinned`: CREATE INDEX idx_clan_announcements_pinned ON public.clan_announcements USING btree (clan_id, pinned)
+
+### `clan_applications`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `status` | `text` | No | `'pending'` |
+| `message` | `text` | Yes | — |
+| `reviewed_by` | `uuid` | Yes | — |
+| `reviewed_at` | `timestamp` | Yes | — |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_applications_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_applications_reviewed_by_fkey`: (`reviewed_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_applications_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- `clan_applications_status_check`: CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'withdrawn'::text]))
+
+**Indexes:**
+- `clan_applications_pkey`: CREATE UNIQUE INDEX clan_applications_pkey ON public.clan_applications USING btree (id)
+- `idx_clan_applications_clan`: CREATE INDEX idx_clan_applications_clan ON public.clan_applications USING btree (clan_id)
+- `idx_clan_applications_pending_unique`: CREATE UNIQUE INDEX idx_clan_applications_pending_unique ON public.clan_applications USING btree (clan_id, user_id) WHERE (status = 'pending'::text)
+- `idx_clan_applications_status`: CREATE INDEX idx_clan_applications_status ON public.clan_applications USING btree (status)
+- `idx_clan_applications_user`: CREATE INDEX idx_clan_applications_user ON public.clan_applications USING btree (user_id)
+
+### `clan_chat_messages`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `body` | `text` | No | — |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `edited_at` | `timestamp` | Yes | — |
+| `deleted_at` | `timestamp` | Yes | — |
+| `deleted_by` | `uuid` | Yes | — |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_chat_messages_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_chat_messages_deleted_by_fkey`: (`deleted_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_chat_messages_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `clan_chat_messages_pkey`: CREATE UNIQUE INDEX clan_chat_messages_pkey ON public.clan_chat_messages USING btree (id)
+- `idx_clan_chat_messages_clan_created`: CREATE INDEX idx_clan_chat_messages_clan_created ON public.clan_chat_messages USING btree (clan_id, created_at DESC)
+- `idx_clan_chat_messages_user`: CREATE INDEX idx_clan_chat_messages_user ON public.clan_chat_messages USING btree (user_id)
+
+### `clan_invitations`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `invited_user_id` | `uuid` | No | — |
+| `invited_by` | `uuid` | No | — |
+| `token` | `text` | No | — |
+| `expires_at` | `timestamp` | Yes | — |
+| `status` | `text` | No | `'pending'` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `clan_invitations_token_unique`: `token`
+
+**Foreign keys:**
+- `clan_invitations_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_invitations_invited_by_fkey`: (`invited_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_invitations_invited_user_id_fkey`: (`invited_user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- `clan_invitations_status_check`: CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'revoked'::text, 'expired'::text]))
+
+**Indexes:**
+- `clan_invitations_pkey`: CREATE UNIQUE INDEX clan_invitations_pkey ON public.clan_invitations USING btree (id)
+- `clan_invitations_token_unique`: CREATE UNIQUE INDEX clan_invitations_token_unique ON public.clan_invitations USING btree (token)
+- `idx_clan_invitations_clan`: CREATE INDEX idx_clan_invitations_clan ON public.clan_invitations USING btree (clan_id)
+- `idx_clan_invitations_status`: CREATE INDEX idx_clan_invitations_status ON public.clan_invitations USING btree (status)
+- `idx_clan_invitations_user`: CREATE INDEX idx_clan_invitations_user ON public.clan_invitations USING btree (invited_user_id)
+
+### `clan_members`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `role_id` | `uuid` | Yes | — |
+| `joined_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `probation_until` | `timestamp` | Yes | — |
+| `last_active_at` | `timestamp` | Yes | — |
+| `status` | `text` | No | `'active'` |
+| `last_role_change_at` | `timestamp` | Yes | — |
+| `contribution_xp` | `bigint` | No | `0` |
+| `contribution_matches` | `integer` | No | `0` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `clan_members_unique`: `clan_id`, `clan_id`, `user_id`, `user_id`
+
+**Foreign keys:**
+- `clan_members_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_members_role_id_fkey`: (`role_id`) → `clan_roles` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_members_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- `clan_members_status_check`: CHECK (status = ANY (ARRAY['active'::text, 'banned'::text, 'left'::text, 'kicked'::text]))
+
+**Indexes:**
+- `clan_members_pkey`: CREATE UNIQUE INDEX clan_members_pkey ON public.clan_members USING btree (id)
+- `clan_members_unique`: CREATE UNIQUE INDEX clan_members_unique ON public.clan_members USING btree (clan_id, user_id)
+- `idx_clan_members_active_user`: CREATE UNIQUE INDEX idx_clan_members_active_user ON public.clan_members USING btree (user_id) WHERE (status = 'active'::text)
+- `idx_clan_members_clan`: CREATE INDEX idx_clan_members_clan ON public.clan_members USING btree (clan_id)
+- `idx_clan_members_status`: CREATE INDEX idx_clan_members_status ON public.clan_members USING btree (status)
+- `idx_clan_members_user`: CREATE INDEX idx_clan_members_user ON public.clan_members USING btree (user_id)
+
+### `clan_objectives`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `objective_type` | `text` | No | — |
+| `target_value` | `integer` | No | — |
+| `progress_value` | `integer` | No | `0` |
+| `start_at` | `timestamp` | No | — |
+| `end_at` | `timestamp` | No | — |
+| `reward` | `jsonb` | No | `'{}'` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_objectives_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `clan_objectives_pkey`: CREATE UNIQUE INDEX clan_objectives_pkey ON public.clan_objectives USING btree (id)
+- `idx_clan_objectives_clan`: CREATE INDEX idx_clan_objectives_clan ON public.clan_objectives USING btree (clan_id)
+- `idx_clan_objectives_window`: CREATE INDEX idx_clan_objectives_window ON public.clan_objectives USING btree (clan_id, end_at DESC)
+
+### `clan_roles`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id` | `uuid` | No | — |
+| `name` | `varchar(40)` | No | — |
+| `permissions` | `jsonb` | No | `'{}'` |
+| `hierarchy_rank` | `integer` | No | — |
+| `display_order` | `integer` | No | `0` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `clan_roles_hierarchy_unique`: `clan_id`, `clan_id`, `hierarchy_rank`, `hierarchy_rank`
+
+**Foreign keys:**
+- `clan_roles_clan_id_fkey`: (`clan_id`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `clan_roles_hierarchy_unique`: CREATE UNIQUE INDEX clan_roles_hierarchy_unique ON public.clan_roles USING btree (clan_id, hierarchy_rank)
+- `clan_roles_pkey`: CREATE UNIQUE INDEX clan_roles_pkey ON public.clan_roles USING btree (id)
+- `idx_clan_roles_clan`: CREATE INDEX idx_clan_roles_clan ON public.clan_roles USING btree (clan_id)
+- `idx_clan_roles_name_unique`: CREATE UNIQUE INDEX idx_clan_roles_name_unique ON public.clan_roles USING btree (clan_id, lower((name)::text))
+
+### `clan_war_matches`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_war_id` | `uuid` | No | — |
+| `game_id` | `uuid` | Yes | — |
+| `map_id` | `uuid` | Yes | — |
+| `participants` | `jsonb` | No | `'[]'` |
+| `result` | `text` | No | — |
+| `points_awarded` | `integer` | No | `0` |
+| `replay_url` | `text` | Yes | — |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_war_matches_clan_war_id_fkey`: (`clan_war_id`) → `clan_wars` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_war_matches_game_id_fkey`: (`game_id`) → `game_rooms` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `clan_war_matches_map_id_fkey`: (`map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+
+**Check constraints:**
+- `clan_war_matches_result_check`: CHECK (result = ANY (ARRAY['win'::text, 'loss'::text, 'draw'::text]))
+
+**Indexes:**
+- `clan_war_matches_pkey`: CREATE UNIQUE INDEX clan_war_matches_pkey ON public.clan_war_matches USING btree (id)
+- `idx_clan_war_matches_result`: CREATE INDEX idx_clan_war_matches_result ON public.clan_war_matches USING btree (result)
+- `idx_clan_war_matches_war`: CREATE INDEX idx_clan_war_matches_war ON public.clan_war_matches USING btree (clan_war_id)
+
+### `clan_wars`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `clan_id_a` | `uuid` | No | — |
+| `clan_id_b` | `uuid` | No | — |
+| `season_id` | `uuid` | Yes | — |
+| `status` | `text` | No | `'scheduled'` |
+| `scheduled_start` | `timestamp` | Yes | — |
+| `scheduled_end` | `timestamp` | Yes | — |
+| `ruleset` | `jsonb` | No | `'{}'` |
+| `score_json` | `jsonb` | No | `'{}'` |
+| `rewards` | `jsonb` | No | `'{}'` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `clan_wars_clan_id_a_fkey`: (`clan_id_a`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `clan_wars_clan_id_b_fkey`: (`clan_id_b`) → `clans` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- `clan_wars_status_check`: CHECK (status = ANY (ARRAY['scheduled'::text, 'active'::text, 'completed'::text, 'cancelled'::text]))
+
+**Indexes:**
+- `clan_wars_pkey`: CREATE UNIQUE INDEX clan_wars_pkey ON public.clan_wars USING btree (id)
+- `idx_clan_wars_clan_a`: CREATE INDEX idx_clan_wars_clan_a ON public.clan_wars USING btree (clan_id_a)
+- `idx_clan_wars_clan_b`: CREATE INDEX idx_clan_wars_clan_b ON public.clan_wars USING btree (clan_id_b)
+- `idx_clan_wars_status`: CREATE INDEX idx_clan_wars_status ON public.clan_wars USING btree (status)
+
+### `clans`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `owner_user_id` | `uuid` | No | — |
+| `name` | `varchar(64)` | No | — |
+| `tag` | `citext` | No | — |
+| `slug` | `text` | No | — |
+| `motto` | `varchar(120)` | Yes | — |
+| `description` | `text` | Yes | — |
+| `crest_asset_url` | `text` | Yes | — |
+| `banner_asset_url` | `text` | Yes | — |
+| `recruitment_policy` | `text` | No | `'application'` |
+| `recruitment_status` | `text` | No | `'active'` |
+| `minimum_rank` | `integer` | Yes | — |
+| `auto_accept_thresholds` | `jsonb` | No | `'{}'` |
+| `language` | `varchar(16)` | Yes | — |
+| `region` | `varchar(32)` | Yes | — |
+| `time_zone` | `varchar(64)` | Yes | — |
+| `privacy` | `text` | No | `'public'` |
+| `total_xp` | `bigint` | No | `0` |
+| `level` | `integer` | No | `1` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `deleted_at` | `timestamp` | Yes | — |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `clans_slug_unique`: `slug`
+- `clans_tag_unique`: `tag`
+
+**Foreign keys:**
+- `clans_owner_user_id_fkey`: (`owner_user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+
+**Check constraints:**
+- `clans_privacy_check`: CHECK (privacy = ANY (ARRAY['public'::text, 'hidden'::text]))
+- `clans_recruitment_policy_check`: CHECK (recruitment_policy = ANY (ARRAY['open'::text, 'application'::text, 'invite'::text]))
+- `clans_recruitment_status_check`: CHECK (recruitment_status = ANY (ARRAY['active'::text, 'closed'::text]))
+
+**Indexes:**
+- `clans_pkey`: CREATE UNIQUE INDEX clans_pkey ON public.clans USING btree (id)
+- `clans_slug_unique`: CREATE UNIQUE INDEX clans_slug_unique ON public.clans USING btree (slug)
+- `clans_tag_unique`: CREATE UNIQUE INDEX clans_tag_unique ON public.clans USING btree (tag)
+- `idx_clans_created_at`: CREATE INDEX idx_clans_created_at ON public.clans USING btree (created_at DESC)
+- `idx_clans_description_trgm`: CREATE INDEX idx_clans_description_trgm ON public.clans USING gin (description gin_trgm_ops)
+- `idx_clans_name_trgm`: CREATE INDEX idx_clans_name_trgm ON public.clans USING gin (name gin_trgm_ops)
+- `idx_clans_owner`: CREATE INDEX idx_clans_owner ON public.clans USING btree (owner_user_id)
+- `idx_clans_privacy`: CREATE INDEX idx_clans_privacy ON public.clans USING btree (privacy)
+- `idx_clans_region`: CREATE INDEX idx_clans_region ON public.clans USING btree (region)
+- `idx_clans_status`: CREATE INDEX idx_clans_status ON public.clans USING btree (recruitment_status)
+- `idx_clans_tag_trgm`: CREATE INDEX idx_clans_tag_trgm ON public.clans USING gin (((tag)::text) gin_trgm_ops)
 
 ### `content_approval_queue`
 
@@ -327,6 +688,106 @@ Generated on 2025-09-20T01:41:14.730Z
 - `content_approval_queue_pkey`: CREATE UNIQUE INDEX content_approval_queue_pkey ON public.content_approval_queue USING btree (id)
 - `idx_content_approval_queue_content`: CREATE INDEX idx_content_approval_queue_content ON public.content_approval_queue USING btree (content_type, content_id)
 - `idx_content_approval_queue_status`: CREATE INDEX idx_content_approval_queue_status ON public.content_approval_queue USING btree (status)
+
+### `conversation_members`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `conversation_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `role` | `conversation_member_role` | No | `'member'` |
+| `joined_at` | `timestamptz` | No | `now()` |
+| `last_read_message_id` | `char(26)` | Yes | — |
+| `last_read_at` | `timestamptz` | Yes | — |
+| `is_muted` | `boolean` | No | `false` |
+| `is_pinned` | `boolean` | No | `false` |
+| `shadow_muted` | `boolean` | No | `false` |
+| `updated_at` | `timestamptz` | No | `now()` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `conversation_members_conversation_id_user_id_key`: `conversation_id`, `conversation_id`, `user_id`, `user_id`
+
+**Foreign keys:**
+- `conversation_members_conversation_id_fkey`: (`conversation_id`) → `conversations` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `conversation_members_last_read_fk`: (`last_read_message_id`) → `conversation_messages` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `conversation_members_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `conversation_members_conversation_id_user_id_key`: CREATE UNIQUE INDEX conversation_members_conversation_id_user_id_key ON public.conversation_members USING btree (conversation_id, user_id)
+- `conversation_members_pkey`: CREATE UNIQUE INDEX conversation_members_pkey ON public.conversation_members USING btree (id)
+- `idx_conversation_members_conversation`: CREATE INDEX idx_conversation_members_conversation ON public.conversation_members USING btree (conversation_id)
+- `idx_conversation_members_user_state`: CREATE INDEX idx_conversation_members_user_state ON public.conversation_members USING btree (user_id, is_pinned DESC, joined_at DESC)
+
+### `conversation_messages`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `char(26)` | No | `generate_ulid()` |
+| `conversation_id` | `uuid` | No | — |
+| `sender_id` | `uuid` | Yes | — |
+| `body` | `text` | No | — |
+| `json_metadata` | `jsonb` | No | `'{}'` |
+| `created_at` | `timestamptz` | No | `now()` |
+| `updated_at` | `timestamptz` | No | `now()` |
+| `deleted_at` | `timestamptz` | Yes | — |
+| `edited_at` | `timestamptz` | Yes | — |
+| `shadow_muted` | `boolean` | No | `false` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `conversation_messages_conversation_id_fkey`: (`conversation_id`) → `conversations` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `conversation_messages_sender_id_fkey`: (`sender_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `conversation_messages_pkey`: CREATE UNIQUE INDEX conversation_messages_pkey ON public.conversation_messages USING btree (id)
+- `idx_conversation_messages_conversation_created_at`: CREATE INDEX idx_conversation_messages_conversation_created_at ON public.conversation_messages USING btree (conversation_id, created_at DESC)
+- `idx_conversation_messages_json_metadata`: CREATE INDEX idx_conversation_messages_json_metadata ON public.conversation_messages USING gin (json_metadata)
+- `idx_conversation_messages_sender_created_at`: CREATE INDEX idx_conversation_messages_sender_created_at ON public.conversation_messages USING btree (sender_id, created_at DESC)
+
+### `conversations`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `kind` | `conversation_kind` | No | — |
+| `title` | `varchar(255)` | Yes | — |
+| `created_by` | `uuid` | No | — |
+| `created_at` | `timestamptz` | No | `now()` |
+| `updated_at` | `timestamptz` | No | `now()` |
+| `is_archived` | `boolean` | No | `false` |
+| `is_read_only` | `boolean` | No | `false` |
+| `game_id` | `uuid` | Yes | — |
+| `metadata` | `jsonb` | No | `'{}'` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `conversations_created_by_fkey`: (`created_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+- `conversations_game_id_fkey`: (`game_id`) → `game_rooms` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `conversations_pkey`: CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)
+- `idx_conversations_game_id`: CREATE INDEX idx_conversations_game_id ON public.conversations USING btree (game_id)
+- `idx_conversations_kind_created_at`: CREATE INDEX idx_conversations_kind_created_at ON public.conversations USING btree (kind, created_at DESC)
 
 ### `email_verification_logs`
 
@@ -523,6 +984,36 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_game_moves_room_id`: CREATE INDEX idx_game_moves_room_id ON public.game_moves USING btree (room_id)
 - `idx_game_moves_turn`: CREATE INDEX idx_game_moves_turn ON public.game_moves USING btree (room_id, turn_number)
 
+### `game_results`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `room_id` | `uuid` | No | — |
+| `map_id` | `uuid` | Yes | — |
+| `winner_id` | `uuid` | Yes | — |
+| `duration_seconds` | `integer` | Yes | — |
+| `total_turns` | `integer` | No | — |
+| `final_state` | `jsonb` | No | — |
+| `player_summary` | `jsonb` | No | — |
+| `battle_log` | `jsonb` | No | — |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `room_id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `game_results_map_id_fkey`: (`map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+- `game_results_room_id_fkey`: (`room_id`) → `game_rooms` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `game_results_winner_id_fkey`: (`winner_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `game_results_pkey`: CREATE UNIQUE INDEX game_results_pkey ON public.game_results USING btree (room_id)
+
 ### `game_rooms`
 
 | Column | Type | Nullable | Default |
@@ -549,6 +1040,14 @@ Generated on 2025-09-20T01:41:14.730Z
 | `winner_id` | `uuid` | Yes | — |
 | `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 | `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `lifecycle_phase` | `varchar(32)` | No | `'lobby'` |
+| `turn_number` | `integer` | No | `0` |
+| `current_turn_user_id` | `uuid` | Yes | — |
+| `turn_expires_at` | `timestamptz` | Yes | — |
+| `ready_check_started_at` | `timestamptz` | Yes | — |
+| `treasure_config` | `jsonb` | Yes | — |
+| `movement_type` | `text` | Yes | — |
+| `fog_of_war` | `text` | Yes | — |
 
 **Primary key:** `id`
 
@@ -556,8 +1055,9 @@ Generated on 2025-09-20T01:41:14.730Z
 - —
 
 **Foreign keys:**
+- `game_rooms_current_turn_user_id_fkey`: (`current_turn_user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
 - `game_rooms_host_id_fkey`: (`host_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `game_rooms_map_id_fkey`: (`map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+- `game_rooms_map_id_fkey`: (`map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 - `game_rooms_season_id_fkey`: (`season_id`) → `seasons` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
 - `game_rooms_variant_id_fkey`: (`variant_id`) → `game_variants` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
 - `game_rooms_winner_id_fkey`: (`winner_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
@@ -565,7 +1065,7 @@ Generated on 2025-09-20T01:41:14.730Z
 **Check constraints:**
 - `game_rooms_max_players_check`: CHECK (max_players >= 2 AND max_players <= 12)
 - `game_rooms_mode_check`: CHECK (game_mode::text = ANY (ARRAY['classic'::character varying, 'capital'::character varying, 'team'::character varying]::text[]))
-- `game_rooms_status_check`: CHECK (status::text = ANY (ARRAY['waiting'::character varying, 'starting'::character varying, 'in_progress'::character varying, 'finished'::character varying, 'abandoned'::character varying, 'paused'::character varying]::text[]))
+- `game_rooms_status_check`: CHECK (status::text = ANY (ARRAY['lobby'::character varying, 'initializing'::character varying, 'active'::character varying, 'completed'::character varying, 'paused'::character varying, 'abandoned'::character varying]::text[]))
 - `game_rooms_team_check`: CHECK (team_mode = false AND number_of_teams IS NULL OR team_mode = true AND number_of_teams >= 2 AND number_of_teams <= 6)
 - `game_rooms_turn_timer_check`: CHECK (turn_timer >= 10 AND turn_timer <= 300)
 
@@ -689,6 +1189,64 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_game_variants_rating`: CREATE INDEX idx_game_variants_rating ON public.game_variants USING btree (rating DESC)
 - `idx_game_variants_ruleset_gin`: CREATE INDEX idx_game_variants_ruleset_gin ON public.game_variants USING gin (ruleset)
 
+### `map_asset_purge_runs`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `run_type` | `varchar(50)` | No | `'staging'` |
+| `processed_count` | `integer` | No | `0` |
+| `purged_count` | `integer` | No | `0` |
+| `failed_count` | `integer` | No | `0` |
+| `bytes_purged` | `bigint` | No | `0` |
+| `started_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `completed_at` | `timestamp` | Yes | — |
+| `duration_ms` | `integer` | Yes | — |
+| `metadata` | `jsonb` | No | `'{}'` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- —
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `idx_map_asset_purge_runs_type`: CREATE INDEX idx_map_asset_purge_runs_type ON public.map_asset_purge_runs USING btree (run_type, started_at DESC)
+- `map_asset_purge_runs_pkey`: CREATE UNIQUE INDEX map_asset_purge_runs_pkey ON public.map_asset_purge_runs USING btree (id)
+
+### `map_collaborators`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `map_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `role` | `varchar(32)` | No | `'editor'` |
+| `assigned_by` | `uuid` | Yes | — |
+| `assigned_at` | `timestamptz` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `map_id`, `map_id`, `user_id`, `user_id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `map_collaborators_assigned_by_fkey`: (`assigned_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `map_collaborators_map_id_fkey`: (`map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `map_collaborators_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- `map_collaborators_role_check`: CHECK (role::text = ANY (ARRAY['editor'::character varying, 'viewer'::character varying, 'owner'::character varying, 'reviewer'::character varying]::text[]))
+
+**Indexes:**
+- `idx_map_collaborators_map_role`: CREATE INDEX idx_map_collaborators_map_role ON public.map_collaborators USING btree (map_id, role)
+- `idx_map_collaborators_user`: CREATE INDEX idx_map_collaborators_user ON public.map_collaborators USING btree (user_id)
+- `map_collaborators_pkey`: CREATE UNIQUE INDEX map_collaborators_pkey ON public.map_collaborators USING btree (map_id, user_id)
+
 ### `map_continents`
 
 | Column | Type | Nullable | Default |
@@ -782,6 +1340,10 @@ Generated on 2025-09-20T01:41:14.730Z
 | `deleted_at` | `timestamp` | Yes | — |
 | `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 | `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `deletion_attempts` | `integer` | No | `0` |
+| `last_deletion_attempt` | `timestamp` | Yes | — |
+| `last_deletion_error` | `text` | Yes | — |
+| `purged_at` | `timestamp` | Yes | — |
 
 **Primary key:** `id`
 
@@ -1074,6 +1636,14 @@ Generated on 2025-09-20T01:41:14.730Z
 | `rating_average` | `numeric(3, 2)` | Yes | `NULL` |
 | `rating_count` | `integer` | Yes | `0` |
 | `play_count` | `integer` | Yes | `0` |
+| `version` | `integer` | No | `1` |
+| `parent_map_id` | `uuid` | Yes | — |
+| `download_count` | `integer` | No | `0` |
+| `submitted_at` | `timestamp` | Yes | — |
+| `reviewed_at` | `timestamp` | Yes | — |
+| `reviewed_by` | `uuid` | Yes | — |
+| `review_notes` | `text` | Yes | — |
+| `rejection_reason` | `text` | Yes | — |
 
 **Primary key:** `id`
 
@@ -1082,8 +1652,11 @@ Generated on 2025-09-20T01:41:14.730Z
 
 **Foreign keys:**
 - `maps_created_by_fkey`: (`creator_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+- `maps_parent_map_id_fkey`: (`parent_map_id`) → `maps` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+- `maps_reviewed_by_fkey`: (`reviewed_by`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL
 
 **Check constraints:**
+- `maps_download_count_check`: CHECK (download_count >= 0)
 - `maps_min_premium_tier_check`: CHECK (min_premium_tier::text = ANY (ARRAY[NULL::character varying, 'free'::character varying, 'premium'::character varying, 'pro'::character varying, 'enterprise'::character varying]::text[]))
 - `maps_name_length`: CHECK (length(name::text) >= 3)
 - `maps_play_count_check`: CHECK (play_count >= 0)
@@ -1091,6 +1664,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - `maps_rating_average_check`: CHECK (rating_average >= 1::numeric AND rating_average <= 5::numeric)
 - `maps_rating_count_check`: CHECK (rating_count >= 0)
 - `maps_status_check`: CHECK (status::text = ANY (ARRAY['draft'::character varying, 'pending_review'::character varying, 'approved'::character varying, 'rejected'::character varying, 'archived'::character varying]::text[]))
+- `maps_version_check`: CHECK (version >= 1)
 
 **Indexes:**
 - `idx_maps_capital_assignments_gin`: CREATE INDEX idx_maps_capital_assignments_gin ON public.maps USING gin (capital_assignments)
@@ -1105,7 +1679,9 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_maps_name_trgm`: CREATE INDEX idx_maps_name_trgm ON public.maps USING gin (name gin_trgm_ops)
 - `idx_maps_play_count`: CREATE INDEX idx_maps_play_count ON public.maps USING btree (play_count DESC)
 - `idx_maps_rating_average`: CREATE INDEX idx_maps_rating_average ON public.maps USING btree (rating_average) WHERE (rating_average IS NOT NULL)
+- `idx_maps_reviewed_at`: CREATE INDEX idx_maps_reviewed_at ON public.maps USING btree (reviewed_at)
 - `idx_maps_status`: CREATE INDEX idx_maps_status ON public.maps USING btree (status)
+- `idx_maps_submitted_at`: CREATE INDEX idx_maps_submitted_at ON public.maps USING btree (submitted_at)
 - `maps_name_key`: CREATE UNIQUE INDEX maps_name_key ON public.maps USING btree (name)
 - `maps_pkey`: CREATE UNIQUE INDEX maps_pkey ON public.maps USING btree (id)
 
@@ -1143,60 +1719,29 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_matchmaking_queue_skill_rating`: CREATE INDEX idx_matchmaking_queue_skill_rating ON public.matchmaking_queue USING btree (skill_rating)
 - `matchmaking_queue_pkey`: CREATE UNIQUE INDEX matchmaking_queue_pkey ON public.matchmaking_queue USING btree (id)
 
-### `message_link_previews`
+### `message_read_receipts`
 
 | Column | Type | Nullable | Default |
 | --- | --- | --- | --- |
-| `id` | `uuid` | No | `uuid_generate_v4()` |
-| `message_id` | `uuid` | No | — |
-| `url` | `varchar(2000)` | No | — |
-| `title` | `varchar(500)` | Yes | — |
-| `description` | `text` | Yes | — |
-| `image_url` | `varchar(2000)` | Yes | — |
-| `site_name` | `varchar(200)` | Yes | — |
-| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
-
-**Primary key:** `id`
-
-**Unique constraints:**
-- `message_link_previews_message_id_url_key`: `message_id`, `message_id`, `url`, `url`
-
-**Foreign keys:**
-- `message_link_previews_message_id_fkey`: (`message_id`) → `chat_messages` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-
-**Check constraints:**
-- —
-
-**Indexes:**
-- `message_link_previews_message_id_url_key`: CREATE UNIQUE INDEX message_link_previews_message_id_url_key ON public.message_link_previews USING btree (message_id, url)
-- `message_link_previews_pkey`: CREATE UNIQUE INDEX message_link_previews_pkey ON public.message_link_previews USING btree (id)
-
-### `message_reactions`
-
-| Column | Type | Nullable | Default |
-| --- | --- | --- | --- |
-| `id` | `uuid` | No | `uuid_generate_v4()` |
-| `message_id` | `uuid` | No | — |
+| `message_id` | `char(26)` | No | — |
 | `user_id` | `uuid` | No | — |
-| `emoji` | `varchar(10)` | No | — |
-| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `read_at` | `timestamptz` | No | `now()` |
 
-**Primary key:** `id`
+**Primary key:** `message_id`, `message_id`, `user_id`, `user_id`
 
 **Unique constraints:**
-- `message_reactions_message_id_user_id_emoji_key`: `message_id`, `message_id`, `message_id`, `user_id`, `user_id`, `user_id`, `emoji`, `emoji`, `emoji`
+- —
 
 **Foreign keys:**
-- `message_reactions_message_id_fkey`: (`message_id`) → `chat_messages` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `message_reactions_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `message_read_receipts_message_id_fkey`: (`message_id`) → `conversation_messages` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `message_read_receipts_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 
 **Check constraints:**
 - —
 
 **Indexes:**
-- `idx_message_reactions_message_id`: CREATE INDEX idx_message_reactions_message_id ON public.message_reactions USING btree (message_id)
-- `message_reactions_message_id_user_id_emoji_key`: CREATE UNIQUE INDEX message_reactions_message_id_user_id_emoji_key ON public.message_reactions USING btree (message_id, user_id, emoji)
-- `message_reactions_pkey`: CREATE UNIQUE INDEX message_reactions_pkey ON public.message_reactions USING btree (id)
+- `idx_message_read_receipts_user_read_at`: CREATE INDEX idx_message_read_receipts_user_read_at ON public.message_read_receipts USING btree (user_id, read_at DESC)
+- `message_read_receipts_pkey`: CREATE UNIQUE INDEX message_read_receipts_pkey ON public.message_read_receipts USING btree (message_id, user_id)
 
 ### `notifications`
 
@@ -1220,7 +1765,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - `notifications_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 
 **Check constraints:**
-- `notifications_type_check`: CHECK (type::text = ANY (ARRAY['friend_request'::character varying, 'game_invite'::character varying, 'game_started'::character varying, 'game_ended'::character varying, 'achievement'::character varying, 'system'::character varying, 'admin'::character varying]::text[]))
+- `notifications_type_check`: CHECK (type::text = ANY (ARRAY['friend_request'::character varying, 'game_invite'::character varying, 'game_started'::character varying, 'game_ended'::character varying, 'achievement'::character varying, 'system'::character varying, 'admin'::character varying, 'chat_message'::character varying, 'map_submission'::character varying, 'map_review'::character varying, 'map_approved'::character varying, 'map_rejected'::character varying]::text[]))
 
 **Indexes:**
 - `idx_notifications_created_at`: CREATE INDEX idx_notifications_created_at ON public.notifications USING btree (created_at DESC)
@@ -1255,6 +1800,42 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_password_reset_tokens_user_id`: CREATE INDEX idx_password_reset_tokens_user_id ON public.password_reset_tokens USING btree (user_id)
 - `password_reset_tokens_pkey`: CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)
 - `password_reset_tokens_token_key`: CREATE UNIQUE INDEX password_reset_tokens_token_key ON public.password_reset_tokens USING btree (token)
+
+### `player_game_results`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `room_id` | `uuid` | No | — |
+| `user_id` | `uuid` | No | — |
+| `position` | `integer` | No | — |
+| `is_winner` | `boolean` | No | — |
+| `eliminated` | `boolean` | No | — |
+| `territories` | `integer` | No | — |
+| `armies` | `integer` | No | — |
+| `elimination_order` | `integer` | Yes | — |
+| `rating_before` | `integer` | Yes | — |
+| `rating_after` | `integer` | Yes | — |
+| `rating_change` | `integer` | Yes | — |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `player_game_results_room_id_user_id_key`: `room_id`, `room_id`, `user_id`, `user_id`
+
+**Foreign keys:**
+- `player_game_results_room_id_fkey`: (`room_id`) → `game_results` (`room_id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `player_game_results_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `idx_player_game_results_room_position`: CREATE INDEX idx_player_game_results_room_position ON public.player_game_results USING btree (room_id, "position")
+- `idx_player_game_results_user`: CREATE INDEX idx_player_game_results_user ON public.player_game_results USING btree (user_id)
+- `player_game_results_pkey`: CREATE UNIQUE INDEX player_game_results_pkey ON public.player_game_results USING btree (id)
+- `player_game_results_room_id_user_id_key`: CREATE UNIQUE INDEX player_game_results_room_id_user_id_key ON public.player_game_results USING btree (room_id, user_id)
 
 ### `player_stats`
 
@@ -1328,7 +1909,7 @@ Generated on 2025-09-20T01:41:14.730Z
 | --- | --- | --- | --- |
 | `id` | `uuid` | No | `uuid_generate_v4()` |
 | `room_id` | `uuid` | No | — |
-| `user_id` | `uuid` | No | — |
+| `user_id` | `uuid` | Yes | — |
 | `joined_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 | `left_at` | `timestamp` | Yes | — |
 | `player_order` | `integer` | Yes | — |
@@ -1336,6 +1917,12 @@ Generated on 2025-09-20T01:41:14.730Z
 | `is_eliminated` | `boolean` | No | `false` |
 | `elimination_reason` | `varchar(50)` | Yes | — |
 | `team_id` | `integer` | Yes | — |
+| `is_ready` | `boolean` | No | `false` |
+| `ready_at` | `timestamptz` | Yes | — |
+| `is_ai` | `boolean` | No | `false` |
+| `ai_difficulty` | `varchar(20)` | Yes | — |
+| `ai_personality_seed` | `integer` | Yes | — |
+| `ai_player_id` | `uuid` | Yes | — |
 
 **Primary key:** `id`
 
@@ -1349,6 +1936,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - `room_players_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 
 **Check constraints:**
+- `room_players_ai_difficulty_check`: CHECK (ai_difficulty IS NULL OR (ai_difficulty::text = ANY (ARRAY['recruit'::character varying, 'commander'::character varying, 'grandmaster'::character varying]::text[])))
 - `room_players_color_check`: CHECK (color::text = ANY (ARRAY['red'::character varying, 'blue'::character varying, 'green'::character varying, 'yellow'::character varying, 'purple'::character varying, 'orange'::character varying, 'pink'::character varying, 'cyan'::character varying, 'brown'::character varying, 'gray'::character varying, 'lime'::character varying, 'navy'::character varying]::text[]))
 - `room_players_elimination_reason_check`: CHECK ((elimination_reason::text = ANY (ARRAY['defeated'::character varying, 'timeout'::character varying, 'disconnected'::character varying, 'abandoned'::character varying]::text[])) OR elimination_reason IS NULL)
 
@@ -1369,6 +1957,10 @@ Generated on 2025-09-20T01:41:14.730Z
 | `filename` | `varchar(255)` | No | — |
 | `executed_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
 | `status` | `varchar(20)` | No | `'completed'` |
+| `checksum` | `varchar(64)` | Yes | — |
+| `execution_time_ms` | `integer` | No | `0` |
+| `rollback_sql` | `text` | Yes | — |
+| `created_at` | `timestamptz` | Yes | `CURRENT_TIMESTAMP` |
 
 **Primary key:** `id`
 
@@ -1379,7 +1971,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - —
 
 **Check constraints:**
-- `migration_status_check`: CHECK (status::text = ANY (ARRAY['pending'::character varying, 'running'::character varying, 'completed'::character varying, 'failed'::character varying]::text[]))
+- `migration_status_check`: CHECK (status::text = ANY (ARRAY['completed'::character varying, 'failed'::character varying, 'rolled_back'::character varying]::text[]))
 
 **Indexes:**
 - `idx_schema_migrations_filename`: CREATE INDEX idx_schema_migrations_filename ON public.schema_migrations USING btree (filename)
@@ -1542,37 +2134,6 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_transactions_user_id`: CREATE INDEX idx_transactions_user_id ON public.transactions USING btree (user_id)
 - `transactions_pkey`: CREATE UNIQUE INDEX transactions_pkey ON public.transactions USING btree (id)
 
-### `unread_message_counts`
-
-| Column | Type | Nullable | Default |
-| --- | --- | --- | --- |
-| `id` | `uuid` | No | `uuid_generate_v4()` |
-| `user_id` | `uuid` | No | — |
-| `room_id` | `uuid` | Yes | — |
-| `sender_id` | `uuid` | Yes | — |
-| `unread_count` | `integer` | No | `0` |
-| `last_read_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
-| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
-
-**Primary key:** `id`
-
-**Unique constraints:**
-- `unread_message_counts_user_id_room_id_sender_id_key`: `user_id`, `user_id`, `user_id`, `room_id`, `room_id`, `room_id`, `sender_id`, `sender_id`, `sender_id`
-
-**Foreign keys:**
-- `unread_message_counts_room_id_fkey`: (`room_id`) → `game_rooms` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `unread_message_counts_sender_id_fkey`: (`sender_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-- `unread_message_counts_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
-
-**Check constraints:**
-- `unread_count_non_negative`: CHECK (unread_count >= 0)
-- `unread_room_or_dm`: CHECK (room_id IS NOT NULL AND sender_id IS NULL OR room_id IS NULL AND sender_id IS NOT NULL)
-
-**Indexes:**
-- `idx_unread_message_counts_user_id`: CREATE INDEX idx_unread_message_counts_user_id ON public.unread_message_counts USING btree (user_id)
-- `unread_message_counts_pkey`: CREATE UNIQUE INDEX unread_message_counts_pkey ON public.unread_message_counts USING btree (id)
-- `unread_message_counts_user_id_room_id_sender_id_key`: CREATE UNIQUE INDEX unread_message_counts_user_id_room_id_sender_id_key ON public.unread_message_counts USING btree (user_id, room_id, sender_id)
-
 ### `user_account_status`
 
 | Column | Type | Nullable | Default |
@@ -1727,6 +2288,58 @@ Generated on 2025-09-20T01:41:14.730Z
 - `idx_user_behavior_patterns_user_id`: CREATE INDEX idx_user_behavior_patterns_user_id ON public.user_behavior_patterns USING btree (user_id)
 - `user_behavior_patterns_pkey`: CREATE UNIQUE INDEX user_behavior_patterns_pkey ON public.user_behavior_patterns USING btree (id)
 
+### `user_blocks`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `uuid` | No | `uuid_generate_v4()` |
+| `blocker_id` | `uuid` | No | — |
+| `blocked_id` | `uuid` | No | — |
+| `created_at` | `timestamptz` | No | `now()` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- `user_blocks_blocker_id_blocked_id_key`: `blocker_id`, `blocker_id`, `blocked_id`, `blocked_id`
+
+**Foreign keys:**
+- `user_blocks_blocked_id_fkey`: (`blocked_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+- `user_blocks_blocker_id_fkey`: (`blocker_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `idx_user_blocks_blocked`: CREATE INDEX idx_user_blocks_blocked ON public.user_blocks USING btree (blocked_id)
+- `idx_user_blocks_blocker`: CREATE INDEX idx_user_blocks_blocker ON public.user_blocks USING btree (blocker_id, created_at DESC)
+- `user_blocks_blocker_id_blocked_id_key`: CREATE UNIQUE INDEX user_blocks_blocker_id_blocked_id_key ON public.user_blocks USING btree (blocker_id, blocked_id)
+- `user_blocks_pkey`: CREATE UNIQUE INDEX user_blocks_pkey ON public.user_blocks USING btree (id)
+
+### `user_clan_preferences`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `user_id` | `uuid` | No | — |
+| `allow_auto_invites` | `boolean` | No | `true` |
+| `notification_settings` | `jsonb` | No | `'{}'` |
+| `created_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+| `updated_at` | `timestamp` | No | `CURRENT_TIMESTAMP` |
+
+**Primary key:** `user_id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `user_clan_preferences_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `idx_user_clan_preferences_notifications`: CREATE INDEX idx_user_clan_preferences_notifications ON public.user_clan_preferences USING gin (notification_settings)
+- `user_clan_preferences_pkey`: CREATE UNIQUE INDEX user_clan_preferences_pkey ON public.user_clan_preferences USING btree (user_id)
+
 ### `user_feature_flags`
 
 | Column | Type | Nullable | Default |
@@ -1814,8 +2427,12 @@ Generated on 2025-09-20T01:41:14.730Z
 | `game_invites_email` | `boolean` | Yes | `true` |
 | `game_ended_browser` | `boolean` | Yes | `true` |
 | `game_ended_email` | `boolean` | Yes | `false` |
-| `show_online_status` | `boolean` | Yes | `true` |
+| `show_online_status` | `boolean` | No | `true` |
 | `direct_messages` | `varchar(20)` | Yes | `'friends'` |
+| `dm_notifications_browser` | `boolean` | Yes | `true` |
+| `dm_notifications_email` | `boolean` | Yes | `false` |
+| `dm_policy` | `text` | Yes | `'everyone'` |
+| `allow_group_invites` | `boolean` | No | `true` |
 
 **Primary key:** `id`
 
@@ -1826,7 +2443,7 @@ Generated on 2025-09-20T01:41:14.730Z
 - `user_preferences_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
 
 **Check constraints:**
-- —
+- `user_preferences_dm_policy_check`: CHECK (dm_policy = ANY (ARRAY['everyone'::text, 'friends_only'::text, 'no_one'::text]))
 
 **Indexes:**
 - `idx_user_preferences_user_id`: CREATE INDEX idx_user_preferences_user_id ON public.user_preferences USING btree (user_id)
@@ -1968,9 +2585,6 @@ Generated on 2025-09-20T01:41:14.730Z
 **Check constraints:**
 - `user_sessions_duration_positive`: CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
 
-**Notes:**
-- Backend login/registration flows create sessions and update `ended_at`/`duration_seconds` when users log out.
-
 **Indexes:**
 - `idx_user_sessions_device_info_gin`: CREATE INDEX idx_user_sessions_device_info_gin ON public.user_sessions USING gin (device_info)
 - `idx_user_sessions_ended_at`: CREATE INDEX idx_user_sessions_ended_at ON public.user_sessions USING btree (ended_at DESC)
@@ -2072,6 +2686,7 @@ Generated on 2025-09-20T01:41:14.730Z
 | `premium_expires_at` | `timestamp` | Yes | — |
 | `is_beta_user` | `boolean` | Yes | `false` |
 | `bio` | `text` | Yes | — |
+| `deleted_at` | `timestamp` | Yes | — |
 
 **Primary key:** `id`
 
@@ -2103,6 +2718,40 @@ Generated on 2025-09-20T01:41:14.730Z
 - `users_pkey`: CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
 - `users_username_key`: CREATE UNIQUE INDEX users_username_key ON public.users USING btree (username)
 
+### `web_push_subscriptions`
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| `id` | `bigint` | No | `nextval('web_push_subscriptions_id_seq')` |
+| `user_id` | `uuid` | No | — |
+| `endpoint` | `text` | No | — |
+| `subscription` | `jsonb` | No | — |
+| `expiration_time` | `timestamptz` | Yes | — |
+| `p256dh_key` | `text` | Yes | — |
+| `auth_key` | `text` | Yes | — |
+| `failure_count` | `integer` | No | `0` |
+| `last_failure_at` | `timestamptz` | Yes | — |
+| `last_failure_reason` | `text` | Yes | — |
+| `last_success_at` | `timestamptz` | Yes | — |
+| `created_at` | `timestamptz` | No | `now()` |
+| `updated_at` | `timestamptz` | No | `now()` |
+
+**Primary key:** `id`
+
+**Unique constraints:**
+- —
+
+**Foreign keys:**
+- `web_push_subscriptions_user_id_fkey`: (`user_id`) → `users` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+
+**Check constraints:**
+- —
+
+**Indexes:**
+- `web_push_subscriptions_pkey`: CREATE UNIQUE INDEX web_push_subscriptions_pkey ON public.web_push_subscriptions USING btree (id)
+- `web_push_subscriptions_user_endpoint_idx`: CREATE UNIQUE INDEX web_push_subscriptions_user_endpoint_idx ON public.web_push_subscriptions USING btree (user_id, endpoint)
+- `web_push_subscriptions_user_idx`: CREATE INDEX web_push_subscriptions_user_idx ON public.web_push_subscriptions USING btree (user_id)
+
 ## Foreign Key Relationships
 
 | Constraint | From table | Columns | To table | Columns | On Update | On Delete |
@@ -2114,11 +2763,39 @@ Generated on 2025-09-20T01:41:14.730Z
 | `capital_eliminations_room_id_fkey` | `capital_eliminations` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
 | `capital_eliminations_eliminated_player_id_fkey` | `capital_eliminations` | `eliminated_player_id` | `users` | `id` | NO ACTION | CASCADE |
 | `capital_eliminations_eliminating_player_id_fkey` | `capital_eliminations` | `eliminating_player_id` | `users` | `id` | NO ACTION | CASCADE |
-| `chat_messages_room_id_fkey` | `chat_messages` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
-| `chat_messages_recipient_id_fkey` | `chat_messages` | `recipient_id` | `users` | `id` | NO ACTION | CASCADE |
-| `chat_messages_sender_id_fkey` | `chat_messages` | `sender_id` | `users` | `id` | NO ACTION | CASCADE |
+| `clan_activity_log_clan_id_fkey` | `clan_activity_log` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_activity_log_actor_user_id_fkey` | `clan_activity_log` | `actor_user_id` | `users` | `id` | NO ACTION | SET NULL |
+| `clan_announcements_clan_id_fkey` | `clan_announcements` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_announcements_author_user_id_fkey` | `clan_announcements` | `author_user_id` | `users` | `id` | NO ACTION | SET NULL |
+| `clan_applications_clan_id_fkey` | `clan_applications` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_applications_reviewed_by_fkey` | `clan_applications` | `reviewed_by` | `users` | `id` | NO ACTION | SET NULL |
+| `clan_applications_user_id_fkey` | `clan_applications` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `clan_chat_messages_clan_id_fkey` | `clan_chat_messages` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_chat_messages_deleted_by_fkey` | `clan_chat_messages` | `deleted_by` | `users` | `id` | NO ACTION | SET NULL |
+| `clan_chat_messages_user_id_fkey` | `clan_chat_messages` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `clan_invitations_clan_id_fkey` | `clan_invitations` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_invitations_invited_by_fkey` | `clan_invitations` | `invited_by` | `users` | `id` | NO ACTION | SET NULL |
+| `clan_invitations_invited_user_id_fkey` | `clan_invitations` | `invited_user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `clan_members_role_id_fkey` | `clan_members` | `role_id` | `clan_roles` | `id` | NO ACTION | SET NULL |
+| `clan_members_clan_id_fkey` | `clan_members` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_members_user_id_fkey` | `clan_members` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `clan_objectives_clan_id_fkey` | `clan_objectives` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_roles_clan_id_fkey` | `clan_roles` | `clan_id` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_war_matches_clan_war_id_fkey` | `clan_war_matches` | `clan_war_id` | `clan_wars` | `id` | NO ACTION | CASCADE |
+| `clan_war_matches_game_id_fkey` | `clan_war_matches` | `game_id` | `game_rooms` | `id` | NO ACTION | SET NULL |
+| `clan_war_matches_map_id_fkey` | `clan_war_matches` | `map_id` | `maps` | `id` | NO ACTION | SET NULL |
+| `clan_wars_clan_id_a_fkey` | `clan_wars` | `clan_id_a` | `clans` | `id` | NO ACTION | CASCADE |
+| `clan_wars_clan_id_b_fkey` | `clan_wars` | `clan_id_b` | `clans` | `id` | NO ACTION | CASCADE |
+| `clans_owner_user_id_fkey` | `clans` | `owner_user_id` | `users` | `id` | NO ACTION | RESTRICT |
 | `content_approval_queue_admin_user_id_fkey` | `content_approval_queue` | `admin_user_id` | `users` | `id` | NO ACTION | SET NULL |
 | `content_approval_queue_submitter_id_fkey` | `content_approval_queue` | `submitter_id` | `users` | `id` | NO ACTION | CASCADE |
+| `conversation_members_last_read_fk` | `conversation_members` | `last_read_message_id` | `conversation_messages` | `id` | NO ACTION | SET NULL |
+| `conversation_members_conversation_id_fkey` | `conversation_members` | `conversation_id` | `conversations` | `id` | NO ACTION | CASCADE |
+| `conversation_members_user_id_fkey` | `conversation_members` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `conversation_messages_conversation_id_fkey` | `conversation_messages` | `conversation_id` | `conversations` | `id` | NO ACTION | CASCADE |
+| `conversation_messages_sender_id_fkey` | `conversation_messages` | `sender_id` | `users` | `id` | NO ACTION | SET NULL |
+| `conversations_game_id_fkey` | `conversations` | `game_id` | `game_rooms` | `id` | NO ACTION | SET NULL |
+| `conversations_created_by_fkey` | `conversations` | `created_by` | `users` | `id` | NO ACTION | RESTRICT |
 | `email_verification_logs_user_id_fkey` | `email_verification_logs` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `events_user_id_fkey` | `events` | `user_id` | `users` | `id` | NO ACTION | SET NULL |
 | `feature_flag_audit_changed_by_fkey` | `feature_flag_audit` | `changed_by` | `users` | `id` | NO ACTION | NO ACTION |
@@ -2127,9 +2804,13 @@ Generated on 2025-09-20T01:41:14.730Z
 | `friendships_user_id_fkey` | `friendships` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `game_moves_room_id_fkey` | `game_moves` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
 | `game_moves_player_id_fkey` | `game_moves` | `player_id` | `users` | `id` | NO ACTION | CASCADE |
+| `game_results_room_id_fkey` | `game_results` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
+| `game_results_map_id_fkey` | `game_results` | `map_id` | `maps` | `id` | NO ACTION | NO ACTION |
+| `game_results_winner_id_fkey` | `game_results` | `winner_id` | `users` | `id` | NO ACTION | NO ACTION |
 | `game_rooms_variant_id_fkey` | `game_rooms` | `variant_id` | `game_variants` | `id` | NO ACTION | NO ACTION |
-| `game_rooms_map_id_fkey` | `game_rooms` | `map_id` | `maps` | `id` | NO ACTION | NO ACTION |
+| `game_rooms_map_id_fkey` | `game_rooms` | `map_id` | `maps` | `id` | NO ACTION | CASCADE |
 | `game_rooms_season_id_fkey` | `game_rooms` | `season_id` | `seasons` | `id` | NO ACTION | NO ACTION |
+| `game_rooms_current_turn_user_id_fkey` | `game_rooms` | `current_turn_user_id` | `users` | `id` | NO ACTION | NO ACTION |
 | `game_rooms_host_id_fkey` | `game_rooms` | `host_id` | `users` | `id` | NO ACTION | CASCADE |
 | `game_rooms_winner_id_fkey` | `game_rooms` | `winner_id` | `users` | `id` | NO ACTION | NO ACTION |
 | `game_states_room_id_fkey` | `game_states` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
@@ -2139,6 +2820,9 @@ Generated on 2025-09-20T01:41:14.730Z
 | `game_territory_modifiers_template_id_fkey` | `game_territory_modifiers` | `template_id` | `territory_modifier_templates` | `id` | NO ACTION | NO ACTION |
 | `game_territory_modifiers_applied_by_fkey` | `game_territory_modifiers` | `applied_by` | `users` | `id` | NO ACTION | NO ACTION |
 | `game_variants_created_by_fkey` | `game_variants` | `created_by` | `users` | `id` | NO ACTION | SET NULL |
+| `map_collaborators_map_id_fkey` | `map_collaborators` | `map_id` | `maps` | `id` | NO ACTION | CASCADE |
+| `map_collaborators_assigned_by_fkey` | `map_collaborators` | `assigned_by` | `users` | `id` | NO ACTION | SET NULL |
+| `map_collaborators_user_id_fkey` | `map_collaborators` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `map_continents_map_id_fkey` | `map_continents` | `map_id` | `maps` | `id` | NO ACTION | CASCADE |
 | `map_drafts_staging_image_id_fkey` | `map_drafts` | `staging_image_id` | `map_images_staging` | `id` | NO ACTION | SET NULL |
 | `map_drafts_parent_map_id_fkey` | `map_drafts` | `parent_map_id` | `maps` | `id` | NO ACTION | SET NULL |
@@ -2161,13 +2845,16 @@ Generated on 2025-09-20T01:41:14.730Z
 | `map_territory_modifiers_template_id_fkey` | `map_territory_modifiers` | `template_id` | `territory_modifier_templates` | `id` | NO ACTION | NO ACTION |
 | `map_versions_map_id_fkey` | `map_versions` | `map_id` | `maps` | `id` | NO ACTION | CASCADE |
 | `map_versions_changed_by_fkey` | `map_versions` | `changed_by` | `users` | `id` | NO ACTION | SET NULL |
+| `maps_parent_map_id_fkey` | `maps` | `parent_map_id` | `maps` | `id` | NO ACTION | SET NULL |
 | `maps_created_by_fkey` | `maps` | `creator_id` | `users` | `id` | NO ACTION | NO ACTION |
+| `maps_reviewed_by_fkey` | `maps` | `reviewed_by` | `users` | `id` | NO ACTION | SET NULL |
 | `matchmaking_queue_user_id_fkey` | `matchmaking_queue` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
-| `message_link_previews_message_id_fkey` | `message_link_previews` | `message_id` | `chat_messages` | `id` | NO ACTION | CASCADE |
-| `message_reactions_message_id_fkey` | `message_reactions` | `message_id` | `chat_messages` | `id` | NO ACTION | CASCADE |
-| `message_reactions_user_id_fkey` | `message_reactions` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `message_read_receipts_message_id_fkey` | `message_read_receipts` | `message_id` | `conversation_messages` | `id` | NO ACTION | CASCADE |
+| `message_read_receipts_user_id_fkey` | `message_read_receipts` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `notifications_user_id_fkey` | `notifications` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `password_reset_tokens_user_id_fkey` | `password_reset_tokens` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `player_game_results_room_id_fkey` | `player_game_results` | `room_id` | `game_results` | `room_id` | NO ACTION | CASCADE |
+| `player_game_results_user_id_fkey` | `player_game_results` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `player_stats_favorite_map_id_fkey` | `player_stats` | `favorite_map_id` | `maps` | `id` | NO ACTION | NO ACTION |
 | `player_stats_user_id_fkey` | `player_stats` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `rating_history_game_room_id_fkey` | `rating_history` | `game_room_id` | `game_rooms` | `id` | NO ACTION | NO ACTION |
@@ -2176,9 +2863,6 @@ Generated on 2025-09-20T01:41:14.730Z
 | `room_players_user_id_fkey` | `room_players` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `territory_adjacencies_map_id_fkey` | `territory_adjacencies` | `map_id` | `maps` | `id` | NO ACTION | CASCADE |
 | `transactions_user_id_fkey` | `transactions` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
-| `unread_message_counts_room_id_fkey` | `unread_message_counts` | `room_id` | `game_rooms` | `id` | NO ACTION | CASCADE |
-| `unread_message_counts_sender_id_fkey` | `unread_message_counts` | `sender_id` | `users` | `id` | NO ACTION | CASCADE |
-| `unread_message_counts_user_id_fkey` | `unread_message_counts` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_account_status_admin_user_id_fkey` | `user_account_status` | `admin_user_id` | `users` | `id` | NO ACTION | NO ACTION |
 | `user_account_status_user_id_fkey` | `user_account_status` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_achievements_achievement_id_fkey` | `user_achievements` | `achievement_id` | `achievements` | `id` | NO ACTION | CASCADE |
@@ -2189,6 +2873,9 @@ Generated on 2025-09-20T01:41:14.730Z
 | `user_bans_admin_id_fkey` | `user_bans` | `admin_id` | `users` | `id` | NO ACTION | NO ACTION |
 | `user_bans_user_id_fkey` | `user_bans` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_behavior_patterns_user_id_fkey` | `user_behavior_patterns` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+| `user_blocks_blocked_id_fkey` | `user_blocks` | `blocked_id` | `users` | `id` | NO ACTION | CASCADE |
+| `user_blocks_blocker_id_fkey` | `user_blocks` | `blocker_id` | `users` | `id` | NO ACTION | CASCADE |
+| `user_clan_preferences_user_id_fkey` | `user_clan_preferences` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_feature_flags_user_id_fkey` | `user_feature_flags` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_inventory_user_id_fkey` | `user_inventory` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_preferences_user_id_fkey` | `user_preferences` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
@@ -2202,3 +2889,5 @@ Generated on 2025-09-20T01:41:14.730Z
 | `user_settings_user_id_fkey` | `user_settings` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `user_terms_acceptance_user_id_fkey` | `user_terms_acceptance` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
 | `users_vip_granted_by_fkey` | `users` | `vip_granted_by` | `users` | `id` | NO ACTION | NO ACTION |
+| `web_push_subscriptions_user_id_fkey` | `web_push_subscriptions` | `user_id` | `users` | `id` | NO ACTION | CASCADE |
+
