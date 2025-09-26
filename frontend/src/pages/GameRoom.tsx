@@ -245,7 +245,7 @@ export default function GameRoom() {
 
       return sanitized
     },
-    [allowedAiDifficulties, maxAiCapacity, showAiControls],
+    [allowedAiDifficulties, maxAiCapacity],
   )
 
   useEffect(() => {
@@ -265,13 +265,7 @@ export default function GameRoom() {
     if (!aiDraftDirty) {
       setAiDraftCounts(normalizeAiDraftCounts(existingAiCounts))
     }
-  }, [
-    aiDraftDirty,
-    aiPlayersInRoom.length,
-    existingAiCounts,
-    normalizeAiDraftCounts,
-    showAiControls,
-  ])
+  }, [aiDraftDirty, aiPlayersInRoom.length, existingAiCounts, normalizeAiDraftCounts])
 
   const draftTotalAi = allowedAiDifficulties.reduce(
     (sum, difficulty) => sum + (aiDraftCounts[difficulty] ?? 0),
@@ -286,7 +280,7 @@ export default function GameRoom() {
     return AI_DIFFICULTY_ORDER.some(
       (difficulty) => (aiDraftCounts[difficulty] ?? 0) !== (existingAiCounts[difficulty] ?? 0),
     )
-  }, [aiDraftCounts, existingAiCounts, showAiControls])
+  }, [aiDraftCounts, existingAiCounts])
 
   const buildAiOpponentPayload = useCallback(
     (counts: Record<AIDifficulty, number>) => {
