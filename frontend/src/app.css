@@ -200,9 +200,9 @@ This allows themes to work with any color scheme!
   --shadow-2: 0 16px 45px rgba(2, 6, 23, 0.55);
   --shadow-modal: 0 30px 80px rgba(2, 6, 23, 0.7);
 
-  --ck-bg-gradient: linear-gradient(135deg, #0a0a0f 0%, rgba(88, 28, 135, 0.2) 50%, #000000 100%);
-  --body-bg-image: var(--ck-bg-gradient);
-  --body-bg-attachment: fixed;
+  /* Do not set background gradient or attachment here.
+     Each theme (including `default` and `dark`) defines its own
+     --ck-bg-gradient/--body-bg-image to avoid unintended tint bleed. */
 
   --glass-bg: rgba(15, 23, 42, 0.55);
   --glass-bg-light: rgba(17, 24, 39, 0.4);
