@@ -1,7 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { socketService } from '../services/socketService'
-import type { GameState } from '../types/game'
-import type { TradeCardsAction } from '../types/game'
+import type { GameState, TradeCardsAction } from '../types/game'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 import {
   addTerritoryAction,

@@ -57,9 +57,7 @@ export const friendsService = {
   },
 
   async status(otherUserId: string): Promise<RelationshipInfo> {
-    const res = await apiClient.get<RelationshipInfo>(
-      `/friends/status/${otherUserId}`,
-    )
+    const res = await apiClient.get<RelationshipInfo>(`/friends/status/${otherUserId}`)
     return res.data
   },
 }

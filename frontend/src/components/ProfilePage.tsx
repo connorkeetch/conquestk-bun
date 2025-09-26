@@ -1,144 +1,24 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import {
-  getColorDisplayName,
-  getColorValue,
-  PLAYER_COLORS,
-  type PlayerColor,
-  PREMIUM_PLAYER_COLORS,
-} from '../constants/colors'
+import friendsService, {
+  type RelationshipInfo,
+  type RelationshipStatus,
+} from '@/services/friendsService'
+import { ensureDirectConversation, messagesActions } from '@/store/messagesSlice'
+import { getColorDisplayName, getColorValue, PLAYER_COLORS, type PlayerColor, PREMIUM_PLAYER_COLORS } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
-import { useAppSelector } from '../hooks/redux'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
-import friendsService, { type RelationshipStatus } from '@/services/friendsService'
 import { type ProfileSummary, profileService } from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
-import RankInsignia, { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
+import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
+import { ensureReadableOnDark, extractFirstHexColor, getRelativeLuminance, hexToRgba, isGradientValue, lightenColor, mixColors } from '@/utils/color'
 
 type TabType = 'overview' | 'stats' | 'matches' | 'achievements'
 
-const hexToRgba = (hex: string, alpha = 1): string => {
-  const normalized = hex.replace('#', '')
-  if (normalized.length !== 6) {
-    return `rgba(220, 38, 38, ${alpha})`
-  }
-
-  const r = parseInt(normalized.slice(0, 2), 16)
-  const g = parseInt(normalized.slice(2, 4), 16)
-  const b = parseInt(normalized.slice(4, 6), 16)
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-const isGradientValue = (value: string): boolean => {
-  return value.startsWith('linear-gradient') || value.startsWith('radial-gradient')
-}
-
-const clamp = (value: number, min: number, max: number): number => {
-  return Math.min(Math.max(value, min), max)
-}
-
-const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
-  const normalized = hex.replace('#', '')
-  if (normalized.length !== 6) {
-    return null
-  }
-
-  const r = parseInt(normalized.slice(0, 2), 16)
-  const g = parseInt(normalized.slice(2, 4), 16)
-  const b = parseInt(normalized.slice(4, 6), 16)
-
-  if ([r, g, b].some((channel) => Number.isNaN(channel))) {
-    return null
-  }
-
-  return { r, g, b }
-}
-
-const rgbComponentToHex = (component: number): string => {
-  return clamp(Math.round(component), 0, 255).toString(16).padStart(2, '0')
-}
-
-const rgbToHex = (r: number, g: number, b: number): string => {
-  return `#${rgbComponentToHex(r)}${rgbComponentToHex(g)}${rgbComponentToHex(b)}`
-}
-
-// Simple RGB distance to detect color similarity
-const colorDistance = (hexA: string, hexB: string): number => {
-  const a = hexToRgb(hexA)
-  const b = hexToRgb(hexB)
-  if (!a || !b) return Infinity
-  const dr = a.r - b.r
-  const dg = a.g - b.g
-  const db = a.b - b.b
-  return Math.sqrt(dr * dr + dg * dg + db * db)
-}
-
-const mixColors = (hexA: string, hexB: string, amount: number): string => {
-  const rgbA = hexToRgb(hexA)
-  const rgbB = hexToRgb(hexB)
-
-  if (!rgbA || !rgbB) {
-    return hexA
-  }
-
-  const ratio = clamp(amount, 0, 1)
-
-  return rgbToHex(
-    rgbA.r + (rgbB.r - rgbA.r) * ratio,
-    rgbA.g + (rgbB.g - rgbA.g) * ratio,
-    rgbA.b + (rgbB.b - rgbA.b) * ratio,
-  )
-}
-
-const lightenColor = (hex: string, amount: number): string => {
-  return mixColors(hex, '#FFFFFF', amount)
-}
-
-const getRelativeLuminance = (hex: string): number => {
-  const rgb = hexToRgb(hex)
-
-  if (!rgb) {
-    return 0
-  }
-
-  const transform = (channel: number) => {
-    const srgb = channel / 255
-    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
-  }
-
-  const r = transform(rgb.r)
-  const g = transform(rgb.g)
-  const b = transform(rgb.b)
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-const ensureReadableOnDark = (hex: string, minLuminance = 0.3): string => {
-  const baseLuminance = getRelativeLuminance(hex)
-
-  if (baseLuminance >= minLuminance) {
-    return hex
-  }
-
-  const adjustments = [0.35, 0.55, 0.75]
-
-  for (const amount of adjustments) {
-    const candidate = lightenColor(hex, amount)
-    if (getRelativeLuminance(candidate) >= minLuminance) {
-      return candidate
-    }
-  }
-
-  return lightenColor(hex, 0.85)
-}
-
-const extractFirstHexColor = (value: string): string | null => {
-  const match = value.match(/#([0-9a-fA-F]{6})/)
-  return match ? `#${match[1]}` : null
-}
+// color helpers moved to '@/utils/color'
 
 const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootState['settings']) => {
   const fallbackPlayerColor = PLAYER_COLORS[0]
@@ -336,7 +216,9 @@ const ProfilePage: React.FC = () => {
   const requestControllerRef = useRef<AbortController | null>(null)
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
   const [relationship, setRelationship] = useState<RelationshipStatus>('none')
+  const [friendSince, setFriendSince] = useState<string | undefined>(undefined)
   const [relBusy, setRelBusy] = useState<string>('')
+  const dispatch = useAppDispatch()
 
   const isOwnProfile = currentUser?.username === username
 
@@ -407,10 +289,12 @@ const ProfilePage: React.FC = () => {
     const run = async () => {
       try {
         if (!profile || isOwnProfile) return
-        const status = await friendsService.status(profile.id)
-        setRelationship(status)
+        const info: RelationshipInfo = await friendsService.status(profile.id)
+        setRelationship(info.status)
+        setFriendSince(info.since)
       } catch (_e) {
         setRelationship('none')
+        setFriendSince(undefined)
       }
     }
     void run()
@@ -421,8 +305,9 @@ const ProfilePage: React.FC = () => {
     setRelBusy('send')
     try {
       await friendsService.sendRequest(profile.id)
-      const status = await friendsService.status(profile.id)
-      setRelationship(status)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setFriendSince(info.since)
     } finally {
       setRelBusy('')
     }
@@ -433,8 +318,9 @@ const ProfilePage: React.FC = () => {
     setRelBusy('cancel')
     try {
       await friendsService.cancel(profile.id)
-      const status = await friendsService.status(profile.id)
-      setRelationship(status)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setFriendSince(info.since)
     } finally {
       setRelBusy('')
     }
@@ -445,8 +331,9 @@ const ProfilePage: React.FC = () => {
     setRelBusy('accept')
     try {
       await friendsService.accept(profile.id)
-      const status = await friendsService.status(profile.id)
-      setRelationship(status)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setFriendSince(info.since)
     } finally {
       setRelBusy('')
     }
@@ -457,8 +344,9 @@ const ProfilePage: React.FC = () => {
     setRelBusy('decline')
     try {
       await friendsService.decline(profile.id)
-      const status = await friendsService.status(profile.id)
-      setRelationship(status)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setFriendSince(info.since)
     } finally {
       setRelBusy('')
     }
@@ -469,8 +357,22 @@ const ProfilePage: React.FC = () => {
     setRelBusy('unfriend')
     try {
       await friendsService.unfriend(profile.id)
-      const status = await friendsService.status(profile.id)
-      setRelationship(status)
+      const info = await friendsService.status(profile.id)
+      setRelationship(info.status)
+      setFriendSince(info.since)
+    } finally {
+      setRelBusy('')
+    }
+  }
+
+  const startDirectMessage = async () => {
+    if (!profile) return
+    setRelBusy('message')
+    try {
+      const detail = await dispatch(ensureDirectConversation(profile.id)).unwrap()
+      dispatch(messagesActions.setActiveConversationId(detail.conversation.id))
+    } catch (_e) {
+      // noop
     } finally {
       setRelBusy('')
     }
@@ -566,34 +468,15 @@ const ProfilePage: React.FC = () => {
     rankColorIsGradient,
     rankAccentColor,
     rankAccentSoft,
-    rankAccentFaint,
     rankGlowStyle,
-    rankHeaderAccentStyle,
     rankProgressFill,
-    rankCallToActionStyle,
     rankProgress,
     ratingToNextRank,
     rankPrimaryHex,
     rankTextColor,
   } = rankVisuals
 
-  // Detect rank vs. player color conflict (too similar = muddy UI)
-  const hasColorConflict = colorDistance(signatureHex, rankPrimaryHex) < 60
-
-  const rankBadgeStyle: React.CSSProperties = rankColorIsGradient
-    ? {
-        backgroundImage: rawRankColor,
-        borderColor: hexToRgba(rankPrimaryHex, 0.6),
-        boxShadow: `0 8px 24px ${hexToRgba(rankPrimaryHex, 0.35)}`,
-      }
-    : {
-        background: `linear-gradient(140deg, ${hexToRgba(rankPrimaryHex, 0.85)} 0%, ${hexToRgba(
-          rankPrimaryHex,
-          0.55,
-        )} 100%)`,
-        borderColor: hexToRgba(rankPrimaryHex, 0.6),
-        boxShadow: `0 8px 24px ${hexToRgba(rankPrimaryHex, 0.35)}`,
-      }
+  // Removed header rank badge; rank appears only on the dedicated card
 
   // Shift avatar/card accents to signature color to reduce rank dominance
   const avatarRingStyle: React.CSSProperties = {
@@ -624,10 +507,7 @@ const ProfilePage: React.FC = () => {
           className="relative glass-box-lg shadow-2xl mb-8 overflow-hidden border"
           style={{ ...heroBackgroundStyle, borderColor: heroBorderColor }}
         >
-          <div
-            className="absolute inset-0 opacity-80 pointer-events-none"
-            style={signatureGlowStyle}
-          />
+                <div className="absolute inset-0 opacity-80 pointer-events-none" style={signatureGlowStyle} />
           <div
             className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-35 pointer-events-none"
             style={{ background: hexToRgba(signatureHex, 0.4) }}
@@ -636,36 +516,23 @@ const ProfilePage: React.FC = () => {
             {/* Avatar & identity section */}
             <div className="flex flex-col items-center sm:items-start gap-4">
               <div className="relative group">
-                <div
-                  className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-                  style={hasColorConflict ? signatureGlowStyle : rankGlowStyle}
-                />
+                <div className="absolute -inset-4 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60" style={signatureGlowStyle} />
                 <div
                   className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 shadow-2xl transition-transform duration-300 group-hover:scale-105 backdrop-blur-sm"
                   style={avatarRingStyle}
                 >
                   {profile.avatarUrl ? (
-                    <>
-                      <img
-                        src={profile.avatarUrl}
-                        alt={profile.username}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-1/4 px-3 py-1 rounded-full bg-surface-3/90 border border-white/10 shadow-lg flex items-center gap-1 backdrop-blur-sm">
-                        <span className="text-xl" style={{ color: rankAccentColor }}>
-                          {rankDetails.insignia}
-                        </span>
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white">
-                          {rankDetails.name}
-                        </span>
-                      </div>
-                    </>
+                    <img
+                      src={profile.avatarUrl}
+                      alt={profile.username}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center text-4xl sm:text-5xl font-bold text-white drop-shadow-lg"
                       style={signatureCrestStyle}
                     >
-                      <span style={{ color: rankAccentColor }}>{rankDetails.insignia}</span>
+                      {profile.username?.[0]?.toUpperCase() ?? '👤'}
                     </div>
                   )}
                 </div>
@@ -692,9 +559,10 @@ const ProfilePage: React.FC = () => {
                 <h1
                   className="text-3xl sm:text-4xl font-bold mb-1 bg-clip-text text-transparent"
                   style={{
-                    backgroundImage: rankColorIsGradient
-                      ? rawRankColor
-                      : `linear-gradient(120deg, ${rankAccentColor}, ${hexToRgba(rankAccentSoft, 0.6)})`,
+                    backgroundImage: `linear-gradient(120deg, ${hexToRgba(
+                      ensureReadableOnDark(signatureHex),
+                      0.95,
+                    )}, ${hexToRgba(lightenColor(ensureReadableOnDark(signatureHex), 0.35), 0.6)})`,
                   }}
                 >
                   {profile.username}
@@ -706,16 +574,6 @@ const ProfilePage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Rank Display */}
-              <RankInsignia
-                rating={profile.elo}
-                size="lg"
-                showLabel
-                showRating
-                className="justify-center sm:justify-start px-4 py-2 rounded-full border backdrop-blur-sm shadow-inner"
-                style={rankBadgeStyle}
-                textColor={rankTextColor}
-              />
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
                 <span className="flex items-center gap-1">
@@ -750,8 +608,28 @@ const ProfilePage: React.FC = () => {
 
               {!isOwnProfile && (
                 <div className="flex gap-2 mt-2">
+                  {relationship === 'friends' && friendSince && (
+                    <div className="text-xs text-muted self-center">
+                      Friends since {new Date(friendSince).toLocaleDateString()}
+                    </div>
+                  )}
+                  {relationship === 'friends' && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={startDirectMessage}
+                      disabled={relBusy === 'message'}
+                    >
+                      {relBusy === 'message' ? 'Opening…' : 'Message'}
+                    </button>
+                  )}
                   {relationship === 'none' && (
-                    <button type="button" className="btn btn-primary" onClick={sendFriendRequest} disabled={relBusy === 'send'}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={sendFriendRequest}
+                      disabled={relBusy === 'send'}
+                    >
                       {relBusy === 'send' ? 'Sending…' : 'Add Friend'}
                     </button>
                   )}
@@ -760,23 +638,43 @@ const ProfilePage: React.FC = () => {
                       <button type="button" className="btn btn-secondary" disabled>
                         Request Sent
                       </button>
-                      <button type="button" className="btn btn-tertiary" onClick={cancelRequest} disabled={relBusy === 'cancel'}>
+                      <button
+                        type="button"
+                        className="btn btn-tertiary"
+                        onClick={cancelRequest}
+                        disabled={relBusy === 'cancel'}
+                      >
                         Cancel
                       </button>
                     </>
                   )}
                   {relationship === 'pending_incoming' && (
                     <>
-                      <button type="button" className="btn btn-primary" onClick={acceptRequest} disabled={relBusy === 'accept'}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={acceptRequest}
+                        disabled={relBusy === 'accept'}
+                      >
                         Accept
                       </button>
-                      <button type="button" className="btn btn-tertiary" onClick={declineRequest} disabled={relBusy === 'decline'}>
+                      <button
+                        type="button"
+                        className="btn btn-tertiary"
+                        onClick={declineRequest}
+                        disabled={relBusy === 'decline'}
+                      >
                         Decline
                       </button>
                     </>
                   )}
                   {relationship === 'friends' && (
-                    <button type="button" className="btn btn-danger" onClick={unfriend} disabled={relBusy === 'unfriend'}>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={unfriend}
+                      disabled={relBusy === 'unfriend'}
+                    >
                       Unfriend
                     </button>
                   )}
@@ -788,10 +686,16 @@ const ProfilePage: React.FC = () => {
 
         {/* Identity highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="relative glass-box-sm border p-5 overflow-hidden" style={cardStyleNeutralToSignature}>
+          <div
+            className="relative glass-box-sm border p-5 overflow-hidden"
+            style={{
+              borderColor: hexToRgba(rankPrimaryHex, 0.45),
+              backgroundImage: `linear-gradient(180deg, ${hexToRgba(rankPrimaryHex, 0.25)} 0%, rgba(12, 16, 27, 0.9) 90%)`,
+            }}
+          >
             <div
               className="absolute inset-0 opacity-30 pointer-events-none"
-              style={signatureHeaderAccentStyle}
+              style={rankHeaderAccentStyle}
             />
             <div className="relative flex items-center gap-3">
               <div className="text-3xl" style={{ color: rankAccentColor }}>

@@ -1,4 +1,5 @@
 import type { AIDifficulty, GamePhase } from './game'
+import type { TreasureConfig } from '@shared/types'
 
 export type GameLifecycleStatus =
   | 'lobby'
@@ -41,6 +42,7 @@ export interface GameRoom {
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   cardTradeMode?: string | null
   bonusType?: string | null
+  treasureConfig?: TreasureConfig | null
   players?: Player[]
 }
 

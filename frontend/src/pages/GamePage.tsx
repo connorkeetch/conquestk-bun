@@ -1,14 +1,14 @@
+import type { Metal, TreasureConfig, TreasureState } from '@shared/types'
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
-import type { Metal, TreasureConfig, TreasureState } from '@shared/types'
-import { tradeTreasureSet } from '../store/gameActions'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { gameService } from '../services/gameService'
 import { socketService } from '../services/socketService'
+import { tradeTreasureSet } from '../store/gameActions'
 import { clearGame, fetchGameState, setError } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 
@@ -193,7 +193,8 @@ const GamePage: React.FC = () => {
     const set = new Set([a, b, c])
     return set.size === 3 && set.has('bronze') && set.has('silver') && set.has('gold')
   }
-  const includesDiamond = (a: Metal, b: Metal, c: Metal) => a === 'diamond' || b === 'diamond' || c === 'diamond'
+  const includesDiamond = (a: Metal, b: Metal, c: Metal) =>
+    a === 'diamond' || b === 'diamond' || c === 'diamond'
   const isValidSet = (metals: [Metal, Metal, Metal]) => {
     const [a, b, c] = metals
     if (includesDiamond(a, b, c)) return true
@@ -201,7 +202,9 @@ const GamePage: React.FC = () => {
     if (isOneOfEach(a, b, c)) return true
     return false
   }
-  const findRedeemableSets = (hand: Metal[]): Array<{ indices: [number, number, number]; hasDiamond: boolean }> => {
+  const findRedeemableSets = (
+    hand: Metal[],
+  ): Array<{ indices: [number, number, number]; hasDiamond: boolean }> => {
     const matches: Array<{ indices: [number, number, number]; hasDiamond: boolean }> = []
     for (let i = 0; i < hand.length - 2; i++) {
       for (let j = i + 1; j < hand.length - 1; j++) {
@@ -550,7 +553,9 @@ const GamePage: React.FC = () => {
               <button
                 type="button"
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  activeTab === 'treasures' ? 'bg-primary text-white' : 'text-muted hover:text-white'
+                  activeTab === 'treasures'
+                    ? 'bg-primary text-white'
+                    : 'text-muted hover:text-white'
                 }`}
                 onClick={() => setActiveTab('treasures')}
               >
@@ -716,15 +721,31 @@ const GamePage: React.FC = () => {
                               const metals = [hand[a], hand[b], hand[c]] as [Metal, Metal, Metal]
                               const valid = isValidSet(metals)
                               const hasDiamond = includesDiamond(...metals)
-                              const base = getNextPayout(currentGame?.gameConfig?.treasureConfig, currentGame?.treasureState)
-                              const bonus = hasDiamond ? Math.max(0, Math.trunc(currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ?? 0)) : 0
+                              const base = getNextPayout(
+                                currentGame?.gameConfig?.treasureConfig,
+                                currentGame?.treasureState,
+                              )
+                              const bonus = hasDiamond
+                                ? Math.max(
+                                    0,
+                                    Math.trunc(
+                                      currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ?? 0,
+                                    ),
+                                  )
+                                : 0
                               return (
-                                <div className={`p-2 rounded ${valid ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'}`}>
+                                <div
+                                  className={`p-2 rounded ${valid ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'}`}
+                                >
                                   {valid ? (
                                     <span>
-                                      Valid set selected • Payout preview: <strong className="text-foreground">{base + bonus}</strong>
+                                      Valid set selected • Payout preview:{' '}
+                                      <strong className="text-foreground">{base + bonus}</strong>
                                       {bonus > 0 ? (
-                                        <span className="text-muted"> (base {base} + diamond bonus {bonus})</span>
+                                        <span className="text-muted">
+                                          {' '}
+                                          (base {base} + diamond bonus {bonus})
+                                        </span>
                                       ) : null}
                                     </span>
                                   ) : (
@@ -734,7 +755,9 @@ const GamePage: React.FC = () => {
                               )
                             })()
                           ) : (
-                            <div className="p-2 rounded bg-surface-2 text-muted">Select 3 treasures to preview payout</div>
+                            <div className="p-2 rounded bg-surface-2 text-muted">
+                              Select 3 treasures to preview payout
+                            </div>
                           )}
                         </div>
                       )}
@@ -744,13 +767,26 @@ const GamePage: React.FC = () => {
                         const hand = (viewerPlayer.treasures ?? []) as Metal[]
                         const sets = findRedeemableSets(hand)
                         if (sets.length === 0) return null
-                        const base = getNextPayout(currentGame?.gameConfig?.treasureConfig, currentGame?.treasureState)
+                        const base = getNextPayout(
+                          currentGame?.gameConfig?.treasureConfig,
+                          currentGame?.treasureState,
+                        )
                         return (
                           <div className="space-y-2">
-                            <p className="text-xs uppercase tracking-wide text-muted">Suggested sets</p>
+                            <p className="text-xs uppercase tracking-wide text-muted">
+                              Suggested sets
+                            </p>
                             <div className="flex flex-wrap gap-2">
                               {sets.map(({ indices, hasDiamond }, i) => {
-                                const bonus = hasDiamond ? Math.max(0, Math.trunc(currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ?? 0)) : 0
+                                const bonus = hasDiamond
+                                  ? Math.max(
+                                      0,
+                                      Math.trunc(
+                                        currentGame?.gameConfig?.treasureConfig?.diamondSetBonus ??
+                                          0,
+                                      ),
+                                    )
+                                  : 0
                                 const payout = base + bonus
                                 return (
                                   <button
