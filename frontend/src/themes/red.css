@@ -1,5 +1,5 @@
-/* Red Theme */
-:root[data-theme="red"] {
+/* Red Theme - applies to red, red-dark, red-light */
+:root[data-theme^="red"] {
   --color-primary: #dc2626; /* Red primary */
   --color-primary-soft: #ef4444; /* Lighter red for hover */
   --color-secondary: #ffd700; /* Gold secondary */

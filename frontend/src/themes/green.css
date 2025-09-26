@@ -1,5 +1,5 @@
-/* Green Theme */
-:root[data-theme="green"] {
+/* Green Theme - applies to green, green-dark, green-light */
+:root[data-theme^="green"] {
   --color-primary: #10b981; /* Emerald green primary */
   --color-primary-soft: #34d399; /* Lighter emerald for hover */
   --color-secondary: #fbbf24; /* Amber secondary */

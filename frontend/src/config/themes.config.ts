@@ -18,6 +18,18 @@ export interface ThemeConfig {
 // Actual styling is done via CSS in app.css using [data-theme="id"] selectors
 export const THEMES: ThemeDefinition[] = [
   {
+    id: 'dark',
+    name: 'Dark',
+    displayColor: '#111827',
+    description: 'Neutral dark background',
+  },
+  {
+    id: 'light',
+    name: 'Light',
+    displayColor: '#93C5FD',
+    description: 'Neutral light background',
+  },
+  {
     id: 'default',
     name: 'Default',
     displayColor: '#2563EB',
