@@ -152,7 +152,13 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
 
             {!loading && !error && mapData && territoriesForDisplay.length > 0 && (
               <div className="h-[520px]">
-                <CustomMapDisplay mapId={mapId} territories={territoriesForDisplay} />
+                <CustomMapDisplay
+                  mapId={mapId}
+                  territories={territoriesForDisplay}
+                  imageUrl={mapData.map.imageUrl}
+                  mapWidth={mapData.map.imageWidth}
+                  mapHeight={mapData.map.imageHeight}
+                />
               </div>
             )}
 

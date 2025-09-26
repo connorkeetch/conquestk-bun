@@ -18,6 +18,9 @@ interface CustomMapDisplayProps {
   onTerritoryClick?: (territoryId: string) => void
   selectedTerritoryId?: string | null
   playerColors?: Record<string, string>
+  imageUrl?: string
+  mapWidth?: number
+  mapHeight?: number
 }
 
 export default function CustomMapDisplay({
@@ -26,6 +29,9 @@ export default function CustomMapDisplay({
   onTerritoryClick,
   selectedTerritoryId,
   playerColors = {},
+  imageUrl,
+  mapWidth,
+  mapHeight,
 }: CustomMapDisplayProps) {
   const [mapData, setMapData] = useState<{
     imageUrl: string
@@ -36,12 +42,21 @@ export default function CustomMapDisplay({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const hydrateFromProps = () => {
+      if (imageUrl && mapWidth && mapHeight) {
+        setMapData({ imageUrl, width: mapWidth, height: mapHeight })
+        setLoading(false)
+        return true
+      }
+      return false
+    }
+
     const loadMapData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Load map metadata
+        // Load full map payload and read nested map fields
         const apiUrl =
           import.meta.env.MODE === 'production'
             ? `/api/maps/${mapId}`
@@ -57,15 +72,13 @@ export default function CustomMapDisplay({
           throw new Error('Failed to load map')
         }
 
-        const map = await response.json()
-
-        // Extract dimensions from metadata
-        const metadata = typeof map.metadata === 'string' ? JSON.parse(map.metadata) : map.metadata
+        const payload = await response.json()
+        const map = payload?.map ?? payload
 
         setMapData({
           imageUrl: map.imageUrl || map.image_url,
-          width: metadata?.width || 1280,
-          height: metadata?.height || 720,
+          width: map.imageWidth || 1280,
+          height: map.imageHeight || 720,
         })
       } catch (error) {
         logger.error('Failed to load custom map data', error)
@@ -76,9 +89,11 @@ export default function CustomMapDisplay({
     }
 
     if (mapId && mapId !== 'classic') {
-      loadMapData()
+      if (!hydrateFromProps()) {
+        void loadMapData()
+      }
     }
-  }, [mapId])
+  }, [mapId, imageUrl, mapWidth, mapHeight])
 
   if (loading) {
     return (

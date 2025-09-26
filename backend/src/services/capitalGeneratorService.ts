@@ -357,10 +357,17 @@ export class CapitalGeneratorService {
   private async getAdjacencies(mapId: string): Promise<Adjacency[]> {
     const result = await this.db.query(
       `
-      SELECT DISTINCT a.from_territory_id, a.to_territory_id
+      SELECT DISTINCT
+        mt1.id AS from_territory_id,
+        mt2.id AS to_territory_id
       FROM territory_adjacencies a
-      JOIN map_territories t ON a.from_territory_id = t.id
-      WHERE t.map_id = $1
+      JOIN map_territories mt1
+        ON mt1.map_id = a.map_id
+       AND mt1.name = a.territory_from
+      JOIN map_territories mt2
+        ON mt2.map_id = a.map_id
+       AND mt2.name = a.territory_to
+      WHERE a.map_id = $1
     `,
       [mapId],
     )
