@@ -15,6 +15,7 @@ import { isTokenExpired } from './utils/token'
 const CommunityPage = lazyWithRetry(() => import('./pages/CommunityPage'))
 const CreateGamePage = lazyWithRetry(() => import('./pages/CreateGamePage'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
+const FriendsPage = lazyWithRetry(() => import('./pages/FriendsPage'))
 
 const ClanDirectoryPage = lazyWithRetry(() => import('./pages/ClanDirectoryPage'))
 const ClanDetailPage = lazyWithRetry(() => import('./pages/ClanDetailPage'))
@@ -228,6 +229,22 @@ function App() {
                   }
                 >
                   <CommunityPage />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/community/friends"
+            element={
+              <AuthGuard>
+                <Suspense
+                  fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="spinner"></div>
+                    </div>
+                  }
+                >
+                  <FriendsPage />
                 </Suspense>
               </AuthGuard>
             }

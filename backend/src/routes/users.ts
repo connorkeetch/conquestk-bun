@@ -437,3 +437,31 @@ router.put('/change-password', authenticateToken, async (req: Request, res: Resp
 })
 
 export default router
+// Search users by username (prefix/substring)
+router.get('/search', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const raw = (req.query.q ?? req.query.query ?? '').toString().trim()
+    const limit = Math.max(1, Math.min(Number(req.query.limit) || 10, 50))
+
+    if (raw.length < 2) {
+      return res.status(400).json({ error: 'Query must be at least 2 characters' })
+    }
+
+    // Simple ILIKE search on username
+    const result = await query(
+      `
+      SELECT id, username
+      FROM users
+      WHERE username ILIKE $1
+      ORDER BY username ASC
+      LIMIT $2
+    `,
+      [`%${raw}%`, limit],
+    )
+
+    return res.json({ users: result.rows })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to search users', 500, { q: req.query?.q })
+    return res.status(500).json({ error: 'Failed to search users' })
+  }
+})

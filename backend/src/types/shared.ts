@@ -269,6 +269,13 @@ export interface ServerToClientEvents {
     timestamp: string
   }) => void
   'notification:new': (payload: RealtimeNotification) => void
+  // Friends events
+  'friend.request.received': (payload: { requesterId: string; requestedAt: string }) => void
+  'friend.request.accepted': (payload: { userId: string; acceptedAt: string }) => void
+  'friend.request.declined': (payload: { userId: string; at: string }) => void
+  'friend.request.cancelled': (payload: { userId: string; at: string }) => void
+  'friend.added': (payload: { userId: string; at: string }) => void
+  'friend.removed': (payload: { userId: string; at: string }) => void
   'lifecycle:update': (data: {
     roomId: string
     status: GameStatus
