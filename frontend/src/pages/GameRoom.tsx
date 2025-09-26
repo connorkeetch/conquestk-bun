@@ -205,8 +205,8 @@ export default function GameRoom() {
     [roomMaxPlayers, humanPlayersCount],
   )
 
-  const roomIsRanked = Boolean(currentRoom?.isRanked ?? false)
-  const showAiControls = isHost && !roomIsRanked && currentRoom?.status === 'lobby'
+  // In-room AI controls are disabled; AI should be set at creation time
+  const showAiControls = false
 
   const normalizeAiDraftCounts = useCallback(
     (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
@@ -748,14 +748,16 @@ export default function GameRoom() {
                   <h2 className="text-xl font-semibold text-[color:var(--heading)]">
                     Waiting for game to start...
                   </h2>
-                  <p className="text-sm text-muted">Need at least 2 players to begin</p>
-                </div>
-                <div className="w-full max-w-xl">
-                  <RiskGameBoard
-                    onTerritoryClick={(_territoryId) => {
-                      /* noop */
-                    }}
-                  />
+                  <p className="text-sm text-muted">
+                    {(() => {
+                      const total = currentRoom.maxPlayers
+                      const joined = currentRoom.players?.length || 0
+                      const needed = Math.max(0, total - joined)
+                      return needed > 0
+                        ? `Need ${needed} more ${needed === 1 ? 'player' : 'players'} to begin`
+                        : `All players present • ${joined}/${total}`
+                    })()}
+                  </p>
                 </div>
               </div>
             )}
