@@ -68,7 +68,6 @@ const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'))
 
 import { applyTheme, getStoredTheme } from './config/themes.config'
 import { FEATURE_FLAGS } from './constants/featureFlags'
-import { useFeatureFlag } from './hooks/useFeatureFlag'
 import { checkAuth } from './store/authSlice'
 
 const SuspenseFallback = () => (
@@ -78,12 +77,7 @@ const SuspenseFallback = () => (
 )
 
 const AiComingSoonRoute = () => {
-  const aiEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
-
-  if (!aiEnabled) {
-    return <Navigate to="/lobby" replace />
-  }
-
+  // AI preview is now available to everyone
   return (
     <Suspense fallback={<SuspenseFallback />}>
       <ComingSoon

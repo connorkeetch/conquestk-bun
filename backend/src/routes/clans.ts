@@ -8,7 +8,6 @@ import {
   clanMembershipService,
 } from '../services/clanMembershipService'
 import { ClanServiceError, clanService } from '../services/clanService'
-import { featureFlagService } from '../services/featureFlagService'
 import type {
   ClanCreateRequest,
   ClanListFilters,
@@ -29,14 +28,7 @@ const validateRequest = (req: Request, res: Response): boolean => {
   return false
 }
 
-const ensureFeatureEnabled = async (req: Request, res: Response): Promise<boolean> => {
-  const enabled = await featureFlagService.evaluateFlagByName('clans_enabled', req.user)
-  if (!enabled) {
-    res.status(404).json({ message: 'Clan system is not available yet' })
-    return false
-  }
-  return true
-}
+// Clans are generally available
 
 const handleKnownError = (error: unknown, res: Response): boolean => {
   if (error instanceof ClanServiceError) {
@@ -65,6 +57,9 @@ const handleKnownError = (error: unknown, res: Response): boolean => {
   return false
 }
 
+// Temporary feature guard shim (always enabled). Replace with real flag if needed.
+const ensureFeatureEnabled = async (_req: Request, _res: Response): Promise<boolean> => true
+
 router.get(
   '/',
   [
@@ -79,9 +74,7 @@ router.get(
     if (validateRequest(req, res)) return
 
     try {
-      if (!(await ensureFeatureEnabled(req, res))) {
-        return
-      }
+      // no feature gating
 
       const filters: ClanListFilters = {
         search: (req.query.search as string | undefined)?.trim() || undefined,
@@ -129,9 +122,7 @@ router.post(
     if (validateRequest(req as Request, res)) return
 
     try {
-      if (!(await ensureFeatureEnabled(req as Request, res))) {
-        return
-      }
+      // no feature gating
 
       const clanRequest: ClanCreateRequest = {
         name: req.body.name,
@@ -168,9 +159,7 @@ router.get(
     if (validateRequest(req, res)) return
 
     try {
-      if (!(await ensureFeatureEnabled(req, res))) {
-        return
-      }
+      // no feature gating
 
       const clan = await clanService.getClanBySlug(req.params.slug)
       if (!clan) {
@@ -199,9 +188,7 @@ router.post(
     if (validateRequest(req as Request, res)) return
 
     try {
-      if (!(await ensureFeatureEnabled(req as Request, res))) {
-        return
-      }
+      // no feature gating
 
       const clan = await clanService.getClanBySlug(req.params.slug)
       if (!clan) {

@@ -247,10 +247,37 @@ export class BattleWorker {
         attackingArmiesCommitted: attackingArmies,
       })
 
-      // If visibility may have expanded (on conquest), send a filtered snapshot to the attacker
-      if (battleResult.territoryConquered && attackerOwnerId) {
+      // If visibility changed (on conquest), send filtered snapshots to affected players
+      if (battleResult.territoryConquered) {
         const { emitRevealSnapshot } = await import('../services/fogService')
-        await emitRevealSnapshot(this.io as unknown as Server, gameId, attackerOwnerId)
+
+        // Fetch updated state to build correct masks
+        const updatedState = await this.gameService.getGameState(gameId)
+
+        const viewers = new Set<string>()
+        if (attackerOwnerId) viewers.add(attackerOwnerId)
+        if (defenderOwnerId) viewers.add(defenderOwnerId)
+
+        // Include teammates if team play is enabled
+        if (updatedState?.gameConfig?.allowTeamPlay) {
+          const attackerTeam = updatedState.players.find((p) => p.id === attackerOwnerId)?.teamId
+          const defenderTeam = updatedState.players.find((p) => p.id === defenderOwnerId)?.teamId
+
+          if (attackerTeam && attackerTeam > 0) {
+            updatedState.players
+              .filter((p) => p.teamId === attackerTeam)
+              .forEach((p) => viewers.add(p.id))
+          }
+          if (defenderTeam && defenderTeam > 0) {
+            updatedState.players
+              .filter((p) => p.teamId === defenderTeam)
+              .forEach((p) => viewers.add(p.id))
+          }
+        }
+
+        for (const viewerId of viewers) {
+          await emitRevealSnapshot(this.io as unknown as Server, gameId, viewerId, updatedState ?? undefined)
+        }
       }
 
       await jobIdempotencyService.markProcessedJob(this.queue.name, idKey, battleResult, 60 * 60)

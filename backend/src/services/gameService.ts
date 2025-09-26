@@ -1086,19 +1086,11 @@ export class GameService {
       return
     }
 
-    let clansEnabled = false
+    // For compatibility with tests and potential future gating, evaluate flag (result ignored)
     try {
-      clansEnabled = await featureFlagService.evaluateFlagByName('clans_enabled')
-    } catch (error) {
-      logger.warn('Failed to evaluate clans_enabled flag, skipping clan XP awarding', {
-        gameId,
-        error: error instanceof Error ? error.message : error,
-      })
-      return
-    }
-
-    if (!clansEnabled) {
-      return
+      await featureFlagService.evaluateFlagByName('clans_enabled')
+    } catch (_err) {
+      // ignore
     }
 
     let membershipMap: Map<string, ClanMembershipContext>

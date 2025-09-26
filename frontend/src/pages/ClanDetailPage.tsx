@@ -15,8 +15,7 @@ import {
 } from 'lucide-react'
 import { type ReactElement, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FEATURE_FLAGS } from '@/constants/featureFlags'
-import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+// Clan detail is generally available
 import { clanApi } from '@/services/clanService'
 import { socketService } from '@/services/socketService'
 import type {
@@ -441,7 +440,6 @@ const MemberGrid = ({ members }: { members: ClanMember[] }) => {
 
 const ClanDetailPage = () => {
   const { slug } = useParams<{ slug: string }>()
-  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
   const [clan, setClan] = useState<ClanDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -474,22 +472,14 @@ const ClanDetailPage = () => {
       }
     }
 
-    if (clansEnabled) {
-      fetchClan()
-    } else {
-      setIsLoading(false)
-    }
+    fetchClan()
 
     return () => {
       isMounted = false
     }
-  }, [slug, clansEnabled])
+  }, [slug])
 
   useEffect(() => {
-    if (!clansEnabled) {
-      return
-    }
-
     const handleProgressUpdate = (payload: ClanProgressionSocketPayload) => {
       setClan((current) => {
         if (!current || payload.clanId !== current.id) {
@@ -557,7 +547,7 @@ const ClanDetailPage = () => {
 
     const unsubscribe = subscribeToClanProgress(socketService, handleProgressUpdate)
     return unsubscribe
-  }, [clansEnabled])
+  }, [])
 
   const clanCreatedAt = useMemo(() => (clan ? formatDate(clan.createdAt) : null), [clan])
   const objectiveResetAt = useMemo(() => {
@@ -577,20 +567,7 @@ const ClanDetailPage = () => {
     return soonest ? soonest.toISOString() : null
   }, [clan])
 
-  if (!clansEnabled) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="glass-box-lg p-10 text-center max-w-2xl mx-auto">
-          <Shield className="w-12 h-12 text-primary-soft mx-auto mb-4" />
-          <h1 className="text-3xl font-semibold text-white mb-2">Clan intel classified</h1>
-          <p className="text-muted text-lg">
-            We're still battening down the hatches for the clan rollout. Check back soon for
-            detailed clan dossiers.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  // No feature gating
 
   if (isLoading) {
     return (

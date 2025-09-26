@@ -2,10 +2,9 @@ import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
-import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { PLAYER_COLORS, getColorValue, type PlayerColor } from '@/constants/colors'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
-import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+// Clans are now generally available; no feature flag gating
 import friendsService from '@/services/friendsService'
 import { notificationService } from '@/services/notificationService'
 import { socketService } from '@/services/socketService'
@@ -40,7 +39,7 @@ export default function Header() {
   const [pendingFriends, setPendingFriends] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
-  const clansEnabled = useFeatureFlag(FEATURE_FLAGS.CLANS_CORE)
+  const clansEnabled = true
   const unreadMessages = useAppSelector(selectTotalUnreadMessages)
 
   // Derive a small bubble style using the user's preferred color
@@ -108,13 +107,10 @@ export default function Header() {
     { path: '/maps', label: 'Maps', icon: '🗺️' },
     { path: '/map-editor', label: 'Map Editor', icon: '✏️' },
     { path: '/community', label: 'Community', icon: '👥' },
+    { path: '/clans', label: 'Clans', icon: '🛡️' },
     { path: '/tutorial', label: 'How to Play', icon: '📚' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
-
-  if (clansEnabled) {
-    menuItems.splice(5, 0, { path: '/clans', label: 'Clans', icon: '🛡️' })
-  }
 
   if (user?.isAdmin) {
     menuItems.push({ path: '/admin', label: 'Admin', icon: '🛡️' })
@@ -163,14 +159,12 @@ export default function Header() {
         },
       )
 
-      if (clansEnabled) {
-        base.push({
-          to: '/clans',
-          label: 'Clans',
-          icon: '🛡️',
-          isActive: location.pathname.startsWith('/clans'),
-        })
-      }
+      base.push({
+        to: '/clans',
+        label: 'Clans',
+        icon: '🛡️',
+        isActive: location.pathname.startsWith('/clans'),
+      })
 
       base.push({
         to: '/tutorial',
@@ -215,14 +209,12 @@ export default function Header() {
         },
       )
 
-      if (clansEnabled) {
-        base.push({
-          to: '/clans',
-          label: 'Clans',
-          icon: '🛡️',
-          isActive: location.pathname.startsWith('/clans'),
-        })
-      }
+      base.push({
+        to: '/clans',
+        label: 'Clans',
+        icon: '🛡️',
+        isActive: location.pathname.startsWith('/clans'),
+      })
 
       base.push({
         to: '/tutorial',
@@ -233,7 +225,7 @@ export default function Header() {
     }
 
     return base
-  }, [clansEnabled, isAuthenticated, location.pathname, user?.isAdmin])
+  }, [isAuthenticated, location.pathname, user?.isAdmin])
 
   const sanitizedUsername = user?.username ? sanitizeText(user.username) : ''
   const userInitial = sanitizedUsername ? sanitizedUsername.charAt(0).toUpperCase() : '👤'

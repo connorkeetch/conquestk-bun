@@ -11,15 +11,10 @@ export const FEATURE_FLAGS = {
 
   // UI Features
   MAP_POLYGON_EDITOR: 'ui_map_polygon_editor',
-  CLANS_CORE: 'clans_enabled',
   COMING_SOON_UI: 'ui_coming_soon_placeholders',
 
   // Experimental Features
-  AI_PLAYERS: 'experimental_ai_players',
-  AI_LOBBY_OPTIONS: 'experimental_ai_lobby_options',
-  AI_RECRUIT: 'experimental_ai_recruit',
-  AI_COMMANDER: 'experimental_ai_commander',
-  AI_GRANDMASTER: 'experimental_ai_grandmaster',
+  // (AI features are now generally available; flags removed)
 } as const
 
 export type FeatureFlagName = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]

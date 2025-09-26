@@ -3,9 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
-import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
 import { socketService } from '../services/socketService'
@@ -50,11 +48,7 @@ export default function GameRoom() {
   const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const aiPlayersEnabled = useFeatureFlag(FEATURE_FLAGS.AI_PLAYERS)
-  const aiLobbyEnabled = useFeatureFlag(FEATURE_FLAGS.AI_LOBBY_OPTIONS)
-  const aiRecruitEnabled = useFeatureFlag(FEATURE_FLAGS.AI_RECRUIT)
-  const aiCommanderEnabled = useFeatureFlag(FEATURE_FLAGS.AI_COMMANDER)
-  const aiGrandmasterEnabled = useFeatureFlag(FEATURE_FLAGS.AI_GRANDMASTER)
+  // AI opponents generally available in non-ranked lobbies (no flags)
   const [aiDraftCounts, setAiDraftCounts] = useState<Record<AIDifficulty, number>>({
     recruit: 0,
     commander: 0,
@@ -165,13 +159,10 @@ export default function GameRoom() {
     return counts
   }, [aiPlayersInRoom])
 
-  const flaggedAiDifficulties = useMemo(() => {
-    const difficulties: AIDifficulty[] = []
-    if (aiRecruitEnabled) difficulties.push('recruit')
-    if (aiCommanderEnabled) difficulties.push('commander')
-    if (aiGrandmasterEnabled) difficulties.push('grandmaster')
-    return difficulties
-  }, [aiRecruitEnabled, aiCommanderEnabled, aiGrandmasterEnabled])
+  const flaggedAiDifficulties = useMemo(
+    () => ['recruit', 'commander', 'grandmaster'] as AIDifficulty[],
+    [],
+  )
 
   const allowedAiDifficulties = useMemo(() => {
     const allowed = new Set<AIDifficulty>(flaggedAiDifficulties)
@@ -195,8 +186,7 @@ export default function GameRoom() {
   )
 
   const roomIsRanked = Boolean(currentRoom?.isRanked ?? false)
-  const showAiControls =
-    aiPlayersEnabled && aiLobbyEnabled && isHost && !roomIsRanked && currentRoom?.status === 'lobby'
+  const showAiControls = isHost && !roomIsRanked && currentRoom?.status === 'lobby'
 
   const normalizeAiDraftCounts = useCallback(
     (counts: Record<AIDifficulty, number>): Record<AIDifficulty, number> => {
