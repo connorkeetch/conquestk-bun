@@ -19,6 +19,7 @@ export interface CreateRoomData {
     difficulty: AIDifficultyOption
     personalitySeed?: number | null
   }>
+  treasureConfig?: unknown
 }
 
 interface GameRoomRow {
@@ -46,6 +47,7 @@ interface GameRoomRow {
   fog_of_war?: string | null
   card_trade_mode?: string | null
   bonus_type?: string | null
+  treasure_config?: unknown | null
   team_mode?: boolean | string | null
   number_of_teams?: number | null
   game_started?: boolean | null
@@ -449,6 +451,10 @@ export class GameRoomService {
       fogOfWar: this.normalizeFogOfWar(row.fog_of_war),
       cardTradeMode: typeof row.card_trade_mode === 'string' ? row.card_trade_mode : undefined,
       bonusType: typeof row.bonus_type === 'string' ? row.bonus_type : undefined,
+      treasureConfig: (row.treasure_config ?? undefined) as
+        | import('../types/game').TreasureConfig
+        | null
+        | undefined,
       currentPlayers: aggregatedCurrentPlayers ?? (players ? players.length : undefined),
       hostUsername: (row as Partial<ActiveGameRoomRow>).host_username ?? undefined,
       hostSkillRating: this.parseNullableNumber(
@@ -533,10 +539,11 @@ export class GameRoomService {
           team_mode,
           number_of_teams,
           is_ranked,
+          treasure_config,
           status,
           lifecycle_phase
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'lobby', 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'lobby', 'lobby')
         RETURNING *
       `
 
@@ -550,6 +557,7 @@ export class GameRoomService {
         allowTeamPlay,
         normalizedNumberOfTeams,
         roomData.isRanked || false,
+        roomData.treasureConfig ? JSON.stringify(roomData.treasureConfig) : null,
       ])
 
       const createdRoom = insertResult.rows[0]

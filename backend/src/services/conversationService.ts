@@ -1679,7 +1679,16 @@ export async function listConversationsForUser(
   const result = await query<ConversationListRow>(
     `
     SELECT
-      ${CONVERSATION_COLUMNS},
+      c.id,
+      c.kind,
+      c.title,
+      c.created_by,
+      c.created_at,
+      c.updated_at,
+      c.is_archived,
+      c.is_read_only,
+      c.game_id,
+      c.metadata,
       cm.role AS member_role,
       cm.joined_at,
       cm.is_muted,
