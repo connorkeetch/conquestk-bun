@@ -180,7 +180,9 @@ This allows themes to work with any color scheme!
    - Being the explicit "light" theme id
    - Being listed here as a one-off light theme (e.g. retrospace)
    To add another light-only theme id, include it in the :not(...) list below. */
-:root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not([data-theme="light"]) {
+:root[data-theme]:not([data-theme="retrospace"]):not([data-theme$="-light"]):not(
+    [data-theme="light"]
+  ) {
   --text: #f9fafb;
   --text-muted: #94a3b8;
   --heading: #f9fafb;

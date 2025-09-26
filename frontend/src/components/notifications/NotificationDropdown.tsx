@@ -1,5 +1,5 @@
 import { Bell, MessageSquare } from 'lucide-react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { type RefObject, useEffect, useRef, useState } from 'react'
 import { notificationService } from '@/services/notificationService'
 import type { Notification } from '@/types/notification'
 
