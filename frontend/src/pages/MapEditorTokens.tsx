@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { generateCapitalAssignments } from '../utils/capitalGenerator'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -17,6 +16,18 @@ import mapWorkflowApi, {
   type MapDraftPayload,
   type MapDraftResponse,
 } from '../services/mapWorkflowService'
+import { generateCapitalAssignments } from '../utils/capitalGenerator'
+
+function computeMapSizeCategory(
+  count: number,
+): 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive' {
+  if (!Number.isFinite(count) || count <= 0) return 'Small'
+  if (count <= 35) return 'Small'
+  if (count <= 45) return 'Medium'
+  if (count <= 65) return 'Large'
+  if (count <= 90) return 'Very Large'
+  return 'Massive'
+}
 
 interface Territory {
   id: string
@@ -677,8 +688,7 @@ export default function MapEditorTokens() {
 
   const mapNameId = useId()
   const mapDescriptionId = useId()
-  const minPlayersId = useId()
-  const maxPlayersId = useId()
+  // Deprecated: replace recommended players with auto map size category
   const capitalPlayerCountId = useId()
   const placementContinentSelectId = useId()
   const continentColorInputId = useId()
@@ -2152,8 +2162,11 @@ export default function MapEditorTokens() {
         connections: Array.isArray(t.connections) ? t.connections : [],
       }))
 
-      const { assignments, generatedCounts, skippedCounts, warnings } =
-        generateCapitalAssignments(territories, state.minPlayers, state.maxPlayers)
+      const { assignments, generatedCounts, skippedCounts, warnings } = generateCapitalAssignments(
+        territories,
+        state.minPlayers,
+        state.maxPlayers,
+      )
 
       if (Object.keys(assignments).length === 0) {
         alert(
@@ -2347,36 +2360,11 @@ export default function MapEditorTokens() {
               />
             </div>
             <div className="mb-4">
-              <label htmlFor={minPlayersId} className="block text-sm mb-1">
-                Min Players: {state.minPlayers}
-              </label>
-              <input
-                id={minPlayersId}
-                type="range"
-                min="2"
-                max="8"
-                value={state.minPlayers}
-                onChange={(e) =>
-                  setState((prev) => ({ ...prev, minPlayers: Number(e.target.value) }))
-                }
-                className="w-full"
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor={maxPlayersId} className="block text-sm mb-1">
-                Max Players: {state.maxPlayers}
-              </label>
-              <input
-                id={maxPlayersId}
-                type="range"
-                min="2"
-                max="12"
-                value={state.maxPlayers}
-                onChange={(e) =>
-                  setState((prev) => ({ ...prev, maxPlayers: Number(e.target.value) }))
-                }
-                className="w-full"
-              />
+              <div className="text-sm mb-1">Map Size</div>
+              <div className="rounded border border-border bg-surface-1 px-3 py-2 text-white flex items-center justify-between">
+                <span>{computeMapSizeCategory(state.territories.length)} </span>
+                <span className="text-muted text-xs">{state.territories.length} territories</span>
+              </div>
             </div>
             {/* Image options consolidated under Properties */}
             <div className="mb-6">

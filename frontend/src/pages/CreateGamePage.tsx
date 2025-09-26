@@ -190,7 +190,7 @@ const CreateGamePage: React.FC = () => {
   const navigate = useNavigate()
   const settings = useAppSelector((state) => state.settings)
   const guntsPrescriptions = useFeatureFlag('gunts_prescriptions')
-  const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
+  // Removed tournament visibility option; comingSoon UI flag not needed here
   const territoryModifiersEnabled = useFeatureFlag(FEATURE_FLAGS.TERRITORY_MODIFIERS)
   const [searchParams] = useSearchParams()
 
@@ -201,9 +201,7 @@ const CreateGamePage: React.FC = () => {
   const preferredColor = settings.game?.preferredColor || PLAYER_COLORS[0]
 
   // Form state
-  const [gameVisibility, setGameVisibility] = useState<'public' | 'private' | 'tournament'>(
-    'public',
-  )
+  const [gameVisibility, setGameVisibility] = useState<'public' | 'private'>('public')
   const [inviteCode, setInviteCode] = useState(localStorage.getItem('lastInviteCode') || '')
   const [gameName, setGameName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(6)
@@ -760,16 +758,6 @@ const CreateGamePage: React.FC = () => {
                 >
                   🔒 Private
                 </button>
-                {comingSoonUiEnabled && (
-                  <button
-                    type="button"
-                    disabled
-                    className="btn btn-secondary flex-1 flex-col items-start gap-1 text-left"
-                  >
-                    🏆 Tournament
-                    <p className="text-xs opacity-70 mt-0.5">Coming soon</p>
-                  </button>
-                )}
               </div>
             </div>
 
@@ -851,13 +839,13 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setGameMode('random')}
-                className={choiceClass(
-                  gameMode === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1',
-                )}
+                className={
+                  choiceClass(gameMode === 'random', 'w-full p-3 text-left flex flex-col gap-1') +
+                  ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                }
               >
-                <div className="font-medium text-[color:var(--heading)]">🎲 Random</div>
-                <p className="text-xs text-muted">Game mode chosen when game starts</p>
+                <div className="font-medium">🎲 Random</div>
+                <p className="text-xs opacity-90">Game mode chosen when game starts</p>
               </button>
             )}
           </div>
@@ -950,10 +938,10 @@ const CreateGamePage: React.FC = () => {
               {!isRanked && (
                 <button
                   type="button"
-                  className={choiceClass(
+                  className={`${choiceClass(
                     playersOption === 'random',
                     'p-3 text-center font-bold transition-all duration-200',
-                  )}
+                  )} bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white`}
                   onClick={() => setPlayersOption('random')}
                 >
                   🎲
@@ -1093,15 +1081,13 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTeams('random')}
-                className={choiceClass(
-                  teams === 'random',
-                  'w-full p-3 text-left flex flex-col gap-1',
-                )}
+                className={
+                  choiceClass(teams === 'random', 'w-full p-3 text-left flex flex-col gap-1') +
+                  ' bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                }
               >
-                <div className="font-medium text-sm text-[color:var(--heading)]">
-                  🎲 Random Teams
-                </div>
-                <p className="text-xs text-muted">Team configuration chosen when game starts</p>
+                <div className="font-medium text-sm">🎲 Random Teams</div>
+                <p className="text-xs opacity-90">Team configuration chosen when game starts</p>
               </button>
             )}
           </div>
@@ -1166,13 +1152,13 @@ const CreateGamePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFortification('random')}
-                className={choiceClass(
+                className={`${choiceClass(
                   fortification === 'random',
                   'w-full p-3 text-left flex flex-col gap-1',
-                )}
+                )} bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white`}
               >
-                <div className="font-medium text-sm text-[color:var(--heading)]">🎲 Random</div>
-                <p className="text-xs text-muted">Fortification type chosen when game starts</p>
+                <div className="font-medium text-sm">🎲 Random</div>
+                <p className="text-xs opacity-90">Fortification type chosen when game starts</p>
               </button>
             )}
           </div>
@@ -1183,9 +1169,14 @@ const CreateGamePage: React.FC = () => {
         {/* 7. Hidden Treasures Card */}
         <OptionCard number={getStepNumber(7)} title="Hidden Treasures">
           <div className="space-y-4">
+            {/* Brief description */}
+            <p className="text-xs text-muted">
+              Hidden Treasures replace classic spoils. Capture territories to earn treasure cards
+              and turn in sets for troop reinforcements based on the payout mode.
+            </p>
             <div>
               <p className="text-xs text-muted mb-2">Payout Mode</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <button
                   type="button"
                   className={choiceClass(
@@ -1253,16 +1244,38 @@ const CreateGamePage: React.FC = () => {
               </div>
             )}
 
-            <div className="text-xs text-muted">
-              Diamond chance is fixed at 8%. Hand limit is 5 and Diamond set bonus is +3.
-            </div>
+            {/* Removed: implementation details text per request */}
           </div>
         </OptionCard>
 
         {/* 9. Advanced Options Card */}
         <OptionCard number={getStepNumber(8)} title="Advanced Options">
           <div className="space-y-4">
-            {/* Territory Modifiers toggle (map-defined only) */}
+            {/* Fog of War first, full-width Enabled/Disabled */}
+            <div>
+              <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">Fog of War</h4>
+              <p className="text-xs text-muted mb-2">
+                When enabled, you see your territories and their neighbors.
+              </p>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setFogOfWar('off')}
+                  className={choiceClass(fogOfWar === 'off', 'w-full px-3 py-2 text-left')}
+                >
+                  Disabled
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFogOfWar('adjacent')}
+                  className={choiceClass(fogOfWar === 'adjacent', 'w-full px-3 py-2 text-left')}
+                >
+                  Enabled
+                </button>
+              </div>
+            </div>
+
+            {/* Territory Modifiers now Enabled/Disabled full-width buttons */}
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-[color:var(--heading)]">
                 Territory Modifiers
@@ -1271,42 +1284,23 @@ const CreateGamePage: React.FC = () => {
                 When enabled, the game uses any modifiers predefined on the selected map (no random
                 distribution).
               </p>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="accent-violet"
-                  checked={useTerritoryModifiers}
-                  onChange={(e) => setUseTerritoryModifiers(e.target.checked)}
-                />
-                <span className="text-sm">Use map-defined territory modifiers</span>
-              </label>
-            </div>
-            {/* Fog of War Section (On/Off, adjacent only) */}
-            <div>
-              <h4 className="text-sm font-medium text-[color:var(--heading)] mb-2">Fog of War</h4>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => setFogOfWar('off')}
-                  className={choiceClass(fogOfWar === 'off', 'flex-1 px-3 py-2 text-left')}
+                  onClick={() => setUseTerritoryModifiers(false)}
+                  className={choiceClass(!useTerritoryModifiers, 'w-full px-3 py-2 text-left')}
                 >
-                  ☀️ Off
+                  Disabled
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFogOfWar('adjacent')}
-                  className={choiceClass(fogOfWar === 'adjacent', 'flex-1 px-3 py-2 text-left')}
+                  onClick={() => setUseTerritoryModifiers(true)}
+                  className={choiceClass(useTerritoryModifiers, 'w-full px-3 py-2 text-left')}
                 >
-                  🔗 On (Adjacent)
+                  Enabled
                 </button>
               </div>
-              <p className="text-xs text-muted mt-2">
-                When enabled, you see your territories and their neighbors. Visibility is not
-                persistent across turns.
-              </p>
             </div>
-
-            {/* Territory Modifiers distribution options removed; map-defined only via checkbox above */}
           </div>
         </OptionCard>
 
@@ -1443,9 +1437,11 @@ const CreateGamePage: React.FC = () => {
                         className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
                           selectedMap === map.id
                             ? map.id === 'random'
-                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg'
+                              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
                               : 'theme-selected shadow-lg'
-                            : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                            : map.id === 'random'
+                              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white/90 hover:opacity-95'
+                              : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
                         }`}
                         onClick={() => setSelectedMap(map.id)}
                       >
