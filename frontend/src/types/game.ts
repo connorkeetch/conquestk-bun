@@ -21,7 +21,7 @@ import type {
   Territory as SharedTerritory,
   TerritoryAbility,
   TradeCardsAction,
-} from '../../../shared/types'
+} from '@shared/types'
 
 // Re-export shared types
 export type {

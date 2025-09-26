@@ -2,7 +2,6 @@
  * Type-safe API client with proper error handling
  */
 
-import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import type {
   AdminDashboardStats,
   ApiResponse,
@@ -15,7 +14,8 @@ import type {
   RegisterResponse,
   User,
   UserStats,
-} from '../../../shared/types'
+} from '@shared/types'
+import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { API_URL } from '../config'
 
 // Custom error class for API errors

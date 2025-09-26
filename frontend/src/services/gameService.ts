@@ -1,3 +1,4 @@
+import type { TreasureConfig } from '@shared/types'
 import axios from 'axios'
 import type { AIDifficulty, GameState } from '../types/game'
 import type { GameRoom } from '../types/gameRoom'
@@ -37,6 +38,8 @@ export interface CreateGameData {
     difficulty: AIDifficulty
     personalitySeed?: number | null
   }>
+  // Optional Hidden Treasures configuration for the game
+  treasureConfig?: Partial<TreasureConfig>
 }
 
 export interface JoinGameResponse {

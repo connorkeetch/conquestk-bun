@@ -275,6 +275,21 @@ export class GameLifecycleService {
       configOverrides.gameMode = room.gameMode
     }
 
+    // Inject Hidden Treasures configuration if provided at room creation
+    try {
+      const { cacheService } = await import('./cacheService')
+      const { normalizeTreasureConfig } = await import('../game/hiddenTreasures')
+      const cached = await cacheService.get<Partial<GameConfiguration['treasureConfig']>>(
+        `room:treasure-config:${roomId}`,
+      )
+      if (cached && typeof cached === 'object') {
+        configOverrides.treasureConfig = normalizeTreasureConfig(cached ?? undefined)
+        await cacheService.delete(`room:treasure-config:${roomId}`)
+      }
+    } catch (_error) {
+      // Non-fatal: continue with defaults
+    }
+
     const gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
 
     // Initialize capitals if requested and possible

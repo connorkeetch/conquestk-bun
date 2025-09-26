@@ -19,7 +19,7 @@ export interface RedeemResult {
 
 const CLASSIC_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
 
-const DEFAULT_CONFIG: TreasureConfig = {
+const DEFAULT_CONFIG: Required<TreasureConfig> = {
   enabled: true,
   diamondsPercent: 0.07,
   payoutMode: 'triangular',
@@ -44,7 +44,9 @@ export function normalizeTreasureConfig(config?: Partial<TreasureConfig>): Treas
   }
 
   merged.diamondsPercent = clampDiamondsPercent(
-    typeof merged.diamondsPercent === 'number' ? merged.diamondsPercent : DEFAULT_CONFIG.diamondsPercent,
+    typeof merged.diamondsPercent === 'number'
+      ? merged.diamondsPercent
+      : DEFAULT_CONFIG.diamondsPercent,
   )
 
   if (merged.payoutMode === 'fixed') {
@@ -108,7 +110,7 @@ export function getPayout(
     case 'none':
       amount = 0
       break
-    case 'triangular':
+    // 'triangular' falls through to default
     default: {
       amount = computeTriangularPayout(nextIndex)
       break
@@ -138,7 +140,7 @@ function computeTriangularPayout(index: number): number {
 }
 
 function classifySet(metals: [Metal, Metal, Metal]): TreasureSetPattern | null {
-  const [a, b, c] = metals
+  const [a] = metals
   const set = new Set(metals)
   const diamondCount = metals.filter((m) => m === 'diamond').length
 
