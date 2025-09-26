@@ -3,6 +3,7 @@
  * This ensures type consistency across the entire application
  */
 
+export * from './delta'
 export * from './messaging'
 export * from './notifications'
 
@@ -489,12 +490,14 @@ export interface RealtimeNotification {
   metadata?: Record<string, unknown>
 }
 
+import type { GameDelta } from './delta'
+
 export interface ServerToClientEvents {
   'player-joined': (data: { roomId: string; player: RoomPlayerEvent }) => void
   'player-left': (data: PlayerLeftEvent) => void
   'player-disconnected': (data: { roomId: string; playerId: string; socketId?: string }) => void
   'game-update': (gameState: GameState) => void
-  'game-delta': (delta: Record<string, unknown>) => void
+  'game-delta': (delta: GameDelta) => void
   armiesDeployed: (result: { gameState: GameState }) => void
   attackResult: (result: BattleResult) => void
   territoriesFortified: (result: { gameState: GameState }) => void

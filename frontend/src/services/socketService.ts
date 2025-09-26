@@ -4,6 +4,7 @@ import type {
   ConversationCreatePayload,
   ConversationMembersUpdateAck,
   ConversationMembersUpdatePayload,
+  GameDelta,
   MessageSendAck,
   MessageSendPayload,
   ReceiptReadAck,
@@ -36,7 +37,6 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
-import type { GameDelta } from '../types/deltaUpdates'
 import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
