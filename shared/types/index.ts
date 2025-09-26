@@ -129,6 +129,24 @@ export interface TerritoryAbility {
   effectValue: number
 }
 
+export type Metal = 'bronze' | 'silver' | 'gold' | 'diamond'
+
+export type TreasurePayoutMode = 'classic' | 'fixed' | 'none' | 'triangular'
+
+export interface TreasureConfig {
+  enabled: boolean
+  diamondsPercent: number
+  payoutMode: TreasurePayoutMode
+  fixedValue?: number
+  handCap: number
+  diamondSetBonus: number
+}
+
+export interface TreasureState {
+  totalSetsCashed: number
+  nextPayoutIndex: number
+}
+
 export interface Player {
   id: string
   userId: string
@@ -146,6 +164,8 @@ export interface Player {
   aiPersonalitySeed?: number | null
   turnTimeRemaining?: number
   teamId?: number // For team games
+  treasures?: Metal[]
+  mustCashInTreasures?: boolean
 }
 
 export interface Card {
@@ -183,6 +203,9 @@ export interface GameState {
   endedAt?: Date | string
   lastAction?: GameAction
   settings?: GameConfiguration // Legacy alias for older consumers
+  treasureState?: TreasureState
+  mustCashInTreasures?: boolean
+  conqueredDuringTurn?: boolean
 }
 
 export interface GameTerritoryModifier {
@@ -216,6 +239,7 @@ export interface GameConfiguration {
   isRanked?: boolean
   isPrivate?: boolean
   movementSystem?: string
+  treasureConfig?: TreasureConfig
 }
 
 export type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
