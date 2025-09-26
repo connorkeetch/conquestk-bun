@@ -717,7 +717,7 @@ export const AdminMaps: React.FC = () => {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-screen-2xl space-y-6">
         <AdminPageHeader
           title="Map Management"
           subtitle="Review drafts, publish updates, and keep the catalog healthy"
