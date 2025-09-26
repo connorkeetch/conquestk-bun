@@ -32,6 +32,18 @@ interface GameMap {
   image_url?: string | null
 }
 
+const computeMapSizeFromCounts = (
+  territoryCount?: number,
+): 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive' | 'Unknown' => {
+  const count = typeof territoryCount === 'number' ? territoryCount : NaN
+  if (!Number.isFinite(count) || count <= 0) return 'Unknown'
+  if (count <= 35) return 'Small'
+  if (count <= 45) return 'Medium'
+  if (count <= 65) return 'Large'
+  if (count <= 90) return 'Very Large'
+  return 'Massive'
+}
+
 type MovementType = 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
 
 const RANDOM_MAP_OPTION: GameMap = {
@@ -1460,7 +1472,7 @@ const CreateGamePage: React.FC = () => {
                         </div>
                         <div className="text-sm text-muted">
                           {map.territory_count > 0
-                            ? `${map.territory_count} territories • ${map.min_players}-${map.max_players} players`
+                            ? `${map.territory_count} territories • Map Size: ${computeMapSizeFromCounts(map.territory_count)}`
                             : 'Randomly selected when game starts'}
                         </div>
                         {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
@@ -1561,9 +1573,9 @@ const CreateGamePage: React.FC = () => {
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-muted">Players</dt>
+                              <dt className="text-muted">Map Size</dt>
                               <dd className="text-white">
-                                {selectedMapData.min_players}-{selectedMapData.max_players}
+                                {computeMapSizeFromCounts(selectedMapData.territory_count)}
                               </dd>
                             </div>
                             <div>

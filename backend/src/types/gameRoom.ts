@@ -15,6 +15,7 @@ export interface GameRoom {
   maxPlayers: number
   isPrivate: boolean
   status: GameLifecycleStatus
+  expiresAt?: Date
   is_ranked?: boolean
   avg_skill_rating?: number
   skill_variance?: number

@@ -21,6 +21,7 @@ export interface GameRoom {
   isRanked?: boolean
   status: GameLifecycleStatus
   createdAt: string
+  expiresAt?: string
   updatedAt?: string
   mapId?: string | null
   gameMode?: string | null

@@ -114,6 +114,26 @@ export default function GameRoom() {
     return (currentRoom.numberOfTeams ?? 0) > 1
   }, [currentRoom])
 
+  // Expiration display for lobby/initializing
+  const expiresAtDate = useMemo(() => {
+    if (!currentRoom) return null
+    if (currentRoom.expiresAt) return new Date(currentRoom.expiresAt)
+    const created = new Date(currentRoom.createdAt)
+    return new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000)
+  }, [currentRoom])
+
+  const formatTimeUntil = useCallback((target?: Date | null) => {
+    if (!target) return ''
+    const ms = target.getTime() - Date.now()
+    if (ms <= 0) return 'Expired'
+    const days = Math.floor(ms / (24 * 60 * 60 * 1000))
+    if (days >= 1) return `Expires in ${days} day${days === 1 ? '' : 's'}`
+    const hours = Math.floor(ms / (60 * 60 * 1000))
+    if (hours >= 1) return `Expires in ${hours}h`
+    const minutes = Math.floor(ms / (60 * 1000))
+    return `Expires in ${minutes}m`
+  }, [])
+
   const treasureSummary = useMemo(() => {
     const cfg = currentRoom?.treasureConfig
     if (!cfg) return null
@@ -645,6 +665,11 @@ export default function GameRoom() {
             <span className="chip text-xs">
               Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
+            {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+              <span className="chip text-xs" title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}>
+                {formatTimeUntil(expiresAtDate)}
+              </span>
+            )}
             {treasureSummary && (
               <span className="chip text-xs" title="Hidden Treasures configuration">
                 {treasureSummary}

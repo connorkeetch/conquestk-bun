@@ -32,6 +32,7 @@ interface GameRoomRow {
   max_players: number
   is_private: boolean
   status: string
+  expires_at?: Date | string | null
   lifecycle_phase?: string | null
   turn_number?: number | string | null
   turn_expires_at?: Date | string | null
@@ -425,6 +426,7 @@ export class GameRoomService {
       maxPlayers: row.max_players,
       isPrivate: row.is_private,
       status: this.normalizeStatus(typeof row.status === 'string' ? row.status : null),
+      expiresAt: this.toDate(row.expires_at) ?? undefined,
       is_ranked:
         typeof row.is_ranked === 'boolean'
           ? row.is_ranked
@@ -622,6 +624,22 @@ export class GameRoomService {
 
     const hydratedRoom = await this.getRoomById(roomRow.id)
     return hydratedRoom ?? this.mapRoomRow(roomRow)
+  }
+
+  /**
+   * Prune lobbies that never started within their expiration window.
+   * Returns the number of rooms deleted.
+   */
+  async pruneStaleRooms(): Promise<number> {
+    const result = await query<{ id: string }>(
+      `DELETE FROM game_rooms
+       WHERE status IN ('lobby', 'initializing')
+         AND expires_at IS NOT NULL
+         AND expires_at < NOW()
+       RETURNING id`,
+    )
+
+    return result.rowCount ?? 0
   }
 
   async getActiveRooms(): Promise<GameRoom[]> {
