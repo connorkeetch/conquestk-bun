@@ -2,6 +2,8 @@ import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
+import { PLAYER_COLORS, getColorValue, type PlayerColor } from '@/constants/colors'
+import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
 import { type ProfileSummary, profileService } from '../../services/profileService'
 import { logout } from '../../store/authSlice'
 
@@ -99,6 +101,19 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
     elo: profileSummary?.elo ?? null,
   }
 
+  // Resolve preferred color for avatar badges
+  const preferredColor: PlayerColor = useAppSelector(
+    (s) => s.settings.game?.preferredColor || PLAYER_COLORS[0],
+  )
+  const resolved = getColorValue(preferredColor)
+  const baseHex = isGradientValue(resolved)
+    ? extractFirstHexColor(resolved) || '#000000'
+    : resolved
+  const textColor = pickTextOnColor(baseHex)
+  const badgeStyle: React.CSSProperties = isGradientValue(resolved)
+    ? ({ backgroundImage: resolved, color: textColor } as React.CSSProperties)
+    : ({ backgroundColor: resolved, color: textColor } as React.CSSProperties)
+
   return (
     <div className={`relative ${className}`} ref={menuRef}>
       {/* User Avatar Button */}
@@ -107,7 +122,10 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-surface-2 transition-all duration-200"
       >
-        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-lg">
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shadow-lg"
+          style={badgeStyle}
+        >
           {getUserInitial()}
         </div>
         <div className="hidden lg:block text-left">
@@ -137,7 +155,10 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-xl font-bold text-white">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold"
+                style={badgeStyle}
+              >
                 {getUserInitial()}
               </div>
               <div className="flex-1">

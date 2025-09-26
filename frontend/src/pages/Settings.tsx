@@ -61,6 +61,11 @@ function ColorDropdown({
     ? extractFirstHexColor(selectedValueStr) || '#000000'
     : selectedValueStr
   const selectedStrokeColor = isPremiumColor(value) ? '#FBBF24' : pickTextOnColor(selectedBaseHex)
+  // Extract gradient stops from a CSS linear-gradient string; evenly spaced offsets
+  const parseGradientStops = (cssGradient: string): string[] => {
+    const matches = cssGradient.match(/#([0-9a-fA-F]{6})/g)
+    return matches ? matches.map((m) => m.toString()) : []
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -104,9 +109,18 @@ function ColorDropdown({
             {selectedHasGradient && (
               <defs>
                 <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
-                  <stop offset="50%" style={{ stopColor: '#00ffff' }} />
-                  <stop offset="100%" style={{ stopColor: '#ffff00' }} />
+                  {(() => {
+                    const stops = parseGradientStops(selectedValueStr)
+                    const count = Math.max(1, stops.length)
+                    return stops.length > 0
+                      ? stops.map((c, idx) => (
+                          <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                        ))
+                      : [
+                          <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
+                          <stop key="b" offset="100%" style={{ stopColor: '#cccccc' }} />,
+                        ]
+                  })()}
                 </linearGradient>
               </defs>
             )}
@@ -194,16 +208,19 @@ function ColorDropdown({
                     />
                     {hasGradient && (
                       <defs>
-                        <linearGradient
-                          id={`gradient-${color}`}
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-                          <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
-                          <stop offset="50%" style={{ stopColor: '#00ffff' }} />
-                          <stop offset="100%" style={{ stopColor: '#ffff00' }} />
+                        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          {(() => {
+                            const stops = parseGradientStops(swatchStr)
+                            const count = Math.max(1, stops.length)
+                            return stops.length > 0
+                              ? stops.map((c, idx) => (
+                                  <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                                ))
+                              : [
+                                  <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
+                                  <stop key="b" offset="100%" style={{ stopColor: '#cccccc' }} />,
+                                ]
+                          })()}
                         </linearGradient>
                       </defs>
                     )}
@@ -279,21 +296,24 @@ function ColorDropdown({
                           fill: hasGradient ? `url(#gradient-${color})` : swatchStr,
                           stroke: '#FBBF24',
                           strokeWidth: '1.5',
-                          filter: color === 'neon' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
+                          filter: color === 'NeonGreen' ? 'drop-shadow(0 0 3px #39FF14)' : undefined,
                         }}
                       />
                       {hasGradient && (
                         <defs>
-                          <linearGradient
-                            id={`gradient-${color}`}
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="100%"
-                          >
-                            <stop offset="0%" style={{ stopColor: '#ff00ff' }} />
-                            <stop offset="50%" style={{ stopColor: '#00ffff' }} />
-                            <stop offset="100%" style={{ stopColor: '#ffff00' }} />
+                          <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                            {(() => {
+                              const stops = parseGradientStops(swatchStr)
+                              const count = Math.max(1, stops.length)
+                              return stops.length > 0
+                                ? stops.map((c, idx) => (
+                                    <stop key={`${c}-${idx}`} offset={`${(idx / (count - 1 || 1)) * 100}%`} style={{ stopColor: c }} />
+                                  ))
+                                : [
+                                    <stop key="a" offset="0%" style={{ stopColor: '#ffffff' }} />,
+                                    <stop key="b" offset="100%" style={{ stopColor: '#cccccc' }} />,
+                                  ]
+                            })()}
                           </linearGradient>
                         </defs>
                       )}
