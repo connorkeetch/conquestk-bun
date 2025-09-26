@@ -280,6 +280,13 @@ export class GameLifecycleService {
       configOverrides.movementType = room.movementType
     }
 
+    // Fog of War: treat any non-off value as adjacent (non-persistent)
+    if (room?.fogOfWar && room.fogOfWar !== 'off') {
+      configOverrides.fogOfWar = 'adjacent'
+    } else {
+      configOverrides.fogOfWar = 'off'
+    }
+
     // Inject Hidden Treasures configuration if provided at room creation (DB-backed)
     try {
       const { normalizeTreasureConfig } = await import('../game/hiddenTreasures')
@@ -346,6 +353,29 @@ export class GameLifecycleService {
     if (io) {
       const serialized = this.toSerializableGameState(gameState)
       io.to(roomId).emit('game-update', serialized)
+    }
+
+    // Schedule auto end-turn if a timer is configured
+    try {
+      if (turnTimer && turnTimer > 0) {
+        const { queueService } = await import('./queueService')
+        const idKey = `auto-end:${roomId}:turn:${gameState.turn}`
+        await queueService.addDelayedGameAction(
+          {
+            gameId: roomId,
+            playerId: gameState.currentPlayer,
+            action: { type: 'end_turn', playerId: gameState.currentPlayer, roomId },
+            idempotencyKey: idKey,
+          },
+          turnTimer * 1000,
+          { idempotencyKey: idKey, priority: 10 },
+        )
+      }
+    } catch (error) {
+      logger.warn('Failed to schedule auto end-turn', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
     }
   }
 

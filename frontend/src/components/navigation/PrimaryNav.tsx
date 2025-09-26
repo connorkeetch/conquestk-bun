@@ -1,10 +1,10 @@
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import friendsService from '@/services/friendsService'
+import { socketService } from '@/services/socketService'
 import { FEATURE_FLAGS } from '../../constants/featureFlags'
 import { useFeatureFlag } from '../../hooks/useFeatureFlag'
-import { socketService } from '@/services/socketService'
-import friendsService from '@/services/friendsService'
 
 interface NavItem {
   path: string

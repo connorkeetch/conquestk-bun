@@ -2,6 +2,7 @@ import type { Metal, TreasureConfig, TreasureState } from '@shared/types'
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { ensureReadableOnDark, hexToRgba } from '@/utils/color'
 import { logger } from '@/utils/logger'
 import { SimpleRiskGameBoard } from '../components/SimpleRiskGameBoard'
 import { getPlayerColor } from '../constants/colors'
@@ -845,14 +846,26 @@ const GamePage: React.FC = () => {
               <div className="absolute top-4 left-1/2 z-10 flex -translate-x-1/2 flex-wrap justify-center gap-2 px-4">
                 {displayPlayers.map((player) => {
                   const isCurrentTurn = player.id === currentTurnPlayerId
+                  const accent = ensureReadableOnDark(player.color)
                   return (
                     <div
                       key={player.id}
                       className={`glass-box-sm flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium shadow-md transition-colors ${
                         isCurrentTurn
-                          ? 'border-primary/70 bg-primary/20 text-primary'
+                          ? 'text-white'
                           : 'border-transparent bg-surface-2/80 text-muted'
                       }`}
+                      style={
+                        isCurrentTurn
+                          ? {
+                              borderColor: hexToRgba(accent, 0.7),
+                              backgroundImage: `linear-gradient(90deg, ${hexToRgba(
+                                accent,
+                                0.22,
+                              )}, ${hexToRgba(accent, 0.08)})`,
+                            }
+                          : undefined
+                      }
                     >
                       <span
                         className="h-2.5 w-2.5 rounded-full"

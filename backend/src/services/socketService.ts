@@ -33,6 +33,37 @@ function getGameChannel(roomId: string): string {
   return `game:${roomId}`
 }
 
+function filterGameStateForPlayer(state: GameState, viewerId: string): GameState {
+  const fogMode = (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })
+    ?.fogOfWar ?? 'off'
+  const fogEnabled = fogMode !== 'off'
+  if (!fogEnabled) return state
+
+  const owned = new Set<string>()
+  for (const t of state.board) {
+    if (t.ownerId === viewerId) owned.add(t.id)
+  }
+  const visible = new Set<string>(owned)
+  // Adjacent (non-persistent) visibility
+  for (const t of state.board) {
+    if (!owned.has(t.id)) continue
+    for (const adj of t.adjacentTerritories) {
+      visible.add(adj)
+    }
+  }
+
+  const filteredBoard = state.board.map((t) => {
+    if (visible.has(t.id)) return t
+    return {
+      ...t,
+      ownerId: null,
+      armies: 0,
+    }
+  })
+
+  return { ...state, board: filteredBoard }
+}
+
 function serializeGameStateForClient(
   state: GameState | SerializedGameState | null | undefined,
 ): SerializedGameState | null {
@@ -212,11 +243,20 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         if (!serializedState) {
           const freshState = await gameService.getGameState(roomId)
-          serializedState = serializeGameStateForClient(freshState)
+          const filtered = filterGameStateForPlayer(freshState as GameState, userId)
+          serializedState = serializeGameStateForClient(filtered)
         }
 
         if (serializedState) {
-          socket.emit('game-update', serializedState)
+          // Apply fog-of-war filtering for the viewer
+          const filtered = filterGameStateForPlayer(
+            serializedState as unknown as GameState,
+            userId,
+          )
+          const finalState = serializeGameStateForClient(filtered)
+          if (finalState) {
+            socket.emit('game-update', finalState)
+          }
         }
 
         logger.info(`User ${userId} subscribed to game channel ${channel}`)

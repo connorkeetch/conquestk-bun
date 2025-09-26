@@ -1,11 +1,14 @@
 import { MessageSquare, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+
 import { FEATURE_FLAGS } from '@/constants/featureFlags'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
-import { notificationService } from '@/services/notificationService'
 import friendsService from '@/services/friendsService'
+import { notificationService } from '@/services/notificationService'
 import { socketService } from '@/services/socketService'
+import { closeInbox, openInbox } from '@/store/uiSlice'
+
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
@@ -15,7 +18,6 @@ import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
 // Consolidated inbox drawer (messages + notifications)
 import InboxDrawer from './messages/InboxDrawer'
-import { closeInbox, openInbox } from '@/store/uiSlice'
 
 interface MenuItem {
   path: string
@@ -299,20 +301,6 @@ export default function Header() {
               {navLinks.map((link) => (
                 <Link key={link.to} className={navTabClass(link.isActive)} to={link.to}>
                   {link.label}
-                </Link>
-              ))}
-            </nav>
-            <nav className="hidden lg:flex xl:hidden nav-tabs items-center gap-1 rounded-full bg-white/5 px-2 py-1 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/10">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  className={`${navTabClass(link.isActive)} flex h-9 w-9 items-center justify-center rounded-full`}
-                  to={link.to}
-                  aria-label={link.label}
-                >
-                  <span aria-hidden="true" className="text-lg">
-                    {link.icon}
-                  </span>
                 </Link>
               ))}
             </nav>

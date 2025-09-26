@@ -86,3 +86,8 @@ export const colorDistance = (hexA: string, hexB: string): number => {
   const db = a.b - b.b
   return Math.sqrt(dr * dr + dg * dg + db * db)
 }
+
+// Quick text color picker for colored backgrounds
+export const pickTextOnColor = (hex: string): '#F8FAFC' | '#0f172a' => {
+  return getRelativeLuminance(hex) > 0.55 ? '#0f172a' : '#F8FAFC'
+}
