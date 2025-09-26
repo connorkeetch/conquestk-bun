@@ -8,7 +8,7 @@
     "build": "tsc && tsc-alias",
     "typecheck": "tsc --noEmit",
     "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('\u2705 Copied migrations to dist/migrations'); } else { console.error('\u274c Warning: migrations directory not found'); }\"",
-    "start": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/index.js",
+    "start": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && ( [ \"$SYNC_FEATURE_FLAGS_ON_START\" = \"true\" ] && node dist/scripts/checkFeatureFlags.js --apply || echo \"Skipping feature flag sync (set SYNC_FEATURE_FLAGS_ON_START=true to enable)\" ) && node dist/index.js",
     "start:sync-flags": "node dist/scripts/runMigration.js && node dist/scripts/ensureDeployAccounts.js && node dist/scripts/checkFeatureFlags.js --apply && node dist/index.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",

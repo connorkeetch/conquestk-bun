@@ -47,7 +47,7 @@ export interface BattleResultDelta extends BaseDelta {
     toTerritory: {
       id: string
       armies: number
-      ownerId: string
+      ownerId?: string | null
     }
     conquered: boolean
     attackerDice: number[]
@@ -57,6 +57,14 @@ export interface BattleResultDelta extends BaseDelta {
     gameEnded?: boolean
     winner?: string
     eliminatedPlayers?: string[]
+    capitalElimination?: {
+      conqueror: string
+      eliminated: string
+      capitalTerritory: string
+      territoriesGained: number
+      troopsGained: number
+    }
+    gameState?: unknown
   }
 }
 
