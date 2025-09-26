@@ -1,9 +1,9 @@
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAppSelector } from '@/hooks/redux'
 import friendsService from '@/services/friendsService'
 import { socketService } from '@/services/socketService'
-import { useAppSelector } from '@/hooks/redux'
 
 // AI menu entries are now generally visible
 

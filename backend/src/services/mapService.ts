@@ -1100,17 +1100,20 @@ export class MapService {
         id: string
         name: string
         map_id: string
-      }>(
-        `SELECT id, name, map_id FROM map_territories WHERE id = ANY($1::uuid[])`,
-        [[adjacencyData.fromTerritoryId, adjacencyData.toTerritoryId]],
-      )
+      }>(`SELECT id, name, map_id FROM map_territories WHERE id = ANY($1::uuid[])`, [
+        [adjacencyData.fromTerritoryId, adjacencyData.toTerritoryId],
+      ])
 
       if (lookup.rowCount !== 2) {
         throw new Error('One or both territories not found')
       }
 
-      const t1 = lookup.rows.find((r) => r.id === adjacencyData.fromTerritoryId)!
-      const t2 = lookup.rows.find((r) => r.id === adjacencyData.toTerritoryId)!
+      const t1 = lookup.rows.find((r) => r.id === adjacencyData.fromTerritoryId)
+      const t2 = lookup.rows.find((r) => r.id === adjacencyData.toTerritoryId)
+
+      if (!t1 || !t2) {
+        throw new Error('One or both territories not found')
+      }
 
       if (t1.map_id !== t2.map_id) {
         throw new Error('Territories belong to different maps')
