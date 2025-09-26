@@ -21,11 +21,24 @@ export const DeltaBuilder = {
     territoryId: string,
     changes: { armies?: number; ownerId?: string },
   ): TerritoryUpdateDelta {
+    const normalizedArmies =
+      typeof changes.armies === 'number' && Number.isFinite(changes.armies)
+        ? Math.max(0, Math.trunc(changes.armies))
+        : undefined
+    const normalizedOwner =
+      typeof changes.ownerId === 'string' && changes.ownerId.trim().length > 0
+        ? changes.ownerId
+        : changes.ownerId === undefined
+          ? undefined
+          : null
     return {
       type: 'TERRITORY_UPDATE',
       roomId,
       territoryId,
-      changes,
+      changes: {
+        ...(normalizedArmies !== undefined ? { armies: normalizedArmies } : {}),
+        ...(normalizedOwner !== undefined ? { ownerId: normalizedOwner } : {}),
+      },
       timestamp: Date.now(),
     }
   },
@@ -51,13 +64,19 @@ export const DeltaBuilder = {
     turn?: number,
     reinforcementArmies?: number,
   ): PhaseChangeDelta {
+    const safeTurn =
+      typeof turn === 'number' && Number.isFinite(turn) ? Math.max(0, Math.trunc(turn)) : undefined
+    const safeReinforce =
+      typeof reinforcementArmies === 'number' && Number.isFinite(reinforcementArmies)
+        ? Math.max(0, Math.trunc(reinforcementArmies))
+        : undefined
     return {
       type: 'PHASE_CHANGE',
       roomId,
       phase,
       currentPlayer,
-      turn,
-      reinforcementArmies,
+      turn: safeTurn,
+      reinforcementArmies: safeReinforce,
       timestamp: Date.now(),
     }
   },
