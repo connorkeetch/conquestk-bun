@@ -222,7 +222,7 @@ const PrimaryNav: React.FC = () => {
 
   return (
     <div
-      className="hidden lg:flex nav-tabs items-center gap-1 xl:gap-2 px-1 py-0.5 rounded-full bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/10"
+      className="hidden lg:flex nav-tabs items-center gap-1 xl:gap-2 px-1 py-0.5 rounded-full bg-[color:var(--panel-bg-alt)] border border-[color:var(--panel-border)] backdrop-blur"
       ref={dropdownRef}
     >
       {navItems.map((item) => (
