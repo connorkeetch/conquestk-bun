@@ -284,6 +284,12 @@ export class GameController {
 
       const result = await this.gameRoomService.joinRoom(roomId, userId)
       const room = await this.gameRoomService.getRoomById(roomId)
+      // Auto-mark ready and trigger start if lobby is full
+      try {
+        await this.lifecycleService.setReadyState(roomId, userId, true)
+      } catch (_err) {
+        // Ignore errors such as 'Game already started'
+      }
       await this.lifecycleService.refreshLifecycle(roomId)
       return res.json({ ...result, room })
     } catch (error) {
