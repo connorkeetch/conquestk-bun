@@ -58,7 +58,7 @@ interface MessagesState {
   typing: Record<string, Record<string, string>>
   activeConversationId: string | null
   loadingInbox: boolean
-  inboxError?: string | null
+  inboxError: string | null
   unreadSummaryFetched: boolean
   pendingUnread: Record<string, number>
 }
