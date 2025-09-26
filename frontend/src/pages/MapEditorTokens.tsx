@@ -216,6 +216,42 @@ const clamp01 = (value: number): number => {
   return value
 }
 
+interface TerritorySpatialIndex {
+  cellSize: number
+  minDistance: number
+  cells: Map<string, Territory[]>
+}
+
+const getTerritoryCellKey = (x: number, y: number, cellSize: number): string => {
+  if (cellSize <= 0) return '0:0'
+  const cellX = Math.floor(x / cellSize)
+  const cellY = Math.floor(y / cellSize)
+  return `${cellX}:${cellY}`
+}
+
+const buildTerritorySpatialIndex = (
+  territories: Territory[],
+  tokenSize: number,
+): TerritorySpatialIndex => {
+  const clickPadding = tokenSize * 0.25
+  const minDistance = tokenSize + clickPadding * 2
+  const cellSize = Math.max(minDistance, 1)
+
+  const cells = new Map<string, Territory[]>()
+
+  for (const territory of territories) {
+    const key = getTerritoryCellKey(territory.x, territory.y, cellSize)
+    const bucket = cells.get(key)
+    if (bucket) {
+      bucket.push(territory)
+    } else {
+      cells.set(key, [territory])
+    }
+  }
+
+  return { cellSize, minDistance, cells }
+}
+
 const toFiniteNumberOrNull = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -570,6 +606,8 @@ export default function MapEditorTokens() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragUpdateFrameRef = useRef<number | null>(null)
+  const pendingDragPositionRef = useRef<{ x: number; y: number } | null>(null)
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState<string | null>(null)
   const [publishedMapId, setPublishedMapId] = useState<string | null>(null)
@@ -944,6 +982,10 @@ export default function MapEditorTokens() {
   const [connectingFromId, setConnectingFromId] = useState<string | null>(null)
   const [tokenShape, setTokenShape] = useState<TokenShape>('hexagon')
   const [tokenSize, setTokenSize] = useState<number>(20)
+  const territorySpatialIndex = useMemo(
+    () => buildTerritorySpatialIndex(state.territories, tokenSize),
+    [state.territories, tokenSize],
+  )
   const [showGrid, setShowGrid] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -1539,14 +1581,28 @@ export default function MapEditorTokens() {
     const y = event.clientY - rect.top + scrollTop
 
     if (editorMode === 'territories' && isPlacingTerritory) {
-      // Check if click is too close to existing territories
-      const clickPadding = tokenSize * 0.25
-      const minDistance = tokenSize + clickPadding * 2
+      const { cells, cellSize, minDistance } = territorySpatialIndex
+      const minDistanceSq = minDistance * minDistance
+      const baseCellX = cellSize > 0 ? Math.floor(x / cellSize) : 0
+      const baseCellY = cellSize > 0 ? Math.floor(y / cellSize) : 0
 
-      const tooClose = state.territories.some((t) => {
-        const distance = Math.sqrt((t.x - x) ** 2 + (t.y - y) ** 2)
-        return distance < minDistance
-      })
+      let tooClose = false
+
+      for (let dx = -1; dx <= 1 && !tooClose; dx += 1) {
+        for (let dy = -1; dy <= 1 && !tooClose; dy += 1) {
+          const bucket = cells.get(`${baseCellX + dx}:${baseCellY + dy}`)
+          if (!bucket) continue
+
+          for (const territory of bucket) {
+            const deltaX = territory.x - x
+            const deltaY = territory.y - y
+            if (deltaX * deltaX + deltaY * deltaY < minDistanceSq) {
+              tooClose = true
+              break
+            }
+          }
+        }
+      }
 
       if (tooClose) {
         // Just ignore clicks that are too close to existing tokens
@@ -1645,6 +1701,39 @@ export default function MapEditorTokens() {
     }))
   }
 
+  const applyDragUpdate = useCallback(() => {
+    dragUpdateFrameRef.current = null
+    const pending = pendingDragPositionRef.current
+
+    if (!pending) return
+
+    pendingDragPositionRef.current = null
+
+    setState((prev) => {
+      const draggedId = prev.draggedTerritoryId
+      if (!draggedId) return prev
+
+      const territoryIndex = prev.territories.findIndex((t) => t.id === draggedId)
+      if (territoryIndex === -1) return prev
+
+      const current = prev.territories[territoryIndex]
+      if (current.x === pending.x && current.y === pending.y) {
+        return prev
+      }
+
+      const territories = [...prev.territories]
+      territories[territoryIndex] = {
+        ...current,
+        x: pending.x,
+        y: pending.y,
+        normalizedX: clamp01(pending.x / (prev.mapWidth > 0 ? prev.mapWidth : 1)),
+        normalizedY: clamp01(pending.y / (prev.mapHeight > 0 ? prev.mapHeight : 1)),
+      }
+
+      return { ...prev, territories }
+    })
+  }, [])
+
   // Handle mouse move for dragging
   const handleMouseMove = useCallback(
     (event: MouseEvent) => {
@@ -1662,26 +1751,22 @@ export default function MapEditorTokens() {
         Math.min(state.mapHeight - 30, event.clientY - rect.top + scrollTop - dragOffset.y),
       )
 
-      setState((prev) => ({
-        ...prev,
-        territories: prev.territories.map((t) =>
-          t.id === prev.draggedTerritoryId
-            ? {
-                ...t,
-                x,
-                y,
-                normalizedX: clamp01(x / (prev.mapWidth > 0 ? prev.mapWidth : 1)),
-                normalizedY: clamp01(y / (prev.mapHeight > 0 ? prev.mapHeight : 1)),
-              }
-            : t,
-        ),
-      }))
+      pendingDragPositionRef.current = { x, y }
+
+      if (dragUpdateFrameRef.current === null) {
+        dragUpdateFrameRef.current = requestAnimationFrame(applyDragUpdate)
+      }
     },
-    [state.draggedTerritoryId, state.mapWidth, state.mapHeight, dragOffset],
+    [state.draggedTerritoryId, state.mapWidth, state.mapHeight, dragOffset, applyDragUpdate],
   )
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
+    if (dragUpdateFrameRef.current !== null) {
+      cancelAnimationFrame(dragUpdateFrameRef.current)
+      dragUpdateFrameRef.current = null
+    }
+    pendingDragPositionRef.current = null
     setState((prev) => ({ ...prev, draggedTerritoryId: null }))
   }, [])
 
@@ -1696,6 +1781,16 @@ export default function MapEditorTokens() {
       }
     }
   }, [state.draggedTerritoryId, handleMouseMove, handleMouseUp])
+
+  useEffect(() => {
+    return () => {
+      if (dragUpdateFrameRef.current !== null) {
+        cancelAnimationFrame(dragUpdateFrameRef.current)
+        dragUpdateFrameRef.current = null
+      }
+      pendingDragPositionRef.current = null
+    }
+  }, [])
 
   // Handle continent creation
   const handleCreateContinent = () => {

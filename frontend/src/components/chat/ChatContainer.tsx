@@ -13,6 +13,7 @@ import {
   selectHasMoreMessages,
   selectMessagesForConversation,
 } from '../../store/messagesSlice'
+import type { ConversationDetail } from '../../types/messages'
 import MessageInput from './MessageInput'
 import MessageList, { type DisplayMessage } from './MessageList'
 
@@ -63,7 +64,7 @@ export default function ChatContainer({
       setResolvedConversationId(null)
 
       try {
-        let detail: Awaited<ReturnType<typeof ensureDirectConversationRequest>>
+        let detail: ConversationDetail
 
         switch (conversationType) {
           case 'dm': {

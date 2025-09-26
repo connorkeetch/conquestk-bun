@@ -122,6 +122,10 @@ type ConversationMemberRoleRow = ConversationMemberRow & {
   username: string
 }
 
+type ConversationMemberRoleWithConversationRow = ConversationMemberRoleRow & {
+  conversation_id: string
+}
+
 type ConversationMembershipRow = {
   role: 'owner' | 'admin' | 'member'
   shadow_muted: boolean | null
@@ -181,10 +185,63 @@ const getConversationMemberRoles = async (
   }))
 }
 
+const getConversationMemberRolesBulk = async (
+  conversationIds: string[],
+): Promise<Map<string, ConversationMemberRole[]>> => {
+  const uniqueIds = Array.from(new Set(conversationIds)).filter(Boolean)
+
+  const memberMap = new Map<string, ConversationMemberRole[]>()
+
+  if (uniqueIds.length === 0) {
+    return memberMap
+  }
+
+  for (const id of uniqueIds) {
+    memberMap.set(id, [])
+  }
+
+  const result = await query<ConversationMemberRoleWithConversationRow>(
+    `
+    SELECT
+      cm.conversation_id,
+      cm.user_id,
+      cm.role,
+      cm.joined_at,
+      cm.shadow_muted,
+      u.username
+    FROM conversation_members cm
+    JOIN users u ON u.id = cm.user_id
+    WHERE cm.conversation_id = ANY($1::uuid[])
+    ORDER BY cm.conversation_id ASC, cm.joined_at ASC
+  `,
+    [uniqueIds],
+  )
+
+  for (const row of result.rows) {
+    const roles = memberMap.get(row.conversation_id)
+    const memberRole: ConversationMemberRole = {
+      userId: row.user_id,
+      role: row.role,
+      joinedAt: row.joined_at,
+      shadowMuted: row.shadow_muted ?? false,
+      username: row.username,
+    }
+
+    if (roles) {
+      roles.push(memberRole)
+    } else {
+      memberMap.set(row.conversation_id, [memberRole])
+    }
+  }
+
+  return memberMap
+}
+
 const buildConversationDescriptor = async (
   conversation: ConversationRecord,
+  memberRolesOverride?: ConversationMemberRole[],
 ): Promise<ConversationWithMembers> => {
-  const memberRoles = await getConversationMemberRoles(conversation.id)
+  const memberRoles = memberRolesOverride ?? (await getConversationMemberRoles(conversation.id))
   const memberIds = memberRoles.map((member) => member.userId)
 
   return {
@@ -1660,9 +1717,22 @@ export async function listConversationsForUser(
 
   const entries: ConversationListEntry[] = []
 
+  const memberRolesByConversation = await getConversationMemberRolesBulk(
+    result.rows.map((row) => row.id),
+  )
+
+  const descriptorCache = new Map<string, ConversationWithMembers>()
+
   for (const row of result.rows) {
     const record = mapConversationRow(row)
-    const descriptor = await buildConversationDescriptor(record)
+    const cached = descriptorCache.get(record.id)
+    const descriptor =
+      cached ??
+      (await buildConversationDescriptor(record, memberRolesByConversation.get(record.id)))
+
+    if (!cached) {
+      descriptorCache.set(record.id, descriptor)
+    }
 
     const membership: ConversationMembershipInfo = {
       role: row.member_role,

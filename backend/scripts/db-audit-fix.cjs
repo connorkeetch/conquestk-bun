@@ -7,9 +7,9 @@
 */
 
 const { Client } = require('pg')
-const { readFileSync } = require('fs')
-const { createHash } = require('crypto')
-const path = require('path')
+const { readFileSync } = require('node:fs')
+const { createHash } = require('node:crypto')
+const path = require('node:path')
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
@@ -112,7 +112,7 @@ function splitSqlSimple(sql) {
     .split(';')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => s + ';')
+    .map((s) => `${s};`)
 }
 
 async function needsConversationSchema(client) {
@@ -203,7 +203,7 @@ async function run() {
         try {
           await query(client, stmt)
         } catch (e) {
-          console.error('❌ 038 failed on statement:\n---\n' + stmt + '\n---')
+          console.error(`❌ 038 failed on statement:\n---\n${stmt}\n---`)
           console.error('    Error:', e.message)
           throw e
         }
@@ -227,6 +227,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('❌ db-audit-fix failed:', err && err.message ? err.message : err)
+  console.error('❌ db-audit-fix failed:', err?.message ? err.message : err)
   process.exit(1)
 })

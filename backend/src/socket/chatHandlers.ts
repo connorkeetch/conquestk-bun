@@ -260,7 +260,7 @@ const broadcastTypingEvent = async (
   userId: string,
   state: 'start' | 'stop',
 ) => {
-  const detail = await ensureConversationAccess(socket, conversationId, userId)
+  const _detail = await ensureConversationAccess(socket, conversationId, userId)
 
   const userInfo = await getUserInfo(userId)
   const payload: TypingEventResponse = {

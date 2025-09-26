@@ -1,4 +1,5 @@
 import type React from 'react'
+import { memo, useMemo } from 'react'
 
 export type TokenShape = 'hexagon' | 'square' | 'circle'
 
@@ -17,7 +18,7 @@ export interface TerritoryTokenProps {
   opacity?: number
 }
 
-export default function TerritoryToken({
+function TerritoryTokenComponent({
   x,
   y,
   armies = 1,
@@ -31,7 +32,7 @@ export default function TerritoryToken({
   size = 30,
   opacity = 0.6,
 }: TerritoryTokenProps) {
-  const getShapeStyle = (): React.CSSProperties => {
+  const style = useMemo<React.CSSProperties>(() => {
     const baseStyle: React.CSSProperties = {
       width: `${size}px`,
       height: `${size}px`,
@@ -73,12 +74,12 @@ export default function TerritoryToken({
       default:
         return baseStyle
     }
-  }
+  }, [color, isDragging, isSelected, opacity, outlineColor, shape, size, x, y])
 
   return (
     <button
       type="button"
-      style={getShapeStyle()}
+      style={style}
       onClick={onClick}
       onMouseDown={onMouseDown}
       aria-label={`Territory: ${armies} armies`}
@@ -97,3 +98,5 @@ export default function TerritoryToken({
     </button>
   )
 }
+
+export default memo(TerritoryTokenComponent)
