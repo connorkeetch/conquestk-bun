@@ -34,8 +34,8 @@ function getGameChannel(roomId: string): string {
 }
 
 function filterGameStateForPlayer(state: GameState, viewerId: string): GameState {
-  const fogMode = (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })
-    ?.fogOfWar ?? 'off'
+  const fogMode =
+    (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar ?? 'off'
   const fogEnabled = fogMode !== 'off'
   if (!fogEnabled) return state
 
@@ -249,10 +249,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         if (serializedState) {
           // Apply fog-of-war filtering for the viewer
-          const filtered = filterGameStateForPlayer(
-            serializedState as unknown as GameState,
-            userId,
-          )
+          const filtered = filterGameStateForPlayer(serializedState as unknown as GameState, userId)
           const finalState = serializeGameStateForClient(filtered)
           if (finalState) {
             socket.emit('game-update', finalState)
