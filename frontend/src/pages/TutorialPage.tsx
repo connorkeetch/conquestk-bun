@@ -184,8 +184,8 @@ const TutorialPage: React.FC = () => {
                   Random mode
                 </h3>
                 <p className="text-sm text-muted">
-                  Shake up spoils, timers, fog, and more with a single click. Perfect for groups who
-                  want every match to feel different.
+                  Shake up treasure payouts, timers, fog, and more with a single click. Perfect for
+                  groups who want every match to feel different.
                 </p>
               </div>
             </div>
@@ -709,21 +709,24 @@ const TutorialPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="panel-muted space-y-2">
-                  <h4 className="font-semibold text-[color:var(--color-primary)]">Spoils cards</h4>
+                  <h4 className="font-semibold text-[color:var(--color-primary)]">Hidden Treasures</h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>
-                      <strong>Escalating:</strong> 4, 6, 8, 10, 15, 20, 25... exponential payouts.
+                      <strong>Triangular:</strong> 4, 6, 9, 13, 18, … increasing payouts per set.
                     </li>
                     <li>
-                      <strong>Fixed:</strong> A steady 10 armies per set.
+                      <strong>Classic:</strong> 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5.
                     </li>
                     <li>
-                      <strong>Static:</strong> Choose a custom value between 5 and 50 armies.
+                      <strong>Fixed:</strong> A steady value per set (host selects the value).
                     </li>
                     <li>
-                      <strong>Random:</strong> Let the game pick a spoils style each match.
+                      <strong>Disabled:</strong> Sets redeem for 0 troops.
                     </li>
                   </ul>
+                  <p className="text-xs text-muted">
+                    Diamond chance is fixed at 8%. Hand limit is 5; sets with a diamond get +3.
+                  </p>
                 </div>
                 <div className="panel-muted space-y-2">
                   <h4 className="font-semibold text-[color:var(--color-info)]">Fortification</h4>

@@ -525,14 +525,16 @@ export default function AdminDashboard() {
                 {refreshingFlags ? 'Refreshing...' : '🔄 Refresh'}
               </button>
             </div>
-            {sortedFeatureFlags.length === 0 ? (
+            {sortedFeatureFlags.filter((f) => f.flagName !== 'clans_enabled').length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-4xl mb-2">🚩</div>
                 <p className="text-muted">No feature flags configured</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {sortedFeatureFlags.map((flag) => (
+                {sortedFeatureFlags
+                  .filter((flag) => flag.flagName !== 'clans_enabled')
+                  .map((flag) => (
                   <div
                     key={flag.flagName}
                     className="flex items-center justify-between bg-surface-2 rounded-lg p-4"

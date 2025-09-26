@@ -414,13 +414,7 @@ export class GameService {
     // Initialize territory modifiers if enabled
     if (config.useTerritoryModifiers) {
       const territoryIds = gameState.board.map((t) => t.id)
-      await territoryModifierService.initializeGameModifiers(
-        roomId,
-        config.mapId,
-        // Map-first: apply predefined modifiers if present; otherwise do nothing
-        'none',
-        territoryIds,
-      )
+      await territoryModifierService.initializeGameModifiers(roomId, config.mapId, territoryIds)
 
       // Load modifiers into game state
       const modifiers = await territoryModifierService.getGameModifiers(roomId)

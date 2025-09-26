@@ -1,6 +1,6 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-26T15:49:52.574Z
+Generated on 2025-09-26T16:35:20.818Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
@@ -18,7 +18,7 @@ Generated on 2025-09-26T15:49:52.574Z
 | --- | ---: | ---: |
 | `achievement_progress` | 8 | 0 |
 | `achievements` | 10 | 6 |
-| `admin_activity_logs` | 9 | 121 |
+| `admin_activity_logs` | 9 | 128 |
 | `admin_notifications` | 9 | 1 |
 | `admin_roles` | 7 | 4 |
 | `capital_eliminations` | 6 | 0 |
@@ -38,8 +38,8 @@ Generated on 2025-09-26T15:49:52.574Z
 | `conversation_messages` | 10 | 0 |
 | `conversations` | 10 | 0 |
 | `email_verification_logs` | 7 | 2 |
-| `events` | 8 | 2 |
-| `feature_flag_audit` | 8 | 71 |
+| `events` | 8 | 3 |
+| `feature_flag_audit` | 8 | 74 |
 | `feature_flags` | 13 | 9 |
 | `friendships` | 6 | 0 |
 | `game_moves` | 9 | 0 |
@@ -48,7 +48,7 @@ Generated on 2025-09-26T15:49:52.574Z
 | `game_states` | 13 | 0 |
 | `game_territory_modifiers` | 8 | 0 |
 | `game_variants` | 11 | 0 |
-| `map_asset_purge_runs` | 10 | 491 |
+| `map_asset_purge_runs` | 10 | 497 |
 | `map_collaborators` | 5 | 0 |
 | `map_continents` | 6 | 0 |
 | `map_drafts` | 24 | 0 |
@@ -89,7 +89,7 @@ Generated on 2025-09-26T15:49:52.574Z
 | `user_profiles` | 10 | 0 |
 | `user_reports` | 11 | 0 |
 | `user_seasonal_stats` | 13 | 0 |
-| `user_sessions` | 9 | 2 |
+| `user_sessions` | 9 | 3 |
 | `user_settings` | 8 | 0 |
 | `user_terms_acceptance` | 6 | 0 |
 | `users` | 32 | 14 |
