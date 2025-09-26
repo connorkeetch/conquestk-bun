@@ -1,4 +1,5 @@
 import type { GameDelta } from '@risk-game/shared/types'
+import type { SerializedGameState } from '../types/game'
 import type { Server, Socket } from 'socket.io'
 import { GameService } from './gameService'
 import type { GameState } from '../types/game'
@@ -126,4 +127,53 @@ export async function emitFogFilteredDelta(
       io.to(s.id).emit('game-delta', filtered)
     }
   }
+}
+
+function filterFullStateForViewer(state: GameState, viewerId: string): GameState {
+  const fogMode = (state.gameConfig as { fogOfWar?: 'off' | 'adjacent' | 'persistent' })?.fogOfWar
+  const fogEnabled = fogMode && fogMode !== 'off'
+  if (!fogEnabled) return state
+  const mask = computeVisibilityMask(state, viewerId)
+  return {
+    ...state,
+    board: state.board.map((t) => (mask.has(t.id) ? t : { ...t, ownerId: null, armies: 0 })),
+  }
+}
+
+function serializeForClient(state: GameState | SerializedGameState): SerializedGameState {
+  const territoryModifiers = (state as GameState).territoryModifiers
+  if (territoryModifiers instanceof Map) {
+    const obj = Object.fromEntries(territoryModifiers.entries())
+    return { ...(state as GameState), territoryModifiers: obj } as unknown as SerializedGameState
+  }
+  return state as SerializedGameState
+}
+
+export async function emitRevealSnapshot(
+  io: Server,
+  roomId: string,
+  viewerId: string,
+  state?: GameState,
+): Promise<void> {
+  const channel = `${ROOM_PREFIX}${roomId}`
+  let sockets: Array<{ id: string; data?: Record<string, unknown> }>
+  try {
+    // biome-ignore lint/suspicious/noExplicitAny: socket.io types
+    sockets = (await (io as any).in(channel).fetchSockets()) as Array<{
+      id: string
+      data?: Record<string, unknown>
+    }>
+  } catch {
+    return
+  }
+
+  const target = sockets.find((s) => (s as any).data?.userId === viewerId)
+  if (!target) return
+
+  const gameState = state ?? (await new GameService().getGameState(roomId))
+  if (!gameState) return
+
+  const filtered = filterFullStateForViewer(gameState, viewerId)
+  const serialized = serializeForClient(filtered)
+  io.to(target.id).emit('game-update', serialized)
 }
