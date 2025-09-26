@@ -35,6 +35,7 @@ interface Map {
   isFeatured?: boolean
   isVipOnly?: boolean
   isPublic?: boolean
+  territoryCount?: number
 }
 
 const Maps: React.FC = () => {

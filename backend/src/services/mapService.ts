@@ -82,10 +82,11 @@ interface ContinentRow {
 interface AdjacencyRow {
   id: string
   map_id: string
+  // When selecting via name-join, we alias mt1.id and mt2.id below
   from_territory_id: string
   to_territory_id: string
-  connection_type: string | null
-  is_bidirectional: boolean
+  connection_type?: string | null
+  is_bidirectional?: boolean
   special_requirements?: string | null
 }
 
@@ -1094,26 +1095,57 @@ export class MapService {
   async createAdjacency(adjacencyData: CreateAdjacencyRequest): Promise<TerritoryAdjacency> {
     const client = await getClient()
     try {
-      const result = await client.query(
-        `
-        INSERT INTO territory_adjacencies (
-          from_territory_id, to_territory_id, connection_type,
-          is_bidirectional, special_requirements
-        ) VALUES ($1, $2, $3, $4, $5)
-        RETURNING *
-      `,
-        [
-          adjacencyData.fromTerritoryId,
-          adjacencyData.toTerritoryId,
-          adjacencyData.connectionType || 'land',
-          adjacencyData.isBidirectional !== false,
-          adjacencyData.specialRequirements
-            ? JSON.stringify(adjacencyData.specialRequirements)
-            : null,
-        ],
+      // Look up territory names and map_id from provided IDs
+      const lookup = await client.query<{
+        id: string
+        name: string
+        map_id: string
+      }>(
+        `SELECT id, name, map_id FROM map_territories WHERE id = ANY($1::uuid[])`,
+        [[adjacencyData.fromTerritoryId, adjacencyData.toTerritoryId]],
       )
 
-      return this.formatAdjacencyFromDb(result.rows[0])
+      if (lookup.rowCount !== 2) {
+        throw new Error('One or both territories not found')
+      }
+
+      const t1 = lookup.rows.find((r) => r.id === adjacencyData.fromTerritoryId)!
+      const t2 = lookup.rows.find((r) => r.id === adjacencyData.toTerritoryId)!
+
+      if (t1.map_id !== t2.map_id) {
+        throw new Error('Territories belong to different maps')
+      }
+
+      // Insert directed edge (and reverse if bidirectional)
+      await client.query(
+        `
+        INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (map_id, territory_from, territory_to) DO NOTHING
+      `,
+        [t1.map_id, t1.name, t2.name],
+      )
+
+      const isBidirectional = adjacencyData.isBidirectional !== false
+      if (isBidirectional) {
+        await client.query(
+          `
+          INSERT INTO territory_adjacencies (map_id, territory_from, territory_to)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (map_id, territory_from, territory_to) DO NOTHING
+        `,
+          [t1.map_id, t2.name, t1.name],
+        )
+      }
+
+      // Return a normalized adjacency object
+      return {
+        id: `${t1.id}->${t2.id}`,
+        fromTerritoryId: t1.id,
+        toTerritoryId: t2.id,
+        connectionType: adjacencyData.connectionType || 'land',
+        isBidirectional,
+      }
     } finally {
       if (client.release) client.release()
     }
@@ -1122,12 +1154,24 @@ export class MapService {
   async getMapAdjacencies(mapId: string): Promise<TerritoryAdjacency[]> {
     const result = await query(
       `
-      SELECT ta.* FROM territory_adjacencies ta
-      JOIN map_territories mt1 ON ta.from_territory_id = mt1.id
-      JOIN map_territories mt2 ON ta.to_territory_id = mt2.id
-      WHERE mt1.map_id = $1 AND mt2.map_id = $2
+      SELECT 
+        ta.id,
+        ta.map_id,
+        mt1.id AS from_territory_id,
+        mt2.id AS to_territory_id,
+        NULL::text AS connection_type,
+        NULL::boolean AS is_bidirectional,
+        NULL::text AS special_requirements
+      FROM territory_adjacencies ta
+      JOIN map_territories mt1 
+        ON mt1.map_id = ta.map_id 
+       AND mt1.name = ta.territory_from
+      JOIN map_territories mt2 
+        ON mt2.map_id = ta.map_id 
+       AND mt2.name = ta.territory_to
+      WHERE ta.map_id = $1
     `,
-      [mapId, mapId],
+      [mapId],
     )
 
     return result.rows.map((row) => this.formatAdjacencyFromDb(row as AdjacencyRow))
@@ -1493,8 +1537,8 @@ export class MapService {
       id: adjacencyRow.id,
       fromTerritoryId: adjacencyRow.from_territory_id,
       toTerritoryId: adjacencyRow.to_territory_id,
-      connectionType: this.normalizeConnectionType(adjacencyRow.connection_type),
-      isBidirectional: adjacencyRow.is_bidirectional,
+      connectionType: this.normalizeConnectionType(adjacencyRow.connection_type ?? 'land'),
+      isBidirectional: adjacencyRow.is_bidirectional ?? true,
       specialRequirements,
     }
   }
