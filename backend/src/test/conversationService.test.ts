@@ -226,6 +226,10 @@ describe('conversationService', () => {
         rowCount: 2,
       })
       .mockResolvedValueOnce({
+        rows: [{ username: 'sender-user' }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
         rows: [
           {
             id: '01HF76DK4Z1X3J6G2M8Q9N0PQS',

@@ -245,6 +245,70 @@ const insertConversationMember = async (
   )
 }
 
+type ConversationMemberSummaryRow = {
+  user_id: string
+  role: 'owner' | 'admin' | 'member'
+}
+
+const syncConversationMembers = async (
+  conversationId: string,
+  desiredUserIds: string[],
+  ownerUserId?: string,
+): Promise<{ added: string[]; removed: string[] }> => {
+  const uniqueDesired = Array.from(new Set(desiredUserIds.filter((id) => typeof id === 'string')))
+  const desiredSet = new Set(uniqueDesired)
+
+  const existingResult = await query<ConversationMemberSummaryRow>(
+    `
+    SELECT user_id, role
+    FROM conversation_members
+    WHERE conversation_id = $1
+  `,
+    [conversationId],
+  )
+
+  const existingMembers = existingResult.rows
+  const existingSet = new Set(existingMembers.map((member) => member.user_id))
+
+  const toAdd = uniqueDesired.filter((userId) => !existingSet.has(userId))
+  const toRemove = existingMembers
+    .filter((member) => !desiredSet.has(member.user_id) && member.role !== 'owner' && member.user_id !== ownerUserId)
+    .map((member) => member.user_id)
+
+  if (toAdd.length === 0 && toRemove.length === 0) {
+    return { added: [], removed: [] }
+  }
+
+  await transaction(async (client) => {
+    for (const userId of toAdd) {
+      await insertConversationMember(client, conversationId, userId, 'member')
+    }
+
+    if (toRemove.length > 0) {
+      await client.query(
+        `
+        DELETE FROM conversation_members
+        WHERE conversation_id = $1 AND user_id = ANY($2::uuid[])
+      `,
+        [conversationId, toRemove],
+      )
+    }
+
+    if (toAdd.length > 0 || toRemove.length > 0) {
+      await client.query(
+        `
+        UPDATE conversations
+        SET updated_at = NOW()
+        WHERE id = $1
+      `,
+        [conversationId],
+      )
+    }
+  })
+
+  return { added: toAdd, removed: toRemove }
+}
+
 export async function ensureDirectConversation(
   initiatorId: string,
   targetUserId: string,
@@ -445,6 +509,138 @@ export async function addMembersToConversation(
   emitConversationMembersAddedEvent(conversationId, addedMemberRoles, descriptor.memberIds)
 
   return addedMemberRoles
+}
+
+export async function ensureGameConversation(gameId: string): Promise<ConversationWithMembers> {
+  const { hostId, name } = await getGameRoomHost(gameId)
+
+  const existingResult = await query<ConversationRow>(
+    `
+    SELECT ${CONVERSATION_COLUMNS}
+    FROM conversations
+    WHERE kind = 'game' AND game_id = $1
+    LIMIT 1
+  `,
+    [gameId],
+  )
+
+  let conversationRecord: ConversationRecord
+
+  if (existingResult.rows.length === 0) {
+    const title = name ? `${name} (Game Chat)` : null
+    const metadata = JSON.stringify({ gameId })
+
+    conversationRecord = await transaction(async (client) => {
+      const conversationInsert = await client.query(
+        `
+        INSERT INTO conversations (kind, title, created_by, metadata, game_id)
+        VALUES ('game', $1, $2, $3::jsonb, $4)
+        RETURNING ${CONVERSATION_COLUMNS}
+      `,
+        [title, hostId, metadata, gameId],
+      )
+
+      const row = conversationInsert.rows[0] as ConversationRow
+      await insertConversationMember(client, row.id, hostId, 'owner')
+      return mapConversationRow(row)
+    })
+  } else {
+    conversationRecord = mapConversationRow(existingResult.rows[0] as ConversationRow)
+  }
+
+  const playerRows = await getActiveRoomPlayers(gameId)
+  const desiredMembers = new Set<string>(playerRows.map((row) => row.user_id))
+  desiredMembers.add(hostId)
+
+  const { added, removed } = await syncConversationMembers(
+    conversationRecord.id,
+    Array.from(desiredMembers),
+    hostId,
+  )
+
+  const descriptor = await buildConversationDescriptor(conversationRecord)
+
+  if (added.length > 0) {
+    const addedRoles = descriptor.memberRoles.filter((member) => added.includes(member.userId))
+    emitConversationMembersAddedEvent(conversationRecord.id, addedRoles, descriptor.memberIds)
+  }
+
+  if (removed.length > 0) {
+    emitConversationMembersRemovedEvent(conversationRecord.id, removed, descriptor.memberIds)
+  }
+
+  emitConversationUpdatedEvent(descriptor)
+  return descriptor
+}
+
+export async function ensureTeamConversation(
+  gameId: string,
+  teamId: number,
+): Promise<ConversationWithMembers> {
+  const { hostId, name } = await getGameRoomHost(gameId)
+
+  const existingResult = await query<ConversationRow>(
+    `
+    SELECT ${CONVERSATION_COLUMNS}
+    FROM conversations
+    WHERE kind = 'team'
+      AND game_id = $1
+      AND metadata ->> 'teamId' = $2
+    LIMIT 1
+  `,
+    [gameId, String(teamId)],
+  )
+
+  let conversationRecord: ConversationRecord
+
+  if (existingResult.rows.length === 0) {
+    const title = name ? `${name} — Team ${teamId}` : `Team ${teamId}`
+    const metadata = JSON.stringify({ gameId, teamId })
+
+    conversationRecord = await transaction(async (client) => {
+      const conversationInsert = await client.query(
+        `
+        INSERT INTO conversations (kind, title, created_by, metadata, game_id)
+        VALUES ('team', $1, $2, $3::jsonb, $4)
+        RETURNING ${CONVERSATION_COLUMNS}
+      `,
+        [title, hostId, metadata, gameId],
+      )
+
+      const row = conversationInsert.rows[0] as ConversationRow
+      await insertConversationMember(client, row.id, hostId, 'owner')
+      return mapConversationRow(row)
+    })
+  } else {
+    conversationRecord = mapConversationRow(existingResult.rows[0] as ConversationRow)
+  }
+
+  const playerRows = await getActiveRoomPlayers(gameId)
+  const desiredMembers = playerRows
+    .filter((row) => row.team_id === teamId)
+    .map((row) => row.user_id)
+
+  desiredMembers.push(hostId)
+
+  const { added, removed } = await syncConversationMembers(
+    conversationRecord.id,
+    desiredMembers,
+    hostId,
+  )
+
+  const descriptor = await buildConversationDescriptor(conversationRecord)
+
+  if (added.length > 0) {
+    const addedRoles = descriptor.memberRoles.filter((member) => added.includes(member.userId))
+    emitConversationMembersAddedEvent(conversationRecord.id, addedRoles, descriptor.memberIds)
+  }
+
+  if (removed.length > 0) {
+    emitConversationMembersRemovedEvent(conversationRecord.id, removed, descriptor.memberIds)
+  }
+
+  emitConversationUpdatedEvent(descriptor)
+  return descriptor
 }
 
 export async function leaveConversation(conversationId: string, userId: string): Promise<void> {
@@ -841,6 +1037,46 @@ const getOtherDirectMember = async (
   return result.rows[0].user_id
 }
 
+type RoomPlayerRow = {
+  user_id: string
+  team_id: number | null
+}
+
+const getGameRoomHost = async (
+  gameId: string,
+): Promise<{ hostId: string; name: string | null }> => {
+  const result = await query<{ host_id: string; name: string | null }>(
+    `
+    SELECT host_id, name
+    FROM game_rooms
+    WHERE id = $1
+  `,
+    [gameId],
+  )
+
+  if (result.rows.length === 0) {
+    throw new ConversationError('NOT_FOUND', 'Game room not found')
+  }
+
+  const row = result.rows[0]
+  return { hostId: row.host_id, name: row.name }
+}
+
+const getActiveRoomPlayers = async (
+  gameId: string,
+): Promise<RoomPlayerRow[]> => {
+  const result = await query<RoomPlayerRow>(
+    `
+    SELECT user_id, team_id
+    FROM room_players
+    WHERE room_id = $1 AND (left_at IS NULL)
+  `,
+    [gameId],
+  )
+
+  return result.rows
+}
+
 const toIsoString = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : value
 
@@ -1128,9 +1364,19 @@ export async function sendMessage(options: SendMessageOptions): Promise<Conversa
     }
   }
 
+  let senderName: string | undefined
+  if (senderId) {
+    const senderResult = await query<{ username: string }>(
+      `SELECT username FROM users WHERE id = $1`,
+      [senderId],
+    )
+    senderName = senderResult.rows[0]?.username
+  }
+
   const jsonMetadata = {
     ...(metadata ?? {}),
     ...(clientMessageId ? { clientMessageId } : {}),
+    ...(senderName ? { senderName } : {}),
   }
 
   const insertResult = await query<ConversationMessageRow>(
@@ -1453,6 +1699,8 @@ export default {
   removeConversationMember,
   updateConversationMemberRole,
   setConversationArchived,
+  ensureGameConversation,
+  ensureTeamConversation,
   markConversationRead,
   getConversationDetail,
   listConversationsForUser,

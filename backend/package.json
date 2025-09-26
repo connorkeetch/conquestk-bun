@@ -25,7 +25,9 @@
     "check:schema": "ts-node src/scripts/checkSchema.ts",
     "migrate:status": "ts-node src/scripts/checkSchema.ts",
     "notify": "ts-node src/scripts/notify.ts",
-    "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts"
+    "backfill:conversation-read": "ts-node src/scripts/backfillConversationReadState.ts",
+    "flags:check": "ts-node src/scripts/checkFeatureFlags.ts",
+    "flags:sync": "ts-node src/scripts/checkFeatureFlags.ts --apply"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",

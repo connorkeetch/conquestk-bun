@@ -11,6 +11,9 @@ import type {
   TypingEventResponse,
 } from '@shared/types'
 import {
+  ensureDirectConversation as ensureDirectConversationRequest,
+  ensureGameConversation as ensureGameConversationRequest,
+  ensureTeamConversation as ensureTeamConversationRequest,
   fetchConversationDetail,
   fetchConversationMessages,
   fetchConversations,
@@ -81,6 +84,7 @@ const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
     ...member,
     joinedAt: toIsoString(member.joinedAt),
     shadowMuted: Boolean(member.shadowMuted),
+    username: member.username,
   })),
   membership: {
     ...item.membership,
@@ -174,6 +178,7 @@ const mergeMembers = (
       roleMap.set(addition.userId, {
         ...existing,
         role: addition.role,
+        username: addition.username ?? existing.username,
       })
     } else {
       roleMap.set(addition.userId, {
@@ -181,6 +186,7 @@ const mergeMembers = (
         role: addition.role,
         joinedAt: new Date().toISOString(),
         shadowMuted: false,
+        username: addition.username,
       })
     }
   }
@@ -191,12 +197,38 @@ const mergeMembers = (
       roleMap.set(update.userId, {
         ...existing,
         role: update.role,
+        username: update.username ?? existing.username,
       })
     }
   }
 
   current.memberRoles = Array.from(roleMap.values())
   current.memberIds = current.memberRoles.map((member) => member.userId)
+}
+
+const applyConversationEntity = (state: MessagesState, entity: ConversationEntity) => {
+  const current = state.conversations[entity.id]
+  if (current) {
+    state.conversations[entity.id] = {
+      ...current,
+      ...entity,
+      memberRoles: entity.memberRoles,
+      memberIds: entity.memberIds,
+      membership: {
+        ...current.membership,
+        ...entity.membership,
+      },
+      unreadCount: entity.unreadCount ?? current.unreadCount,
+      lastMessage: entity.lastMessage ?? current.lastMessage,
+    }
+  } else {
+    const unread = state.pendingUnread[entity.id] ?? entity.unreadCount ?? 0
+    delete state.pendingUnread[entity.id]
+    state.conversations[entity.id] = {
+      ...entity,
+      unreadCount: unread,
+    }
+  }
 }
 
 export const loadInbox = createAsyncThunk<ConversationListItem[], void, { rejectValue: string }>(
@@ -249,6 +281,43 @@ export const loadUnreadSummary = createAsyncThunk<UnreadSummaryEntry[], void, { 
       return await fetchUnreadSummary()
     } catch (_error) {
       return rejectWithValue('Failed to load unread summary')
+    }
+  },
+)
+
+export const ensureDirectConversation = createAsyncThunk<ConversationDetail, string, { rejectValue: string }>(
+  'messages/ensureDirectConversation',
+  async (targetUserId, { rejectWithValue }) => {
+    try {
+      return await ensureDirectConversationRequest(targetUserId)
+    } catch (_error) {
+      return rejectWithValue('Failed to start direct conversation')
+    }
+  },
+)
+
+export const ensureGameConversation = createAsyncThunk<ConversationDetail, string, { rejectValue: string }>(
+  'messages/ensureGameConversation',
+  async (gameId, { rejectWithValue }) => {
+    try {
+      return await ensureGameConversationRequest(gameId)
+    } catch (_error) {
+      return rejectWithValue('Failed to ensure game conversation')
+    }
+  },
+)
+
+export const ensureTeamConversation = createAsyncThunk<
+  ConversationDetail,
+  { gameId: string; teamId: number },
+  { rejectValue: string }
+>(
+  'messages/ensureTeamConversation',
+  async ({ gameId, teamId }, { rejectWithValue }) => {
+    try {
+      return await ensureTeamConversationRequest(gameId, teamId)
+    } catch (_error) {
+      return rejectWithValue('Failed to ensure team conversation')
     }
   },
 )
@@ -309,6 +378,7 @@ const messagesSlice = createSlice({
           role: member.role,
           joinedAt: new Date().toISOString(),
           shadowMuted: false,
+          username: member.username,
         })),
       }
 
@@ -322,27 +392,7 @@ const messagesSlice = createSlice({
       state.conversations[summary.id] = entity
     },
     conversationUpserted(state, action: PayloadAction<ConversationEntity>) {
-      const entity = action.payload
-      const current = state.conversations[entity.id]
-      if (current) {
-        state.conversations[entity.id] = {
-          ...current,
-          ...entity,
-          membership: {
-            ...current.membership,
-            ...entity.membership,
-          },
-          unreadCount: entity.unreadCount ?? current.unreadCount,
-          lastMessage: entity.lastMessage ?? current.lastMessage,
-        }
-      } else {
-        const unread = state.pendingUnread[entity.id] ?? entity.unreadCount ?? 0
-        delete state.pendingUnread[entity.id]
-        state.conversations[entity.id] = {
-          ...entity,
-          unreadCount: unread,
-        }
-      }
+      applyConversationEntity(state, action.payload)
     },
     conversationMembersAdded(state, action: PayloadAction<ConversationMembersAddedPayload>) {
       const conversation = state.conversations[action.payload.conversationId]
@@ -424,11 +474,7 @@ const messagesSlice = createSlice({
         state.loadingInbox = false
         for (const item of action.payload) {
           const entity = adaptConversation(item)
-          state.conversations[entity.id] = {
-            ...entity,
-            unreadCount: entity.unreadCount ?? 0,
-          }
-          delete state.pendingUnread[entity.id]
+          applyConversationEntity(state, entity)
         }
       })
       .addCase(loadInbox.rejected, (state, action) => {
@@ -451,11 +497,7 @@ const messagesSlice = createSlice({
       })
       .addCase(refreshConversation.fulfilled, (state, action) => {
         const entity = adaptConversationDetail(action.payload)
-        state.conversations[entity.id] = {
-          ...entity,
-          unreadCount: state.pendingUnread[entity.id] ?? entity.unreadCount ?? 0,
-        }
-        delete state.pendingUnread[entity.id]
+        applyConversationEntity(state, entity)
       })
       .addCase(loadUnreadSummary.fulfilled, (state, action) => {
         for (const entry of action.payload) {
@@ -466,6 +508,18 @@ const messagesSlice = createSlice({
           }
         }
         state.unreadSummaryFetched = true
+      })
+      .addCase(ensureDirectConversation.fulfilled, (state, action) => {
+        const entity = adaptConversationDetail(action.payload)
+        applyConversationEntity(state, entity)
+      })
+      .addCase(ensureGameConversation.fulfilled, (state, action) => {
+        const entity = adaptConversationDetail(action.payload)
+        applyConversationEntity(state, entity)
+      })
+      .addCase(ensureTeamConversation.fulfilled, (state, action) => {
+        const entity = adaptConversationDetail(action.payload)
+        applyConversationEntity(state, entity)
       })
   },
 })

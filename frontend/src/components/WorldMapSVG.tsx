@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { TerritoryDisplayMap } from './RiskGameBoard'
+import type { TerritoryDisplayMap } from './game/territoryDisplay'
 
 interface WorldMapSVGProps {
   territories: TerritoryDisplayMap
