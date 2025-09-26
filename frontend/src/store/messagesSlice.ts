@@ -286,7 +286,6 @@ export const loadUnreadSummary = createAsyncThunk<
     return rejectWithValue('Failed to load unread summary')
   }
 })
-
 export const ensureDirectConversation = createAsyncThunk<
   ConversationDetail,
   string,

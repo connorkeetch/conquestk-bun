@@ -35,6 +35,11 @@ export interface ConversationMembersRemovedPayload {
   members: Array<{ userId: string }>
 }
 
+export interface ConversationMembersChangedPayload {
+  conversationId: string
+  members: ConversationMemberEvent[]
+}
+
 export interface ConversationMessageEventPayload {
   conversationId: string
   id: string
@@ -71,6 +76,10 @@ export interface ConversationCreateAck {
   error?: string
   code?: string
   conversation?: ConversationEventSummary & { memberIds: string[] }
+}
+
+export interface ConversationUpdatedPayload {
+  conversation: ConversationEventSummary
 }
 
 export interface ConversationMembersUpdatePayload {

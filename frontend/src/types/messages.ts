@@ -1,6 +1,6 @@
 import type { ConversationMemberEvent } from '@shared/types'
 
-export type ConversationKind = 'direct' | 'group' | 'game'
+export type ConversationKind = 'direct' | 'group' | 'game' | 'team'
 
 export interface ConversationMemberRole extends ConversationMemberEvent {
   joinedAt: string

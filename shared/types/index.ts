@@ -6,6 +6,27 @@
 export * from './messaging'
 export * from './notifications'
 
+// Import messaging types for internal references
+import type {
+  ConversationCreateAck,
+  ConversationCreatedPayload,
+  ConversationCreatePayload,
+  ConversationMembersAddedPayload,
+  ConversationMembersChangedPayload,
+  ConversationMembersRemovedPayload,
+  ConversationMembersUpdateAck,
+  ConversationMembersUpdatePayload,
+  ConversationMessageEventPayload,
+  ConversationUpdatedPayload,
+  MessageSendAck,
+  MessageSendPayload,
+  ReceiptReadAck,
+  ReceiptReadEventPayload,
+  ReceiptReadPayload,
+  TypingEventPayload,
+  TypingEventResponse,
+} from './messaging'
+
 // ============================================
 // Chat Types
 // ============================================
