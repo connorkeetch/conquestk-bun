@@ -379,9 +379,7 @@ const AdminUsers: React.FC = () => {
       vipNotes.push(`Reason: ${selectedUser.vipReason}.`)
     }
     if (selectedUser.vipGrantedAt) {
-      vipNotes.push(
-        `Granted ${new Date(selectedUser.vipGrantedAt).toLocaleString()}`,
-      )
+      vipNotes.push(`Granted ${new Date(selectedUser.vipGrantedAt).toLocaleString()}`)
     }
 
     return (
@@ -421,9 +419,7 @@ const AdminUsers: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Status:</span>
-                  <span className={statusBadgeClass}>
-                    {formatStatusLabel(selectedUser.status)}
-                  </span>
+                  <span className={statusBadgeClass}>{formatStatusLabel(selectedUser.status)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Joined:</span>
@@ -449,9 +445,7 @@ const AdminUsers: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Beta tester:</span>
-                  <span className={betaBadgeClass}>
-                    {selectedUser.isBetaUser ? 'Yes' : 'No'}
-                  </span>
+                  <span className={betaBadgeClass}>{selectedUser.isBetaUser ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Language:</span>
@@ -483,9 +477,7 @@ const AdminUsers: React.FC = () => {
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    <span className={vipBadgeClass}>
-                      {selectedUser.isVip ? 'VIP' : 'Standard'}
-                    </span>
+                    <span className={vipBadgeClass}>{selectedUser.isVip ? 'VIP' : 'Standard'}</span>
                     <select
                       value={selectedUser.isVip ? 'vip' : 'standard'}
                       onChange={(event) =>
@@ -498,9 +490,7 @@ const AdminUsers: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                {vipNotes.length > 0 && (
-                  <p className="text-xs text-muted">{vipNotes.join(' ')}</p>
-                )}
+                {vipNotes.length > 0 && <p className="text-xs text-muted">{vipNotes.join(' ')}</p>}
 
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -546,9 +536,7 @@ const AdminUsers: React.FC = () => {
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="font-medium text-[color:var(--heading)]">Premium tier</p>
-                    <p className="text-xs text-muted">
-                      Subscription level and entitlement window.
-                    </p>
+                    <p className="text-xs text-muted">Subscription level and entitlement window.</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                     <span className={premiumBadgeClass}>
@@ -767,9 +755,7 @@ const AdminUsers: React.FC = () => {
                 {actionDialogCopy.title}
               </h3>
               {actionDialogCopy.description && (
-                <p className="text-sm text-muted mt-1">
-                  {actionDialogCopy.description}
-                </p>
+                <p className="text-sm text-muted mt-1">{actionDialogCopy.description}</p>
               )}
             </div>
             <button
@@ -783,7 +769,9 @@ const AdminUsers: React.FC = () => {
 
           <div className="modal-body space-y-4">
             <section className="panel-muted space-y-2 text-sm">
-              <div className="font-medium text-[color:var(--heading)]">{actionDialog.user.username}</div>
+              <div className="font-medium text-[color:var(--heading)]">
+                {actionDialog.user.username}
+              </div>
               <div className="text-muted">{actionDialog.user.email}</div>
               <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
                 <div>
@@ -813,7 +801,10 @@ const AdminUsers: React.FC = () => {
 
             {actionDialogCopy.notesLabel && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[color:var(--heading)]" htmlFor={actionNotesId}>
+                <label
+                  className="text-sm font-medium text-[color:var(--heading)]"
+                  htmlFor={actionNotesId}
+                >
                   {actionDialogCopy.notesLabel}
                   {actionDialogCopy.notesRequired && (
                     <span className="text-[color:var(--color-danger)] ml-1">*</span>
@@ -848,9 +839,7 @@ const AdminUsers: React.FC = () => {
             <button
               type="button"
               onClick={executeAction}
-              disabled={
-                actionSubmitting || (actionDialogCopy.notesRequired && !actionNotes.trim())
-              }
+              disabled={actionSubmitting || (actionDialogCopy.notesRequired && !actionNotes.trim())}
               className={confirmClass}
             >
               {actionSubmitting ? 'Working...' : actionDialogCopy.confirmLabel}
@@ -967,9 +956,7 @@ const AdminUsers: React.FC = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="panel">
-            <div className="text-2xl font-semibold text-[color:var(--heading)]">
-              {users.length}
-            </div>
+            <div className="text-2xl font-semibold text-[color:var(--heading)]">{users.length}</div>
             <p className="text-sm text-muted mt-1">Total users</p>
           </div>
           <div className="panel">
@@ -995,7 +982,10 @@ const AdminUsers: React.FC = () => {
         {/* Search and Filter Bar */}
         <div className="panel">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <form onSubmit={handleSearch} className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+            <form
+              onSubmit={handleSearch}
+              className="flex w-full flex-col gap-3 sm:flex-row sm:items-center"
+            >
               <input
                 type="text"
                 placeholder="Search users by username or email..."
@@ -1045,7 +1035,9 @@ const AdminUsers: React.FC = () => {
           <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)]">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="font-semibold text-[color:var(--color-danger)]">Unable to load users</p>
+                <p className="font-semibold text-[color:var(--color-danger)]">
+                  Unable to load users
+                </p>
                 <p className="text-sm text-muted mt-1 max-w-2xl">{error}</p>
               </div>
               <button
@@ -1154,7 +1146,6 @@ const AdminUsers: React.FC = () => {
         {renderUserModal()}
 
         {renderActionDialog()}
-
       </div>
     </div>
   )

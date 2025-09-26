@@ -272,7 +272,12 @@ const syncConversationMembers = async (
 
   const toAdd = uniqueDesired.filter((userId) => !existingSet.has(userId))
   const toRemove = existingMembers
-    .filter((member) => !desiredSet.has(member.user_id) && member.role !== 'owner' && member.user_id !== ownerUserId)
+    .filter(
+      (member) =>
+        !desiredSet.has(member.user_id) &&
+        member.role !== 'owner' &&
+        member.user_id !== ownerUserId,
+    )
     .map((member) => member.user_id)
 
   if (toAdd.length === 0 && toRemove.length === 0) {
@@ -1065,9 +1070,7 @@ const getGameRoomHost = async (
   return { hostId: row.host_id, name: row.name }
 }
 
-const getActiveRoomPlayers = async (
-  gameId: string,
-): Promise<RoomPlayerRow[]> => {
+const getActiveRoomPlayers = async (gameId: string): Promise<RoomPlayerRow[]> => {
   const result = await query<RoomPlayerRow>(
     `
     SELECT user_id, team_id

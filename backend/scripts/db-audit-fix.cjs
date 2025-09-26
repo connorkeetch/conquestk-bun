@@ -68,8 +68,8 @@ async function tableExists(client, table) {
     `SELECT EXISTS (
        SELECT FROM information_schema.tables
        WHERE table_schema='public' AND table_name=$1
-     ) as exists` ,
-     [table]
+     ) as exists`,
+    [table],
   )
   return r.rows[0].exists
 }
@@ -86,7 +86,7 @@ async function ensureSchemaMigrations(client) {
        status VARCHAR(20) DEFAULT 'completed' CHECK (status IN ('completed','failed','rolled_back')),
        rollback_sql TEXT,
        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-     )`
+     )`,
   )
 }
 
@@ -101,7 +101,7 @@ async function markCompleted(client, filename, sql, ms) {
        executed_at = EXCLUDED.executed_at,
        execution_time_ms = EXCLUDED.execution_time_ms,
        status = EXCLUDED.status`,
-    [filename, checksum, ms]
+    [filename, checksum, ms],
   )
 }
 
@@ -175,7 +175,7 @@ async function run() {
       await query(client, sql)
       const dt = Date.now() - t0
       await markCompleted(client, MIG_031, sql, dt)
-      console.log(`✅ 031 applied (${dt}ms)`)    
+      console.log(`✅ 031 applied (${dt}ms)`)
     } else {
       console.log('✅ Conversations schema present')
     }
@@ -185,10 +185,13 @@ async function run() {
       console.log('🧩 Applying 038 (clan core tables)...')
       let sql = readFileSync(path.join(MIG_DIR, MIG_038), 'utf8')
       // 038 contains an invalid UNIQUE constraint using LOWER(name); switch to a unique index.
-      sql = sql.replace(/\n\s*CONSTRAINT\s+clan_roles_name_unique\s+UNIQUE\s*\(\s*clan_id\s*,\s*LOWER\(name\)\s*\)\s*,?/i, '\n')
+      sql = sql.replace(
+        /\n\s*CONSTRAINT\s+clan_roles_name_unique\s+UNIQUE\s*\(\s*clan_id\s*,\s*LOWER\(name\)\s*\)\s*,?/i,
+        '\n',
+      )
       // Adapt feature_flags.dependencies cast if table uses jsonb instead of text[]
       const depType = await client.query(
-        `SELECT data_type, udt_name FROM information_schema.columns WHERE table_name='feature_flags' AND column_name='dependencies'`
+        `SELECT data_type, udt_name FROM information_schema.columns WHERE table_name='feature_flags' AND column_name='dependencies'`,
       )
       if (depType.rows.length && depType.rows[0].data_type === 'jsonb') {
         sql = sql.replace(/'\{\}'::text\[\]/g, "'{}'::jsonb")
@@ -206,10 +209,13 @@ async function run() {
         }
       }
       // Ensure unique index for LOWER(name) exists
-      await query(client, 'CREATE UNIQUE INDEX IF NOT EXISTS idx_clan_roles_name_unique ON clan_roles(clan_id, LOWER(name))')
+      await query(
+        client,
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_clan_roles_name_unique ON clan_roles(clan_id, LOWER(name))',
+      )
       const dt = Date.now() - t0
       await markCompleted(client, MIG_038, sql, dt)
-      console.log(`✅ 038 applied (${dt}ms)`)    
+      console.log(`✅ 038 applied (${dt}ms)`)
     } else {
       console.log('✅ Clan schema present')
     }

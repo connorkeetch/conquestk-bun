@@ -37,7 +37,9 @@ function scanFiles(): ScanResult {
   try {
     const constantsPath = path.join(FRONTEND_SRC, 'constants', 'featureFlags.ts')
     const content = fs.readFileSync(constantsPath, 'utf8')
-    const objectLiteralMatch = content.match(/export const FEATURE_FLAGS\s*=\s*\{([\s\S]*?)\}\s*as const/)
+    const objectLiteralMatch = content.match(
+      /export const FEATURE_FLAGS\s*=\s*\{([\s\S]*?)\}\s*as const/,
+    )
     if (objectLiteralMatch) {
       const body = objectLiteralMatch[1]
       const entryRegex = /(\w+)\s*:\s*'([^']+)'/g
@@ -169,4 +171,3 @@ main()
     console.error(err)
     process.exit(1)
   })
-
