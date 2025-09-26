@@ -239,6 +239,12 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         m.rating_average,
         m.rating_count,
         m.play_count,
+        (
+          SELECT COUNT(*)
+          FROM game_rooms gr
+          WHERE gr.map_id = m.id
+            AND gr.started_at >= (NOW() - INTERVAL '30 days')
+        ) as play_count_30d,
         m.tags,
         m.created_at,
         (SELECT COUNT(*) FROM map_territories WHERE map_id = m.id) as territory_count,
@@ -271,6 +277,7 @@ router.get('/available-for-game', async (req: Request, res: Response) => {
         is_featured: row.is_featured || false,
         creator_name: row.creator_name || 'Unknown',
         play_count: parseInt(row.play_count, 10) || 0,
+        play_count_30d: parseInt(row.play_count_30d, 10) || 0,
         rating_average: parseFloat(row.rating_average) || 0,
         rating_count: parseInt(row.rating_count, 10) || 0,
         tags: row.tags || [],

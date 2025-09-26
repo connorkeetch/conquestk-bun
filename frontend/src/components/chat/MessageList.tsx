@@ -122,7 +122,9 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
 
               <div
                 className={`text-xs mt-1 flex items-center gap-2 ${
-                  isOwnMessage ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]' : 'text-muted'
+                  isOwnMessage
+                    ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]'
+                    : 'text-muted'
                 }`}
               >
                 <span>{formatTime(message.createdAt)}</span>

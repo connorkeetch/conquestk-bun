@@ -6,6 +6,19 @@ import { logger } from '@/utils/logger'
 import { useAppSelector } from '../hooks/redux'
 import api from '../services/api'
 
+// Keep map size logic consistent with CreateGamePage
+const computeMapSizeFromCounts = (
+  territoryCount?: number,
+): 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive' | 'Unknown' => {
+  const count = typeof territoryCount === 'number' ? territoryCount : NaN
+  if (!Number.isFinite(count) || count <= 0) return 'Unknown'
+  if (count <= 35) return 'Small'
+  if (count <= 45) return 'Medium'
+  if (count <= 65) return 'Large'
+  if (count <= 90) return 'Very Large'
+  return 'Massive'
+}
+
 interface Map {
   id: string
   name: string
@@ -31,6 +44,9 @@ const Maps: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('popularity')
   const [filterTag, setFilterTag] = useState('')
+  const [filterSize, setFilterSize] = useState<
+    '' | 'Small' | 'Medium' | 'Large' | 'Very Large' | 'Massive'
+  >('')
   const [filterStatus, setFilterStatus] = useState('')
   const [showMyMaps, setShowMyMaps] = useState(false)
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
@@ -86,6 +102,13 @@ const Maps: React.FC = () => {
   // Apply status filter for My Maps
   if (showMyMaps && filterStatus) {
     filteredMaps = filteredMaps.filter((map) => map.status === filterStatus)
+  }
+
+  // Apply Map Size filter (client-side)
+  if (filterSize) {
+    filteredMaps = filteredMaps.filter(
+      (map) => computeMapSizeFromCounts(map.territoryCount) === filterSize,
+    )
   }
 
   const getStatusBadge = (status?: string) => {
@@ -201,6 +224,20 @@ const Maps: React.FC = () => {
             ))}
           </select>
         )}
+
+        {/* Map Size filter */}
+        <select
+          value={filterSize}
+          onChange={(e) => setFilterSize(e.target.value as typeof filterSize)}
+          className="glass-box-sm text-white focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="">All Sizes</option>
+          <option value="Small">Small (≤35)</option>
+          <option value="Medium">Medium (36–45)</option>
+          <option value="Large">Large (46–65)</option>
+          <option value="Very Large">Very Large (66–90)</option>
+          <option value="Massive">Massive (91+)</option>
+        </select>
 
         <select
           value={sortBy}
