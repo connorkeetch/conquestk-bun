@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FullMapData } from '../services/mapService'
 import { mapService } from '../services/mapService'
 import CustomMapDisplay from './CustomMapDisplay'
@@ -50,7 +50,7 @@ export default function MapDetailModal({ isOpen, mapId, onClose }: MapDetailModa
       return
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose()
       }

@@ -81,10 +81,6 @@ interface PrivacyPreferenceRow {
   dm_privacy: 'anyone' | 'friends' | 'nobody' | null
 }
 
-interface PlayerIdRow {
-  player_id: string
-}
-
 interface UnreadMessageCountRow {
   conversation_type: 'game' | 'team' | 'dm'
   conversation_id: string
@@ -431,16 +427,17 @@ class ChatService {
    */
   async incrementGameUnreadForAllPlayers(gameId: string, senderId: string): Promise<void> {
     try {
-      // Get all players in the game
-      const playersResult = await query<PlayerIdRow>(
-        `SELECT player_id FROM room_players WHERE room_id = $1 AND player_id != $2`,
+      await query(
+        `
+        INSERT INTO unread_message_counts (user_id, conversation_type, conversation_id, unread_count)
+        SELECT player_id, 'game', $1, 1
+        FROM room_players
+        WHERE room_id = $1 AND player_id != $2
+        ON CONFLICT (user_id, conversation_type, conversation_id)
+        DO UPDATE SET unread_count = unread_message_counts.unread_count + 1
+      `,
         [gameId, senderId],
       )
-
-      // Increment unread for each player
-      for (const player of playersResult.rows) {
-        await this.incrementUnreadCount(player.player_id, 'game', gameId)
-      }
     } catch (error) {
       logger.error('Error incrementing game unread counts:', error)
     }

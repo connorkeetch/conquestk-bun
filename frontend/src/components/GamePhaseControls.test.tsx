@@ -233,6 +233,7 @@ describe('GamePhaseControls', () => {
             isLoading: false,
             error: null,
             isAuthenticated: true,
+            requiresEmailVerification: false,
           },
           room: {
             currentRoom: null,

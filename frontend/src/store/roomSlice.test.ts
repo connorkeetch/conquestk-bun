@@ -61,7 +61,7 @@ describe('roomSlice reducers', () => {
             isReady: true,
             readyAt: '2024-01-02T00:00:00.000Z',
             isAi: true,
-            aiDifficulty: 'commander',
+            aiDifficulty: 'commander' as const,
             aiPlayerId: 'ai-777',
           },
           {
@@ -73,7 +73,7 @@ describe('roomSlice reducers', () => {
             readyAt: null,
             isAi: false,
           },
-        ],
+        ] as unknown as GameRoom['players'],
       },
     }
 

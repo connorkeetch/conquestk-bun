@@ -35,8 +35,8 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
-import type { BattleResult, GameState } from '../types/game'
 import type { GameDelta } from '../types/deltaUpdates'
+import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
 import audioService from './audioService'

@@ -403,7 +403,7 @@ export const AdminMaps: React.FC = () => {
         : []
 
       if (territories.length === 0 && metadataTerritories.length > 0) {
-        territories = metadataTerritories
+        const mapped = metadataTerritories
           .map((entry) => {
             const record = parseJsonObject(entry)
             if (!record) return null
@@ -427,7 +427,9 @@ export const AdminMaps: React.FC = () => {
               polygon_data: record,
             }
           })
-          .filter((item): item is RawTerritoryRecord => Boolean(item))
+          .filter((item): item is RawTerritoryRecord => Boolean(item)) as RawTerritoryRecord[]
+
+        territories = mapped
       }
 
       const resolvedImageWidth =

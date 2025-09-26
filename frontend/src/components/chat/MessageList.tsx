@@ -69,7 +69,7 @@ const parseLinkPreviews = (metadata?: Record<string, unknown> | null): LinkPrevi
             : typeof record.site_name === 'string'
               ? record.site_name
               : undefined,
-      }
+      } as LinkPreviewData
     })
     .filter((preview): preview is LinkPreviewData => preview !== null)
 }
