@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { generateCapitalAssignments } from '../utils/capitalGenerator'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -2145,9 +2146,47 @@ export default function MapEditorTokens() {
 
     setIsGeneratingCapitals(true)
     try {
-      // For now, just alert that we need to save the map first
-      // In a complete implementation, we'd call the API after the map is saved
-      alert('Please save the map to database first, then capitals can be generated')
+      const territories = state.territories.map((t) => ({
+        id: t.id,
+        name: t.name,
+        connections: Array.isArray(t.connections) ? t.connections : [],
+      }))
+
+      const { assignments, generatedCounts, skippedCounts, warnings } =
+        generateCapitalAssignments(territories, state.minPlayers, state.maxPlayers)
+
+      if (Object.keys(assignments).length === 0) {
+        alert(
+          warnings[0] ||
+            'Unable to auto-generate capitals. Please check territory connections and counts.',
+        )
+        return
+      }
+
+      setCapitalAssignments(assignments)
+      setCapitalMetadata({
+        generatedAt: new Date().toISOString(),
+        algorithm: 'client-maximin-distance-v1',
+        manuallyAdjusted: {},
+      })
+
+      const summary = [
+        generatedCounts.length
+          ? `Generated for players: ${generatedCounts.join(', ')}`
+          : 'Generated assignments created.',
+        skippedCounts.length ? `Skipped: ${skippedCounts.join(', ')}` : '',
+        warnings.length ? `Warnings: ${warnings.join(' | ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      // Provide a concise summary without blocking further edits
+      if (summary) {
+        alert(summary)
+      }
+    } catch (error) {
+      reportError('Failed to generate capitals:', error)
+      alert('Failed to generate capitals. Please try again.')
     } finally {
       setIsGeneratingCapitals(false)
     }
