@@ -1,6 +1,6 @@
 # ConquestK Database Schema
 
-Generated on 2025-09-26T17:12:37.526Z
+Generated on 2025-09-26T17:16:29.836Z
 
 > This document is generated via `npm run check:schema -- --skip-validation --export ../docs/operations/database-schema.md`. Run the command after any migration changes to keep it current.
 
