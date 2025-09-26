@@ -628,12 +628,7 @@ const AdminUsers: React.FC = () => {
                                 <p className="text-xs text-muted mt-1">{flag.description}</p>
                               )}
                             </td>
-                            <td className="align-top text-xs text-muted">
-                              {flag.accessLevel}
-                              {flag.rolloutPercentage != null && flag.rolloutPercentage < 100
-                                ? ` (${flag.rolloutPercentage}% rollout)`
-                                : ''}
-                            </td>
+                            <td className="align-top text-xs text-muted">{flag.accessLevel}</td>
                             <td className="align-top">
                               <span className={globalBadge}>
                                 {flag.isEnabled ? 'Enabled' : 'Disabled'}

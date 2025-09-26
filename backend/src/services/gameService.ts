@@ -417,7 +417,8 @@ export class GameService {
       await territoryModifierService.initializeGameModifiers(
         roomId,
         config.mapId,
-        config.modifierDistribution || 'balanced',
+        // Map-first: apply predefined modifiers if present; otherwise do nothing
+        'none',
         territoryIds,
       )
 

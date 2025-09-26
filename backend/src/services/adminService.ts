@@ -63,7 +63,6 @@ export interface FeatureFlag {
   config: Record<string, unknown>
   accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
   category?: string | null
-  rolloutPercentage: number
   dependencies: string[]
   createdBy: string
   createdAt: Date
@@ -73,7 +72,6 @@ export interface FeatureFlag {
 export interface FeatureFlagSettingsUpdate {
   description?: string | null
   accessLevel?: FeatureFlag['accessLevel']
-  rolloutPercentage?: number
   config?: Record<string, unknown>
   category?: string | null
   dependencies?: string[]
@@ -85,7 +83,6 @@ export interface UserFeatureFlagAssignment {
   isEnabled: boolean
   accessLevel: 'disabled' | 'internal' | 'beta' | 'public'
   category?: string | null
-  rolloutPercentage: number
   config: Record<string, unknown>
   userOverride: boolean | null
   effectiveValue: boolean | null
@@ -807,10 +804,6 @@ export class AdminService {
           config: targetCriteria,
           accessLevel: (flag.access_level as FeatureFlag['accessLevel']) ?? 'disabled',
           category: flag.category,
-          rolloutPercentage:
-            typeof flag.rollout_percentage === 'string'
-              ? parseInt(flag.rollout_percentage, 10)
-              : (flag.rollout_percentage ?? 0),
           dependencies: Array.isArray(flag.dependencies)
             ? (flag.dependencies as string[])
             : this.safeJsonParse<string[]>(flag.dependencies as string | null | undefined, []),
@@ -844,6 +837,7 @@ export class AdminService {
       `
       UPDATE feature_flags
       SET is_enabled = $1,
+          rollout_percentage = CASE WHEN $1 THEN 100 ELSE 0 END,
           updated_at = CURRENT_TIMESTAMP
       WHERE flag_name = $2
       RETURNING id
@@ -884,9 +878,6 @@ export class AdminService {
     }
     if (updates.accessLevel !== undefined) {
       mappedUpdates.access_level = updates.accessLevel
-    }
-    if (updates.rolloutPercentage !== undefined) {
-      mappedUpdates.rollout_percentage = updates.rolloutPercentage
     }
     if (updates.config !== undefined) {
       mappedUpdates.target_criteria = updates.config
@@ -988,10 +979,6 @@ export class AdminService {
         isEnabled: Boolean(flag.is_enabled),
         accessLevel: (flag.access_level as FeatureFlag['accessLevel']) ?? 'disabled',
         category: flag.category,
-        rolloutPercentage:
-          typeof flag.rollout_percentage === 'string'
-            ? parseInt(flag.rollout_percentage, 10)
-            : (flag.rollout_percentage ?? 0),
         config: targetCriteria,
         userOverride: overrides.get(flag.flag_name) ?? null,
         effectiveValue,

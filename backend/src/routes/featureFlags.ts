@@ -47,13 +47,11 @@ router.put(
     const {
       enabled,
       access_level,
-      rollout_percentage,
       target_criteria,
       reason,
     }: {
       enabled?: boolean
       access_level?: AccessLevel
-      rollout_percentage?: number
       target_criteria?: Record<string, unknown>
       reason?: string
     } = req.body
@@ -63,12 +61,10 @@ router.put(
       const updates: Partial<{
         is_enabled: boolean
         access_level: AccessLevel
-        rollout_percentage: number
         target_criteria: Record<string, unknown>
       }> = {}
       if (enabled !== undefined) updates.is_enabled = enabled
       if (access_level !== undefined) updates.access_level = access_level
-      if (rollout_percentage !== undefined) updates.rollout_percentage = rollout_percentage
       if (target_criteria !== undefined) updates.target_criteria = target_criteria
 
       const flag = await featureFlagService.updateFlag(flagName, updates, userId, reason)

@@ -122,21 +122,17 @@ export class TerritoryModifierService {
     territories: string[],
   ): Promise<void> {
     try {
-      // If distribution is 'none', don't add any modifiers
-      if (distribution === 'none') {
-        logger.info(`No modifiers for game ${gameId}`)
-        return
-      }
-
-      // Get map-specific modifiers if they exist
+      // Always prefer map-defined modifiers
       const mapModifiers = await this.getMapModifiers(mapId)
 
       if (mapModifiers.length > 0) {
-        // Use predefined map modifiers
         await this.applyMapModifiers(gameId, mapModifiers)
-      } else {
-        // Generate random modifiers based on distribution
+      } else if (distribution !== 'none') {
+        // Only generate random modifiers if explicitly requested
         await this.generateRandomModifiers(gameId, territories, distribution)
+      } else {
+        logger.info(`No territory modifiers applied for game ${gameId}`)
+        return
       }
 
       logger.info(
