@@ -198,8 +198,7 @@ export class UserService {
   async markPasswordResetTokenUsed(token: string): Promise<void> {
     const updateQuery = `
       UPDATE password_reset_tokens 
-      SET used = true, 
-          used_at = CURRENT_TIMESTAMP
+      SET used_at = CURRENT_TIMESTAMP
       WHERE token = $1
     `
     await query(updateQuery, [token])

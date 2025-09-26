@@ -106,7 +106,8 @@ export class AuthController {
       // Send verification email only if service is enabled
       if (emailService.isEnabled() && verificationToken) {
         try {
-          const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`
+          const { buildFrontendUrl } = await import('../utils/url')
+          const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`)
           await emailService.sendVerificationEmail({
             username,
             email,
@@ -521,7 +522,8 @@ export class AuthController {
 
       // Send reset email
       if (emailService.isEnabled()) {
-        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`
+        const { buildFrontendUrl } = await import('../utils/url')
+        const resetLink = buildFrontendUrl(req, `/reset-password/${resetToken}`)
         await emailService.sendPasswordResetEmail({
           username: user.username,
           email: user.email,
@@ -636,7 +638,8 @@ export class AuthController {
 
       // Send verification email
       if (emailService.isEnabled()) {
-        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`
+        const { buildFrontendUrl } = await import('../utils/url')
+        const verificationLink = buildFrontendUrl(req, `/verify-email/${verificationToken}`)
         await emailService.sendVerificationEmail({
           username: user.username,
           email: user.email,

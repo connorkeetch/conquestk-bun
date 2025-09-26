@@ -49,7 +49,9 @@ export class GameLifecycleService {
         status: string
         turn_timer: number | null
         max_players: number | null
-      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [roomId])
+      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [
+        roomId,
+      ])
 
       if (roomResult.rowCount === 0) {
         throw new Error('Room not found')

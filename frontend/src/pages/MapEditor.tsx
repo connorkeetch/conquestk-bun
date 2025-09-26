@@ -1264,7 +1264,9 @@ export default function MapEditor() {
       {showImageOptions && tempImageUrl && (
         <div className="fixed inset-0 bg-[color:color-mix(in srgb, var(--color-black) 80%, transparent)] z-50 flex items-center justify-center p-4">
           <div className="bg-surface-1 rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-[color:var(--heading)] mb-4">Image Import Options</h2>
+            <h2 className="text-xl font-bold text-[color:var(--heading)] mb-4">
+              Image Import Options
+            </h2>
             <p className="text-muted mb-6">How would you like to use this image?</p>
             <div className="space-y-3">
               <button
@@ -1273,7 +1275,9 @@ export default function MapEditor() {
                 className="w-full px-4 py-3 btn-primary rounded-lg font-medium flex items-center justify-between"
               >
                 <span>Use Full Image</span>
-                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">No cropping</span>
+                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">
+                  No cropping
+                </span>
               </button>
               <button
                 type="button"
@@ -1281,7 +1285,9 @@ export default function MapEditor() {
                 className="w-full px-4 py-3 btn-success rounded-lg font-medium flex items-center justify-between"
               >
                 <span>Crop Image</span>
-                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">Select area</span>
+                <span className="text-sm text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]">
+                  Select area
+                </span>
               </button>
               <button
                 type="button"

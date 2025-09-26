@@ -62,6 +62,8 @@ ENGINE_VERSION=24    # Explicit version specification
 NODE_ENV=staging  # Important: staging mode, not production
 CORS_ORIGIN=https://risk-game-production-9935.up.railway.app
 FRONTEND_URL=https://risk-game-production-9935.up.railway.app
+
+> Note: If `FRONTEND_URL` is not set, the backend now derives the base URL from the incoming request's protocol and host (trusting proxies). This makes links in verification and password reset emails work by default in most environments, but you should still set `FRONTEND_URL` explicitly in production and staging to avoid surprises.
 ENABLE_DEBUG_LOGS=true
 SENTRY_ENVIRONMENT=staging
 ```

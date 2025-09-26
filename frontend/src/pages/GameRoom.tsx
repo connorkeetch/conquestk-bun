@@ -624,7 +624,9 @@ export default function GameRoom() {
             <span className="chip text-xs uppercase tracking-wide">
               Status: {getStatusLabel(currentRoom.status)}
             </span>
-            <span className="chip text-xs">Joined {joinSummary.joined}/{joinSummary.total}</span>
+            <span className="chip text-xs">
+              Joined {joinSummary.joined}/{joinSummary.total}
+            </span>
             <span className="chip text-xs">
               Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
             </span>
