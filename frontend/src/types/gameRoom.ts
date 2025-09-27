@@ -26,6 +26,7 @@ export interface GameRoom {
   updatedAt?: string
   mapId?: string | null
   gameMode?: string | null
+  movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
   mapName?: string
   hostSkillRating?: number
   hostTier?: string | null

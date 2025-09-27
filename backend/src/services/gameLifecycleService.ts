@@ -331,6 +331,22 @@ export class GameLifecycleService {
 
     await this.persistGameState(roomId, gameState)
 
+    // Append lifecycle logs: CREATED (using room.createdAt if present) and STARTED (now)
+    try {
+      const createdAtIso = (room?.createdAt && new Date(room.createdAt).toISOString()) ||
+        new Date().toISOString()
+      const nowIso = new Date().toISOString()
+      await this.gameService.appendLog(roomId, [
+        { type: 'LIFECYCLE', timestamp: createdAtIso, event: 'CREATED' },
+        { type: 'LIFECYCLE', timestamp: nowIso, event: 'STARTED' },
+      ])
+    } catch (err) {
+      logger.warn('Failed to append lifecycle logs', {
+        roomId,
+        error: err instanceof Error ? err.message : err,
+      })
+    }
+
     await query(
       `
       UPDATE game_rooms

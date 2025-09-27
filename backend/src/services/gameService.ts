@@ -91,7 +91,25 @@ type TurnLogEntry = {
   territoryCount?: number
 }
 
-type GameLogEntry = BattleLogEntry | FortifyLogEntry | TurnLogEntry
+type TreasureLogEntry = {
+  type: 'TREASURE'
+  timestamp: string
+  userId: string
+  metal: import('../types/game').Metal
+}
+
+type LifecycleLogEntry = {
+  type: 'LIFECYCLE'
+  timestamp: string
+  event: 'CREATED' | 'STARTED'
+}
+
+type GameLogEntry =
+  | BattleLogEntry
+  | FortifyLogEntry
+  | TurnLogEntry
+  | TreasureLogEntry
+  | LifecycleLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -696,7 +714,16 @@ export class GameService {
           territoryCount,
         })
       }
-      await this.appendGameLog(roomId, entries)
+      // Include treasure award entry if applicable
+      if (treasureAwarded) {
+        entries.push({
+          type: 'TREASURE',
+          timestamp: now,
+          userId: previousPlayerId,
+          metal: treasureAwarded,
+        })
+      }
+      await this.appendLog(roomId, entries)
     } catch (err) {
       logger.warn('Failed to append turn logs', {
         roomId,
@@ -761,7 +788,7 @@ export class GameService {
         fromArmies: result.fromArmies,
         toArmies: result.toArmies,
       }
-      await this.appendGameLog(gameId, [entry])
+      await this.appendLog(gameId, [entry])
     } catch (err) {
       logger.warn('Failed to append fortify log', {
         gameId,
@@ -1618,7 +1645,7 @@ export class GameService {
     return Array.isArray(log) ? log : []
   }
 
-  private async appendGameLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
+  async appendLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
     if (!entries || entries.length === 0) return
     await transaction(async (client) => {
       const existing = await client.query<{ game_log: GameLogEntry[] | null }>(

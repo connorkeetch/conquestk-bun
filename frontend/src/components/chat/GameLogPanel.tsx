@@ -132,6 +132,20 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
             }
             continue
           }
+          if (type === 'TREASURE') {
+            const name = nameOf((e as any).userId as string) || 'Unknown'
+            formatted.push({ ts, text: `${name} received a card.` })
+            continue
+          }
+          if (type === 'LIFECYCLE') {
+            const ev = String((e as any).event)
+            if (ev === 'CREATED') {
+              formatted.push({ ts, text: 'Game created.' })
+            } else if (ev === 'STARTED') {
+              formatted.push({ ts, text: 'Game started.' })
+            }
+            continue
+          }
           if (type === 'FORTIFY') {
             const name = nameOf((e as any).playerId as string) || 'Unknown'
             const from = toName(String((e as any).fromTerritoryId))
