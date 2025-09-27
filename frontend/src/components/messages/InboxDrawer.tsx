@@ -85,6 +85,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const [friends, setFriends] = useState<FriendSummary[]>([])
   const [friendsLoading, setFriendsLoading] = useState(false)
   const [friendsError, setFriendsError] = useState<string | null>(null)
+  const [requestedUserIds, setRequestedUserIds] = useState<Record<string, boolean>>({})
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const searchInputId = useId()
@@ -349,7 +350,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       setFriendStartError(null)
       setFriendActionMessage(null)
       await friendsService.sendRequest(userId)
-      setFriendActionMessage('Friend request sent')
+      setRequestedUserIds((prev) => ({ ...prev, [userId]: true }))
     } catch (error) {
       setFriendStartError(error instanceof Error ? error.message : 'Failed to send request')
     }
@@ -532,13 +533,17 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                 >
                                   Message
                                 </button>
-                                <button
-                                  type="button"
-                                  className="btn-ghost btn-xs"
-                                  onClick={() => void handleAddFriend(user.id)}
-                                >
-                                  Add friend
-                                </button>
+                                {requestedUserIds[user.id] ? (
+                                  <span className="text-[11px] text-muted">Requested</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn-ghost btn-xs"
+                                    onClick={() => void handleAddFriend(user.id)}
+                                  >
+                                    Add friend
+                                  </button>
+                                )}
                               </div>
                             </li>
                           ))}
@@ -707,6 +712,74 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                       </optgroup>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor={mobileThreadSelectId + '-search'}
+                    className="text-[11px] uppercase tracking-wide text-muted block mb-1"
+                  >
+                    Start a new chat
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={mobileThreadSelectId + '-search'}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="form-input w-full"
+                      placeholder="Search users…"
+                      autoComplete="off"
+                    />
+                    {searchLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                  {searchError && (
+                    <div className="text-[11px] text-[color:var(--color-danger)]">
+                      {searchError}
+                    </div>
+                  )}
+                  {searchQuery.trim().length >= 2 && (
+                    <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-[color:var(--panel-border)]">
+                      {searchResults.length === 0 && !searchLoading ? (
+                        <div className="px-3 py-2 text-xs text-muted">No users found</div>
+                      ) : (
+                        <ul className="divide-y divide-[color:var(--panel-border)]">
+                          {searchResults.map((user) => (
+                            <li
+                              key={user.id}
+                              className="px-3 py-2 flex items-center justify-between gap-2"
+                            >
+                              <span className="text-sm">{user.username}</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="btn-outline btn-xs"
+                                  onClick={() => {
+                                    void startDirectConversation(user.id)
+                                    setSearchQuery('')
+                                    setSearchResults([])
+                                  }}
+                                >
+                                  Message
+                                </button>
+                                {requestedUserIds[user.id] ? (
+                                  <span className="text-[11px] text-muted">Requested</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn-ghost btn-xs"
+                                    onClick={() => void handleAddFriend(user.id)}
+                                  >
+                                    Add friend
+                                  </button>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
