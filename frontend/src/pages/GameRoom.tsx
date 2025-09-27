@@ -387,18 +387,24 @@ export default function GameRoom() {
     }
 
     socketService.connect()
-    if (!isSpectator) {
-      socketService.joinRoom(roomId)
-    }
 
     return () => {
-      if (!isSpectator) {
-        socketService.leaveRoom(roomId)
-      }
       dispatch(clearGame())
       dispatch(setCurrentRoom(null))
     }
-  }, [dispatch, isSpectator, navigate, roomId])
+  }, [dispatch, navigate, roomId])
+
+  // Join the socket room only if the user is a member (or host) and not spectating
+  useEffect(() => {
+    if (!roomId || isSpectator || !isMember) {
+      return
+    }
+
+    socketService.joinRoom(roomId)
+    return () => {
+      socketService.leaveRoom(roomId)
+    }
+  }, [roomId, isMember, isSpectator])
 
   useEffect(() => {
     if (!roomId) {

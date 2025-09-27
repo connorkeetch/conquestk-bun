@@ -434,31 +434,37 @@ export class GameController {
 
       const isParticipant =
         room.hostId === userId || (await this.gameRoomService.isPlayerInRoom(roomId, userId))
-      if (!isParticipant && !isAdminSpectator) {
-        return res.status(403).json({ message: 'You are not part of this room' })
-      }
 
       let gameState = await this.gameService.getGameState(roomId)
       if (!gameState) {
         return res.status(404).json({ message: 'Game state not initialized yet' })
       }
 
-      // Apply Fog of War filtering for non-spectators (adjacent, non-persistent)
+      // Apply Fog of War filtering/masking
       try {
         if (!isAdminSpectator && room.fogOfWar && room.fogOfWar !== 'off') {
-          const owned = new Set<string>(
-            gameState.board.filter((t) => t.ownerId === userId).map((t) => t.id),
-          )
-          const visible = new Set<string>(owned)
-          for (const t of gameState.board) {
-            if (!owned.has(t.id)) continue
-            for (const adj of t.adjacentTerritories) visible.add(adj)
-          }
-          gameState = {
-            ...gameState,
-            board: gameState.board.map((t) =>
-              visible.has(t.id) ? t : { ...t, ownerId: null, armies: 0 },
-            ),
+          if (!isParticipant) {
+            // Non-participants with FoW enabled must not see any ownership or armies
+            gameState = {
+              ...gameState,
+              board: gameState.board.map((t) => ({ ...t, ownerId: null, armies: 0 })),
+            }
+          } else {
+            // Participants see adjacent visibility around their owned territories
+            const owned = new Set<string>(
+              gameState.board.filter((t) => t.ownerId === userId).map((t) => t.id),
+            )
+            const visible = new Set<string>(owned)
+            for (const t of gameState.board) {
+              if (!owned.has(t.id)) continue
+              for (const adj of t.adjacentTerritories) visible.add(adj)
+            }
+            gameState = {
+              ...gameState,
+              board: gameState.board.map((t) =>
+                visible.has(t.id) ? t : { ...t, ownerId: null, armies: 0 },
+              ),
+            }
           }
         }
       } catch {
