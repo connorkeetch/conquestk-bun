@@ -36,17 +36,26 @@ type ConversationItem = ReturnType<typeof selectAllConversations>[number]
 interface ConversationSection {
   key: 'game' | 'team' | 'direct' | 'group'
   label: string
-  icon: string
   conversations: ConversationItem[]
 }
 
-const getConversationTitle = (conversation: ConversationItem): string =>
-  conversation.title ||
-  (typeof conversation.metadata?.displayName === 'string'
-    ? conversation.metadata.displayName
-    : undefined) ||
-  DEFAULT_TITLES[conversation.kind] ||
-  'Conversation'
+const getConversationTitle = (
+  conversation: ConversationItem,
+  currentUserId?: string | null,
+): string => {
+  if (conversation.kind === 'direct' && currentUserId) {
+    const other = conversation.memberRoles?.find((m) => m.userId !== currentUserId)
+    if (other?.username) return other.username
+  }
+  return (
+    conversation.title ||
+    (typeof conversation.metadata?.displayName === 'string'
+      ? (conversation.metadata.displayName as string)
+      : undefined) ||
+    DEFAULT_TITLES[conversation.kind] ||
+    'Conversation'
+  )
+}
 
 const formatRelativeTime = (timestamp: string | Date) => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
@@ -90,6 +99,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const searchInputId = useId()
   const mobileThreadSelectId = useId()
+  const [searchActiveIndex, setSearchActiveIndex] = useState<number>(-1)
 
   const drawerRef = useRef<HTMLDivElement>(null)
   const friendsLoadedRef = useRef(false)
@@ -164,6 +174,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         const results = await searchUsers(q, 10, { signal: ctrl.signal })
         const filtered = currentUserId ? results.filter((u) => u.id !== currentUserId) : results
         setSearchResults(filtered)
+        setSearchActiveIndex(filtered.length > 0 ? 0 : -1)
       } catch (_e) {
         if (!ctrl.signal.aborted) setSearchError('Failed to search users')
       } finally {
@@ -209,8 +220,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   const conversationSections = useMemo<ConversationSection[]>(() => {
     const sections: ConversationSection[] = [
-      { key: 'direct', label: 'Direct Messages', icon: '💬', conversations: [] },
-      { key: 'group', label: 'Group Chats', icon: '🗂️', conversations: [] },
+      { key: 'direct', label: 'Direct Messages', conversations: [] },
+      { key: 'group', label: 'Group Chats', conversations: [] },
     ]
 
     for (const conversation of visibleConversations) {
@@ -403,22 +414,22 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     }
     switch (activeConversation.kind) {
       case 'direct':
-        return { icon: '💬', label: 'Direct message' }
+        return null
       case 'group':
-        return { icon: '🗂️', label: 'Group chat' }
+        return { icon: '', label: 'Group chat' }
       case 'team': {
         const teamId = activeConversation.metadata?.teamId
         const teamLabel = typeof teamId === 'number' ? `Team ${teamId}` : 'Team chat'
-        return { icon: '👥', label: teamLabel }
+        return { icon: '', label: teamLabel }
       }
       case 'game': {
         const gameLabel = activeConversation.gameId
           ? `Game ${activeConversation.gameId}`
           : 'Game thread'
-        return { icon: '🎮', label: gameLabel }
+        return { icon: '', label: gameLabel }
       }
       default:
-        return { icon: '💬', label: 'Conversation' }
+        return { icon: '', label: 'Conversation' }
     }
   }, [activeConversation])
 
@@ -493,6 +504,30 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (searchResults.length === 0) return
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setSearchActiveIndex((i) =>
+                            i < searchResults.length - 1 ? i + 1 : searchResults.length - 1,
+                          )
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setSearchActiveIndex((i) => (i > 0 ? i - 1 : 0))
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const target =
+                            searchActiveIndex >= 0 && searchActiveIndex < searchResults.length
+                              ? searchResults[searchActiveIndex]
+                              : null
+                          if (target) {
+                            void startDirectConversation(target.id)
+                            setSearchQuery('')
+                            setSearchResults([])
+                            setSearchActiveIndex(-1)
+                          }
+                        }
+                      }}
                       className="form-input"
                       placeholder="Search users…"
                       autoComplete="off"
@@ -515,10 +550,12 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                         <div className="px-3 py-2 text-xs text-muted">No users found</div>
                       ) : (
                         <ul className="divide-y divide-[color:var(--panel-border)]">
-                          {searchResults.map((user) => (
+                          {searchResults.map((user, idx) => (
                             <li
                               key={user.id}
-                              className="px-3 py-2 flex items-center justify-between gap-2"
+                              className={`px-3 py-2 flex items-center justify-between gap-2 ${
+                                idx === searchActiveIndex ? 'bg-[color:var(--hover-bg)]' : ''
+                              }`}
                             >
                               <span className="text-sm">{user.username}</span>
                               <div className="flex items-center gap-2">
@@ -529,6 +566,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                     void startDirectConversation(user.id)
                                     setSearchQuery('')
                                     setSearchResults([])
+                                    setSearchActiveIndex(-1)
                                   }}
                                 >
                                   Message
@@ -607,16 +645,15 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                   ) : (
                     conversationSections.map((section) => (
                       <div key={section.key}>
-                        <div className="px-4 py-2 text-[11px] uppercase tracking-wide text-muted flex items-center gap-2">
-                          <span>{section.icon}</span>
-                          <span>{section.label}</span>
+                        <div className="px-4 py-2 text-[11px] uppercase tracking-wide text-muted">
+                          {section.label}
                         </div>
                         <ul>
                           {section.conversations.map((conversation) => {
                             const isActive = conversation.id === activeConversationId
                             const unread = conversation.unreadCount ?? 0
                             const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
-                            const title = getConversationTitle(conversation)
+                            const title = getConversationTitle(conversation, currentUserId)
                             const contextLabel =
                               conversation.kind === 'team'
                                 ? conversation.metadata?.teamId !== undefined
@@ -626,9 +663,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                   ? conversation.gameId
                                     ? `Game ${conversation.gameId}`
                                     : 'Game thread'
-                                  : conversation.kind === 'direct'
-                                    ? 'Direct message'
-                                    : 'Group chat'
+                                  : conversation.kind === 'group'
+                                    ? 'Group chat'
+                                    : ''
                             return (
                               <li key={conversation.id}>
                                 <button
@@ -651,10 +688,11 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                       >
                                         {title}
                                       </p>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted flex items-center gap-1">
-                                        <span>{section.icon}</span>
-                                        <span>{contextLabel}</span>
-                                      </div>
+                                      {contextLabel && (
+                                        <div className="text-[10px] uppercase tracking-wide text-muted">
+                                          {contextLabel}
+                                        </div>
+                                      )}
                                       <p className="text-xs text-muted truncate">{subtitle}</p>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
@@ -698,9 +736,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                   >
                     <option value="">Select a thread…</option>
                     {conversationSections.map((section) => (
-                      <optgroup key={section.key} label={`${section.icon} ${section.label}`}>
+                      <optgroup key={section.key} label={section.label}>
                         {section.conversations.map((conversation) => {
-                          const title = getConversationTitle(conversation)
+                          const title = getConversationTitle(conversation, currentUserId)
                           const unread = conversation.unreadCount ?? 0
                           return (
                             <option key={conversation.id} value={conversation.id}>
@@ -716,17 +754,41 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
                 <div>
                   <label
-                    htmlFor={mobileThreadSelectId + '-search'}
+                    htmlFor={`${mobileThreadSelectId}-search`}
                     className="text-[11px] uppercase tracking-wide text-muted block mb-1"
                   >
                     Start a new chat
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      id={mobileThreadSelectId + '-search'}
+                      id={`${mobileThreadSelectId}-search`}
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (searchResults.length === 0) return
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setSearchActiveIndex((i) =>
+                            i < searchResults.length - 1 ? i + 1 : searchResults.length - 1,
+                          )
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setSearchActiveIndex((i) => (i > 0 ? i - 1 : 0))
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const target =
+                            searchActiveIndex >= 0 && searchActiveIndex < searchResults.length
+                              ? searchResults[searchActiveIndex]
+                              : null
+                          if (target) {
+                            void startDirectConversation(target.id)
+                            setSearchQuery('')
+                            setSearchResults([])
+                            setSearchActiveIndex(-1)
+                          }
+                        }
+                      }}
                       className="form-input w-full"
                       placeholder="Search users…"
                       autoComplete="off"
@@ -744,10 +806,12 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                         <div className="px-3 py-2 text-xs text-muted">No users found</div>
                       ) : (
                         <ul className="divide-y divide-[color:var(--panel-border)]">
-                          {searchResults.map((user) => (
+                          {searchResults.map((user, idx) => (
                             <li
                               key={user.id}
-                              className="px-3 py-2 flex items-center justify-between gap-2"
+                              className={`px-3 py-2 flex items-center justify-between gap-2 ${
+                                idx === searchActiveIndex ? 'bg-[color:var(--hover-bg)]' : ''
+                              }`}
                             >
                               <span className="text-sm">{user.username}</span>
                               <div className="flex items-center gap-2">
@@ -758,6 +822,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                     void startDirectConversation(user.id)
                                     setSearchQuery('')
                                     setSearchResults([])
+                                    setSearchActiveIndex(-1)
                                   }}
                                 >
                                   Message
@@ -820,9 +885,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                         {conversationTitle}
                       </h3>
                       {activeConversationDescriptor && (
-                        <div className="mt-1 inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted">
-                          <span>{activeConversationDescriptor.icon}</span>
-                          <span>{activeConversationDescriptor.label}</span>
+                        <div className="mt-1 text-[11px] uppercase tracking-wide text-muted">
+                          {activeConversationDescriptor.label}
                         </div>
                       )}
                     </div>
