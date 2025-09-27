@@ -41,15 +41,23 @@ export default function TabbedGameChat({
   const [activeTab, setActiveTab] = useState<string>('game')
   const conversations = useAppSelector(selectAllConversations)
 
-  useEffect(() => {
-    void dispatch(ensureGameConversation(gameId))
-  }, [dispatch, gameId])
+  // Only ensure game conversation after the user has joined the game
+  const isMember = useMemo(
+    () => players.some((p) => p.userId === currentUserId),
+    [players, currentUserId],
+  )
 
   useEffect(() => {
+    if (!isMember) return
+    void dispatch(ensureGameConversation(gameId))
+  }, [dispatch, gameId, isMember])
+
+  useEffect(() => {
+    if (!isMember) return
     if (userTeamId !== null && userTeamId !== undefined) {
       void dispatch(ensureTeamConversation({ gameId, teamId: userTeamId }))
     }
-  }, [dispatch, gameId, userTeamId])
+  }, [dispatch, gameId, userTeamId, isMember])
 
   const gameConversation = useMemo(
     () =>

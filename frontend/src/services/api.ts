@@ -27,7 +27,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status
-    if (status === 401 || status === 403) {
+    // Only redirect on 401 (unauthenticated). Do NOT redirect on 403 (authorization) —
+    // many endpoints legitimately return 403 when the user lacks permission
+    // (e.g., game chat before joining). Redirecting on 403 logs users out unnecessarily.
+    if (status === 401) {
       const token = localStorage.getItem('token')
       // Always clear any bad token
       if (token) localStorage.removeItem('token')
