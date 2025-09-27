@@ -57,6 +57,7 @@ export interface Player {
   readyAt?: string | null
   skill_rating?: number
   current_tier?: string | null
+  preferred_color?: string | null
   teamId?: number | null
   isAi?: boolean
   aiDifficulty?: AIDifficulty | null

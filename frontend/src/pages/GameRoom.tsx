@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
+import { getColorValue } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
@@ -722,26 +723,54 @@ export default function GameRoom() {
             <ul className="list">
               {currentRoom.players?.map((player) => {
                 const isCurrentUser = player.userId === user?.id
+                const colorValue = player.preferred_color
+                  ? getColorValue(player.preferred_color)
+                  : '#9CA3AF'
                 return (
                   <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
-                    <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-success)]"></span>
                     <span
-                      className={`text-sm ${
-                        isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
-                      }`}
-                    >
-                      {player.username}
-                    </span>
-                    {player.isAi && player.aiDifficulty && (
-                      <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
-                        AI - {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
-                      </span>
-                    )}
-                    {player.userId === currentRoom.hostId && (
-                      <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
-                        Host
-                      </span>
-                    )}
+                      className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: colorValue }}
+                      title={
+                        player.preferred_color ? `Color: ${player.preferred_color}` : undefined
+                      }
+                    ></span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {player.isAi || !player.userId ? (
+                        <span
+                          className={`truncate text-sm ${
+                            isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
+                          }`}
+                        >
+                          {player.username}
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/profile/${encodeURIComponent(player.username)}`}
+                          className={`truncate text-sm hover:underline ${
+                            isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
+                          }`}
+                          title={`View ${player.username}'s profile`}
+                        >
+                          {player.username}
+                        </Link>
+                      )}
+                      {typeof player.skill_rating === 'number' && (
+                        <span className="text-xs text-muted">· {player.skill_rating} ELO</span>
+                      )}
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                      {player.userId === currentRoom.hostId && (
+                        <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
+                          Host
+                        </span>
+                      )}
+                      {player.isAi && player.aiDifficulty && (
+                        <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
+                          AI - {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
+                        </span>
+                      )}
+                    </div>
                   </li>
                 )
               })}
