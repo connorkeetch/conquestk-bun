@@ -22,8 +22,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // If we get a 401 or 403, clear the token and redirect to login
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    // Only redirect on 401 (unauthenticated). 403 (forbidden) should not log users out.
+    if (error.response?.status === 401) {
       // Don't clear token for login/register endpoints
       const isAuthEndpoint =
         error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register')

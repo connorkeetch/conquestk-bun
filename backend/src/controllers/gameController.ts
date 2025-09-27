@@ -437,6 +437,13 @@ export class GameController {
 
       let gameState = await this.gameService.getGameState(roomId)
       if (!gameState) {
+        // Log helpful context for debugging missing state
+        logger.info('Room state request before initialization', {
+          roomId,
+          userId,
+          isParticipant,
+          lifecyclePhase: room.lifecyclePhase ?? room.status,
+        })
         return res.status(404).json({ message: 'Game state not initialized yet' })
       }
 
@@ -449,6 +456,7 @@ export class GameController {
               ...gameState,
               board: gameState.board.map((t) => ({ ...t, ownerId: null, armies: 0 })),
             }
+            logger.info('Applied non-participant FoW masking', { roomId, userId })
           } else {
             // Participants see adjacent visibility around their owned territories
             const owned = new Set<string>(
@@ -467,7 +475,12 @@ export class GameController {
             }
           }
         }
-      } catch {
+      } catch (maskError) {
+        logger.warn('Fog-of-war masking failed; returning unmasked state fallback', {
+          roomId,
+          userId,
+          error: maskError instanceof Error ? maskError.message : String(maskError),
+        })
         // Fallback on any error
       }
 
