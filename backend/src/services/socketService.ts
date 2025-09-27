@@ -258,6 +258,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
             typeof player?.aiPersonalitySeed === 'number'
               ? player.aiPersonalitySeed
               : (player?.aiPersonalitySeed ?? null),
+          selectedColor:
+            typeof player?.selected_color === 'string' && player.selected_color.length > 0
+              ? player.selected_color
+              : null,
         }
 
         socket.to(channel).emit('player-joined', {

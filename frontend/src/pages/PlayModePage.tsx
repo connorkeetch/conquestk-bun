@@ -134,25 +134,9 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
   const filteredRooms = useMemo(() => rooms.filter((room) => config.filter(room)), [rooms, config])
 
   const handleJoin = async (roomId: string) => {
-    try {
-      setJoiningRoomId(roomId)
-      const response = await gameService.joinRoom(roomId)
-      if (response.room || response.success) {
-        navigate(`/room/${roomId}`)
-        return
-      }
-      navigate(`/room/${roomId}`)
-    } catch (err: unknown) {
-      logger.error('[PlayMode] Failed to join room', err)
-      const message =
-        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
-          ?.message ||
-        (err as { response?: { data?: { message?: string } }; message?: string })?.message ||
-        'We could not join that game. It might be full or already started.'
-      setError(message)
-    } finally {
-      setJoiningRoomId(null)
-    }
+    setJoiningRoomId(roomId)
+    navigate(`/room/${roomId}`)
+    setJoiningRoomId(null)
   }
 
   const createPath = useMemo(() => {

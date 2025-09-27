@@ -215,6 +215,7 @@ export interface RoomPlayerEvent {
   isAi: boolean
   aiDifficulty?: RoomPlayer['aiDifficulty']
   aiPersonalitySeed?: number | null
+  selectedColor?: string | null
 }
 
 export interface PlayerLeftEvent {

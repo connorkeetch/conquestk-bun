@@ -230,6 +230,8 @@ class SocketService {
           payload.player.aiPersonalitySeed === undefined
             ? (payload.player.aiPersonalitySeed ?? undefined)
             : payload.player.aiPersonalitySeed,
+        selected_color:
+          (payload.player as { selectedColor?: string | null }).selectedColor ?? undefined,
       }
 
       store.dispatch(

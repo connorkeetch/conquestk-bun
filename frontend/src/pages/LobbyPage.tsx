@@ -447,13 +447,8 @@ const LobbyPage: React.FC = () => {
       setError(null)
       setLoading(true)
 
-      // Try to join the room with the provided code
-      const response = await gameService.joinRoom(trimmedCode)
-      if (response.room) {
-        navigate(`/room/${trimmedCode}`)
-      } else {
-        navigate(`/room/${trimmedCode}`)
-      }
+      // Navigate to room; selection and join happen on the room page
+      navigate(`/room/${trimmedCode}`)
     } catch (err: unknown) {
       const apiError = err as { response?: { status?: number; data?: { message?: string } } }
       // Provide specific error messages based on the error
