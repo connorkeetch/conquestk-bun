@@ -350,3 +350,20 @@ export const profileService = {
 }
 
 export default profileService
+export type UserSearchResult = { id: string; username: string }
+
+export async function searchUsers(
+  query: string,
+  limit = 10,
+  options: RequestOptions = {},
+): Promise<UserSearchResult[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+  const response = await apiClient.get<{
+    users: Array<{ id: string; username: string }>
+  }>('/users/search', {
+    params: { q, limit },
+    signal: options.signal,
+  })
+  return response.data.users ?? []
+}

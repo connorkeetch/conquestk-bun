@@ -4,7 +4,7 @@ import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import friendsService, { type FriendSummary } from '@/services/friendsService'
-import profileService from '@/services/profileService'
+import { searchUsers, type UserSearchResult } from '@/services/profileService'
 import { socketService } from '@/services/socketService'
 import {
   loadConversationMessages,
@@ -76,17 +76,18 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   // Local UI state
   const [sendError, setSendError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all')
-  const [newUsername, setNewUsername] = useState('')
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const [friendStartError, setFriendStartError] = useState<string | null>(null)
+  const [friendActionMessage, setFriendActionMessage] = useState<string | null>(null)
   const [friends, setFriends] = useState<FriendSummary[]>([])
   const [friendsLoading, setFriendsLoading] = useState(false)
   const [friendsError, setFriendsError] = useState<string | null>(null)
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const newConversationInputId = useId()
-  const friendSuggestionsId = useId()
+  const searchInputId = useId()
   const mobileThreadSelectId = useId()
 
   const drawerRef = useRef<HTMLDivElement>(null)
@@ -142,6 +143,38 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       cancelled = true
     }
   }, [isOpen])
+
+  // Debounced user search
+  useEffect(() => {
+    if (!isOpen) return
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setSearchResults([])
+      setSearchError(null)
+      setSearchLoading(false)
+      return
+    }
+    setSearchLoading(true)
+    setSearchError(null)
+    setFriendActionMessage(null)
+    const ctrl = new AbortController()
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchUsers(q, 10, { signal: ctrl.signal })
+        const filtered = currentUserId ? results.filter((u) => u.id !== currentUserId) : results
+        setSearchResults(filtered)
+      } catch (_e) {
+        if (!ctrl.signal.aborted) setSearchError('Failed to search users')
+      } finally {
+        if (!ctrl.signal.aborted) setSearchLoading(false)
+      }
+    }, 250)
+    return () => {
+      ctrl.abort()
+      clearTimeout(timeout)
+      setSearchLoading(false)
+    }
+  }, [searchQuery, isOpen, currentUserId])
 
   // Close on ESC
   useEffect(() => {
@@ -311,28 +344,16 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     [activeConversationId],
   )
 
-  const handleCreateConversation = useCallback(
-    async (event?: React.FormEvent) => {
-      event?.preventDefault()
-      const username = newUsername.trim()
-      if (!username || isCreatingConversation) return
-      try {
-        setIsCreatingConversation(true)
-        setCreateError(null)
-        const profile = await profileService.getProfileByUsername(username)
-        const targetUserId = profile.id
-        await startDirectConversation(targetUserId)
-        setNewUsername('')
-        setFilter('all')
-        setFriendStartError(null)
-      } catch (error) {
-        setCreateError(error instanceof Error ? error.message : 'Failed to start conversation')
-      } finally {
-        setIsCreatingConversation(false)
-      }
-    },
-    [newUsername, isCreatingConversation, startDirectConversation],
-  )
+  const handleAddFriend = useCallback(async (userId: string) => {
+    try {
+      setFriendStartError(null)
+      setFriendActionMessage(null)
+      await friendsService.sendRequest(userId)
+      setFriendActionMessage('Friend request sent')
+    } catch (error) {
+      setFriendStartError(error instanceof Error ? error.message : 'Failed to send request')
+    }
+  }, [])
 
   const handleStartFriendConversation = useCallback(
     async (friend: FriendSummary) => {
@@ -340,7 +361,6 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         setFriendStartError(null)
         await startDirectConversation(friend.userId)
         setFilter('all')
-        setNewUsername('')
       } catch (error) {
         setFriendStartError(error instanceof Error ? error.message : 'Unable to message friend')
       }
@@ -432,8 +452,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
           <div className="flex flex-1 min-h-0">
             <aside className="hidden sm:flex sm:flex-col sm:w-80 border-r border-[color:var(--panel-border)]">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--panel-border)] text-xs uppercase tracking-wide text-muted">
-                <span>Conversations</span>
+              <div className="flex items-center justify-end px-3 py-2 border-b border-[color:var(--panel-border)] text-xs uppercase tracking-wide text-muted">
                 <div className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--panel-bg-alt)] p-0.5">
                   <button
                     type="button"
@@ -460,46 +479,79 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
               </div>
 
               <div className="px-3 py-3 border-b border-[color:var(--panel-border)]">
-                <form onSubmit={handleCreateConversation} className="space-y-2">
+                <div className="space-y-2">
                   <label
-                    htmlFor={newConversationInputId}
+                    htmlFor={searchInputId}
                     className="text-[11px] uppercase tracking-wide text-muted block"
                   >
-                    Start new conversation
+                    Start a new chat
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      id={newConversationInputId}
+                      id={searchInputId}
                       type="text"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="form-input"
-                      placeholder="Username"
-                      list={friendSuggestionsId}
+                      placeholder="Search users…"
+                      autoComplete="off"
                     />
-                    <datalist id={friendSuggestionsId}>
-                      {friends.map((friend) => (
-                        <option key={friend.userId} value={friend.username} />
-                      ))}
-                    </datalist>
-                    <button
-                      type="submit"
-                      className="btn-primary btn-sm"
-                      disabled={isCreatingConversation}
-                    >
-                      {isCreatingConversation ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        'Start'
-                      )}
-                    </button>
+                    {searchLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   </div>
-                  {createError && (
+                  {searchError && (
                     <div className="text-[11px] text-[color:var(--color-danger)]">
-                      {createError}
+                      {searchError}
                     </div>
                   )}
-                </form>
+                  {friendActionMessage && (
+                    <div className="text-[11px] text-[color:var(--color-success, #22c55e)]">
+                      {friendActionMessage}
+                    </div>
+                  )}
+                  {searchQuery.trim().length >= 2 && (
+                    <div className="max-h-48 overflow-y-auto rounded-md border border-[color:var(--panel-border)]">
+                      {searchResults.length === 0 && !searchLoading ? (
+                        <div className="px-3 py-2 text-xs text-muted">No users found</div>
+                      ) : (
+                        <ul className="divide-y divide-[color:var(--panel-border)]">
+                          {searchResults.map((user) => (
+                            <li
+                              key={user.id}
+                              className="px-3 py-2 flex items-center justify-between gap-2"
+                            >
+                              <span className="text-sm">{user.username}</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="btn-outline btn-xs"
+                                  onClick={() => {
+                                    void startDirectConversation(user.id)
+                                    setSearchQuery('')
+                                    setSearchResults([])
+                                  }}
+                                >
+                                  Message
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-ghost btn-xs"
+                                  onClick={() => void handleAddFriend(user.id)}
+                                >
+                                  Add friend
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                  {searchQuery.trim().length < 2 && (
+                    <div className="text-[11px] text-muted">
+                      Type at least 2 characters to search
+                    </div>
+                  )}
+                </div>
                 <div className="pt-3 mt-3 border-t border-[color:var(--panel-border)]">
                   <p className="text-[11px] uppercase tracking-wide text-muted mb-2">
                     Message a friend
