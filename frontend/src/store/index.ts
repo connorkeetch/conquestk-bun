@@ -1,6 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authSlice from './authSlice'
-import chatSlice from './chatSlice'
 import gameSlice from './gameSlice'
 import messagesReducer from './messagesSlice'
 import roomSlice from './roomSlice'
@@ -13,7 +12,6 @@ export const store = configureStore({
     game: gameSlice,
     room: roomSlice,
     settings: settingsSlice,
-    chat: chatSlice,
     messages: messagesReducer,
     ui: uiReducer,
   },
