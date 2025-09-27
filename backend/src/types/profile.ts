@@ -134,6 +134,7 @@ export interface UserRanking {
   rank: number
   rating: number
   gamesWon: number
+  gamesPlayed: number
   winRate: number
   level: number
 }

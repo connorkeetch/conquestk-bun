@@ -488,6 +488,7 @@ export class ProfileService {
         rank: index + 1,
         rating: row.rating,
         gamesWon: row.games_won,
+        gamesPlayed: row.games_played,
         winRate: Math.round(row.win_rate),
         level: row.level,
       }))
