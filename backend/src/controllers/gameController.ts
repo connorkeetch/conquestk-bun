@@ -301,6 +301,17 @@ export class GameController {
       return res.json({ ...result, room })
     } catch (error) {
       logger.error('Join room error:', error)
+      if (error instanceof Error) {
+        if (error.message.includes('Color already taken')) {
+          return res.status(409).json({ message: error.message })
+        }
+        if (error.message.includes('Room is full') || error.message.includes('not accepting')) {
+          return res.status(403).json({ message: error.message })
+        }
+        if (error.message.includes('Room not found')) {
+          return res.status(404).json({ message: error.message })
+        }
+      }
       return res.status(500).json({ message: 'Internal server error' })
     }
   }

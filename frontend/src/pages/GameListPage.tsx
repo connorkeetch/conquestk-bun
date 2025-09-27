@@ -217,7 +217,7 @@ const GameListPage: React.FC = () => {
                         <Link
                           to={
                             game.status === 'active'
-                              ? `/game/${game.id}`
+                              ? `/game/${game.roomCode ?? game.id}`
                               : `/room/${game.roomCode ?? game.id}`
                           }
                           className={`btn ${game.status === 'lobby' ? 'btn-primary' : 'btn-secondary'}`}

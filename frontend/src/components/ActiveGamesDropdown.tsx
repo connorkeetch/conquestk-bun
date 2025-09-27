@@ -117,7 +117,7 @@ const ActiveGamesDropdown: React.FC = () => {
                       {activeGames.slice(0, 5).map((game) => (
                         <Link
                           key={game.id}
-                          to={`/game/${game.id}`}
+                          to={`/game/${(game as unknown as { roomCode?: number }).roomCode ?? game.id}`}
                           className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
                           onClick={() => setIsOpen(false)}
                         >
