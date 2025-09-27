@@ -148,6 +148,24 @@ class SocketService {
     this.socket?.emit('conversation.members.update', payload, callback)
   }
 
+  // Convenience: leave a conversation by removing the current user membership
+  leaveConversation(conversationId: string, callback?: (ack: ConversationMembersUpdateAck) => void) {
+    const userId = store.getState().auth.user?.id
+    if (!userId) {
+      callback?.({ ok: false, error: 'Not authenticated', code: 'auth_required' })
+      return
+    }
+    this.updateConversationMembers({ conversationId, remove: [userId] }, callback)
+  }
+
+  // Convenience: archive a conversation (requires appropriate permissions server-side)
+  archiveConversation(
+    conversationId: string,
+    callback?: (ack: ConversationMembersUpdateAck) => void,
+  ) {
+    this.updateConversationMembers({ conversationId, archive: true }, callback)
+  }
+
   // Generic on/off wrappers for convenience in feature areas (typed via casts)
   on<T extends keyof ServerToClientEvents>(event: T, handler: ServerToClientEvents[T]) {
     // biome-ignore lint/suspicious/noExplicitAny: event bridge surface for pages/modules
@@ -324,6 +342,16 @@ class SocketService {
         readyStates: payload.readyStates,
       }
       store.dispatch(applyLifecycleUpdate(lifecyclePayload))
+
+      // When games end or are abandoned, prune any archived game/team conversations
+      if (payload.status === 'completed' || payload.status === 'abandoned') {
+        // Narrow kinds to keep DM/group threads intact
+        const kinds: Array<import('../types/messages').ConversationSummary['kind']> = [
+          'game',
+          'team',
+        ]
+        store.dispatch(messagesActions.pruneArchivedConversations({ kinds }))
+      }
     })
 
     this.socket.on('room-update', (roomData) => {
@@ -638,6 +666,16 @@ class SocketService {
     this.socket.on('conversation.updated', (payload) => {
       const data = payload as Parameters<ServerToClientEvents['conversation.updated']>[0]
       store.dispatch(messagesActions.conversationUpdated(data))
+
+      // If this specific conversation just became archived and it's a game/team thread, prune it
+      const c = data.conversation
+      if (c.isArchived && (c.kind === 'game' || c.kind === 'team')) {
+        const kinds: Array<import('../types/messages').ConversationSummary['kind']> = [
+          'game',
+          'team',
+        ]
+        store.dispatch(messagesActions.pruneArchivedConversations({ kinds }))
+      }
     })
 
     this.socket.on('receipt.read', (payload) => {

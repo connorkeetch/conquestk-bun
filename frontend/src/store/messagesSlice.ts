@@ -333,6 +333,40 @@ const messagesSlice = createSlice({
         delete state.pendingUnread[action.payload]
       }
     },
+    // Remove a conversation and all associated local state (messages, typing, flags)
+    removeConversationLocal(state, action: PayloadAction<string>) {
+      const id = action.payload
+      if (state.activeConversationId === id) {
+        state.activeConversationId = null
+      }
+      delete state.messages[id]
+      delete state.hasMore[id]
+      delete state.loadingMessages[id]
+      delete state.typing[id]
+      delete state.pendingUnread[id]
+      delete state.conversations[id]
+    },
+    // Prune archived conversations; optionally restrict to specific kinds
+    pruneArchivedConversations(
+      state,
+      action: PayloadAction<{ kinds?: Array<ConversationSummary['kind']> } | undefined>,
+    ) {
+      const allowedKinds = action.payload?.kinds
+      for (const [id, conv] of Object.entries(state.conversations)) {
+        const isKindAllowed = !allowedKinds || allowedKinds.includes(conv.kind)
+        if (conv.isArchived && isKindAllowed) {
+          if (state.activeConversationId === id) {
+            state.activeConversationId = null
+          }
+          delete state.messages[id]
+          delete state.hasMore[id]
+          delete state.loadingMessages[id]
+          delete state.typing[id]
+          delete state.pendingUnread[id]
+          delete state.conversations[id]
+        }
+      }
+    },
     messageReceived(
       state,
       action: PayloadAction<{ message: ConversationMessageEventPayload; currentUserId?: string }>,
