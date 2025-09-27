@@ -4,7 +4,7 @@ import { logger } from '@/utils/logger'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
-import { getColorValue } from '../constants/colors'
+import { PLAYER_COLORS, getColorValue } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
@@ -49,6 +49,8 @@ export default function GameRoom() {
   const [teamUpdateError, setTeamUpdateError] = useState<string | null>(null)
   const [joinSubmitting, setJoinSubmitting] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false)
+  const [selectedJoinColor, setSelectedJoinColor] = useState<string | null>(null)
   // AI opponents generally available in non-ranked lobbies (no flags)
   const [aiDraftCounts, setAiDraftCounts] = useState<Record<AIDifficulty, number>>({
     recruit: 0,
@@ -443,6 +445,38 @@ export default function GameRoom() {
 
   // Ready-check removed; joining implies ready
 
+  const takenColors = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of currentRoom?.players ?? []) {
+      const c = (p as { selected_color?: string | null }).selected_color
+      if (c && c.length > 0) set.add(c.toUpperCase())
+    }
+    return set
+  }, [currentRoom?.players])
+
+  // Open join dialog with preselected preferred color if available
+  const openJoinDialog = useCallback(() => {
+    if (!currentRoom || currentRoom.status !== 'lobby' || lobbyFull) return
+    // Find preferred color
+    // Pull from settings (preferred color stored elsewhere)
+    try {
+      const preferred = (JSON.parse(localStorage.getItem('userSettings') || '{}')?.game
+        ?.preferredColor || null) as string | null
+      let defaultColor: string | null = null
+      if (preferred && !takenColors.has(preferred.toUpperCase())) {
+        defaultColor = preferred
+      } else {
+        defaultColor = PLAYER_COLORS.find((hex) => !takenColors.has(hex.toUpperCase())) ?? null
+      }
+      setSelectedJoinColor(defaultColor)
+    } catch {
+      setSelectedJoinColor(
+        PLAYER_COLORS.find((hex) => !takenColors.has(hex.toUpperCase())) ?? null,
+      )
+    }
+    setJoinDialogOpen(true)
+  }, [currentRoom, lobbyFull, takenColors])
+
   useEffect(() => {
     if (!roomId) {
       navigate('/lobby')
@@ -548,24 +582,21 @@ export default function GameRoom() {
 
   // No ready toggle; start triggers when lobby is full
 
-  const handleJoinLobby = useCallback(async () => {
+  const handleConfirmJoin = useCallback(async () => {
     if (!roomId || isMember || !currentRoom || currentRoom.status !== 'lobby' || lobbyFull) {
       return
     }
-
     try {
       setJoinSubmitting(true)
       setJoinError(null)
-
-      const response = await gameService.joinRoom(roomId)
-
+      const response = await gameService.joinRoom(roomId, selectedJoinColor ?? undefined)
       if (response.room) {
         dispatch(setCurrentRoom(response.room))
       } else {
         const refreshed = await gameService.getRoomDetails(roomId)
         dispatch(setCurrentRoom(refreshed.room))
       }
-
+      setJoinDialogOpen(false)
       await dispatch(fetchGameState({ roomId, allowSpectate: false }))
     } catch (error: unknown) {
       let message = 'Failed to join game'
@@ -573,10 +604,7 @@ export default function GameRoom() {
         if ('response' in error) {
           const apiError = error as { response?: { data?: { message?: string } } }
           message = apiError.response?.data?.message ?? message
-        } else if (
-          'message' in error &&
-          typeof (error as { message?: unknown }).message === 'string'
-        ) {
+        } else if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
           message = (error as { message: string }).message
         }
       } else if (error instanceof Error) {
@@ -586,7 +614,7 @@ export default function GameRoom() {
     } finally {
       setJoinSubmitting(false)
     }
-  }, [roomId, isMember, currentRoom, lobbyFull, dispatch])
+  }, [roomId, isMember, currentRoom, lobbyFull, dispatch, selectedJoinColor])
 
   const handleTeamChange = useCallback(
     async (playerId: string, teamId: number) => {
@@ -719,7 +747,7 @@ export default function GameRoom() {
         <div className="flex flex-wrap gap-2">
           {!isMember && (
             <button
-              onClick={() => void handleJoinLobby()}
+              onClick={() => openJoinDialog()}
               disabled={joinActionDisabled}
               type="button"
               title={joinButtonTitle}
@@ -746,6 +774,50 @@ export default function GameRoom() {
       {joinError && (
         <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-sm text-[color:var(--color-danger)]">
           {joinError}
+        </div>
+      )}
+
+      {joinDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="panel w-full max-w-md space-y-4">
+            <h2 className="text-lg font-semibold text-[color:var(--heading)]">Choose your color</h2>
+            <p className="text-sm text-muted">Each player must pick a unique color for this game.</p>
+            <div className="grid grid-cols-6 gap-2">
+              {PLAYER_COLORS.map((hex) => {
+                const taken = takenColors.has(hex.toUpperCase())
+                const isSelected = selectedJoinColor?.toUpperCase() === hex.toUpperCase()
+                return (
+                  <button
+                    key={hex}
+                    type="button"
+                    className={`h-8 w-8 rounded-full border ${
+                      isSelected ? 'ring-2 ring-white' : ''
+                    } ${taken ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                    style={{ background: getColorValue(hex), borderColor: 'rgba(255,255,255,0.25)' }}
+                    onClick={() => {
+                      if (!taken) setSelectedJoinColor(hex)
+                    }}
+                    disabled={taken}
+                    aria-label={`Select color ${hex}`}
+                    title={taken ? 'Already taken' : 'Available'}
+                  />
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button type="button" className="btn btn-secondary" onClick={() => setJoinDialogOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void handleConfirmJoin()}
+                disabled={joinSubmitting || !selectedJoinColor}
+              >
+                {joinSubmitting ? 'Joining…' : 'Join Game'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

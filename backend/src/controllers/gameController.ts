@@ -280,12 +280,16 @@ export class GameController {
       const { roomId: rawRoom } = req.params
       const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const userId = req.userId
+      const selectedColor =
+        typeof (req.body as { selectedColor?: unknown })?.selectedColor === 'string'
+          ? ((req.body as { selectedColor?: string }).selectedColor ?? null)
+          : null
 
       if (!userId) {
         return res.status(401).json({ message: 'Authentication required' })
       }
 
-      const result = await this.gameRoomService.joinRoom(roomId, userId)
+      const result = await this.gameRoomService.joinRoom(roomId, userId, { selectedColor })
       const room = await this.gameRoomService.getRoomById(roomId)
       // Auto-mark ready and trigger start if lobby is full
       try {

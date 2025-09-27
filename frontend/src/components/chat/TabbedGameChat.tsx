@@ -6,6 +6,8 @@ import {
   selectAllConversations,
 } from '../../store/messagesSlice'
 import ChatContainer from './ChatContainer'
+import GameLogPanel from './GameLogPanel'
+import GameOptionsPanel from './GameOptionsPanel'
 
 interface ChatPlayer {
   userId: string
@@ -24,7 +26,7 @@ interface TabbedGameChatProps {
 interface ChatTab {
   id: string
   label: string
-  type: 'game' | 'team' | 'dm'
+  type: 'game' | 'team' | 'dm' | 'options' | 'log'
   conversationId: string
   badge?: number
   enabled: boolean
@@ -90,7 +92,7 @@ export default function TabbedGameChat({
     if (!gameConversation || !gameConversation.isArchived) {
       builtTabs.push({
         id: 'game',
-        label: '🎮 Game',
+        label: 'Game Chat',
         type: 'game',
         conversationId: gameId,
         badge: gameConversation?.unreadCount ?? 0,
@@ -103,7 +105,7 @@ export default function TabbedGameChat({
       if (!teamConversation || !teamConversation.isArchived) {
         builtTabs.push({
           id: 'team',
-          label: '👥 Team',
+          label: 'Team Chat',
           type: 'team',
           conversationId: `${gameId}:${userTeamId}`,
           badge: teamConversation?.unreadCount ?? 0,
@@ -113,6 +115,24 @@ export default function TabbedGameChat({
     }
 
     // No DM tabs in game room chat; DMs live in Inbox only
+
+    // Game Options tab (always available)
+    builtTabs.push({
+      id: 'options',
+      label: 'Game Options',
+      type: 'options',
+      conversationId: '',
+      enabled: true,
+    })
+
+    // Log tab (always available)
+    builtTabs.push({
+      id: 'log',
+      label: 'Log',
+      type: 'log',
+      conversationId: '',
+      enabled: true,
+    })
 
     return builtTabs
   }, [gameId, userTeamId, gameConversation, teamConversation])
@@ -167,13 +187,19 @@ export default function TabbedGameChat({
         })}
       </div>
 
-      {/* Chat Content */}
+      {/* Content */}
       <div className="flex-1 min-h-0">
-        <ChatContainer
-          conversationType={activeTabData.type}
-          conversationId={activeTabData.conversationId}
-          className="h-full"
-        />
+        {activeTabData.type === 'game' || activeTabData.type === 'team' ? (
+          <ChatContainer
+            conversationType={activeTabData.type as 'game' | 'team'}
+            conversationId={activeTabData.conversationId}
+            className="h-full"
+          />
+        ) : activeTabData.type === 'options' ? (
+          <GameOptionsPanel className="h-full" />
+        ) : (
+          <GameLogPanel gameId={gameId} className="h-full" />
+        )}
       </div>
     </div>
   )

@@ -62,8 +62,10 @@ export const gameService = {
     return response.data
   },
 
-  async joinRoom(roomId: string): Promise<JoinGameResponse> {
-    const response = await api.post(`/game/rooms/${roomId}/join`)
+  async joinRoom(roomId: string, selectedColor?: string): Promise<JoinGameResponse> {
+    const response = await api.post(`/game/rooms/${roomId}/join`,
+      selectedColor ? { selectedColor } : undefined,
+    )
     return response.data
   },
 
