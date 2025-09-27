@@ -35,22 +35,50 @@ const CommunityPage: React.FC = () => {
   const fetchLeaderboardData = useCallback(async () => {
     setLoading(true)
     try {
-      const endpoint =
-        leaderboardTab === 'monthly'
-          ? '/leaderboard/monthly'
-          : leaderboardTab === 'friends'
-            ? '/leaderboard/friends'
-            : '/leaderboard/global'
-
-      const response = await api.get(endpoint)
-
-      if (leaderboardTab === 'global') {
-        setGlobalLeaderboard(response.data.leaderboard || [])
-      } else if (leaderboardTab === 'monthly') {
-        setMonthlyLeaderboard(response.data.leaderboard || [])
-      } else {
-        setFriendsLeaderboard(response.data.leaderboard || [])
+      // Only the global leaderboard endpoint exists server-side today.
+      if (leaderboardTab !== 'global') {
+        // No API for monthly/friends yet; show empty state without calling backend
+        if (leaderboardTab === 'monthly') setMonthlyLeaderboard([])
+        else setFriendsLeaderboard([])
+        return
       }
+
+      // Use public backend route: GET /api/leaderboard (aliases to global)
+      const response = await api.get('/leaderboard', {
+        params: { limit: 100 },
+      })
+
+      // Backend returns an array (profileService.getLeaderboard),
+      // but also support { leaderboard: [...] } just in case.
+      const raw = Array.isArray(response.data)
+        ? response.data
+        : response.data?.leaderboard || []
+
+      const normalized: LeaderboardEntry[] = raw.map((entry: any, index: number) => {
+        // Accept both profile leaderboard shape and older variants
+        const userId = entry.userId || entry.user_id || entry.id
+        const username = entry.username
+        const rating = entry.rating || entry.elo || entry.skillRating || 0
+        const gamesWon = entry.gamesWon ?? entry.wins ?? 0
+        const gamesPlayed = entry.gamesPlayed ?? (entry.wins != null && entry.losses != null
+          ? entry.wins + entry.losses
+          : undefined)
+        const losses = entry.losses ?? (gamesPlayed != null ? Math.max(0, gamesPlayed - gamesWon) : 0)
+        const winRate = typeof entry.winRate === 'number' ? entry.winRate : 0
+
+        return {
+          id: userId,
+          username,
+          elo: Math.round(rating),
+          wins: gamesWon,
+          losses,
+          winRate,
+          rank: entry.rank || index + 1,
+          gamesPlayed: gamesPlayed ?? gamesWon + losses,
+        }
+      })
+
+      setGlobalLeaderboard(normalized)
     } catch (error) {
       logger.error('Failed to fetch leaderboard', error)
       // Set empty arrays on error
