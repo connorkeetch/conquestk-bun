@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
+import GameOptionsPanel from '../components/chat/GameOptionsPanel'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -13,6 +14,7 @@ import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
+import { formatStatus, formatTurnTimer, hostDisplay, seatUsage } from '../utils/lobby'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   recruit: 'Recruit',
@@ -68,6 +70,7 @@ export default function GameRoom() {
   } | null>(null)
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
+  const [roomCodeCopied, setRoomCodeCopied] = useState(false)
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -174,6 +177,45 @@ export default function GameRoom() {
 
   const mapDisplayName = currentRoom?.mapName || mapPreview?.name || null
 
+  const formattedRoomCode = useMemo(() => {
+    if (!currentRoom?.roomCode) {
+      return null
+    }
+
+    const value = String(currentRoom.roomCode)
+    return value.length >= 6 ? value : value.padStart(6, '0')
+  }, [currentRoom?.roomCode])
+
+  const mapPreviewAspectRatio = useMemo(() => {
+    if (mapPreview?.width && mapPreview?.height) {
+      return `${mapPreview.width}/${mapPreview.height}`
+    }
+
+    return undefined
+  }, [mapPreview?.height, mapPreview?.width])
+
+  const formatSettingLabel = useCallback((value: string) => {
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
+  }, [])
+
+  const turnTimerLabel = useMemo(() => {
+    const seconds = currentRoom?.turnTimerSeconds
+    if (!seconds) {
+      return 'Off'
+    }
+
+    if (seconds >= 60) {
+      const minutes = Math.floor(seconds / 60)
+      const remainingSeconds = seconds % 60
+      if (remainingSeconds === 0) {
+        return `${minutes} min`
+      }
+      return `${minutes}m ${remainingSeconds}s`
+    }
+
+    return `${seconds} sec`
+  }, [currentRoom?.turnTimerSeconds])
+
   useEffect(() => {
     let isActive = true
     const mapId = currentRoom?.mapId
@@ -222,6 +264,38 @@ export default function GameRoom() {
       isActive = false
     }
   }, [currentRoom?.mapId])
+
+  useEffect(() => {
+    if (!roomCodeCopied) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setRoomCodeCopied(false)
+    }, 2000)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [roomCodeCopied])
+
+  const handleCopyRoomCode = useCallback(async () => {
+    if (!formattedRoomCode) {
+      return
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      logger.warn('Clipboard API unavailable for copying room code')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(formattedRoomCode)
+      setRoomCodeCopied(true)
+    } catch (error) {
+      logger.warn('Failed to copy room code', error)
+    }
+  }, [formattedRoomCode])
 
   const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
   const maxAiCapacity = useMemo(
@@ -672,10 +746,17 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-12 pt-8 lg:px-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-[color:var(--heading)]">{currentRoom.name}</h1>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="chip bg-[color:var(--surface-2)]/80">
+              <span className="mr-1">👑</span> Host: {hostDisplay(currentRoom)}
+            </span>
+            <span className="chip text-muted">{formatStatus(currentRoom.status)}</span>
+            <span className="chip text-muted">Players: {seatUsage(currentRoom).label}</span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {!isMember && (
@@ -702,6 +783,57 @@ export default function GameRoom() {
             Leave Room
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {formattedRoomCode && (
+          <button
+            type="button"
+            onClick={() => void handleCopyRoomCode()}
+            className={`chip transition ${
+              roomCodeCopied
+                ? 'border-[color:var(--color-success)] text-[color:var(--color-success)]'
+                : 'hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]'
+            }`}
+            aria-live="polite"
+          >
+            Room code: {formattedRoomCode}
+            <span className="text-xs uppercase tracking-wide">
+              {roomCodeCopied ? 'Copied!' : 'Copy'}
+            </span>
+          </button>
+        )}
+        <span className="chip text-muted">
+          {currentRoom.isRanked ? 'Ranked match' : 'Casual lobby'}
+        </span>
+        {currentRoom.gameMode && (
+          <span className="chip text-muted">Mode: {formatSettingLabel(currentRoom.gameMode)}</span>
+        )}
+        <span className="chip text-muted">
+          Teams:{' '}
+          {currentRoom.allowTeamPlay && currentRoom.teamMode !== 'none'
+            ? currentRoom.teamMode === 'teams'
+              ? `${currentRoom.numberOfTeams ?? 0} teams`
+              : 'Auto-balance'
+            : 'Off'}
+        </span>
+        <span className="chip text-muted">Turn timer: {turnTimerLabel}</span>
+        <span className="chip text-muted">
+          Fog of war:{' '}
+          {currentRoom.fogOfWar && currentRoom.fogOfWar !== 'off'
+            ? formatSettingLabel(currentRoom.fogOfWar)
+            : 'Off'}
+        </span>
+        {currentRoom.cardTradeMode && (
+          <span className="chip text-muted">
+            Card trades: {formatSettingLabel(currentRoom.cardTradeMode)}
+          </span>
+        )}
+        {currentRoom.bonusType && (
+          <span className="chip text-muted">
+            Bonuses: {formatSettingLabel(currentRoom.bonusType)}
+          </span>
+        )}
       </div>
 
       {joinError && (
@@ -777,10 +909,10 @@ export default function GameRoom() {
 
       {/* No ready errors expected */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
         {/* Game Board */}
         <div className="lg:col-span-3">
-          <div className="panel h-[600px] p-0">
+          <div className="panel min-h-[60vh] h-[520px] p-0 sm:h-[560px] lg:h-[640px] xl:h-[720px]">
             {currentGame ? (
               <RiskGameBoard
                 onTerritoryClick={(_territoryId) => {
@@ -789,13 +921,14 @@ export default function GameRoom() {
               />
             ) : (
               <div className="flex h-full flex-col">
-                <div className="relative flex-1 overflow-hidden bg-[color:var(--surface-2)]">
+                <div
+                  className="relative flex flex-1 items-center justify-center overflow-hidden bg-[color:var(--surface-2)] p-6"
+                  style={mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined}
+                >
                   {mapPreviewLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="space-y-2 text-center">
-                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
-                        <p className="text-sm text-muted">Loading map preview...</p>
-                      </div>
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
+                      <p className="text-sm text-muted">Loading map preview...</p>
                     </div>
                   ) : mapPreview?.imageUrl ? (
                     <img
@@ -805,15 +938,18 @@ export default function GameRoom() {
                           ? `Map preview for ${mapDisplayName}`
                           : 'Selected map preview'
                       }
-                      className="h-full w-full object-cover"
+                      className="max-h-full max-w-full object-contain"
+                      style={
+                        mapPreviewAspectRatio ? { aspectRatio: mapPreviewAspectRatio } : undefined
+                      }
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-muted">
+                    <div className="px-6 text-center text-muted">
                       <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
                     </div>
                   )}
                   {mapDisplayName && (
-                    <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
+                    <div className="pointer-events-none absolute left-6 top-6 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
                       {mapDisplayName}
                       {typeof mapPreview?.territoryCount === 'number' &&
                         mapPreview.territoryCount > 0 && (
@@ -825,7 +961,7 @@ export default function GameRoom() {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <div className="flex flex-col items-center justify-center gap-3 px-6 pb-6 pt-4 text-center">
                   <h2 className="text-xl font-semibold text-[color:var(--heading)]">
                     Waiting for game to start...
                   </h2>
@@ -858,7 +994,7 @@ export default function GameRoom() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Players */}
-          <div className="panel space-y-4">
+          <div className="panel space-y-5">
             <h3 className="text-lg font-semibold text-[color:var(--heading)]">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
             </h3>
@@ -1085,6 +1221,56 @@ export default function GameRoom() {
                 className="h-full"
               />
             )}
+          </div>
+        </div>
+        {/* Sidebar */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Lobby Meta */}
+          <div className="panel space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-[color:var(--heading)]">Lobby</div>
+              <span className="chip text-xs">{formatStatus(currentRoom.status)}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="panel-outline p-3">
+                <div className="text-xs uppercase tracking-wide text-muted">Host</div>
+                <div className="text-sm text-white">{hostDisplay(currentRoom)}</div>
+              </div>
+              <div className="panel-outline p-3">
+                <div className="text-xs uppercase tracking-wide text-muted">Players</div>
+                <div className="text-sm text-white">{seatUsage(currentRoom).label}</div>
+              </div>
+              <div className="panel-outline p-3 col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted">Turn Timer</div>
+                    <div className="text-sm text-white">
+                      {formatTurnTimer(currentRoom.turnTimerSeconds)}
+                    </div>
+                  </div>
+                  {formattedRoomCode && (
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyRoomCode()}
+                      className={`chip transition ${
+                        roomCodeCopied
+                          ? 'border-[color:var(--color-success)] text-[color:var(--color-success)]'
+                          : 'hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]'
+                      }`}
+                      aria-live="polite"
+                      title="Copy room code"
+                    >
+                      Code: {formattedRoomCode} {roomCodeCopied ? '✓' : ''}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Game Configuration */}
+          <div className="panel p-0 overflow-hidden">
+            <GameOptionsPanel className="h-full" />
           </div>
         </div>
       </div>

@@ -691,7 +691,8 @@ export class GameRoomService {
   async getRoomById(roomId: string): Promise<GameRoom | null> {
     await this.ensureAiReadyStates(roomId)
     const roomQuery = `
-      SELECT gr.*, 
+      SELECT gr.*,
+             m.name as map_name,
              json_agg(
                json_build_object(
                   'id', rp.id,
@@ -723,8 +724,9 @@ export class GameRoomService {
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON rp.user_id = u.id
       LEFT JOIN user_preferences up ON u.id = up.user_id
+      LEFT JOIN maps m ON gr.map_id = m.id
       WHERE gr.id = $1
-      GROUP BY gr.id
+      GROUP BY gr.id, m.name
     `
 
     const result = await query<GameRoomWithPlayersRow>(roomQuery, [roomId])

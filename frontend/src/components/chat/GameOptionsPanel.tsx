@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAppSelector } from '../../hooks/redux'
 import { mapService } from '@/services/mapService'
+import { useAppSelector } from '../../hooks/redux'
 
 type Props = {
   className?: string
@@ -18,7 +18,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     if (!room?.mapName && room?.mapId) {
       ;(async () => {
         try {
-          const data = await mapService.getMap(room.mapId!)
+          const data = await mapService.getMap(room.mapId as string)
           if (!isActive) return
           setResolvedMapName(data.map.name || null)
         } catch {
@@ -35,7 +35,6 @@ export default function GameOptionsPanel({ className = '' }: Props) {
   const lines = useMemo(() => {
     if (!room) return [] as Array<{ k: string; v: string }>
 
-    const bool = (v?: boolean) => (v ? 'Yes' : 'No')
     const toTitle = (v?: string | null) => (v ? String(v).replace(/_/g, ' ') : '—')
     const fog = room.fogOfWar ?? 'off'
     const ranked = room.isRanked ?? false
@@ -116,7 +115,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     ]
 
     return items
-  }, [room])
+  }, [room, resolvedMapName, currentGame?.gameConfig?.useTerritoryModifiers])
 
   if (!room) {
     return (

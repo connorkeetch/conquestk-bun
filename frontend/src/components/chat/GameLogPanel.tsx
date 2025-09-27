@@ -45,6 +45,22 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
   const redact = fogOn && !gameEnded
   const backfillLoadedRef = useRef(false)
 
+  const toSafeInt = useMemo(
+    () =>
+      (value: unknown, fallback = 0) => {
+        if (typeof value === 'number') {
+          return Number.isFinite(value) ? Math.trunc(value) : fallback
+        }
+        if (typeof value === 'string') {
+          const n = Number.parseInt(value, 10)
+          return Number.isFinite(n) ? n : fallback
+        }
+        const n = Number(value)
+        return Number.isFinite(n) ? Math.trunc(n) : fallback
+      },
+    [],
+  )
+
   const playerName = useMemo(() => {
     const map = new Map<string, string>()
     if (game?.players) {
@@ -99,30 +115,37 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
         const formatted: LogEntry[] = []
         // We rely on current maps for names
         const toName = (id: string) => territoryName.get(id) || id
-        const nameOf = (id: string | null | undefined) => (id ? playerName.get(id) || id : undefined)
+        const nameOf = (id: string | null | undefined) =>
+          id ? playerName.get(id) || id : undefined
         // Sort ascending by timestamp then push and reverse
-        const sorted = [...raw].sort((a, b) =>
-          new Date(String(a.timestamp)).getTime() - new Date(String(b.timestamp)).getTime(),
+        const sorted = [...raw].sort(
+          (a, b) =>
+            new Date(String(a.timestamp)).getTime() - new Date(String(b.timestamp)).getTime(),
         )
         for (const e of sorted) {
-          const ts = new Date(String((e as any).timestamp))
-          const type = (e as any).type as string | undefined
+          const er = e as Record<string, unknown>
+          const ts = new Date(String(er.timestamp))
+          const type = er.type as string | undefined
           if (!type || type === 'BATTLE') {
-            const attackerName = nameOf((e as any).attackerId as string) || 'Unknown'
-            const defenderName = nameOf((e as any).defenderId as string | null | undefined)
-            const from = toName(String((e as any).attackingTerritoryId))
-            const to = toName(String((e as any).defendingTerritoryId))
-            const killed = Number(((e as any).losses ?? {}).defender ?? 0)
-            const lost = Number(((e as any).losses ?? {}).attacker ?? 0)
-            const conquered = Boolean((e as any).conquered)
+            const attackerName = nameOf(er.attackerId as string) || 'Unknown'
+            const defenderName = nameOf(er.defenderId as string | null | undefined)
+            const from = toName(String(er.attackingTerritoryId))
+            const to = toName(String(er.defendingTerritoryId))
+            const losses = (er.losses as Record<string, unknown> | undefined) ?? undefined
+            const killed = toSafeInt(losses?.defender, 0)
+            const lost = toSafeInt(losses?.attacker, 0)
+            const conquered = Boolean(er.conquered)
             if (conquered) {
               formatted.push({
                 ts,
                 text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
               })
-              const moved = Number((e as any).movedArmies ?? 0)
+              const moved = toSafeInt(er.movedArmies, 0)
               if (moved > 0) {
-                formatted.push({ ts, text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.` })
+                formatted.push({
+                  ts,
+                  text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.`,
+                })
               }
             } else {
               formatted.push({
@@ -133,12 +156,12 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
             continue
           }
           if (type === 'TREASURE') {
-            const name = nameOf((e as any).userId as string) || 'Unknown'
+            const name = nameOf(er.userId as string) || 'Unknown'
             formatted.push({ ts, text: `${name} received a card.` })
             continue
           }
           if (type === 'LIFECYCLE') {
-            const ev = String((e as any).event)
+            const ev = String(er.event)
             if (ev === 'CREATED') {
               formatted.push({ ts, text: 'Game created.' })
             } else if (ev === 'STARTED') {
@@ -147,10 +170,10 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
             continue
           }
           if (type === 'FORTIFY') {
-            const name = nameOf((e as any).playerId as string) || 'Unknown'
-            const from = toName(String((e as any).fromTerritoryId))
-            const to = toName(String((e as any).toTerritoryId))
-            const n = Number((e as any).movedArmies ?? 0)
+            const name = nameOf(er.playerId as string) || 'Unknown'
+            const from = toName(String(er.fromTerritoryId))
+            const to = toName(String(er.toTerritoryId))
+            const n = toSafeInt(er.movedArmies, 0)
             formatted.push({
               ts,
               text: `${to} (${name}) was fortified from ${from} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
@@ -158,13 +181,13 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
             continue
           }
           if (type === 'TURN') {
-            const name = nameOf((e as any).playerId as string) || 'Unknown'
-            const event = String((e as any).event)
+            const name = nameOf(er.playerId as string) || 'Unknown'
+            const event = String(er.event)
             if (event === 'END') {
               formatted.push({ ts, text: `${name} ended the turn.` })
             } else if (event === 'START') {
-              const reinf = Number((e as any).reinforcementArmies ?? 0)
-              const terrs = Number((e as any).territoryCount ?? 0)
+              const reinf = toSafeInt(er.reinforcementArmies, 0)
+              const terrs = toSafeInt(er.territoryCount, 0)
               if (reinf > 0) {
                 formatted.push({
                   ts,
@@ -176,7 +199,6 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
               }
               formatted.push({ ts, text: `${name} started the turn.` })
             }
-            continue
           }
         }
         // Newest first
@@ -190,7 +212,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
     return () => {
       cancelled = true
     }
-  }, [gameId, redact, playerName, territoryName])
+  }, [gameId, redact, playerName, territoryName, toSafeInt])
 
   useEffect(() => {
     function add(text: string, ts?: Date) {
@@ -309,7 +331,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
         const name = playerName.get(fr.playerId) || fr.playerId
         const fromName = territoryName.get(fr.fromTerritoryId) || fr.fromTerritoryId
         const toName = territoryName.get(fr.toTerritoryId) || fr.toTerritoryId
-        const n = fr.movedArmies
+        const n = toSafeInt(fr.movedArmies, 0)
         add(
           `${toName} (${name}) was fortified from ${fromName} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
         )
@@ -354,7 +376,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
       socketService.off('phaseChanged', onPhaseChangedLegacy)
       socketService.off('game-delta', onDelta)
     }
-  }, [gameId, playerName, territoryName, game?.board, game?.currentPlayer, redact])
+  }, [gameId, playerName, territoryName, game?.board, game?.currentPlayer, redact, toSafeInt])
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>

@@ -333,8 +333,8 @@ export class GameLifecycleService {
 
     // Append lifecycle logs: CREATED (using room.createdAt if present) and STARTED (now)
     try {
-      const createdAtIso = (room?.createdAt && new Date(room.createdAt).toISOString()) ||
-        new Date().toISOString()
+      const createdAtIso =
+        (room?.createdAt && new Date(room.createdAt).toISOString()) || new Date().toISOString()
       const nowIso = new Date().toISOString()
       await this.gameService.appendLog(roomId, [
         { type: 'LIFECYCLE', timestamp: createdAtIso, event: 'CREATED' },
