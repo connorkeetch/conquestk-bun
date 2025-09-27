@@ -1,4 +1,9 @@
-import type { ClanDetails, ClanListFilters, ClanListResponse } from '@/types/clans'
+import type {
+  ClanCreateRequest,
+  ClanDetails,
+  ClanListFilters,
+  ClanListResponse,
+} from '@/types/clans'
 import apiClient from './api'
 
 const buildListParams = (filters: ClanListFilters): Record<string, string> => {
@@ -42,6 +47,11 @@ export const clanApi = {
 
   async getClanBySlug(slug: string): Promise<ClanDetails> {
     const response = await apiClient.get(`/clans/${slug}`)
+    return response.data.clan as ClanDetails
+  },
+
+  async createClan(payload: ClanCreateRequest): Promise<ClanDetails> {
+    const response = await apiClient.post('/clans', payload)
     return response.data.clan as ClanDetails
   },
 }

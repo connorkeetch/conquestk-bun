@@ -215,7 +215,11 @@ const GameListPage: React.FC = () => {
                           </div>
                         </div>
                         <Link
-                          to={game.status === 'active' ? `/game/${game.id}` : `/room/${game.id}`}
+                          to={
+                            game.status === 'active'
+                              ? `/game/${game.id}`
+                              : `/room/${game.roomCode ?? game.id}`
+                          }
                           className={`btn ${game.status === 'lobby' ? 'btn-primary' : 'btn-secondary'}`}
                         >
                           {game.status === 'lobby'
@@ -276,7 +280,7 @@ const GameListPage: React.FC = () => {
                           </div>
                         </div>
                         <Link
-                          to={`/room/${game.id}`}
+                          to={`/room/${game.roomCode ?? game.id}`}
                           className="px-3 py-1 text-muted hover:text-white hover:bg-surface-2 rounded transition-colors text-sm"
                         >
                           📊 View Results

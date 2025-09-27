@@ -30,7 +30,7 @@ export default function GameLobby() {
     e.preventDefault()
     const action = await dispatch(createRoom({ name: roomName, maxPlayers, isPrivate }))
     if (createRoom.fulfilled.match(action)) {
-      navigate(`/room/${action.payload.id}`)
+      navigate(`/room/${action.payload.roomCode ?? action.payload.id}`)
     }
   }
 
@@ -128,7 +128,7 @@ export default function GameLobby() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleJoinRoom(room.id)}
+                  onClick={() => handleJoinRoom(String(room.roomCode ?? room.id))}
                   disabled={
                     room.status !== 'lobby' || (room.players?.length || 0) >= room.maxPlayers
                   }

@@ -16,6 +16,7 @@ interface GameInfo {
   status: GameRoom['status']
   playerCount: number
   maxPlayers: number
+  roomCode?: number
   isYourTurn?: boolean
   winner?: string | null
   createdAt: string
@@ -956,7 +957,7 @@ const LobbyPage: React.FC = () => {
                     return (
                       <Link
                         key={game.id}
-                        to={`/room/${game.id}`}
+                        to={`/room/${game.roomCode ?? game.id}`}
                         className="panel block group transition-shadow hover:border-[color:var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -1141,7 +1142,10 @@ const LobbyPage: React.FC = () => {
                         </div>
                         <div>
                           {game.status === 'lobby' || game.status === 'initializing' ? (
-                            <Link to={`/room/${game.id}`} className="btn btn-primary btn-sm">
+                            <Link
+                              to={`/room/${game.roomCode ?? game.id}`}
+                              className="btn btn-primary btn-sm"
+                            >
                               📋 View Lobby
                             </Link>
                           ) : game.status === 'active' ? (

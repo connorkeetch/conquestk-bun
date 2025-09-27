@@ -9,6 +9,7 @@ import { useFeatureFlag } from '../hooks/useFeatureFlag'
 
 interface RecentGame {
   id: string
+  roomCode?: number
   mapName: string
   players: number
   status: 'completed' | 'in_progress' | 'waiting'
@@ -260,7 +261,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     {game.status === 'in_progress' && (
                       <Link
-                        to={`/room/${game.id}`}
+                        to={`/room/${game.roomCode ?? game.id}`}
                         className="text-sm text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)]"
                       >
                         Continue →

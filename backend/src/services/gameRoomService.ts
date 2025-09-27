@@ -32,6 +32,7 @@ interface GameRoomRow {
   max_players: number
   is_private: boolean
   status: string
+  room_code?: number | string | null
   expires_at?: Date | string | null
   lifecycle_phase?: string | null
   turn_number?: number | string | null
@@ -426,6 +427,12 @@ export class GameRoomService {
 
     return {
       id: row.id,
+      roomCode:
+        typeof row.room_code === 'number'
+          ? row.room_code
+          : typeof row.room_code === 'string'
+            ? Number.parseInt(row.room_code, 10)
+            : undefined,
       name: row.name,
       hostId: row.host_id,
       maxPlayers: row.max_players,
@@ -719,6 +726,37 @@ export class GameRoomService {
       return null
     }
     return this.mapRoomRow(row)
+  }
+
+  async getRoomByCode(roomCode: number): Promise<GameRoom | null> {
+    const result = await query<{ id: string }>('SELECT id FROM game_rooms WHERE room_code = $1', [
+      roomCode,
+    ])
+    const row = result.rows[0]
+    if (!row) return null
+    return this.getRoomById(row.id)
+  }
+
+  async resolveRoomId(idOrCode: string): Promise<string> {
+    // If numeric, treat as room_code; otherwise assume UUID string
+    if (/^\d+$/.test(idOrCode)) {
+      const code = Number.parseInt(idOrCode, 10)
+      const res = await query<{ id: string }>('SELECT id FROM game_rooms WHERE room_code = $1', [
+        code,
+      ])
+      const row = res.rows[0]
+      if (!row) throw new Error('Room not found')
+      return row.id
+    }
+    return idOrCode
+  }
+
+  async getRoomByIdOrCode(idOrCode: string): Promise<GameRoom | null> {
+    if (/^\d+$/.test(idOrCode)) {
+      const code = Number.parseInt(idOrCode, 10)
+      return this.getRoomByCode(code)
+    }
+    return this.getRoomById(idOrCode)
   }
 
   async ensureAiReadyStates(roomId: string): Promise<void> {

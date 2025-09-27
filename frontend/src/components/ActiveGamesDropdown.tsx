@@ -12,6 +12,7 @@ interface GameInfo {
   status: GameRoom['status']
   playerCount: number
   maxPlayers: number
+  roomCode?: number
   isYourTurn?: boolean
   winner?: string | null
   createdAt: string
@@ -154,7 +155,7 @@ const ActiveGamesDropdown: React.FC = () => {
                       {waitingGames.slice(0, 3).map((game) => (
                         <Link
                           key={game.id}
-                          to={`/room/${game.id}`}
+                          to={`/room/${game.roomCode ?? game.id}`}
                           className="block p-3 bg-surface-2 rounded-lg hover:bg-gray-600 transition-colors"
                           onClick={() => setIsOpen(false)}
                         >
