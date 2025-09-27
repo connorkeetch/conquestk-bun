@@ -100,14 +100,8 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
                   : 'bg-surface-2 text-[color:var(--text)]'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
-              {senderLabel && (
-                <div
-                  className={`text-xs font-semibold mb-1 opacity-80 ${
-                    isOwnMessage ? 'text-right' : ''
-                  }`}
-                >
-                  {senderLabel}
-                </div>
+              {!isOwnMessage && senderLabel && (
+                <div className="text-xs font-semibold mb-1 opacity-80">{senderLabel}</div>
               )}
 
               <div className="break-words">
