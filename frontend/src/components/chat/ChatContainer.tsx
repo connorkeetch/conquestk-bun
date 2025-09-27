@@ -211,76 +211,12 @@ export default function ChatContainer({
     [resolvedConversationId],
   )
 
-  const conversationTitle = useMemo(() => {
-    if (!conversation) {
-      return conversationType === 'dm'
-        ? 'Direct Message'
-        : conversationType === 'team'
-          ? 'Team Chat'
-          : 'Game Chat'
-    }
-
-    const metadataTitle =
-      typeof conversation.metadata?.displayName === 'string'
-        ? (conversation.metadata.displayName as string)
-        : undefined
-
-    return (
-      conversation.title ||
-      metadataTitle ||
-      (conversation.kind === 'team'
-        ? 'Team Conversation'
-        : conversation.kind === 'game'
-          ? 'Game Conversation'
-          : 'Conversation')
-    )
-  }, [conversation, conversationType])
-
-  const conversationSubtitle = useMemo(() => {
-    if (!conversation) {
-      return null
-    }
-    switch (conversation.kind) {
-      case 'direct':
-        return 'Direct conversation'
-      case 'group':
-        return 'Group conversation'
-      case 'team':
-        return 'Team conversation'
-      case 'game':
-        return 'Game conversation'
-      default:
-        return null
-    }
-  }, [conversation])
-
-  const unreadCount = conversation?.unreadCount ?? 0
-
-  const conversationKindDescriptor = useMemo(() => {
-    const kind = conversation?.kind ?? conversationType
-    switch (kind) {
-      case 'dm':
-      case 'direct':
-        return { icon: '💬', label: 'Direct message' }
-      case 'group':
-        return { icon: '🗂️', label: 'Group chat' }
-      case 'team': {
-        const teamRaw = conversation?.metadata?.teamId
-        const teamId =
-          typeof teamRaw === 'number'
-            ? teamRaw
-            : typeof teamRaw === 'string' && !Number.isNaN(Number(teamRaw))
-              ? Number(teamRaw)
-              : null
-        const teamLabel = teamId !== null ? `Team ${teamId}` : 'Team chat'
-        return { icon: '👥', label: teamLabel }
-      }
-      default: {
-        const gameLabel = conversation?.gameId ? `Game ${conversation.gameId}` : 'Game thread'
-        return { icon: '🎮', label: gameLabel }
-      }
-    }
-  }, [conversation, conversationType])
+  // We intentionally suppress the header/subheader inside the chat container
+  // to keep the panel clean in the game room. Tab labels convey context.
+  const _unused = useMemo(
+    () => ({ conversation, conversationType }),
+    [conversation, conversationType],
+  )
 
   if (initializing) {
     return (
@@ -302,28 +238,6 @@ export default function ChatContainer({
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
-      <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
-        <div>
-          <h3 className="font-semibold text-white">{conversationTitle}</h3>
-          <div className="flex items-center gap-2">
-            {conversationKindDescriptor && (
-              <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted">
-                <span>{conversationKindDescriptor.icon}</span>
-                <span>{conversationKindDescriptor.label}</span>
-              </span>
-            )}
-            {conversationSubtitle && (
-              <span className="text-xs text-muted">{conversationSubtitle}</span>
-            )}
-          </div>
-        </div>
-        {unreadCount > 0 && (
-          <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
-            {unreadCount} unread
-          </span>
-        )}
-      </div>
-
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {hasMore && (
           <div className="text-center">

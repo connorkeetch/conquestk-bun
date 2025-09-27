@@ -391,6 +391,12 @@ export class GameRoomService {
             typeof player.preferred_color === 'string' && player.preferred_color.length > 0
               ? player.preferred_color
               : undefined,
+          selected_color:
+            // @ts-expect-error selected_color may be present from SQL JSON
+            typeof player.selected_color === 'string' && player.selected_color.length > 0
+              ? // @ts-expect-error narrowing SQL shape
+                player.selected_color
+              : undefined,
           joinedAt: this.toDate(player.joinedAt) ?? new Date(),
           isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
           readyAt: this.toDate(player.readyAt) ?? null,
@@ -701,7 +707,8 @@ export class GameRoomService {
                   'skill_rating', u.skill_rating,
                   -- 'current_tier', u.current_tier, -- Column doesn't exist yet
                   'current_tier', NULL,
-                  'preferred_color', up.preferred_color,
+              'preferred_color', up.preferred_color,
+              'selected_color', rp.selected_color,
                   'joinedAt', rp.joined_at,
                   'isReady', rp.is_ready,
                   'readyAt', rp.ready_at,
@@ -956,7 +963,7 @@ export class GameRoomService {
   async getPlayer(roomId: string, userId: string): Promise<Player | null> {
     const playerQuery = `
       SELECT rp.id, rp.user_id, rp.ai_player_id, u.username, rp.joined_at, rp.is_ready, rp.ready_at, rp.team_id,
-             rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed
+             rp.is_ai, rp.ai_difficulty, rp.ai_personality_seed, rp.selected_color
       FROM room_players rp
       LEFT JOIN users u ON rp.user_id = u.id
       WHERE rp.room_id = $1 AND rp.user_id = $2
@@ -975,6 +982,7 @@ export class GameRoomService {
       is_ai: boolean | null
       ai_difficulty: string | null
       ai_personality_seed: number | null
+      selected_color?: string | null
     }>(playerQuery, [roomId, userId])
 
     const row = result.rows[0]
@@ -1000,10 +1008,18 @@ export class GameRoomService {
           : row.ai_personality_seed === null
             ? null
             : undefined,
+      selected_color:
+        typeof row.selected_color === 'string' && row.selected_color.length > 0
+          ? row.selected_color
+          : undefined,
     }
   }
 
-  async joinRoom(roomId: string, userId: string): Promise<{ success: boolean; message: string }> {
+  async joinRoom(
+    roomId: string,
+    userId: string,
+    options?: { selectedColor?: string | null },
+  ): Promise<{ success: boolean; message: string }> {
     const client = await getClient()
 
     try {
@@ -1090,12 +1106,68 @@ export class GameRoomService {
         }
       }
 
+      // Enforce unique selected_color
+      // Gather used colors
+      const usedColorsRes = await client.query<{ selected_color: string | null }>(
+        `SELECT selected_color FROM room_players WHERE room_id = $1 AND selected_color IS NOT NULL`,
+        [roomId],
+      )
+      const used = new Set(
+        usedColorsRes.rows
+          .map((r) => r.selected_color)
+          .filter((c): c is string => typeof c === 'string')
+          .map((c) => c.toUpperCase()),
+      )
+
+      const normalize = (c?: string | null) =>
+        typeof c === 'string' && c.trim().length > 0 ? c.trim().toUpperCase() : null
+
+      // Determine final selected color
+      let finalColor: string | null = null
+      const requested = options?.selectedColor ?? null
+      if (requested && normalize(requested)) {
+        if (used.has(normalize(requested)!)) {
+          throw new Error('Color already taken')
+        }
+        finalColor = requested
+      } else {
+        // Try user's preferred color
+        const prefRes = await client.query<{ preferred_color: string | null }>(
+          `SELECT preferred_color FROM user_preferences WHERE user_id = $1`,
+          [userId],
+        )
+        const preferred = prefRes.rows[0]?.preferred_color ?? null
+        if (preferred && !used.has(normalize(preferred)!)) {
+          finalColor = preferred
+        } else {
+          // Fallback palette of 12 distinct colors
+          const palette = [
+            '#DC2626',
+            '#851D2D',
+            '#EC4899',
+            '#EA580C',
+            '#F59E0B',
+            '#014421',
+            '#059669',
+            '#2563EB',
+            '#06B6D4',
+            '#7C3AED',
+            '#918151',
+            '#5C4033',
+          ]
+          finalColor = palette.find((c) => !used.has(c.toUpperCase())) ?? null
+        }
+      }
+
       const joinQuery = `
-        INSERT INTO room_players (room_id, user_id, is_ready, ready_at)
-        VALUES ($1, $2, TRUE, NOW())
-        ON CONFLICT (room_id, user_id) DO UPDATE SET is_ready = TRUE, ready_at = NOW()
+        INSERT INTO room_players (room_id, user_id, is_ready, ready_at, selected_color)
+        VALUES ($1, $2, TRUE, NOW(), $3)
+        ON CONFLICT (room_id, user_id) DO UPDATE
+          SET is_ready = TRUE,
+              ready_at = NOW(),
+              selected_color = COALESCE(EXCLUDED.selected_color, room_players.selected_color)
       `
-      await client.query(joinQuery, [roomId, userId])
+      await client.query(joinQuery, [roomId, userId, finalColor])
 
       await client.query('COMMIT')
       return { success: true, message: 'Joined room successfully' }
