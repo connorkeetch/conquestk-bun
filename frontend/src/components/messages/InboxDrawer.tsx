@@ -654,6 +654,9 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                             const unread = conversation.unreadCount ?? 0
                             const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
                             const title = getConversationTitle(conversation, currentUserId)
+                            const isDirect = conversation.kind === 'direct'
+                            const partnerInitial =
+                              isDirect && title ? title.charAt(0).toUpperCase() : ''
                             const contextLabel =
                               conversation.kind === 'team'
                                 ? conversation.metadata?.teamId !== undefined
@@ -678,22 +681,29 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                                   onClick={() => handleSelectConversation(conversation.id)}
                                 >
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="space-y-1">
-                                      <p
-                                        className={`text-sm font-medium ${
-                                          isActive
-                                            ? 'text-[color:var(--heading)]'
-                                            : 'text-[color:var(--text)]'
-                                        }`}
-                                      >
-                                        {title}
-                                      </p>
-                                      {contextLabel && (
-                                        <div className="text-[10px] uppercase tracking-wide text-muted">
-                                          {contextLabel}
+                                    <div className="flex items-start gap-3">
+                                      {isDirect && (
+                                        <div className="mt-0.5 w-8 h-8 rounded-full bg-[color:var(--panel-bg-alt)] flex items-center justify-center text-xs font-semibold text-[color:var(--heading)]">
+                                          {partnerInitial}
                                         </div>
                                       )}
-                                      <p className="text-xs text-muted truncate">{subtitle}</p>
+                                      <div className="space-y-1">
+                                        <p
+                                          className={`text-sm font-medium ${
+                                            isActive
+                                              ? 'text-[color:var(--heading)]'
+                                              : 'text-[color:var(--text)]'
+                                          }`}
+                                        >
+                                          {title}
+                                        </p>
+                                        {contextLabel && (
+                                          <div className="text-[10px] uppercase tracking-wide text-muted">
+                                            {contextLabel}
+                                          </div>
+                                        )}
+                                        <p className="text-xs text-muted truncate">{subtitle}</p>
+                                      </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                       <span className="text-[10px] uppercase tracking-wide text-muted">
@@ -881,9 +891,16 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--panel-border)]">
                     <div>
-                      <h3 className="text-base font-semibold text-[color:var(--heading)]">
-                        {conversationTitle}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        {activeConversation.kind === 'direct' && (
+                          <div className="w-8 h-8 rounded-full bg-[color:var(--panel-bg-alt)] flex items-center justify-center text-xs font-semibold text-[color:var(--heading)]">
+                            {conversationTitle.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <h3 className="text-base font-semibold text-[color:var(--heading)]">
+                          {conversationTitle}
+                        </h3>
+                      </div>
                       {activeConversationDescriptor && (
                         <div className="mt-1 text-[11px] uppercase tracking-wide text-muted">
                           {activeConversationDescriptor.label}
