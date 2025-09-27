@@ -1,6 +1,7 @@
 import { type Request, type Response, Router } from 'express'
 import { requireAdmin } from '../middleware/adminAuth'
 import { authenticateToken } from '../middleware/auth'
+import { messageLimiter } from '../middleware/rateLimiter'
 import {
   addMembersToConversation,
   ConversationError,
@@ -303,6 +304,7 @@ router.get(
 
 router.post(
   '/conversations/:conversationId/messages',
+  messageLimiter,
   authenticateToken,
   async (req: Request, res: Response) => {
     try {
