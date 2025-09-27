@@ -4,7 +4,7 @@ import { logger } from '@/utils/logger'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
-import { PLAYER_COLORS, getColorValue } from '../constants/colors'
+import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
@@ -470,9 +470,7 @@ export default function GameRoom() {
       }
       setSelectedJoinColor(defaultColor)
     } catch {
-      setSelectedJoinColor(
-        PLAYER_COLORS.find((hex) => !takenColors.has(hex.toUpperCase())) ?? null,
-      )
+      setSelectedJoinColor(PLAYER_COLORS.find((hex) => !takenColors.has(hex.toUpperCase())) ?? null)
     }
     setJoinDialogOpen(true)
   }, [currentRoom, lobbyFull, takenColors])
@@ -604,7 +602,10 @@ export default function GameRoom() {
         if ('response' in error) {
           const apiError = error as { response?: { data?: { message?: string } } }
           message = apiError.response?.data?.message ?? message
-        } else if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
+        } else if (
+          'message' in error &&
+          typeof (error as { message?: unknown }).message === 'string'
+        ) {
           message = (error as { message: string }).message
         }
       } else if (error instanceof Error) {
@@ -781,7 +782,9 @@ export default function GameRoom() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="panel w-full max-w-md space-y-4">
             <h2 className="text-lg font-semibold text-[color:var(--heading)]">Choose your color</h2>
-            <p className="text-sm text-muted">Each player must pick a unique color for this game.</p>
+            <p className="text-sm text-muted">
+              Each player must pick a unique color for this game.
+            </p>
             <div className="grid grid-cols-6 gap-2">
               {PLAYER_COLORS.map((hex) => {
                 const taken = takenColors.has(hex.toUpperCase())
@@ -793,7 +796,10 @@ export default function GameRoom() {
                     className={`h-8 w-8 rounded-full border ${
                       isSelected ? 'ring-2 ring-white' : ''
                     } ${taken ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                    style={{ background: getColorValue(hex), borderColor: 'rgba(255,255,255,0.25)' }}
+                    style={{
+                      background: getColorValue(hex),
+                      borderColor: 'rgba(255,255,255,0.25)',
+                    }}
                     onClick={() => {
                       if (!taken) setSelectedJoinColor(hex)
                     }}
@@ -804,8 +810,24 @@ export default function GameRoom() {
                 )
               })}
             </div>
+            {selectedJoinColor && (
+              <div className="text-xs text-muted">
+                Selected:{' '}
+                <span className="text-white">{getColorDisplayName(selectedJoinColor)}</span> (
+                {selectedJoinColor})
+              </div>
+            )}
+            {joinError && (
+              <div className="panel border-[color:var(--color-danger)] bg-[color:color-mix(in srgb, var(--color-danger) 12%, transparent)] text-xs text-[color:var(--color-danger)]">
+                {joinError}
+              </div>
+            )}
             <div className="flex items-center justify-end gap-2 pt-2">
-              <button type="button" className="btn btn-secondary" onClick={() => setJoinDialogOpen(false)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setJoinDialogOpen(false)}
+              >
                 Cancel
               </button>
               <button
@@ -902,20 +924,24 @@ export default function GameRoom() {
               {currentRoom.players?.map((player) => {
                 const isCurrentUser = player.userId === user?.id
                 const colorValue = (player as { selected_color?: string | null }).selected_color
-                  ? getColorValue((player as { selected_color?: string | null }).selected_color as string)
+                  ? getColorValue(
+                      (player as { selected_color?: string | null }).selected_color as string,
+                    )
                   : player.preferred_color
                     ? getColorValue(player.preferred_color)
-                  : '#9CA3AF'
+                    : '#9CA3AF'
                 return (
                   <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
                     <span
                       className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ background: colorValue }}
-                      title={(player as { selected_color?: string | null }).selected_color
-                        ? `Color: ${(player as { selected_color?: string | null }).selected_color}`
-                        : player.preferred_color
-                          ? `Color: ${player.preferred_color}`
-                          : undefined}
+                      title={
+                        (player as { selected_color?: string | null }).selected_color
+                          ? `Color: ${(player as { selected_color?: string | null }).selected_color}`
+                          : player.preferred_color
+                            ? `Color: ${player.preferred_color}`
+                            : undefined
+                      }
                     ></span>
                     <div className="flex items-center gap-2 min-w-0">
                       {player.isAi || !player.userId ? (
