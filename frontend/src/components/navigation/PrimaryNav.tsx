@@ -211,11 +211,7 @@ const PrimaryNav: React.FC = () => {
   const getNavItemClass = (item: NavItem) => {
     const baseClass =
       'nav-tab flex items-center gap-2 text-sm font-medium transition-colors duration-200 cursor-pointer'
-
-    if (isActive(item)) {
-      return `${baseClass} is-active`
-    }
-    return baseClass
+    return isActive(item) ? `${baseClass} is-active` : baseClass
   }
 
   const handleNavItemClick = (item: NavItem, e: React.MouseEvent) => {
@@ -242,6 +238,7 @@ const PrimaryNav: React.FC = () => {
               aria-haspopup="true"
               aria-expanded={activeDropdown === item.path}
               aria-label={item.label}
+              aria-current={isActive(item) ? 'page' : undefined}
             >
               <span className="text-lg" aria-hidden="true">
                 {item.icon}
@@ -272,6 +269,7 @@ const PrimaryNav: React.FC = () => {
               className={`${getNavItemClass(item)} justify-center xl:justify-start`}
               onClick={() => setActiveDropdown(null)}
               aria-label={item.label}
+              aria-current={isActive(item) ? 'page' : undefined}
             >
               <span className="text-lg" aria-hidden="true">
                 {item.icon}

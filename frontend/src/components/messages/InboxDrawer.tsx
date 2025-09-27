@@ -405,8 +405,8 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   const conversationTitle = useMemo(() => {
     if (!activeConversation) return 'Messages'
-    return getConversationTitle(activeConversation)
-  }, [activeConversation])
+    return getConversationTitle(activeConversation, currentUserId)
+  }, [activeConversation, currentUserId])
 
   const activeConversationDescriptor = useMemo(() => {
     if (!activeConversation) {
@@ -673,27 +673,34 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                               <li key={conversation.id}>
                                 <button
                                   type="button"
-                                  className={`w-full text-left px-4 py-3 transition-colors ${
+                                  className={`w-full text-left px-4 py-3 transition-colors border-l-2 ${
                                     isActive
-                                      ? 'bg-[color:var(--panel-bg-alt)]'
-                                      : 'hover:bg-[color:var(--hover-bg)]'
+                                      ? 'bg-[color:var(--panel-bg-alt)] border-[color:var(--color-primary)]'
+                                      : 'hover:bg-[color:var(--hover-bg)] border-transparent'
                                   }`}
                                   onClick={() => handleSelectConversation(conversation.id)}
                                 >
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-start gap-3">
                                       {isDirect && (
-                                        <div className="mt-0.5 w-8 h-8 rounded-full bg-[color:var(--panel-bg-alt)] flex items-center justify-center text-xs font-semibold text-[color:var(--heading)]">
+                                        <div
+                                          className={`mt-0.5 w-8 h-8 rounded-full bg-[color:var(--panel-bg-alt)] flex items-center justify-center text-xs font-semibold text-[color:var(--heading)] ${
+                                            isActive
+                                              ? 'ring-2 ring-[color:var(--color-primary)]'
+                                              : ''
+                                          }`}
+                                        >
                                           {partnerInitial}
                                         </div>
                                       )}
                                       <div className="space-y-1">
                                         <p
-                                          className={`text-sm font-medium ${
+                                          className={`text-sm ${
                                             isActive
-                                              ? 'text-[color:var(--heading)]'
-                                              : 'text-[color:var(--text)]'
+                                              ? 'font-semibold text-[color:var(--heading)]'
+                                              : 'font-medium text-[color:var(--text)]'
                                           }`}
+                                          data-selected={isActive ? 'true' : 'false'}
                                         >
                                           {title}
                                         </p>
