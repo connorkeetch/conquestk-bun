@@ -299,9 +299,14 @@ export default function Header() {
 
           {/* Center nav - compact icons for large screens, full nav for extra large */}
           <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 flex-col items-center gap-2">
-            <nav className="hidden xl:flex nav-tabs text-body-sm">
+            <nav className="hidden xl:flex nav-tabs text-body-sm" aria-label="Primary">
               {navLinks.map((link) => (
-                <Link key={link.to} className={navTabClass(link.isActive)} to={link.to}>
+                <Link
+                  key={link.to}
+                  className={navTabClass(link.isActive)}
+                  to={link.to}
+                  aria-current={link.isActive ? 'page' : undefined}
+                >
                   {link.label}
                 </Link>
               ))}

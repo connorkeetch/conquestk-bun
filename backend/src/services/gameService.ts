@@ -1,4 +1,4 @@
-import { transaction } from '../config/database'
+import { query, transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
 import { loadMapForEngine } from '../game/mapLoader'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
@@ -66,6 +66,7 @@ type BattleLogEntry = {
     defender: number
   }
   conquered: boolean
+  movedArmies?: number
   eliminatedPlayers: string[]
 }
 
@@ -576,6 +577,11 @@ export class GameService {
 
     const previousPlayerId = gameState.currentPlayer
     const previousPhase = gameState.phase
+    // Keep snapshot of previous player's treasure hand to detect awards
+    const previousPlayer = gameState.players.find((p) => p.id === previousPlayerId)
+    const prevTreasures = previousPlayer?.treasures
+    const prevHand = Array.isArray(prevTreasures) ? [...prevTreasures] : []
+
     const updatedState = this.gameEngine.advancePhase(gameState)
 
     // Use longer TTL for finished games
@@ -615,6 +621,30 @@ export class GameService {
       }
     }
 
+    // Detect treasure card awarded to the player who just ended their turn
+    let treasureAwarded: import('../types/game').Metal | undefined
+    try {
+      const afterPlayer = updatedState.players.find((p) => p.id === previousPlayerId)
+      const afterTreasures = afterPlayer?.treasures
+      const afterHand = Array.isArray(afterTreasures) ? afterTreasures : []
+      if (afterHand.length > prevHand.length) {
+        // Identify the newly added card by multiset diff
+        const counts = new Map<string, number>()
+        for (const m of prevHand) counts.set(m, (counts.get(m) ?? 0) + 1)
+        for (const m of afterHand) {
+          const c = counts.get(m) ?? 0
+          if (c > 0) {
+            counts.set(m, c - 1)
+          } else {
+            treasureAwarded = m as import('../types/game').Metal
+            break
+          }
+        }
+      }
+    } catch {
+      // best-effort only
+    }
+
     // Calculate reinforcement armies if moving to reinforcement phase
     let reinforcementArmies = 0
     if (updatedState.phase === 'reinforcement') {
@@ -627,6 +657,7 @@ export class GameService {
     return {
       gameState: this.serializeGameState(updatedState),
       reinforcementArmies,
+      treasureAwarded,
     }
   }
 
@@ -813,6 +844,7 @@ export class GameService {
         defender: defenderLosses,
       },
       conquered: territoryConquered,
+      movedArmies: territoryConquered ? finalDefenderArmies : undefined,
       eliminatedPlayers: lastBattleResult.eliminatedPlayers ?? [],
     }
 
@@ -1498,5 +1530,20 @@ export class GameService {
   async removeGame(roomId: string) {
     await gameStateCache.invalidateGame(roomId)
     logger.info(`Forcefully removed game ${roomId} from cache`)
+  }
+
+  /**
+   * Fetch persisted battle log entries for a game room.
+   * Returns an empty array if none are available.
+   */
+  async getBattleLog(roomId: string): Promise<BattleLogEntry[]> {
+    const result = await query<{ game_log: BattleLogEntry[] | null }>(
+      'SELECT game_log FROM game_states WHERE room_id = $1',
+      [roomId],
+    )
+    const rows = result.rows
+    if (!rows || rows.length === 0) return []
+    const log = rows[0]?.game_log
+    return Array.isArray(log) ? log : []
   }
 }

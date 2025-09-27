@@ -213,10 +213,6 @@ export default function ChatContainer({
 
   // We intentionally suppress the header/subheader inside the chat container
   // to keep the panel clean in the game room. Tab labels convey context.
-  const _unused = useMemo(
-    () => ({ conversation, conversationType }),
-    [conversation, conversationType],
-  )
 
   if (initializing) {
     return (

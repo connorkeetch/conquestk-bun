@@ -12,7 +12,8 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     if (!room) return [] as Array<{ k: string; v: string }>
 
     const bool = (v?: boolean) => (v ? 'Yes' : 'No')
-    const toTitle = (v?: string | null) => (v ? String(v).replaceAll('_', ' ') : '—')
+    // Avoid String.prototype.replaceAll for wider TS lib compatibility
+    const toTitle = (v?: string | null) => (v ? String(v).replace(/_/g, ' ') : '—')
     const fog = room.fogOfWar ?? 'off'
     const ranked = room.isRanked ?? false
     const privateRoom = room.isPrivate
