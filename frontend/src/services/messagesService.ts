@@ -75,3 +75,7 @@ export async function ensureTeamConversation(
   })
   return response.data
 }
+
+export async function leaveConversation(conversationId: string): Promise<void> {
+  await apiClient.post(`/messages/conversations/${conversationId}/leave`)
+}
