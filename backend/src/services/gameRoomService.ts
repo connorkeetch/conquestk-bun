@@ -1125,8 +1125,9 @@ export class GameRoomService {
       // Determine final selected color
       let finalColor: string | null = null
       const requested = options?.selectedColor ?? null
-      if (requested && normalize(requested)) {
-        if (used.has(normalize(requested)!)) {
+      const requestedNorm = requested ? normalize(requested) : null
+      if (requested && requestedNorm) {
+        if (used.has(requestedNorm)) {
           throw new Error('Color already taken')
         }
         finalColor = requested
@@ -1137,7 +1138,8 @@ export class GameRoomService {
           [userId],
         )
         const preferred = prefRes.rows[0]?.preferred_color ?? null
-        if (preferred && !used.has(normalize(preferred)!)) {
+        const preferredNorm = preferred ? normalize(preferred) : null
+        if (preferred && (!preferredNorm || !used.has(preferredNorm))) {
           finalColor = preferred
         } else {
           // Fallback palette of 12 distinct colors
