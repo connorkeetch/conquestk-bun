@@ -3,6 +3,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import friendsService, { type FriendSummary } from '@/services/friendsService'
+import { leaveConversation as leaveConversationRequest } from '@/services/messagesService'
 import profileService from '@/services/profileService'
 import { socketService } from '@/services/socketService'
 import {
@@ -29,6 +31,23 @@ const DEFAULT_TITLES: Record<string, string> = {
   group: 'Group Conversation',
   game: 'Game Conversation',
 }
+
+type ConversationItem = ReturnType<typeof selectAllConversations>[number]
+
+interface ConversationSection {
+  key: 'game' | 'team' | 'direct' | 'group'
+  label: string
+  icon: string
+  conversations: ConversationItem[]
+}
+
+const getConversationTitle = (conversation: ConversationItem): string =>
+  conversation.title ||
+  (typeof conversation.metadata?.displayName === 'string'
+    ? conversation.metadata.displayName
+    : undefined) ||
+  DEFAULT_TITLES[conversation.kind] ||
+  'Conversation'
 
 const formatRelativeTime = (timestamp: string | Date) => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
@@ -61,15 +80,25 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   const [newUsername, setNewUsername] = useState('')
   const [isCreatingConversation, setIsCreatingConversation] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [friendStartError, setFriendStartError] = useState<string | null>(null)
+  const [friends, setFriends] = useState<FriendSummary[]>([])
+  const [friendsLoading, setFriendsLoading] = useState(false)
+  const [friendsError, setFriendsError] = useState<string | null>(null)
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const newConversationInputId = useId()
+  const friendSuggestionsId = useId()
+  const mobileThreadSelectId = useId()
 
   const drawerRef = useRef<HTMLDivElement>(null)
+  const friendsLoadedRef = useRef(false)
 
   // Fetch once per open
   const fetchedOnOpenRef = useRef(false)
   useEffect(() => {
     if (!isOpen) {
       fetchedOnOpenRef.current = false
+      friendsLoadedRef.current = false
       return
     }
     if (!fetchedOnOpenRef.current) {
@@ -78,6 +107,42 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       fetchedOnOpenRef.current = true
     }
   }, [isOpen, dispatch, unreadSummaryFetched])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+    if (friendsLoadedRef.current) {
+      return
+    }
+
+    let cancelled = false
+    const loadFriends = async () => {
+      try {
+        setFriendsLoading(true)
+        setFriendsError(null)
+        const friendList = await friendsService.listFriends()
+        if (!cancelled) {
+          setFriends(friendList)
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setFriendsError('Failed to load friends')
+        }
+      } finally {
+        if (!cancelled) {
+          setFriendsLoading(false)
+        }
+      }
+    }
+
+    friendsLoadedRef.current = true
+    void loadFriends()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen])
 
   // Close on ESC
   useEffect(() => {
@@ -93,11 +158,34 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
     )
   }, [conversations])
 
-  const filteredConversations = useMemo(() => {
-    return filter === 'unread'
-      ? sortedConversations.filter((c) => (c.unreadCount ?? 0) > 0)
-      : sortedConversations
-  }, [sortedConversations, filter])
+  const visibleConversations = useMemo(() => {
+    const base =
+      filter === 'unread'
+        ? sortedConversations.filter((c) => (c.unreadCount ?? 0) > 0)
+        : sortedConversations
+    if (!currentUserId) {
+      return base
+    }
+    return base.filter((conversation) => conversation.memberIds.includes(currentUserId))
+  }, [sortedConversations, filter, currentUserId])
+
+  const conversationSections = useMemo<ConversationSection[]>(() => {
+    const sections: ConversationSection[] = [
+      { key: 'game', label: 'Game Rooms', icon: '🎮', conversations: [] },
+      { key: 'team', label: 'Team Chats', icon: '👥', conversations: [] },
+      { key: 'direct', label: 'Direct Messages', icon: '💬', conversations: [] },
+      { key: 'group', label: 'Group Chats', icon: '🗂️', conversations: [] },
+    ]
+
+    for (const conversation of visibleConversations) {
+      const targetSection = sections.find((section) => section.key === conversation.kind)
+      if (targetSection) {
+        targetSection.conversations.push(conversation)
+      }
+    }
+
+    return sections.filter((section) => section.conversations.length > 0)
+  }, [visibleConversations])
 
   const activeConversation = useAppSelector((s) =>
     activeConversationId ? selectConversationById(s, activeConversationId) : undefined,
@@ -118,29 +206,51 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   useEffect(() => {
     if (!isOpen || !activeConversationId) return
     if ((messagesByConversation[activeConversationId] ?? []).length === 0) return
+    dispatch(messagesActions.markReadOptimistic(activeConversationId))
     socketService.markConversationReadViaSocket(activeConversationId)
-  }, [isOpen, activeConversationId, messagesByConversation])
+  }, [dispatch, isOpen, activeConversationId, messagesByConversation])
 
   // Auto-select first conversation on open
   useEffect(() => {
     if (!isOpen) return
-    if (!activeConversationId && sortedConversations.length > 0) {
-      dispatch(messagesActions.setActiveConversationId(sortedConversations[0].id))
+    if (!activeConversationId && visibleConversations.length > 0) {
+      dispatch(messagesActions.setActiveConversationId(visibleConversations[0].id))
     }
-  }, [isOpen, sortedConversations, activeConversationId, dispatch])
+  }, [isOpen, visibleConversations, activeConversationId, dispatch])
 
   const handleSelectConversation = useCallback(
     (conversationId: string) => {
       dispatch(messagesActions.setActiveConversationId(conversationId))
       setSendError(null)
+      setDeleteError(null)
       const existing = messagesByConversation[conversationId]
       if (!existing || existing.length === 0) {
         dispatch(loadConversationMessages({ conversationId, limit: 50 }))
       }
       dispatch(refreshConversation(conversationId))
+      dispatch(messagesActions.markReadOptimistic(conversationId))
       socketService.markConversationReadViaSocket(conversationId)
     },
     [dispatch, messagesByConversation],
+  )
+
+  const startDirectConversation = useCallback(
+    (targetUserId: string) =>
+      new Promise<string>((resolve, reject) => {
+        socketService.createConversation({ kind: 'direct', targetUserId }, (ack) => {
+          if (!ack?.ok || !ack.conversation) {
+            reject(new Error(ack?.error ?? 'Unable to start conversation'))
+            return
+          }
+          const conversationId = ack.conversation.id
+          dispatch(messagesActions.setActiveConversationId(conversationId))
+          dispatch(refreshConversation(conversationId))
+          dispatch(loadInbox())
+          socketService.markConversationReadViaSocket(conversationId)
+          resolve(conversationId)
+        })
+      }),
+    [dispatch],
   )
 
   const handleLoadOlder = useCallback(() => {
@@ -209,41 +319,86 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
         setCreateError(null)
         const profile = await profileService.getProfileByUsername(username)
         const targetUserId = profile.id
-        socketService.createConversation({ kind: 'direct', targetUserId }, (ack) => {
-          if (!ack?.ok || !ack.conversation) {
-            setCreateError(ack?.error ?? 'Unable to start conversation')
-            setIsCreatingConversation(false)
-            return
-          }
-          const conversationId = ack.conversation.id
-          dispatch(messagesActions.setActiveConversationId(conversationId))
-          dispatch(refreshConversation(conversationId))
-          dispatch(loadInbox())
-          socketService.markConversationReadViaSocket(conversationId)
-          setNewUsername('')
-          setIsCreatingConversation(false)
-          setFilter('all')
-        })
-      } catch {
-        setCreateError('Failed to start conversation')
+        await startDirectConversation(targetUserId)
+        setNewUsername('')
+        setFilter('all')
+        setFriendStartError(null)
+      } catch (error) {
+        setCreateError(error instanceof Error ? error.message : 'Failed to start conversation')
+      } finally {
         setIsCreatingConversation(false)
       }
     },
-    [newUsername, isCreatingConversation, dispatch],
+    [newUsername, isCreatingConversation, startDirectConversation],
+  )
+
+  const handleStartFriendConversation = useCallback(
+    async (friend: FriendSummary) => {
+      try {
+        setFriendStartError(null)
+        await startDirectConversation(friend.userId)
+        setFilter('all')
+        setNewUsername('')
+      } catch (error) {
+        setFriendStartError(error instanceof Error ? error.message : 'Unable to message friend')
+      }
+    },
+    [startDirectConversation],
+  )
+
+  const handleArchiveConversation = useCallback(
+    async (conversation: ConversationItem) => {
+      try {
+        setDeleteError(null)
+        setDeletingConversationId(conversation.id)
+        if (conversation.kind === 'group') {
+          await leaveConversationRequest(conversation.id)
+        }
+        dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
+        dispatch(loadInbox())
+      } catch (error) {
+        setDeleteError(
+          error instanceof Error
+            ? error.message
+            : conversation.kind === 'group'
+              ? 'Failed to leave conversation'
+              : 'Failed to delete conversation',
+        )
+      } finally {
+        setDeletingConversationId(null)
+      }
+    },
+    [dispatch],
   )
 
   const conversationTitle = useMemo(() => {
     if (!activeConversation) return 'Messages'
-    const metadataTitle =
-      typeof activeConversation.metadata?.displayName === 'string'
-        ? activeConversation.metadata.displayName
-        : undefined
-    return (
-      activeConversation.title ||
-      metadataTitle ||
-      DEFAULT_TITLES[activeConversation.kind] ||
-      'Conversation'
-    )
+    return getConversationTitle(activeConversation)
+  }, [activeConversation])
+
+  const activeConversationDescriptor = useMemo(() => {
+    if (!activeConversation) {
+      return null
+    }
+    switch (activeConversation.kind) {
+      case 'direct':
+        return { icon: '💬', label: 'Direct message' }
+      case 'group':
+        return { icon: '🗂️', label: 'Group chat' }
+      case 'team': {
+        const teamId = activeConversation.metadata?.teamId
+        const teamLabel = typeof teamId === 'number' ? `Team ${teamId}` : 'Team chat'
+        return { icon: '👥', label: teamLabel }
+      }
+      case 'game': {
+        const gameLabel = activeConversation.gameId
+          ? `Game ${activeConversation.gameId}`
+          : 'Game thread'
+        return { icon: '🎮', label: gameLabel }
+      }
+      default:
+        return { icon: '💬', label: 'Conversation' }
+    }
   }, [activeConversation])
 
   return (
@@ -279,27 +434,43 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
             <aside className="hidden sm:flex sm:flex-col sm:w-80 border-r border-[color:var(--panel-border)]">
               <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--panel-border)] text-xs uppercase tracking-wide text-muted">
                 <span>Conversations</span>
-                <div className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--panel-bg-alt)] p-0.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${
-                      filter === 'all' ? 'bg-[color:var(--color-primary)] text-white' : 'text-muted'
-                    }`}
-                    onClick={() => setFilter('all')}
+                    className="btn-outline btn-xs"
+                    onClick={() =>
+                      dispatch(
+                        messagesActions.pruneArchivedConversations({ kinds: ['game', 'team'] }),
+                      )
+                    }
+                    title="Remove archived game/team threads"
                   >
-                    All
+                    Remove archived
                   </button>
-                  <button
-                    type="button"
-                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${
-                      filter === 'unread'
-                        ? 'bg-[color:var(--color-primary)] text-white'
-                        : 'text-muted'
-                    }`}
-                    onClick={() => setFilter('unread')}
-                  >
-                    Unread
-                  </button>
+                  <div className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--panel-bg-alt)] p-0.5">
+                    <button
+                      type="button"
+                      className={`px-2 py-0.5 text-[10px] rounded-full transition ${
+                        filter === 'all'
+                          ? 'bg-[color:var(--color-primary)] text-white'
+                          : 'text-muted'
+                      }`}
+                      onClick={() => setFilter('all')}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-2 py-0.5 text-[10px] rounded-full transition ${
+                        filter === 'unread'
+                          ? 'bg-[color:var(--color-primary)] text-white'
+                          : 'text-muted'
+                      }`}
+                      onClick={() => setFilter('unread')}
+                    >
+                      Unread
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -319,7 +490,13 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                       onChange={(e) => setNewUsername(e.target.value)}
                       className="form-input"
                       placeholder="Username"
+                      list={friendSuggestionsId}
                     />
+                    <datalist id={friendSuggestionsId}>
+                      {friends.map((friend) => (
+                        <option key={friend.userId} value={friend.username} />
+                      ))}
+                    </datalist>
                     <button
                       type="submit"
                       className="btn-primary btn-sm"
@@ -338,6 +515,37 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                     </div>
                   )}
                 </form>
+                <div className="pt-3 mt-3 border-t border-[color:var(--panel-border)]">
+                  <p className="text-[11px] uppercase tracking-wide text-muted mb-2">
+                    Message a friend
+                  </p>
+                  {friendsLoading ? (
+                    <p className="text-xs text-muted">Loading friends…</p>
+                  ) : friendsError ? (
+                    <p className="text-xs text-[color:var(--color-danger)]">{friendsError}</p>
+                  ) : friends.length === 0 ? (
+                    <p className="text-xs text-muted">No friends yet</p>
+                  ) : (
+                    <ul className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                      {friends.map((friend) => (
+                        <li key={friend.userId}>
+                          <button
+                            type="button"
+                            className="w-full text-left px-2 py-1 rounded-md text-sm transition hover:bg-[color:var(--hover-bg)]"
+                            onClick={() => handleStartFriendConversation(friend)}
+                          >
+                            {friend.username}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {friendStartError && (
+                    <p className="mt-2 text-[11px] text-[color:var(--color-danger)]">
+                      {friendStartError}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {inboxLoading ? (
@@ -349,58 +557,151 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                   {inboxError}
                 </div>
               ) : (
-                <ul className="flex-1 overflow-y-auto">
-                  {filteredConversations.map((conversation) => {
-                    const isActive = conversation.id === activeConversationId
-                    const unread = conversation.unreadCount ?? 0
-                    const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
-                    const title =
-                      conversation.title ||
-                      (typeof conversation.metadata?.displayName === 'string'
-                        ? conversation.metadata.displayName
-                        : undefined) ||
-                      DEFAULT_TITLES[conversation.kind] ||
-                      'Conversation'
-                    return (
-                      <li key={conversation.id}>
-                        <button
-                          type="button"
-                          className={`w-full text-left px-4 py-3 transition-colors ${
-                            isActive
-                              ? 'bg-[color:var(--panel-bg-alt)]'
-                              : 'hover:bg-[color:var(--hover-bg)]'
-                          }`}
-                          onClick={() => handleSelectConversation(conversation.id)}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p
-                                className={`text-sm font-medium ${
-                                  isActive
-                                    ? 'text-[color:var(--heading)]'
-                                    : 'text-[color:var(--text)]'
-                                }`}
-                              >
-                                {title}
-                              </p>
-                              <p className="text-xs text-muted truncate">{subtitle}</p>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-[10px] uppercase tracking-wide text-muted">
-                                {formatRelativeTime(conversation.updatedAt)}
-                              </span>
-                              {unread > 0 && <span className="badge">{unread}</span>}
-                            </div>
-                          </div>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <div className="flex-1 overflow-y-auto">
+                  {conversationSections.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-muted">
+                      No conversations yet.
+                    </div>
+                  ) : (
+                    conversationSections.map((section) => (
+                      <div key={section.key}>
+                        <div className="px-4 py-2 text-[11px] uppercase tracking-wide text-muted flex items-center gap-2">
+                          <span>{section.icon}</span>
+                          <span>{section.label}</span>
+                        </div>
+                        <ul>
+                          {section.conversations.map((conversation) => {
+                            const isActive = conversation.id === activeConversationId
+                            const unread = conversation.unreadCount ?? 0
+                            const subtitle = conversation.lastMessage?.body ?? 'No messages yet'
+                            const title = getConversationTitle(conversation)
+                            const contextLabel =
+                              conversation.kind === 'team'
+                                ? conversation.metadata?.teamId !== undefined
+                                  ? `Team ${conversation.metadata.teamId}`
+                                  : 'Team chat'
+                                : conversation.kind === 'game'
+                                  ? conversation.gameId
+                                    ? `Game ${conversation.gameId}`
+                                    : 'Game thread'
+                                  : conversation.kind === 'direct'
+                                    ? 'Direct message'
+                                    : 'Group chat'
+                            return (
+                              <li key={conversation.id}>
+                                <button
+                                  type="button"
+                                  className={`w-full text-left px-4 py-3 transition-colors ${
+                                    isActive
+                                      ? 'bg-[color:var(--panel-bg-alt)]'
+                                      : 'hover:bg-[color:var(--hover-bg)]'
+                                  }`}
+                                  onClick={() => handleSelectConversation(conversation.id)}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="space-y-1">
+                                      <p
+                                        className={`text-sm font-medium ${
+                                          isActive
+                                            ? 'text-[color:var(--heading)]'
+                                            : 'text-[color:var(--text)]'
+                                        }`}
+                                      >
+                                        {title}
+                                      </p>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted flex items-center gap-1">
+                                        <span>{section.icon}</span>
+                                        <span>{contextLabel}</span>
+                                      </div>
+                                      <p className="text-xs text-muted truncate">{subtitle}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="text-[10px] uppercase tracking-wide text-muted">
+                                        {formatRelativeTime(conversation.updatedAt)}
+                                      </span>
+                                      {unread > 0 && <span className="badge">{unread}</span>}
+                                    </div>
+                                  </div>
+                                </button>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    ))
+                  )}
+                </div>
               )}
             </aside>
 
             <section className="flex-1 flex flex-col min-w-0">
+              <div className="sm:hidden border-b border-[color:var(--panel-border)] px-4 py-3 space-y-3">
+                <div>
+                  <label
+                    htmlFor={mobileThreadSelectId}
+                    className="text-[11px] uppercase tracking-wide text-muted block mb-1"
+                  >
+                    Thread
+                  </label>
+                  <select
+                    id={mobileThreadSelectId}
+                    className="form-select w-full"
+                    value={activeConversationId ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      if (value) {
+                        handleSelectConversation(value)
+                      }
+                    }}
+                  >
+                    <option value="">Select a thread…</option>
+                    {conversationSections.map((section) => (
+                      <optgroup key={section.key} label={`${section.icon} ${section.label}`}>
+                        {section.conversations.map((conversation) => {
+                          const title = getConversationTitle(conversation)
+                          const unread = conversation.unreadCount ?? 0
+                          return (
+                            <option key={conversation.id} value={conversation.id}>
+                              {title}
+                              {unread > 0 ? ` (${unread})` : ''}
+                            </option>
+                          )
+                        })}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted mb-2">Friends</p>
+                  {friendsLoading ? (
+                    <p className="text-xs text-muted">Loading friends…</p>
+                  ) : friendsError ? (
+                    <p className="text-xs text-[color:var(--color-danger)]">{friendsError}</p>
+                  ) : friends.length === 0 ? (
+                    <p className="text-xs text-muted">No friends yet</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {friends.map((friend) => (
+                        <button
+                          key={friend.userId}
+                          type="button"
+                          className="px-3 py-1 rounded-full text-xs bg-[color:var(--panel-bg-alt)] text-[color:var(--text)] hover:bg-[color:var(--hover-bg)] transition"
+                          onClick={() => handleStartFriendConversation(friend)}
+                        >
+                          {friend.username}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {friendStartError && (
+                    <p className="mt-2 text-[11px] text-[color:var(--color-danger)]">
+                      {friendStartError}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {activeConversation ? (
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--panel-border)]">
@@ -408,18 +709,37 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                       <h3 className="text-base font-semibold text-[color:var(--heading)]">
                         {conversationTitle}
                       </h3>
-                      <p className="text-xs text-muted">
-                        {activeConversation.kind === 'direct'
-                          ? 'Direct conversation'
-                          : activeConversation.kind === 'group'
-                            ? 'Group conversation'
-                            : 'Game chat'}
-                      </p>
+                      {activeConversationDescriptor && (
+                        <div className="mt-1 inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted">
+                          <span>{activeConversationDescriptor.icon}</span>
+                          <span>{activeConversationDescriptor.label}</span>
+                        </div>
+                      )}
                     </div>
-                    {activeConversation.unreadCount > 0 && (
-                      <span className="badge">{activeConversation.unreadCount} unread</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {activeConversation.unreadCount > 0 && (
+                        <span className="badge">{activeConversation.unreadCount} unread</span>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-outline btn-sm"
+                        onClick={() => handleArchiveConversation(activeConversation)}
+                        disabled={deletingConversationId === activeConversation.id}
+                      >
+                        {deletingConversationId === activeConversation.id
+                          ? 'Removing…'
+                          : activeConversation.kind === 'group'
+                            ? 'Leave chat'
+                            : 'Delete thread'}
+                      </button>
+                    </div>
                   </div>
+
+                  {deleteError && (
+                    <div className="px-4 py-2 text-sm text-[color:var(--color-danger)]">
+                      {deleteError}
+                    </div>
+                  )}
 
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {hasMore && (

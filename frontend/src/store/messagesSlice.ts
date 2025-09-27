@@ -61,6 +61,10 @@ interface MessagesState {
   inboxError: string | null
   unreadSummaryFetched: boolean
   pendingUnread: Record<string, number>
+  hiddenConversationIds: Record<string, boolean>
+  // When we optimistically mark a conversation read, set a timestamp to suppress
+  // stale unread updates racing in from server for a short grace window.
+  pendingRead: Record<string, number>
 }
 
 const initialState: MessagesState = {
@@ -74,6 +78,8 @@ const initialState: MessagesState = {
   inboxError: null,
   unreadSummaryFetched: false,
   pendingUnread: {},
+  hiddenConversationIds: {},
+  pendingRead: {},
 }
 
 const adaptConversation = (item: ConversationListItem): ConversationEntity => ({
@@ -210,8 +216,17 @@ const mergeMembers = (
   current.memberIds = current.memberRoles.map((member) => member.userId)
 }
 
-const applyConversationEntity = (state: MessagesState, entity: ConversationEntity) => {
+const applyConversationEntity = (state: MessagesState, incoming: ConversationEntity) => {
+  if (state.hiddenConversationIds[incoming.id]) {
+    return
+  }
+  let entity = incoming
   const current = state.conversations[entity.id]
+  // Respect recent optimistic read within a short window
+  const ts = state.pendingRead[entity.id]
+  if (ts && Date.now() - ts < 2000) {
+    entity = { ...entity, unreadCount: 0 }
+  }
   if (current) {
     state.conversations[entity.id] = {
       ...current,
@@ -327,11 +342,25 @@ const messagesSlice = createSlice({
   initialState,
   reducers: {
     setActiveConversationId(state, action: PayloadAction<string | null>) {
+      if (action.payload && state.hiddenConversationIds[action.payload]) {
+        state.activeConversationId = null
+        return
+      }
       state.activeConversationId = action.payload
       if (action.payload && state.conversations[action.payload]) {
         state.conversations[action.payload].unreadCount = 0
         delete state.pendingUnread[action.payload]
+        state.pendingRead[action.payload] = Date.now()
       }
+    },
+    // Optimistically clear unread count and start grace window
+    markReadOptimistic(state, action: PayloadAction<string>) {
+      const id = action.payload
+      if (state.conversations[id]) {
+        state.conversations[id].unreadCount = 0
+      }
+      delete state.pendingUnread[id]
+      state.pendingRead[id] = Date.now()
     },
     // Remove a conversation and all associated local state (messages, typing, flags)
     removeConversationLocal(state, action: PayloadAction<string>) {
@@ -371,6 +400,8 @@ const messagesSlice = createSlice({
       state,
       action: PayloadAction<{ message: ConversationMessageEventPayload; currentUserId?: string }>,
     ) {
+      const conversationId = action.payload.message.conversationId
+      delete state.hiddenConversationIds[conversationId]
       const normalized = adaptMessage(action.payload.message)
       const messages = ensureMessagesArray(state, normalized.conversationId)
       insertMessageChronologically(messages, normalized)
@@ -405,6 +436,7 @@ const messagesSlice = createSlice({
       }>,
     ) {
       const { conversation: summary, members } = action.payload.payload
+      delete state.hiddenConversationIds[summary.id]
       const normalizedSummary: ConversationSummary = {
         ...summary,
         createdAt: toIsoString(summary.createdAt),
@@ -430,6 +462,7 @@ const messagesSlice = createSlice({
       state.conversations[summary.id] = entity
     },
     conversationUpserted(state, action: PayloadAction<ConversationEntity>) {
+      delete state.hiddenConversationIds[action.payload.id]
       applyConversationEntity(state, action.payload)
     },
     conversationMembersAdded(state, action: PayloadAction<ConversationMembersAddedPayload>) {
@@ -466,6 +499,19 @@ const messagesSlice = createSlice({
         lastMessage: conversation.lastMessage,
       }
     },
+    archiveConversation(state, action: PayloadAction<{ conversationId: string }>) {
+      const { conversationId } = action.payload
+      state.hiddenConversationIds[conversationId] = true
+      delete state.conversations[conversationId]
+      delete state.messages[conversationId]
+      delete state.typing[conversationId]
+      delete state.hasMore[conversationId]
+      delete state.loadingMessages[conversationId]
+      delete state.pendingUnread[conversationId]
+      if (state.activeConversationId === conversationId) {
+        state.activeConversationId = null
+      }
+    },
     receiptReadReceived(
       state,
       action: PayloadAction<{ payload: ReceiptReadEventPayload; currentUserId?: string }>,
@@ -476,6 +522,7 @@ const messagesSlice = createSlice({
       if (action.payload.payload.userId === action.payload.currentUserId) {
         conversation.unreadCount = 0
         delete state.pendingUnread[action.payload.payload.conversationId]
+        delete state.pendingRead[action.payload.payload.conversationId]
       }
 
       if (conversation.membership?.lastReadMessageId) {
@@ -498,6 +545,9 @@ const messagesSlice = createSlice({
     },
     unreadSummaryApplied(state, action: PayloadAction<UnreadSummaryEntry[]>) {
       for (const entry of action.payload) {
+        if (state.hiddenConversationIds[entry.conversationId]) {
+          continue
+        }
         if (state.conversations[entry.conversationId]) {
           state.conversations[entry.conversationId].unreadCount = entry.unreadCount
         } else {
@@ -544,10 +594,17 @@ const messagesSlice = createSlice({
       })
       .addCase(loadUnreadSummary.fulfilled, (state, action) => {
         for (const entry of action.payload) {
+          if (state.hiddenConversationIds[entry.conversationId]) {
+            continue
+          }
+          const ts = state.pendingRead[entry.conversationId]
+          const withinGrace = ts && Date.now() - ts < 2000
           if (state.conversations[entry.conversationId]) {
-            state.conversations[entry.conversationId].unreadCount = entry.unreadCount
+            state.conversations[entry.conversationId].unreadCount = withinGrace
+              ? 0
+              : entry.unreadCount
           } else {
-            state.pendingUnread[entry.conversationId] = entry.unreadCount
+            state.pendingUnread[entry.conversationId] = withinGrace ? 0 : entry.unreadCount
           }
         }
         state.unreadSummaryFetched = true

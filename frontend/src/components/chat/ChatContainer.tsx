@@ -97,6 +97,7 @@ export default function ChatContainer({
         dispatch(messagesActions.setActiveConversationId(id))
         dispatch(loadConversationMessages({ conversationId: id, limit: 50 }))
         dispatch(refreshConversation(id))
+        dispatch(messagesActions.markReadOptimistic(id))
         socketService.markConversationReadViaSocket(id)
       } catch (ensureError) {
         if (!cancelled) {
@@ -130,8 +131,9 @@ export default function ChatContainer({
     if (!resolvedConversationId || rawMessages.length === 0) {
       return
     }
+    dispatch(messagesActions.markReadOptimistic(resolvedConversationId))
     socketService.markConversationReadViaSocket(resolvedConversationId)
-  }, [resolvedConversationId, rawMessages.length])
+  }, [dispatch, resolvedConversationId, rawMessages.length])
 
   const displayMessages: DisplayMessage[] = useMemo(() => {
     const memberNameMap = new Map(
@@ -254,6 +256,32 @@ export default function ChatContainer({
 
   const unreadCount = conversation?.unreadCount ?? 0
 
+  const conversationKindDescriptor = useMemo(() => {
+    const kind = conversation?.kind ?? conversationType
+    switch (kind) {
+      case 'dm':
+      case 'direct':
+        return { icon: '💬', label: 'Direct message' }
+      case 'group':
+        return { icon: '🗂️', label: 'Group chat' }
+      case 'team': {
+        const teamRaw = conversation?.metadata?.teamId
+        const teamId =
+          typeof teamRaw === 'number'
+            ? teamRaw
+            : typeof teamRaw === 'string' && !Number.isNaN(Number(teamRaw))
+              ? Number(teamRaw)
+              : null
+        const teamLabel = teamId !== null ? `Team ${teamId}` : 'Team chat'
+        return { icon: '👥', label: teamLabel }
+      }
+      default: {
+        const gameLabel = conversation?.gameId ? `Game ${conversation.gameId}` : 'Game thread'
+        return { icon: '🎮', label: gameLabel }
+      }
+    }
+  }, [conversation, conversationType])
+
   if (initializing) {
     return (
       <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>
@@ -277,7 +305,17 @@ export default function ChatContainer({
       <div className="flex items-center justify-between px-4 py-3 bg-surface-1 border-b border-border rounded-t-lg">
         <div>
           <h3 className="font-semibold text-white">{conversationTitle}</h3>
-          {conversationSubtitle && <p className="text-xs text-muted">{conversationSubtitle}</p>}
+          <div className="flex items-center gap-2">
+            {conversationKindDescriptor && (
+              <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted">
+                <span>{conversationKindDescriptor.icon}</span>
+                <span>{conversationKindDescriptor.label}</span>
+              </span>
+            )}
+            {conversationSubtitle && (
+              <span className="text-xs text-muted">{conversationSubtitle}</span>
+            )}
+          </div>
         </div>
         {unreadCount > 0 && (
           <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">

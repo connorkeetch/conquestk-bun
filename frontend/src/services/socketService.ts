@@ -47,6 +47,7 @@ type RoomLifecyclePayload = LifecycleUpdatePayload
 
 class SocketService {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
+  private lastReadEmitAt: Record<string, number> = {}
 
   connect() {
     if (this.socket?.connected) {
@@ -123,6 +124,12 @@ class SocketService {
   }
 
   markConversationReadViaSocket(conversationId: string, callback?: (ack: ReceiptReadAck) => void) {
+    const now = Date.now()
+    const last = this.lastReadEmitAt[conversationId] ?? 0
+    if (now - last < 1000) {
+      return
+    }
+    this.lastReadEmitAt[conversationId] = now
     this.socket?.emit('receipt.read', { conversationId }, callback)
   }
 
@@ -324,6 +331,18 @@ class SocketService {
         return
       }
 
+      if (payload.status === 'completed' || payload.status === 'abandoned') {
+        const messageState = store.getState().messages.conversations
+        for (const conversation of Object.values(messageState)) {
+          if (
+            (conversation.kind === 'game' || conversation.kind === 'team') &&
+            conversation.gameId === payload.roomId
+          ) {
+            store.dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
+          }
+        }
+      }
+
       const previousRoom = store.getState().room.currentRoom
       if (
         previousRoom &&
@@ -390,6 +409,18 @@ class SocketService {
 
       if (!roomId) {
         return
+      }
+
+      if (status === 'completed' || status === 'abandoned') {
+        const messageState = store.getState().messages.conversations
+        for (const conversation of Object.values(messageState)) {
+          if (
+            (conversation.kind === 'game' || conversation.kind === 'team') &&
+            conversation.gameId === roomId
+          ) {
+            store.dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
+          }
+        }
       }
 
       const lifecyclePayload: RoomLifecyclePayload = {
@@ -591,6 +622,12 @@ class SocketService {
 
     this.socket.on('notification:new', (payload: unknown) => {
       const data = payload as Parameters<ServerToClientEvents['notification:new']>[0]
+      const currentUserId = store.getState().auth.user?.id
+      // Suppress self-authored chat notifications defensively (server normally avoids this)
+      const senderId = (data.metadata as Record<string, unknown> | undefined)?.senderId
+      if (data.type === 'chat_message' && currentUserId && senderId === currentUserId) {
+        return
+      }
       notificationService.addNotification({
         id: data.id,
         type: data.type as NotificationType,
