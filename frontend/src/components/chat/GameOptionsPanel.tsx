@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
+import { mapService } from '@/services/mapService'
 
 type Props = {
   className?: string
@@ -7,12 +8,34 @@ type Props = {
 
 export default function GameOptionsPanel({ className = '' }: Props) {
   const room = useAppSelector((state) => state.room.currentRoom)
+  const currentGame = useAppSelector((state) => state.game.currentGame)
+  const [resolvedMapName, setResolvedMapName] = useState<string | null>(null)
+
+  // Resolve map name if backend response lacks it
+  useEffect(() => {
+    let isActive = true
+    setResolvedMapName(null)
+    if (!room?.mapName && room?.mapId) {
+      ;(async () => {
+        try {
+          const data = await mapService.getMap(room.mapId!)
+          if (!isActive) return
+          setResolvedMapName(data.map.name || null)
+        } catch {
+          if (!isActive) return
+          setResolvedMapName(null)
+        }
+      })()
+    }
+    return () => {
+      isActive = false
+    }
+  }, [room?.mapId, room?.mapName])
 
   const lines = useMemo(() => {
     if (!room) return [] as Array<{ k: string; v: string }>
 
     const bool = (v?: boolean) => (v ? 'Yes' : 'No')
-    // Avoid String.prototype.replaceAll for wider TS lib compatibility
     const toTitle = (v?: string | null) => (v ? String(v).replace(/_/g, ' ') : '—')
     const fog = room.fogOfWar ?? 'off'
     const ranked = room.isRanked ?? false
@@ -21,30 +44,75 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     const teamMode = room.teamMode ?? 'none'
     const numberOfTeams = room.numberOfTeams ?? null
     const turnTimer = room.turnTimerSeconds ?? 0
+    const movementType = room.movementType ?? null
+    const gameMode = room.gameMode ?? null
+
+    const playersLabel = 'Players'
+
+    const teamsValue = (() => {
+      if (!teamPlay || teamMode === 'none') return 'Off'
+      if (teamMode === 'auto_balance') return 'Auto-balance'
+      if (teamMode === 'teams') {
+        return numberOfTeams && numberOfTeams > 0 ? `${numberOfTeams}` : 'Teams'
+      }
+      return toTitle(teamMode)
+    })()
+
+    const fogValue = fog === 'off' ? 'Disabled' : 'Enabled'
+
+    const formatTimer = (seconds?: number | null) => {
+      const s = seconds ?? 0
+      if (!s || s <= 0) return 'Off'
+      if (s >= 3600) {
+        const hours = Math.floor(s / 3600)
+        const rem = Math.floor((s % 3600) / 60)
+        return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`
+      }
+      const minutes = Math.ceil(s / 60)
+      return `${minutes}m`
+    }
+
+    const fortificationValue = (() => {
+      switch (movementType) {
+        case 'classic_adjacent':
+          return 'Adjacent'
+        case 'adjacent_multi':
+          return 'Adjacent (multi)'
+        case 'path_single':
+          return 'Chained'
+        case 'path_multi':
+          return 'Unlimited'
+        default:
+          return 'Adjacent'
+      }
+    })()
 
     const treasureSummary = (() => {
       const cfg = room.treasureConfig
       if (!cfg || cfg.enabled === false) return 'Off'
       const mode = cfg.payoutMode || 'triangular'
-      if (mode === 'fixed') {
-        const fixed = Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue ?? 8)))
-        return `Fixed (${fixed}) · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
-      }
-      const label = mode === 'triangular' ? 'Triangular' : mode === 'classic' ? 'Classic' : 'None'
-      return `${label} · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
+      if (mode === 'fixed') return 'Fixed'
+      return mode === 'triangular' ? 'Triangular' : mode === 'classic' ? 'Classic' : 'Off'
+    })()
+
+    const modifiersValue = (() => {
+      // Prefer live game state if available; otherwise assume Disabled
+      const enabled = Boolean(currentGame?.gameConfig?.useTerritoryModifiers)
+      return enabled ? 'Enabled' : 'Disabled'
     })()
 
     const items: Array<{ k: string; v: string }> = [
-      { k: 'Map', v: room.mapName || 'Unknown map' },
-      { k: 'Max Players', v: String(room.maxPlayers) },
+      ...(gameMode ? [{ k: 'Game Mode', v: toTitle(gameMode) }] : []),
+      { k: 'Map', v: room.mapName || resolvedMapName || 'Unknown map' },
+      { k: playersLabel, v: String(room.maxPlayers) },
+      { k: 'Teams', v: teamsValue },
+      { k: 'Fog of War', v: fogValue },
+      { k: 'Turn Timer', v: formatTimer(turnTimer) },
+      { k: 'Fortification', v: fortificationValue },
+      { k: 'Treasures', v: treasureSummary },
+      { k: 'Modifiers', v: modifiersValue },
       { k: 'Ranked', v: ranked ? 'Yes' : 'No' },
       { k: 'Private Room', v: privateRoom ? 'Yes' : 'No' },
-      { k: 'Team Play', v: bool(teamPlay) },
-      { k: 'Team Mode', v: toTitle(teamMode) },
-      ...(teamPlay && numberOfTeams ? [{ k: 'Number of Teams', v: String(numberOfTeams) }] : []),
-      { k: 'Fog of War', v: toTitle(fog) },
-      { k: 'Turn Timer', v: turnTimer ? `${turnTimer}s` : 'Off' },
-      { k: 'Treasures', v: treasureSummary },
     ]
 
     return items
