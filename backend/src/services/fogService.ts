@@ -78,6 +78,17 @@ function filterDeltaForMask(delta: GameDelta, mask: Set<string>): GameDelta | nu
     }
   }
 
+  if ((delta as { type?: string }).type === 'FORTIFY_RESULT') {
+    // biome-ignore lint/suspicious/noExplicitAny: union guard for custom type
+    const fr = delta as any
+    const fromVisible = mask.has(fr.fromTerritoryId)
+    const toVisible = mask.has(fr.toTerritoryId)
+    if (!fromVisible && !toVisible) {
+      return null
+    }
+    return delta
+  }
+
   // PHASE_CHANGE, GAME_END: not sensitive
   return delta
 }
