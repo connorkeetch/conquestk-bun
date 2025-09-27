@@ -13,7 +13,7 @@ import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 // import audioService from '../services/audioService'
 import { logout } from '../store/authSlice'
-import { selectTotalUnreadMessages } from '../store/messagesSlice'
+import { selectTotalUnreadDirectGroup } from '../store/messagesSlice'
 import { sanitizeText } from '../utils/sanitizer'
 import ActiveGamesDropdown from './ActiveGamesDropdown'
 import MountainLogo from './MountainLogo'
@@ -44,7 +44,7 @@ export default function Header() {
   const [pendingFriends, setPendingFriends] = useState(0)
   // const [isMuted, setIsMuted] = useState(false)
   const menuTitleId = useId()
-  const unreadMessages = useAppSelector(selectTotalUnreadMessages)
+  const unreadMessages = useAppSelector(selectTotalUnreadDirectGroup)
 
   // Derive a small bubble style using the user's preferred color
   const resolvedPreferred = getColorValue(preferredColor)

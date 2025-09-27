@@ -669,4 +669,18 @@ export const selectTotalUnreadMessages = (state: RootState): number => {
   return conversationUnread + pendingUnread
 }
 
+// Only counts unread for direct/group threads for the navbar Messages badge
+export const selectTotalUnreadDirectGroup = (state: RootState): number => {
+  let total = 0
+  for (const conversation of Object.values(state.messages.conversations)) {
+    if (
+      (conversation.kind === 'direct' || conversation.kind === 'group') &&
+      !conversation.isArchived
+    ) {
+      total += conversation.unreadCount ?? 0
+    }
+  }
+  return total
+}
+
 export default messagesReducer
