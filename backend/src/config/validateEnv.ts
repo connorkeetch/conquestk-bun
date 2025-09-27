@@ -201,28 +201,14 @@ export function validateEnvironmentVariables(): void {
   const warnings: string[] = []
   const applied: string[] = []
 
-  // Handle production/staging-specific secret generation FIRST before validation
+  // In production/staging, do NOT auto-generate secrets. They must be provided and stable.
+  // This prevents invalidating all existing JWTs/sessions on every deploy or restart.
   if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
-    const crypto = require('node:crypto')
-
-    // Generate JWT_SECRET if missing or invalid (Railway reference)
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('$')) {
-      process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex')
-      warnings.push('⚠️  JWT_SECRET not provided or is Railway reference - generated random key')
-      applied.push(`✅ Generated JWT_SECRET for production`)
+      errors.push('❌ Missing JWT_SECRET in production/staging. Set a stable 32+ char value.')
     }
-
-    // Generate SESSION_SECRET if missing or invalid (Railway reference)
     if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith('$')) {
-      process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex')
-      warnings.push('⚠️  SESSION_SECRET not provided or is Railway reference - generated random key')
-      applied.push(`✅ Generated SESSION_SECRET for production`)
-    }
-
-    // Ensure they're different
-    if (process.env.JWT_SECRET === process.env.SESSION_SECRET) {
-      process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex')
-      warnings.push('⚠️  Regenerated SESSION_SECRET to be different from JWT_SECRET')
+      errors.push('❌ Missing SESSION_SECRET in production/staging. Set a stable 32+ char value.')
     }
   }
 
