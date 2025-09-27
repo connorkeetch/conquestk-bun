@@ -78,6 +78,7 @@ interface PlayerRow {
   username?: string | null
   skill_rating?: number | null
   current_tier?: string | null
+  preferred_color?: string | null
   joinedAt: Date | string | null
   isReady?: boolean | null
   readyAt?: Date | string | null
@@ -385,6 +386,10 @@ export class GameRoomService {
           username: player.username ?? usernameFallback,
           skill_rating: this.parseNullableNumber(player.skill_rating) ?? undefined,
           current_tier: this.normalizePlayerTier(player.current_tier),
+          preferred_color:
+            typeof player.preferred_color === 'string' && player.preferred_color.length > 0
+              ? player.preferred_color
+              : undefined,
           joinedAt: this.toDate(player.joinedAt) ?? new Date(),
           isReady: typeof player.isReady === 'boolean' ? player.isReady : undefined,
           readyAt: this.toDate(player.readyAt) ?? null,
@@ -689,6 +694,7 @@ export class GameRoomService {
                   'skill_rating', u.skill_rating,
                   -- 'current_tier', u.current_tier, -- Column doesn't exist yet
                   'current_tier', NULL,
+                  'preferred_color', up.preferred_color,
                   'joinedAt', rp.joined_at,
                   'isReady', rp.is_ready,
                   'readyAt', rp.ready_at,
@@ -702,6 +708,7 @@ export class GameRoomService {
       FROM game_rooms gr
       LEFT JOIN room_players rp ON gr.id = rp.room_id
       LEFT JOIN users u ON rp.user_id = u.id
+      LEFT JOIN user_preferences up ON u.id = up.user_id
       WHERE gr.id = $1
       GROUP BY gr.id
     `

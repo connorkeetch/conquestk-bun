@@ -58,6 +58,7 @@ export interface Player {
   username: string
   skill_rating?: number
   current_tier?: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Master' | 'Grandmaster'
+  preferred_color?: string
   joinedAt: Date
   isReady?: boolean
   readyAt?: Date | null
