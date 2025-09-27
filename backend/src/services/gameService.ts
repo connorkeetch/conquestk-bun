@@ -55,6 +55,7 @@ type PlayerConfig = {
 }
 
 type BattleLogEntry = {
+  type?: 'BATTLE'
   jobId: string
   timestamp: string
   attackingTerritoryId: string
@@ -69,6 +70,28 @@ type BattleLogEntry = {
   movedArmies?: number
   eliminatedPlayers: string[]
 }
+
+type FortifyLogEntry = {
+  type: 'FORTIFY'
+  timestamp: string
+  playerId: string
+  fromTerritoryId: string
+  toTerritoryId: string
+  movedArmies: number
+  fromArmies: number
+  toArmies: number
+}
+
+type TurnLogEntry = {
+  type: 'TURN'
+  timestamp: string
+  playerId: string
+  event: 'START' | 'END'
+  reinforcementArmies?: number
+  territoryCount?: number
+}
+
+type GameLogEntry = BattleLogEntry | FortifyLogEntry | TurnLogEntry
 
 type PlayerRankingSummary = {
   userId: string
@@ -654,6 +677,33 @@ export class GameService {
       )
     }
 
+    // Append TURN logs (END for previous, START for next when applicable)
+    try {
+      const now = new Date().toISOString()
+      const entries: GameLogEntry[] = [
+        { type: 'TURN', timestamp: now, playerId: previousPlayerId, event: 'END' },
+      ]
+      if (updatedState.phase === 'reinforcement') {
+        const territoryCount = updatedState.board.filter(
+          (t) => t.ownerId === updatedState.currentPlayer,
+        ).length
+        entries.push({
+          type: 'TURN',
+          timestamp: now,
+          playerId: updatedState.currentPlayer,
+          event: 'START',
+          reinforcementArmies,
+          territoryCount,
+        })
+      }
+      await this.appendGameLog(roomId, entries)
+    } catch (err) {
+      logger.warn('Failed to append turn logs', {
+        roomId,
+        error: err instanceof Error ? err.message : err,
+      })
+    }
+
     return {
       gameState: this.serializeGameState(updatedState),
       reinforcementArmies,
@@ -699,6 +749,26 @@ export class GameService {
       data.toTerritoryId,
       data.armies,
     )
+    // Persist fortify to game log
+    try {
+      const entry: FortifyLogEntry = {
+        type: 'FORTIFY',
+        timestamp: new Date().toISOString(),
+        playerId: data.playerId,
+        fromTerritoryId: data.fromTerritoryId,
+        toTerritoryId: data.toTerritoryId,
+        movedArmies: data.armies,
+        fromArmies: result.fromArmies,
+        toArmies: result.toArmies,
+      }
+      await this.appendGameLog(gameId, [entry])
+    } catch (err) {
+      logger.warn('Failed to append fortify log', {
+        gameId,
+        error: err instanceof Error ? err.message : err,
+      })
+    }
+
     return {
       fromArmies: result.fromArmies,
       toArmies: result.toArmies,
@@ -833,6 +903,7 @@ export class GameService {
     const serializedState = this.serializeGameState(updatedGameState)
     const playerStats = this.buildPlayerStats(playersAfterBattle, updatedBoard)
     const logEntry: BattleLogEntry = {
+      type: 'BATTLE',
       jobId,
       timestamp: new Date().toISOString(),
       attackingTerritoryId,
@@ -1536,8 +1607,8 @@ export class GameService {
    * Fetch persisted battle log entries for a game room.
    * Returns an empty array if none are available.
    */
-  async getBattleLog(roomId: string): Promise<BattleLogEntry[]> {
-    const result = await query<{ game_log: BattleLogEntry[] | null }>(
+  async getBattleLog(roomId: string): Promise<GameLogEntry[]> {
+    const result = await query<{ game_log: GameLogEntry[] | null }>(
       'SELECT game_log FROM game_states WHERE room_id = $1',
       [roomId],
     )
@@ -1545,5 +1616,25 @@ export class GameService {
     if (!rows || rows.length === 0) return []
     const log = rows[0]?.game_log
     return Array.isArray(log) ? log : []
+  }
+
+  private async appendGameLog(roomId: string, entries: GameLogEntry[]): Promise<void> {
+    if (!entries || entries.length === 0) return
+    await transaction(async (client) => {
+      const existing = await client.query<{ game_log: GameLogEntry[] | null }>(
+        'SELECT game_log FROM game_states WHERE room_id = $1 FOR UPDATE',
+        [roomId],
+      )
+      const current = Array.isArray(existing.rows[0]?.game_log)
+        ? (existing.rows[0]?.game_log as GameLogEntry[])
+        : []
+      const updated = [...current, ...entries].slice(-500)
+      await client.query(
+        `INSERT INTO game_states (room_id, game_log, last_activity)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (room_id) DO UPDATE SET game_log = EXCLUDED.game_log, last_activity = NOW()`,
+        [roomId, JSON.stringify(updated)],
+      )
+    })
   }
 }

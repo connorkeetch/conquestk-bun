@@ -253,6 +253,24 @@ export class GameActionWorker {
       const { emitFogFilteredDelta } = await import('../services/fogService')
       await emitFogFilteredDelta(this.io as unknown as Server, gameId, fromDelta)
     }
+    // Emit a consolidated fortify result delta for logging/UX purposes
+    try {
+      const fortifyDelta: import('@risk-game/shared/types').GameDelta = {
+        type: 'FORTIFY_RESULT',
+        roomId: gameId,
+        timestamp: Date.now(),
+        fromTerritoryId: action.payload?.fromTerritoryId || '',
+        toTerritoryId: action.payload?.toTerritoryId || '',
+        movedArmies: action.payload?.armies || 0,
+        fromArmies: result.fromArmies,
+        toArmies: result.toArmies,
+        playerId,
+      }
+      const { emitFogFilteredDelta } = await import('../services/fogService')
+      await emitFogFilteredDelta(this.io as unknown as Server, gameId, fortifyDelta)
+    } catch (_e) {
+      // Non-fatal: fortify summary is best-effort
+    }
     return toDelta
   }
 

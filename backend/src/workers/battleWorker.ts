@@ -208,6 +208,8 @@ export class BattleWorker {
         roomId: gameId,
         timestamp: Date.now(),
         battleResult: {
+          attackerId: attackerOwnerId,
+          defenderId: defenderOwnerId ?? null,
           ...battleResult,
           fromTerritory: {
             id: attackingTerritory,

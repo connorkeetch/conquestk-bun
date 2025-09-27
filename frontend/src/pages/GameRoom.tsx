@@ -13,7 +13,6 @@ import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
-import type { GameRoom as GameRoomType } from '../types/gameRoom'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   recruit: 'Recruit',
@@ -70,25 +69,6 @@ export default function GameRoom() {
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
 
-  const getStatusLabel = (status: GameRoomType['status']) => {
-    switch (status) {
-      case 'lobby':
-        return 'Waiting for players'
-      case 'initializing':
-        return 'Launching'
-      case 'active':
-        return 'In progress'
-      case 'completed':
-        return 'Completed'
-      case 'paused':
-        return 'Paused'
-      case 'abandoned':
-        return 'Abandoned'
-      default:
-        return status
-    }
-  }
-
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
       return undefined
@@ -97,12 +77,6 @@ export default function GameRoom() {
   }, [currentRoom?.players, user?.id])
 
   const isMember = Boolean(currentPlayer)
-
-  const joinSummary = useMemo(() => {
-    const total = currentRoom?.maxPlayers ?? 0
-    const joined = currentRoom?.players?.length ?? 0
-    return { joined, total }
-  }, [currentRoom?.players, currentRoom?.maxPlayers])
 
   const isHost = currentRoom?.hostId === user?.id
 
@@ -145,19 +119,6 @@ export default function GameRoom() {
     const minutes = Math.floor(ms / (60 * 1000))
     return `Expires in ${minutes}m`
   }, [])
-
-  const treasureSummary = useMemo(() => {
-    const cfg = currentRoom?.treasureConfig
-    if (!cfg) return null
-    if (cfg.enabled === false) return 'Treasures: Off'
-    const mode = cfg.payoutMode || 'triangular'
-    if (mode === 'fixed') {
-      const fixed = Math.max(1, Math.min(50, Math.trunc(cfg.fixedValue ?? 8)))
-      return `Treasures: Fixed (${fixed}) · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
-    }
-    const label = mode === 'triangular' ? 'Triangular' : mode === 'classic' ? 'Classic' : 'None'
-    return `Treasures: ${label} · Hand ${cfg.handCap} · Diamond +${cfg.diamondSetBonus}`
-  }, [currentRoom?.treasureConfig])
 
   const lobbyTeamPlayers = useMemo(
     () =>
@@ -715,35 +676,6 @@ export default function GameRoom() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-[color:var(--heading)]">{currentRoom.name}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-            {typeof currentRoom.roomCode === 'number' && (
-              <span className="chip text-xs" title="Share this code to invite others">
-                Code {currentRoom.roomCode}
-              </span>
-            )}
-            <span className="chip text-xs uppercase tracking-wide">
-              Status: {getStatusLabel(currentRoom.status)}
-            </span>
-            <span className="chip text-xs">
-              Joined {joinSummary.joined}/{joinSummary.total}
-            </span>
-            <span className="chip text-xs">
-              Players {currentRoom.players?.length || 0}/{currentRoom.maxPlayers}
-            </span>
-            {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-              <span
-                className="chip text-xs"
-                title={expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined}
-              >
-                {formatTimeUntil(expiresAtDate)}
-              </span>
-            )}
-            {treasureSummary && (
-              <span className="chip text-xs" title="Hidden Treasures configuration">
-                {treasureSummary}
-              </span>
-            )}
-          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {!isMember && (
@@ -907,6 +839,16 @@ export default function GameRoom() {
                         : `All players present • ${joined}/${total}`
                     })()}
                   </p>
+                  {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+                    <p
+                      className="text-xs text-muted"
+                      title={
+                        expiresAtDate ? `Expires ${expiresAtDate.toLocaleString()}` : undefined
+                      }
+                    >
+                      {formatTimeUntil(expiresAtDate)}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
