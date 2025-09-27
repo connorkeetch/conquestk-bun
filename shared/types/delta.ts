@@ -41,6 +41,8 @@ export interface PhaseChangeDelta extends DeltaBase {
 export interface BattleResultDelta extends DeltaBase {
   type: 'BATTLE_RESULT'
   battleResult: {
+    attackerId?: string
+    defenderId?: string | null
     fromTerritory: {
       id: string
       armies: number
@@ -69,6 +71,24 @@ export interface BattleResultDelta extends DeltaBase {
   }
 }
 
+export interface FortifyResultDelta extends DeltaBase {
+  type: 'FORTIFY_RESULT'
+  fromTerritoryId: string
+  toTerritoryId: string
+  movedArmies: number
+  fromArmies: number
+  toArmies: number
+  playerId: string
+}
+
+import type { Metal } from './index'
+
+export interface TreasureAwardedDelta extends DeltaBase {
+  type: 'TREASURE_AWARDED'
+  userId: string
+  metal: Metal
+}
+
 export interface GameEndDelta extends DeltaBase {
   type: 'GAME_END'
   winner: string
@@ -81,3 +101,5 @@ export type GameDelta =
   | PhaseChangeDelta
   | BattleResultDelta
   | GameEndDelta
+  | FortifyResultDelta
+  | TreasureAwardedDelta

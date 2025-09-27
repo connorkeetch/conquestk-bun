@@ -517,6 +517,17 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const channel = getGameChannel(data.roomId)
         io.to(channel).emit('game-delta', phaseDelta)
 
+        // If a treasure card was awarded to the previous player, emit explicit delta
+        if (result.treasureAwarded) {
+          io.to(channel).emit('game-delta', {
+            type: 'TREASURE_AWARDED',
+            roomId: data.roomId,
+            timestamp: Date.now(),
+            userId,
+            metal: result.treasureAwarded,
+          })
+        }
+
         // Keep legacy event for backward compatibility
         io.to(channel).emit('phaseChanged', {
           phase: result.gameState.phase,

@@ -544,6 +544,34 @@ export class GameController {
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
+
+  getRoomLog = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
+      const userId = req.userId
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' })
+      }
+
+      const room = await this.gameRoomService.getRoomById(roomId)
+      if (!room) {
+        return res.status(404).json({ message: 'Room not found' })
+      }
+
+      // Only allow backfill after game is completed or abandoned
+      if (room.status !== 'completed' && room.status !== 'abandoned') {
+        return res.status(403).json({ message: 'Game log available after game ends' })
+      }
+
+      const log = await this.gameService.getBattleLog(roomId)
+      return res.json({ log })
+    } catch (error) {
+      logger.error('Get room log error:', error)
+      return res.status(500).json({ message: 'Internal server error' })
+    }
+  }
 }
 type CreateRoomRequestBody = {
   name: string

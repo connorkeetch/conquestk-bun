@@ -1,6 +1,13 @@
-import type { BattleResultDelta, GameDelta, PhaseChangeDelta } from '@shared/types'
+import type {
+  BattleResultDelta,
+  FortifyResultDelta,
+  GameDelta,
+  PhaseChangeDelta,
+  TreasureAwardedDelta,
+} from '@shared/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppSelector } from '../../hooks/redux'
+import { gameService } from '../../services/gameService'
 import { socketService } from '../../services/socketService'
 
 type Props = {
@@ -32,6 +39,11 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
+  const fogOn = (room?.fogOfWar ?? 'off') !== 'off'
+  const gameEnded =
+    game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
+  const redact = fogOn && !gameEnded
+  const backfillLoadedRef = useRef(false)
 
   const playerName = useMemo(() => {
     const map = new Map<string, string>()
@@ -73,6 +85,99 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
     }
   }, [room?.createdAt])
 
+  // Backfill full history after game ends
+  useEffect(() => {
+    if (!gameId || redact || backfillLoadedRef.current) {
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const raw = await gameService.getGameLog(gameId)
+        if (cancelled) return
+        // Format to display entries; build newest-first
+        const formatted: LogEntry[] = []
+        // We rely on current maps for names
+        const toName = (id: string) => territoryName.get(id) || id
+        const nameOf = (id: string | null | undefined) => (id ? playerName.get(id) || id : undefined)
+        // Sort ascending by timestamp then push and reverse
+        const sorted = [...raw].sort((a, b) =>
+          new Date(String(a.timestamp)).getTime() - new Date(String(b.timestamp)).getTime(),
+        )
+        for (const e of sorted) {
+          const ts = new Date(String((e as any).timestamp))
+          const type = (e as any).type as string | undefined
+          if (!type || type === 'BATTLE') {
+            const attackerName = nameOf((e as any).attackerId as string) || 'Unknown'
+            const defenderName = nameOf((e as any).defenderId as string | null | undefined)
+            const from = toName(String((e as any).attackingTerritoryId))
+            const to = toName(String((e as any).defendingTerritoryId))
+            const killed = Number(((e as any).losses ?? {}).defender ?? 0)
+            const lost = Number(((e as any).losses ?? {}).attacker ?? 0)
+            const conquered = Boolean((e as any).conquered)
+            if (conquered) {
+              formatted.push({
+                ts,
+                text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
+              })
+              const moved = Number((e as any).movedArmies ?? 0)
+              if (moved > 0) {
+                formatted.push({ ts, text: `${from} (${attackerName}) occupied ${to} with ${moved} troops.` })
+              }
+            } else {
+              formatted.push({
+                ts,
+                text: `${from} (${attackerName}) attacked ${to}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
+              })
+            }
+            continue
+          }
+          if (type === 'FORTIFY') {
+            const name = nameOf((e as any).playerId as string) || 'Unknown'
+            const from = toName(String((e as any).fromTerritoryId))
+            const to = toName(String((e as any).toTerritoryId))
+            const n = Number((e as any).movedArmies ?? 0)
+            formatted.push({
+              ts,
+              text: `${to} (${name}) was fortified from ${from} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
+            })
+            continue
+          }
+          if (type === 'TURN') {
+            const name = nameOf((e as any).playerId as string) || 'Unknown'
+            const event = String((e as any).event)
+            if (event === 'END') {
+              formatted.push({ ts, text: `${name} ended the turn.` })
+            } else if (event === 'START') {
+              const reinf = Number((e as any).reinforcementArmies ?? 0)
+              const terrs = Number((e as any).territoryCount ?? 0)
+              if (reinf > 0) {
+                formatted.push({
+                  ts,
+                  text:
+                    terrs > 0
+                      ? `${name} received ${reinf} troops for ${terrs} territories.`
+                      : `${name} received ${reinf} troops.`,
+                })
+              }
+              formatted.push({ ts, text: `${name} started the turn.` })
+            }
+            continue
+          }
+        }
+        // Newest first
+        formatted.sort((a, b) => b.ts.getTime() - a.ts.getTime())
+        setEntries(formatted)
+        backfillLoadedRef.current = true
+      } catch (_err) {
+        // ignore; keep live log only
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [gameId, redact, playerName, territoryName])
+
   useEffect(() => {
     function add(text: string, ts?: Date) {
       setEntries((prev) => [{ ts: ts ?? new Date(), text }, ...prev].slice(0, 500))
@@ -88,6 +193,8 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
       if (!payload || payload.roomId !== gameId) return
       if (payload.status === 'active') {
         add('Game started.')
+      } else if (payload.status === 'completed') {
+        add('Game ended.')
       }
     }
 
@@ -121,15 +228,19 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
 
       if (delta.phase === 'reinforcement') {
         const name = playerName.get(nextPlayer) || nextPlayer
-        if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
-          // best-effort territory count from current board snapshot
-          const territoryCount = (game?.board || []).filter((t) => t.ownerId === nextPlayer).length
-          if (territoryCount > 0) {
-            add(
-              `${name} received ${delta.reinforcementArmies} troops for ${territoryCount} territories.`,
-            )
-          } else {
-            add(`${name} received ${delta.reinforcementArmies} troops.`)
+        // In fog-of-war games during play, do not show reinforcement amounts
+        if (!redact) {
+          if (typeof delta.reinforcementArmies === 'number' && delta.reinforcementArmies > 0) {
+            const territoryCount = (game?.board || []).filter(
+              (t) => t.ownerId === nextPlayer,
+            ).length
+            if (territoryCount > 0) {
+              add(
+                `${name} received ${delta.reinforcementArmies} troops for ${territoryCount} territories.`,
+              )
+            } else {
+              add(`${name} received ${delta.reinforcementArmies} troops.`)
+            }
           }
         }
         add(`${name} started the turn.`)
@@ -137,19 +248,21 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
     }
 
     const handleBattleResult = (delta: BattleResultDelta) => {
+      if (redact) return
       const br = delta.battleResult
       const fromName = territoryName.get(br.fromTerritory.id) || br.fromTerritory.id
       const toName = territoryName.get(br.toTerritory.id) || br.toTerritory.id
-
-      const attackerId = lastPlayerRef.current || game?.currentPlayer || ''
+      const attackerId = br.attackerId || lastPlayerRef.current || game?.currentPlayer || ''
+      const defenderId = br.defenderId || undefined
       const attackerName = playerName.get(attackerId) || attackerId || 'Unknown'
+      const defenderName = defenderId ? playerName.get(defenderId) || defenderId : undefined
 
       const killed = br.defenderLosses
       const lost = br.attackerLosses
 
       if (br.conquered) {
         add(
-          `${fromName} (${attackerName}) attacked ${toName} conquering it, killing ${killed}, losing ${lost}.`,
+          `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
         )
         // Moved troops equals final armies on conquered territory
         const moved = br.toTerritory.armies
@@ -157,7 +270,9 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
           add(`${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`)
         }
       } else {
-        add(`${fromName} (${attackerName}) attacked ${toName} killing ${killed}, losing ${lost}.`)
+        add(
+          `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
+        )
       }
     }
 
@@ -170,12 +285,32 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
         return
       }
       if (d.type === 'BATTLE_RESULT') {
+        if (redact) return
         handleBattleResult(d as BattleResultDelta)
+        return
+      }
+      if (d.type === 'FORTIFY_RESULT') {
+        if (redact) return
+        const fr = d as FortifyResultDelta
+        const name = playerName.get(fr.playerId) || fr.playerId
+        const fromName = territoryName.get(fr.fromTerritoryId) || fr.fromTerritoryId
+        const toName = territoryName.get(fr.toTerritoryId) || fr.toTerritoryId
+        const n = fr.movedArmies
+        add(
+          `${toName} (${name}) was fortified from ${fromName} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
+        )
+        return
+      }
+      if (d.type === 'TREASURE_AWARDED') {
+        if (redact) return
+        const ta = d as TreasureAwardedDelta
+        const name = playerName.get(ta.userId) || ta.userId
+        add(`${name} received a card.`)
         return
       }
       if (d.type === 'TERRITORY_UPDATE') {
         // Infer reinforcements only during reinforcement phase and on positive diffs
-        if (phaseRef.current === 'reinforcement') {
+        if (phaseRef.current === 'reinforcement' && !redact) {
           const prev = lastArmiesRef.current[d.territoryId] ?? 0
           const next = d.changes.armies ?? prev
           if (next > prev) {
@@ -205,7 +340,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
       socketService.off('phaseChanged', onPhaseChangedLegacy)
       socketService.off('game-delta', onDelta)
     }
-  }, [gameId, playerName, territoryName, game?.board, game?.currentPlayer])
+  }, [gameId, playerName, territoryName, game?.board, game?.currentPlayer, redact])
 
   return (
     <div className={`flex flex-col h-full bg-surface-1 rounded-lg ${className}`}>

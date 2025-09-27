@@ -103,6 +103,14 @@ export const gameService = {
     const response = await api.get<{ game: GameState }>(`/game/rooms/${roomId}/state`, { params })
     return response.data.game
   },
+  async getGameLog(roomId: string): Promise<Array<Record<string, unknown>>> {
+    const response = await api.get<{ log: Array<Record<string, unknown>> }>(
+      `/game/rooms/${roomId}/log`,
+    )
+    // Best-effort typing/coercion for known fields
+    const items = Array.isArray(response.data?.log) ? response.data.log : []
+    return items
+  },
 
   // Get user's active games (for GameListPage)
   async getUserGames() {
