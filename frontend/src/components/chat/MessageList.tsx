@@ -87,6 +87,8 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
         const senderLabel = getDisplayName?.(message, isOwnMessage) ?? message.senderName
         const isDeleted = Boolean(message.deletedAt)
         const linkPreviews = parseLinkPreviews(message.metadata)
+        const displayName = senderLabel || (isOwnMessage ? 'You' : 'System')
+        const timestampLabel = formatTime(message.createdAt)
 
         return (
           <div
@@ -100,9 +102,20 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
                   : 'bg-surface-2 text-[color:var(--text)]'
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
-              {!isOwnMessage && senderLabel && (
-                <div className="text-xs font-semibold mb-1 opacity-80">{senderLabel}</div>
-              )}
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                  {displayName}
+                </span>
+                <span
+                  className={`text-[10px] uppercase tracking-wide ${
+                    isOwnMessage
+                      ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]'
+                      : 'text-muted'
+                  }`}
+                >
+                  {timestampLabel}
+                </span>
+              </div>
 
               <div className="break-words">
                 {isDeleted ? <span className="text-sm italic">Message deleted</span> : message.body}
@@ -120,16 +133,17 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
                 </div>
               )}
 
-              <div
-                className={`text-xs mt-1 flex items-center gap-2 ${
-                  isOwnMessage
-                    ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]'
-                    : 'text-muted'
-                }`}
-              >
-                <span>{formatTime(message.createdAt)}</span>
-                {message.editedAt && !isDeleted && <span className="italic">(edited)</span>}
-              </div>
+              {!isDeleted && message.editedAt && (
+                <div
+                  className={`text-[11px] mt-1 flex items-center gap-2 ${
+                    isOwnMessage
+                      ? 'text-[color:color-mix(in srgb, var(--color-white) 80%, transparent)]'
+                      : 'text-muted'
+                  }`}
+                >
+                  <span className="italic">edited</span>
+                </div>
+              )}
             </div>
           </div>
         )

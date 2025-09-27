@@ -50,6 +50,10 @@ export async function fetchUnreadSummary(): Promise<UnreadSummaryEntry[]> {
   return response.data.conversations ?? []
 }
 
+export async function leaveConversation(conversationId: string): Promise<void> {
+  await apiClient.post(`/messages/conversations/${conversationId}/leave`)
+}
+
 export async function ensureDirectConversation(targetUserId: string): Promise<ConversationDetail> {
   const response = await apiClient.post<{ conversation: { id: string } }>('/messages/dm', {
     targetUserId,

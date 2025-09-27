@@ -30,7 +30,10 @@
     "flags:check": "ts-node src/scripts/checkFeatureFlags.ts",
     "flags:sync": "ts-node src/scripts/checkFeatureFlags.ts --apply",
     "flags:check:runtime": "node dist/scripts/checkFeatureFlags.js",
-    "flags:sync:runtime": "node dist/scripts/checkFeatureFlags.js --apply"
+    "flags:sync:runtime": "node dist/scripts/checkFeatureFlags.js --apply",
+    "purge:messages": "ts-node src/scripts/purgeMessaging.ts",
+    "purge:messages:yes": "ts-node src/scripts/purgeMessaging.ts --yes",
+    "purge:messages:include-blocks": "ts-node src/scripts/purgeMessaging.ts --yes --include-user-blocks"
   },
   "dependencies": {
     "@risk-game/shared": "file:../shared",
