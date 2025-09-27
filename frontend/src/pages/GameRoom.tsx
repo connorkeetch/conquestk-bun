@@ -901,17 +901,21 @@ export default function GameRoom() {
             <ul className="list">
               {currentRoom.players?.map((player) => {
                 const isCurrentUser = player.userId === user?.id
-                const colorValue = player.preferred_color
-                  ? getColorValue(player.preferred_color)
+                const colorValue = (player as { selected_color?: string | null }).selected_color
+                  ? getColorValue((player as { selected_color?: string | null }).selected_color as string)
+                  : player.preferred_color
+                    ? getColorValue(player.preferred_color)
                   : '#9CA3AF'
                 return (
                   <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
                     <span
                       className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ background: colorValue }}
-                      title={
-                        player.preferred_color ? `Color: ${player.preferred_color}` : undefined
-                      }
+                      title={(player as { selected_color?: string | null }).selected_color
+                        ? `Color: ${(player as { selected_color?: string | null }).selected_color}`
+                        : player.preferred_color
+                          ? `Color: ${player.preferred_color}`
+                          : undefined}
                     ></span>
                     <div className="flex items-center gap-2 min-w-0">
                       {player.isAi || !player.userId ? (
