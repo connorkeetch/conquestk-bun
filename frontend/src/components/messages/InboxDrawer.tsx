@@ -4,7 +4,6 @@ import MessageInput from '@/components/chat/MessageInput'
 import MessageList, { type DisplayMessage } from '@/components/chat/MessageList'
 import { useAppDispatch, useAppSelector } from '@/hooks/redux'
 import friendsService, { type FriendSummary } from '@/services/friendsService'
-import { leaveConversation as leaveConversationRequest } from '@/services/messagesService'
 import profileService from '@/services/profileService'
 import { socketService } from '@/services/socketService'
 import {
@@ -76,7 +75,7 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   // Local UI state
   const [sendError, setSendError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all')
   const [newUsername, setNewUsername] = useState('')
   const [isCreatingConversation, setIsCreatingConversation] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -159,10 +158,15 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
   }, [conversations])
 
   const visibleConversations = useMemo(() => {
-    const base =
-      filter === 'unread'
-        ? sortedConversations.filter((c) => (c.unreadCount ?? 0) > 0)
-        : sortedConversations
+    // Only show direct and group conversations in the Inbox
+    let base = sortedConversations.filter((c) => c.kind === 'direct' || c.kind === 'group')
+    if (filter === 'unread') {
+      base = base.filter((c) => !c.isArchived && (c.unreadCount ?? 0) > 0)
+    } else if (filter === 'all') {
+      base = base.filter((c) => !c.isArchived)
+    } else if (filter === 'archived') {
+      base = base.filter((c) => c.isArchived)
+    }
     if (!currentUserId) {
       return base
     }
@@ -171,8 +175,6 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
 
   const conversationSections = useMemo<ConversationSection[]>(() => {
     const sections: ConversationSection[] = [
-      { key: 'game', label: 'Game Rooms', icon: '🎮', conversations: [] },
-      { key: 'team', label: 'Team Chats', icon: '👥', conversations: [] },
       { key: 'direct', label: 'Direct Messages', icon: '💬', conversations: [] },
       { key: 'group', label: 'Group Chats', icon: '🗂️', conversations: [] },
     ]
@@ -351,19 +353,17 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
       try {
         setDeleteError(null)
         setDeletingConversationId(conversation.id)
-        if (conversation.kind === 'group') {
-          await leaveConversationRequest(conversation.id)
-        }
-        dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
+        // Archive this thread on the server (applies to direct/group)
+        await new Promise<void>((resolve, reject) => {
+          socketService.archiveConversation(conversation.id, (ack) => {
+            if (!ack?.ok) return reject(new Error(ack?.error ?? 'Failed to archive'))
+            resolve()
+          })
+        })
+        // Refresh inbox; also expect conversation.updated event to arrive
         dispatch(loadInbox())
       } catch (error) {
-        setDeleteError(
-          error instanceof Error
-            ? error.message
-            : conversation.kind === 'group'
-              ? 'Failed to leave conversation'
-              : 'Failed to delete conversation',
-        )
+        setDeleteError(error instanceof Error ? error.message : 'Failed to archive conversation')
       } finally {
         setDeletingConversationId(null)
       }
@@ -434,43 +434,28 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
             <aside className="hidden sm:flex sm:flex-col sm:w-80 border-r border-[color:var(--panel-border)]">
               <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--panel-border)] text-xs uppercase tracking-wide text-muted">
                 <span>Conversations</span>
-                <div className="flex items-center gap-2">
+                <div className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--panel-bg-alt)] p-0.5">
                   <button
                     type="button"
-                    className="btn-outline btn-xs"
-                    onClick={() =>
-                      dispatch(
-                        messagesActions.pruneArchivedConversations({ kinds: ['game', 'team'] }),
-                      )
-                    }
-                    title="Remove archived game/team threads"
+                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${filter === 'all' ? 'bg-[color:var(--color-primary)] text-white' : 'text-muted'}`}
+                    onClick={() => setFilter('all')}
                   >
-                    Remove archived
+                    All
                   </button>
-                  <div className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--panel-bg-alt)] p-0.5">
-                    <button
-                      type="button"
-                      className={`px-2 py-0.5 text-[10px] rounded-full transition ${
-                        filter === 'all'
-                          ? 'bg-[color:var(--color-primary)] text-white'
-                          : 'text-muted'
-                      }`}
-                      onClick={() => setFilter('all')}
-                    >
-                      All
-                    </button>
-                    <button
-                      type="button"
-                      className={`px-2 py-0.5 text-[10px] rounded-full transition ${
-                        filter === 'unread'
-                          ? 'bg-[color:var(--color-primary)] text-white'
-                          : 'text-muted'
-                      }`}
-                      onClick={() => setFilter('unread')}
-                    >
-                      Unread
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${filter === 'unread' ? 'bg-[color:var(--color-primary)] text-white' : 'text-muted'}`}
+                    onClick={() => setFilter('unread')}
+                  >
+                    Unread
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-[10px] rounded-full transition ${filter === 'archived' ? 'bg-[color:var(--color-primary)] text-white' : 'text-muted'}`}
+                    onClick={() => setFilter('archived')}
+                  >
+                    Archived
+                  </button>
                 </div>
               </div>
 
@@ -725,12 +710,11 @@ export default function InboxDrawer({ isOpen, onClose }: InboxDrawerProps) {
                         className="btn-outline btn-sm"
                         onClick={() => handleArchiveConversation(activeConversation)}
                         disabled={deletingConversationId === activeConversation.id}
+                        title="Archive this thread"
                       >
                         {deletingConversationId === activeConversation.id
-                          ? 'Removing…'
-                          : activeConversation.kind === 'group'
-                            ? 'Leave chat'
-                            : 'Delete thread'}
+                          ? 'Archiving…'
+                          : 'Archive thread'}
                       </button>
                     </div>
                   </div>

@@ -80,19 +80,7 @@ export default function TabbedGameChat({
     )
   }, [conversations, gameId, userTeamId])
 
-  const directConversationByUserId = useMemo(() => {
-    const map = new Map<string, (typeof conversations)[number]>()
-    for (const conversationEntity of conversations) {
-      if (conversationEntity.kind !== 'direct') continue
-      if (!conversationEntity.memberIds.includes(currentUserId)) continue
-      for (const memberId of conversationEntity.memberIds) {
-        if (memberId !== currentUserId) {
-          map.set(memberId, conversationEntity)
-        }
-      }
-    }
-    return map
-  }, [conversations, currentUserId])
+  // DM tabs are intentionally excluded from in-game chat
 
   // Build tabs
   const tabs = useMemo<ChatTab[]>(() => {
@@ -124,33 +112,10 @@ export default function TabbedGameChat({
       }
     }
 
-    players
-      .filter((player) => player.userId && player.userId !== currentUserId)
-      .forEach((player) => {
-        const userId = player.userId as string
-        const isTeammate = userTeamId !== null && player.teamId === userTeamId
-        const teamIndicator = isTeammate ? ' 🤝' : ''
-
-        builtTabs.push({
-          id: `dm-${userId}`,
-          label: `💬 ${player.username}${teamIndicator}`,
-          type: 'dm',
-          conversationId: userId,
-          badge: directConversationByUserId.get(userId)?.unreadCount ?? 0,
-          enabled: true,
-        })
-      })
+    // No DM tabs in game room chat; DMs live in Inbox only
 
     return builtTabs
-  }, [
-    currentUserId,
-    gameId,
-    players,
-    userTeamId,
-    gameConversation,
-    teamConversation,
-    directConversationByUserId,
-  ])
+  }, [gameId, userTeamId, gameConversation, teamConversation])
 
   // Make sure active tab is valid
   useEffect(() => {

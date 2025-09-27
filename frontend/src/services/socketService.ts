@@ -331,17 +331,7 @@ class SocketService {
         return
       }
 
-      if (payload.status === 'completed' || payload.status === 'abandoned') {
-        const messageState = store.getState().messages.conversations
-        for (const conversation of Object.values(messageState)) {
-          if (
-            (conversation.kind === 'game' || conversation.kind === 'team') &&
-            conversation.gameId === payload.roomId
-          ) {
-            store.dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
-          }
-        }
-      }
+      // drop local archiveConversation calls; we only prune archived later
 
       const previousRoom = store.getState().room.currentRoom
       if (
@@ -411,17 +401,7 @@ class SocketService {
         return
       }
 
-      if (status === 'completed' || status === 'abandoned') {
-        const messageState = store.getState().messages.conversations
-        for (const conversation of Object.values(messageState)) {
-          if (
-            (conversation.kind === 'game' || conversation.kind === 'team') &&
-            conversation.gameId === roomId
-          ) {
-            store.dispatch(messagesActions.archiveConversation({ conversationId: conversation.id }))
-          }
-        }
-      }
+      // drop local archiveConversation calls; we only prune archived later
 
       const lifecyclePayload: RoomLifecyclePayload = {
         roomId,
