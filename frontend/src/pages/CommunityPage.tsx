@@ -50,33 +50,57 @@ const CommunityPage: React.FC = () => {
 
       // Backend returns an array (profileService.getLeaderboard),
       // but also support { leaderboard: [...] } just in case.
-      const raw = Array.isArray(response.data)
-        ? response.data
-        : response.data?.leaderboard || []
+      const raw = Array.isArray(response.data) ? response.data : response.data?.leaderboard || []
 
-      const normalized: LeaderboardEntry[] = raw.map((entry: any, index: number) => {
-        // Accept both profile leaderboard shape and older variants
-        const userId = entry.userId || entry.user_id || entry.id
-        const username = entry.username
-        const rating = entry.rating || entry.elo || entry.skillRating || 0
-        const gamesWon = entry.gamesWon ?? entry.wins ?? 0
-        const gamesPlayed = entry.gamesPlayed ?? (entry.wins != null && entry.losses != null
-          ? entry.wins + entry.losses
-          : undefined)
-        const losses = entry.losses ?? (gamesPlayed != null ? Math.max(0, gamesPlayed - gamesWon) : 0)
-        const winRate = typeof entry.winRate === 'number' ? entry.winRate : 0
+      type AnyLeaderboardLike = Partial<Record<string, string | number | null | undefined>>
 
-        return {
-          id: userId,
-          username,
-          elo: Math.round(rating),
-          wins: gamesWon,
-          losses,
-          winRate,
-          rank: entry.rank || index + 1,
-          gamesPlayed: gamesPlayed ?? gamesWon + losses,
-        }
-      })
+      const asNumber = (value: unknown, fallback = 0): number =>
+        typeof value === 'number'
+          ? value
+          : Number.isFinite(Number(value))
+            ? Number(value)
+            : fallback
+
+      const asString = (value: unknown, fallback = ''): string =>
+        typeof value === 'string' ? value : fallback
+
+      const normalized: LeaderboardEntry[] = (raw as AnyLeaderboardLike[]).map(
+        (entry, index: number) => {
+          // Accept both profile leaderboard shape and older variants
+          const userId = asString(entry.userId ?? entry.user_id ?? entry.id, '')
+          const username = asString(entry.username, '')
+          const rating = asNumber(entry.rating ?? entry.elo ?? entry.skillRating, 0)
+          const gamesWon = asNumber(entry.gamesWon ?? entry.wins, 0)
+          const rawGamesPlayed = entry.gamesPlayed
+          const rawLosses = entry.losses
+          const computedGamesPlayed =
+            typeof rawGamesPlayed === 'number'
+              ? rawGamesPlayed
+              : typeof entry.wins === 'number' && typeof rawLosses === 'number'
+                ? // fallback if only wins/losses provided
+                  (entry.wins as number) + (rawLosses as number)
+                : undefined
+          const losses =
+            typeof rawLosses === 'number'
+              ? (rawLosses as number)
+              : computedGamesPlayed != null
+                ? Math.max(0, computedGamesPlayed - gamesWon)
+                : 0
+          const winRate = asNumber(entry.winRate, 0)
+          const rank = asNumber(entry.rank, index + 1)
+
+          return {
+            id: userId,
+            username,
+            elo: Math.round(rating),
+            wins: gamesWon,
+            losses,
+            winRate,
+            rank,
+            gamesPlayed: computedGamesPlayed ?? gamesWon + losses,
+          }
+        },
+      )
 
       setGlobalLeaderboard(normalized)
     } catch (error) {

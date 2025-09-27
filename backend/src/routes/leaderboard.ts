@@ -15,12 +15,11 @@ router.get(['/', '/global'], async (req, res) => {
       username: entry.username,
       elo: Math.round(entry.rating),
       wins: entry.gamesWon,
-      losses: typeof (entry as any).gamesPlayed === 'number'
-        ? Math.max(0, (entry as any).gamesPlayed - entry.gamesWon)
-        : 0,
+      losses:
+        typeof entry.gamesPlayed === 'number' ? Math.max(0, entry.gamesPlayed - entry.gamesWon) : 0,
       winRate: entry.winRate,
       rank: entry.rank,
-      gamesPlayed: (entry as any).gamesPlayed,
+      gamesPlayed: entry.gamesPlayed,
     }))
 
     return res.json({ leaderboard })
@@ -42,4 +41,3 @@ router.get('/friends', async (_req, res) => {
 })
 
 export default router
-

@@ -149,7 +149,10 @@ class SocketService {
   }
 
   // Convenience: leave a conversation by removing the current user membership
-  leaveConversation(conversationId: string, callback?: (ack: ConversationMembersUpdateAck) => void) {
+  leaveConversation(
+    conversationId: string,
+    callback?: (ack: ConversationMembersUpdateAck) => void,
+  ) {
     const userId = store.getState().auth.user?.id
     if (!userId) {
       callback?.({ ok: false, error: 'Not authenticated', code: 'auth_required' })
