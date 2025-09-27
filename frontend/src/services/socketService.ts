@@ -560,19 +560,6 @@ class SocketService {
 
     this.socket.on('notification:new', (payload: unknown) => {
       const data = payload as Parameters<ServerToClientEvents['notification:new']>[0]
-      const currentUserId = store.getState().auth.user?.id
-      const metadata = data.metadata
-      const senderId =
-        metadata && typeof metadata === 'object' && 'senderId' in metadata
-          ? (metadata as Record<string, unknown>).senderId
-          : undefined
-      if (
-        data.type === 'chat_message' &&
-        typeof senderId === 'string' &&
-        senderId === currentUserId
-      ) {
-        return
-      }
       notificationService.addNotification({
         id: data.id,
         type: data.type as NotificationType,

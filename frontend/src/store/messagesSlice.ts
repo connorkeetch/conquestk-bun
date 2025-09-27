@@ -210,18 +210,6 @@ const mergeMembers = (
   current.memberIds = current.memberRoles.map((member) => member.userId)
 }
 
-const removeConversation = (state: MessagesState, conversationId: string) => {
-  if (state.activeConversationId === conversationId) {
-    state.activeConversationId = null
-  }
-  delete state.conversations[conversationId]
-  delete state.messages[conversationId]
-  delete state.hasMore[conversationId]
-  delete state.loadingMessages[conversationId]
-  delete state.typing[conversationId]
-  delete state.pendingUnread[conversationId]
-}
-
 const applyConversationEntity = (state: MessagesState, entity: ConversationEntity) => {
   const current = state.conversations[entity.id]
   if (current) {
@@ -437,16 +425,9 @@ const messagesSlice = createSlice({
       const conversation = state.conversations[action.payload.conversation.id]
       if (!conversation) return
 
-      const summary = action.payload.conversation
-
-      state.conversations[summary.id] = {
+      state.conversations[action.payload.conversation.id] = {
         ...conversation,
-        ...summary,
-        createdAt: toIsoString(summary.createdAt),
-        updatedAt: toIsoString(summary.updatedAt),
-        metadata: normalizeMetadata(summary.metadata),
-        memberIds: summary.memberIds,
-        memberRoles: conversation.memberRoles,
+        ...action.payload.conversation,
         membership: conversation.membership,
         lastMessage: conversation.lastMessage,
       }
@@ -490,9 +471,6 @@ const messagesSlice = createSlice({
         }
       }
       state.unreadSummaryFetched = true
-    },
-    conversationRemoved(state, action: PayloadAction<string>) {
-      removeConversation(state, action.payload)
     },
   },
   extraReducers: (builder) => {
