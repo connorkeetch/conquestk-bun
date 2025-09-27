@@ -210,23 +210,33 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
           throw new Error('Invalid room ID')
         }
 
+        // Allow numeric room code as input
+        const normalizedRoomId = /^\d+$/.test(roomId)
+          ? await gameRoomService
+              .getRoomByCode(Number.parseInt(roomId, 10))
+              .then((r) => r?.id ?? '')
+          : roomId
+        if (!normalizedRoomId) {
+          throw new Error('Room not found')
+        }
+
         const userId = requireUserId(socket)
-        const hasAccess = await gameRoomService.isPlayerInRoom(roomId, userId)
+        const hasAccess = await gameRoomService.isPlayerInRoom(normalizedRoomId, userId)
         if (!hasAccess) {
           throw new Error('You are not a member of this game')
         }
 
-        const channel = getGameChannel(roomId)
+        const channel = getGameChannel(normalizedRoomId)
         // Join both the game channel (for game updates) and the room channel (for lifecycle/room updates)
         await socket.join(channel)
-        await socket.join(roomId)
+        await socket.join(normalizedRoomId)
 
         if (!socket.joinedGameRooms) {
           socket.joinedGameRooms = new Set()
         }
-        socket.joinedGameRooms.add(roomId)
+        socket.joinedGameRooms.add(normalizedRoomId)
 
-        const player = await gameRoomService.getPlayer(roomId, userId)
+        const player = await gameRoomService.getPlayer(normalizedRoomId, userId)
         const isAi = player?.isAi === true
         const normalizedPlayer = {
           id: player?.id ?? player?.userId ?? userId,
@@ -251,15 +261,15 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         }
 
         socket.to(channel).emit('player-joined', {
-          roomId,
+          roomId: normalizedRoomId,
           player: normalizedPlayer,
         })
 
-        const cachedState = await gameStateCache.getGameState<SerializedGameState>(roomId)
+        const cachedState = await gameStateCache.getGameState<SerializedGameState>(normalizedRoomId)
         let serializedState = serializeGameStateForClient(cachedState)
 
         if (!serializedState) {
-          const freshState = await gameService.getGameState(roomId)
+          const freshState = await gameService.getGameState(normalizedRoomId)
           if (freshState) {
             const filtered = filterGameStateForPlayer(freshState, userId)
             serializedState = serializeGameStateForClient(filtered)
@@ -290,18 +300,26 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         if (!roomId || typeof roomId !== 'string') {
           throw new Error('Invalid room ID')
         }
+        const normalizedRoomId = /^\d+$/.test(roomId)
+          ? await gameRoomService
+              .getRoomByCode(Number.parseInt(roomId, 10))
+              .then((r) => r?.id ?? '')
+          : roomId
+        if (!normalizedRoomId) {
+          throw new Error('Room not found')
+        }
 
         const userId = requireUserId(socket)
-        const channel = getGameChannel(roomId)
+        const channel = getGameChannel(normalizedRoomId)
 
-        const player = await gameRoomService.getPlayer(roomId, userId).catch(() => null)
+        const player = await gameRoomService.getPlayer(normalizedRoomId, userId).catch(() => null)
 
         await socket.leave(channel)
-        await socket.leave(roomId)
-        socket.joinedGameRooms?.delete(roomId)
+        await socket.leave(normalizedRoomId)
+        socket.joinedGameRooms?.delete(normalizedRoomId)
 
         socket.to(channel).emit('player-left', {
-          roomId,
+          roomId: normalizedRoomId,
           playerSlotId: player?.id ?? userId,
           userId,
           aiPlayerId: player?.aiPlayerId ?? null,

@@ -279,18 +279,18 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
-                    to={`/room/${room.id}`}
+                    to={`/room/${room.roomCode ?? room.id}`}
                     className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10"
                   >
                     View
                   </Link>
                   <button
                     type="button"
-                    onClick={() => void handleJoin(room.id)}
-                    disabled={joiningRoomId === room.id}
+                    onClick={() => void handleJoin(String(room.roomCode ?? room.id))}
+                    disabled={joiningRoomId === String(room.roomCode ?? room.id)}
                     className="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {joiningRoomId === room.id ? 'Joining…' : 'Join Game'}
+                    {joiningRoomId === String(room.roomCode ?? room.id) ? 'Joining…' : 'Join Game'}
                   </button>
                 </div>
               </div>

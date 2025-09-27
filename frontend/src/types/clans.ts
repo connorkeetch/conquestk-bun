@@ -102,6 +102,23 @@ export interface ClanDetails extends ClanSummary {
   recentActivity: ClanActivityEvent[]
 }
 
+export interface ClanCreateRequest {
+  name: string
+  tag: string
+  motto?: string
+  description?: string
+  crestAssetUrl?: string
+  bannerAssetUrl?: string
+  recruitmentPolicy?: ClanRecruitmentPolicy
+  recruitmentStatus?: ClanRecruitmentStatus
+  minimumRank?: number
+  autoAcceptThresholds?: Record<string, unknown>
+  language?: string
+  region?: string
+  timeZone?: string
+  privacy?: ClanPrivacy
+}
+
 export interface ClanListFilters {
   search?: string
   region?: string

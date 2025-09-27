@@ -10,6 +10,7 @@ export type GameLifecycleStatus =
 
 export interface GameRoom {
   id: string
+  roomCode?: number
   name: string
   hostId: string
   maxPlayers: number

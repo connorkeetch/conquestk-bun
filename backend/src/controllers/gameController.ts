@@ -176,7 +176,8 @@ export class GameController {
 
   updateTeamAssignment = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const hostId = req.userId
       const { playerId, playerSlotId, teamId } = req.body as {
         playerId?: string
@@ -239,7 +240,8 @@ export class GameController {
 
   setReadyState = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const userId = req.userId
       const { ready } = req.body as { ready?: boolean }
 
@@ -275,7 +277,8 @@ export class GameController {
 
   joinRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const userId = req.userId
 
       if (!userId) {
@@ -300,7 +303,8 @@ export class GameController {
 
   leaveRoom = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const userId = req.userId
 
       if (!userId) {
@@ -318,7 +322,8 @@ export class GameController {
 
   updateAiOpponents = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const hostId = req.userId
 
       if (!hostId) {
@@ -394,7 +399,8 @@ export class GameController {
 
   getRoomDetails = async (req: Request, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const room = await this.gameRoomService.getRoomById(roomId)
 
       if (!room) {
@@ -410,7 +416,8 @@ export class GameController {
 
   getRoomState = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { roomId } = req.params
+      const { roomId: rawRoom } = req.params
+      const roomId = await this.gameRoomService.resolveRoomId(rawRoom)
       const userId = req.userId
 
       if (!roomId) {
@@ -509,6 +516,7 @@ export class GameController {
         status: game.status || (game.gameStarted ? 'active' : 'lobby'),
         playerCount: game.playerCount || game.players?.length || 0,
         maxPlayers: game.maxPlayers,
+        roomCode: game.roomCode,
         isYourTurn: game.currentTurnUserId === userId,
         winner: game.winner || null,
         createdAt: game.createdAt,

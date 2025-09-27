@@ -1,12 +1,43 @@
 import { Compass, Filter, Loader2, MapPin, Search, Shield, Users } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 // Clans directory is always enabled
+import { useAppSelector } from '@/hooks/redux'
 import { clanApi } from '@/services/clanService'
-import type { ClanListFilters, ClanListResponse, ClanSummary } from '@/types/clans'
+import type {
+  ClanCreateRequest,
+  ClanListFilters,
+  ClanListResponse,
+  ClanPrivacy,
+  ClanRecruitmentPolicy,
+  ClanRecruitmentStatus,
+  ClanSummary,
+} from '@/types/clans'
 import { logger } from '@/utils/logger'
 
 const DEFAULT_LIMIT = 20
+
+type CreateClanFormState = {
+  name: string
+  tag: string
+  motto: string
+  description: string
+  region: string
+  recruitmentPolicy: ClanRecruitmentPolicy
+  recruitmentStatus: ClanRecruitmentStatus
+  privacy: ClanPrivacy
+}
+
+const createInitialClanForm = (): CreateClanFormState => ({
+  name: '',
+  tag: '',
+  motto: '',
+  description: '',
+  region: '',
+  recruitmentPolicy: 'open',
+  recruitmentStatus: 'active',
+  privacy: 'public',
+})
 
 const recruitmentFilters: Array<{
   label: string
@@ -100,6 +131,35 @@ const ClanSummaryCard = ({ clan }: { clan: ClanSummary }) => {
 const createInitialFilters = (): ClanListFilters => ({ limit: DEFAULT_LIMIT })
 
 const extractErrorMessage = (error: unknown): string => {
+  if (error && typeof error === 'object') {
+    const maybeAxios = error as {
+      response?: {
+        data?: {
+          message?: string
+          errors?: Array<{ msg?: string | null | undefined }>
+        }
+      }
+      message?: string
+    }
+
+    const axiosMessage = maybeAxios.response?.data?.message
+    if (typeof axiosMessage === 'string' && axiosMessage.trim().length > 0) {
+      return axiosMessage
+    }
+
+    const validationMessage = maybeAxios.response?.data?.errors?.find((item) => {
+      return typeof item?.msg === 'string' && (item.msg as string).trim().length > 0
+    })?.msg
+
+    if (typeof validationMessage === 'string' && validationMessage.trim().length > 0) {
+      return validationMessage
+    }
+
+    if (typeof maybeAxios.message === 'string' && maybeAxios.message.trim().length > 0) {
+      return maybeAxios.message
+    }
+  }
+
   if (error instanceof Error) {
     return error.message
   }
@@ -110,6 +170,12 @@ const extractErrorMessage = (error: unknown): string => {
 }
 
 const ClanDirectoryPage = () => {
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAppSelector((state) => state.auth)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateClanFormState>(createInitialClanForm)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [isSubmittingClan, setIsSubmittingClan] = useState(false)
   const [search, setSearch] = useState('')
   const [region, setRegion] = useState('')
   const [recruitmentStatus, setRecruitmentStatus] = useState<ClanListFilters['recruitmentStatus']>()
@@ -120,6 +186,108 @@ const ClanDirectoryPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const toggleCreateForm = () => {
+    setShowCreateForm((prev) => {
+      const next = !prev
+      if (!next) {
+        setCreateForm(createInitialClanForm())
+        setCreateError(null)
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShowCreateForm(false)
+      setCreateForm(createInitialClanForm())
+      setCreateError(null)
+    }
+  }, [isAuthenticated])
+
+  const handleCreateInputChange =
+    <T extends keyof CreateClanFormState>(field: T) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const { value } = event.target
+      setCreateForm((prev) => ({ ...prev, [field]: value as CreateClanFormState[T] }))
+      setCreateError(null)
+    }
+
+  const handleTagChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value.toUpperCase()
+    setCreateForm((prev) => ({ ...prev, tag: value }))
+    setCreateError(null)
+  }
+
+  const handleCreateClan = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!isAuthenticated) {
+      setCreateError('You need to log in to create a clan.')
+      return
+    }
+
+    const trimmedName = createForm.name.trim()
+    if (trimmedName.length < 3) {
+      setCreateError('Clan name must be at least 3 characters long.')
+      return
+    }
+    if (trimmedName.length > 64) {
+      setCreateError('Clan name cannot exceed 64 characters.')
+      return
+    }
+
+    const sanitizedTag = createForm.tag.trim().toUpperCase()
+    if (sanitizedTag.length < 2 || sanitizedTag.length > 5) {
+      setCreateError('Clan tag must be between 2 and 5 characters.')
+      return
+    }
+
+    const trimmedMotto = createForm.motto.trim()
+    if (trimmedMotto.length > 120) {
+      setCreateError('Clan motto must be 120 characters or fewer.')
+      return
+    }
+
+    const trimmedDescription = createForm.description.trim()
+    if (trimmedDescription.length > 1024) {
+      setCreateError('Clan description must be 1024 characters or fewer.')
+      return
+    }
+
+    const trimmedRegion = createForm.region.trim()
+    if (trimmedRegion.length > 32) {
+      setCreateError('Region must be 32 characters or fewer.')
+      return
+    }
+
+    const payload: ClanCreateRequest = {
+      name: trimmedName,
+      tag: sanitizedTag,
+      motto: trimmedMotto.length > 0 ? trimmedMotto : undefined,
+      description: trimmedDescription.length > 0 ? trimmedDescription : undefined,
+      region: trimmedRegion.length > 0 ? trimmedRegion : undefined,
+      recruitmentPolicy: createForm.recruitmentPolicy,
+      recruitmentStatus: createForm.recruitmentStatus,
+      privacy: createForm.privacy,
+    }
+
+    setIsSubmittingClan(true)
+    try {
+      const clan = await clanApi.createClan(payload)
+      setCreateForm(createInitialClanForm())
+      setCreateError(null)
+      setShowCreateForm(false)
+      navigate(`/community/clans/${clan.slug}`)
+    } catch (err) {
+      const message = extractErrorMessage(err)
+      setCreateError(message)
+      logger.error('Failed to create clan', err)
+    } finally {
+      setIsSubmittingClan(false)
+    }
+  }
 
   const loadClans = useCallback(async (filters: ClanListFilters, append = false) => {
     try {
@@ -213,6 +381,173 @@ const ClanDirectoryPage = () => {
             </p>
           </div>
         </header>
+
+        <section className="glass-box-lg p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-white">Lead your own clan</h2>
+              <p className="mt-2 text-muted max-w-2xl">
+                Launch a new banner, define your mission, and invite allies to join your fight for
+                dominance.
+              </p>
+            </div>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={toggleCreateForm}
+                className="btn-primary self-start sm:self-auto"
+                disabled={isSubmittingClan}
+              >
+                {showCreateForm ? 'Close form' : 'Create a clan'}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="btn-primary inline-flex items-center justify-center self-start sm:self-auto"
+              >
+                Sign in to create
+              </Link>
+            )}
+          </div>
+
+          {!isAuthenticated && (
+            <p className="text-sm text-muted">
+              You need an account to found a clan. Log in or register to get started.
+            </p>
+          )}
+
+          {showCreateForm && isAuthenticated && (
+            <form onSubmit={handleCreateClan} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Clan name</span>
+                  <input
+                    type="text"
+                    value={createForm.name}
+                    onChange={handleCreateInputChange('name')}
+                    className="input-field"
+                    placeholder="e.g. Dawn Vanguard"
+                    maxLength={64}
+                    required
+                  />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Tag</span>
+                  <input
+                    type="text"
+                    value={createForm.tag}
+                    onChange={handleTagChange}
+                    className="input-field uppercase"
+                    placeholder="TAG"
+                    maxLength={5}
+                    required
+                  />
+                  <span className="text-xs text-muted">
+                    2-5 characters, displayed across the directory.
+                  </span>
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Motto (optional)</span>
+                  <input
+                    type="text"
+                    value={createForm.motto}
+                    onChange={handleCreateInputChange('motto')}
+                    className="input-field"
+                    placeholder="Your rallying cry"
+                    maxLength={120}
+                  />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Region (optional)</span>
+                  <input
+                    type="text"
+                    value={createForm.region}
+                    onChange={handleCreateInputChange('region')}
+                    className="input-field"
+                    placeholder="NA, EU, Global..."
+                    maxLength={32}
+                  />
+                </label>
+              </div>
+
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-white">Description (optional)</span>
+                <textarea
+                  value={createForm.description}
+                  onChange={handleCreateInputChange('description')}
+                  className="input-field min-h-[120px]"
+                  placeholder="Tell other commanders what your clan is all about."
+                  maxLength={1024}
+                />
+                <span className="text-xs text-muted">
+                  Highlight your goals, preferred playstyle, and what you expect from recruits.
+                </span>
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Recruitment policy</span>
+                  <select
+                    value={createForm.recruitmentPolicy}
+                    onChange={handleCreateInputChange('recruitmentPolicy')}
+                    className="input-field"
+                  >
+                    <option value="open">Open enrollment</option>
+                    <option value="application">Applications required</option>
+                    <option value="invite">Invite only</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Recruitment status</span>
+                  <select
+                    value={createForm.recruitmentStatus}
+                    onChange={handleCreateInputChange('recruitmentStatus')}
+                    className="input-field"
+                  >
+                    <option value="active">Actively recruiting</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-white">Privacy</span>
+                  <select
+                    value={createForm.privacy}
+                    onChange={handleCreateInputChange('privacy')}
+                    className="input-field"
+                  >
+                    <option value="public">Public directory listing</option>
+                    <option value="hidden">Hidden (invite only)</option>
+                  </select>
+                </label>
+              </div>
+
+              {createError && (
+                <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                  {createError}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <button
+                  type="submit"
+                  className="btn-primary flex items-center gap-2"
+                  disabled={isSubmittingClan}
+                >
+                  {isSubmittingClan && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Create clan</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={toggleCreateForm}
+                  disabled={isSubmittingClan}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
 
         <form onSubmit={handleFilterSubmit} className="glass-box-lg p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

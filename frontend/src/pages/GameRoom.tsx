@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { logger } from '@/utils/logger'
 import TabbedGameChat from '../components/chat/TabbedGameChat'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -7,6 +8,7 @@ import { getColorValue } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
+import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
@@ -56,6 +58,15 @@ export default function GameRoom() {
   const [aiDraftDirty, setAiDraftDirty] = useState(false)
   const [aiSaving, setAiSaving] = useState(false)
   const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+  const [mapPreview, setMapPreview] = useState<{
+    imageUrl: string | null
+    width?: number
+    height?: number
+    name?: string
+    territoryCount?: number
+  } | null>(null)
+  const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
+  const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
 
   const getStatusLabel = (status: GameRoomType['status']) => {
     switch (status) {
@@ -197,6 +208,57 @@ export default function GameRoom() {
     () => currentRoom?.players?.filter((player) => !player.isAi)?.length ?? 0,
     [currentRoom?.players],
   )
+
+  const mapDisplayName = currentRoom?.mapName || mapPreview?.name || null
+
+  useEffect(() => {
+    let isActive = true
+    const mapId = currentRoom?.mapId
+
+    if (!mapId) {
+      setMapPreview(null)
+      setMapPreviewError(null)
+      setMapPreviewLoading(false)
+      return undefined
+    }
+
+    setMapPreviewLoading(true)
+    setMapPreviewError(null)
+
+    const loadMap = async () => {
+      try {
+        const data = await mapService.getMap(mapId)
+        if (!isActive) {
+          return
+        }
+        const preview = {
+          imageUrl: data.map.imageUrl ?? null,
+          width: data.map.imageWidth,
+          height: data.map.imageHeight,
+          name: data.map.name,
+          territoryCount: Array.isArray(data.territories) ? data.territories.length : undefined,
+        }
+        setMapPreview(preview)
+      } catch (error) {
+        if (!isActive) {
+          return
+        }
+        logger.error('Failed to load map preview', error)
+        setMapPreview(null)
+        setMapPreviewError('Unable to load map preview right now')
+      } finally {
+        if (isActive) {
+          setMapPreviewLoading(false)
+        }
+      }
+    }
+
+    void loadMap()
+
+    return () => {
+      isActive = false
+    }
+  }, [currentRoom?.mapId])
 
   const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
   const maxAiCapacity = useMemo(
@@ -412,7 +474,10 @@ export default function GameRoom() {
       return
     }
 
-    if (currentRoom && currentRoom.id === roomId) {
+    if (
+      currentRoom &&
+      (currentRoom.id === roomId || String(currentRoom.roomCode ?? '') === roomId)
+    ) {
       setRoomError(null)
       return
     }
@@ -622,6 +687,11 @@ export default function GameRoom() {
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-[color:var(--heading)]">{currentRoom.name}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            {typeof currentRoom.roomCode === 'number' && (
+              <span className="chip text-xs" title="Share this code to invite others">
+                Code {currentRoom.roomCode}
+              </span>
+            )}
             <span className="chip text-xs uppercase tracking-wide">
               Status: {getStatusLabel(currentRoom.status)}
             </span>
@@ -692,8 +762,44 @@ export default function GameRoom() {
                 }}
               />
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-                <div className="space-y-2">
+              <div className="flex h-full flex-col">
+                <div className="relative flex-1 overflow-hidden bg-[color:var(--surface-2)]">
+                  {mapPreviewLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="space-y-2 text-center">
+                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--color-accent)] border-t-transparent"></div>
+                        <p className="text-sm text-muted">Loading map preview...</p>
+                      </div>
+                    </div>
+                  ) : mapPreview?.imageUrl ? (
+                    <img
+                      src={mapPreview.imageUrl}
+                      alt={
+                        mapDisplayName
+                          ? `Map preview for ${mapDisplayName}`
+                          : 'Selected map preview'
+                      }
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-muted">
+                      <p>{mapPreviewError ?? 'Map preview will appear once it is ready.'}</p>
+                    </div>
+                  )}
+                  {mapDisplayName && (
+                    <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/65 px-4 py-1 text-sm font-medium text-white backdrop-blur">
+                      {mapDisplayName}
+                      {typeof mapPreview?.territoryCount === 'number' &&
+                        mapPreview.territoryCount > 0 && (
+                          <span className="ml-2 text-xs text-white/80">
+                            · {mapPreview.territoryCount}{' '}
+                            {mapPreview.territoryCount === 1 ? 'territory' : 'territories'}
+                          </span>
+                        )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
                   <h2 className="text-xl font-semibold text-[color:var(--heading)]">
                     Waiting for game to start...
                   </h2>

@@ -13,6 +13,7 @@ export type GameLifecyclePhase = GamePhase | 'lobby' | 'initializing'
 
 export interface GameRoom {
   id: string
+  roomCode?: number
   name: string
   hostId: string
   hostUsername?: string

@@ -656,7 +656,7 @@ const CreateGamePage: React.FC = () => {
           // Show success message
           setError(`✅ Game "${response.room.name}" created successfully! Create another?`)
         } else {
-          navigate(`/room/${response.room.id}`)
+          navigate(`/room/${response.room.roomCode ?? response.room.id}`)
         }
       } else {
         throw new Error('Failed to create game room')
