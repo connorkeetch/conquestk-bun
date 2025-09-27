@@ -63,6 +63,12 @@ export default function NotificationDropdown({
     return () => window.removeEventListener('mousedown', onClick)
   }, [isOpen, onClose, triggerRef])
 
+  // Mark all notifications as read immediately upon opening
+  useEffect(() => {
+    if (!isOpen) return
+    notificationService.markAllAsRead()
+  }, [isOpen])
+
   const handleNotificationClick = (n: Notification) => {
     notificationService.markAsRead(n.id)
     if (n.actionUrl) {

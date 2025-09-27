@@ -90,24 +90,30 @@ export default function TabbedGameChat({
   const tabs = useMemo<ChatTab[]>(() => {
     const builtTabs: ChatTab[] = []
 
-    builtTabs.push({
-      id: 'game',
-      label: '🎮 Game',
-      type: 'game',
-      conversationId: gameId,
-      badge: gameConversation?.unreadCount ?? 0,
-      enabled: true,
-    })
-
-    if (userTeamId !== null && userTeamId !== undefined) {
+    // Include game tab only if the game conversation is not archived
+    if (!gameConversation || !gameConversation.isArchived) {
       builtTabs.push({
-        id: 'team',
-        label: '👥 Team',
-        type: 'team',
-        conversationId: `${gameId}:${userTeamId}`,
-        badge: teamConversation?.unreadCount ?? 0,
+        id: 'game',
+        label: '🎮 Game',
+        type: 'game',
+        conversationId: gameId,
+        badge: gameConversation?.unreadCount ?? 0,
         enabled: true,
       })
+    }
+
+    if (userTeamId !== null && userTeamId !== undefined) {
+      // Include team tab only if the team conversation is not archived
+      if (!teamConversation || !teamConversation.isArchived) {
+        builtTabs.push({
+          id: 'team',
+          label: '👥 Team',
+          type: 'team',
+          conversationId: `${gameId}:${userTeamId}`,
+          badge: teamConversation?.unreadCount ?? 0,
+          enabled: true,
+        })
+      }
     }
 
     players
