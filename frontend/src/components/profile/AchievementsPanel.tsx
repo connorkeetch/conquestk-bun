@@ -81,7 +81,7 @@ const AchievementsPanel: React.FC<Props> = ({ className = '' }) => {
   ) => {
     const name = (a as Achievement).name || 'Achievement'
     const description = (a as Achievement).description || ''
-    const icon = (a as Achievement).icon || (a as UserAchievement).icon
+    const icon = (a as Achievement).icon ?? (a as UserAchievement).icon ?? undefined
 
     return (
       <div
