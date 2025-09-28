@@ -207,7 +207,7 @@ const CommunityPage: React.FC = () => {
                         Player
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
-                        ELO
+                        CP
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-muted uppercase tracking-wider">
                         Games

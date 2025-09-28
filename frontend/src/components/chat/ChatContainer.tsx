@@ -1,5 +1,6 @@
 import type { ChatConversationType } from '@shared/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { socketService } from '../../services/socketService'
 import {
@@ -16,7 +17,6 @@ import {
 import type { ConversationDetail } from '../../types/messages'
 import MessageInput from './MessageInput'
 import MessageList, { type DisplayMessage } from './MessageList'
-import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 
 type ChatContainerProps = {
   conversationType: ChatConversationType
@@ -281,17 +281,11 @@ export default function ChatContainer({
           />
         )}
       </div>
+      <PlayerProfileModal
+        open={profileUsername !== null}
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
+      />
     </div>
-  )
-}
-
-// Modal portal inline to avoid additional providers
-export function ChatContainerWithProfileModal(props: ChatContainerProps) {
-  const [username, setUsername] = useState<string | null>(null)
-  return (
-    <>
-      <ChatContainer {...props} />
-      <PlayerProfileModal open={username !== null} username={username} onClose={() => setUsername(null)} />
-    </>
   )
 }

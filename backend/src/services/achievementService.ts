@@ -75,7 +75,10 @@ class AchievementService {
 
         // Classic Conqueror: win normal game by domination
         if (
-          (gameMode === 'normal' || gameMode === 'classic' || gameMode === '' || gameMode === 'standard') &&
+          (gameMode === 'normal' ||
+            gameMode === 'classic' ||
+            gameMode === '' ||
+            gameMode === 'standard') &&
           allOthersEliminated
         ) {
           await this.unlockByName(w.userId, 'Classic Conqueror')

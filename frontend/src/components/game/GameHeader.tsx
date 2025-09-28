@@ -1,4 +1,6 @@
 import type React from 'react'
+import { useState } from 'react'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 
 interface GameHeaderProps {
   currentPhase: string
@@ -16,6 +18,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   turn,
   currentPlayerInfo,
 }) => {
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
   return (
     <div className="bg-blue-900 text-white p-4">
       <div className="flex justify-between items-center">
@@ -32,13 +35,25 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               className="w-3 h-3 rounded-full border border-white"
               style={{ backgroundColor: currentPlayerInfo.color }}
             ></div>
-            <span className="font-semibold">{currentPlayerInfo.username}</span>
+            <button
+              type="button"
+              className="font-semibold underline-offset-2 hover:underline"
+              onClick={() => setProfileUsername(currentPlayerInfo.username)}
+              title={`View ${currentPlayerInfo.username}'s profile`}
+            >
+              {currentPlayerInfo.username}
+            </button>
             <span className="text-sm opacity-75">
               ({currentPlayerInfo.troops ?? 0} troops to deploy)
             </span>
           </div>
         )}
       </div>
+      <PlayerProfileModal
+        open={profileUsername !== null}
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
+      />
     </div>
   )
 }

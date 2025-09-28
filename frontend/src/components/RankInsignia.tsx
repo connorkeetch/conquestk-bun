@@ -72,7 +72,7 @@ const RankInsignia: React.FC<RankInsigniaProps> = ({
       <span
         className={`${sizeClasses[size]} inline-block`}
         style={{ color: textColor ?? rank.color }}
-        title={`${rank.name} (${rating} ELO)`}
+        title={`${rank.name} (${rating} CP)`}
       >
         {rank.insignia}
       </span>

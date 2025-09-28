@@ -58,7 +58,7 @@ const MODE_CONFIG: Record<
     bulletPoints: [
       'Public only — no invite codes',
       '3-6 players, free-for-all',
-      'ELO updates at the end of each game',
+      'CP updates at the end of each game',
     ],
     filter: (room) => room.isRanked === true,
   },

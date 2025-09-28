@@ -87,7 +87,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       if (!cfg || cfg.enabled === false) return 'Off'
       const mode = cfg.payoutMode || 'triangular'
       if (mode === 'fixed') return 'Fixed'
-      return mode === 'triangular' ? 'Triangular' : mode === 'classic' ? 'Classic' : 'Off'
+      return mode === 'triangular' ? 'Progressive' : mode === 'classic' ? 'Classic' : 'Off'
     })()
 
     const modifiersValue = (() => {

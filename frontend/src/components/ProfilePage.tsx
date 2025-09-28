@@ -807,12 +807,36 @@ const ProfilePage: React.FC = () => {
                     ? premiumColorEntry[1].description
                     : 'Commander of the Conquest Realms'}
                 </p>
+                {/* Rank summary under username */}
+                <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl" title="Rank insignia">
+                      {rankDetails.insignia}
+                    </span>
+                    <span className="font-semibold">{rankDetails.name}</span>
+                  </div>
+                  <span className="hidden sm:inline text-white/30">•</span>
+                  <div className="text-muted">
+                    {(() => {
+                      const min = rankDetails.minRating
+                      const max = nextRank ? nextRank.minRating - 1 : undefined
+                      return max ? `Rank band: ${min}–${max} CP` : `Rank band: ${min}+ CP`
+                    })()}
+                  </div>
+                  <span className="hidden sm:inline text-white/30">•</span>
+                  <div className="text-muted font-mono">
+                    {(() => {
+                      const filled = Math.max(0, Math.min(10, Math.round(rankProgress / 10)))
+                      return `${'■'.repeat(filled)}${'□'.repeat(10 - filled)}`
+                    })()}
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs uppercase tracking-[0.35em] text-muted">
                 <span className="flex items-center gap-1">
                   <span className="text-lg">🎯</span>
-                  {profile.elo} ELO
+                  {profile.elo} CP
                 </span>
                 <span className="hidden sm:inline text-white/30">•</span>
                 <span className="flex items-center gap-1">
@@ -983,8 +1007,8 @@ const ProfilePage: React.FC = () => {
             {nextRank ? (
               <div className="relative mt-4">
                 <div className="flex justify-between text-[11px] text-muted uppercase tracking-[0.3em] mb-1">
-                  <span>{profile.elo} ELO</span>
-                  <span>{nextRank.minRating} ELO</span>
+                  <span>{profile.elo} CP</span>
+                  <span>{nextRank.minRating} CP</span>
                 </div>
                 <div className="h-2 rounded-full bg-surface-2/60 overflow-hidden">
                   <div
@@ -997,7 +1021,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <p className="text-xs text-muted mt-2">
                   {ratingToNextRank > 0
-                    ? `${ratingToNextRank} rating to reach ${nextRank.name}.`
+                    ? `${ratingToNextRank} CP to reach ${nextRank.name}.`
                     : `Promotion to ${nextRank.name} is imminent.`}
                 </p>
               </div>
@@ -1028,7 +1052,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
             <p className="relative text-xs text-muted mt-4 leading-relaxed">
-              Joined {formatDate(profile.joinDate)} · Peak rating {profile.peakRating}
+              Joined {formatDate(profile.joinDate)} · Peak CP {profile.peakRating}
             </p>
             <p className="relative text-xs text-muted mt-2 leading-relaxed">
               {isOwnProfile
@@ -1105,15 +1129,15 @@ const ProfilePage: React.FC = () => {
               <div className="relative glass-box-lg shadow-xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
                 <h2 className="text-xl font-bold text-primary-soft mb-4 flex items-center gap-2">
-                  <span>📈</span> Rating History
+                  <span>📈</span> CP History
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <div className="text-muted text-sm mb-1">Current Rating</div>
+                    <div className="text-muted text-sm mb-1">Current CP</div>
                     <div className="text-3xl font-bold text-primary">{profile.elo}</div>
                   </div>
                   <div>
-                    <div className="text-muted text-sm mb-1">Peak Rating</div>
+                    <div className="text-muted text-sm mb-1">Peak CP</div>
                     <div className="text-3xl font-bold text-violet-soft">{profile.peakRating}</div>
                   </div>
                 </div>
@@ -1227,7 +1251,7 @@ const ProfilePage: React.FC = () => {
                         }
                         return (
                           <>
-                            {metric('ELO', base.elo, other.elo)}
+                            {metric('CP', base.elo, other.elo)}
                             {metric(
                               'Win Rate %',
                               Math.round(base.winRate),
@@ -1235,7 +1259,7 @@ const ProfilePage: React.FC = () => {
                               (n) => `${n}%`,
                             )}
                             {metric('Games Played', base.gamesPlayed, other.gamesPlayed)}
-                            {metric('Peak ELO', base.peakRating, other.peakRating)}
+                            {metric('Peak CP', base.peakRating, other.peakRating)}
                           </>
                         )
                       })()}

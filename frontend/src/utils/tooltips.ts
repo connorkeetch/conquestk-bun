@@ -29,8 +29,8 @@ export const getCardTradeDescription = (mode?: string | null) => {
 export const getTreasureDescription = (cfg?: TreasureConfig | null) => {
   if (!cfg || cfg.enabled === false) return 'Treasure cards are disabled.'
   const mode = cfg.payoutMode || 'triangular'
-  if (mode === 'fixed') return 'Treasure rewards a fixed number of cards at set intervals.'
+  if (mode === 'fixed') return 'Treasure rewards a fixed number of troops per set.'
   if (mode === 'classic') return 'Treasure follows classic Risk-style payouts that grow steadily.'
-  // triangular or other
-  return 'Treasure payouts grow triangularly (1+2+3…), rewarding streaks over time.'
+  // triangular or other (shown in UI as Progressive)
+  return 'Treasure payouts grow progressively (triangular growth), increasing by +1 more each set.'
 }

@@ -80,7 +80,7 @@ const Home: React.FC = () => {
         'Every match is tracked, ranked, and backed by the same systems we use internally.',
       bullets: [
         'Authoritative game archival captures every dice roll and territory swing.',
-        'ELO ladders, win streaks, and performance stats update the moment a battle ends.',
+        'CP ladders, win streaks, and performance stats update the moment a battle ends.',
         'Lifecycle engine enforces lobby → active → completed states with ready-checks.',
       ],
     },

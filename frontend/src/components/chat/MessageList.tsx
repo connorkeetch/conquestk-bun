@@ -75,7 +75,12 @@ const parseLinkPreviews = (metadata?: Record<string, unknown> | null): LinkPrevi
     .filter((preview): preview is LinkPreviewData => preview !== null)
 }
 
-export default function MessageList({ messages, currentUserId, getDisplayName, onUserClick }: MessageListProps) {
+export default function MessageList({
+  messages,
+  currentUserId,
+  getDisplayName,
+  onUserClick,
+}: MessageListProps) {
   const isOwn = useMemo(
     () => new Set(currentUserId && typeof currentUserId === 'string' ? [currentUserId] : []),
     [currentUserId],
@@ -106,7 +111,12 @@ export default function MessageList({ messages, currentUserId, getDisplayName, o
               <div className="flex items-baseline justify-between gap-3 mb-1">
                 {(() => {
                   const clickable =
-                    typeof onUserClick === 'function' && !isOwnMessage && displayName && displayName !== 'System'
+                    typeof onUserClick === 'function' &&
+                    !isOwnMessage &&
+                    !!message.senderId &&
+                    displayName &&
+                    displayName !== 'System' &&
+                    displayName !== 'Player'
                   return clickable ? (
                     <button
                       type="button"

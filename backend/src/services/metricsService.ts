@@ -143,20 +143,20 @@ class TreasureMetrics {
   private readonly modeCounter = new CounterMetric('treasure_mode_total')
 
   recordMode(config: TreasureConfig) {
-    const mode = config.payoutMode ?? 'triangular'
+    const mode = config.payoutMode ?? 'classic'
     const enabled = config.enabled ? 'enabled' : 'disabled'
     this.modeCounter.inc({ mode, enabled })
   }
 
   recordDraw(config: TreasureConfig, metal: Metal) {
     if (!config.enabled) return
-    const mode = config.payoutMode ?? 'triangular'
+    const mode = config.payoutMode ?? 'classic'
     this.drawCounter.inc({ mode, metal })
   }
 
   recordCash(config: TreasureConfig, hasDiamond: boolean) {
     if (!config.enabled) return
-    const mode = config.payoutMode ?? 'triangular'
+    const mode = config.payoutMode ?? 'classic'
     this.cashCounter.inc({ mode, diamond: hasDiamond ? 'yes' : 'no' })
   }
 

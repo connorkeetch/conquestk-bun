@@ -123,7 +123,7 @@ const LeaderboardsPage: React.FC = () => {
                     Tier
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
-                    Rating
+                    CP
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[color:var(--heading)] uppercase tracking-wider">
                     Games

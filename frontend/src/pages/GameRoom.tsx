@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
@@ -72,6 +73,7 @@ export default function GameRoom() {
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [liveMessage, setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -261,8 +263,6 @@ export default function GameRoom() {
       logger.warn('Failed to copy invite link', error)
     }
   }, [currentRoom?.name])
-
-  
 
   // Screen reader announcements for players joining/leaving
   useEffect(() => {
@@ -840,7 +840,8 @@ export default function GameRoom() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isHost && currentRoom.status === 'lobby' &&
+          {isHost &&
+            currentRoom.status === 'lobby' &&
             (currentRoom.players?.length || 0) >= currentRoom.maxPlayers && (
               <button
                 type="button"
@@ -1094,7 +1095,6 @@ export default function GameRoom() {
         </div>
 
         <div className="space-y-6 lg:col-span-1">
-
           <div className="panel space-y-5">
             <h3 className="text-lg font-semibold text-[color:var(--heading)]">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
@@ -1132,18 +1132,19 @@ export default function GameRoom() {
                           {player.username}
                         </span>
                       ) : (
-                        <Link
-                          to={`/profile/${encodeURIComponent(player.username)}`}
-                          className={`truncate text-sm hover:underline ${
+                        <button
+                          type="button"
+                          className={`truncate text-sm underline-offset-2 hover:underline ${
                             isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
                           }`}
                           title={`View ${player.username}'s profile`}
+                          onClick={() => setProfileUsername(player.username)}
                         >
                           {player.username}
-                        </Link>
+                        </button>
                       )}
                       {typeof player.skill_rating === 'number' && (
-                        <span className="text-xs text-muted">· {player.skill_rating} ELO</span>
+                        <span className="text-xs text-muted">· {player.skill_rating} CP</span>
                       )}
                     </div>
                     <div className="ml-auto flex items-center gap-2">
@@ -1311,6 +1312,11 @@ export default function GameRoom() {
           {liveMessage}
         </div>
       </div>
+      <PlayerProfileModal
+        open={profileUsername !== null}
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
+      />
     </div>
   )
 }
