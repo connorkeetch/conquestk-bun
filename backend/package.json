@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
+    "prebuild": "npm run --workspace @risk-game/shared build",
     "build": "tsc && tsc-alias",
     "typecheck": "tsc --noEmit",
     "postbuild": "node -e \"const fs=require('fs'); const path=require('path'); if (!fs.existsSync('dist/migrations')) { fs.mkdirSync('dist/migrations', {recursive:true}); } if (fs.existsSync('migrations')) { fs.cpSync('migrations', 'dist/migrations', {recursive:true}); console.log('\u2705 Copied migrations to dist/migrations'); } else { console.error('\u274c Warning: migrations directory not found'); }\"",
