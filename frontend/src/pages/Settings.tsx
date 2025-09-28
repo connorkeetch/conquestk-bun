@@ -1,3 +1,4 @@
+import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '../constants/profileTaglines'
 import { normalizeThemeId, type ThemeId } from '@shared/types/themes'
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
@@ -29,7 +30,6 @@ import audioService from '../services/audioService'
 import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
 import { profileService } from '../services/profileService'
-import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '@risk-game/shared/types/profileTaglines'
 import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,

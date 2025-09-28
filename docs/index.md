@@ -41,6 +41,7 @@ Use this index to jump directly to the information you need.
 ### Feature & product deep dives
 - [guides/game-options.md](guides/game-options.md) – Create Game options and what they do today
 - [guides/map-format.md](guides/map-format.md) – map JSON schema and editor workflow
+- [guides/map-import-packages.md](guides/map-import-packages.md) – bulk import format and packaging
 - [guides/theme-system.md](guides/theme-system.md) – design tokens and theming strategy
 - [guides/email-verification.md](guides/email-verification.md) – verification, password reset, and notifications
 - [planning/clan-system-plan.md](planning/clan-system-plan.md) – future social/clan feature planning
