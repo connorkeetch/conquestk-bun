@@ -29,8 +29,8 @@ Follow-ups (tracked as tasks)
 - DONE – Responsive board sizing: Replaced fixed board heights with viewport-aware sizing using clamp().
 - DONE – Actionable empty states: Added host prompts (Copy Invite Link, Copy Room Code, View Game Configuration) and a spectator hint.
 - Inline status education: Add tooltips or info modals explaining fog-of-war, card trade, and treasure rules.
-- Performance polish: Lazy-hydrate chat and analytics after the critical lobby content paints.
-- Accessibility: Audit focus outlines, ensure dialog focus trapping, and add ARIA live regions for join/leave updates.
+- DONE – Performance polish: Lazy-hydrate chat after the critical lobby content paints.
+- DONE – Accessibility: Added focus-visible outlines for buttons/chips, focus-trapped the Join dialog with Escape to close, and added an ARIA live region for join/leave announcements.
 
 Notes
 - The Game Options panel is now accessible both in the chat tabs and in the sidebar; this duplicates visibility (intentional) without duplicating logic.

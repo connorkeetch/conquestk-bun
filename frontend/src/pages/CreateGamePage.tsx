@@ -1628,9 +1628,7 @@ const CreateGamePage: React.FC = () => {
                             </div>
                             <div>
                               <dt className="text-muted">Games Played</dt>
-                              <dd className="text-white">
-                                {totalPlays > 0 ? totalPlays : '—'}
-                              </dd>
+                              <dd className="text-white">{totalPlays > 0 ? totalPlays : '—'}</dd>
                             </div>
                             {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
                               <div className="col-span-2">

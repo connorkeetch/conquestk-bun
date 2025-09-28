@@ -1,11 +1,10 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useId } from 'react'
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
-import { lazyWithRetry } from '../utils/lazyWithRetry'
 import GameOptionsPanel from '../components/chat/GameOptionsPanel'
-import Skeleton from '../components/ui/Skeleton'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
+import { Skeleton } from '../components/ui/Skeleton'
 import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
@@ -15,6 +14,7 @@ import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
+import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { formatStatus, formatTurnTimer, hostDisplay, seatUsage } from '../utils/lobby'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
@@ -71,10 +71,14 @@ export default function GameRoom() {
   } | null>(null)
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
+  const [liveMessage, setLiveMessage] = useState('')
   const [roomCodeCopied, setRoomCodeCopied] = useState(false)
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
-  const [liveMessage, setLiveMessage] = useState('')
 
+  const formattedRoomCode = useMemo(() => {
+    const code = currentRoom?.roomCode
+    return typeof code === 'number' && Number.isFinite(code) ? String(code) : null
+  }, [currentRoom?.roomCode])
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -238,6 +242,164 @@ export default function GameRoom() {
     }
   }, [currentRoom?.mapId])
 
+  // Copy helpers for invite link and room code
+  useEffect(() => {
+    if (!roomCodeCopied) return
+    const t = window.setTimeout(() => setRoomCodeCopied(false), 2000)
+    return () => window.clearTimeout(t)
+  }, [roomCodeCopied])
+
+  useEffect(() => {
+    if (!inviteLinkCopied) return
+    const t = window.setTimeout(() => setInviteLinkCopied(false), 2000)
+    return () => window.clearTimeout(t)
+  }, [inviteLinkCopied])
+
+  const handleCopyRoomCode = useCallback(async () => {
+    if (!formattedRoomCode) return
+    try {
+      await navigator.clipboard.writeText(formattedRoomCode)
+      setRoomCodeCopied(true)
+    } catch (error) {
+      logger.warn('Failed to copy room code', error)
+    }
+  }, [formattedRoomCode])
+
+  const handleCopyInviteLink = useCallback(async () => {
+    try {
+      const url = typeof window !== 'undefined' ? window.location.href : ''
+      if (!url) return
+      if (navigator?.share) {
+        try {
+          await navigator.share({ title: currentRoom?.name ?? 'ConquestK Lobby', url })
+          return
+        } catch {
+          // fall back to clipboard
+        }
+      }
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        setInviteLinkCopied(true)
+      }
+    } catch (error) {
+      logger.warn('Failed to copy invite link', error)
+    }
+  }, [currentRoom?.name])
+
+  const gameConfigRef = useRef<HTMLDivElement | null>(null)
+
+  // Screen reader announcements for players joining/leaving
+  useEffect(() => {
+    const onJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
+      if (!payload || payload.roomId !== currentRoom?.id) return
+      const name = payload.player.username
+      setLiveMessage(`${name} joined the lobby.`)
+    }
+    const onLeft: Parameters<typeof socketService.on<'player-left'>>[1] = (payload) => {
+      if (!payload || payload.roomId !== currentRoom?.id) return
+      setLiveMessage('A player left the lobby.')
+    }
+    socketService.on('player-joined', onJoined)
+    socketService.on('player-left', onLeft)
+    return () => {
+      socketService.off('player-joined', onJoined)
+      socketService.off('player-left', onLeft)
+    }
+  }, [currentRoom?.id])
+
+  // Lazy-hydrate chat when visible or after idle
+  const LazyTabbedGameChat = useMemo(
+    () => lazyWithRetry(() => import('../components/chat/TabbedGameChat')),
+    [],
+  )
+  const chatContainerRef = useRef<HTMLDivElement | null>(null)
+  const [shouldHydrateChat, setShouldHydrateChat] = useState(false)
+  useEffect(() => {
+    if (shouldHydrateChat) return
+    let hydrated = false
+    const mark = () => {
+      if (!hydrated) {
+        hydrated = true
+        setShouldHydrateChat(true)
+      }
+    }
+    const el = chatContainerRef.current
+    if ('IntersectionObserver' in window && el) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              io.disconnect()
+              mark()
+              break
+            }
+          }
+        },
+        { rootMargin: '120px' },
+      )
+      io.observe(el)
+      type RIC = (cb: () => void, opts?: { timeout?: number }) => number
+      const rIC = (window as unknown as { requestIdleCallback?: RIC }).requestIdleCallback
+      const cIC = (window as unknown as { cancelIdleCallback?: (id: number) => void })
+        .cancelIdleCallback
+      const idleId =
+        typeof rIC === 'function' ? rIC(mark, { timeout: 1200 }) : window.setTimeout(mark, 900)
+      return () => {
+        io.disconnect()
+        if (typeof cIC === 'function') {
+          cIC(idleId)
+        } else {
+          window.clearTimeout(idleId)
+        }
+      }
+    }
+    const t = window.setTimeout(mark, 600)
+    return () => window.clearTimeout(t)
+  }, [shouldHydrateChat])
+
+  // Accessible Join dialog focus trap
+  const joinDialogRef = useRef<HTMLDivElement | null>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const joinDialogTitleId = useId()
+  useEffect(() => {
+    if (!joinDialogOpen) {
+      previouslyFocusedRef.current?.focus()
+      return
+    }
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+    const container = joinDialogRef.current
+    if (!container) return
+    const focusable = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      ),
+    )
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    ;(first ?? container).focus()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setJoinDialogOpen(false)
+        return
+      }
+      if (e.key === 'Tab') {
+        if (focusable.length === 0) {
+          e.preventDefault()
+          return
+        }
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last?.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first?.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [joinDialogOpen])
 
   const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
   const maxAiCapacity = useMemo(
@@ -736,8 +898,20 @@ export default function GameRoom() {
 
       {joinDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="panel w-full max-w-md space-y-4">
-            <h2 className="text-lg font-semibold text-[color:var(--heading)]">Choose your color</h2>
+          <div
+            ref={joinDialogRef}
+            className="panel w-full max-w-md space-y-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={joinDialogTitleId}
+            tabIndex={-1}
+          >
+            <h2
+              id={joinDialogTitleId}
+              className="text-lg font-semibold text-[color:var(--heading)]"
+            >
+              Choose your color
+            </h2>
             <p className="text-sm text-muted">
               Each player must pick a unique color for this game.
             </p>
@@ -803,9 +977,8 @@ export default function GameRoom() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
         {/* Game Board */}
-        <div className="space-y-6 lg:col-span-3">
-          <div className="panel min-h-[60vh] h-[520px] p-0 sm:h-[560px] lg:h-[640px] xl:h-[720px]">
-        
+        <div className="lg:col-span-3">
+          <div className="panel h-auto min-h-[clamp(520px,65vh,920px)] p-0">
             {currentGame ? (
               <RiskGameBoard
                 onTerritoryClick={(_territoryId) => {
@@ -878,25 +1051,42 @@ export default function GameRoom() {
                       {formatTimeUntil(expiresAtDate)}
                     </p>
                   )}
-                  
                 </div>
               </div>
             )}
           </div>
-          <div className="panel p-0 overflow-hidden" style={{ height: '400px' }}>
-            {roomId && user && (
-              <TabbedGameChat
-                gameId={roomId}
-                players={(currentRoom.players || []).map((p) => ({
-                  userId: p.userId ?? p.id,
-                  username: p.username,
-                  teamId: p.teamId ?? null,
-                }))}
-                currentUserId={user.id}
-                userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
-                className="h-full"
-              />
-            )}
+          <div
+            ref={chatContainerRef}
+            className="panel p-0 overflow-hidden"
+            style={{ height: 'min(40vh, 460px)' }}
+          >
+            {roomId && user ? (
+              shouldHydrateChat ? (
+                <Suspense
+                  fallback={
+                    <div className="h-full flex items-center justify-center p-4">
+                      <Skeleton variant="rectangular" width="100%" height="100%" />
+                    </div>
+                  }
+                >
+                  <LazyTabbedGameChat
+                    gameId={roomId}
+                    players={(currentRoom.players || []).map((p) => ({
+                      userId: p.userId ?? p.id,
+                      username: p.username,
+                      teamId: p.teamId ?? null,
+                    }))}
+                    currentUserId={user.id}
+                    userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
+                    className="h-full"
+                  />
+                </Suspense>
+              ) : (
+                <div className="h-full flex items-center justify-center p-4 text-sm text-muted">
+                  Preparing chat…
+                </div>
+              )
+            ) : null}
           </div>
         </div>
 
@@ -935,7 +1125,36 @@ export default function GameRoom() {
                     : 'Off'}
                 </div>
               </div>
+              <div className="panel-outline p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs uppercase tracking-wide text-muted">Invite</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-xs"
+                      onClick={() => void handleCopyInviteLink()}
+                      aria-live="polite"
+                    >
+                      {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
+                    </button>
+                    {formattedRoomCode && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-xs"
+                        onClick={() => void handleCopyRoomCode()}
+                        aria-live="polite"
+                      >
+                        {roomCodeCopied ? 'Code copied ✓' : 'Copy Code'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div ref={gameConfigRef} className="panel p-0 overflow-hidden">
+            <GameOptionsPanel className="h-full" />
           </div>
 
           <div className="panel space-y-5">
@@ -1148,7 +1367,10 @@ export default function GameRoom() {
               </button>
             </div>
           )}
-          
+        </div>
+        {/* SR-only live region for announcements */}
+        <div className="sr-only" aria-live="polite">
+          {liveMessage}
         </div>
       </div>
     </div>
