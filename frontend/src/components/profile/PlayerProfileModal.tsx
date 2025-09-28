@@ -128,7 +128,11 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                 </div>
                 <div className="min-w-0">
                   <div className="font-semibold truncate">{profile.username}</div>
-                  <div className="text-xs text-muted">Commander of the Conquest Realms</div>
+                  <div className="text-xs text-muted">
+                    {profile.tagline && profile.tagline.trim().length > 0
+                      ? profile.tagline
+                      : 'Commander of the Conquest Realms'}
+                  </div>
                 </div>
               </div>
 

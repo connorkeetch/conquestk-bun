@@ -28,6 +28,8 @@ import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
 import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
+import { profileService } from '../services/profileService'
+import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '@risk-game/shared/types/profileTaglines'
 import pushNotificationService from '../services/pushNotificationService'
 import {
   clearCache,
@@ -487,6 +489,32 @@ export default function Settings() {
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [checkingUsername, setCheckingUsername] = useState(false)
   const [profileUpdateLoading, setProfileUpdateLoading] = useState(false)
+  const [currentTagline, setCurrentTagline] = useState<string>(DEFAULT_TAGLINE)
+
+  // Load current tagline for the logged-in user
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        if (!user?.id) return
+        const summary = await profileService.getMyProfile({ signal: controller.signal })
+        if (!active) return
+        if (typeof summary.tagline === 'string' && summary.tagline.trim().length > 0) {
+          setCurrentTagline(summary.tagline)
+        } else {
+          setCurrentTagline(DEFAULT_TAGLINE)
+        }
+      } catch (_e) {
+        // leave default
+      }
+    }
+    void load()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [user?.id])
 
   useEffect(() => {
     const initNotifications = async () => {
@@ -557,7 +585,7 @@ export default function Settings() {
   }
 
   // Update profile (username/email)
-  const updateProfile = async (username?: string, email?: string) => {
+  const updateProfile = async (username?: string, email?: string, tagline?: string) => {
     setProfileUpdateLoading(true)
     try {
       const token = localStorage.getItem('token')
@@ -568,6 +596,7 @@ export default function Settings() {
       const updateData: Record<string, unknown> = {}
       if (username) updateData.username = username
       if (email) updateData.email = email
+      if (tagline) updateData.tagline = tagline
 
       const response = await fetch(`${apiUrl}/users/profile`, {
         method: 'PUT',
@@ -583,6 +612,7 @@ export default function Settings() {
       if (response.ok) {
         setSaveStatus('Profile updated successfully!')
         setTimeout(() => setSaveStatus(null), 3000)
+        if (tagline) setCurrentTagline(tagline)
         // You might want to update the Redux state here too
         return true
       }
@@ -1193,6 +1223,25 @@ export default function Settings() {
             type: 'input',
             isWorking: true,
             defaultValue: user?.email || '',
+          },
+          {
+            id: 'profile-tagline',
+            label: 'Profile Tagline',
+            description: 'Short title shown under your username',
+            type: 'select',
+            isWorking: true,
+            defaultValue: currentTagline,
+            options: PROFILE_TAGLINES.map((t) => ({ value: t, label: t })),
+            onChange: async (value) => {
+              if (typeof value !== 'string') return
+              // Optimistically update local state
+              setCurrentTagline(value)
+              const ok = await updateProfile(undefined, undefined, value)
+              if (!ok) {
+                // revert on failure
+                setCurrentTagline((prev) => prev)
+              }
+            },
           },
           {
             id: 'change-password',

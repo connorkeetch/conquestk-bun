@@ -14,6 +14,9 @@ const ensureUserProfileColumns = async () => {
 
   try {
     await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT')
+    await query(
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Commander of the Conquest Realms'",
+    )
     await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP')
     ensuredUserProfileColumns = true
   } catch (error) {
@@ -172,7 +175,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
     const result = await query(
       `
       SELECT
-        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio, u.tagline,
         u.skill_rating,
         COALESCE(ps.games_played, 0) AS games_played,
         COALESCE(ps.games_won, 0) AS games_won,
@@ -212,6 +215,7 @@ router.get('/:username/profile', async (req: Request, res: Response) => {
       emailVerified: user.email_verified,
       avatarUrl: null,
       bio: user.bio,
+      tagline: user.tagline,
       elo,
       joinDate: user.created_at,
       lastActive: user.last_login,
@@ -251,7 +255,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const result = await query(
       `
       SELECT
-        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio,
+        u.id, u.username, u.email, u.created_at, u.email_verified, u.bio, u.tagline,
         u.skill_rating,
         COALESCE(ps.games_played, 0) AS games_played,
         COALESCE(ps.games_won, 0) AS games_won,
@@ -291,6 +295,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       emailVerified: user.email_verified,
       avatarUrl: null,
       bio: user.bio,
+      tagline: user.tagline,
       elo,
       joinDate: user.created_at,
       lastActive: user.last_login,
@@ -354,7 +359,11 @@ router.post('/check-username', authenticateToken, async (req: Request, res: Resp
 router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.userId
-    const { username, email } = req.body
+    const { username, email, tagline } = req.body as {
+      username?: string
+      email?: string
+      tagline?: string
+    }
 
     await ensureUserProfileColumns()
 
@@ -404,6 +413,24 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     if (email) {
       updates.push(`email = $${paramCounter++}`)
       values.push(email.trim().toLowerCase())
+    }
+
+    // Validate and accept tagline from the preselected list
+    if (typeof tagline === 'string') {
+      // Validate against shared list
+      try {
+        const { PROFILE_TAGLINES } = require('@risk-game/shared/types/profileTaglines') as {
+          PROFILE_TAGLINES: string[]
+        }
+        const trimmed = tagline.trim()
+        if (!PROFILE_TAGLINES.includes(trimmed)) {
+          return res.status(400).json({ error: 'Invalid tagline selection' })
+        }
+        updates.push(`tagline = $${paramCounter++}`)
+        values.push(trimmed)
+      } catch (_e) {
+        return res.status(500).json({ error: 'Tagline configuration unavailable' })
+      }
     }
 
     if (updates.length === 0) {

@@ -16,6 +16,7 @@ export interface ProfileSummary {
   emailVerified?: boolean
   avatarUrl: string | null
   bio?: string | null
+  tagline?: string | null
   elo: number
   joinDate: string
   lastActive?: string | null
@@ -101,6 +102,7 @@ type RawProfileSummary = {
   avatarUrl?: unknown
   avatar_url?: unknown
   bio?: unknown
+  tagline?: unknown
   elo: unknown
   joinDate?: unknown
   join_date?: unknown
@@ -206,6 +208,7 @@ const normalizeProfileSummary = (data: RawProfileSummary): ProfileSummary => {
     emailVerified: (data.emailVerified ?? data.email_verified) as boolean | undefined,
     avatarUrl: pickNullableString(data as Record<string, unknown>, ['avatarUrl', 'avatar_url']),
     bio: pickNullableString(data as Record<string, unknown>, ['bio']),
+    tagline: pickNullableString(data as Record<string, unknown>, ['tagline']),
     elo,
     joinDate:
       pickString(data as Record<string, unknown>, ['joinDate', 'join_date']) ??

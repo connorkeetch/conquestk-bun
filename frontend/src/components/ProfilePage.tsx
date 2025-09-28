@@ -825,9 +825,11 @@ const ProfilePage: React.FC = () => {
                   {profile.username}
                 </h1>
                 <p className="text-xs sm:text-sm uppercase tracking-[0.45em] text-muted">
-                  {premiumColorEntry
-                    ? premiumColorEntry[1].description
-                    : 'Commander of the Conquest Realms'}
+                  {profile.tagline && profile.tagline.trim().length > 0
+                    ? profile.tagline
+                    : premiumColorEntry
+                      ? premiumColorEntry[1].description
+                      : 'Commander of the Conquest Realms'}
                 </p>
                 {/* Rank summary under username */}
                 <div className="mt-2 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:gap-4">
