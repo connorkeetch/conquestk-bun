@@ -3448,7 +3448,7 @@ export default function MapEditorTokens() {
 
       <div className="w-full">
         {/* Reduced padding, more screen real estate */}
-        <div className="flex items-center justify-between mb-4 px-3">
+        <div className="flex flex-col gap-4 mb-4 px-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Map Editor (Token-Based)</h1>
             <p className="text-sm text-muted mt-1">
@@ -3457,7 +3457,7 @@ export default function MapEditorTokens() {
             </p>
           </div>
           {polygonEditorEnabled && (
-            <div className="flex gap-4 items-center">
+            <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-end">
               <a
                 href="/map-editor-polygon"
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
@@ -3465,7 +3465,7 @@ export default function MapEditorTokens() {
               >
                 🏪 Try Polygon Editor (Beta)
               </a>
-              <div className="text-sm text-muted">
+              <div className="text-sm text-muted text-left sm:text-right">
                 <p className="text-xs">Token-based: Place circular tokens as territories</p>
                 <p className="text-xs">Polygon-based: Draw custom territory shapes</p>
               </div>
@@ -3475,69 +3475,74 @@ export default function MapEditorTokens() {
         {/* Tabbed Interface */}
         <div className="bg-surface-1 rounded-lg mx-3 mb-3">
           {/* Tab Headers */}
-          <div className="flex border-b border-border">
-            <button
-              type="button"
-              onClick={() => setEditorMode('properties')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'properties'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
+          <div className="border-b border-border">
+            <div
+              className="flex flex-nowrap gap-1 overflow-x-auto px-2 py-2 sm:px-3"
+              role="tablist"
             >
-              📋 Properties
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode('territories')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'territories'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              🗺️ Regions
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode('connections')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'connections'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              🔗 Connections
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode('capitals')}
-              className={`px-6 py-3 font-medium transition-colors relative ${
-                editorMode === 'capitals'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted hover:text-white'
-              }`}
-            >
-              👑 Capitals
-            </button>
-            {territoryModifiersEnabled && (
               <button
                 type="button"
-                onClick={() => setEditorMode('modifiers')}
-                className={`px-6 py-3 font-medium transition-colors relative ${
-                  editorMode === 'modifiers'
+                onClick={() => setEditorMode('properties')}
+                className={`flex-shrink-0 px-5 py-2.5 font-medium transition-colors relative ${
+                  editorMode === 'properties'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted hover:text-white'
                 }`}
               >
-                ⚡ Modifiers
+                📋 Properties
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setEditorMode('territories')}
+                className={`flex-shrink-0 px-5 py-2.5 font-medium transition-colors relative ${
+                  editorMode === 'territories'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted hover:text-white'
+                }`}
+              >
+                🗺️ Regions
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorMode('connections')}
+                className={`flex-shrink-0 px-5 py-2.5 font-medium transition-colors relative ${
+                  editorMode === 'connections'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted hover:text-white'
+                }`}
+              >
+                🔗 Connections
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorMode('capitals')}
+                className={`flex-shrink-0 px-5 py-2.5 font-medium transition-colors relative ${
+                  editorMode === 'capitals'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted hover:text-white'
+                }`}
+              >
+                👑 Capitals
+              </button>
+              {territoryModifiersEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('modifiers')}
+                  className={`flex-shrink-0 px-5 py-2.5 font-medium transition-colors relative ${
+                    editorMode === 'modifiers'
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-muted hover:text-white'
+                  }`}
+                >
+                  ⚡ Modifiers
+                </button>
+              )}
+            </div>
 
-            {/* Save/Load Actions on the right */}
-            <div className="flex gap-2 ml-auto p-2">
+            {/* Save/Load Actions */}
+            <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
               {lastSaved && (
-                <div className="text-xs text-muted self-center mr-2">
+                <div className="text-xs text-muted">
                   Auto-saved {lastSaved.toLocaleTimeString()}
                 </div>
               )}
@@ -3552,19 +3557,17 @@ export default function MapEditorTokens() {
               </button>
 
               {draftId && (
-                <span className="self-center text-xs text-muted uppercase tracking-wide">
+                <span className="text-xs text-muted uppercase tracking-wide">
                   Status: {draftStatus}
                 </span>
               )}
 
-              {saveStatus === 'saving' && (
-                <span className="self-center text-xs text-muted">Saving…</span>
-              )}
+              {saveStatus === 'saving' && <span className="text-xs text-muted">Saving…</span>}
               {saveStatus === 'saved' && (
-                <span className="self-center text-xs text-green-400">Draft saved</span>
+                <span className="text-xs text-green-400">Draft saved</span>
               )}
               {saveStatus === 'error' && saveError && (
-                <span className="self-center text-xs text-red-400">{saveError}</span>
+                <span className="text-xs text-red-400">{saveError}</span>
               )}
 
               {draftId && draftStatus !== 'submitted' && (
@@ -4023,12 +4026,12 @@ export default function MapEditorTokens() {
         )}
       </div>
       {/* Main Editor Area - Full width with right sidebar */}
-      <div className="flex gap-4 px-3">
+      <div className="flex flex-col gap-4 px-3 lg:flex-row">
         {/* Map Canvas - Main area taking most space, centered content */}
         <div
           ref={mapContainerRef}
           className="relative flex-1 bg-surface-1 rounded-lg overflow-auto flex items-center justify-center p-4"
-          style={{ height: 'calc(100vh - 240px)' }}
+          style={{ minHeight: 320, maxHeight: 'calc(100vh - 220px)' }}
         >
           {/* Help tooltip moved to sidebar footer to avoid covering canvas */}
           <div
@@ -4234,8 +4237,8 @@ export default function MapEditorTokens() {
 
         {/* Dynamic Sidebar Panel - Now on the right */}
         <div
-          className="w-80 bg-surface-2 border border-border rounded-lg p-4 flex-shrink-0 overflow-y-auto shadow-lg"
-          style={{ height: 'calc(100vh - 240px)' }}
+          className="w-full bg-surface-2 border border-border rounded-lg p-4 flex-shrink-0 overflow-y-auto shadow-lg lg:w-80"
+          style={{ maxHeight: 'calc(100vh - 220px)' }}
         >
           {renderSidebarContent()}
           {modeHelpMessage && (

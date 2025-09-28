@@ -1,3 +1,4 @@
+import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
@@ -266,7 +267,7 @@ export class AuthController {
         )
         if (preferencesResult.rows[0]) {
           preferences = {
-            theme: preferencesResult.rows[0].theme || 'default',
+            theme: normalizeThemeId(preferencesResult.rows[0].theme ?? DEFAULT_THEME_ID),
           }
         }
       } catch (preferencesError) {
@@ -399,7 +400,7 @@ export class AuthController {
         )
         if (preferencesResult.rows[0]) {
           preferences = {
-            theme: preferencesResult.rows[0].theme || 'default',
+            theme: normalizeThemeId(preferencesResult.rows[0].theme ?? DEFAULT_THEME_ID),
             soundEnabled: preferencesResult.rows[0].sound_enabled,
             musicEnabled: preferencesResult.rows[0].music_enabled,
             notificationEnabled: preferencesResult.rows[0].notification_enabled,
@@ -748,10 +749,10 @@ export class AuthController {
           dm_notifications_browser,
           dm_notifications_email
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (user_id) 
-        DO UPDATE SET 
-          theme = COALESCE(EXCLUDED.theme, user_preferences.theme),
+        VALUES ($1, COALESCE($2, $9), $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+          theme = CASE WHEN $2 IS NULL THEN user_preferences.theme ELSE EXCLUDED.theme END,
           notification_enabled = COALESCE(EXCLUDED.notification_enabled, user_preferences.notification_enabled),
           show_online_status = COALESCE(EXCLUDED.show_online_status, user_preferences.show_online_status),
           direct_messages = COALESCE(EXCLUDED.direct_messages, user_preferences.direct_messages),
@@ -770,22 +771,36 @@ export class AuthController {
       const dmEmailPref =
         typeof dmNotificationPrefs.email === 'boolean' ? dmNotificationPrefs.email : false
 
+      const hasThemeUpdate = typeof settings.theme === 'string'
+      const normalizedTheme = hasThemeUpdate ? normalizeThemeId(settings.theme) : null
+
       const result = await query(updateQuery, [
         userId,
-        settings.theme || 'dark', // Default theme
+        normalizedTheme,
         settings.notifications?.enabled !== undefined ? settings.notifications.enabled : true,
         settings.showOnlineStatus !== undefined ? settings.showOnlineStatus : true,
         settings.directMessages || 'friends',
         settings.preferredColor || '#DC2626',
         dmBrowserPref,
         dmEmailPref,
+        DEFAULT_THEME_ID,
       ])
 
       logger.info('User settings updated:', { userId, settings: Object.keys(settings) })
 
+      const persistedSettings = (result.rows[0] ?? {}) as Record<string, unknown> & {
+        theme?: string
+      }
+
+      if (persistedSettings && typeof persistedSettings.theme === 'string') {
+        persistedSettings.theme = normalizeThemeId(persistedSettings.theme)
+      } else {
+        persistedSettings.theme = DEFAULT_THEME_ID
+      }
+
       return res.json({
         message: 'Settings updated successfully',
-        settings: result.rows[0],
+        settings: persistedSettings,
       })
     } catch (error) {
       logger.error('Update settings error:', toKnownError(error))

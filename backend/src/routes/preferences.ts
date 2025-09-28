@@ -76,13 +76,13 @@ export function createPreferencesRouter(pool: Pool): Router {
         return res.status(400).json({ error: 'Theme is required' })
       }
 
-      const success = await preferencesService.updateTheme(userId, theme)
+      const updatedTheme = await preferencesService.updateTheme(userId, theme)
 
-      if (!success) {
+      if (!updatedTheme) {
         return res.status(500).json({ error: 'Failed to update theme' })
       }
 
-      return res.json({ success: true, theme })
+      return res.json({ success: true, theme: updatedTheme })
     } catch (error) {
       handleRouteError(error, req, 'Failed to update theme')
       return res.status(500).json({ error: 'Failed to update theme' })

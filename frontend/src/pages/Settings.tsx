@@ -1,3 +1,4 @@
+import { normalizeThemeId, type ThemeId } from '@shared/types/themes'
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { extractFirstHexColor, isGradientValue, pickTextOnColor } from '@/utils/color'
@@ -29,7 +30,6 @@ import authService from '../services/authService'
 import preferencesService from '../services/preferencesService'
 import pushNotificationService from '../services/pushNotificationService'
 import {
-  type ColorTheme,
   clearCache,
   type DMPermission,
   type NotificationPrefs,
@@ -449,7 +449,7 @@ export default function Settings() {
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
 
   // Get current color theme from centralized config
-  const [currentColorTheme, setCurrentColorTheme] = useState<string>(() => getStoredTheme())
+  const [currentColorTheme, setCurrentColorTheme] = useState<ThemeId>(() => getStoredTheme())
   const [backgroundMotionEnabled, setBackgroundMotionEnabled] = useState<boolean>(() =>
     getBackgroundMotionPreference(),
   )
@@ -608,9 +608,10 @@ export default function Settings() {
           return
         }
 
-        const success = await preferencesService.updateTheme(value)
-        if (success) {
-          logger.info('Theme persisted to database', value)
+        const normalizedTheme = normalizeThemeId(value)
+        const persistedTheme = await preferencesService.updateTheme(normalizedTheme)
+        if (persistedTheme) {
+          logger.info('Theme persisted to database', persistedTheme)
         }
         return
       }
@@ -1419,12 +1420,12 @@ export default function Settings() {
                 return
               }
 
-              const theme = value as ColorTheme
-              setCurrentColorTheme(theme)
-              applyTheme(theme)
-              storeTheme(theme)
-              dispatch(setColorTheme(theme))
-              void persistSetting('theme', theme)
+              const normalizedTheme = normalizeThemeId(value)
+              setCurrentColorTheme(normalizedTheme)
+              applyTheme(normalizedTheme)
+              storeTheme(normalizedTheme)
+              dispatch(setColorTheme(normalizedTheme))
+              void persistSetting('theme', normalizedTheme)
             },
           },
           {
