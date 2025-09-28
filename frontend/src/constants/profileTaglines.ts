@@ -56,4 +56,3 @@ export const PROFILE_TAGLINES: string[] = [
   'Archduke of Overconfidence',
   'The Eternal Runner-Up',
 ]
-
