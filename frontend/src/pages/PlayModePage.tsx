@@ -245,6 +245,7 @@ const PlayModePage: React.FC<PlayModePageProps> = ({ mode }) => {
                   <div className="flex items-center gap-3">
                     <h3 className="text-2xl font-semibold text-white">
                       {room.name || 'Untitled Game'}
+                      {typeof room.roomCode === 'number' ? ` — Room ${room.roomCode}` : ''}
                     </h3>
                     {room.mapName && (
                       <span className="text-xs uppercase tracking-wide text-muted bg-white/10 px-2 py-1 rounded">

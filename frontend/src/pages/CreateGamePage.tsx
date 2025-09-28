@@ -654,7 +654,11 @@ const CreateGamePage: React.FC = () => {
           setUseAutoName(true)
           setError(null)
           // Show success message
-          setError(`✅ Game "${response.room.name}" created successfully! Create another?`)
+          setError(
+            `✅ Game "${response.room.name}${
+              typeof response.room.roomCode === 'number' ? ` — Room ${response.room.roomCode}` : ''
+            }" created successfully! Create another?`,
+          )
         } else {
           navigate(`/room/${response.room.roomCode ?? response.room.id}`)
         }

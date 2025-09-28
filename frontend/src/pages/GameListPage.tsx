@@ -189,7 +189,10 @@ const GameListPage: React.FC = () => {
                   <div key={game.id} className="card">
                     <div className="card-header">
                       <div className="flex-1">
-                        <h3 className="card-title">{game.name}</h3>
+                        <h3 className="card-title">
+                          {game.name}
+                          {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
+                        </h3>
                         <div className="flex items-center space-x-4 text-sm text-muted">
                           <span>
                             {game.currentPlayers}/{game.maxPlayers} players
@@ -258,7 +261,10 @@ const GameListPage: React.FC = () => {
                   <div key={game.id} className="card opacity-75">
                     <div className="card-header">
                       <div className="flex-1">
-                        <h3 className="card-title">{game.name}</h3>
+                        <h3 className="card-title">
+                          {game.name}
+                          {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
+                        </h3>
                         <div className="flex items-center space-x-4 text-sm text-muted">
                           <span>
                             {game.currentPlayers}/{game.maxPlayers} players

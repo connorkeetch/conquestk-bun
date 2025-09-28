@@ -111,7 +111,9 @@ const GamePage: React.FC = () => {
     void dispatch(fetchGameState({ roomId: gameId, allowSpectate: isSpectator }))
   }, [currentGame, dispatch, gameId, isSpectator])
 
-  const gameName = currentRoom?.name || 'Conquest Match'
+  const gameName = currentRoom?.name
+    ? `${currentRoom.name}${typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}`
+    : 'Conquest Match'
   const formatRoomStatus = (status?: string) => {
     if (!status) {
       return 'Unknown status'
@@ -172,7 +174,7 @@ const GamePage: React.FC = () => {
   }
   const getNextPayout = (config: TreasureConfig | undefined, state: TreasureState | undefined) => {
     const idx = state?.nextPayoutIndex ?? 0
-    const mode = config?.payoutMode ?? 'triangular'
+    const mode = config?.payoutMode ?? 'classic'
     if (!config || config.enabled === false) return 0
     switch (mode) {
       case 'classic': {
@@ -403,7 +405,7 @@ const GamePage: React.FC = () => {
           <div className="text-4xl mb-3">⚠️</div>
           <h2 className="text-2xl font-bold mb-2">Unable to load game</h2>
           <p className="text-muted mb-6">{pageError}</p>
-          <Link to="/games/active" className="btn-primary px-4 py-2 inline-flex justify-center">
+          <Link to="/lobby/my-games" className="btn-primary px-4 py-2 inline-flex justify-center">
             Return to My Games
           </Link>
         </div>
@@ -441,7 +443,7 @@ const GamePage: React.FC = () => {
         <div className="container mx-auto px-4 h-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             {!isFullScreen && (
-              <Link to="/games/active" className="btn-secondary px-3 py-1 text-sm">
+              <Link to="/lobby/my-games" className="btn-secondary px-3 py-1 text-sm">
                 ← My Games
               </Link>
             )}

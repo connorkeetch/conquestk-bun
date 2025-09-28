@@ -123,7 +123,12 @@ const ActiveGamesDropdown: React.FC = () => {
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
-                              <p className="text-white font-medium">{game.name}</p>
+                              <p className="text-white font-medium">
+                                {game.name}
+                                {typeof game.roomCode === 'number'
+                                  ? ` — Room ${game.roomCode}`
+                                  : ''}
+                              </p>
                               <div className="flex items-center gap-3 text-sm text-muted mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="w-3 h-3" />
@@ -161,7 +166,12 @@ const ActiveGamesDropdown: React.FC = () => {
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="text-white font-medium">{game.name}</p>
+                              <p className="text-white font-medium">
+                                {game.name}
+                                {typeof game.roomCode === 'number'
+                                  ? ` — Room ${game.roomCode}`
+                                  : ''}
+                              </p>
                               <p className="text-sm text-muted">
                                 {game.playerCount}/{game.maxPlayers} players
                               </p>
@@ -184,7 +194,10 @@ const ActiveGamesDropdown: React.FC = () => {
                     <div className="space-y-2">
                       {finishedGames.map((game) => (
                         <div key={game.id} className="p-3 bg-surface-2 rounded-lg opacity-75">
-                          <p className="text-white font-medium">{game.name}</p>
+                          <p className="text-white font-medium">
+                            {game.name}
+                            {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
+                          </p>
                           <p className="text-sm text-muted">Winner: {game.winner || 'Unknown'}</p>
                         </div>
                       ))}
@@ -195,7 +208,7 @@ const ActiveGamesDropdown: React.FC = () => {
                 {/* Footer */}
                 <div className="p-4 bg-surface-1">
                   <Link
-                    to="/games"
+                    to="/lobby/my-games"
                     className="w-full px-4 py-2 bg-surface-2 text-white rounded-lg hover:bg-gray-600 transition-colors text-center block"
                     onClick={() => setIsOpen(false)}
                   >

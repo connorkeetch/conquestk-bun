@@ -249,7 +249,12 @@ export default function GameRoom() {
       if (!url) return
       if (navigator?.share) {
         try {
-          await navigator.share({ title: currentRoom?.name ?? 'ConquestK Lobby', url })
+          const shareTitle = currentRoom
+            ? `${currentRoom.name}${
+                typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''
+              }`
+            : 'ConquestK Lobby'
+          await navigator.share({ title: shareTitle, url })
           return
         } catch {
           // fall back to clipboard
@@ -262,7 +267,7 @@ export default function GameRoom() {
     } catch (error) {
       logger.warn('Failed to copy invite link', error)
     }
-  }, [currentRoom?.name])
+  }, [currentRoom?.name, currentRoom?.roomCode, currentRoom])
 
   // Screen reader announcements for players joining/leaving
   useEffect(() => {
@@ -829,7 +834,10 @@ export default function GameRoom() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-12 pt-8 lg:px-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-[color:var(--heading)]">{currentRoom.name}</h1>
+          <h1 className="text-4xl font-bold text-[color:var(--heading)]">
+            {currentRoom.name}
+            {typeof currentRoom.roomCode === 'number' ? ` — Room ${currentRoom.roomCode}` : ''}
+          </h1>
           <p className="text-sm text-muted">
             Hosted by{' '}
             <span className="text-[color:var(--heading)]">{hostDisplay(currentRoom)}</span>

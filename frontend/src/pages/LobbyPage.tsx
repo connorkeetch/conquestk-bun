@@ -1,7 +1,7 @@
 import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
@@ -197,7 +197,7 @@ const formatTreasureMode = (
   if (!treasureConfig) return undefined
   const enabled = treasureConfig.enabled !== false
   if (!enabled) return 'Treasures: Off'
-  const mode = treasureConfig.payoutMode || 'triangular'
+  const mode = treasureConfig.payoutMode || 'classic'
   if (mode === 'fixed') {
     return `Treasures: Fixed (${Math.max(1, Math.min(50, treasureConfig.fixedValue ?? 8))})`
   }
@@ -225,6 +225,7 @@ const LobbyPage: React.FC = () => {
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
   const [resendMessage, setResendMessage] = useState('')
   const [filters, setFilters] = useState<LobbyFilters>({ ...DEFAULT_LOBBY_FILTERS })
+  const { section } = useParams<{ section?: string }>()
 
   const mapFieldId = useId()
   const modeFieldId = useId()
@@ -399,6 +400,16 @@ const LobbyPage: React.FC = () => {
       loadMyGames()
     }
   }, [activeTab, loadPublicGames, loadMyGames])
+
+  // Sync tab with URL param
+  useEffect(() => {
+    const normalized = (section || '').toLowerCase()
+    if (normalized === 'browse' || normalized === 'my-games' || normalized === 'private') {
+      setActiveTab(normalized as 'browse' | 'my-games' | 'private')
+    } else {
+      setActiveTab('browse')
+    }
+  }, [section])
 
   useEffect(() => {
     // Check email verification status
@@ -769,7 +780,7 @@ const LobbyPage: React.FC = () => {
         <button
           type="button"
           className={`tab ${activeTab === 'browse' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('browse')}
+          onClick={() => navigate('/lobby/browse')}
         >
           🌍 Browse Games
         </button>
@@ -777,7 +788,7 @@ const LobbyPage: React.FC = () => {
           <button
             type="button"
             className={`tab ${activeTab === 'my-games' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('my-games')}
+            onClick={() => navigate('/lobby/my-games')}
           >
             🎮 My Games
           </button>
@@ -785,7 +796,7 @@ const LobbyPage: React.FC = () => {
         <button
           type="button"
           className={`tab ${activeTab === 'private' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('private')}
+          onClick={() => navigate('/lobby/private')}
         >
           🔒 Private Game
         </button>
@@ -959,6 +970,7 @@ const LobbyPage: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <h3 className="text-lg font-semibold text-[color:var(--heading)] truncate">
                               {game.name}
+                              {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
                             </h3>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted mt-1">
                               <span className={statusClass}>{statusLabel}</span>
@@ -1114,6 +1126,7 @@ const LobbyPage: React.FC = () => {
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-[color:var(--heading)]">
                             {game.name}
+                            {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-muted">
                             <span>
