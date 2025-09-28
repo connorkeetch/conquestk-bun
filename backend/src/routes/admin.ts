@@ -28,6 +28,7 @@ type AdminGameRow = {
   host_username: string | null
   map_name: string | null
   player_count: string | number | null
+  room_code?: number | string | null
 }
 
 type AdminGamePlayerRow = {
@@ -546,6 +547,7 @@ router.get(
           gr.started_at,
           gr.ended_at,
           gr.winner_id,
+          gr.room_code,
           u.username as host_username,
           m.name as map_name,
           COUNT(rp.user_id) as player_count
@@ -663,6 +665,12 @@ router.get(
           createdAt: game.created_at,
           updatedAt: game.updated_at,
           lastActivity: game.updated_at || game.created_at,
+          roomCode:
+            typeof game.room_code === 'number'
+              ? game.room_code
+              : typeof game.room_code === 'string'
+                ? Number.parseInt(game.room_code, 10)
+                : undefined,
           players,
         }
       })

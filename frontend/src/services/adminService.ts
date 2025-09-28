@@ -114,6 +114,7 @@ export interface AdminGame {
   maxPlayers: number
   isPrivate: boolean
   lastActivity: string
+  roomCode?: number
 }
 
 export interface SystemStatus {

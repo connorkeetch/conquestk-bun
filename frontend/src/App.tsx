@@ -22,7 +22,6 @@ const ClanDetailPage = lazyWithRetry(() => import('./pages/ClanDetailPage'))
 
 import ForgotPassword from './pages/ForgotPassword'
 
-// Consolidated into Lobby; kept for potential future split
 const GamePage = lazyWithRetry(() => import('./pages/GamePage'))
 const GameRoom = lazyWithRetry(() => import('./pages/GameRoom'))
 

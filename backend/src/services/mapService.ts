@@ -499,14 +499,37 @@ export class MapService {
   ): Array<{ from: string; to: string }> {
     const pairs: Array<{ from: string; to: string }> = []
     const seen = new Set<string>()
+    const idToName = new Map<string, string>()
+
+    // Normalize references so we persist adjacencies using the DB-stored name
+    for (const t of territories) {
+      const id = (t.id || '').trim()
+      const name = (t.name || '').trim()
+      if (id && name) {
+        idToName.set(id, name)
+        idToName.set(name, name)
+      } else if (name) {
+        idToName.set(name, name)
+      } else if (id) {
+        idToName.set(id, id)
+      }
+    }
+
+    const normalize = (key?: string): string | undefined => {
+      if (!key) return undefined
+      const trimmed = key.trim()
+      return idToName.get(trimmed) || trimmed
+    }
 
     const addPair = (from?: string, to?: string) => {
-      if (!from || !to || from === to) return
-      const key = from < to ? `${from}|${to}` : `${to}|${from}`
+      const nf = normalize(from)
+      const nt = normalize(to)
+      if (!nf || !nt || nf === nt) return
+      const key = nf < nt ? `${nf}|${nt}` : `${nt}|${nf}`
       if (seen.has(key)) return
       seen.add(key)
-      pairs.push({ from, to })
-      pairs.push({ from: to, to: from })
+      pairs.push({ from: nf, to: nt })
+      pairs.push({ from: nt, to: nf })
     }
 
     if (Array.isArray(explicitAdjacencies) && explicitAdjacencies.length > 0) {
@@ -1168,10 +1191,14 @@ export class MapService {
       FROM territory_adjacencies ta
       JOIN map_territories mt1 
         ON mt1.map_id = ta.map_id 
-       AND mt1.name = ta.territory_from
+       AND (
+         mt1.name = ta.territory_from OR (mt1.polygon_data::jsonb ->> 'originalId') = ta.territory_from
+       )
       JOIN map_territories mt2 
         ON mt2.map_id = ta.map_id 
-       AND mt2.name = ta.territory_to
+       AND (
+         mt2.name = ta.territory_to OR (mt2.polygon_data::jsonb ->> 'originalId') = ta.territory_to
+       )
       WHERE ta.map_id = $1
     `,
       [mapId],

@@ -478,6 +478,14 @@ export class MapWorkflowService {
         throw new MapNotFoundError()
       }
 
+      // Guardrail: ensure the map is playable before approving
+      const validation = await mapService.validateMapPlayable(mapId)
+      if (!validation.isValid) {
+        throw new Error(
+          `Map cannot be approved; playability validation failed: ${validation.errors.join('; ')}`,
+        )
+      }
+
       await query(
         `
         UPDATE maps 
