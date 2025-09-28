@@ -387,6 +387,16 @@ export class GameController {
       }
 
       const room = await this.gameRoomService.updateAiOpponents(roomId, hostId, sanitizedRequest)
+      // If lobby is now full, trigger ready-check to auto-start
+      try {
+        const playerCount = room.players?.length ?? 0
+        const required = room.maxPlayers
+        if (room.status === 'lobby' && required > 0 && playerCount >= required) {
+          await this.lifecycleService.setReadyState(roomId, hostId, true)
+        }
+      } catch (_err) {
+        // Non-fatal; continue to broadcast lifecycle
+      }
       await this.lifecycleService.refreshLifecycle(roomId)
 
       return res.json({ room })

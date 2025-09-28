@@ -16,6 +16,7 @@ import {
 import type { ConversationDetail } from '../../types/messages'
 import MessageInput from './MessageInput'
 import MessageList, { type DisplayMessage } from './MessageList'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 
 type ChatContainerProps = {
   conversationType: ChatConversationType
@@ -54,6 +55,7 @@ export default function ChatContainer({
       ? Object.values(state.messages.typing[resolvedConversationId] ?? {})
       : [],
   )
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -251,7 +253,11 @@ export default function ChatContainer({
         {displayMessages.length === 0 && !isLoadingMessages ? (
           <div className="text-center text-muted py-6 text-sm">No messages yet.</div>
         ) : (
-          <MessageList messages={displayMessages} currentUserId={currentUserId} />
+          <MessageList
+            messages={displayMessages}
+            currentUserId={currentUserId}
+            onUserClick={(name) => setProfileUsername(name)}
+          />
         )}
 
         {typingUsers.length > 0 && (
@@ -276,5 +282,16 @@ export default function ChatContainer({
         )}
       </div>
     </div>
+  )
+}
+
+// Modal portal inline to avoid additional providers
+export function ChatContainerWithProfileModal(props: ChatContainerProps) {
+  const [username, setUsername] = useState<string | null>(null)
+  return (
+    <>
+      <ChatContainer {...props} />
+      <PlayerProfileModal open={username !== null} username={username} onClose={() => setUsername(null)} />
+    </>
   )
 }

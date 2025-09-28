@@ -840,6 +840,24 @@ export default function GameRoom() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isHost && currentRoom.status === 'lobby' &&
+            (currentRoom.players?.length || 0) >= currentRoom.maxPlayers && (
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={async () => {
+                  if (!roomId) return
+                  try {
+                    await gameService.setReadyState(roomId, true)
+                  } catch (err) {
+                    logger.warn('Failed to trigger start via ready-state', err)
+                  }
+                }}
+                title="Start game now"
+              >
+                Start Game
+              </button>
+            )}
           {!isMember && (
             <button
               onClick={() => openJoinDialog()}

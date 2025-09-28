@@ -16,6 +16,7 @@ interface MessageListProps {
   messages: DisplayMessage[]
   currentUserId?: string | null
   getDisplayName?: (message: DisplayMessage, isOwn: boolean) => string | undefined
+  onUserClick?: (username: string) => void
 }
 
 const formatTime = (dateString: string) => {
@@ -74,7 +75,7 @@ const parseLinkPreviews = (metadata?: Record<string, unknown> | null): LinkPrevi
     .filter((preview): preview is LinkPreviewData => preview !== null)
 }
 
-export default function MessageList({ messages, currentUserId, getDisplayName }: MessageListProps) {
+export default function MessageList({ messages, currentUserId, getDisplayName, onUserClick }: MessageListProps) {
   const isOwn = useMemo(
     () => new Set(currentUserId && typeof currentUserId === 'string' ? [currentUserId] : []),
     [currentUserId],
@@ -103,9 +104,24 @@ export default function MessageList({ messages, currentUserId, getDisplayName }:
               } ${isDeleted ? 'opacity-50 italic' : ''}`}
             >
               <div className="flex items-baseline justify-between gap-3 mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
-                  {displayName}
-                </span>
+                {(() => {
+                  const clickable =
+                    typeof onUserClick === 'function' && !isOwnMessage && displayName && displayName !== 'System'
+                  return clickable ? (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold uppercase tracking-wide opacity-80 hover:underline"
+                      onClick={() => onUserClick(displayName)}
+                      title={`View ${displayName}'s profile`}
+                    >
+                      {displayName}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                      {displayName}
+                    </span>
+                  )
+                })()}
                 <span
                   className={`text-[10px] uppercase tracking-wide ${
                     isOwnMessage
