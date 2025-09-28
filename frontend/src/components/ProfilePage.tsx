@@ -35,7 +35,7 @@ import {
 import type { RootState } from '../store'
 import AchievementsPanel from './profile/AchievementsPanel'
 import UserStats from './profile/UserStats'
-import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
+import { CONQUEST_RANKS, getConquestRank, getRankTierInfo } from './RankInsignia'
 
 type TabType = 'overview' | 'stats' | 'friends' | 'matches' | 'achievements'
 
@@ -205,6 +205,16 @@ const buildRankVisuals = (profile: ProfileSummary) => {
   )
   const ratingToNextRank = Math.max(0, (nextRankDetails?.minRating ?? profile.elo) - profile.elo)
 
+  const {
+    index: rankTierIndex,
+    label: rankTierLabel,
+    total: totalRankTiers,
+  } = getRankTierInfo({
+    minRating: rankDetails.minRating,
+    rating: profile.elo,
+  })
+  const rankSegmentsFilled = Math.min(rankTierIndex + 1, totalRankTiers)
+
   return {
     rankDetails,
     nextRank: nextRankDetails ?? null,
@@ -221,6 +231,9 @@ const buildRankVisuals = (profile: ProfileSummary) => {
     ratingToNextRank,
     rankPrimaryHex,
     rankTextColor,
+    rankTierLabel,
+    rankSegmentsFilled,
+    totalRankTiers,
   }
 }
 
@@ -722,7 +735,16 @@ const ProfilePage: React.FC = () => {
     rankProgress,
     ratingToNextRank,
     rankPrimaryHex,
+    rankTierLabel,
+    rankSegmentsFilled,
+    totalRankTiers,
   } = rankVisuals
+
+  const rankRangeText = useMemo(() => {
+    const min = rankDetails.minRating
+    const max = nextRank ? nextRank.minRating - 1 : undefined
+    return max ? `${min}–${max} CP` : `${min}+ CP`
+  }, [nextRank, rankDetails.minRating])
 
   // Removed header rank badge; rank appears only on the dedicated card
 
@@ -808,27 +830,37 @@ const ProfilePage: React.FC = () => {
                     : 'Commander of the Conquest Realms'}
                 </p>
                 {/* Rank summary under username */}
-                <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-3 text-sm">
+                <div className="mt-2 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-xl" title="Rank insignia">
                       {rankDetails.insignia}
                     </span>
                     <span className="font-semibold">{rankDetails.name}</span>
                   </div>
-                  <span className="hidden sm:inline text-white/30">•</span>
-                  <div className="text-muted">
-                    {(() => {
-                      const min = rankDetails.minRating
-                      const max = nextRank ? nextRank.minRating - 1 : undefined
-                      return max ? `Rank band: ${min}–${max} CP` : `Rank band: ${min}+ CP`
-                    })()}
-                  </div>
-                  <span className="hidden sm:inline text-white/30">•</span>
-                  <div className="text-muted font-mono">
-                    {(() => {
-                      const filled = Math.max(0, Math.min(10, Math.round(rankProgress / 10)))
-                      return `${'■'.repeat(filled)}${'□'.repeat(10 - filled)}`
-                    })()}
+                  <div className="flex flex-1 flex-col gap-1 text-muted">
+                    <span className="font-semibold text-white/80">{rankTierLabel}</span>
+                    <div
+                      className="flex items-center gap-1"
+                      role="img"
+                      aria-label={`${rankSegmentsFilled} of ${totalRankTiers} rank tiers completed`}
+                    >
+                      {Array.from({ length: totalRankTiers }).map((_, index) => (
+                        <span
+                          key={`rank-tier-progress-${index}`}
+                          className="h-1.5 flex-1 min-w-[12px] rounded-full transition-all duration-300"
+                          style={
+                            index < rankSegmentsFilled
+                              ? {
+                                  background: rankProgressFill,
+                                  boxShadow: `0 0 6px ${hexToRgba(rankAccentColor, 0.4)}`,
+                                }
+                              : { backgroundColor: 'rgba(255,255,255,0.12)' }
+                          }
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-white/40">{rankRangeText}</span>
                   </div>
                 </div>
               </div>

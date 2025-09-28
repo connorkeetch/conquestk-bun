@@ -8,6 +8,19 @@ export interface ConquestRank {
   insignia: string
 }
 
+export const RANK_ROMAN_NUMERALS = [
+  'I',
+  'II',
+  'III',
+  'IV',
+  'V',
+  'VI',
+  'VII',
+  'VIII',
+  'IX',
+  'X',
+] as const
+
 // 🎯 NOW USING UNIFIED COLOR SYSTEM - All colors reference RANK_COLORS from colors.ts
 export const CONQUEST_RANKS: ConquestRank[] = [
   { name: 'Chieftain', minRating: 0, color: RANK_COLORS.CHIEFTAIN.base, insignia: '🛡️' },
@@ -29,6 +42,42 @@ export function getConquestRank(skillRating: number): ConquestRank {
     }
   }
   return CONQUEST_RANKS[0] // Default to Chieftain
+}
+
+interface RankTierInfoOptions {
+  minRating?: number
+  rating?: number
+}
+
+export function getRankTierInfo({ minRating, rating }: RankTierInfoOptions) {
+  const totalTiers = CONQUEST_RANKS.length
+  let tierIndex = -1
+
+  if (typeof minRating === 'number') {
+    tierIndex = CONQUEST_RANKS.findIndex((rank) => rank.minRating === minRating)
+  }
+
+  if (tierIndex < 0 && typeof rating === 'number') {
+    for (let i = totalTiers - 1; i >= 0; i--) {
+      if (rating >= CONQUEST_RANKS[i].minRating) {
+        tierIndex = i
+        break
+      }
+    }
+  }
+
+  if (tierIndex < 0) {
+    tierIndex = 0
+  }
+
+  const roman = RANK_ROMAN_NUMERALS[tierIndex] ?? String(tierIndex + 1)
+
+  return {
+    index: tierIndex,
+    roman,
+    label: `Rank ${roman}`,
+    total: totalTiers,
+  }
 }
 
 interface RankInsigniaProps {

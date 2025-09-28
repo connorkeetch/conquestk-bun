@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { type ProfileSummary, profileService } from '@/services/profileService'
-import RankInsignia, { getConquestRank } from '../RankInsignia'
+import RankInsignia, { getConquestRank, getRankTierInfo } from '../RankInsignia'
 
 interface PlayerProfileModalProps {
   open: boolean
@@ -79,6 +79,18 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
   if (!open) return null
 
   const rank = profile ? getConquestRank(profile.elo) : null
+  const rankTierInfo = profile
+    ? getRankTierInfo({ minRating: profile.rank?.minRating, rating: profile.elo })
+    : null
+  const rankSegmentsFilled = rankTierInfo ? Math.min(rankTierInfo.index + 1, rankTierInfo.total) : 0
+  const rankBarColor = profile?.rank?.color ?? rank?.color ?? 'var(--color-primary)'
+  const rankRangeText = profile
+    ? (() => {
+        const min = profile.rank?.minRating ?? rank?.minRating ?? 0
+        const max = profile.rank?.nextRank ? profile.rank.nextRank.minRating - 1 : undefined
+        return max ? `${min}–${max} CP` : `${min}+ CP`
+      })()
+    : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -128,14 +140,31 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                 </div>
               </div>
 
-              {rank && (
-                <div className="text-xs text-muted">
-                  {(() => {
-                    const next = profile.rank?.nextRank
-                    const min = profile.rank?.minRating ?? rank.minRating
-                    const max = next ? next.minRating - 1 : undefined
-                    return max ? `${min}–${max} CP` : `${min}+ CP`
-                  })()}
+              {rankTierInfo && (
+                <div className="space-y-1 text-xs text-muted">
+                  <span className="font-semibold text-white/80">{rankTierInfo.label}</span>
+                  <div
+                    className="flex items-center gap-1"
+                    role="img"
+                    aria-label={`${rankSegmentsFilled} of ${rankTierInfo.total} rank tiers completed`}
+                  >
+                    {Array.from({ length: rankTierInfo.total }).map((_, index) => (
+                      <span
+                        key={`modal-rank-tier-${index}`}
+                        className="h-1.5 flex-1 min-w-[10px] rounded-full"
+                        style={
+                          index < rankSegmentsFilled
+                            ? {
+                                background: rankBarColor,
+                                boxShadow: '0 0 4px rgba(255,255,255,0.35)',
+                              }
+                            : { backgroundColor: 'rgba(255,255,255,0.12)' }
+                        }
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                  {rankRangeText && <span className="text-[11px] text-white/40">{rankRangeText}</span>}
                 </div>
               )}
 
