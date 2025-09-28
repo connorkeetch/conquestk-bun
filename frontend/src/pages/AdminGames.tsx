@@ -306,7 +306,6 @@ export default function AdminGames() {
                         <div>
                           <div className="font-medium text-lg">
                             {game.name || `Game ${game.id.slice(0, 8)}`}
-                            {typeof game.roomCode === 'number' ? ` — Room ${game.roomCode}` : ''}
                           </div>
                           <div className="text-sm text-muted">
                             Map: {game.mapName} • Created by {game.createdByUsername}
@@ -463,9 +462,6 @@ export default function AdminGames() {
             <div className="mb-4 p-4 bg-surface-2 rounded">
               <div className="font-medium">
                 {actionModal.game.name || `Game ${actionModal.game.id.slice(0, 8)}`}
-                {typeof actionModal.game.roomCode === 'number'
-                  ? ` — Room ${actionModal.game.roomCode}`
-                  : ''}
               </div>
               <div className="text-sm text-muted">
                 {actionModal.game.mapName} • {actionModal.game.players.length} players

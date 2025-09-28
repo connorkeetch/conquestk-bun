@@ -5,7 +5,12 @@ import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
 import { Skeleton } from '../components/ui/Skeleton'
-import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
+import {
+  getColorDisplayName,
+  getColorValue,
+  getRankColor,
+  PLAYER_COLORS,
+} from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
@@ -14,6 +19,7 @@ import { socketService } from '../services/socketService'
 import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
+import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { hostDisplay, seatUsage } from '../utils/lobby'
 
@@ -1107,65 +1113,76 @@ export default function GameRoom() {
             <h3 className="text-lg font-semibold text-[color:var(--heading)]">
               Players ({currentRoom.players?.length || 0}/{currentRoom.maxPlayers})
             </h3>
-            <ul className="list">
+            <ul className="list border border-border rounded-md overflow-hidden">
               {currentRoom.players?.map((player) => {
                 const isCurrentUser = player.userId === user?.id
-                const colorValue = (player as { selected_color?: string | null }).selected_color
-                  ? getColorValue(
-                      (player as { selected_color?: string | null }).selected_color as string,
-                    )
-                  : player.preferred_color
-                    ? getColorValue(player.preferred_color)
-                    : '#9CA3AF'
+                const rawColor =
+                  ((player as { selected_color?: string | null }).selected_color as
+                    | string
+                    | null) ||
+                  (player.preferred_color as string | null) ||
+                  null
+                const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
+                const colorHex = extractFirstHexColor(colorValue) || '#9CA3AF'
+                const usernameColor = ensureReadableOnDark(colorHex)
+                const rank =
+                  typeof player.skill_rating === 'number'
+                    ? getRankColor(player.skill_rating)
+                    : undefined
+                const rankRange = rank
+                  ? `${rank.minElo}–${Number.isFinite(rank.maxElo) ? rank.maxElo : `${rank.minElo}+`} CP`
+                  : 'Unranked'
                 return (
-                  <li key={player.id} className="list-item flex items-center gap-3 last:border-b-0">
-                    <span
-                      className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: colorValue }}
-                      title={
-                        (player as { selected_color?: string | null }).selected_color
-                          ? `Color: ${(player as { selected_color?: string | null }).selected_color}`
-                          : player.preferred_color
-                            ? `Color: ${player.preferred_color}`
-                            : undefined
-                      }
-                    ></span>
-                    <div className="flex items-center gap-2 min-w-0">
-                      {player.isAi || !player.userId ? (
-                        <span
-                          className={`truncate text-sm ${
-                            isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
-                          }`}
-                        >
-                          {player.username}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`truncate text-sm underline-offset-2 hover:underline ${
-                            isCurrentUser ? 'font-semibold text-[color:var(--heading)]' : ''
-                          }`}
-                          title={`View ${player.username}'s profile`}
-                          onClick={() => setProfileUsername(player.username)}
-                        >
-                          {player.username}
-                        </button>
-                      )}
-                      {typeof player.skill_rating === 'number' && (
-                        <span className="text-xs text-muted">· {player.skill_rating} CP</span>
-                      )}
-                    </div>
-                    <div className="ml-auto flex items-center gap-2">
-                      {player.userId === currentRoom.hostId && (
-                        <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
-                          Host
-                        </span>
-                      )}
-                      {player.isAi && player.aiDifficulty && (
-                        <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
-                          AI - {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
-                        </span>
-                      )}
+                  <li key={player.id} className="list-item last:border-b-0">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-3.5 w-3.5 shrink-0 rounded-full border border-border"
+                        style={{ background: colorValue }}
+                        title={rawColor ? `Color: ${rawColor}` : undefined}
+                        aria-hidden="true"
+                      />
+                      <div className="flex-1 min-w-0">
+                        {/* Row 1: Name + badges */}
+                        <div className="flex items-center gap-2">
+                          {player.isAi || !player.userId ? (
+                            <span
+                              className={`truncate text-sm ${isCurrentUser ? 'font-semibold' : ''}`}
+                              style={{ color: usernameColor }}
+                            >
+                              {player.username}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`truncate text-sm underline-offset-2 hover:underline ${
+                                isCurrentUser ? 'font-semibold' : ''
+                              }`}
+                              style={{ color: usernameColor }}
+                              title={`View ${player.username}'s profile`}
+                              onClick={() => setProfileUsername(player.username)}
+                            >
+                              {player.username}
+                            </button>
+                          )}
+                          {player.userId === currentRoom.hostId && (
+                            <span className="badge border-[color:var(--color-warning)] text-[color:var(--color-warning)]">
+                              👑 Host
+                            </span>
+                          )}
+                          {player.isAi && player.aiDifficulty && (
+                            <span className="badge border-[color:var(--color-accent)] text-[color:var(--color-accent)]">
+                              🤖 {AI_DIFFICULTY_LABELS[player.aiDifficulty]}
+                            </span>
+                          )}
+                        </div>
+                        {/* Row 2: Tier + rating */}
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+                          <span>{rank ? `${rank.name} – ${rankRange}` : 'Unranked'}</span>
+                          {typeof player.skill_rating === 'number' && (
+                            <span className="opacity-80">· {player.skill_rating} CP</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </li>
                 )
