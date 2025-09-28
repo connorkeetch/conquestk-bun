@@ -26,8 +26,8 @@ What to verify locally
 - Chat and log panels still function and scroll as expected.
 
 Follow-ups (tracked as tasks)
-- Responsive board sizing: Replace fixed pixel heights with viewport-aware sizing across breakpoints so ultra-wide monitors use space without forcing scroll.
-- Actionable empty states: Show host-only prompts (Invite players, Configure rules) and spectator hints in the waiting state.
+- DONE – Responsive board sizing: Replaced fixed board heights with viewport-aware sizing using clamp().
+- DONE – Actionable empty states: Added host prompts (Copy Invite Link, Copy Room Code, View Game Configuration) and a spectator hint.
 - Inline status education: Add tooltips or info modals explaining fog-of-war, card trade, and treasure rules.
 - Performance polish: Lazy-hydrate chat and analytics after the critical lobby content paints.
 - Accessibility: Audit focus outlines, ensure dialog focus trapping, and add ARIA live regions for join/leave updates.
@@ -35,4 +35,3 @@ Follow-ups (tracked as tasks)
 Notes
 - The Game Options panel is now accessible both in the chat tabs and in the sidebar; this duplicates visibility (intentional) without duplicating logic.
 - This document mirrors outcomes already reflected in code; no service changes required.
-

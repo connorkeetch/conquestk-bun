@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { mapService } from '@/services/mapService'
+import { useMemo } from 'react'
 import { useAppSelector } from '../../hooks/redux'
 
 type Props = {
@@ -9,28 +8,6 @@ type Props = {
 export default function GameOptionsPanel({ className = '' }: Props) {
   const room = useAppSelector((state) => state.room.currentRoom)
   const currentGame = useAppSelector((state) => state.game.currentGame)
-  const [resolvedMapName, setResolvedMapName] = useState<string | null>(null)
-
-  // Resolve map name if backend response lacks it
-  useEffect(() => {
-    let isActive = true
-    setResolvedMapName(null)
-    if (!room?.mapName && room?.mapId) {
-      ;(async () => {
-        try {
-          const data = await mapService.getMap(room.mapId as string)
-          if (!isActive) return
-          setResolvedMapName(data.map.name || null)
-        } catch {
-          if (!isActive) return
-          setResolvedMapName(null)
-        }
-      })()
-    }
-    return () => {
-      isActive = false
-    }
-  }, [room?.mapId, room?.mapName])
 
   const lines = useMemo(() => {
     if (!room) return [] as Array<{ k: string; v: string }>
@@ -102,7 +79,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
 
     const items: Array<{ k: string; v: string }> = [
       ...(gameMode ? [{ k: 'Game Mode', v: toTitle(gameMode) }] : []),
-      { k: 'Map', v: room.mapName || resolvedMapName || 'Unknown map' },
+      { k: 'Map', v: room.mapName || 'Unknown map' },
       { k: playersLabel, v: String(room.maxPlayers) },
       { k: 'Teams', v: teamsValue },
       { k: 'Fog of War', v: fogValue },
@@ -115,7 +92,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     ]
 
     return items
-  }, [room, resolvedMapName, currentGame?.gameConfig?.useTerritoryModifiers])
+  }, [room, currentGame?.gameConfig?.useTerritoryModifiers])
 
   if (!room) {
     return (

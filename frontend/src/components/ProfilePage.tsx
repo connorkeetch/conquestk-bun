@@ -783,7 +783,7 @@ const ProfilePage: React.FC = () => {
                   Friends since {new Date(friendSince).toLocaleDateString()}
                 </div>
               )}
-              {!isOwnProfile && mutual?.total && mutual.total > 0 && (
+              {!isOwnProfile && (mutual?.total ?? 0) > 0 && (
                 <div className="mt-2 text-sm text-muted">
                   Mutual friends ({mutual.total}):{' '}
                   {mutual.users.map((u, i) => (
