@@ -1,7 +1,6 @@
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
-import GameOptionsPanel from '../components/chat/GameOptionsPanel'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
 import { Skeleton } from '../components/ui/Skeleton'
@@ -15,7 +14,7 @@ import { clearGame, fetchGameState } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
-import { formatStatus, formatTurnTimer, hostDisplay, seatUsage } from '../utils/lobby'
+import { hostDisplay, seatUsage } from '../utils/lobby'
 
 const AI_DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
   recruit: 'Recruit',
@@ -72,13 +71,7 @@ export default function GameRoom() {
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [liveMessage, setLiveMessage] = useState('')
-  const [roomCodeCopied, setRoomCodeCopied] = useState(false)
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
-
-  const formattedRoomCode = useMemo(() => {
-    const code = currentRoom?.roomCode
-    return typeof code === 'number' && Number.isFinite(code) ? String(code) : null
-  }, [currentRoom?.roomCode])
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -242,28 +235,11 @@ export default function GameRoom() {
     }
   }, [currentRoom?.mapId])
 
-  // Copy helpers for invite link and room code
-  useEffect(() => {
-    if (!roomCodeCopied) return
-    const t = window.setTimeout(() => setRoomCodeCopied(false), 2000)
-    return () => window.clearTimeout(t)
-  }, [roomCodeCopied])
-
   useEffect(() => {
     if (!inviteLinkCopied) return
     const t = window.setTimeout(() => setInviteLinkCopied(false), 2000)
     return () => window.clearTimeout(t)
   }, [inviteLinkCopied])
-
-  const handleCopyRoomCode = useCallback(async () => {
-    if (!formattedRoomCode) return
-    try {
-      await navigator.clipboard.writeText(formattedRoomCode)
-      setRoomCodeCopied(true)
-    } catch (error) {
-      logger.warn('Failed to copy room code', error)
-    }
-  }, [formattedRoomCode])
 
   const handleCopyInviteLink = useCallback(async () => {
     try {
@@ -286,7 +262,7 @@ export default function GameRoom() {
     }
   }, [currentRoom?.name])
 
-  const gameConfigRef = useRef<HTMLDivElement | null>(null)
+  
 
   // Screen reader announcements for players joining/leaving
   useEffect(() => {
@@ -884,6 +860,15 @@ export default function GameRoom() {
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
           </button>
+          <button
+            onClick={() => void handleCopyInviteLink()}
+            type="button"
+            className="btn btn-secondary"
+            title="Copy invite link"
+            aria-live="polite"
+          >
+            {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
+          </button>
           <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
             Leave Room
           </button>
@@ -1091,71 +1076,6 @@ export default function GameRoom() {
         </div>
 
         <div className="space-y-6 lg:col-span-1">
-          <div className="panel space-y-4">
-            <div className="text-sm font-semibold text-[color:var(--heading)]">Lobby Overview</div>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="panel-outline p-3">
-                <div className="text-xs uppercase tracking-wide text-muted">Status</div>
-                <div className="text-sm text-white">{formatStatus(currentRoom.status)}</div>
-              </div>
-              <div className="panel-outline p-3">
-                <div className="text-xs uppercase tracking-wide text-muted">Turn Timer</div>
-                <div className="text-sm text-white">
-                  {formatTurnTimer(currentRoom.turnTimerSeconds)}
-                </div>
-              </div>
-              {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
-                <div className="panel-outline p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted">Lobby Expires</div>
-                  <div
-                    className="text-sm text-white"
-                    title={expiresAtDate ? expiresAtDate.toLocaleString() : undefined}
-                  >
-                    {formatTimeUntil(expiresAtDate)}
-                  </div>
-                </div>
-              )}
-              <div className="panel-outline p-3">
-                <div className="text-xs uppercase tracking-wide text-muted">Teams</div>
-                <div className="text-sm text-white">
-                  {currentRoom.allowTeamPlay && currentRoom.teamMode !== 'none'
-                    ? currentRoom.teamMode === 'teams'
-                      ? `${currentRoom.numberOfTeams ?? 0} teams`
-                      : 'Auto-balance'
-                    : 'Off'}
-                </div>
-              </div>
-              <div className="panel-outline p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs uppercase tracking-wide text-muted">Invite</div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-xs"
-                      onClick={() => void handleCopyInviteLink()}
-                      aria-live="polite"
-                    >
-                      {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
-                    </button>
-                    {formattedRoomCode && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-xs"
-                        onClick={() => void handleCopyRoomCode()}
-                        aria-live="polite"
-                      >
-                        {roomCodeCopied ? 'Code copied ✓' : 'Copy Code'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div ref={gameConfigRef} className="panel p-0 overflow-hidden">
-            <GameOptionsPanel className="h-full" />
-          </div>
 
           <div className="panel space-y-5">
             <h3 className="text-lg font-semibold text-[color:var(--heading)]">

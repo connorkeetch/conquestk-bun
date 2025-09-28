@@ -693,6 +693,8 @@ export class GameRoomService {
     const roomQuery = `
       SELECT gr.*,
              m.name as map_name,
+             hu.username as host_username,
+             hu.skill_rating as host_skill_rating,
              json_agg(
                json_build_object(
                   'id', rp.id,
@@ -725,8 +727,9 @@ export class GameRoomService {
       LEFT JOIN users u ON rp.user_id = u.id
       LEFT JOIN user_preferences up ON u.id = up.user_id
       LEFT JOIN maps m ON gr.map_id = m.id
+      LEFT JOIN users hu ON gr.host_id = hu.id
       WHERE gr.id = $1
-      GROUP BY gr.id, m.name
+      GROUP BY gr.id, m.name, hu.username, hu.skill_rating
     `
 
     const result = await query<GameRoomWithPlayersRow>(roomQuery, [roomId])
