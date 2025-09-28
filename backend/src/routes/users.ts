@@ -417,20 +417,15 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Validate and accept tagline from the preselected list
     if (typeof tagline === 'string') {
-      // Validate against shared list
-      try {
-        const { PROFILE_TAGLINES } = require('@risk-game/shared/types/profileTaglines') as {
-          PROFILE_TAGLINES: string[]
-        }
-        const trimmed = tagline.trim()
-        if (!PROFILE_TAGLINES.includes(trimmed)) {
-          return res.status(400).json({ error: 'Invalid tagline selection' })
-        }
-        updates.push(`tagline = $${paramCounter++}`)
-        values.push(trimmed)
-      } catch (_e) {
-        return res.status(500).json({ error: 'Tagline configuration unavailable' })
+      const { isAllowedTagline } = require('../constants/profileTaglines') as {
+        isAllowedTagline: (v: unknown) => v is string
       }
+      const trimmed = tagline.trim()
+      if (!isAllowedTagline(trimmed)) {
+        return res.status(400).json({ error: 'Invalid tagline selection' })
+      }
+      updates.push(`tagline = $${paramCounter++}`)
+      values.push(trimmed)
     }
 
     if (updates.length === 0) {
