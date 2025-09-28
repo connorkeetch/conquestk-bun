@@ -1,5 +1,6 @@
 import { validate as uuidValidate } from 'uuid'
 import { getClient, query } from '../config/database'
+import { mapService } from './mapService'
 import { logger } from '../utils/logger'
 import { featureFlagService } from './featureFlagService'
 
@@ -657,6 +658,14 @@ export class AdminService {
 
         // Update content to be public/approved
         if (content_type === 'map') {
+          // Validate playability before approving a map
+          const validation = await mapService.validateMapPlayable(content_id)
+          if (!validation.isValid) {
+            throw new Error(
+              `Map cannot be approved; playability validation failed: ${validation.errors.join('; ')}`,
+            )
+          }
+
           const mapState = await client.query(
             `SELECT status, is_public, reviewed_at, reviewed_by FROM maps WHERE id = $1`,
             [content_id],

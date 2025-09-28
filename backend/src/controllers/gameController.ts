@@ -271,6 +271,14 @@ export class GameController {
         return res.status(404).json({ message: error.message })
       }
 
+      if (
+        error instanceof Error &&
+        (error.message.includes('Selected map failed validation') ||
+          error.message.includes('playability validation failed'))
+      ) {
+        return res.status(400).json({ code: 'MAP_INVALID', message: error.message })
+      }
+
       return res.status(500).json({ message: 'Internal server error' })
     }
   }

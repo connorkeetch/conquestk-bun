@@ -5,12 +5,7 @@ import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
 import TeamAssignment from '../components/TeamAssignment'
 import { Skeleton } from '../components/ui/Skeleton'
-import {
-  getColorDisplayName,
-  getColorValue,
-  getRankColor,
-  PLAYER_COLORS,
-} from '../constants/colors'
+import { getColorDisplayName, getColorValue, PLAYER_COLORS } from '../constants/colors'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
@@ -59,6 +54,7 @@ export default function GameRoom() {
   const [joinError, setJoinError] = useState<string | null>(null)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [selectedJoinColor, setSelectedJoinColor] = useState<string | null>(null)
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
   // AI opponents generally available in non-ranked lobbies (no flags)
   const [aiDraftCounts, setAiDraftCounts] = useState<Record<AIDifficulty, number>>({
     recruit: 0,
@@ -79,7 +75,6 @@ export default function GameRoom() {
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [liveMessage, setLiveMessage] = useState('')
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
-  const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -193,6 +188,40 @@ export default function GameRoom() {
 
     return undefined
   }, [mapPreview?.height, mapPreview?.width])
+
+  // Tier mapping and roman numerals for rank display
+  const TIER_BOUNDS = useMemo(
+    () => [
+      { name: 'Chieftain', min: 0, max: 599 },
+      { name: 'Warlord', min: 600, max: 799 },
+      { name: 'Raider King', min: 800, max: 999 },
+      { name: 'Sultan', min: 1000, max: 1199 },
+      { name: 'Caesar', min: 1200, max: 1399 },
+      { name: 'Khan', min: 1400, max: 1599 },
+      { name: 'Emperor', min: 1600, max: 1799 },
+      { name: 'The Great King', min: 1800, max: 1999 },
+      { name: 'Overlord', min: 2000, max: 2199 },
+      { name: 'Worldbreaker', min: 2200, max: 9999 },
+    ],
+    [],
+  )
+
+  const ratingToTier = useCallback(
+    (rating: number | null | undefined) => {
+      if (typeof rating !== 'number') return null
+      return (
+        TIER_BOUNDS.find((t) => rating >= t.min && rating <= t.max) ??
+        TIER_BOUNDS.find((t) => t.name === 'Sultan') ??
+        null
+      )
+    },
+    [TIER_BOUNDS],
+  )
+
+  const romanNumeral = useCallback((index1: number) => {
+    const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+    return romans[Math.max(1, Math.min(index1, romans.length)) - 1] ?? String(index1)
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -1125,13 +1154,10 @@ export default function GameRoom() {
                 const colorValue = rawColor ? getColorValue(rawColor) : '#9CA3AF'
                 const colorHex = extractFirstHexColor(colorValue) || '#9CA3AF'
                 const usernameColor = ensureReadableOnDark(colorHex)
-                const rank =
-                  typeof player.skill_rating === 'number'
-                    ? getRankColor(player.skill_rating)
-                    : undefined
-                const rankRange = rank
-                  ? `${rank.minElo}–${Number.isFinite(rank.maxElo) ? rank.maxElo : `${rank.minElo}+`} CP`
-                  : 'Unranked'
+                const tier = ratingToTier(
+                  typeof player.skill_rating === 'number' ? player.skill_rating : null,
+                )
+                const tierIndex = tier ? TIER_BOUNDS.findIndex((t) => t.name === tier.name) + 1 : 0
                 return (
                   <li key={player.id} className="list-item last:border-b-0">
                     <div className="flex items-center gap-3">
@@ -1175,12 +1201,20 @@ export default function GameRoom() {
                             </span>
                           )}
                         </div>
-                        {/* Row 2: Tier + rating */}
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-                          <span>{rank ? `${rank.name} – ${rankRange}` : 'Unranked'}</span>
+                        {/* Row 2: Tier + rating + team */}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <span>
+                            {tier ? `${tier.name} — Rank ${romanNumeral(tierIndex)}` : 'Unranked'}
+                          </span>
                           {typeof player.skill_rating === 'number' && (
                             <span className="opacity-80">· {player.skill_rating} CP</span>
                           )}
+                          {currentRoom.allowTeamPlay &&
+                            currentRoom.teamMode !== 'none' &&
+                            typeof player.teamId === 'number' &&
+                            player.teamId > 0 && (
+                              <span className="chip text-xs">Team {player.teamId}</span>
+                            )}
                         </div>
                       </div>
                     </div>

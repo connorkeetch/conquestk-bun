@@ -1,7 +1,7 @@
 import { Clock, Gamepad2, Trophy } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import { GameCardSkeleton, SkeletonGroup } from '../components/ui/Skeleton'
 import { useAppSelector } from '../hooks/redux'
@@ -226,6 +226,7 @@ const LobbyPage: React.FC = () => {
   const [resendMessage, setResendMessage] = useState('')
   const [filters, setFilters] = useState<LobbyFilters>({ ...DEFAULT_LOBBY_FILTERS })
   const { section } = useParams<{ section?: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const mapFieldId = useId()
   const modeFieldId = useId()
@@ -410,6 +411,27 @@ const LobbyPage: React.FC = () => {
       setActiveTab('browse')
     }
   }, [section])
+
+  // Deep-link: sync my-games filter with query param
+  useEffect(() => {
+    if (activeTab !== 'my-games') return
+    const raw = (searchParams.get('filter') || 'all').toLowerCase()
+    const allowed = new Set(['all', 'active', 'lobby', 'completed'])
+    const next = allowed.has(raw) ? (raw as 'all' | 'active' | 'lobby' | 'completed') : 'all'
+    if (next !== myGamesFilter) {
+      setMyGamesFilter(next)
+    }
+  }, [activeTab, searchParams, myGamesFilter])
+
+  useEffect(() => {
+    if (activeTab !== 'my-games') return
+    const current = (searchParams.get('filter') || 'all').toLowerCase()
+    if (current !== myGamesFilter) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('filter', myGamesFilter)
+      setSearchParams(nextParams)
+    }
+  }, [myGamesFilter, activeTab, searchParams, setSearchParams])
 
   useEffect(() => {
     // Check email verification status
@@ -788,7 +810,10 @@ const LobbyPage: React.FC = () => {
           <button
             type="button"
             className={`tab ${activeTab === 'my-games' ? 'tab-active' : ''}`}
-            onClick={() => navigate('/lobby/my-games')}
+            onClick={() => {
+              const currentFilter = searchParams.get('filter') || myGamesFilter || 'all'
+              navigate(`/lobby/my-games?filter=${encodeURIComponent(currentFilter)}`)
+            }}
           >
             🎮 My Games
           </button>
