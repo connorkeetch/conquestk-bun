@@ -1068,6 +1068,21 @@ export class GameService {
       battleMetrics.clearGame(gameId)
       if (finalization.archived) {
         await this.awardClanContributions(gameId, finalization.playerRankings)
+        try {
+          const { achievementService } = await import('./achievementService')
+          // Map to minimal structure to avoid type coupling
+          const minimal = finalization.playerRankings.map((r) => ({
+            userId: r.userId,
+            isWinner: r.isWinner,
+            eliminated: r.eliminated,
+          }))
+          await achievementService.handleGameCompleted(gameId, minimal)
+        } catch (e) {
+          logger.warn('Failed to process achievements after game completion', {
+            gameId,
+            error: e instanceof Error ? e.message : e,
+          })
+        }
       }
     }
 

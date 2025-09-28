@@ -85,7 +85,7 @@ export class ProfileService {
       // Get achievements with details
       const achievementsResult = await client.query(
         `
-        SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
+        SELECT ua.*, a.name, a.description, a.icon AS icon, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
         WHERE ua.user_id = $1
@@ -323,7 +323,7 @@ export class ProfileService {
       // Get unlocked achievements
       const unlockedResult = await client.query(
         `
-        SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
+        SELECT ua.*, a.name, a.description, a.icon AS icon, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
         WHERE ua.user_id = $1
@@ -335,7 +335,7 @@ export class ProfileService {
       // Get all available achievements
       const availableResult = await client.query(`
         SELECT a.* FROM achievements a
-        WHERE a.is_hidden = FALSE
+        WHERE a.is_secret = FALSE
         ORDER BY a.category, a.points
       `)
 
@@ -375,7 +375,7 @@ export class ProfileService {
       // Get achievement details
       const result = await client.query(
         `
-        SELECT ua.*, a.name, a.description, a.icon_emoji, a.category, a.points, a.rarity
+        SELECT ua.*, a.name, a.description, a.icon AS icon, a.category, a.points, a.rarity
         FROM user_achievements ua
         JOIN achievements a ON ua.achievement_id = a.id
         WHERE ua.user_id = $1 AND ua.achievement_id = $2
@@ -383,21 +383,7 @@ export class ProfileService {
         [userId, achievementId],
       )
 
-      // Update user experience points
-      const achievement = await client.query('SELECT points FROM achievements WHERE id = $1', [
-        achievementId,
-      ])
-
-      if (achievement.rows.length > 0) {
-        await client.query(
-          `
-          UPDATE users 
-          SET experience_points = experience_points + $1
-          WHERE user_id = $2
-        `,
-          [achievement.rows[0].points, userId],
-        )
-      }
+      // XP update omitted (no experience_points column on users)
 
       return result.rows[0]
     } finally {
