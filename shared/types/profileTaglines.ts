@@ -1,0 +1,63 @@
+export const DEFAULT_TAGLINE = 'Commander of the Conquest Realms'
+
+export const PROFILE_TAGLINES: string[] = [
+  // Epic and serious titles
+  'The Conqueror of Realms',
+  'High Warlord of the Iron Banner',
+  'Keeper of the Eternal Throne',
+  'The Unbroken',
+  'Lord of Storms',
+  'Harbinger of Victory',
+  'The Last Khan',
+  'Guardian of the Gates',
+  'Emperor Without End',
+  'Sultan of the Seven Fronts',
+  'Pharaoh of the Two Lands',
+  'Augustus of the New Order',
+  'Imperator of the People',
+  'Autocrat of All the Armies',
+  'Basileus of the World',
+  'Tsar of Tsars',
+  'Shahanshah (King of Kings)',
+  'The Lion of Judah',
+  'Defender of the Faith',
+  'Caliph of Conquest',
+  'Caesar of the Frontier',
+  'Padishah of Destiny',
+  'The Magnificent',
+  "The Terrible (Ivan’s PR department was bold)",
+  'Lord Protector of the Realm',
+  'The Scourge of God',
+  'Conqueror of the West',
+  'The Hammer of the Scots',
+  'The Sun King',
+  'The Great Khan',
+  'Princeps of the Senate',
+  'The Red Sultan',
+  'The Unifier of Realms',
+  'The Iron Chancellor',
+
+  // Fun and cheeky titles
+  'The Slightly Above Average',
+  'Duke of Poor Decisions',
+  'Master of Dice Rolls',
+  'The Great Procrastinator',
+  'Baron von Ragequit',
+  'Chief Executive of Bad Dice Rolls',
+  'The Strategist Who Forgot to Strategize',
+  'Knight of “Just One More Turn”',
+  'Prince of Lag',
+  'Ruler of Exactly Three Territories',
+  'The Mighty… Until Next Round',
+  'Slayer of AFK Opponents',
+  'Admiral of Sinking Ships',
+  'Champion of the Tutorial Match',
+  'The Merciful (Unless Provoked)',
+  'Archduke of Overconfidence',
+  'The Eternal Runner-Up',
+]
+
+export const isAllowedTagline = (value: unknown): value is string => {
+  return typeof value === 'string' && PROFILE_TAGLINES.includes(value)
+}
+
