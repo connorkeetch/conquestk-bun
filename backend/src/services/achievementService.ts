@@ -69,13 +69,13 @@ class AchievementService {
         }
 
         // Crown Jewel: win capitals game (MVP approximation)
-        if (gameMode === 'capitals') {
+        if (gameMode === 'capitals' || gameMode === 'capital') {
           await this.unlockByName(w.userId, 'Crown Jewel')
         }
 
         // Classic Conqueror: win normal game by domination
         if (
-          (gameMode === 'normal' || gameMode === '' || gameMode === 'standard') &&
+          (gameMode === 'normal' || gameMode === 'classic' || gameMode === '' || gameMode === 'standard') &&
           allOthersEliminated
         ) {
           await this.unlockByName(w.userId, 'Classic Conqueror')
