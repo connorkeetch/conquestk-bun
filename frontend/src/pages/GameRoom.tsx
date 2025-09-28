@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { logger } from '@/utils/logger'
 import GameOptionsPanel from '../components/chat/GameOptionsPanel'
@@ -71,6 +71,7 @@ export default function GameRoom() {
   const [mapPreviewLoading, setMapPreviewLoading] = useState(false)
   const [mapPreviewError, setMapPreviewError] = useState<string | null>(null)
   const [roomCodeCopied, setRoomCodeCopied] = useState(false)
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
 
   const currentPlayer = useMemo(() => {
     if (!currentRoom?.players || !user?.id) {
@@ -296,6 +297,33 @@ export default function GameRoom() {
       logger.warn('Failed to copy room code', error)
     }
   }, [formattedRoomCode])
+
+  const handleCopyInviteLink = useCallback(async () => {
+    try {
+      const url = typeof window !== 'undefined' ? window.location.href : ''
+      if (!url) return
+      if (navigator?.share) {
+        try {
+          await navigator.share({ title: currentRoom?.name ?? 'ConquestK Lobby', url })
+          return
+        } catch {
+          // fall through to clipboard
+        }
+      }
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        setInviteLinkCopied(true)
+        setTimeout(() => setInviteLinkCopied(false), 2000)
+      }
+    } catch {
+      // silently ignore
+    }
+  }, [currentRoom?.name])
+
+  const gameConfigRef = useRef<HTMLDivElement | null>(null)
+  const scrollToGameConfig = useCallback(() => {
+    gameConfigRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   const roomMaxPlayers = currentRoom?.maxPlayers ?? 0
   const maxAiCapacity = useMemo(
@@ -912,7 +940,7 @@ export default function GameRoom() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
         {/* Game Board */}
         <div className="lg:col-span-3">
-          <div className="panel min-h-[60vh] h-[520px] p-0 sm:h-[560px] lg:h-[640px] xl:h-[720px]">
+          <div className="panel h-auto min-h-[clamp(520px,65vh,920px)] p-0">
             {currentGame ? (
               <RiskGameBoard
                 onTerritoryClick={(_territoryId) => {
@@ -985,6 +1013,42 @@ export default function GameRoom() {
                       {formatTimeUntil(expiresAtDate)}
                     </p>
                   )}
+                  {/* Actionable empty states */}
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                    {isHost ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => void handleCopyInviteLink()}
+                          aria-live="polite"
+                        >
+                          {inviteLinkCopied ? 'Invite link copied ✓' : 'Copy Invite Link'}
+                        </button>
+                        {formattedRoomCode && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => void handleCopyRoomCode()}
+                          >
+                            Copy Room Code
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={scrollToGameConfig}
+                        >
+                          View Game Configuration
+                        </button>
+                      </>
+                    ) : !isMember ? (
+                      <p className="text-xs text-muted">
+                        You are spectating this lobby. Use Join Game above when a seat opens, or ask
+                        the host for the room code.
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             )}
@@ -1207,7 +1271,7 @@ export default function GameRoom() {
           )}
 
           {/* Chat */}
-          <div className="panel p-0 overflow-hidden" style={{ height: '400px' }}>
+          <div className="panel p-0 overflow-hidden" style={{ height: 'min(40vh, 460px)' }}>
             {roomId && user && (
               <TabbedGameChat
                 gameId={roomId}
@@ -1269,7 +1333,7 @@ export default function GameRoom() {
           </div>
 
           {/* Game Configuration */}
-          <div className="panel p-0 overflow-hidden">
+          <div ref={gameConfigRef} className="panel p-0 overflow-hidden">
             <GameOptionsPanel className="h-full" />
           </div>
         </div>

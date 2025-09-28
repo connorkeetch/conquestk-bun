@@ -1477,45 +1477,50 @@ const CreateGamePage: React.FC = () => {
                         computeMapSizeFromCounts(map.territory_count) === mapSizeFilter
                       return matchesSearch && matchesSize
                     })
-                    .map((map) => (
-                      <button
-                        key={map.id}
-                        type="button"
-                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                          selectedMap === map.id
-                            ? map.id === 'random'
-                              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
-                              : 'theme-selected shadow-lg'
-                            : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
-                        }`}
-                        onClick={() => setSelectedMap(map.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-bold text-white">
-                            {map.id === 'random' && '🎲 '}
-                            {map.is_featured && '⭐ '}
-                            {map.is_vip_only && '👑 '}
-                            {map.name}
+                    .map((map) => {
+                      const ratingAverage = Number(map.rating_average ?? 0)
+                      const totalPlays = Number(map.play_count ?? 0)
+
+                      return (
+                        <button
+                          key={map.id}
+                          type="button"
+                          className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
+                            selectedMap === map.id
+                              ? map.id === 'random'
+                                ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg'
+                                : 'theme-selected shadow-lg'
+                              : 'bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                          }`}
+                          onClick={() => setSelectedMap(map.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-white">
+                              {map.id === 'random' && '🎲 '}
+                              {map.is_featured && '⭐ '}
+                              {map.is_vip_only && '👑 '}
+                              {map.name}
+                            </div>
+                            {ratingAverage > 0 && (
+                              <div className="text-xs text-yellow-400">
+                                {'⭐'.repeat(Math.floor(ratingAverage))}
+                              </div>
+                            )}
                           </div>
-                          {map.rating_average && map.rating_average > 0 && (
-                            <div className="text-xs text-yellow-400">
-                              {'⭐'.repeat(Math.floor(map.rating_average))}
+                          <div className="text-sm text-muted">
+                            {map.territory_count > 0
+                              ? `${map.territory_count} territories • Map Size: ${computeMapSizeFromCounts(map.territory_count)}`
+                              : 'Randomly selected when game starts'}
+                          </div>
+                          {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
+                            <div className="text-xs text-muted mt-1">
+                              by {map.creator_name}
+                              {totalPlays > 0 && ` • ${totalPlays} plays`}
                             </div>
                           )}
-                        </div>
-                        <div className="text-sm text-muted">
-                          {map.territory_count > 0
-                            ? `${map.territory_count} territories • Map Size: ${computeMapSizeFromCounts(map.territory_count)}`
-                            : 'Randomly selected when game starts'}
-                        </div>
-                        {map.creator_name && map.id !== 'classic' && map.id !== 'random' && (
-                          <div className="text-xs text-muted mt-1">
-                            by {map.creator_name}
-                            {map.play_count && map.play_count > 0 && ` • ${map.play_count} plays`}
-                          </div>
-                        )}
-                      </button>
-                    ))
+                        </button>
+                      )
+                    })
                 )}
               </div>
             </div>
@@ -1534,6 +1539,10 @@ const CreateGamePage: React.FC = () => {
 
                   const imageSrc = selectedMapData.imageUrl || selectedMapData.image_url
                   const isRandomMap = selectedMapData.id === 'random'
+                  const ratingAverage = Number(selectedMapData.rating_average ?? 0)
+                  const ratingCount = Number(selectedMapData.rating_count ?? 0)
+                  const totalPlays = Number(selectedMapData.play_count ?? 0)
+                  const monthlyPlays = Number(selectedMapData.play_count_30d ?? 0)
 
                   const handleOpenMapDetails = () => {
                     if (isRandomMap) {
@@ -1614,18 +1623,13 @@ const CreateGamePage: React.FC = () => {
                             <div>
                               <dt className="text-muted">Games Last Month</dt>
                               <dd className="text-white">
-                                {selectedMapData.play_count_30d &&
-                                selectedMapData.play_count_30d > 0
-                                  ? selectedMapData.play_count_30d
-                                  : '—'}
+                                {monthlyPlays > 0 ? monthlyPlays : '—'}
                               </dd>
                             </div>
                             <div>
                               <dt className="text-muted">Games Played</dt>
                               <dd className="text-white">
-                                {selectedMapData.play_count && selectedMapData.play_count > 0
-                                  ? selectedMapData.play_count
-                                  : '—'}
+                                {totalPlays > 0 ? totalPlays : '—'}
                               </dd>
                             </div>
                             {selectedMapData.creator_name && selectedMapData.id !== 'classic' && (
@@ -1649,19 +1653,17 @@ const CreateGamePage: React.FC = () => {
                                 </dd>
                               </div>
                             )}
-                            {selectedMapData.rating_average &&
-                              selectedMapData.rating_average > 0 && (
-                                <div className="col-span-2">
-                                  <dt className="text-muted">Rating</dt>
-                                  <dd className="text-yellow-400">
-                                    {'⭐'.repeat(Math.floor(selectedMapData.rating_average))}
-                                    <span className="text-white ml-1">
-                                      ({selectedMapData.rating_average.toFixed(1)}/5 from{' '}
-                                      {selectedMapData.rating_count} reviews)
-                                    </span>
-                                  </dd>
-                                </div>
-                              )}
+                            {ratingAverage > 0 && (
+                              <div className="col-span-2">
+                                <dt className="text-muted">Rating</dt>
+                                <dd className="text-yellow-400">
+                                  {'⭐'.repeat(Math.floor(ratingAverage))}
+                                  <span className="text-white ml-1">
+                                    ({ratingAverage.toFixed(1)}/5 from {ratingCount} reviews)
+                                  </span>
+                                </dd>
+                              </div>
+                            )}
                           </dl>
                         </div>
                       )}

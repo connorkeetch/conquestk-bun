@@ -1,5 +1,6 @@
 import { query, transaction } from '../config/database'
 import { GameEngine } from '../game/gameEngine'
+import { drawTreasure, ensureTreasureState, normalizeTreasureConfig } from '../game/hiddenTreasures'
 import { loadMapForEngine } from '../game/mapLoader'
 import type { ClanMembershipContext, ClanProgressionSocketPayload } from '../types/clans'
 import type {
@@ -15,7 +16,6 @@ import type {
 } from '../types/game'
 import { logger } from '../utils/logger'
 import { type AIDecisionPlan, aiDecisionService, type DecisionBudget } from './aiDecisionService'
-import { drawTreasure, ensureTreasureState, normalizeTreasureConfig } from '../game/hiddenTreasures'
 import { gameStateCache } from './cacheService'
 import { ClanProgressionServiceError, clanProgressionService } from './clanProgressionService'
 import { clanService } from './clanService'
