@@ -17,7 +17,7 @@ Configuration
 - Enable/disable: Choose a payout mode. Any mode except “Disabled” enables Hidden Treasures; “Disabled” turns it off.
 - Diamond chance: Fixed at 8% (engine default and room config).
 - Payout mode:
-  - Triangular: 4, 6, 9, 13, 18, … (increasing gaps)
+  - Progressive (triangular growth): 4, 6, 9, 13, 18, … (increasing gaps)
   - Classic: 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5 per set
   - Fixed: Constant value (1..50)
   - Disabled: Sets redeem for 0 troops

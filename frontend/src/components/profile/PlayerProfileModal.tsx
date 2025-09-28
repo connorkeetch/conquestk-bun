@@ -1,8 +1,7 @@
-import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { type ProfileSummary, profileService } from '@/services/profileService'
 import RankInsignia, { getConquestRank } from '../RankInsignia'
-import { profileService, type ProfileSummary } from '@/services/profileService'
 
 interface PlayerProfileModalProps {
   open: boolean
@@ -104,9 +103,15 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 flex items-center justify-center bg-[color:var(--surface-2)]">
                   {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt={profile.username} className="w-full h-full object-cover" />
+                    <img
+                      src={profile.avatarUrl}
+                      alt={profile.username}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <span className="text-xl font-bold">{profile.username.slice(0, 1).toUpperCase()}</span>
+                    <span className="text-xl font-bold">
+                      {profile.username.slice(0, 1).toUpperCase()}
+                    </span>
                   )}
                 </div>
                 <div className="min-w-0">
@@ -170,4 +175,3 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
     </div>
   )
 }
-

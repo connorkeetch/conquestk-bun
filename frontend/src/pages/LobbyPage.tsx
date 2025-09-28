@@ -202,7 +202,7 @@ const formatTreasureMode = (
     return `Treasures: Fixed (${Math.max(1, Math.min(50, treasureConfig.fixedValue ?? 8))})`
   }
   const labelMap: Record<string, string> = {
-    triangular: 'Triangular',
+    triangular: 'Progressive',
     classic: 'Classic',
     none: 'None',
   }

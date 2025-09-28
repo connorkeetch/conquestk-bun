@@ -232,7 +232,7 @@ const CreateGamePage: React.FC = () => {
   // Hidden Treasures (new ruleset) UI state
   const [treasurePayoutMode, setTreasurePayoutMode] = useState<
     'classic' | 'fixed' | 'none' | 'triangular'
-  >('triangular')
+  >('classic')
   // Diamond chance is fixed at 8% per new rules
   const DIAMOND_PERCENT = 0.08
   const [fixedTreasureValue, setFixedTreasureValue] = useState<number>(8)
@@ -1208,17 +1208,7 @@ const CreateGamePage: React.FC = () => {
             <div>
               <p className="text-xs text-muted mb-2">Payout Mode</p>
               <div className="space-y-2">
-                <button
-                  type="button"
-                  className={choiceClass(
-                    treasurePayoutMode === 'triangular',
-                    'w-full p-3 text-left flex flex-col gap-1',
-                  )}
-                  onClick={() => setTreasurePayoutMode('triangular')}
-                >
-                  <div className="text-sm text-[color:var(--heading)]">📈 Triangular</div>
-                  <p className="text-xs text-muted">4, 6, 9, 13, 18, ...</p>
-                </button>
+                {/* Classic first and default */}
                 <button
                   type="button"
                   className={choiceClass(
@@ -1229,6 +1219,17 @@ const CreateGamePage: React.FC = () => {
                 >
                   <div className="text-sm text-[color:var(--heading)]">📜 Classic</div>
                   <p className="text-xs text-muted">4, 6, 8, 10, 12, 15, ...</p>
+                </button>
+                <button
+                  type="button"
+                  className={choiceClass(
+                    treasurePayoutMode === 'triangular',
+                    'w-full p-3 text-left flex flex-col gap-1',
+                  )}
+                  onClick={() => setTreasurePayoutMode('triangular')}
+                >
+                  <div className="text-sm text-[color:var(--heading)]">📈 Progressive</div>
+                  <p className="text-xs text-muted">4, 6, 9, 13, 18, ...</p>
                 </button>
                 <button
                   type="button"

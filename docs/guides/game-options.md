@@ -41,7 +41,7 @@ Gameplay options
 - Hidden Treasures (Payout Mode)
   - Status: Fully wired.
   - Configure in the “Hidden Treasures” panel:
-    - Payout mode: Triangular, Classic, Fixed, Disabled
+    - Payout mode: Classic (default), Progressive, Fixed, Disabled
     - Diamond chance is fixed at 8%
     - Hand limit is fixed at 5
     - Diamond set bonus is fixed at +3

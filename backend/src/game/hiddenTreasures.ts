@@ -55,7 +55,7 @@ const CLASSIC_SEQUENCE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35]
 const DEFAULT_CONFIG: Required<TreasureConfig> = {
   enabled: true,
   diamondsPercent: 0.08,
-  payoutMode: 'triangular',
+  payoutMode: 'classic',
   fixedValue: 8,
   handCap: 5,
   diamondSetBonus: 3,

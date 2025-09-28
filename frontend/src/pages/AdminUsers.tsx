@@ -435,7 +435,7 @@ const AdminUsers: React.FC = () => {
                   <span className="text-[color:var(--text)]">{selectedUser.gamesPlayed || 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted">ELO rating:</span>
+                  <span className="text-muted">Conquest Points (CP):</span>
                   <span className="text-[color:var(--text)]">{selectedUser.elo || 1000}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1069,7 +1069,7 @@ const AdminUsers: React.FC = () => {
                     <th className="text-left">Beta</th>
                     <th className="text-left">Premium</th>
                     <th className="text-left">Games</th>
-                    <th className="text-left">ELO</th>
+                    <th className="text-left">CP</th>
                     <th className="text-left">Last Login</th>
                     <th className="text-left">Actions</th>
                   </tr>

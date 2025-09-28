@@ -1,4 +1,6 @@
 import type React from 'react'
+import { useState } from 'react'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 
 interface PlayerSummary {
   id: string
@@ -14,6 +16,8 @@ interface PlayersLegendProps {
 }
 
 export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
+
   return (
     <div className="p-4 border-b border-gray-200">
       <h3 className="text-lg font-semibold mb-3">Players</h3>
@@ -30,7 +34,14 @@ export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
                 className="w-4 h-4 rounded-full border border-gray-400"
                 style={{ backgroundColor: player.color }}
               />
-              <span className="font-medium">{player.username}</span>
+              <button
+                type="button"
+                className="font-medium underline-offset-2 hover:underline"
+                onClick={() => setProfileUsername(player.username)}
+                title={`View ${player.username}'s profile`}
+              >
+                {player.username}
+              </button>
             </div>
             <div className="text-sm text-gray-600">
               <span>{player.territoriesOwned} territories</span>
@@ -40,6 +51,11 @@ export const PlayersLegend: React.FC<PlayersLegendProps> = ({ players }) => {
           </div>
         ))}
       </div>
+      <PlayerProfileModal
+        open={profileUsername !== null}
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
+      />
     </div>
   )
 }

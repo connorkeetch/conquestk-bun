@@ -61,7 +61,7 @@ const TutorialPage: React.FC = () => {
           className={`tab ${activeTab === 'rankings' ? 'tab-active' : ''}`}
         >
           <Trophy className="w-4 h-4" />
-          Rankings & ELO
+          Rankings & CP
         </button>
         <button
           type="button"
@@ -295,13 +295,13 @@ const TutorialPage: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  How ELO works
+                  How Conquest Points (CP) work
                 </h3>
                 <p className="text-muted">
-                  The ELO rating system measures your skill level based on game results. Everyone
-                  starts at 1000 ELO. Win against higher-rated players to gain more points, lose to
-                  lower-rated players to lose more points. Your journey follows the path of
-                  history's greatest conquerors!
+                  Conquest Points (CP) measure your skill based on game results. Everyone starts at
+                  1000 CP. Win against higher-rated players to gain more points, lose to lower-rated
+                  players to lose more points. Your journey follows the path of history's greatest
+                  conquerors!
                 </p>
               </div>
 
@@ -451,12 +451,12 @@ const TutorialPage: React.FC = () => {
 
               <div className="panel-muted space-y-2">
                 <h3 className="text-xl font-semibold text-[color:var(--color-primary)]">
-                  Earning points
+                  Earning Conquest Points
                 </h3>
                 <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                  <li>Win games to grow your rating</li>
+                  <li>Win games to grow your CP</li>
                   <li>Eliminations and decisive victories award bonus points</li>
-                  <li>Ranked games adjust ELO; casual matches are risk-free practice</li>
+                  <li>Ranked games adjust CP; casual matches are risk-free practice</li>
                   <li>Consistency matters—stringing wins together accelerates progress</li>
                 </ul>
               </div>
@@ -714,7 +714,7 @@ const TutorialPage: React.FC = () => {
                   </h4>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     <li>
-                      <strong>Triangular:</strong> 4, 6, 9, 13, 18, … increasing payouts per set.
+                      <strong>Progressive:</strong> 4, 6, 9, 13, 18, … increasing payouts per set.
                     </li>
                     <li>
                       <strong>Classic:</strong> 4, 6, 8, 10, 12, 15, 20, 25, 30, 35, then +5.
@@ -791,8 +791,7 @@ const TutorialPage: React.FC = () => {
                 <li className="flex items-start gap-2">
                   <Users className="h-5 w-5 text-[color:var(--color-primary)] mt-0.5" />
                   <span>
-                    <strong>Game type:</strong> Casual matches for practice or Ranked for ELO
-                    stakes.
+                    <strong>Game type:</strong> Casual matches for practice or Ranked for CP stakes.
                   </span>
                 </li>
               </ul>

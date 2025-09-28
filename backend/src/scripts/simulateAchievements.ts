@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+
 dotenv.config()
 
 import { v4 as uuidv4 } from 'uuid'
@@ -91,7 +92,7 @@ async function simulate() {
 
   // Report unlocked achievements for p1
   const { unlocked } = await profileService.getAchievements(p1.id)
-  const names = unlocked.map((u: any) => u.name)
+  const names = unlocked.map((u: { name?: string }) => u.name ?? 'unknown')
   logger.info('Unlocked achievements for player1:', { names })
 }
 
