@@ -68,11 +68,21 @@ router.get(
   '/history',
   asyncHandler(async (req, res) => {
     const userId = req.userId
-    const limit = parseInt(req.query.limit as string, 10) || 50
-    const offset = parseInt(req.query.offset as string, 10) || 0
+    const rawLimit = parseInt(req.query.limit as string, 10)
+    const rawOffset = parseInt(req.query.offset as string, 10)
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 20
+    const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0
 
-    const history = await profileService.getGameHistory(userId, limit, offset)
-    res.json(history)
+    const matches = await profileService.getGameHistory(userId, limit, offset)
+    res.json({
+      matches,
+      pagination: {
+        limit,
+        offset,
+        returned: matches.length,
+        hasMore: matches.length === limit,
+      },
+    })
   }),
 )
 
