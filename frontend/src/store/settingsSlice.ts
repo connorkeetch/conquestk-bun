@@ -1,52 +1,21 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { DEFAULT_THEME_ID, normalizeThemeId, type ThemeId } from '@shared/types/themes'
 import type { PlayerColor } from '../constants/colors'
 import preferencesService from '../services/preferencesService'
 
 // Theme types - Extended for multi-theme support
-export type ColorTheme =
-  | 'default'
-  | 'violet'
-  | 'red'
-  | 'blue'
-  | 'retrospace'
-  | 'green'
-  | 'frontier'
-  | 'black'
-  | 'highcontrast'
-  | 'halloween'
-  | 'metal'
-  | 'cutlers-cheese'
+export type ColorTheme = ThemeId
 export type StyleTheme = 'modern' | 'cowboy' | 'myspace' | 'minimal' | 'gaming'
-export type Theme = 'dark' | 'light' | 'high-contrast' | ColorTheme // Legacy compatibility
+export type Theme = ThemeId
 
 // New theme system for future theme switching
 export interface ThemeSettings {
-  baseTheme: 'dark' | 'light' | 'high-contrast' // Core theme (dark/light)
+  baseTheme: 'dark' | 'light' | 'highcontrast' // Core theme (dark/light)
   colorTheme: ColorTheme // Color palette
   styleTheme: StyleTheme // UI style/components
 }
 
 export type DMPermission = 'everyone' | 'friends' | 'nobody'
-
-const THEME_VALUES: Theme[] = [
-  'dark',
-  'light',
-  'high-contrast',
-  'default',
-  'violet',
-  'red',
-  'blue',
-  'retrospace',
-  'green',
-  'frontier',
-  'black',
-  'highcontrast',
-  'halloween',
-  'metal',
-  'cutlers-cheese',
-]
-
-const isThemeValue = (value: string): value is Theme => THEME_VALUES.includes(value as Theme)
 
 // Notification settings
 export interface NotificationPrefs {
@@ -103,7 +72,7 @@ interface SettingsState {
 // Default settings
 const defaultSettings: SettingsState = {
   display: {
-    theme: 'dark',
+    theme: DEFAULT_THEME_ID,
   },
   audio: {
     masterVolume: 75,
@@ -126,14 +95,26 @@ const defaultSettings: SettingsState = {
   },
 }
 
+const createSettingsState = (theme: ThemeId = DEFAULT_THEME_ID): SettingsState => ({
+  ...defaultSettings,
+  display: { ...defaultSettings.display, theme },
+  audio: { ...defaultSettings.audio },
+  game: { ...defaultSettings.game },
+  privacy: { ...defaultSettings.privacy },
+  notifications: { ...defaultSettings.notifications },
+})
+
 // Load settings from localStorage
 const loadSettings = (): SettingsState => {
+  const fallbackTheme = DEFAULT_THEME_ID
+
   try {
     const saved = localStorage.getItem('userSettings')
     if (saved) {
-      const parsed = JSON.parse(saved)
+      const parsed = JSON.parse(saved) as Partial<SettingsState>
+
       // Merge with defaults to ensure all fields exist
-      const mergedSettings = {
+      const mergedSettings: SettingsState = {
         ...defaultSettings,
         ...parsed,
         display: { ...defaultSettings.display, ...parsed.display },
@@ -143,22 +124,67 @@ const loadSettings = (): SettingsState => {
         notifications: { ...defaultSettings.notifications, ...parsed.notifications },
       }
 
-      // Apply stored color theme from localStorage on load to fix persistence
-      const storedColorTheme = localStorage.getItem('colorTheme') as ColorTheme
-      if (storedColorTheme) {
-        document.documentElement.setAttribute('data-theme', storedColorTheme)
+      const storedColorThemeRaw = localStorage.getItem('colorTheme')
+      const parsedTheme =
+        typeof parsed.display?.theme === 'string' ? parsed.display.theme : undefined
+
+      let themeToUse: ThemeId = fallbackTheme
+
+      if (typeof storedColorThemeRaw === 'string') {
+        themeToUse = normalizeThemeId(storedColorThemeRaw)
+      } else if (parsedTheme) {
+        themeToUse = normalizeThemeId(parsedTheme)
+      }
+
+      mergedSettings.display.theme = themeToUse
+
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', themeToUse)
+      }
+
+      try {
+        localStorage.setItem('colorTheme', themeToUse)
+      } catch (_storageError) {
+        // Ignore storage errors (quota, privacy mode, etc.)
       }
 
       return mergedSettings
     }
   } catch (_error) {
-    // Even on error, try to load stored color theme
-    const storedColorTheme = localStorage.getItem('colorTheme') as ColorTheme
-    if (storedColorTheme) {
-      document.documentElement.setAttribute('data-theme', storedColorTheme)
+    // Attempt to recover theme preference even if parsing fails
+    try {
+      const storedColorThemeRaw = localStorage.getItem('colorTheme')
+      if (storedColorThemeRaw) {
+        const themeToUse = normalizeThemeId(storedColorThemeRaw)
+
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-theme', themeToUse)
+        }
+
+        try {
+          localStorage.setItem('colorTheme', themeToUse)
+        } catch (_storageError) {
+          // Ignore storage errors (quota, privacy mode, etc.)
+        }
+
+        return createSettingsState(themeToUse)
+      }
+    } catch (_storageError) {
+      // Ignore fallback errors and continue to default state
     }
   }
-  return defaultSettings
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme', fallbackTheme)
+  }
+
+  try {
+    localStorage.setItem('colorTheme', fallbackTheme)
+  } catch (_error) {
+    // Ignore storage errors (quota, privacy mode, etc.)
+  }
+
+  return createSettingsState(fallbackTheme)
 }
 
 // Save settings to localStorage
@@ -176,10 +202,18 @@ const settingsSlice = createSlice({
   reducers: {
     // Display settings
     setTheme: (state, action: PayloadAction<Theme>) => {
-      state.display.theme = action.payload
+      const normalizedTheme = normalizeThemeId(action.payload)
+      state.display.theme = normalizedTheme
       saveSettings(state)
+
+      try {
+        localStorage.setItem('colorTheme', normalizedTheme)
+      } catch (_error) {
+        // Ignore storage errors (quota, privacy mode, etc.)
+      }
+
       // Also save to backend if user is logged in
-      preferencesService.updateTheme(action.payload).catch(() => {
+      preferencesService.updateTheme(normalizedTheme).catch(() => {
         // Silently fail if not logged in or backend unavailable
       })
     },
@@ -239,10 +273,18 @@ const settingsSlice = createSlice({
     },
 
     resetSettings: (state) => {
-      Object.assign(state, defaultSettings)
+      Object.assign(state, createSettingsState(DEFAULT_THEME_ID))
       saveSettings(state)
       // Apply default theme
-      document.documentElement.setAttribute('data-theme', defaultSettings.display.theme)
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', DEFAULT_THEME_ID)
+      }
+
+      try {
+        localStorage.setItem('colorTheme', DEFAULT_THEME_ID)
+      } catch (_error) {
+        // Ignore storage errors (quota, privacy mode, etc.)
+      }
     },
 
     // Load settings from server (merge with current Redux state)
@@ -251,9 +293,19 @@ const settingsSlice = createSlice({
       if (!serverSettings) return
 
       // Map server settings to Redux state (only if they exist)
-      if (serverSettings.theme && isThemeValue(serverSettings.theme)) {
-        state.display.theme = serverSettings.theme
-        document.documentElement.setAttribute('data-theme', serverSettings.theme)
+      if (serverSettings.theme) {
+        const normalizedTheme = normalizeThemeId(serverSettings.theme)
+        state.display.theme = normalizedTheme
+
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-theme', normalizedTheme)
+        }
+
+        try {
+          localStorage.setItem('colorTheme', normalizedTheme)
+        } catch (_error) {
+          // Ignore storage errors (quota, privacy mode, etc.)
+        }
       }
 
       if (serverSettings.preferred_color) {
@@ -312,10 +364,19 @@ const settingsSlice = createSlice({
 
     // Color theme settings (new semantic theme system)
     setColorTheme: (state, action: PayloadAction<ColorTheme>) => {
+      const normalizedTheme = normalizeThemeId(action.payload)
+
       // Update the Redux state for consistency
-      state.display.theme = action.payload
+      state.display.theme = normalizedTheme
+
       // Save full settings to maintain consistency
       saveSettings(state)
+
+      try {
+        localStorage.setItem('colorTheme', normalizedTheme)
+      } catch (_error) {
+        // Ignore storage errors (quota, privacy mode, etc.)
+      }
     },
   },
 })

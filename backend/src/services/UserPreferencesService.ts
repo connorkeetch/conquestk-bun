@@ -1,9 +1,11 @@
+import type { ThemeId } from '@risk-game/shared/types/themes'
+import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { Pool } from 'pg'
 import { logger } from '../utils/logger'
 
 export interface UserPreferences {
   userId: number
-  theme: string
+  theme: ThemeId
   soundEnabled: boolean
   musicEnabled: boolean
   notificationEnabled: boolean
@@ -107,7 +109,12 @@ export class UserPreferencesService {
         return this.createDefaultPreferences(userId)
       }
 
-      return result.rows[0]
+      const updatedPreferences = result.rows[0] as UserPreferences
+
+      return {
+        ...updatedPreferences,
+        theme: normalizeThemeId(updatedPreferences.theme),
+      }
     } catch (error) {
       logger.error('❌ Error fetching user preferences', { userId, error })
       return null
@@ -126,7 +133,7 @@ export class UserPreferencesService {
 
       if (preferences.theme !== undefined) {
         updates.push(`theme = $${paramIndex++}`)
-        values.push(preferences.theme)
+        values.push(normalizeThemeId(preferences.theme))
       }
       if (preferences.soundEnabled !== undefined) {
         updates.push(`sound_enabled = $${paramIndex++}`)
@@ -198,7 +205,12 @@ export class UserPreferencesService {
         return this.createDefaultPreferences(userId, preferences)
       }
 
-      return result.rows[0]
+      const createdPreferences = result.rows[0] as UserPreferences
+
+      return {
+        ...createdPreferences,
+        theme: normalizeThemeId(createdPreferences.theme),
+      }
     } catch (error) {
       logger.error('❌ Error updating user preferences', {
         userId,
@@ -209,17 +221,23 @@ export class UserPreferencesService {
     }
   }
 
-  async updateTheme(userId: number, theme: string): Promise<boolean> {
+  async updateTheme(userId: number, theme: string): Promise<ThemeId | null> {
     try {
-      const result = await this.updatePreferences(userId, { theme })
-      return result !== null
+      const normalizedTheme = normalizeThemeId(theme)
+      const result = await this.updatePreferences(userId, { theme: normalizedTheme })
+
+      if (!result) {
+        return null
+      }
+
+      return normalizeThemeId(result.theme)
     } catch (error) {
       logger.error('❌ Error updating theme preference', {
         userId,
         theme,
         error,
       })
-      return false
+      return null
     }
   }
 
@@ -228,19 +246,19 @@ export class UserPreferencesService {
     overrides: Partial<UserPreferences> = {},
   ): Promise<UserPreferences> {
     try {
-      const defaults = {
-        theme: 'default',
-        soundEnabled: true,
-        musicEnabled: true,
-        notificationEnabled: true,
-        dmNotificationsBrowser: true,
-        dmNotificationsEmail: false,
-        autoReady: false,
-        showTimer: true,
-        showArmyNumbers: true,
-        animationSpeed: 'normal' as const,
-        language: 'en',
-        ...overrides,
+      const defaults: UserPreferences = {
+        userId,
+        theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
+        soundEnabled: overrides.soundEnabled ?? true,
+        musicEnabled: overrides.musicEnabled ?? true,
+        notificationEnabled: overrides.notificationEnabled ?? true,
+        dmNotificationsBrowser: overrides.dmNotificationsBrowser ?? true,
+        dmNotificationsEmail: overrides.dmNotificationsEmail ?? false,
+        autoReady: overrides.autoReady ?? false,
+        showTimer: overrides.showTimer ?? true,
+        showArmyNumbers: overrides.showArmyNumbers ?? true,
+        animationSpeed: overrides.animationSpeed ?? 'normal',
+        language: overrides.language ?? 'en',
       }
 
       const result = await this.pool.query(
@@ -292,7 +310,12 @@ export class UserPreferencesService {
         ],
       )
 
-      return result.rows[0]
+      const createdPreferences = result.rows[0] as UserPreferences
+
+      return {
+        ...createdPreferences,
+        theme: normalizeThemeId(createdPreferences.theme),
+      }
     } catch (error) {
       logger.error('❌ Error creating default preferences', {
         userId,
@@ -302,16 +325,17 @@ export class UserPreferencesService {
       // Return in-memory defaults as fallback
       return {
         userId,
-        theme: 'default',
-        soundEnabled: true,
-        musicEnabled: true,
-        notificationEnabled: true,
-        autoReady: false,
-        showTimer: true,
-        showArmyNumbers: true,
-        animationSpeed: 'normal',
-        language: 'en',
-        ...overrides,
+        theme: normalizeThemeId(overrides.theme ?? DEFAULT_THEME_ID),
+        soundEnabled: overrides.soundEnabled ?? true,
+        musicEnabled: overrides.musicEnabled ?? true,
+        notificationEnabled: overrides.notificationEnabled ?? true,
+        dmNotificationsBrowser: overrides.dmNotificationsBrowser ?? true,
+        dmNotificationsEmail: overrides.dmNotificationsEmail ?? false,
+        autoReady: overrides.autoReady ?? false,
+        showTimer: overrides.showTimer ?? true,
+        showArmyNumbers: overrides.showArmyNumbers ?? true,
+        animationSpeed: overrides.animationSpeed ?? 'normal',
+        language: overrides.language ?? 'en',
       }
     }
   }

@@ -1,3 +1,4 @@
+import { DEFAULT_THEME_ID } from '@risk-game/shared/types/themes'
 import { initDatabase, query } from '../config/database'
 import { getErrorMessage } from '../utils/errorHelpers'
 import { logger } from '../utils/logger'
@@ -32,7 +33,7 @@ async function validateAndFixProduction() {
             music_enabled BOOLEAN DEFAULT TRUE,
             chat_enabled BOOLEAN DEFAULT TRUE,
             show_tutorial BOOLEAN DEFAULT TRUE,
-            theme VARCHAR(20) DEFAULT 'dark',
+            theme VARCHAR(20) DEFAULT '${DEFAULT_THEME_ID}',
             language VARCHAR(10) DEFAULT 'en',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

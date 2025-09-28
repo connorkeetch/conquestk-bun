@@ -1,3 +1,5 @@
+import type { ThemeId } from '@risk-game/shared/types/themes'
+
 // User Profile and Achievement System Types
 
 export interface UserProfile {
@@ -75,7 +77,7 @@ export interface GameHistoryEntry {
 
 export interface UserPreferences {
   userId: string
-  theme: 'dark' | 'light'
+  theme: ThemeId
   language: string
   timezone: string
   notificationsEnabled: boolean

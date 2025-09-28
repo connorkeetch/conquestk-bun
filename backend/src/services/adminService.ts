@@ -1,8 +1,8 @@
 import { validate as uuidValidate } from 'uuid'
 import { getClient, query } from '../config/database'
-import { mapService } from './mapService'
 import { logger } from '../utils/logger'
 import { featureFlagService } from './featureFlagService'
+import { mapService } from './mapService'
 
 const domainPermissionMap: Record<string, string[]> = {
   users: ['users.*', 'user_management', 'system_admin'],

@@ -1,3 +1,4 @@
+import { DEFAULT_THEME_ID, normalizeThemeId } from '@risk-game/shared/types/themes'
 import type { QueryResultRow } from 'pg'
 import { getClient } from '../config/database'
 import type {
@@ -385,7 +386,13 @@ export class ProfileService {
 
       // XP update omitted (no experience_points column on users)
 
-      return result.rows[0]
+      const preferences = result.rows[0]
+
+      if (preferences && typeof preferences.theme === 'string') {
+        preferences.theme = normalizeThemeId(preferences.theme)
+      }
+
+      return preferences
     } finally {
       if (client.release) client.release()
     }
@@ -442,7 +449,11 @@ export class ProfileService {
         if (key !== 'userId' && preferences[key as keyof UserPreferences] !== undefined) {
           updateFields.push(`${this.camelToSnake(key)} = $${++paramCount}`)
           const value = preferences[key as keyof UserPreferences]
-          values.push(value as string | number | boolean)
+          if (key === 'theme' && typeof value === 'string') {
+            values.push(normalizeThemeId(value))
+          } else {
+            values.push(value as string | number | boolean)
+          }
         }
       })
 
@@ -462,7 +473,23 @@ export class ProfileService {
         userId,
       ])
 
-      return result.rows[0]
+      const updatedPreferences = result.rows[0] as
+        | (UserPreferences & {
+            theme?: string | null
+          })
+        | undefined
+
+      if (!updatedPreferences) {
+        return this.createDefaultPreferences(userId)
+      }
+
+      return {
+        ...updatedPreferences,
+        theme:
+          typeof updatedPreferences.theme === 'string'
+            ? normalizeThemeId(updatedPreferences.theme)
+            : DEFAULT_THEME_ID,
+      }
     } finally {
       if (client.release) client.release()
     }
@@ -551,7 +578,7 @@ export class ProfileService {
   private createDefaultPreferences(userId: string): UserPreferences {
     return {
       userId,
-      theme: 'dark',
+      theme: DEFAULT_THEME_ID,
       language: 'en',
       timezone: 'UTC',
       notificationsEnabled: true,

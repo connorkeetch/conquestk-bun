@@ -6,6 +6,7 @@
 export * from './delta'
 export * from './messaging'
 export * from './notifications'
+export * from './themes'
 
 // Import messaging types for internal references
 import type {
