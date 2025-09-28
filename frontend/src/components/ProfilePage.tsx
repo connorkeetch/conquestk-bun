@@ -33,6 +33,7 @@ import {
   profileService,
 } from '../services/profileService'
 import type { RootState } from '../store'
+import AchievementsPanel from './profile/AchievementsPanel'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
 
@@ -234,6 +235,7 @@ const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const requestControllerRef = useRef<AbortController | null>(null)
   const comingSoonUiEnabled = useFeatureFlag(FEATURE_FLAGS.COMING_SOON_UI)
+  const profileExtrasEnabled = useFeatureFlag(FEATURE_FLAGS.PROFILE_EXTRAS)
   const [relationship, setRelationship] = useState<RelationshipStatus>('none')
   const [friendSince, setFriendSince] = useState<string | undefined>(undefined)
   const [mutual, setMutual] = useState<{
@@ -739,7 +741,7 @@ const ProfilePage: React.FC = () => {
     { id: 'friends', label: 'Friends', icon: '🤝', available: true },
   ]
 
-  if (comingSoonUiEnabled) {
+  if (profileExtrasEnabled) {
     tabs.push(
       { id: 'matches', label: 'Matches', icon: '🎮', available: true },
       { id: 'achievements', label: 'Achievements', icon: '🏆', available: true },
@@ -1524,13 +1526,9 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {comingSoonUiEnabled && activeTab === 'achievements' && (
-            <div className="relative glass-box-xl shadow-xl text-center">
-              <div className="text-5xl mb-4">🏆</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Achievements Coming Soon</h2>
-              <p className="text-muted">
-                Unlock achievements, earn badges, and showcase your accomplishments.
-              </p>
+          {profileExtrasEnabled && activeTab === 'achievements' && (
+            <div className="relative glass-box-xl shadow-xl">
+              <AchievementsPanel />
             </div>
           )}
         </div>

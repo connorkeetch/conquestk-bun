@@ -1,5 +1,11 @@
 import { useMemo } from 'react'
+import {
+  getCardTradeDescription,
+  getFogDescription,
+  getTreasureDescription,
+} from '@/utils/tooltips'
 import { useAppSelector } from '../../hooks/redux'
+import InfoTooltip from '../InfoTooltip'
 
 type Props = {
   className?: string
@@ -10,7 +16,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
   const currentGame = useAppSelector((state) => state.game.currentGame)
 
   const lines = useMemo(() => {
-    if (!room) return [] as Array<{ k: string; v: string }>
+    if (!room) return [] as Array<{ k: string; v: string; help?: string }>
 
     const toTitle = (v?: string | null) => (v ? String(v).replace(/_/g, ' ') : '—')
     const fog = room.fogOfWar ?? 'off'
@@ -90,16 +96,16 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       return enabled ? 'Enabled' : 'Disabled'
     })()
 
-    const items: Array<{ k: string; v: string }> = [
+    const items: Array<{ k: string; v: string; help?: string }> = [
       ...(gameMode ? [{ k: 'Game Mode', v: toTitle(gameMode) }] : []),
       { k: 'Map', v: room.mapName || 'Unknown map' },
       { k: playersLabel, v: String(room.maxPlayers) },
       { k: 'Teams', v: teamsValue },
-      { k: 'Fog of War', v: fogValue },
+      { k: 'Fog of War', v: fogValue, help: getFogDescription(fog) },
       { k: 'Turn Timer', v: formatTimer(turnTimer) },
-      { k: 'Card Trades', v: cardTradesValue },
+      { k: 'Card Trades', v: cardTradesValue, help: getCardTradeDescription(cardTradeMode) },
       { k: 'Fortification', v: fortificationValue },
-      { k: 'Treasures', v: treasureSummary },
+      { k: 'Treasures', v: treasureSummary, help: getTreasureDescription(room.treasureConfig) },
       { k: 'Bonuses', v: bonusesValue },
       { k: 'Modifiers', v: modifiersValue },
       { k: 'Ranked', v: ranked ? 'Yes' : 'No' },
@@ -133,7 +139,10 @@ export default function GameOptionsPanel({ className = '' }: Props) {
               key={line.k}
               className="flex items-center justify-between rounded border border-border bg-surface-1/60 px-3 py-2"
             >
-              <div className="text-xs uppercase tracking-wide text-muted">{line.k}</div>
+              <div className="flex items-center gap-1">
+                <div className="text-xs uppercase tracking-wide text-muted">{line.k}</div>
+                {line.help ? <InfoTooltip title={line.help} /> : null}
+              </div>
               <div className="text-sm text-white">{line.v}</div>
             </div>
           ))}
