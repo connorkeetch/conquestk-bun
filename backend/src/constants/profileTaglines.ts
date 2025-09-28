@@ -56,4 +56,3 @@ export const PROFILE_TAGLINES: string[] = [
 
 export const isAllowedTagline = (value: unknown): value is string =>
   typeof value === 'string' && PROFILE_TAGLINES.includes(value)
-

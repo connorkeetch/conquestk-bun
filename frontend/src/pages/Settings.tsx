@@ -1,4 +1,3 @@
-import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '../constants/profileTaglines'
 import { normalizeThemeId, type ThemeId } from '@shared/types/themes'
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
@@ -24,6 +23,7 @@ import {
   STANDARD_COLORS,
 } from '../constants/colors'
 import { FEATURE_FLAGS } from '../constants/featureFlags'
+import { DEFAULT_TAGLINE, PROFILE_TAGLINES } from '../constants/profileTaglines'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import audioService from '../services/audioService'
