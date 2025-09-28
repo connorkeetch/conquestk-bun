@@ -2,6 +2,7 @@ import { Calendar, Crown, Medal, TrendingUp, Trophy, Users } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 // Community hub with sub-navigation for Leaderboards and Clans
 import { logger } from '@/utils/logger'
 import api from '../services/api'
@@ -31,6 +32,7 @@ const CommunityPage: React.FC = () => {
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardEntry[]>([])
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(false)
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   const fetchLeaderboardData = useCallback(async () => {
     setLoading(true)
@@ -234,9 +236,14 @@ const CommunityPage: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="ml-2">
-                              <div className="text-sm font-medium text-white">
+                              <button
+                                type="button"
+                                onClick={() => setProfileUsername(player.username)}
+                                className="text-sm font-medium text-white underline-offset-2 hover:underline"
+                                title={`View ${player.username}'s profile`}
+                              >
                                 {player.username}
-                              </div>
+                              </button>
                             </div>
                           </div>
                         </td>
@@ -278,6 +285,11 @@ const CommunityPage: React.FC = () => {
               </div>
             )}
           </div>
+          <PlayerProfileModal
+            open={profileUsername !== null}
+            username={profileUsername}
+            onClose={() => setProfileUsername(null)}
+          />
         </>
       )}
     </div>

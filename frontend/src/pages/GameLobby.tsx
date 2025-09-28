@@ -121,7 +121,10 @@ export default function GameLobby() {
             <div key={room.id} className="panel">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-semibold">{room.name}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {room.name}
+                    {typeof room.roomCode === 'number' ? ` — Room ${room.roomCode}` : ''}
+                  </h3>
                   <p className="text-muted">
                     Players: {room.players?.length || 0}/{room.maxPlayers} | Status: {room.status}
                   </p>

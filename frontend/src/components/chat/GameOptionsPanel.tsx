@@ -85,7 +85,7 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     const treasureSummary = (() => {
       const cfg = room.treasureConfig
       if (!cfg || cfg.enabled === false) return 'Off'
-      const mode = cfg.payoutMode || 'triangular'
+      const mode = cfg.payoutMode || 'classic'
       if (mode === 'fixed') return 'Fixed'
       return mode === 'triangular' ? 'Progressive' : mode === 'classic' ? 'Classic' : 'Off'
     })()

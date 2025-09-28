@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import Layout from '../components/Layout'
 import SkillTierBadge from '../components/SkillTierBadge'
 import { useAppSelector } from '../hooks/redux'
@@ -25,6 +25,7 @@ const LeaderboardsPage: React.FC = () => {
   const [tierFilter, setTierFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(0)
   const currentUser = useAppSelector((state) => state.auth.user)
+  const [profileUsername, setProfileUsername] = useState<string | null>(null)
 
   const ITEMS_PER_PAGE = 50
 
@@ -162,13 +163,15 @@ const LeaderboardsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                          to={`/profile/${entry.userId}`}
-                          className="text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] font-medium"
+                        <button
+                          type="button"
+                          onClick={() => setProfileUsername(entry.username)}
+                          className="text-[color:var(--color-primary-soft)] hover:text-[color:var(--color-primary)] font-medium underline-offset-2 hover:underline"
+                          title={`View ${entry.username}'s profile`}
                         >
                           {entry.username}
                           {isCurrentUser && <span className="ml-2 text-xs text-muted">(You)</span>}
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <SkillTierBadge
@@ -238,6 +241,12 @@ const LeaderboardsPage: React.FC = () => {
             </button>
           </div>
         )}
+
+        <PlayerProfileModal
+          open={profileUsername !== null}
+          username={profileUsername}
+          onClose={() => setProfileUsername(null)}
+        />
       </div>
     </Layout>
   )

@@ -22,7 +22,7 @@ const ClanDetailPage = lazyWithRetry(() => import('./pages/ClanDetailPage'))
 
 import ForgotPassword from './pages/ForgotPassword'
 
-const GameListPage = lazyWithRetry(() => import('./pages/GameListPage'))
+const _GameListPage = lazyWithRetry(() => import('./pages/GameListPage'))
 const GamePage = lazyWithRetry(() => import('./pages/GamePage'))
 const GameRoom = lazyWithRetry(() => import('./pages/GameRoom'))
 
@@ -436,7 +436,7 @@ function App() {
             path="/games"
             element={
               <AuthGuard>
-                <Navigate to="/games/active" replace />
+                <Navigate to="/lobby/my-games" replace />
               </AuthGuard>
             }
           />
@@ -444,15 +444,7 @@ function App() {
             path="/games/:section"
             element={
               <AuthGuard>
-                <Suspense
-                  fallback={
-                    <div className="min-h-screen flex items-center justify-center">
-                      <div className="spinner"></div>
-                    </div>
-                  }
-                >
-                  <GameListPage />
-                </Suspense>
+                <Navigate to="/lobby/my-games" replace />
               </AuthGuard>
             }
           />
