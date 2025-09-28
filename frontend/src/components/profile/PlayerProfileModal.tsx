@@ -152,9 +152,12 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                     role="img"
                     aria-label={`${rankSegmentsFilled} of ${rankTierInfo.total} rank tiers completed`}
                   >
-                    {Array.from({ length: rankTierInfo.total }).map((_, index) => (
+                    {Array.from(
+                      { length: rankTierInfo.total },
+                      (_, i) => `modal-rank-tier-${i}`,
+                    ).map((tierId, index) => (
                       <span
-                        key={`modal-rank-tier-${index}`}
+                        key={tierId}
                         className="h-1.5 flex-1 min-w-[10px] rounded-full"
                         style={
                           index < rankSegmentsFilled
@@ -168,7 +171,9 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                       />
                     ))}
                   </div>
-                  {rankRangeText && <span className="text-[11px] text-white/40">{rankRangeText}</span>}
+                  {rankRangeText && (
+                    <span className="text-[11px] text-white/40">{rankRangeText}</span>
+                  )}
                 </div>
               )}
 

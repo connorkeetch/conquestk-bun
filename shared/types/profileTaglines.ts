@@ -25,7 +25,7 @@ export const PROFILE_TAGLINES: string[] = [
   'Caesar of the Frontier',
   'Padishah of Destiny',
   'The Magnificent',
-  "The Terrible (Ivan’s PR department was bold)",
+  'The Terrible (Ivan’s PR department was bold)',
   'Lord Protector of the Realm',
   'The Scourge of God',
   'Conqueror of the West',
@@ -60,4 +60,3 @@ export const PROFILE_TAGLINES: string[] = [
 export const isAllowedTagline = (value: unknown): value is string => {
   return typeof value === 'string' && PROFILE_TAGLINES.includes(value)
 }
-

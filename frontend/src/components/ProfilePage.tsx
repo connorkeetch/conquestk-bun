@@ -740,11 +740,13 @@ const ProfilePage: React.FC = () => {
     totalRankTiers,
   } = rankVisuals
 
-  const rankRangeText = useMemo(() => {
+  // Compute inline (no hook) to avoid calling hooks after early returns
+  const rankRangeText = (() => {
     const min = rankDetails.minRating
     const max = nextRank ? nextRank.minRating - 1 : undefined
     return max ? `${min}–${max} CP` : `${min}+ CP`
-  }, [nextRank, rankDetails.minRating])
+  })()
+  const rankTierIds = Array.from({ length: totalRankTiers }, (_, i) => `rank-tier-${i}`)
 
   // Removed header rank badge; rank appears only on the dedicated card
 
@@ -846,9 +848,9 @@ const ProfilePage: React.FC = () => {
                       role="img"
                       aria-label={`${rankSegmentsFilled} of ${totalRankTiers} rank tiers completed`}
                     >
-                      {Array.from({ length: totalRankTiers }).map((_, index) => (
+                      {rankTierIds.map((tierId, index) => (
                         <span
-                          key={`rank-tier-progress-${index}`}
+                          key={tierId}
                           className="h-1.5 flex-1 min-w-[12px] rounded-full transition-all duration-300"
                           style={
                             index < rankSegmentsFilled
