@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 
 import friendsService, {
@@ -27,7 +27,11 @@ import {
 import { FEATURE_FLAGS } from '../constants/featureFlags'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
-import { type ProfileSummary, profileService } from '../services/profileService'
+import {
+  type MatchHistoryEntry,
+  type ProfileSummary,
+  profileService,
+} from '../services/profileService'
 import type { RootState } from '../store'
 import UserStats from './profile/UserStats'
 import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
@@ -35,6 +39,8 @@ import { CONQUEST_RANKS, getConquestRank } from './RankInsignia'
 type TabType = 'overview' | 'stats' | 'friends' | 'matches' | 'achievements'
 
 // color helpers moved to '@/utils/color'
+
+const MATCH_HISTORY_PAGE_SIZE = 10
 
 const buildSignatureVisuals = (profile: ProfileSummary | null, settings: RootState['settings']) => {
   const fallbackPlayerColor = PLAYER_COLORS[0]
@@ -247,8 +253,73 @@ const ProfilePage: React.FC = () => {
     error?: string | null
     profile?: ProfileSummary | null
   } | null>(null)
+  const [matchHistory, setMatchHistory] = useState<MatchHistoryEntry[]>([])
+  const [matchHistoryLoading, setMatchHistoryLoading] = useState(false)
+  const [matchHistoryError, setMatchHistoryError] = useState<string | null>(null)
+  const [matchHistoryHasMore, setMatchHistoryHasMore] = useState(false)
+  const [matchHistoryInitialized, setMatchHistoryInitialized] = useState(false)
+  const matchHistoryRequestRef = useRef<AbortController | null>(null)
+  const matchHistoryOffsetRef = useRef(0)
 
   const isOwnProfile = currentUser?.username === username
+
+  const matchSummary = useMemo(() => {
+    const gamesPlayed = profile?.gamesPlayed ?? 0
+    const wins = profile?.wins ?? 0
+    const losses = profile ? Math.max(0, gamesPlayed - wins) : 0
+    const winRate =
+      profile?.winRate ?? (gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 1000) / 10 : 0)
+
+    const durations = matchHistory
+      .map((entry) =>
+        entry.durationMinutes && entry.durationMinutes > 0 ? entry.durationMinutes : null,
+      )
+      .filter((value): value is number => value !== null)
+
+    const averageDuration =
+      durations.length > 0
+        ? Math.round((durations.reduce((acc, value) => acc + value, 0) / durations.length) * 10) /
+          10
+        : null
+
+    const recentRecord = matchHistory.slice(0, 5)
+    const recentWins = recentRecord.filter((entry) => entry.result === 'won').length
+    const recentLosses = recentRecord.filter((entry) => entry.result === 'lost').length
+
+    return {
+      gamesPlayed,
+      wins,
+      losses,
+      winRate,
+      averageDuration,
+      recentRecord,
+      recentWins,
+      recentLosses,
+    }
+  }, [profile, matchHistory])
+
+  const formatMatchDuration = (minutes: number | null) => {
+    if (minutes === null || Number.isNaN(minutes)) {
+      return '—'
+    }
+
+    if (minutes < 1) {
+      return '<1 min'
+    }
+
+    if (minutes < 60) {
+      return `${Math.round(minutes)} min`
+    }
+
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = Math.round(minutes % 60)
+
+    if (remainingMinutes <= 0) {
+      return `${hours} hr`
+    }
+
+    return `${hours} hr ${remainingMinutes} min`
+  }
 
   const fetchProfile = useCallback(async () => {
     if (!username) {
@@ -302,6 +373,25 @@ const ProfilePage: React.FC = () => {
     }
   }, [fetchProfile])
 
+  useEffect(() => {
+    setMatchHistory([])
+    setMatchHistoryHasMore(false)
+    setMatchHistoryError(null)
+    setMatchHistoryInitialized(false)
+    matchHistoryOffsetRef.current = 0
+    matchHistoryRequestRef.current?.abort()
+    matchHistoryRequestRef.current = null
+    if (!username) {
+      return
+    }
+  }, [username])
+
+  useEffect(() => {
+    return () => {
+      matchHistoryRequestRef.current?.abort()
+    }
+  }, [])
+
   // Pick initial tab from query string if provided
   useEffect(() => {
     const t = searchParams.get('tab')
@@ -311,7 +401,7 @@ const ProfilePage: React.FC = () => {
   }, [searchParams])
 
   useEffect(() => {
-    if (!comingSoonUiEnabled && (activeTab === 'matches' || activeTab === 'achievements')) {
+    if (!comingSoonUiEnabled && activeTab === 'achievements') {
       setActiveTab('overview')
     }
   }, [comingSoonUiEnabled, activeTab])
@@ -360,6 +450,61 @@ const ProfilePage: React.FC = () => {
     void fetchProfile()
   }, [fetchProfile])
 
+  const fetchMatchHistory = useCallback(
+    async ({ reset = false }: { reset?: boolean } = {}) => {
+      if (!username) {
+        return
+      }
+
+      if (reset) {
+        matchHistoryOffsetRef.current = 0
+        setMatchHistory([])
+        setMatchHistoryHasMore(false)
+        setMatchHistoryError(null)
+      }
+
+      setMatchHistoryInitialized(true)
+      matchHistoryRequestRef.current?.abort()
+      const controller = new AbortController()
+      matchHistoryRequestRef.current = controller
+
+      try {
+        setMatchHistoryLoading(true)
+        const response = await profileService.getMatchHistory(username, {
+          limit: MATCH_HISTORY_PAGE_SIZE,
+          offset: reset ? 0 : matchHistoryOffsetRef.current,
+          isOwnProfile,
+          signal: controller.signal,
+        })
+
+        if (controller.signal.aborted) {
+          return
+        }
+
+        setMatchHistory((prev) => (reset ? response.matches : [...prev, ...response.matches]))
+        matchHistoryOffsetRef.current = response.nextOffset
+        setMatchHistoryHasMore(response.hasMore)
+        setMatchHistoryError(null)
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return
+        }
+        setMatchHistoryError('Unable to load match history right now. Please try again soon.')
+        if (reset) {
+          matchHistoryOffsetRef.current = 0
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setMatchHistoryLoading(false)
+        }
+        if (matchHistoryRequestRef.current === controller) {
+          matchHistoryRequestRef.current = null
+        }
+      }
+    },
+    [username, isOwnProfile],
+  )
+
   // Load relationship status when viewing another user's profile
   useEffect(() => {
     const run = async () => {
@@ -378,6 +523,19 @@ const ProfilePage: React.FC = () => {
     }
     void run()
   }, [profile, isOwnProfile])
+
+  useEffect(() => {
+    if (activeTab === 'matches' && profile && !matchHistoryInitialized) {
+      void fetchMatchHistory({ reset: true })
+      return () => {
+        matchHistoryRequestRef.current?.abort()
+      }
+    }
+
+    if (activeTab !== 'matches') {
+      matchHistoryRequestRef.current?.abort()
+    }
+  }, [activeTab, profile, matchHistoryInitialized, fetchMatchHistory])
 
   const sendFriendRequest = async () => {
     if (!profile) return
@@ -1165,13 +1323,204 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {comingSoonUiEnabled && activeTab === 'matches' && (
-            <div className="relative glass-box-xl shadow-xl text-center">
-              <div className="text-5xl mb-4">🎮</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Match History Coming Soon</h2>
-              <p className="text-muted">
-                View detailed match history, replays, and game analytics.
-              </p>
+          {activeTab === 'matches' && profile && (
+            <div className="space-y-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                    <span>🎮</span>
+                    Battle Ledger
+                  </h2>
+                  <p className="text-sm text-muted">
+                    {isOwnProfile
+                      ? 'Track your latest conquests, win streaks, and match pacing.'
+                      : `A quick look at ${profile.username}'s recent campaigns.`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => void fetchMatchHistory({ reset: true })}
+                    disabled={matchHistoryLoading}
+                  >
+                    {matchHistoryLoading ? 'Refreshing…' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="glass-box-sm p-5 border border-white/10 bg-surface-2/70">
+                  <p className="text-xs uppercase tracking-[0.35em] text-muted">Total Battles</p>
+                  <p className="text-3xl font-bold text-white mt-2">{matchSummary.gamesPlayed}</p>
+                  <p className="text-sm text-muted mt-2">
+                    {matchSummary.gamesPlayed > 0
+                      ? `${matchSummary.wins} victories · ${matchSummary.losses} defeats`
+                      : isOwnProfile
+                        ? 'Jump into a game to start your campaign.'
+                        : `${profile.username} has not recorded a battle yet.`}
+                  </p>
+                </div>
+
+                <div className="glass-box-sm p-5 border border-primary/20 bg-gradient-to-br from-primary/20 via-transparent to-transparent">
+                  <p className="text-xs uppercase tracking-[0.35em] text-muted">Win Rate</p>
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {matchSummary.gamesPlayed > 0 ? `${matchSummary.winRate.toFixed(1)}%` : '—'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <span className="px-2 py-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-200">
+                      {matchSummary.recentWins} recent wins
+                    </span>
+                    <span className="px-2 py-1 rounded-full border border-rose-400/30 bg-rose-500/10 text-rose-200">
+                      {matchSummary.recentLosses} recent losses
+                    </span>
+                  </div>
+                </div>
+
+                <div className="glass-box-sm p-5 border border-white/10 bg-surface-2/70">
+                  <p className="text-xs uppercase tracking-[0.35em] text-muted">Tempo</p>
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {matchSummary.averageDuration
+                      ? formatMatchDuration(matchSummary.averageDuration)
+                      : '—'}
+                  </p>
+                  <p className="text-sm text-muted mt-2">
+                    {matchSummary.averageDuration
+                      ? 'Average duration of your recent matches.'
+                      : 'We need a few completed matches to analyze pacing.'}
+                  </p>
+                </div>
+              </div>
+
+              {matchHistoryLoading && matchHistory.length === 0 ? (
+                <div className="glass-box p-6 text-center text-muted">
+                  <div className="text-4xl mb-3 animate-pulse">🔄</div>
+                  <p>Loading match history…</p>
+                </div>
+              ) : matchHistoryError ? (
+                <div className="p-5 border border-red-500/30 bg-red-500/10 rounded-xl text-red-200 text-sm">
+                  <div className="font-semibold mb-2">Could not load matches</div>
+                  <p className="mb-3">{matchHistoryError}</p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => void fetchMatchHistory({ reset: true })}
+                    disabled={matchHistoryLoading}
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : matchHistory.length === 0 ? (
+                <div className="glass-box p-6 text-center text-muted">
+                  <div className="text-4xl mb-3">🧭</div>
+                  <p>
+                    {isOwnProfile
+                      ? 'No battles on record yet. Your first conquest will appear here.'
+                      : `${profile.username} has not logged any public matches yet.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {matchSummary.recentRecord.length > 0 && (
+                    <div className="glass-box-sm p-4 border border-white/10 bg-surface-2/70">
+                      <p className="text-xs uppercase tracking-[0.35em] text-muted mb-2">
+                        Recent streak
+                      </p>
+                      <div className="flex gap-2">
+                        {matchSummary.recentRecord.map((entry, index) => (
+                          <span
+                            key={`${entry.gameId}-${index}`}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                              entry.result === 'won'
+                                ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40'
+                                : 'bg-rose-500/15 text-rose-200 border-rose-400/40'
+                            }`}
+                          >
+                            {entry.result === 'won' ? 'Victory' : 'Defeat'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {matchHistory.map((match) => {
+                      const startedAt = match.startedAt ? new Date(match.startedAt) : null
+                      const endedAt = match.endedAt ? new Date(match.endedAt) : null
+                      const startedLabel = startedAt
+                        ? startedAt.toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })
+                        : 'Unknown start'
+                      const statusLabel = match.status
+                        ? match.status.replace(/_/g, ' ').toUpperCase()
+                        : 'UNKNOWN'
+
+                      return (
+                        <div
+                          key={`${match.gameId}-${match.startedAt ?? 'unknown'}`}
+                          className="glass-box-sm border border-white/10 bg-surface-2/70 p-4"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <span>{match.result === 'won' ? '🏆' : '⚔️'}</span>
+                                {match.gameName ?? 'Unnamed Battle'}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted mt-2">
+                                <span>{startedLabel}</span>
+                                <span className="hidden sm:inline text-white/20">•</span>
+                                <span>
+                                  {match.gameMode
+                                    ? match.gameMode.replace(/_/g, ' ')
+                                    : 'Mode unknown'}
+                                </span>
+                                {endedAt && (
+                                  <>
+                                    <span className="hidden sm:inline text-white/20">•</span>
+                                    <span>{formatMatchDuration(match.durationMinutes)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                                  match.result === 'won'
+                                    ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40'
+                                    : 'bg-rose-500/15 text-rose-200 border-rose-400/40'
+                                }`}
+                              >
+                                {match.result === 'won' ? 'Victory' : 'Defeat'}
+                              </span>
+                              <span className="text-xs uppercase tracking-[0.35em] text-muted">
+                                {statusLabel}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {matchHistoryHasMore && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => void fetchMatchHistory()}
+                        disabled={matchHistoryLoading}
+                      >
+                        {matchHistoryLoading ? 'Loading…' : 'Load more matches'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

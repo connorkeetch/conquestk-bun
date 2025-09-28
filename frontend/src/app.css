@@ -478,6 +478,22 @@ This allows themes to work with any color scheme!
     box-shadow: var(--shadow-2);
   }
 
+  /* Accessible focus outlines */
+  .btn:focus-visible,
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible,
+  .btn-tertiary:focus-visible,
+  .btn-ghost:focus-visible,
+  .btn-outline:focus-visible,
+  .btn-danger:focus-visible,
+  .btn-success:focus-visible,
+  .btn-icon:focus-visible,
+  .chip:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
+
   .btn:disabled,
   .btn-primary:disabled,
   .btn-secondary:disabled,

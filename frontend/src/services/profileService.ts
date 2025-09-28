@@ -28,6 +28,17 @@ export interface ProfileSummary {
   rank: ProfileRankSummary
 }
 
+export interface MatchHistoryEntry {
+  gameId: string
+  gameName: string | null
+  gameMode: string | null
+  status: string
+  result: 'won' | 'lost'
+  durationMinutes: number | null
+  startedAt: string | null
+  endedAt: string | null
+}
+
 export interface PlayerStatsOverview {
   gamesPlayed: number
   wins: number
@@ -160,6 +171,21 @@ const pickString = (source: Record<string, unknown>, keys: string[]): string | u
 const pickNullableString = (source: Record<string, unknown>, keys: string[]): string | null => {
   const value = pickString(source, keys)
   return value ?? null
+}
+
+const normalizeMatchHistoryEntry = (data: Record<string, unknown>): MatchHistoryEntry => {
+  const rawDuration = pickNumber(data, ['durationMinutes', 'duration_minutes'], -1)
+
+  return {
+    gameId: pickString(data, ['gameId', 'game_id']) ?? 'unknown',
+    gameName: pickNullableString(data, ['gameName', 'game_name']),
+    gameMode: pickNullableString(data, ['gameMode', 'game_mode']),
+    status: pickString(data, ['status']) ?? 'unknown',
+    result: pickString(data, ['result']) === 'won' ? 'won' : 'lost',
+    durationMinutes: rawDuration >= 0 ? rawDuration : null,
+    startedAt: pickNullableString(data, ['startedAt', 'started_at']),
+    endedAt: pickNullableString(data, ['endedAt', 'ended_at']),
+  }
 }
 
 const normalizeProfileSummary = (data: RawProfileSummary): ProfileSummary => {
@@ -327,6 +353,12 @@ interface RequestOptions {
   signal?: AbortSignal
 }
 
+interface MatchHistoryOptions extends RequestOptions {
+  limit?: number
+  offset?: number
+  isOwnProfile?: boolean
+}
+
 export const profileService = {
   async getProfileByUsername(
     username: string,
@@ -346,6 +378,39 @@ export const profileService = {
   async getMyStats(options: RequestOptions = {}): Promise<PlayerStatsBreakdown> {
     const response = await apiClient.get('/profile/stats', { signal: options.signal })
     return normalizeStatsBreakdown(response.data)
+  },
+
+  async getMatchHistory(
+    username: string,
+    options: MatchHistoryOptions = {},
+  ): Promise<{ matches: MatchHistoryEntry[]; hasMore: boolean; nextOffset: number }> {
+    const limit = Math.min(Math.max(options.limit ?? 10, 1), 50)
+    const offset = Math.max(options.offset ?? 0, 0)
+    const endpoint = options.isOwnProfile
+      ? '/profile/history'
+      : `/users/${encodeURIComponent(username)}/history`
+
+    const response = await apiClient.get(endpoint, {
+      params: { limit, offset },
+      signal: options.signal,
+    })
+
+    const rawMatches = Array.isArray(response.data?.matches) ? response.data.matches : []
+    const matches = rawMatches.map((item: Record<string, unknown>) =>
+      normalizeMatchHistoryEntry(item),
+    )
+
+    const hasMore = Boolean(
+      typeof response.data?.pagination?.hasMore === 'boolean'
+        ? response.data.pagination.hasMore
+        : matches.length === limit,
+    )
+
+    return {
+      matches,
+      hasMore,
+      nextOffset: offset + matches.length,
+    }
   },
 }
 

@@ -22,6 +22,8 @@ export default function GameOptionsPanel({ className = '' }: Props) {
     const turnTimer = room.turnTimerSeconds ?? 0
     const movementType = room.movementType ?? null
     const gameMode = room.gameMode ?? null
+    const cardTradeMode = room.cardTradeMode ?? null
+    const bonusType = room.bonusType ?? null
 
     const playersLabel = 'Players'
 
@@ -34,7 +36,18 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       return toTitle(teamMode)
     })()
 
-    const fogValue = fog === 'off' ? 'Disabled' : 'Enabled'
+    const fogValue = fog === 'off' ? 'Off' : toTitle(fog)
+
+    const cardTradesValue = (() => {
+      if (!cardTradeMode) return 'Progressive'
+      const normalized = cardTradeMode.toLowerCase()
+      if (normalized === 'fixed') return 'Fixed'
+      if (normalized === 'progressive' || normalized === 'escalating') return 'Progressive'
+      if (normalized === 'none' || normalized === 'disabled') return 'Disabled'
+      return toTitle(cardTradeMode)
+    })()
+
+    const bonusesValue = bonusType ? toTitle(bonusType) : 'Classic'
 
     const formatTimer = (seconds?: number | null) => {
       const s = seconds ?? 0
@@ -84,8 +97,10 @@ export default function GameOptionsPanel({ className = '' }: Props) {
       { k: 'Teams', v: teamsValue },
       { k: 'Fog of War', v: fogValue },
       { k: 'Turn Timer', v: formatTimer(turnTimer) },
+      { k: 'Card Trades', v: cardTradesValue },
       { k: 'Fortification', v: fortificationValue },
       { k: 'Treasures', v: treasureSummary },
+      { k: 'Bonuses', v: bonusesValue },
       { k: 'Modifiers', v: modifiersValue },
       { k: 'Ranked', v: ranked ? 'Yes' : 'No' },
       { k: 'Private Room', v: privateRoom ? 'Yes' : 'No' },

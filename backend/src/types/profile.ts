@@ -63,25 +63,14 @@ export interface UserStatistics {
 }
 
 export interface GameHistoryEntry {
-  id: string
-  userId: string
-  gameId?: string
-  mapId?: string
-  mapName: string
-  playerCount: number
-  position: number // final ranking
-  result: 'won' | 'lost' | 'abandoned'
-  duration: number // in minutes
-  territoriesHeld: number
-  maxTerritories: number
-  turnsTaken: number
-  battlesInitiated: number
-  battlesWon: number
-  continentsHeld: string[] // array of continent names
-  gameMode: string
-  startedAt: Date
-  endedAt: Date
-  createdAt: Date
+  gameId: string
+  gameName: string | null
+  gameMode: string | null
+  status: string
+  result: 'won' | 'lost'
+  durationMinutes: number | null
+  startedAt: Date | null
+  endedAt: Date | null
 }
 
 export interface UserPreferences {

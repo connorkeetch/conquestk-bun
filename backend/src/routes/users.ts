@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { type Request, type Response, Router } from 'express'
 import { query } from '../config/database'
 import { authenticateToken } from '../middleware/auth'
+import { profileService } from '../services/profileService'
 import { logger } from '../utils/logger'
 import { handleRouteError } from '../utils/routeErrorHandler'
 
@@ -122,6 +123,45 @@ function getConquestRank(skillRating: number) {
   }
   return CONQUEST_RANKS[0] // Default to Chieftain
 }
+
+router.get('/:username/history', async (req: Request, res: Response) => {
+  const { username } = req.params
+  const rawLimit = parseInt(req.query.limit as string, 10)
+  const rawOffset = parseInt(req.query.offset as string, 10)
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 20
+  const offset = Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0
+
+  try {
+    const userResult = await query(
+      `
+      SELECT id
+      FROM users
+      WHERE username = $1 AND deleted_at IS NULL
+    `,
+      [username],
+    )
+
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const userId = userResult.rows[0].id as string
+    const matches = await profileService.getGameHistory(userId, limit, offset)
+
+    return res.json({
+      matches,
+      pagination: {
+        limit,
+        offset,
+        returned: matches.length,
+        hasMore: matches.length === limit,
+      },
+    })
+  } catch (error) {
+    handleRouteError(error, req, 'Failed to fetch match history', 500, { username })
+    return res.status(500).json({ error: 'Failed to fetch match history' })
+  }
+})
 
 // Get user profile by username (public route)
 router.get('/:username/profile', async (req: Request, res: Response) => {

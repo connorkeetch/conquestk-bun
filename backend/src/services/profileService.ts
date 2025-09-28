@@ -40,6 +40,33 @@ interface ModeStatsRow extends QueryResultRow {
   avg_duration: number | null
 }
 
+interface GameHistoryRow extends QueryResultRow {
+  game_id: string
+  game_name: string | null
+  game_mode: string | null
+  status: string
+  result: string | null
+  duration_minutes: number | string | null
+  started_at: Date | null
+  ended_at: Date | null
+}
+
+const mapGameHistoryRow = (row: GameHistoryRow): GameHistoryEntry => ({
+  gameId: row.game_id,
+  gameName: row.game_name ?? null,
+  gameMode: row.game_mode ?? null,
+  status: row.status,
+  result: row.result === 'won' ? 'won' : 'lost',
+  durationMinutes:
+    typeof row.duration_minutes === 'number'
+      ? row.duration_minutes
+      : typeof row.duration_minutes === 'string'
+        ? Number(row.duration_minutes)
+        : null,
+  startedAt: row.started_at ?? null,
+  endedAt: row.ended_at ?? null,
+})
+
 export class ProfileService {
   // Get complete user profile with all related data
   async getUserProfile(userId: string): Promise<ProfileResponse> {
@@ -95,7 +122,7 @@ export class ProfileService {
         profile: profileResult.rows[0] || this.createDefaultProfile(userId),
         statistics: statsResult.rows[0] || this.createDefaultStats(userId),
         achievements: achievementsResult.rows || [],
-        recentGames: recentGamesResult.rows || [],
+        recentGames: (recentGamesResult.rows as GameHistoryRow[]).map(mapGameHistoryRow),
         preferences: preferencesResult.rows[0] || this.createDefaultPreferences(userId),
       }
     } finally {
@@ -389,7 +416,7 @@ export class ProfileService {
     try {
       const result = await client.query(
         `
-        SELECT 
+        SELECT
           gr.id as game_id,
           gr.name as game_name,
           gr.started_at,
@@ -407,7 +434,7 @@ export class ProfileService {
         [userId, limit, offset],
       )
 
-      return result.rows || []
+      return (result.rows as GameHistoryRow[]).map(mapGameHistoryRow)
     } finally {
       if (client.release) client.release()
     }
