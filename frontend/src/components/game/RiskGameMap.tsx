@@ -58,6 +58,14 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
 
   const territoryEntries = useMemo(() => Object.entries(territories), [territories])
 
+  const focusCoords = useMemo(() => {
+    const id = selectedTargetTerritory || selectedTerritory
+    if (!id) return null
+    const t = territories[id]
+    if (!t) return null
+    return { x: t.armyPosition.x, y: t.armyPosition.y }
+  }, [selectedTargetTerritory, selectedTerritory, territories])
+
   return (
     <div className="game-board flex-1 relative bg-blue-100 p-4">
       <div className="relative w-full h-full">
@@ -66,6 +74,7 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
             mapWidth={CLASSIC_MAP_WIDTH}
             mapHeight={CLASSIC_MAP_HEIGHT}
             showMinimap={true}
+            focus={focusCoords}
           >
             <WorldMapSVG
               territories={territories}
