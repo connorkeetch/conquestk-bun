@@ -58,10 +58,10 @@ Go Live is tentatively set for Oct 1, 2025
   - On join, server validates membership, subscribes the client, and backfills the latest authoritative state.
   - Load test (> _N_ concurrent clients) shows no dropped deltas; reconnect replays missed state.
 
-### A5. Core rules parity (continent bonuses, teams, capitals)
+### A5. Core rules parity (sector bonuses, teams, capitals)
 - **Priority:** P0 • **Tags:** [be][fe]
 - **Status:** ✅ Completed (September 2025)
-- **Problem:** Bonuses and team play remain TODOs; capital checks are stubbed; client helpers hard-code classic continents.
+- **Problem:** Bonuses and team play remain TODOs; capital checks are stubbed; client helpers hard-code classic sectors.
 - **Acceptance criteria:**
   - Backend calculates reinforcements with map metadata (no hard-coded constants).
 - Team rules (reinforcement sharing, win conditions) exist or the UI disables team mode pre-launch.
@@ -69,7 +69,7 @@ Go Live is tentatively set for Oct 1, 2025
 - Tests cover classic plus one custom map; frontend renders bonuses from server data only.
 - _Progress (September 2025): Lobby creation now supports explicit team counts, hosts can assign players per team,
   and the engine enforces alliances for movement/combat with team-based victory checks. Reinforcement math
-  now pulls continent bonuses from map metadata for both backend workers and the client UI, and the capital
+  now pulls sector bonuses from map metadata for both backend workers and the client UI, and the capital
   warning path (`isCapitalTerritory`) reflects cached game state._
 - _Progress (September 2025): Reinforcement placements can now target any teammate-owned territory. Backend validation
   and tests cover the new path, the board blocks enemy selections, and the reinforcement panel highlights

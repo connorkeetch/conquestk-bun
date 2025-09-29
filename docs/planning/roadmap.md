@@ -12,7 +12,7 @@ Progress over the summer 2025 cycle that is now in production:
 - **Authoritative battle archival & rankings:** the battle worker now calls `applyBattleResult` end-to-end, persisting to `game_results`/`player_game_results`, updating ELO, and exposing battle metrics for alerting.
 - **Lifecycle state machine & ready-check:** lobby → initializing → active → completed transitions are enforced server-side, with ready-check broadcasts and automatic game archival on completion.
 - **Real-time delta streaming:** the frontend consumes live deltas over the canonical `game:<roomId>` channel, replacing fixture data and keeping the Redux store authoritative.
-- **Capitals & continent parity:** backend continent bonuses, capital assignments, and team logic now drive both reinforcement math and UI messaging for custom and classic maps.
+- **Capitals & sector parity:** backend sector bonuses, capital assignments, and team logic now drive both reinforcement math and UI messaging for custom and classic maps.
 - **Web push notification foundation:** durable subscription storage, turn/game notifications, and service worker handling landed; approvals/DM fan-out remain on the backlog.
 - **Navigation & audio truthfulness:** tournament stubs were removed, and turn notification sound aliases keep legacy keys functioning without regressions.
 

@@ -56,8 +56,11 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
   const territoryValues = useMemo(() => Object.values(territories), [territories])
 
   const continentDefinitions = useMemo(
-    () => resolveContinentDefinitions(gameState?.gameConfig?.continentBonuses),
-    [gameState?.gameConfig?.continentBonuses],
+    () =>
+      resolveContinentDefinitions(
+        gameState?.gameConfig?.sectorBonuses || gameState?.gameConfig?.continentBonuses,
+      ),
+    [gameState?.gameConfig],
   )
 
   const playerContinentStatuses = useMemo(

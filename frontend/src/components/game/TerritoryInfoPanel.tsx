@@ -40,7 +40,7 @@ export const TerritoryInfoPanel: React.FC<TerritoryInfoPanelProps> = ({
           <span className="font-medium">Name:</span> {territory.name}
         </div>
         <div>
-          <span className="font-medium">Continent:</span> {territory.continent}
+          <span className="font-medium">Sector:</span> {territory.continent}
         </div>
         <div>
           <span className="font-medium">Owner:</span>{' '}

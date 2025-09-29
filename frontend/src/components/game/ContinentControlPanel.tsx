@@ -45,7 +45,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = ({
 
   return (
     <div className="p-4 flex-1 overflow-y-auto">
-      <h3 className="text-lg font-semibold mb-3">Continent Control</h3>
+      <h3 className="text-lg font-semibold mb-3">Sector Control</h3>
       <div className="space-y-3">
         {continents.map((continent) => {
           const controllingPlayer = playerStatuses.find((status) =>
@@ -120,7 +120,7 @@ export const ContinentControlPanel: React.FC<ContinentControlPanelProps> = ({
               )
             })}
           {playerStatuses.every((status) => status.totalBonusArmies === 0) && (
-            <div className="text-muted italic">No continent bonuses this turn</div>
+            <div className="text-muted italic">No sector bonuses this turn</div>
           )}
         </div>
       </div>

@@ -7,7 +7,7 @@ This document outlines the work required to support both token-based and polygon
 
 ### Map editors
 - **Token editor** – `MapEditorTokens.tsx` is wired into the new map workflow API and persists drafts (including background uploads) through `/api/workflow/drafts` before publishing.【F:frontend/src/pages/MapEditorTokens.tsx†L11-L148】【F:frontend/src/pages/MapEditorTokens.tsx†L1088-L1191】
-- **Polygon editor** – `MapEditor.tsx` still uses the older `/api/maps` endpoints. Saving a map walks through `mapService.createMap`, then issues follow-up calls per continent, territory, and adjacency, making it incompatible with the workflow-based publish/review pipeline we now use for community maps.【F:frontend/src/pages/MapEditor.tsx†L844-L883】
+- **Polygon editor** – `MapEditor.tsx` still uses the older `/api/maps` endpoints. Saving a map walks through `mapService.createMap`, then issues follow-up calls per sector (formerly continent), territory, and adjacency, making it incompatible with the workflow-based publish/review pipeline we now use for community maps.【F:frontend/src/pages/MapEditor.tsx†L844-L883】
 - The polygon editor stores polygon vertices locally while drawing (`boundaryCoords`) and posts them through the legacy APIs. The token editor only tracks token coordinates (`x`, `y`) and never captures polygon data.【F:frontend/src/pages/MapEditor.tsx†L496-L536】【F:frontend/src/pages/MapEditorTokens.tsx†L16-L112】
 
 ### Data & backend pipeline
