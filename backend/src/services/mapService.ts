@@ -25,6 +25,7 @@ import type {
   TerritoryModifierMetadata,
   UpdateMapRequest,
 } from '../types/maps'
+import { deleteAsset, extractStorageKeyFromUrl, getPublicAssetUrl } from '../utils/assetStorage'
 import { logger } from '../utils/logger'
 import { MapNotFoundError, mapPermissionService } from './mapPermissionService'
 
@@ -361,8 +362,9 @@ export class MapService {
               ? clamp01(pixelYCandidate / height)
               : 0
 
-        const pixelX = clamp01(normalizedX) * width
-        const pixelY = clamp01(normalizedY) * height
+        // Preserve exact pixel coordinates if provided to avoid float round-trip drift
+        const pixelX = pixelXCandidate !== null ? pixelXCandidate : clamp01(normalizedX) * width
+        const pixelY = pixelYCandidate !== null ? pixelYCandidate : clamp01(normalizedY) * height
 
         const boundaryCoords = Array.isArray(territory.boundaryCoords)
           ? territory.boundaryCoords.map((coord) => {
@@ -908,12 +910,72 @@ export class MapService {
         { allowCollaborator: false },
       )
 
+      // Read image URL before deletion for potential asset cleanup
+      const preResult = await client.query<{ image_url: string | null }>(
+        'SELECT image_url FROM maps WHERE id = $1',
+        [mapId],
+      )
+      const imageUrl = preResult.rows[0]?.image_url ?? null
+
       // Delete map (cascades to all related tables)
       const result = await client.query('DELETE FROM maps WHERE id = $1', [mapId])
       logger.info(`Deleted map ${mapId} by user ${userId}`)
 
       if ((result.rowCount || 0) === 0) {
         throw new MapNotFoundError()
+      }
+
+      // Opportunistic asset cleanup: only delete when unreferenced elsewhere
+      if (imageUrl) {
+        const storageKey = extractStorageKeyFromUrl(imageUrl)
+        if (storageKey) {
+          // Build canonical and suffix matches to detect any remaining references
+          const canonicalUrl = getPublicAssetUrl(storageKey)
+          const suffix = `/${storageKey}`
+
+          const mapsRef = await client.query(
+            `SELECT 1 FROM maps WHERE id <> $1 AND (image_url = $2 OR image_url LIKE $3) LIMIT 1`,
+            [mapId, canonicalUrl, `%${suffix}`],
+          )
+
+          let referencedElsewhere = mapsRef.rows.length > 0
+
+          if (!referencedElsewhere) {
+            // Also consider drafts that may reference published map images
+            try {
+              const draftsRef = await client.query(
+                `SELECT 1 FROM map_drafts WHERE (image_url = $1 OR image_url LIKE $2) LIMIT 1`,
+                [canonicalUrl, `%${suffix}`],
+              )
+              referencedElsewhere = draftsRef.rows.length > 0
+            } catch (e) {
+              // map_drafts might not exist in older schemas; ignore errors here
+              logger?.warn?.('Skipping draft reference check during asset cleanup', { error: e })
+            }
+          }
+
+          if (!referencedElsewhere) {
+            try {
+              await deleteAsset(storageKey)
+              logger.info('Deleted map image asset from storage', {
+                mapId,
+                storageKey,
+              })
+            } catch (err) {
+              // Do not fail the request if storage deletion fails
+              logger.warn('Failed to delete map image asset (non-fatal)', {
+                mapId,
+                storageKey,
+                error: err,
+              })
+            }
+          } else {
+            logger.info('Retained map image asset; still referenced elsewhere', {
+              mapId,
+              storageKey,
+            })
+          }
+        }
       }
     } finally {
       if (client.release) client.release()
