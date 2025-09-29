@@ -864,15 +864,6 @@ router.delete(
 
       return res.json({ message: 'Map deleted successfully' })
     } catch (error) {
-      const pgCode = (error as any)?.code as string | undefined
-      if (pgCode === '23503') {
-        return res.status(409).json({
-          error: 'Cannot delete map with historical game results',
-          code: 'MAP_DELETE_CONFLICT',
-          detail:
-            'This map is referenced by completed games. Archive the map instead to preserve history.',
-        })
-      }
       if (error instanceof MapPermissionError) {
         return res.status(403).json({ error: error.message })
       }
