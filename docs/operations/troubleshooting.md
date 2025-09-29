@@ -143,3 +143,13 @@ powershell -ExecutionPolicy Bypass -File ./start-dev.ps1
 ✅ Can register/login successfully  
 ✅ Map editor loads at `/map-editor`  
 ✅ Backend responds to `/api/maps` endpoints
+**Post-September 2025: Sector migration related**
+```bash
+# Errors mentioning map_continents/continent columns
+# indicate the continents→sectors migration wasn't applied.
+cd backend && npm run migrate
+
+# Verify tables/columns exist
+\d+ map_sectors
+\d+ map_territories  -- expect a 'sector' column
+```

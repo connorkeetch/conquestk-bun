@@ -332,3 +332,27 @@ railway logs --environment production
 - Use different secrets per environment
 - Enable 2FA on Railway account
 - Audit Railway team access monthly
+## 🔁 Post‑Deploy Migration Notes (September 2025)
+
+Terminology update: continents → sectors
+- Apply DB migration 022 on all environments.
+
+Local
+```bash
+cd backend && npm run migrate
+```
+
+Production/Staging
+- Migrations run on app start via `npm start`. Confirm applied:
+```sql
+SELECT * FROM schema_migrations ORDER BY executed_at DESC;
+```
+
+API compatibility
+- New: `POST /api/maps/:mapId/sectors`
+- Alias: `POST /api/maps/:mapId/continents` (kept for backward compatibility)
+- Territory payload accepts `sectorId` (preferred) or `continentId` (deprecated)
+- Map metadata uses `sectors` (preferred); `continents` still read and mapped
+
+UI
+- Visible labels now say “Sectors.” Internally, the editor still uses `continents` state; the service layer maps responses.
