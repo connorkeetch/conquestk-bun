@@ -1,0 +1,43 @@
+territory_id,name,x,y
+5,Northwest Territory,92,68
+7,Ontario,122,126
+11,Greenland,322,45
+28,Quebec,211,135
+29,Western United States,42,197
+30,Eastern United States,132,180
+31,Central America,53,277
+32,Iceland,374,66
+33,Venezuela,152,363
+34,Peru,180,444
+35,Brazil,260,438
+36,Argentina,201,534
+37,North Africa,424,258
+38,Egypt,522,238
+39,East Africa,575,350
+40,Congo,505,373
+41,South Africa,518,479
+42,Madagascar,607,449
+43,Britain,402,108
+44,Scandinavia,460,74
+45,Ukraine,542,114
+46,Northern Europe,457,128
+47,Southern Europe,488,170
+48,Western Europe,419,151
+49,Middle East,580,233
+50,Kazakhstan,647,164
+51,India,705,262
+52,Ural,650,78
+53,Siberia,712,80
+54,Yakutsk,810,71
+55,Irkutsk,807,115
+56,Mongolia,847,152
+57,China,745,191
+58,Siam,800,282
+59,Japan,913,196
+60,Kamchatka,869,83
+61,Indonesia,849,361
+62,Papua New Guinea,949,390
+63,Western Australia,894,461
+64,Eastern Australia,944,468
+66,Alaska,7,62
+69,Alberta,53,122

@@ -277,7 +277,7 @@ async function run(): Promise<void> {
         imageHeight = info.height
       }
 
-  const metadata = {
+      let metadata = {
         territories: Array.isArray(data.territories) ? data.territories : [],
         continents: Array.isArray(data.continents) ? data.continents : [],
         adjacencies: Array.isArray(data.adjacencies) ? data.adjacencies : [],
@@ -285,8 +285,96 @@ async function run(): Promise<void> {
         territoryModifiers: (data.territoryModifiers as
           | Record<string, TerritoryModifierMetadata>
           | undefined) || undefined,
-        width: typeof data.width === 'number' ? data.width : imageWidth,
-        height: typeof data.height === 'number' ? data.height : imageHeight,
+        width: typeof (data as any).canvas_width === 'number'
+          ? (data as any).canvas_width
+          : typeof data.width === 'number'
+            ? data.width
+            : imageWidth,
+        height: typeof (data as any).canvas_height === 'number'
+          ? (data as any).canvas_height
+          : typeof data.height === 'number'
+            ? data.height
+            : imageHeight,
+      }
+
+      // CSV ingest mode (World-Classic folder style)
+      const csvTerritories = fs
+        .readdirSync(folder)
+        .find((f) => /^territories_.*\.csv$/i.test(f))
+      const csvAdj = fs
+        .readdirSync(folder)
+        .find((f) => /^adjacencies_.*\.csv$/i.test(f))
+      const csvRegions = fs
+        .readdirSync(folder)
+        .find((f) => /^regions_.*\.csv$/i.test(f))
+      const csvBonuses = fs
+        .readdirSync(folder)
+        .find((f) => /^bonuses_.*\.csv$/i.test(f))
+      const csvCapitals = fs
+        .readdirSync(folder)
+        .find((f) => /^capitals_.*\.csv$/i.test(f))
+
+      const parseCsv = (filePath: string): string[][] => {
+        const text = fs.readFileSync(filePath, 'utf8')
+        return text
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .split('\n')
+          .filter((l) => l.trim().length > 0)
+          .map((l) => l.split(',').map((s) => s.trim()))
+      }
+
+      if (csvTerritories) {
+        const rows = parseCsv(path.join(folder, csvTerritories))
+        const header = rows.shift() || []
+        const idxId = header.findIndex((h) => h.toLowerCase().includes('territory'))
+        const idxName = header.findIndex((h) => h.toLowerCase() === 'name')
+        const idxX = header.findIndex((h) => h.toLowerCase() === 'x')
+        const idxY = header.findIndex((h) => h.toLowerCase() === 'y')
+        const territories = rows
+          .map((r) => ({
+            id: (r[idxId] ?? '').toString(),
+            name: r[idxName] ?? undefined,
+            x: Number(r[idxX] ?? '0') || 0,
+            y: Number(r[idxY] ?? '0') || 0,
+          }))
+          .filter((t) => t.id && t.name)
+        metadata.territories = territories as any
+      }
+
+      if (csvAdj) {
+        const rows = parseCsv(path.join(folder, csvAdj))
+        const header = rows.shift() || []
+        const idxFrom = header.findIndex((h) => h.toLowerCase() === 'source' || h.toLowerCase() === 'from')
+        const idxTo = header.findIndex((h) => h.toLowerCase() === 'target' || h.toLowerCase() === 'to')
+        const adjs = rows
+          .map((r) => ({ from: r[idxFrom], to: r[idxTo] }))
+          .filter((a) => typeof a.from === 'string' && typeof a.to === 'string')
+        metadata.adjacencies = adjs as any
+      }
+
+      // Optionally create continents from regions + bonuses if provided
+      if (csvRegions && csvBonuses) {
+        const regRows = parseCsv(path.join(folder, csvRegions))
+        const bonusRows = parseCsv(path.join(folder, csvBonuses))
+        // Minimal support if files have content later; currently headers only
+        if (regRows.length > 1) {
+          // Implement mapping if region data included in future datasets
+        }
+        if (bonusRows.length > 1) {
+          // Implement bonus association if provided
+        }
+      }
+
+      // Capitals file (if present) — prepare metadata.capitalAssignments minimal
+      if (csvCapitals) {
+        const capRows = parseCsv(path.join(folder, csvCapitals))
+        if (capRows.length > 1) {
+          // Example: assign listed ids as valid capitals for 2 players by default
+          const ids = capRows.slice(1).map((r) => r[0]).filter(Boolean)
+          if (!metadata.capitalAssignments) (metadata as any).capitalAssignments = {}
+          ;(metadata as any).capitalAssignments['2'] = ids
+        }
       }
 
       // Normalize connections/adjacencies for compatibility
