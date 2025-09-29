@@ -121,6 +121,21 @@ export class MapService {
     return false
   }
 
+  private normalizePublicImageUrl(url: unknown): string | undefined {
+    if (typeof url !== 'string' || !url.trim()) return undefined
+    const input = url.trim()
+    const endpoint = (process.env.ASSET_ENDPOINT || '').trim().replace(/\/$/, '')
+    const bucket = (process.env.ASSET_BUCKET || '').trim().replace(/\/$/, '')
+    const publicBase = (process.env.PUBLIC_ASSET_BASE_URL || '').trim().replace(/\/$/, '')
+    if (publicBase && endpoint && bucket) {
+      const oldPrefix = `${endpoint}/${bucket}`
+      if (input.startsWith(oldPrefix)) {
+        return input.replace(oldPrefix, publicBase)
+      }
+    }
+    return input
+  }
+
   async createMap(
     userId: string,
     mapData: CreateMapRequest & { metadata?: MapMetadataPayload },
@@ -143,12 +158,14 @@ export class MapService {
           RETURNING *
         `
 
+      const normalizedImageUrl = this.normalizePublicImageUrl(mapData.imageUrl)
+
       const mapValues = hasMetadataColumn
         ? [
             mapData.name,
             mapData.description || null,
             userId,
-            mapData.imageUrl || null,
+            normalizedImageUrl || null,
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
@@ -163,7 +180,7 @@ export class MapService {
             mapData.name,
             mapData.description || null,
             userId,
-            mapData.imageUrl || null,
+            normalizedImageUrl || null,
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
@@ -218,7 +235,7 @@ export class MapService {
             mapData.name,
             mapData.description || null,
             userId,
-            mapData.imageUrl || null,
+            normalizedImageUrl || null,
             mapData.imageWidth || 800,
             mapData.imageHeight || 600,
             mapData.isPublic || false,
@@ -845,7 +862,7 @@ export class MapService {
       }
       if (updates.imageUrl !== undefined) {
         updateFields.push(`image_url = $${++paramCount}`)
-        updateValues.push(updates.imageUrl)
+        updateValues.push(this.normalizePublicImageUrl(updates.imageUrl))
       }
       if (updates.imageWidth !== undefined) {
         updateFields.push(`image_width = $${++paramCount}`)

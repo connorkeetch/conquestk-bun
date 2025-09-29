@@ -192,7 +192,6 @@ frontend/public/audio-files/
 maps-package.zip
 
 # Map import working directory (local only)
-World-Classic/
 map-uploads/
 
 # Windows ADS metadata files that can appear from downloads
