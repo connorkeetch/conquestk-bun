@@ -1,6 +1,8 @@
 import type React from 'react'
 import { useCallback, useMemo } from 'react'
+import { useAppSelector } from '@/hooks/redux'
 import type { GamePlayer } from '@/types/game'
+import { computeRollOdds } from '@/utils/odds'
 import CustomMapDisplay from '../CustomMapDisplay'
 import ResponsiveMapContainer from '../ResponsiveMapContainer'
 import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryModifierIcon'
@@ -67,6 +69,43 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
     return { x: t.armyPosition.x, y: t.armyPosition.y }
   }, [selectedTargetTerritory, selectedTerritory, territories])
 
+  // Odds tooltip on attack hover
+  const attackDice = useAppSelector((s) => s.uiRoom.dice)
+  const oddsTooltip = useMemo(() => {
+    if (mapId !== 'classic') return null
+    if (pendingAction !== 'attack') return null
+    if (!selectedTerritory || !hoveredTerritory) return null
+    if (!validTargets.includes(hoveredTerritory)) return null
+    const src = territories[selectedTerritory]
+    const dst = territories[hoveredTerritory]
+    if (!src || !dst) return null
+    const srcArmies = src.armies ?? 0
+    const dstArmies = dst.armies ?? 0
+    if (srcArmies <= 1) return null
+    const att = Math.max(1, Math.min(3, Math.min(attackDice, srcArmies - 1))) as 1 | 2 | 3
+    const def = Math.max(1, Math.min(2, dstArmies > 1 ? 2 : 1)) as 1 | 2
+    const odds = computeRollOdds(att, def)
+    const winChance = (odds.probabilities.defenderLoses1 + odds.probabilities.defenderLoses2) * 100
+    const left = (dst.armyPosition.x / CLASSIC_MAP_WIDTH) * 100
+    const top = (dst.armyPosition.y / CLASSIC_MAP_HEIGHT) * 100
+    return {
+      att,
+      def,
+      left,
+      top,
+      odds,
+      winChance,
+    }
+  }, [
+    attackDice,
+    hoveredTerritory,
+    mapId,
+    pendingAction,
+    selectedTerritory,
+    territories,
+    validTargets,
+  ])
+
   return (
     <div className="game-board flex-1 relative bg-blue-100 p-4">
       <div className="relative w-full h-full">
@@ -88,6 +127,21 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               validTargets={validTargets}
               pendingAction={pendingAction}
             />
+            {oddsTooltip && (
+              <div
+                role="tooltip"
+                className="absolute z-20 pointer-events-none"
+                style={{
+                  left: `${oddsTooltip.left}%`,
+                  top: `${oddsTooltip.top}%`,
+                  transform: 'translate(-50%, -140%)',
+                }}
+              >
+                <div className="rounded bg-surface-2/95 border border-border shadow px-2 py-1 text-xs text-white whitespace-nowrap">
+                  {`Odds (${oddsTooltip.att}v${oddsTooltip.def}) · Win ${(oddsTooltip.winChance).toFixed(0)}% · E[Δ] ${oddsTooltip.odds.expected.advantage >= 0 ? '+' : ''}${oddsTooltip.odds.expected.advantage.toFixed(2)}`}
+                </div>
+              </div>
+            )}
           </ResponsiveMapContainer>
         ) : (
           <CustomMapDisplay

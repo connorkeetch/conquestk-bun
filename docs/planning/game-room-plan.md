@@ -13,6 +13,18 @@
 - Clickable log → map focus
   - `GameLogPanel` now emits `onFocus([from,to])` for battle/fortify entries; `TabbedGameChat` plumbs this to `GameRoom`, which highlights the last territory.
   - Implemented pan/zoom focus: selecting from log now recenters the map to the selected territory via a `focus` prop on `ResponsiveMapContainer`.
+- Consolidation of right rail
+  - Removed legacy `GamePhaseControls` panel; phase CTAs live in the bottom action bar.
+  - Consolidated `CurrentActionPanel` details (selection, target, action) into the bottom action bar so state is visible in one place.
+- Inline transfer
+  - Border-attached slider shows at the midpoint after a conquest to adjust the default “commit on next conquest.”
+- Time bank backend
+  - Added canonical field `timeBankSecondsRemaining` to lifecycle payloads and DB support: `game_rooms.time_bank_seconds` + `room_players.time_bank_seconds_remaining`.
+  - On auto end-turn, the server attempts to consume time bank in 15s chunks before ending a turn, broadcasting updates and rescheduling.
+  - Create Game flow includes a “Time Bank (optional)” minutes input; persisted to DB.
+
+Notes / TODO
+- Grace/AFK logic and host-side adjusters for time bank to follow. The backend chunk size is 15s for now; may expose it as a room setting later.
 - Keyboard shortcuts
   - Added minimal bindings: `E`/`T` end turn. Numeric dice are set via UI in the action bar. More shortcuts remain TODO.
 - Reduced motion

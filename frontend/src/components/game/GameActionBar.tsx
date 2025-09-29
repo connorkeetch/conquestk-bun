@@ -33,6 +33,16 @@ export function GameActionBar() {
     [game?.board, target],
   )
 
+  const pendingText = () => {
+    if (!game) return ''
+    if (game.phase === 'reinforcement' && selected) return 'deploy'
+    if (game.phase === 'attack' && selected && !target) return 'choose target'
+    if (game.phase === 'attack' && selected && target) return 'attack'
+    if (game.phase === 'fortify' && selected && !target) return 'choose destination'
+    if (game.phase === 'fortify' && selected && target) return 'fortify'
+    return ''
+  }
+
   const odds = useMemo(() => {
     if (!game || !selected || !target) return null
     const src = game.board.find((t) => t.id === selected)
@@ -266,6 +276,13 @@ export function GameActionBar() {
               >
                 Advantage {odds.expected.advantage >= 0 ? '+' : ''}
                 {odds.expected.advantage.toFixed(2)}
+              </span>
+            )}
+            {(selected || target || pendingText()) && (
+              <span className="chip text-xs">
+                {selected ? `From: ${selectedName}` : '—'}
+                {target ? ` → To: ${targetName}` : ''}
+                {pendingText() ? ` • ${pendingText()}` : ''}
               </span>
             )}
           </div>
