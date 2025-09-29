@@ -38,6 +38,7 @@ export interface GameRoom {
   currentTurnUserId?: string | null
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
+  timeBankSecondsRemaining?: number | null
   allowTeamPlay?: boolean
   teamMode?: 'none' | 'teams' | 'auto_balance' | null
   numberOfTeams?: number | null

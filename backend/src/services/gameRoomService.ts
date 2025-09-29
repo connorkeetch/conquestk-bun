@@ -499,6 +499,8 @@ export class GameRoomService {
       turnNumber: this.parseNullableNumber(row.turn_number) ?? undefined,
       turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
+      // Time bank is not currently tracked; expose canonical field as null for now.
+      timeBankSecondsRemaining: null,
       winner: row.winner ?? undefined,
       playerCount: normalizedPlayerCount,
       players,

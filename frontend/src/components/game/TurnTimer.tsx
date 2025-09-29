@@ -51,15 +51,10 @@ export function TurnTimer({ className = '' }: Props) {
   const bar = ratio > 0.5 ? 'bg-green-500' : ratio > 0.2 ? 'bg-yellow-500' : 'bg-red-500'
 
   // Optional: time bank display if the backend provides it
-  const bankSeconds = (() => {
-    if (!room) return null
-    const anyRoom = room as unknown as Record<string, unknown>
-    const ms = Number(anyRoom.timeBankMs ?? anyRoom.timeBankRemainingMs ?? 0)
-    if (Number.isFinite(ms) && ms > 0) return Math.ceil(ms / 1000)
-    const sec = Number(anyRoom.timeBankSecondsRemaining ?? anyRoom.timeBankSeconds ?? 0)
-    if (Number.isFinite(sec) && sec > 0) return Math.ceil(sec)
-    return null
-  })()
+  const bankSeconds =
+    typeof room?.timeBankSecondsRemaining === 'number'
+      ? Math.max(0, Math.trunc(room.timeBankSecondsRemaining))
+      : null
 
   return (
     <div className={`flex items-center gap-2 min-w-[140px] ${className}`} title="Turn timer">

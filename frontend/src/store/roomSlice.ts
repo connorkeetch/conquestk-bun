@@ -24,6 +24,7 @@ export interface LifecycleUpdatePayload {
   currentTurnUserId?: string | null
   turnExpiresAt?: string | null
   readyCheckStartedAt?: string | null
+  timeBankSecondsRemaining?: number | null
   readyStates?: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
   players?: RoomPlayer[]
 }
@@ -141,6 +142,10 @@ const roomSlice = createSlice({
 
         if (turnExpiresAt !== undefined) {
           room.turnExpiresAt = turnExpiresAt
+        }
+
+        if (action.payload.timeBankSecondsRemaining !== undefined) {
+          room.timeBankSecondsRemaining = action.payload.timeBankSecondsRemaining ?? null
         }
 
         if (readyCheckStartedAt !== undefined) {

@@ -624,6 +624,7 @@ export interface ServerToClientEvents {
     currentTurnUserId: string | null
     turnExpiresAt: string | null
     readyCheckStartedAt: string | null
+    timeBankSecondsRemaining?: number | null
     readyStates: Array<{ userId: string; isReady: boolean; readyAt: string | null }>
     players?: Array<{
       userId: string
@@ -640,6 +641,7 @@ export interface ServerToClientEvents {
     turnNumber?: number | null
     currentTurnUserId?: string | null
     turnExpiresAt?: string | null
+    timeBankSecondsRemaining?: number | null
     readyCheckStartedAt?: string | null
     players?: Array<{
       userId: string

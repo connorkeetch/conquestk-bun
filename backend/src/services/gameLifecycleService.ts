@@ -438,6 +438,7 @@ export class GameLifecycleService {
       readyCheckStartedAt: snapshot.room.readyCheckStartedAt
         ? snapshot.room.readyCheckStartedAt.toISOString()
         : null,
+      timeBankSecondsRemaining: snapshot.room.timeBankSecondsRemaining ?? null,
       readyStates: snapshot.readyStates,
       players,
     }
@@ -450,6 +451,7 @@ export class GameLifecycleService {
       turnNumber: snapshot.room.turnNumber,
       currentTurnUserId: snapshot.room.currentTurnUserId,
       turnExpiresAt: snapshot.room.turnExpiresAt ? snapshot.room.turnExpiresAt.toISOString() : null,
+      timeBankSecondsRemaining: snapshot.room.timeBankSecondsRemaining ?? null,
       readyCheckStartedAt: snapshot.room.readyCheckStartedAt
         ? snapshot.room.readyCheckStartedAt.toISOString()
         : null,
