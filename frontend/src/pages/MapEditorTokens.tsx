@@ -1024,6 +1024,8 @@ export default function MapEditorTokens() {
   const [selectedPlayerCount, setSelectedPlayerCount] = useState(4)
   const [isGeneratingCapitals, setIsGeneratingCapitals] = useState(false)
   const [isAssigningCapital, setIsAssigningCapital] = useState(false)
+  // Position editor mode: 'px' for pixels, 'norm' for normalized 0..1
+  const [positionMode, setPositionMode] = useState<'px' | 'norm'>('px')
 
   const handleDeleteTerritory = useCallback((territoryId: string) => {
     setState((prev) => {
@@ -1849,17 +1851,11 @@ export default function MapEditorTokens() {
       const half = tokenSize / 2
       const x = Math.max(
         half,
-        Math.min(
-          state.mapWidth - half,
-          event.clientX - rect.left + scrollLeft - dragOffset.x,
-        ),
+        Math.min(state.mapWidth - half, event.clientX - rect.left + scrollLeft - dragOffset.x),
       )
       const y = Math.max(
         half,
-        Math.min(
-          state.mapHeight - half,
-          event.clientY - rect.top + scrollTop - dragOffset.y,
-        ),
+        Math.min(state.mapHeight - half, event.clientY - rect.top + scrollTop - dragOffset.y),
       )
 
       pendingDragPositionRef.current = { x, y }
@@ -2984,85 +2980,220 @@ export default function MapEditorTokens() {
                                       </p>
 
                                       {/* Position controls */}
-                                      <div className="grid grid-cols-2 gap-2 mt-2">
-                                        <div>
-                                          <label
-                                            className="text-[11px] text-muted uppercase tracking-wide"
-                                            htmlFor={`territory-x-${territory.id}`}
-                                          >
-                                            X
-                                          </label>
-                                          <input
-                                            id={`territory-x-${territory.id}`}
-                                            type="number"
-                                            step={1}
-                                            min={0}
-                                            max={Math.max(0, state.mapWidth)}
-                                            value={Math.round(territory.x)}
-                                            onChange={(e) => {
-                                              const raw = Number(e.target.value)
-                                              const clamped = Number.isFinite(raw)
-                                                ? Math.min(Math.max(raw, 0), Math.max(1, state.mapWidth))
-                                                : 0
-                                              setState((prev) => ({
-                                                ...prev,
-                                                territories: prev.territories.map((t) =>
-                                                  t.id === territory.id
-                                                    ? {
-                                                        ...t,
-                                                        x: clamped,
-                                                        normalizedX: clamp01(
-                                                          clamped / (prev.mapWidth > 0 ? prev.mapWidth : 1),
+                                      <div className="mt-2 space-y-2">
+                                        <div className="flex items-center gap-2 text-[11px] text-muted">
+                                          <span className="uppercase tracking-wide">Position</span>
+                                          <div className="flex rounded border border-border overflow-hidden">
+                                            <button
+                                              type="button"
+                                              className={`px-2 py-1 ${positionMode === 'px' ? 'bg-surface-2 text-white' : ''}`}
+                                              onClick={() => setPositionMode('px')}
+                                            >
+                                              px
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className={`px-2 py-1 ${positionMode === 'norm' ? 'bg-surface-2 text-white' : ''}`}
+                                              onClick={() => setPositionMode('norm')}
+                                            >
+                                              0–1
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          {/* X control with nudgers */}
+                                          <div>
+                                            <label className="text-[11px] text-muted uppercase tracking-wide" htmlFor={`territory-x-${territory.id}`}>
+                                              X
+                                            </label>
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                type="button"
+                                                className="rounded border border-border px-2 py-1 text-xs"
+                                                onClick={() => {
+                                                  setState((prev) => ({
+                                                    ...prev,
+                                                    territories: prev.territories.map((t) =>
+                                                      t.id === territory.id
+                                                        ? (() => {
+                                                            const nextX = Math.max(0, (t.x ?? 0) - 1)
+                                                            return {
+                                                              ...t,
+                                                              x: nextX,
+                                                              normalizedX: clamp01(nextX / (prev.mapWidth > 0 ? prev.mapWidth : 1)),
+                                                            }
+                                                          })()
+                                                        : t,
+                                                    ),
+                                                  }))
+                                                }}
+                                                title="-1 px"
+                                              >
+                                                −
+                                              </button>
+                                              <input
+                                                id={`territory-x-${territory.id}`}
+                                                type="number"
+                                                step={positionMode === 'px' ? 1 : 0.001}
+                                                min={0}
+                                                max={positionMode === 'px' ? Math.max(0, state.mapWidth) : 1}
+                                                value={positionMode === 'px' ? Math.round(territory.x) : Number((territory.normalizedX ?? (territory.x / (state.mapWidth || 1))).toFixed(3))}
+                                                onChange={(e) => {
+                                                  const raw = Number(e.target.value)
+                                                  if (!Number.isFinite(raw)) return
+                                                  setState((prev) => {
+                                                    const width = prev.mapWidth > 0 ? prev.mapWidth : 1
+                                                    if (positionMode === 'px') {
+                                                      const clamped = Math.min(Math.max(raw, 0), Math.max(1, width))
+                                                      return {
+                                                        ...prev,
+                                                        territories: prev.territories.map((t) =>
+                                                          t.id === territory.id
+                                                            ? { ...t, x: clamped, normalizedX: clamp01(clamped / width) }
+                                                            : t,
                                                         ),
                                                       }
-                                                    : t,
-                                                ),
-                                              }))
-                                            }}
-                                            className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                                          />
-                                        </div>
-                                        <div>
-                                          <label
-                                            className="text-[11px] text-muted uppercase tracking-wide"
-                                            htmlFor={`territory-y-${territory.id}`}
-                                          >
-                                            Y
-                                          </label>
-                                          <input
-                                            id={`territory-y-${territory.id}`}
-                                            type="number"
-                                            step={1}
-                                            min={0}
-                                            max={Math.max(0, state.mapHeight)}
-                                            value={Math.round(territory.y)}
-                                            onChange={(e) => {
-                                              const raw = Number(e.target.value)
-                                              const clamped = Number.isFinite(raw)
-                                                ? Math.min(Math.max(raw, 0), Math.max(1, state.mapHeight))
-                                                : 0
-                                              setState((prev) => ({
-                                                ...prev,
-                                                territories: prev.territories.map((t) =>
-                                                  t.id === territory.id
-                                                    ? {
-                                                        ...t,
-                                                        y: clamped,
-                                                        normalizedY: clamp01(
-                                                          clamped / (prev.mapHeight > 0 ? prev.mapHeight : 1),
+                                                    }
+                                                    // normalized edit
+                                                    const norm = clamp01(raw)
+                                                    const px = norm * width
+                                                    return {
+                                                      ...prev,
+                                                      territories: prev.territories.map((t) =>
+                                                        t.id === territory.id ? { ...t, x: px, normalizedX: norm } : t,
+                                                      ),
+                                                    }
+                                                  })
+                                                }}
+                                                className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                              />
+                                              <button
+                                                type="button"
+                                                className="rounded border border-border px-2 py-1 text-xs"
+                                                onClick={() => {
+                                                  setState((prev) => ({
+                                                    ...prev,
+                                                    territories: prev.territories.map((t) =>
+                                                      t.id === territory.id
+                                                        ? (() => {
+                                                            const width = prev.mapWidth > 0 ? prev.mapWidth : 1
+                                                            const nextX = Math.min(width, (t.x ?? 0) + 1)
+                                                            return {
+                                                              ...t,
+                                                              x: nextX,
+                                                              normalizedX: clamp01(nextX / width),
+                                                            }
+                                                          })()
+                                                        : t,
+                                                    ),
+                                                  }))
+                                                }}
+                                                title="+1 px"
+                                              >
+                                                +
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* Y control with nudgers */}
+                                          <div>
+                                            <label className="text-[11px] text-muted uppercase tracking-wide" htmlFor={`territory-y-${territory.id}`}>
+                                              Y
+                                            </label>
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                type="button"
+                                                className="rounded border border-border px-2 py-1 text-xs"
+                                                onClick={() => {
+                                                  setState((prev) => ({
+                                                    ...prev,
+                                                    territories: prev.territories.map((t) =>
+                                                      t.id === territory.id
+                                                        ? (() => {
+                                                            const nextY = Math.max(0, (t.y ?? 0) - 1)
+                                                            return {
+                                                              ...t,
+                                                              y: nextY,
+                                                              normalizedY: clamp01(nextY / (prev.mapHeight > 0 ? prev.mapHeight : 1)),
+                                                            }
+                                                          })()
+                                                        : t,
+                                                    ),
+                                                  }))
+                                                }}
+                                                title="-1 px"
+                                              >
+                                                −
+                                              </button>
+                                              <input
+                                                id={`territory-y-${territory.id}`}
+                                                type="number"
+                                                step={positionMode === 'px' ? 1 : 0.001}
+                                                min={0}
+                                                max={positionMode === 'px' ? Math.max(0, state.mapHeight) : 1}
+                                                value={positionMode === 'px' ? Math.round(territory.y) : Number((territory.normalizedY ?? (territory.y / (state.mapHeight || 1))).toFixed(3))}
+                                                onChange={(e) => {
+                                                  const raw = Number(e.target.value)
+                                                  if (!Number.isFinite(raw)) return
+                                                  setState((prev) => {
+                                                    const height = prev.mapHeight > 0 ? prev.mapHeight : 1
+                                                    if (positionMode === 'px') {
+                                                      const clamped = Math.min(Math.max(raw, 0), Math.max(1, height))
+                                                      return {
+                                                        ...prev,
+                                                        territories: prev.territories.map((t) =>
+                                                          t.id === territory.id
+                                                            ? { ...t, y: clamped, normalizedY: clamp01(clamped / height) }
+                                                            : t,
                                                         ),
                                                       }
-                                                    : t,
-                                                ),
-                                              }))
-                                            }}
-                                            className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                                          />
+                                                    }
+                                                    const norm = clamp01(raw)
+                                                    const px = norm * height
+                                                    return {
+                                                      ...prev,
+                                                      territories: prev.territories.map((t) =>
+                                                        t.id === territory.id ? { ...t, y: px, normalizedY: norm } : t,
+                                                      ),
+                                                    }
+                                                  })
+                                                }}
+                                                className="w-full rounded border border-border bg-surface-1 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                                              />
+                                              <button
+                                                type="button"
+                                                className="rounded border border-border px-2 py-1 text-xs"
+                                                onClick={() => {
+                                                  setState((prev) => ({
+                                                    ...prev,
+                                                    territories: prev.territories.map((t) =>
+                                                      t.id === territory.id
+                                                        ? (() => {
+                                                            const height = prev.mapHeight > 0 ? prev.mapHeight : 1
+                                                            const nextY = Math.min(height, (t.y ?? 0) + 1)
+                                                            return {
+                                                              ...t,
+                                                              y: nextY,
+                                                              normalizedY: clamp01(nextY / height),
+                                                            }
+                                                          })()
+                                                        : t,
+                                                    ),
+                                                  }))
+                                                }}
+                                                title="+1 px"
+                                              >
+                                                +
+                                              </button>
+                                            </div>
+                                          </div>
                                         </div>
+
+                                        <p className="text-[11px] text-muted">
+                                          Tip: use arrow keys in the number fields for precise moves.
+                                        </p>
                                       </div>
-                                      <p className="text-[11px] text-muted">
-                                        Tip: use arrow keys in the number fields for precise moves.
-                                      </p>
                                     </div>
                                   )}
                                 </div>
@@ -3727,8 +3858,8 @@ export default function MapEditorTokens() {
               )}
             </div>
 
-              {/* Save/Load Actions */}
-              <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+            {/* Save/Load Actions */}
+            <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
               {lastSaved && (
                 <div className="text-xs text-muted">
                   Auto-saved {lastSaved.toLocaleTimeString()}
@@ -3779,7 +3910,7 @@ export default function MapEditorTokens() {
               {publishedMapId && isAdmin && adminSaveStatus === 'error' && adminSaveError && (
                 <span className="text-xs text-red-400">{adminSaveError}</span>
               )}
-              
+
               {draftId && draftStatus !== 'submitted' && (
                 <button
                   type="button"
