@@ -33,7 +33,9 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
     }
   }
   const getTerritoryStyles = (territoryId: string) => {
-    const baseClasses = 'cursor-pointer transition-all duration-200'
+    const isValid = validTargets.includes(territoryId)
+    const isAttackMode = pendingAction === 'attack'
+    const baseClasses = `${isAttackMode && isValid ? 'cursor-crosshair' : 'cursor-pointer'} transition-all duration-200`
     let extraClasses = ''
     let strokeWidth = '1'
     let strokeColor = '#333'
@@ -47,10 +49,10 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
       extraClasses += ' drop-shadow-md'
       strokeWidth = '2'
       strokeColor = '#FF4444' // Red for selected target
-    } else if (validTargets.includes(territoryId)) {
+    } else if (isValid) {
       extraClasses += ' drop-shadow-sm'
       strokeWidth = '2'
-      strokeColor = '#44FF44' // Green for valid targets
+      strokeColor = isAttackMode ? '#38bdf8' : '#44FF44' // cyan highlight on attack mode
     } else if (hoveredTerritory === territoryId) {
       extraClasses += ' brightness-110 stroke-2'
       strokeWidth = '2'
@@ -58,7 +60,7 @@ export const WorldMapSVG: React.FC<WorldMapSVGProps> = ({
 
     // Action-specific visual feedback
     if (pendingAction) {
-      if (pendingAction === 'attack' && validTargets.includes(territoryId)) {
+      if (pendingAction === 'attack' && isValid) {
         extraClasses += ' animate-pulse'
       } else if (pendingAction === 'deploy' && selectedTerritory === territoryId) {
         extraClasses += ' animate-pulse'

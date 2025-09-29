@@ -16,7 +16,6 @@ import {
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
 // import { GamePhaseControls } from './GamePhaseControls'
 import { ContinentControlPanel } from './game/ContinentControlPanel'
-import { CurrentActionPanel } from './game/CurrentActionPanel'
 import { GameHeader } from './game/GameHeader'
 import type { PlayerSummary } from './game/PlayersLegend'
 import { PlayersLegend } from './game/PlayersLegend'
@@ -215,13 +214,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
 
           <PlayersLegend players={playerSummaries} />
 
-          <CurrentActionPanel
-            selectedTerritory={selectedTerritory}
-            selectedTargetTerritory={selectedTargetTerritory}
-            pendingAction={pendingAction}
-            validTargets={validTargets}
-            territories={territories}
-          />
+          {/* CurrentActionPanel consolidated into bottom action bar */}
 
           <TerritoryInfoPanel
             hoveredTerritory={hoveredTerritory}
