@@ -1000,6 +1000,8 @@ export default function MapEditorTokens() {
     [state.territories, tokenSize],
   )
   const [showGrid, setShowGrid] = useState(false)
+  const [showCenters, setShowCenters] = useState(false)
+  const [showGridCoords, setShowGridCoords] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -1011,6 +1013,38 @@ export default function MapEditorTokens() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [showLoadDraftDialog, setShowLoadDraftDialog] = useState(false)
   const [showImageOptions, setShowImageOptions] = useState(false)
+
+  // Grid step computation for readable ticks/labels
+  const computeNiceStep = useCallback((span: number) => {
+    const desiredTicks = 12
+    const approx = Math.max(10, span / desiredTicks)
+    const magnitude = 10 ** Math.floor(Math.log10(approx))
+    const candidates = [1, 2, 2.5, 5, 10].map((n) => n * magnitude)
+    for (const c of candidates) {
+      if (c >= approx) return Math.round(c)
+    }
+    return Math.round(10 * magnitude)
+  }, [])
+
+  const gridStepX = useMemo(() => computeNiceStep(state.mapWidth), [computeNiceStep, state.mapWidth])
+  const gridStepY = useMemo(
+    () => computeNiceStep(state.mapHeight),
+    [computeNiceStep, state.mapHeight],
+  )
+
+  const xTicks = useMemo(() => {
+    const ticks: number[] = []
+    const step = Math.max(10, gridStepX)
+    for (let x = 0; x <= state.mapWidth; x += step) ticks.push(x)
+    return ticks
+  }, [gridStepX, state.mapWidth])
+
+  const yTicks = useMemo(() => {
+    const ticks: number[] = []
+    const step = Math.max(10, gridStepY)
+    for (let y = 0; y <= state.mapHeight; y += step) ticks.push(y)
+    return ticks
+  }, [gridStepY, state.mapHeight])
 
   // New continent form
   const [newContinentName, setNewContinentName] = useState('')
@@ -3335,6 +3369,31 @@ export default function MapEditorTokens() {
               >
                 ⊞ {showGrid ? 'Hide grid overlay' : 'Show grid overlay'}
               </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGridCoords((prev) => !prev)}
+                  className={`w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                    showGridCoords
+                      ? 'bg-primary text-white'
+                      : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
+                  }`}
+                >
+                  {showGridCoords ? 'Hide coordinate labels' : 'Show coordinate labels'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCenters((prev) => !prev)}
+                  className={`w-full rounded px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                    showCenters
+                      ? 'bg-primary text-white'
+                      : 'border border-border bg-surface-1 hover:border-primary hover:bg-surface-2'
+                  }`}
+                >
+                  {showCenters ? 'Hide center crosshairs' : 'Show center crosshairs'}
+                </button>
+              </div>
             </div>
 
             <div className="rounded border border-border bg-surface-1 p-3">
@@ -4510,14 +4569,48 @@ export default function MapEditorTokens() {
           >
             {/* Grid Overlay */}
             {showGrid && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  backgroundImage:
-                    'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px), repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, transparent 1px, transparent 49px, rgba(255,255,255,0.1) 50px)',
-                  backgroundSize: '50px 50px',
-                }}
-              />
+              <>
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      'repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gy) - 1px), rgba(255,255,255,0.12) var(--gy)), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gx) - 1px), rgba(255,255,255,0.12) var(--gx))',
+                    // Use CSS vars to set independent steps for X and Y
+                    // fallback to equal steps via backgroundSize if CSS vars unsupported
+                    backgroundSize: `${gridStepX}px ${gridStepY}px`,
+                    // @ts-expect-error -- CSS variables
+                    ['--gx' as any]: `${gridStepX}px`,
+                    // @ts-expect-error -- CSS variables
+                    ['--gy' as any]: `${gridStepY}px`,
+                  } as React.CSSProperties}
+                />
+                {/* Axis lines at 0 */}
+                <div className="absolute left-0 top-0 h-px w-full bg-white/30 pointer-events-none" />
+                <div className="absolute left-0 top-0 w-px h-full bg-white/30 pointer-events-none" />
+                {/* Coordinate labels along top and left edges */}
+                {showGridCoords && (
+                  <>
+                    {xTicks.map((x) => (
+                      <div
+                        key={`xt-${x}`}
+                        className="absolute text-[10px] text-white/80 pointer-events-none select-none"
+                        style={{ left: x, top: 2, transform: 'translateX(-50%)' }}
+                      >
+                        {x}
+                      </div>
+                    ))}
+                    {yTicks.map((y) => (
+                      <div
+                        key={`yt-${y}`}
+                        className="absolute text-[10px] text-white/80 pointer-events-none select-none"
+                        style={{ left: 2, top: y, transform: 'translateY(-50%)' }}
+                      >
+                        {y}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
             )}
 
             {/* Connection Lines */}
@@ -4612,6 +4705,69 @@ export default function MapEditorTokens() {
                 </Fragment>
               )
             })}
+
+            {/* Debug: show precise centers/crosshairs */}
+            {showCenters && (
+              <div className="absolute inset-0 pointer-events-none">
+                {state.territories.map((t) => (
+                  <div
+                    key={`center-${t.id}`}
+                    className="absolute"
+                    style={{ left: t.x, top: t.y, transform: 'translate(-50%, -50%)' }}
+                  >
+                    {/* crosshair lines */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: -8,
+                        top: 0,
+                        width: 16,
+                        height: 1,
+                        background: 'rgba(255,255,255,0.85)',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: -8,
+                        width: 1,
+                        height: 16,
+                        background: 'rgba(255,255,255,0.85)',
+                      }}
+                    />
+                    {/* center dot */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: -1,
+                        top: -1,
+                        width: 2,
+                        height: 2,
+                        background: '#fff',
+                        boxShadow: '0 0 2px rgba(0,0,0,0.6)',
+                      }}
+                    />
+                    {/* coordinate label */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 10,
+                        top: 10,
+                        fontSize: 10,
+                        color: '#fff',
+                        background: 'rgba(0,0,0,0.55)',
+                        padding: '2px 4px',
+                        borderRadius: 3,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {Math.round(t.x)},{Math.round(t.y)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {!state.imageUrl && !isDragOver && (
               <div
