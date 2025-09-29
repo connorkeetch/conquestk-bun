@@ -16,6 +16,7 @@ export interface TerritoryTokenProps {
   onMouseDown?: (e: React.MouseEvent) => void
   size?: number
   opacity?: number
+  showArmies?: boolean
 }
 
 function TerritoryTokenComponent({
@@ -31,6 +32,7 @@ function TerritoryTokenComponent({
   onMouseDown,
   size = 30,
   opacity = 0.6,
+  showArmies = true,
 }: TerritoryTokenProps) {
   const style = useMemo<React.CSSProperties>(() => {
     const baseStyle: React.CSSProperties = {
@@ -88,17 +90,19 @@ function TerritoryTokenComponent({
       onMouseDown={onMouseDown}
       aria-label={`Territory: ${armies} armies`}
     >
-      <span
-        style={{
-          color: 'white',
-          fontSize: `${size * 0.4}px`,
-          fontWeight: 'bold',
-          textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-          pointerEvents: 'none',
-        }}
-      >
-        {armies}
-      </span>
+      {showArmies && (
+        <span
+          style={{
+            color: 'white',
+            fontSize: `${size * 0.4}px`,
+            fontWeight: 'bold',
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+            pointerEvents: 'none',
+          }}
+        >
+          {armies}
+        </span>
+      )}
     </button>
   )
 }
