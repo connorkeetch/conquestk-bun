@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '@/utils/logger'
@@ -245,8 +245,8 @@ const buildTerritorySpatialIndex = (
   territories: Territory[],
   tokenSize: number,
 ): TerritorySpatialIndex => {
-  const clickPadding = tokenSize * 0.25
-  const minDistance = tokenSize + clickPadding * 2
+  // Spacing should correspond to the actual token footprint only
+  const minDistance = tokenSize
   const cellSize = Math.max(minDistance, 1)
 
   const cells = new Map<string, Territory[]>()
@@ -1753,13 +1753,21 @@ export default function MapEditorTokens() {
       const rect = containerRef.current.getBoundingClientRect()
       const scrollLeft = mapContainerRef.current?.scrollLeft || 0
       const scrollTop = mapContainerRef.current?.scrollTop || 0
+      // Keep token fully within bounds based on current token size
+      const half = tokenSize / 2
       const x = Math.max(
-        0,
-        Math.min(state.mapWidth - 30, event.clientX - rect.left + scrollLeft - dragOffset.x),
+        half,
+        Math.min(
+          state.mapWidth - half,
+          event.clientX - rect.left + scrollLeft - dragOffset.x,
+        ),
       )
       const y = Math.max(
-        0,
-        Math.min(state.mapHeight - 30, event.clientY - rect.top + scrollTop - dragOffset.y),
+        half,
+        Math.min(
+          state.mapHeight - half,
+          event.clientY - rect.top + scrollTop - dragOffset.y,
+        ),
       )
 
       pendingDragPositionRef.current = { x, y }
@@ -1768,7 +1776,14 @@ export default function MapEditorTokens() {
         dragUpdateFrameRef.current = requestAnimationFrame(applyDragUpdate)
       }
     },
-    [state.draggedTerritoryId, state.mapWidth, state.mapHeight, dragOffset, applyDragUpdate],
+    [
+      state.draggedTerritoryId,
+      state.mapWidth,
+      state.mapHeight,
+      tokenSize,
+      dragOffset,
+      applyDragUpdate,
+    ],
   )
 
   // Handle mouse up to stop dragging
@@ -4107,67 +4122,44 @@ export default function MapEditorTokens() {
             {/* Territory Tokens */}
             {state.territories.map((territory) => {
               const continent = getContinentForTerritory(territory.id)
-              const clickPadding = tokenSize * 0.25 // 25% padding
-              const totalSize = tokenSize + clickPadding * 2
 
               return (
-                <button
-                  key={territory.id}
-                  type="button"
-                  aria-label={`Territory ${territory.name}`}
-                  className="absolute group focus:outline-none"
-                  style={{
-                    left: territory.x - totalSize / 2,
-                    top: territory.y - totalSize / 2,
-                    width: totalSize,
-                    height: totalSize,
-                    cursor: 'pointer',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                  }}
-                  onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
-                  onClick={(e) => handleTokenClick(territory.id, e)}
-                >
-                  {/* Ultra-transparent click area indicator (visible on hover) */}
-                  <div
-                    className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                    style={{
-                      background:
-                        'radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 100%)',
-                      border: '1px solid rgba(124, 58, 237, 0.08)',
-                    }}
+                <Fragment key={territory.id}>
+                  <TerritoryToken
+                    x={territory.x - tokenSize / 2}
+                    y={territory.y - tokenSize / 2}
+                    armies={territory.armies}
+                    color={continent?.color || '#808080'} // Gray for unassigned
+                    outlineColor={continent?.color} // Continent color for outline
+                    shape={tokenShape}
+                    isSelected={state.selectedTerritoryId === territory.id}
+                    isDragging={state.draggedTerritoryId === territory.id}
+                    size={tokenSize}
+                    opacity={0.7}
+                    onMouseDown={(e) => handleTokenMouseDown(territory.id, e)}
+                    onClick={(e) => handleTokenClick(territory.id, e)}
                   />
 
-                  {/* Territory token centered in the click area */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <TerritoryToken
-                      x={0}
-                      y={0}
-                      armies={territory.armies}
-                      color={continent?.color || '#808080'} // Gray for unassigned
-                      outlineColor={continent?.color} // Continent color for outline
-                      shape={tokenShape}
-                      isSelected={state.selectedTerritoryId === territory.id}
-                      isDragging={state.draggedTerritoryId === territory.id}
-                      size={tokenSize}
-                      opacity={0.7}
-                    />
-                  </div>
                   {editorMode === 'capitals' && getCapitalForTerritory(territory.id) && (
-                    <div className="absolute -top-3 -right-3 text-lg">
+                    <div
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: territory.x + tokenSize * 0.5 - 3,
+                        top: territory.y - tokenSize * 0.5 - 3,
+                      }}
+                    >
                       <span className="bg-yellow-500 text-black rounded-full px-1.5 py-0.5 text-xs font-bold">
                         {getCapitalForTerritory(territory.id)}
                       </span>
                     </div>
                   )}
-                  {/* Territory name label */}
+
                   {territory.name && state.labelSettings?.showLabels && (
                     <div
-                      className="absolute left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10 pointer-events-none"
+                      className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap z-10 pointer-events-none"
                       style={{
-                        top: '100%',
-                        marginTop: '4px',
+                        left: territory.x,
+                        top: territory.y + tokenSize / 2 + 4,
                         fontSize: `${state.labelSettings?.fontSize || 14}px`,
                         fontFamily: state.labelSettings?.fontFamily || 'Arial',
                         color: state.labelSettings?.textColor || '#000000',
@@ -4186,7 +4178,7 @@ export default function MapEditorTokens() {
                       {territory.name}
                     </div>
                   )}
-                </button>
+                </Fragment>
               )
             })}
 
