@@ -490,8 +490,9 @@ export default function Settings() {
   const [checkingUsername, setCheckingUsername] = useState(false)
   const [profileUpdateLoading, setProfileUpdateLoading] = useState(false)
   const [currentTagline, setCurrentTagline] = useState<string>(DEFAULT_TAGLINE)
+  const [currentBio, setCurrentBio] = useState<string>('')
 
-  // Load current tagline for the logged-in user
+  // Load current tagline and bio for the logged-in user
   useEffect(() => {
     let active = true
     const controller = new AbortController()
@@ -504,6 +505,11 @@ export default function Settings() {
           setCurrentTagline(summary.tagline)
         } else {
           setCurrentTagline(DEFAULT_TAGLINE)
+        }
+        if (typeof summary.bio === 'string') {
+          setCurrentBio(summary.bio)
+        } else {
+          setCurrentBio('')
         }
       } catch (_e) {
         // leave default
@@ -977,6 +983,110 @@ export default function Settings() {
         }
 
         case 'custom':
+          if (setting.id === 'bio') {
+            const BIO_MAX = 160
+            const isEditing = editingField === 'bio'
+            const value = isEditing
+              ? (fieldValues.bio ?? (setting.defaultValue as string) ?? '')
+              : ((setting.defaultValue as string) ?? '')
+            const remaining = BIO_MAX - (value?.length ?? 0)
+            return (
+              <div className={baseContainerClass}>
+                {renderComingSoonBadge()}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className={labelClass}>{setting.label}</div>
+                      <div className={descriptionClass}>{setting.description}</div>
+                    </div>
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setEditingField('bio')
+                          setFieldValues((prev) => ({ ...prev, bio: value }))
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditing ? (
+                    <>
+                      <textarea
+                        className="form-textarea w-full resize-y min-h-[96px]"
+                        maxLength={BIO_MAX}
+                        value={value}
+                        onChange={(e) =>
+                          setFieldValues((prev) => ({ ...prev, bio: e.target.value }))
+                        }
+                        placeholder="Share a short intro, e.g. favorite maps or playstyle."
+                      />
+                      <div className="flex items-center justify-between text-xs">
+                        <span
+                          className={
+                            remaining < 0 ? 'text-[color:var(--color-danger)]' : 'text-muted'
+                          }
+                        >
+                          {Math.max(0, remaining)} / {BIO_MAX}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setEditingField(null)
+                              setFieldValues((prev) => {
+                                const next = { ...prev }
+                                delete next.bio
+                                return next
+                              })
+                            }}
+                            disabled={profileUpdateLoading}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={async () => {
+                              const next = (value ?? '').trim()
+                              // Allow clearing bio
+                              if (next.length > BIO_MAX) return
+                              try {
+                                setProfileUpdateLoading(true)
+                                await profileService.updateMyProfile({ bio: next })
+                                setCurrentBio(next)
+                                setEditingField(null)
+                                setSaveStatus('Bio updated!')
+                                setTimeout(() => setSaveStatus(null), 3000)
+                              } catch (e) {
+                                const message =
+                                  e instanceof Error ? e.message : 'Failed to update bio'
+                                setSaveStatus(message)
+                                setTimeout(() => setSaveStatus(null), 5000)
+                              } finally {
+                                setProfileUpdateLoading(false)
+                              }
+                            }}
+                            disabled={profileUpdateLoading || value.length > BIO_MAX}
+                          >
+                            {profileUpdateLoading ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-3 rounded-lg bg-[color:var(--surface-2)]/60 border border-white/10 text-sm text-muted whitespace-pre-line">
+                      {value?.trim().length ? value : 'No bio set'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }
           if (setting.id === 'preferred-color') {
             const currentColor = setting.defaultValue as PlayerColor
             return (
@@ -1223,6 +1333,14 @@ export default function Settings() {
             type: 'input',
             isWorking: true,
             defaultValue: user?.email || '',
+          },
+          {
+            id: 'bio',
+            label: 'Bio',
+            description: 'Short intro shown on your profile (max 160 characters, no links)',
+            type: 'custom',
+            isWorking: true,
+            defaultValue: currentBio,
           },
           {
             id: 'profile-tagline',

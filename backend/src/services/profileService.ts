@@ -14,6 +14,8 @@ import type {
   UserRanking,
   UserStatistics,
 } from '../types/profile'
+import { validateBio } from '../utils/contentModeration'
+import { logger } from '../utils/logger'
 
 interface RawLeaderboardRow {
   user_id: string
@@ -146,8 +148,22 @@ export class ProfileService {
       }
 
       if (updates.bio !== undefined) {
+        // Enforce server-side moderation and length limit
+        const input = typeof updates.bio === 'string' ? updates.bio : ''
+        const { ok, sanitized, error } = validateBio(input)
+        if (!ok) {
+          logger.warn('Bio update rejected by moderation', { userId, reason: error })
+          const err = new Error(error || 'Invalid bio') as Error & {
+            status?: number
+            statusCode?: number
+          }
+          err.status = 400
+          err.statusCode = 400
+          throw err
+        }
+        const limited = sanitized.length > 160 ? sanitized.slice(0, 160) : sanitized
         updateClauses.push(`bio = $${++paramIndex}`)
-        values.push(updates.bio)
+        values.push(limited)
       }
 
       if (updateClauses.length > 0) {
