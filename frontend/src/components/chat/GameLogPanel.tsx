@@ -39,6 +39,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
   const lastArmiesRef = useRef<Record<string, number>>({})
   const phaseRef = useRef<string | null>(null)
   const lastPlayerRef = useRef<string | null>(null)
+  const startedLoggedRef = useRef(false)
   const fogOn = (room?.fogOfWar ?? 'off') !== 'off'
   const gameEnded =
     game?.phase === 'finished' || room?.status === 'completed' || room?.status === 'abandoned'
@@ -100,6 +101,15 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
       setEntries((prev) => [{ ts: createdAt, text: 'Game created.' }, ...prev])
     }
   }, [room?.createdAt])
+
+  // Ensure we show a start entry if the component mounts mid-game
+  useEffect(() => {
+    if (!room) return
+    if (room.status === 'active' && !startedLoggedRef.current) {
+      startedLoggedRef.current = true
+      setEntries((prev) => [{ ts: new Date(), text: 'Game started.' }, ...prev])
+    }
+  }, [room])
 
   // Backfill full history after game ends
   useEffect(() => {
@@ -228,6 +238,7 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
     const onLifecycle: Parameters<typeof socketService.on<'lifecycle:update'>>[1] = (payload) => {
       if (!payload || payload.roomId !== gameId) return
       if (payload.status === 'active') {
+        startedLoggedRef.current = true
         add('Game started.')
       } else if (payload.status === 'completed') {
         add('Game ended.')

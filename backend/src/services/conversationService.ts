@@ -574,7 +574,7 @@ export async function addMembersToConversation(
 }
 
 export async function ensureGameConversation(gameId: string): Promise<ConversationWithMembers> {
-  const { hostId, name } = await getGameRoomHost(gameId)
+  const { hostId, name, roomId } = await getGameRoomHost(gameId)
 
   const existingResult = await query<ConversationRow>(
     `
@@ -583,14 +583,14 @@ export async function ensureGameConversation(gameId: string): Promise<Conversati
     WHERE kind = 'game' AND game_id = $1
     LIMIT 1
   `,
-    [gameId],
+    [roomId],
   )
 
   let conversationRecord: ConversationRecord
 
   if (existingResult.rows.length === 0) {
     const title = name ? `${name} (Game Chat)` : null
-    const metadata = JSON.stringify({ gameId })
+    const metadata = JSON.stringify({ gameId: roomId })
 
     conversationRecord = await transaction(async (client) => {
       const conversationInsert = await client.query(
@@ -599,7 +599,7 @@ export async function ensureGameConversation(gameId: string): Promise<Conversati
         VALUES ('game', $1, $2, $3::jsonb, $4)
         RETURNING ${CONVERSATION_COLUMNS}
       `,
-        [title, hostId, metadata, gameId],
+        [title, hostId, metadata, roomId],
       )
 
       const row = conversationInsert.rows[0] as ConversationRow
@@ -610,7 +610,7 @@ export async function ensureGameConversation(gameId: string): Promise<Conversati
     conversationRecord = mapConversationRow(existingResult.rows[0] as ConversationRow)
   }
 
-  const playerRows = await getActiveRoomPlayers(gameId)
+  const playerRows = await getActiveRoomPlayers(roomId)
   const desiredMembers = new Set<string>(playerRows.map((row) => row.user_id))
   desiredMembers.add(hostId)
 
@@ -639,7 +639,7 @@ export async function ensureTeamConversation(
   gameId: string,
   teamId: number,
 ): Promise<ConversationWithMembers> {
-  const { hostId, name } = await getGameRoomHost(gameId)
+  const { hostId, name, roomId } = await getGameRoomHost(gameId)
 
   const existingResult = await query<ConversationRow>(
     `
@@ -650,14 +650,14 @@ export async function ensureTeamConversation(
       AND metadata ->> 'teamId' = $2
     LIMIT 1
   `,
-    [gameId, String(teamId)],
+    [roomId, String(teamId)],
   )
 
   let conversationRecord: ConversationRecord
 
   if (existingResult.rows.length === 0) {
     const title = name ? `${name} — Team ${teamId}` : `Team ${teamId}`
-    const metadata = JSON.stringify({ gameId, teamId })
+    const metadata = JSON.stringify({ gameId: roomId, teamId })
 
     conversationRecord = await transaction(async (client) => {
       const conversationInsert = await client.query(
@@ -666,7 +666,7 @@ export async function ensureTeamConversation(
         VALUES ('team', $1, $2, $3::jsonb, $4)
         RETURNING ${CONVERSATION_COLUMNS}
       `,
-        [title, hostId, metadata, gameId],
+        [title, hostId, metadata, roomId],
       )
 
       const row = conversationInsert.rows[0] as ConversationRow
@@ -677,7 +677,7 @@ export async function ensureTeamConversation(
     conversationRecord = mapConversationRow(existingResult.rows[0] as ConversationRow)
   }
 
-  const playerRows = await getActiveRoomPlayers(gameId)
+  const playerRows = await getActiveRoomPlayers(roomId)
   const desiredMembers = playerRows
     .filter((row) => row.team_id === teamId)
     .map((row) => row.user_id)
@@ -1108,23 +1108,42 @@ type RoomPlayerRow = {
 }
 
 const getGameRoomHost = async (
-  gameId: string,
-): Promise<{ hostId: string; name: string | null }> => {
-  const result = await query<{ host_id: string; name: string | null }>(
-    `
-    SELECT host_id, name
-    FROM game_rooms
-    WHERE id = $1
-  `,
-    [gameId],
-  )
+  gameIdentifier: string,
+): Promise<{ hostId: string; name: string | null; roomId: string }> => {
+  const isUUID = (value: string): boolean =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
+  const isNumeric = (value: string): boolean => /^[0-9]+$/.test(value)
+
+  let result
+  if (isUUID(gameIdentifier)) {
+    result = await query<{ id: string; host_id: string; name: string | null }>(
+      `
+      SELECT id, host_id, name
+      FROM game_rooms
+      WHERE id = $1::uuid
+    `,
+      [gameIdentifier],
+    )
+  } else if (isNumeric(gameIdentifier)) {
+    result = await query<{ id: string; host_id: string; name: string | null }>(
+      `
+      SELECT id, host_id, name
+      FROM game_rooms
+      WHERE room_code = $1::bigint
+    `,
+      [gameIdentifier],
+    )
+  } else {
+    throw new ConversationError('INVALID_TARGET', 'Invalid game identifier')
+  }
 
   if (result.rows.length === 0) {
     throw new ConversationError('NOT_FOUND', 'Game room not found')
   }
 
   const row = result.rows[0]
-  return { hostId: row.host_id, name: row.name }
+  return { hostId: row.host_id, name: row.name, roomId: row.id }
 }
 
 const getActiveRoomPlayers = async (gameId: string): Promise<RoomPlayerRow[]> => {

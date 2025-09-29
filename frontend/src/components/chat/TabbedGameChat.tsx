@@ -49,17 +49,17 @@ export default function TabbedGameChat({
     [players, currentUserId],
   )
 
+  // Always ensure game conversation for the current user so chat is available even when solo or spectating
   useEffect(() => {
-    if (!isMember) return
+    if (!currentUserId) return
     void dispatch(ensureGameConversation(gameId))
-  }, [dispatch, gameId, isMember])
+  }, [dispatch, gameId, currentUserId])
 
   useEffect(() => {
-    if (!isMember) return
     if (userTeamId !== null && userTeamId !== undefined) {
       void dispatch(ensureTeamConversation({ gameId, teamId: userTeamId }))
     }
-  }, [dispatch, gameId, userTeamId, isMember])
+  }, [dispatch, gameId, userTeamId])
 
   const gameConversation = useMemo(
     () =>

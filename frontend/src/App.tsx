@@ -115,6 +115,21 @@ function App() {
   // Initialize favicon badge service
   useFaviconBadge()
 
+  // Frontend safety net: redirect www -> apex in production
+  useEffect(() => {
+    try {
+      if (import.meta.env.PROD) {
+        const hn = window.location.hostname.toLowerCase()
+        if (hn === 'www.conquestk.com') {
+          const { pathname, search, hash } = window.location
+          window.location.replace(`https://conquestk.com${pathname}${search}${hash}`)
+        }
+      }
+    } catch {
+      // no-op
+    }
+  }, [])
+
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token')
