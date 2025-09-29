@@ -23,6 +23,7 @@ export interface CreateRoomData {
   movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
+  timeBankSeconds?: number
 }
 
 interface GameRoomRow {
@@ -576,6 +577,7 @@ export class GameRoomService {
           movement_type,
           fog_of_war,
           turn_timer,
+          time_bank_seconds,
           team_mode,
           number_of_teams,
           is_ranked,
@@ -583,7 +585,7 @@ export class GameRoomService {
           status,
           lifecycle_phase
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'lobby', 'lobby')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'lobby', 'lobby')
         RETURNING *
       `
 
@@ -599,6 +601,9 @@ export class GameRoomService {
         typeof roomData.turnTimerSeconds === 'number' && Number.isFinite(roomData.turnTimerSeconds)
           ? Math.trunc(roomData.turnTimerSeconds)
           : 86400, // default to 24 hours
+        typeof roomData.timeBankSeconds === 'number' && Number.isFinite(roomData.timeBankSeconds)
+          ? Math.max(0, Math.trunc(roomData.timeBankSeconds))
+          : 0,
         allowTeamPlay,
         normalizedNumberOfTeams,
         roomData.isRanked || false,

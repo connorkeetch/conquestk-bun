@@ -32,6 +32,7 @@ export class GameController {
         movementType,
         fogOfWar,
         turnTimerSeconds,
+        timeBankSeconds,
         teamMode,
         numberOfTeams,
         allowTeamPlay,
@@ -125,6 +126,10 @@ export class GameController {
         turnTimerSeconds:
           typeof turnTimerSeconds === 'number' && Number.isFinite(turnTimerSeconds)
             ? Math.max(10, Math.min(86400, Math.trunc(turnTimerSeconds)))
+            : undefined,
+        timeBankSeconds:
+          typeof timeBankSeconds === 'number' && Number.isFinite(timeBankSeconds)
+            ? Math.max(0, Math.min(86400, Math.trunc(timeBankSeconds)))
             : undefined,
         allowTeamPlay:
           allowTeamPlay === undefined ? normalizedTeamMode !== 'none' : Boolean(allowTeamPlay),
@@ -600,6 +605,7 @@ type CreateRoomRequestBody = {
   movementType?: 'classic_adjacent' | 'adjacent_multi' | 'path_single' | 'path_multi'
   fogOfWar?: 'off' | 'adjacent' | 'persistent'
   turnTimerSeconds?: number
+  timeBankSeconds?: number
   teamMode?: 'none' | 'teams' | 'auto_balance' | boolean
   numberOfTeams?: number | string
   allowTeamPlay?: boolean
