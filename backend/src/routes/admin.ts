@@ -1203,16 +1203,20 @@ router.get(
         mapId,
       ])
 
-      // Get adjacencies if they exist
-      const adjacenciesResult = await dbQuery(
-        'SELECT * FROM territory_adjacencies WHERE map_id = $1',
-        [mapId],
-      )
+      // Get adjacencies, normalized to territory IDs for frontend preview compatibility
+      // We use mapService.getMapAdjacencies to resolve name-based edges to UUIDs
+      const normalizedAdjacencies = await mapService.getMapAdjacencies(mapId)
+
+      // Shape adjacencies to include simple { from, to } fields expected by AdminMaps preview
+      const adjacencies = normalizedAdjacencies.map((a) => ({
+        from: a.fromTerritoryId,
+        to: a.toTerritoryId,
+      }))
 
       res.json({
         ...map,
         territories: territoriesResult.rows,
-        adjacencies: adjacenciesResult.rows,
+        adjacencies,
       })
     } catch (error) {
       handleRouteError(error, req, 'Failed to get map details', 500, {
