@@ -21,9 +21,12 @@ export default function ResponsiveMapContainer({
   const [baseScale, setBaseScale] = useState(1)
   const [zoom, setZoom] = useState(1)
   const isDraggingRef = useRef(false)
-  const dragStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(
-    null,
-  )
+  const dragStartRef = useRef<{
+    x: number
+    y: number
+    scrollLeft: number
+    scrollTop: number
+  } | null>(null)
 
   useEffect(() => {
     const calculateScale = () => {
@@ -165,7 +168,10 @@ export default function ResponsiveMapContainer({
       className={`relative w-full h-full flex items-center justify-center bg-surface-1 overflow-auto ${className}`}
       style={{ cursor: isDraggingRef.current ? 'grabbing' : undefined }}
     >
-      <div className="relative" style={{ width: `${display.width}px`, height: `${display.height}px` }}>
+      <div
+        className="relative"
+        style={{ width: `${display.width}px`, height: `${display.height}px` }}
+      >
         {children}
       </div>
 
@@ -186,7 +192,9 @@ export default function ResponsiveMapContainer({
         >
           −
         </button>
-        <div className="text-xs self-center w-16 text-center text-muted">{Math.round(zoom * 100)}%</div>
+        <div className="text-xs self-center w-16 text-center text-muted">
+          {Math.round(zoom * 100)}%
+        </div>
         <button
           type="button"
           className="btn btn-secondary btn-sm"
@@ -207,11 +215,18 @@ export default function ResponsiveMapContainer({
 
       {/* Minimap */}
       {showMinimap && (
-        <div
+        <button
+          type="button"
           className="absolute bottom-2 left-2 rounded border border-border overflow-hidden bg-surface-2/80 backdrop-blur"
           style={{ width: minimap.mmWidth, height: minimap.mmHeight }}
           onClick={handleMinimapClick}
-          role="presentation"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleMinimapClick(e as unknown as React.MouseEvent<HTMLDivElement>)
+            }
+          }}
         >
           <div
             className="w-full h-full"
@@ -235,7 +250,7 @@ export default function ResponsiveMapContainer({
               top: minimap.viewY,
             }}
           />
-        </div>
+        </button>
       )}
     </div>
   )

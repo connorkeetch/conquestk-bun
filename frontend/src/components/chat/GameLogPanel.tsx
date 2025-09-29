@@ -13,11 +13,13 @@ import { socketService } from '../../services/socketService'
 type Props = {
   gameId: string
   className?: string
+  onFocus?: (territoryIds: string[]) => void
 }
 
 type LogEntry = {
   ts: Date
   text: string
+  focusTerritories?: string[]
 }
 
 function formatTimestamp(d: Date): string {
@@ -32,7 +34,7 @@ function formatTimestamp(d: Date): string {
   return `${day} ${mon}, ${time}`
 }
 
-export default function GameLogPanel({ gameId, className = '' }: Props) {
+export default function GameLogPanel({ gameId, className = '', onFocus }: Props) {
   const room = useAppSelector((s) => s.room.currentRoom)
   const game = useAppSelector((s) => s.game.currentGame)
   const [entries, setEntries] = useState<LogEntry[]>([])
@@ -225,8 +227,10 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
   }, [gameId, redact, playerName, territoryName, toSafeInt])
 
   useEffect(() => {
-    function add(text: string, ts?: Date) {
-      setEntries((prev) => [{ ts: ts ?? new Date(), text }, ...prev].slice(0, 500))
+    function add(text: string, ts?: Date, focusTerritories?: string[]) {
+      setEntries((prev) =>
+        [{ ts: ts ?? new Date(), text, focusTerritories }, ...prev].slice(0, 500),
+      )
     }
 
     const onPlayerJoined: Parameters<typeof socketService.on<'player-joined'>>[1] = (payload) => {
@@ -310,15 +314,22 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
       if (br.conquered) {
         add(
           `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} conquering it, killing ${killed}, losing ${lost}.`,
+          undefined,
+          [br.fromTerritory.id, br.toTerritory.id],
         )
         // Moved troops equals final armies on conquered territory
         const moved = br.toTerritory.armies
         if (moved && moved > 0) {
-          add(`${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`)
+          add(`${fromName} (${attackerName}) occupied ${toName} with ${moved} troops.`, undefined, [
+            br.fromTerritory.id,
+            br.toTerritory.id,
+          ])
         }
       } else {
         add(
           `${fromName} (${attackerName}) attacked ${toName}${defenderName ? ` (${defenderName})` : ''} killing ${killed}, losing ${lost}.`,
+          undefined,
+          [br.fromTerritory.id, br.toTerritory.id],
         )
       }
     }
@@ -345,6 +356,8 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
         const n = toSafeInt(fr.movedArmies, 0)
         add(
           `${toName} (${name}) was fortified from ${fromName} (${name}) with ${n} ${n === 1 ? 'troop' : 'troops'}.`,
+          undefined,
+          [fr.fromTerritoryId, fr.toTerritoryId],
         )
         return
       }
@@ -396,12 +409,28 @@ export default function GameLogPanel({ gameId, className = '' }: Props) {
           <div className="text-center text-muted py-6 text-sm">No log entries yet.</div>
         ) : (
           <div className="space-y-3">
-            {entries.map((e) => (
-              <div key={`${e.ts.getTime()}-${e.text}`} className="text-sm">
-                <div className="text-xs text-muted">{formatTimestamp(e.ts)}</div>
-                <div className="text-white">{e.text}</div>
-              </div>
-            ))}
+            {entries.map((e) => {
+              const key = `${e.ts.getTime()}-${e.text}`
+              const clickable = Boolean(
+                onFocus && e.focusTerritories && e.focusTerritories.length > 0,
+              )
+              return (
+                <div key={key} className="text-sm">
+                  <div className="text-xs text-muted">{formatTimestamp(e.ts)}</div>
+                  {clickable ? (
+                    <button
+                      type="button"
+                      className="text-left text-white underline underline-offset-2 hover:text-[color:var(--color-accent)]"
+                      onClick={() => e.focusTerritories && onFocus?.(e.focusTerritories)}
+                    >
+                      {e.text}
+                    </button>
+                  ) : (
+                    <div className="text-white">{e.text}</div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

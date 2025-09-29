@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
+import { useAppSelector } from '@/hooks/redux'
 import audioService from '../services/audioService'
 import type { BattleResult, BattleTerritorySnapshot } from '../types/game'
 
@@ -17,6 +18,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
   onContinueAttack,
 }) => {
   const [showAnimation, setShowAnimation] = useState(false)
+  const speed = useAppSelector((s) => s.uiRoom.animationSpeed)
 
   const resolveTerritory = (
     territory: BattleResult['fromTerritory'],
@@ -54,20 +56,22 @@ export const BattleModal: React.FC<BattleModalProps> = ({
         }, 500),
       )
 
-      // Play outcome sound
-      timeouts.push(
-        window.setTimeout(() => {
-          if (battleResult.conquered) {
-            audioService.playEffect('fanfare')
-            audioService.playEffect('capture')
-          } else if (battleResult.defenderLosses > battleResult.attackerLosses) {
-            audioService.playEffect('attack')
-          }
-        }, 1000),
-      )
+      if (speed !== 'instant') {
+        // Play outcome sound
+        timeouts.push(
+          window.setTimeout(() => {
+            if (battleResult.conquered) {
+              audioService.playEffect('fanfare')
+              audioService.playEffect('capture')
+            } else if (battleResult.defenderLosses > battleResult.attackerLosses) {
+              audioService.playEffect('attack')
+            }
+          }, 1000),
+        )
+      }
 
       if (!onContinueAttack) {
-        timeouts.push(window.setTimeout(onClose, 3000))
+        timeouts.push(window.setTimeout(onClose, speed === 'instant' ? 600 : 3000))
       }
 
       return () => {
@@ -76,7 +80,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
         })
       }
     }
-  }, [isOpen, battleResult, onClose, onContinueAttack])
+  }, [isOpen, battleResult, onClose, onContinueAttack, speed])
 
   if (!isOpen || !battleResult) return null
 
@@ -96,7 +100,7 @@ export const BattleModal: React.FC<BattleModalProps> = ({
         <div
           key={die.id}
           className={`w-12 h-12 ${color} border-2 border-gray-300 rounded-lg flex items-center justify-center text-white font-bold text-lg ${
-            showAnimation ? 'animate-bounce' : ''
+            showAnimation && speed !== 'instant' ? 'animate-bounce' : ''
           }`}
           style={{ animationDelay: `${die.index * 0.1}s` }}
         >

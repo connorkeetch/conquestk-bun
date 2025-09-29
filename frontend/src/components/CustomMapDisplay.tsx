@@ -170,8 +170,7 @@ export default function CustomMapDisplay({
                   height: '32px',
                   backgroundColor: color,
                   opacity: isSelected ? 0.9 : 0.8,
-                  clipPath:
-                    'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+                  clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
                   boxShadow: isSelected
                     ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
                     : '0 2px 4px rgba(0,0,0,0.3)',

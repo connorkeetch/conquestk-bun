@@ -14,6 +14,7 @@ interface TabbedGameChatProps {
   currentUserId: string
   userTeamId?: number | null
   className?: string
+  onLogFocus?: (territoryIds: string[]) => void
 }
 
 interface ChatTab {
@@ -30,6 +31,7 @@ export default function TabbedGameChat({
   currentUserId,
   userTeamId,
   className = '',
+  onLogFocus,
 }: TabbedGameChatProps) {
   const dispatch = useAppDispatch()
   const [activeTab, setActiveTab] = useState<string>('game')
@@ -186,7 +188,7 @@ export default function TabbedGameChat({
         ) : activeTabData.type === 'options' ? (
           <GameOptionsPanel className="h-full" />
         ) : (
-          <GameLogPanel gameId={gameId} className="h-full" />
+          <GameLogPanel gameId={gameId} className="h-full" onFocus={onLogFocus} />
         )}
       </div>
     </div>

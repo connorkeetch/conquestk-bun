@@ -1,5 +1,48 @@
 # Game Room Plan
 
+## Progress Tracker (Sept 29)
+
+- Phase-driven HUD and bottom action bar
+  - Added `frontend/src/components/game/GameActionBar.tsx` (sticky bottom). It surfaces phase-aware CTAs for Reinforcement (Place), Attack (Roll with 1/2/3 dice selector), and Fortify (Move slider). Wired to Redux actions; keeps side panel intact for now to avoid breaking flows. Next: unify with `GamePhaseControls` or remove the duplicate.
+  - Follow-up: removed the legacy `GamePhaseControls` panel from the right rail and consolidated controls into the bottom bar to reduce mode errors.
+- Turn timer
+  - Added `frontend/src/components/game/TurnTimer.tsx`, driven by `room.turnExpiresAt` via lifecycle updates. Plays a subtle audio tick under 10s. No client auto-end; server remains source of truth. Time-bank UI not yet surfaced.
+- Connection/resync UX
+  - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
+- Clickable log → map focus
+  - `GameLogPanel` now emits `onFocus([from,to])` for battle/fortify entries; `TabbedGameChat` plumbs this to `GameRoom`, which highlights the last territory. Pan/zoom-to-fit is not implemented; selection highlight acts as focus for now.
+- Keyboard shortcuts
+  - Added minimal bindings: `E`/`T` end turn. Numeric dice are set via UI in the action bar. More shortcuts remain TODO.
+- Reduced motion
+  - Introduced `uiRoomSlice.animationSpeed` and respected it in `BattleModal` (skip bounce, shorten auto-close when set to instant). UI toggle to be added in Settings.
+- Attack odds + auto-attack
+  - Displayed single-roll odds and expected losses in the bottom bar when a source/target is selected (computed via enumeration in `frontend/src/utils/odds.ts`).
+  - Added an “Auto” button to repeat attacks until stop/conquest/insufficient armies. Persisted “commit on conquer” input; we pass the commit via socket so backend moves that many when conquering.
+- Post-conquest transfer preference
+  - Added “Commit on conquer” numeric input in the Attack phase (default 1, persisted) which is included with the attack action; backend uses it for post-conquest move.
+- Color-blind palette & labels
+  - Planned. No palette swap yet; army labels already sit on high-contrast tokens. Will add a color-blind toggle and variable set in a later pass.
+- Spectators & AFK → bot
+  - Spectate is supported via `?spectate=true`. AFK→bot replacement remains server-driven; no UI added in this pass.
+- Store shape for transient UI
+  - Added `frontend/src/store/uiRoomSlice.ts` for dice, overlays, animation speed, hover/selection mirror, and connection status. Existing selection in `gameSlice` remains; we’ll migrate gradually.
+- Header
+  - `GameHeader` shows a phase chip, turn number, a compact timer, and a live connection dot. Map remains the hero.
+
+Notes
+
+- Socket handlers live at `backend/src/services/socketService.ts` in this repo (not `backend/src/socket/gameHandlers.ts`). Keep the plan’s intent but mind the path.
+- We intentionally didn’t restructure the right rail yet. Chat+log already exist; the bottom action bar was the biggest UX win with minimal risk.
+
+Next Steps (suggested)
+
+- Add odds tooltip on attack hover + quick “auto-attack” option.
+- Add inline transfer slider post-conquest (visual inline slider near border); current MVP uses a numeric "commit on conquer" input in the action bar.
+- Surface time bank UI alongside the timer when configured; reflect server deltas.
+- Implement pan/zoom focus to selected territories from log clicks (ResponsiveMapContainer hook).
+- Consolidate `CurrentActionPanel` details into the bottom bar (now that phase controls are moved) and reduce right-rail redundancy.
+
+
 ## 0. The One‑Screen Mental Model
 
 If a player can’t tell “where am I, whose turn is it, what can I do next?” in 3 seconds, you lose them.

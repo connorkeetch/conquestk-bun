@@ -96,11 +96,11 @@ export class GameLifecycleService {
       players = playersResult.rows
 
       const playerCount = players.length
-      const requiredCount = Math.max(2, roomResult.rows[0].max_players ?? 2)
-      // Simplified: joining implies ready. Start when lobby is full.
-      const allReady = playerCount === requiredCount
+      const minPlayers = 2
+      // Allow manual start when: (1) host explicitly marks ready AND (2) at least min players present
+      const canStart = playerCount >= minPlayers && ready === true
 
-      if (allReady && lifecycleStatus === 'lobby') {
+      if (canStart && lifecycleStatus === 'lobby') {
         shouldStart = true
         lifecycleStatus = 'initializing'
         await client.query(
@@ -117,7 +117,7 @@ export class GameLifecycleService {
         )
       }
 
-      if (!allReady && lifecycleStatus === 'initializing') {
+      if (!canStart && lifecycleStatus === 'initializing') {
         lifecycleStatus = 'lobby'
         await client.query(
           `

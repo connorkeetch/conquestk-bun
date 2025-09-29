@@ -204,7 +204,8 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         {['reinforcement', 'attack', 'fortify'].map((p, idx, arr) => {
           const isActive = gameState.phase === p
           const isCompleted =
-            (p === 'reinforcement' && (gameState.phase === 'attack' || gameState.phase === 'fortify')) ||
+            (p === 'reinforcement' &&
+              (gameState.phase === 'attack' || gameState.phase === 'fortify')) ||
             (p === 'attack' && gameState.phase === 'fortify')
           return (
             <div key={p} className="flex-1 flex items-center">
