@@ -38,6 +38,7 @@ type Options = {
   approve?: boolean
   draftOnFail?: boolean
   forceDraft?: boolean
+  nameSuffix?: string
 }
 
 const parseArgs = (): Options => {
@@ -52,6 +53,7 @@ const parseArgs = (): Options => {
     else if (a === '--approve') opts.approve = true
     else if (a === '--draft-on-fail') opts.draftOnFail = true
     else if (a === '--force-draft') opts.forceDraft = true
+    else if (a === '--name-suffix' && args[i + 1]) opts.nameSuffix = args[++i]
   }
   return opts
 }
@@ -153,6 +155,20 @@ async function resolveAdminUserId(): Promise<string> {
   throw new Error('No admin users found; cannot approve maps automatically')
 }
 
+const normalizeImageUrl = (url?: string): string | undefined => {
+  if (!url) return url
+  const endpoint = process.env.ASSET_ENDPOINT?.replace(/\/$/, '')
+  const bucket = process.env.ASSET_BUCKET?.replace(/\/$/, '')
+  const publicBase = process.env.PUBLIC_ASSET_BASE_URL?.replace(/\/$/, '')
+  if (publicBase && endpoint && bucket) {
+    const oldPrefix = `${endpoint}/${bucket}`
+    if (url.startsWith(oldPrefix)) {
+      return url.replace(oldPrefix, publicBase)
+    }
+  }
+  return url
+}
+
 async function extractZip(zipPath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -205,6 +221,31 @@ async function run(): Promise<void> {
       const data = JSON.parse(raw) as MapPackageJson
       if (!data.name || typeof data.name !== 'string') throw new Error('map.json missing name')
 
+      // Apply optional name suffix to enable test imports without colliding
+      if (opts.nameSuffix && typeof opts.nameSuffix === 'string') {
+        data.name = `${data.name}${opts.nameSuffix}`
+      }
+
+      // Skip if a map or draft with this name already exists (default behavior)
+      const { query } = (await import('../config/database')) as typeof import('../config/database')
+      const existingMap = await query<{ id: string }>(
+        'SELECT id FROM maps WHERE LOWER(name) = LOWER($1) LIMIT 1',
+        [data.name.trim()],
+      )
+      const existingDraft = await query<{ id: string }>(
+        "SELECT id FROM map_drafts WHERE LOWER(name) = LOWER($1) AND draft_status != 'submitted' LIMIT 1",
+        [data.name.trim()],
+      )
+      if (existingMap.rows[0]?.id || existingDraft.rows[0]?.id) {
+        logger.info('⏭️  Skipping existing map by name', {
+          name: data.name,
+          existingMapId: existingMap.rows[0]?.id,
+          existingDraftId: existingDraft.rows[0]?.id,
+          source: jsonPath,
+        })
+        continue
+      }
+
       // Resolve image and upload via asset pipeline
       let imageUrl: string | undefined
       let imageWidth: number | undefined
@@ -219,7 +260,7 @@ async function run(): Promise<void> {
           preferredFilename: data.imageFilename || 'background.png',
           subdirectory: subdir,
         })
-        imageUrl = info.relativeUrl
+        imageUrl = normalizeImageUrl(info.relativeUrl)
         imageWidth = info.width
         imageHeight = info.height
       } else {
@@ -231,12 +272,12 @@ async function run(): Promise<void> {
           preferredFilename: path.basename(found.filePath),
           subdirectory: subdir,
         })
-        imageUrl = info.relativeUrl
+        imageUrl = normalizeImageUrl(info.relativeUrl)
         imageWidth = info.width
         imageHeight = info.height
       }
 
-      const metadata = {
+  const metadata = {
         territories: Array.isArray(data.territories) ? data.territories : [],
         continents: Array.isArray(data.continents) ? data.continents : [],
         adjacencies: Array.isArray(data.adjacencies) ? data.adjacencies : [],
@@ -247,6 +288,76 @@ async function run(): Promise<void> {
         width: typeof data.width === 'number' ? data.width : imageWidth,
         height: typeof data.height === 'number' ? data.height : imageHeight,
       }
+
+      // Normalize connections/adjacencies for compatibility
+      const normTerritories = Array.isArray(metadata.territories)
+        ? metadata.territories.map((t: any) => {
+            if (t && !Array.isArray(t.connections)) {
+              const neighbors = Array.isArray(t.neighbors)
+                ? t.neighbors
+                : Array.isArray(t.neighbours)
+                  ? t.neighbours
+                  : Array.isArray(t.links)
+                    ? t.links
+                    : Array.isArray(t.adjacent)
+                      ? t.adjacent
+                      : undefined
+              if (Array.isArray(neighbors)) {
+                return { ...t, connections: neighbors.filter((x: any) => typeof x === 'string') }
+              }
+            }
+            return t
+          })
+        : []
+
+      const normAdjacencies = (() => {
+        const pairs: Array<{ from: string; to: string }> = []
+        const seen = new Set<string>()
+
+        const addPair = (from?: unknown, to?: unknown) => {
+          if (typeof from !== 'string') return
+          if (typeof to !== 'string') return
+          const f = from.trim()
+          const t = to.trim()
+          if (!f || !t || f === t) return
+          const key = f < t ? `${f}|${t}` : `${t}|${f}`
+          if (seen.has(key)) return
+          seen.add(key)
+          pairs.push({ from: f, to: t })
+          pairs.push({ from: t, to: f })
+        }
+
+        const raw = Array.isArray(metadata.adjacencies) ? metadata.adjacencies : []
+        if (raw.length > 0) {
+          for (const a of raw as any[]) {
+            if (!a || typeof a !== 'object') continue
+            const from = (a.from || a.fromTerritoryId || a.territory_from || a.source) as
+              | string
+              | undefined
+            const toVal = (a.to || a.toTerritoryId || a.territory_to || a.target) as
+              | string
+              | string[]
+              | undefined
+            if (Array.isArray(toVal)) {
+              for (const t of toVal) addPair(from, t)
+            } else {
+              addPair(from, toVal)
+            }
+          }
+          return pairs
+        }
+
+        // Fallback: build from per-territory connections if present
+        for (const t of normTerritories as any[]) {
+          const from = (t?.id || t?.name) as string | undefined
+          if (!from || !Array.isArray(t?.connections)) continue
+          for (const c of t.connections) addPair(from, c)
+        }
+        return pairs
+      })()
+
+      metadata.territories = normTerritories
+      metadata.adjacencies = normAdjacencies
 
       if (opts.dryRun) {
         logger.info(`DRY RUN: would import "${data.name}" from ${folder}`)
@@ -289,6 +400,22 @@ async function run(): Promise<void> {
 
         logger.info(`✅ Imported map: ${created.name} (${created.id})`)
 
+        // Post-insert row counts (authoritative from DB)
+        try {
+          const { query } = (await import('../config/database')) as typeof import('../config/database')
+          const t = await query<{ c: string }>('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [created.id])
+          const c = await query<{ c: string }>('SELECT COUNT(*) AS c FROM map_continents WHERE map_id = $1', [created.id])
+          const a = await query<{ c: string }>('SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1', [created.id])
+          logger.info('📊 Inserted rows', {
+            mapId: created.id,
+            territories: parseInt(t.rows[0]?.c || '0', 10),
+            continents: parseInt(c.rows[0]?.c || '0', 10),
+            adjacencies: parseInt(a.rows[0]?.c || '0', 10),
+          })
+        } catch (countErr) {
+          logger.warn('Could not fetch row counts after import', { error: countErr })
+        }
+
         if (opts.approve) {
           try {
             const adminId = await resolveAdminUserId()
@@ -325,6 +452,53 @@ async function run(): Promise<void> {
     } catch (err) {
       logger.error(`❌ Failed to process ${jsonPath}`, { error: err })
     }
+  }
+
+  // After processing the package, normalize any lingering image URLs to the public CDN base
+  try {
+    const endpoint = process.env.ASSET_ENDPOINT?.replace(/\/$/, '')
+    const bucket = process.env.ASSET_BUCKET?.replace(/\/$/, '')
+    const publicBase = process.env.PUBLIC_ASSET_BASE_URL?.replace(/\/$/, '')
+
+    if (endpoint && bucket && publicBase) {
+      const oldPrefix = `${endpoint}/${bucket}`
+      const like = `${oldPrefix}/%`
+      const { query } = (await import('../config/database')) as typeof import('../config/database')
+
+      // Update maps table
+      const mapsToUpdate = await query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM maps WHERE image_url LIKE $1`,
+        [like],
+      )
+      const mapsCount = parseInt(mapsToUpdate.rows[0]?.total || '0', 10)
+      if (mapsCount > 0) {
+        logger.info(`Post-import: updating ${mapsCount} map image URL(s) to ${publicBase}`)
+        await query(
+          `UPDATE maps SET image_url = REPLACE(image_url, $1, $2) WHERE image_url LIKE $3`,
+          [oldPrefix, publicBase, like],
+        )
+      }
+
+      // Update drafts table
+      const draftsToUpdate = await query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM map_drafts WHERE image_url LIKE $1`,
+        [like],
+      )
+      const draftsCount = parseInt(draftsToUpdate.rows[0]?.total || '0', 10)
+      if (draftsCount > 0) {
+        logger.info(`Post-import: updating ${draftsCount} draft image URL(s) to ${publicBase}`)
+        await query(
+          `UPDATE map_drafts SET image_url = REPLACE(image_url, $1, $2) WHERE image_url LIKE $3`,
+          [oldPrefix, publicBase, like],
+        )
+      }
+    } else {
+      logger.info(
+        'Post-import URL normalization skipped: ensure ASSET_ENDPOINT, ASSET_BUCKET, and PUBLIC_ASSET_BASE_URL are set to auto-rewrite raw R2 URLs to CDN',
+      )
+    }
+  } catch (normErr) {
+    logger.warn('Post-import image URL normalization failed (non-critical):', normErr)
   }
 }
 
