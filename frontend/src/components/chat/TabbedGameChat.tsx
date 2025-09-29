@@ -9,15 +9,8 @@ import ChatContainer from './ChatContainer'
 import GameLogPanel from './GameLogPanel'
 import GameOptionsPanel from './GameOptionsPanel'
 
-interface ChatPlayer {
-  userId: string
-  username: string
-  teamId?: number | null
-}
-
 interface TabbedGameChatProps {
   gameId: string
-  players: ChatPlayer[]
   currentUserId: string
   userTeamId?: number | null
   className?: string
@@ -34,7 +27,6 @@ interface ChatTab {
 
 export default function TabbedGameChat({
   gameId,
-  players,
   currentUserId,
   userTeamId,
   className = '',
@@ -43,11 +35,7 @@ export default function TabbedGameChat({
   const [activeTab, setActiveTab] = useState<string>('game')
   const conversations = useAppSelector(selectAllConversations)
 
-  // Only ensure game conversation after the user has joined the game
-  const isMember = useMemo(
-    () => players.some((p) => p.userId === currentUserId),
-    [players, currentUserId],
-  )
+  // Note: we no longer gate chat by membership; spectators can view game chat
 
   // Always ensure game conversation for the current user so chat is available even when solo or spectating
   useEffect(() => {

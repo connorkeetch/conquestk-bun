@@ -4462,9 +4462,7 @@ export default function MapEditorTokens() {
                     // Use CSS vars to set independent steps for X and Y
                     // fallback to equal steps via backgroundSize if CSS vars unsupported
                     backgroundSize: `${gridStepX}px ${gridStepY}px`,
-                    // @ts-expect-error -- CSS variables
                     ['--gx' as any]: `${gridStepX}px`,
-                    // @ts-expect-error -- CSS variables
                     ['--gy' as any]: `${gridStepY}px`,
                   } as React.CSSProperties}
                 />

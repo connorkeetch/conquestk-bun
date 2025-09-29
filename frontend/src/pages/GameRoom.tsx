@@ -680,6 +680,13 @@ export default function GameRoom() {
         }
         dispatch(setCurrentRoom(response.room))
         setRoomError(null)
+
+        // Normalize route param to canonical UUID id, preserving query params
+        const canonicalId = response.room.id
+        if (roomId !== canonicalId) {
+          const qs = searchParams.toString()
+          navigate(`/room/${canonicalId}${qs ? `?${qs}` : ''}`, { replace: true })
+        }
       } catch (error: unknown) {
         if (!isMounted) {
           return
@@ -1122,12 +1129,7 @@ export default function GameRoom() {
                   }
                 >
                   <LazyTabbedGameChat
-                    gameId={roomId}
-                    players={(currentRoom.players || []).map((p) => ({
-                      userId: p.userId ?? p.id,
-                      username: p.username,
-                      teamId: p.teamId ?? null,
-                    }))}
+                    gameId={currentRoom.id}
                     currentUserId={user.id}
                     userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
                     className="h-full"

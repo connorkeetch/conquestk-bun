@@ -1115,9 +1115,9 @@ const getGameRoomHost = async (
 
   const isNumeric = (value: string): boolean => /^[0-9]+$/.test(value)
 
-  let result
+  let row: { id: string; host_id: string; name: string | null }
   if (isUUID(gameIdentifier)) {
-    result = await query<{ id: string; host_id: string; name: string | null }>(
+    const result = await query<{ id: string; host_id: string; name: string | null }>(
       `
       SELECT id, host_id, name
       FROM game_rooms
@@ -1125,8 +1125,12 @@ const getGameRoomHost = async (
     `,
       [gameIdentifier],
     )
+    if (result.rows.length === 0) {
+      throw new ConversationError('NOT_FOUND', 'Game room not found')
+    }
+    row = result.rows[0]
   } else if (isNumeric(gameIdentifier)) {
-    result = await query<{ id: string; host_id: string; name: string | null }>(
+    const result = await query<{ id: string; host_id: string; name: string | null }>(
       `
       SELECT id, host_id, name
       FROM game_rooms
@@ -1134,15 +1138,14 @@ const getGameRoomHost = async (
     `,
       [gameIdentifier],
     )
+    if (result.rows.length === 0) {
+      throw new ConversationError('NOT_FOUND', 'Game room not found')
+    }
+    row = result.rows[0]
   } else {
     throw new ConversationError('INVALID_TARGET', 'Invalid game identifier')
   }
 
-  if (result.rows.length === 0) {
-    throw new ConversationError('NOT_FOUND', 'Game room not found')
-  }
-
-  const row = result.rows[0]
   return { hostId: row.host_id, name: row.name, roomId: row.id }
 }
 

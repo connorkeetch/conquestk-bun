@@ -1,6 +1,6 @@
 # 📚 ConquestK Documentation
 
-_Last updated: September 21, 2025_
+ _Last updated: September 29, 2025_
 
 Welcome! Every guide, decision record, and troubleshooting note lives in the `docs/` directory.
 Use this index to jump directly to the information you need.
