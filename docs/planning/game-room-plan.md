@@ -289,3 +289,6 @@ This separation keeps socket snapshots clean while the UI can glow and wiggle to
 - Spectator mode and bot replacement for AFK.
 
 Get those eight right and the room will feel tight even before you add fancy overlays. Then you can mess around with replays and heatmaps like a proud goblin.
+- Odds tooltip & highlights
+  - Added odds tooltip near hovered targets in Attack mode (classic + custom maps), showing dice matchup, win chance, and expected advantage. Tooltip pulses subtly to invite attention.
+  - Valid targets use a cyan stroke and crosshair cursor in Attack mode.
