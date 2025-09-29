@@ -415,6 +415,15 @@ export const profileService = {
       nextOffset: offset + matches.length,
     }
   },
+
+  async updateMyProfile(updates: {
+    bio?: string
+    avatarUrl?: string
+    preferences?: Record<string, unknown>
+  }): Promise<void> {
+    // Backend expects PUT /profile with partial fields
+    await apiClient.put('/profile', updates)
+  },
 }
 
 export default profileService

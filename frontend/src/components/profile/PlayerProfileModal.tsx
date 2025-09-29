@@ -84,13 +84,7 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
     : null
   const rankSegmentsFilled = rankTierInfo ? Math.min(rankTierInfo.index + 1, rankTierInfo.total) : 0
   const rankBarColor = profile?.rank?.color ?? rank?.color ?? 'var(--color-primary)'
-  const rankRangeText = profile
-    ? (() => {
-        const min = profile.rank?.minRating ?? rank?.minRating ?? 0
-        const max = profile.rank?.nextRank ? profile.rank.nextRank.minRating - 1 : undefined
-        return max ? `${min}–${max} CP` : `${min}+ CP`
-      })()
-    : null
+  // Range text removed per design request
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -158,7 +152,7 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                     ).map((tierId, index) => (
                       <span
                         key={tierId}
-                        className="h-1.5 flex-1 min-w-[10px] rounded-full"
+                        className="h-1.5 w-6 rounded-full"
                         style={
                           index < rankSegmentsFilled
                             ? {
@@ -171,9 +165,6 @@ export default function PlayerProfileModal({ open, username, onClose }: PlayerPr
                       />
                     ))}
                   </div>
-                  {rankRangeText && (
-                    <span className="text-[11px] text-white/40">{rankRangeText}</span>
-                  )}
                 </div>
               )}
 

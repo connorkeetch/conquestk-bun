@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 
 import friendsService, {
@@ -275,6 +275,12 @@ const ProfilePage: React.FC = () => {
   const [matchHistoryInitialized, setMatchHistoryInitialized] = useState(false)
   const matchHistoryRequestRef = useRef<AbortController | null>(null)
   const matchHistoryOffsetRef = useRef(0)
+  // Bio editing state
+  const BIO_MAX = 160
+  const [editingBio, setEditingBio] = useState(false)
+  const [bioDraft, setBioDraft] = useState('')
+  const [bioSaving, setBioSaving] = useState(false)
+  const bioTextareaId = useId()
 
   const isOwnProfile = currentUser?.username === username
 
@@ -406,6 +412,11 @@ const ProfilePage: React.FC = () => {
       matchHistoryRequestRef.current?.abort()
     }
   }, [])
+
+  // Keep bio draft in sync with loaded profile
+  useEffect(() => {
+    setBioDraft(profile?.bio ?? '')
+  }, [profile?.bio])
 
   // Pick initial tab from query string if provided
   useEffect(() => {
@@ -740,12 +751,6 @@ const ProfilePage: React.FC = () => {
     totalRankTiers,
   } = rankVisuals
 
-  // Compute inline (no hook) to avoid calling hooks after early returns
-  const rankRangeText = (() => {
-    const min = rankDetails.minRating
-    const max = nextRank ? nextRank.minRating - 1 : undefined
-    return max ? `${min}–${max} CP` : `${min}+ CP`
-  })()
   const rankTierIds = Array.from({ length: totalRankTiers }, (_, i) => `rank-tier-${i}`)
 
   // Removed header rank badge; rank appears only on the dedicated card
@@ -851,7 +856,7 @@ const ProfilePage: React.FC = () => {
                       {rankTierIds.map((tierId, index) => (
                         <span
                           key={tierId}
-                          className="h-1.5 flex-1 min-w-[12px] rounded-full transition-all duration-300"
+                          className="h-1.5 w-6 rounded-full transition-all duration-300"
                           style={
                             index < rankSegmentsFilled
                               ? {
@@ -864,7 +869,6 @@ const ProfilePage: React.FC = () => {
                         />
                       ))}
                     </div>
-                    <span className="text-xs text-white/40">{rankRangeText}</span>
                   </div>
                 </div>
               </div>
@@ -906,23 +910,109 @@ const ProfilePage: React.FC = () => {
               </div>
 
               {/* Bio */}
-              {profile.bio && (
+              {isOwnProfile ? (
+                editingBio ? (
+                  <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
+                    <label className="block text-sm text-muted mb-2" htmlFor={bioTextareaId}>
+                      Your Bio
+                    </label>
+                    <textarea
+                      className="form-textarea w-full resize-y min-h-[96px]"
+                      id={bioTextareaId}
+                      maxLength={BIO_MAX}
+                      value={bioDraft}
+                      onChange={(e) => setBioDraft(e.target.value)}
+                      placeholder="Share a short intro, e.g. favorite maps or playstyle."
+                    />
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <span
+                        className={
+                          bioDraft.length > BIO_MAX
+                            ? 'text-[color:var(--color-danger)]'
+                            : 'text-muted'
+                        }
+                      >
+                        {Math.min(bioDraft.length, BIO_MAX)} / {BIO_MAX}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            setEditingBio(false)
+                            setBioDraft(profile?.bio ?? '')
+                          }}
+                          disabled={bioSaving}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={async () => {
+                            const next = bioDraft.trim()
+                            if (next.length === 0 || next.length > BIO_MAX) return
+                            try {
+                              setBioSaving(true)
+                              await profileService.updateMyProfile({ bio: next })
+                              setProfile((prev) => (prev ? { ...prev, bio: next } : prev))
+                              setEditingBio(false)
+                            } catch (_e) {
+                              // noop; could surface a toast in the future
+                            } finally {
+                              setBioSaving(false)
+                            }
+                          }}
+                          disabled={
+                            bioSaving ||
+                            bioDraft.trim().length === 0 ||
+                            bioDraft.trim().length > BIO_MAX
+                          }
+                        >
+                          {bioSaving ? 'Saving…' : 'Save Bio'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : profile.bio && profile.bio.trim().length > 0 ? (
+                  <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-muted text-base leading-relaxed whitespace-pre-line flex-1">
+                        {profile.bio}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-tertiary btn-sm"
+                        onClick={() => setEditingBio(true)}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-surface-2/60 border border-dashed border-white/10 backdrop-blur-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-muted text-base leading-relaxed">
+                        Introduce yourself to other commanders. Add a short bio to share your
+                        playstyle and favorite strategies.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setEditingBio(true)}
+                      >
+                        Add Bio
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : profile.bio && profile.bio.trim().length > 0 ? (
                 <div className="p-4 rounded-xl bg-surface-2/60 border border-white/10 backdrop-blur-sm">
-                  <p className="text-muted text-base leading-relaxed">{profile.bio}</p>
-                </div>
-              )}
-
-              {!profile.bio && isOwnProfile && (
-                <div className="p-4 rounded-xl bg-surface-2/60 border border-dashed border-white/10 backdrop-blur-sm">
-                  <p className="text-muted text-base leading-relaxed">
-                    Introduce yourself to other commanders.{' '}
-                    <Link to="/settings" className="text-primary-soft hover:underline">
-                      Add a short bio
-                    </Link>{' '}
-                    to share your playstyle and favorite strategies.
+                  <p className="text-muted text-base leading-relaxed whitespace-pre-line">
+                    {profile.bio}
                   </p>
                 </div>
-              )}
+              ) : null}
 
               {!isOwnProfile && (
                 <div className="flex gap-2 mt-2">
