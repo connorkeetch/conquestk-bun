@@ -422,6 +422,11 @@ export class MapService {
           INSERT INTO map_territories (
             map_id, name, polygon_data, continent, is_capital, capital_for_players
           ) VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (map_id, name) DO UPDATE SET
+            polygon_data = EXCLUDED.polygon_data,
+            continent = EXCLUDED.continent,
+            is_capital = EXCLUDED.is_capital,
+            capital_for_players = EXCLUDED.capital_for_players
         `,
           [
             mapId,
@@ -471,6 +476,22 @@ export class MapService {
         mapId,
         error,
       })
+    }
+  }
+
+  /**
+   * Update an existing map's structural content (territories, continents, adjacencies, modifiers)
+   * from editor metadata. Admin or collaborators with edit rights may call this.
+   */
+  async updateMapContentFromMetadata(
+    mapId: string,
+    metadata: MapMetadataPayload,
+  ): Promise<void> {
+    const client = await getClient()
+    try {
+      await this.synchronizeMapStructure(client, mapId, metadata)
+    } finally {
+      if (client.release) client.release()
     }
   }
 
