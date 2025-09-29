@@ -498,9 +498,11 @@ export class GameRoomService {
           : undefined,
       turnNumber: this.parseNullableNumber(row.turn_number) ?? undefined,
       turnExpiresAt: this.toDate(row.turn_expires_at) ?? null,
+      timeBankSecondsRemaining: this.parseNullableNumber(
+        (row as Record<string, unknown>).time_bank_seconds_remaining,
+      ),
       readyCheckStartedAt: this.toDate(row.ready_check_started_at) ?? null,
       // Time bank is not currently tracked; expose canonical field as null for now.
-      timeBankSecondsRemaining: null,
       winner: row.winner ?? undefined,
       playerCount: normalizedPlayerCount,
       players,
@@ -697,6 +699,12 @@ export class GameRoomService {
              m.name as map_name,
              hu.username as host_username,
              hu.skill_rating as host_skill_rating,
+             (
+               SELECT rp2.time_bank_seconds_remaining
+               FROM room_players rp2
+               WHERE rp2.room_id = gr.id AND rp2.user_id = gr.current_turn_user_id
+               LIMIT 1
+             ) as time_bank_seconds_remaining,
              json_agg(
                json_build_object(
                   'id', rp.id,
