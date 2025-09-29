@@ -2,7 +2,7 @@ import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from '../store'
-import { endTurn } from '../store/gameActions'
+// import { endTurn } from '../store/gameActions'
 import {
   selectTargetTerritory,
   selectTerritory,
@@ -14,7 +14,7 @@ import {
   resolveContinentDefinitions,
 } from '../utils/continentBonuses'
 import { isFriendlyTerritoryOwner } from '../utils/teamHelpers'
-import { GamePhaseControls } from './GamePhaseControls'
+// import { GamePhaseControls } from './GamePhaseControls'
 import { ContinentControlPanel } from './game/ContinentControlPanel'
 import { CurrentActionPanel } from './game/CurrentActionPanel'
 import { GameHeader } from './game/GameHeader'
@@ -155,9 +155,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
     ],
   )
 
-  const handleEndTurn = useCallback(() => {
-    dispatch(endTurn())
-  }, [dispatch])
+  // Phase controls moved to action bar
 
   const handleTerritoryHover = useCallback((territoryId: string | null) => {
     setHoveredTerritory(territoryId)
@@ -213,9 +211,7 @@ export const RiskGameBoard: React.FC<RiskGameBoardProps> = ({
         />
 
         <div className="w-80 bg-white border-l border-gray-300 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <GamePhaseControls onEndTurn={handleEndTurn} />
-          </div>
+          {/* Phase controls moved to bottom action bar */}
 
           <PlayersLegend players={playerSummaries} />
 

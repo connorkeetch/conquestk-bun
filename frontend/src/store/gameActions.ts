@@ -243,7 +243,11 @@ export const deployArmies = createAsyncThunk(
 export const executeAttack = createAsyncThunk(
   'game/executeAttack',
   async (
-    { fromTerritoryId, toTerritoryId }: { fromTerritoryId: string; toTerritoryId: string },
+    {
+      fromTerritoryId,
+      toTerritoryId,
+      commitArmies,
+    }: { fromTerritoryId: string; toTerritoryId: string; commitArmies?: number },
     { getState, dispatch },
   ) => {
     const state = getState() as RootState
@@ -252,7 +256,11 @@ export const executeAttack = createAsyncThunk(
     if (!currentGame) throw new Error('No active game')
 
     try {
-      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId)
+      const commit =
+        typeof commitArmies === 'number' && commitArmies > 0
+          ? commitArmies
+          : (state.uiRoom?.attackCommit ?? 1)
+      socketService.attack(currentGame.roomId, fromTerritoryId, toTerritoryId, commit)
 
       dispatch(
         addTerritoryAction({

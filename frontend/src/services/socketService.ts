@@ -37,6 +37,7 @@ import {
   removePlayerFromRoom,
   updateRoom,
 } from '../store/roomSlice'
+import { setConnectionStatus } from '../store/uiRoomSlice'
 import type { BattleResult, GameState } from '../types/game'
 import type { GameRoom, Player as RoomPlayer } from '../types/gameRoom'
 import type { NotificationType } from '../types/notification'
@@ -70,6 +71,8 @@ class SocketService {
     }) as unknown as Socket<ServerToClientEvents, ClientToServerEvents>
 
     this.setupEventListeners()
+    // Immediately reflect connecting state
+    store.dispatch(setConnectionStatus('connecting'))
   }
 
   disconnect() {
@@ -103,8 +106,8 @@ class SocketService {
     this.socket?.emit('deployArmies', { roomId, territoryId, armies })
   }
 
-  attack(roomId: string, fromTerritoryId: string, toTerritoryId: string) {
-    this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId })
+  attack(roomId: string, fromTerritoryId: string, toTerritoryId: string, armies?: number) {
+    this.socket?.emit('attack', { roomId, fromTerritoryId, toTerritoryId, armies })
   }
 
   checkCapitalAttack(roomId: string, targetTerritoryId: string) {

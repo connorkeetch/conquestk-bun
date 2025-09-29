@@ -1,5 +1,7 @@
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ConnectionBanner } from '@/components/game/ConnectionBanner'
+import { GameActionBar } from '@/components/game/GameActionBar'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
 import { logger } from '@/utils/logger'
 import { RiskGameBoard } from '../components/RiskGameBoard'
@@ -11,7 +13,8 @@ import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
-import { clearGame, fetchGameState } from '../store/gameSlice'
+import { endTurn } from '../store/gameActions'
+import { clearGame, fetchGameState, selectTerritory } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
 import type { AIDifficulty } from '../types/game'
 import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
@@ -711,7 +714,7 @@ export default function GameRoom() {
     return () => {
       isMounted = false
     }
-  }, [currentRoom, dispatch, roomId])
+  }, [currentRoom, dispatch, roomId, navigate, searchParams])
 
   useEffect(() => {
     if (isMember) {
@@ -739,6 +742,24 @@ export default function GameRoom() {
     audioService.toggleMute()
     setIsMuted(audioService.isMutedState())
   }
+
+  // Keyboard shortcuts for quick gameplay
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!currentRoom || !currentGame) return
+      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return
+      const key = e.key.toLowerCase()
+      if (key === 'e' || key === 't') {
+        e.preventDefault()
+        dispatch(endTurn())
+        return
+      }
+      // 'L' to focus last log event: handled inside log panel when clicked
+      // Dice 1/2/3 handled inside action bar
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [currentGame, currentRoom, dispatch])
 
   // No ready toggle; start triggers when lobby is full
 
@@ -873,7 +894,8 @@ export default function GameRoom() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-12 pt-8 lg:px-10">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-20 pt-8 lg:px-10">
+      <ConnectionBanner />
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-[color:var(--heading)]">
@@ -890,25 +912,23 @@ export default function GameRoom() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isHost &&
-            currentRoom.status === 'lobby' &&
-            (currentRoom.players?.length || 0) >= currentRoom.maxPlayers && (
-              <button
-                type="button"
-                className="btn btn-success"
-                onClick={async () => {
-                  if (!roomId) return
-                  try {
-                    await gameService.setReadyState(roomId, true)
-                  } catch (err) {
-                    logger.warn('Failed to trigger start via ready-state', err)
-                  }
-                }}
-                title="Start game now"
-              >
-                Start Game
-              </button>
-            )}
+          {isHost && currentRoom.status === 'lobby' && (currentRoom.players?.length || 0) >= 2 && (
+            <button
+              type="button"
+              className="btn btn-success"
+              onClick={async () => {
+                if (!roomId) return
+                try {
+                  await gameService.setReadyState(roomId, true)
+                } catch (err) {
+                  logger.warn('Failed to trigger start via ready-state', err)
+                }
+              }}
+              title="Start game now (minimum 2 players required)"
+            >
+              Start Game
+            </button>
+          )}
           {!isMember && (
             <button
               onClick={() => openJoinDialog()}
@@ -1133,6 +1153,10 @@ export default function GameRoom() {
                     currentUserId={user.id}
                     userTeamId={currentGame?.players?.find((p) => p.userId === user.id)?.teamId}
                     className="h-full"
+                    onLogFocus={(territories) => {
+                      const focus = territories[territories.length - 1]
+                      if (focus) dispatch(selectTerritory(focus))
+                    }}
                   />
                 </Suspense>
               ) : (
@@ -1362,6 +1386,8 @@ export default function GameRoom() {
           {liveMessage}
         </div>
       </div>
+      {currentGame && <GameActionBar />}
+
       <PlayerProfileModal
         open={profileUsername !== null}
         username={profileUsername}

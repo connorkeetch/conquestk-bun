@@ -1026,7 +1026,10 @@ export default function MapEditorTokens() {
     return Math.round(10 * magnitude)
   }, [])
 
-  const gridStepX = useMemo(() => computeNiceStep(state.mapWidth), [computeNiceStep, state.mapWidth])
+  const gridStepX = useMemo(
+    () => computeNiceStep(state.mapWidth),
+    [computeNiceStep, state.mapWidth],
+  )
   const gridStepY = useMemo(
     () => computeNiceStep(state.mapHeight),
     [computeNiceStep, state.mapHeight],
@@ -4456,15 +4459,17 @@ export default function MapEditorTokens() {
               <>
                 <div
                   className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      'repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gy) - 1px), rgba(255,255,255,0.12) var(--gy)), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gx) - 1px), rgba(255,255,255,0.12) var(--gx))',
-                    // Use CSS vars to set independent steps for X and Y
-                    // fallback to equal steps via backgroundSize if CSS vars unsupported
-                    backgroundSize: `${gridStepX}px ${gridStepY}px`,
-                    ['--gx' as any]: `${gridStepX}px`,
-                    ['--gy' as any]: `${gridStepY}px`,
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      backgroundImage:
+                        'repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gy) - 1px), rgba(255,255,255,0.12) var(--gy)), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0px, transparent 1px, transparent calc(var(--gx) - 1px), rgba(255,255,255,0.12) var(--gx))',
+                      // Use CSS vars to set independent steps for X and Y
+                      // fallback to equal steps via backgroundSize if CSS vars unsupported
+                      backgroundSize: `${gridStepX}px ${gridStepY}px`,
+                      ['--gx' as string]: `${gridStepX}px`,
+                      ['--gy' as string]: `${gridStepY}px`,
+                    } as unknown as React.CSSProperties
+                  }
                 />
                 {/* Axis lines at 0 */}
                 <div className="absolute left-0 top-0 h-px w-full bg-white/30 pointer-events-none" />

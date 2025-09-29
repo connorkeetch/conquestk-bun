@@ -4,6 +4,7 @@ import gameSlice from './gameSlice'
 import messagesReducer from './messagesSlice'
 import roomSlice from './roomSlice'
 import settingsSlice from './settingsSlice'
+import uiRoomReducer from './uiRoomSlice'
 import uiReducer from './uiSlice'
 
 export const store = configureStore({
@@ -14,6 +15,7 @@ export const store = configureStore({
     settings: settingsSlice,
     messages: messagesReducer,
     ui: uiReducer,
+    uiRoom: uiRoomReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
