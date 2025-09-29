@@ -7,7 +7,12 @@ import dotenv from 'dotenv'
 // Load backend/.env before importing helpers that read env on import
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
-import type { TerritoryModifierMetadata } from '../types/maps'
+import type {
+  MetadataAdjacencyInput,
+  MetadataSectorInput,
+  MetadataTerritoryInput,
+  TerritoryModifierMetadata,
+} from '../types/maps'
 import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 
@@ -294,9 +299,9 @@ async function run(): Promise<void> {
       }
       type ImportAdjacency = { from: string; to: string }
       type ImportMetadata = {
-        territories: ImportTerritory[]
-        sectors: unknown[]
-        adjacencies: ImportAdjacency[]
+        territories: MetadataTerritoryInput[]
+        sectors: MetadataSectorInput[]
+        adjacencies: MetadataAdjacencyInput[]
         capitalAssignments: Record<string, string[]>
         territoryModifiers?: Record<string, TerritoryModifierMetadata>
         width?: number
@@ -306,14 +311,18 @@ async function run(): Promise<void> {
       const canvasDims = data as unknown as { canvas_width?: number; canvas_height?: number }
 
       const metadata: ImportMetadata = {
-        territories: Array.isArray(data.territories) ? (data.territories as ImportTerritory[]) : [],
+        territories: (Array.isArray(data.territories)
+          ? (data.territories as unknown[])
+          : []) as MetadataTerritoryInput[],
         sectors: (() => {
-          const grp = data as unknown as { sectors?: unknown[]; continents?: unknown[] }
-          if (Array.isArray(grp.sectors)) return grp.sectors
-          if (Array.isArray(grp.continents)) return grp.continents
-          return [] as unknown[]
+          const grp = data as { sectors?: unknown[]; continents?: unknown[] }
+          if (Array.isArray(grp.sectors)) return grp.sectors as MetadataSectorInput[]
+          if (Array.isArray(grp.continents)) return grp.continents as MetadataSectorInput[]
+          return [] as MetadataSectorInput[]
         })(),
-        adjacencies: Array.isArray(data.adjacencies) ? (data.adjacencies as ImportAdjacency[]) : [],
+        adjacencies: (Array.isArray(data.adjacencies)
+          ? (data.adjacencies as unknown[])
+          : []) as MetadataAdjacencyInput[],
         capitalAssignments: data.capitalAssignments || {},
         territoryModifiers: (data.territoryModifiers || undefined) as
           | Record<string, TerritoryModifierMetadata>
@@ -364,7 +373,7 @@ async function run(): Promise<void> {
             y: Number(r[idxY] ?? '0') || 0,
           }))
           .filter((t) => t.id && t.name)
-        metadata.territories = territories
+        metadata.territories = territories as unknown as MetadataTerritoryInput[]
       }
 
       if (csvAdj) {
@@ -379,7 +388,7 @@ async function run(): Promise<void> {
         const adjs: ImportAdjacency[] = rows
           .map((r) => ({ from: r[idxFrom], to: r[idxTo] }))
           .filter((a) => typeof a.from === 'string' && typeof a.to === 'string')
-        metadata.adjacencies = adjs
+        metadata.adjacencies = adjs as unknown as MetadataAdjacencyInput[]
       }
 
       // Optionally create sectors from regions + bonuses if provided
@@ -527,9 +536,9 @@ async function run(): Promise<void> {
           minPlayers: typeof data.minPlayers === 'number' ? data.minPlayers : 2,
           maxPlayers: typeof data.maxPlayers === 'number' ? data.maxPlayers : 6,
           metadata: {
-            territories: metadata.territories as any,
-            sectors: metadata.sectors as any,
-            adjacencies: metadata.adjacencies as any,
+            territories: metadata.territories,
+            sectors: metadata.sectors,
+            adjacencies: metadata.adjacencies,
             capitalAssignments: metadata.capitalAssignments,
             width: metadata.width,
             height: metadata.height,
