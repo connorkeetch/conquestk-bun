@@ -1178,46 +1178,7 @@ export const AdminMaps: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="form-label" htmlFor={mapMinPlayersId}>
-                      Min Players
-                    </label>
-                    <input
-                      id={mapMinPlayersId}
-                      type="number"
-                      min="2"
-                      max="12"
-                      value={editForm.minPlayers}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          minPlayers: Number.parseInt(e.target.value, 10),
-                        })
-                      }
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="form-label" htmlFor={mapMaxPlayersId}>
-                      Max Players
-                    </label>
-                    <input
-                      id={mapMaxPlayersId}
-                      type="number"
-                      min="2"
-                      max="12"
-                      value={editForm.maxPlayers}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          maxPlayers: Number.parseInt(e.target.value, 10),
-                        })
-                      }
-                      className="form-input"
-                    />
-                  </div>
-                </div>
+                {/* Removed Min/Max players — map size governs gameplay; these were unused */}
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-4">
@@ -1560,21 +1521,31 @@ export const AdminMaps: React.FC = () => {
                             return (
                               <div
                                 key={token.id}
-                                className="absolute flex flex-col items-center gap-1 text-xs"
+                                className="absolute"
                                 style={{
                                   left: `${clampedLeft}%`,
                                   top: `${clampedTop}%`,
                                   transform: 'translate(-50%, -50%)',
                                 }}
                               >
+                                {/* Hex-style token to mirror editor visuals */}
                                 <div
-                                  className={`w-4 h-4 rounded-full border-2 border-black/60 shadow-md ${
-                                    token.isCapital
-                                      ? 'bg-[color:var(--color-danger)]'
-                                      : 'bg-[color:var(--color-primary)]'
-                                  }`}
+                                  style={{
+                                    width: 16,
+                                    height: 16,
+                                    backgroundColor: '#6b7280', // gray similar to editor default
+                                    opacity: 0.7,
+                                    border: '2px solid rgba(0,0,0,0.6)',
+                                    clipPath:
+                                      'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                  }}
                                 />
-                                <span className="pointer-events-auto whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-[color:var(--color-white)]">
+                                {/* Territory name below the token without affecting centering */}
+                                <span
+                                  className="absolute whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-[color:var(--color-white)]"
+                                  style={{ left: '50%', top: 'calc(100% + 6px)', transform: 'translateX(-50%)' }}
+                                >
                                   {token.name}
                                 </span>
                               </div>
