@@ -50,12 +50,28 @@ export function TurnTimer({ className = '' }: Props) {
   const color = ratio > 0.5 ? 'text-green-400' : ratio > 0.2 ? 'text-yellow-300' : 'text-red-400'
   const bar = ratio > 0.5 ? 'bg-green-500' : ratio > 0.2 ? 'bg-yellow-500' : 'bg-red-500'
 
+  // Optional: time bank display if the backend provides it
+  const bankSeconds = (() => {
+    if (!room) return null
+    const anyRoom = room as unknown as Record<string, unknown>
+    const ms = Number(anyRoom.timeBankMs ?? anyRoom.timeBankRemainingMs ?? 0)
+    if (Number.isFinite(ms) && ms > 0) return Math.ceil(ms / 1000)
+    const sec = Number(anyRoom.timeBankSecondsRemaining ?? anyRoom.timeBankSeconds ?? 0)
+    if (Number.isFinite(sec) && sec > 0) return Math.ceil(sec)
+    return null
+  })()
+
   return (
     <div className={`flex items-center gap-2 min-w-[140px] ${className}`} title="Turn timer">
       <div className="w-24 h-2 rounded bg-surface-2 overflow-hidden">
         <div className={`h-full ${bar}`} style={{ width: `${ratio * 100}%` }} />
       </div>
       <div className={`text-xs tabular-nums ${color}`}>{seconds}s</div>
+      {typeof bankSeconds === 'number' && bankSeconds > 0 && (
+        <span className="chip text-[10px]" title="Time bank remaining">
+          +{bankSeconds}s
+        </span>
+      )}
     </div>
   )
 }

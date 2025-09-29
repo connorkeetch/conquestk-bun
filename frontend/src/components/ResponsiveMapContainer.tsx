@@ -7,6 +7,7 @@ interface ResponsiveMapContainerProps {
   className?: string
   showMinimap?: boolean
   backgroundImageUrl?: string
+  focus?: { x: number; y: number } | null
 }
 
 export default function ResponsiveMapContainer({
@@ -16,6 +17,7 @@ export default function ResponsiveMapContainer({
   className = '',
   showMinimap = true,
   backgroundImageUrl,
+  focus = null,
 }: ResponsiveMapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [baseScale, setBaseScale] = useState(1)
@@ -149,10 +151,10 @@ export default function ResponsiveMapContainer({
     return { mmWidth, mmHeight, viewW, viewH, viewX, viewY }
   }, [display.width, display.height, mapWidth, mapHeight])
 
-  const handleMinimapClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMinimapClick = (e: React.MouseEvent<HTMLElement>) => {
     const el = containerRef.current
     if (!el) return
-    const rect = (e.target as HTMLDivElement).getBoundingClientRect()
+    const rect = (e.target as HTMLElement).getBoundingClientRect()
     const relX = e.clientX - rect.left
     const relY = e.clientY - rect.top
     // Center viewport around clicked point
@@ -161,6 +163,23 @@ export default function ResponsiveMapContainer({
     el.scrollLeft = Math.max(0, Math.min(display.width - el.clientWidth, targetX))
     el.scrollTop = Math.max(0, Math.min(display.height - el.clientHeight, targetY))
   }
+
+  // Focus pan when focus coordinates change
+  useEffect(() => {
+    if (!focus) return
+    const el = containerRef.current
+    if (!el) return
+    // Convert map coordinates to displayed pixels
+    const fx = (focus.x / mapWidth) * display.width
+    const fy = (focus.y / mapHeight) * display.height
+    const targetX = Math.max(0, Math.min(display.width - el.clientWidth, fx - el.clientWidth / 2))
+    const targetY = Math.max(
+      0,
+      Math.min(display.height - el.clientHeight, fy - el.clientHeight / 2),
+    )
+    el.scrollLeft = targetX
+    el.scrollTop = targetY
+  }, [focus, display.width, display.height, mapWidth, mapHeight])
 
   return (
     <div

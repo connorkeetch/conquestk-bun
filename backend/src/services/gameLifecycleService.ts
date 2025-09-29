@@ -49,9 +49,11 @@ export class GameLifecycleService {
         status: string
         turn_timer: number | null
         max_players: number | null
-      }>('SELECT status, turn_timer, max_players FROM game_rooms WHERE id = $1 FOR UPDATE', [
-        roomId,
-      ])
+        host_id: string
+      }>(
+        'SELECT status, turn_timer, max_players, host_id FROM game_rooms WHERE id = $1 FOR UPDATE',
+        [roomId],
+      )
 
       if (roomResult.rowCount === 0) {
         throw new Error('Room not found')
@@ -60,6 +62,8 @@ export class GameLifecycleService {
       const rawStatus = roomResult.rows[0].status
       lifecycleStatus = this.normalizeStatus(rawStatus)
       turnTimer = roomResult.rows[0].turn_timer ?? 60
+      const hostId = roomResult.rows[0].host_id
+      const maxPlayers = roomResult.rows[0].max_players ?? 2
 
       if (lifecycleStatus === 'active' || lifecycleStatus === 'completed') {
         throw new Error('Game already started')
@@ -97,8 +101,13 @@ export class GameLifecycleService {
 
       const playerCount = players.length
       const minPlayers = 2
+      const isHost = userId === hostId
+      const lobbyIsFull = playerCount >= maxPlayers
+
       // Allow manual start when: (1) host explicitly marks ready AND (2) at least min players present
-      const canStart = playerCount >= minPlayers && ready === true
+      // OR auto-start when lobby is full (any player joining triggers this)
+      const canStart =
+        (isHost && ready === true && playerCount >= minPlayers) || (lobbyIsFull && ready === true)
 
       if (canStart && lifecycleStatus === 'lobby') {
         shouldStart = true
