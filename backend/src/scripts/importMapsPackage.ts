@@ -1,14 +1,14 @@
-import dotenv from 'dotenv'
-import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
 import { randomUUID } from 'node:crypto'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import dotenv from 'dotenv'
 
 // Load backend/.env before importing helpers that read env on import
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
-import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
 import type { TerritoryModifierMetadata } from '../types/maps'
+import { storeBase64Image, storeImageBuffer } from '../utils/imageStorage'
 import { logger } from '../utils/logger'
 
 type Json = unknown
@@ -24,6 +24,7 @@ type MapPackageJson = {
   imageFilename?: string
   image?: { mimeType?: string; data: string }
   territories?: Json
+  sectors?: Json
   continents?: Json
   adjacencies?: Json
   capitalAssignments?: Record<string, string[]>
@@ -106,7 +107,11 @@ const extToMime = (ext: string): string => {
 }
 
 const slug = (name: string): string =>
-  name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'map'
+  name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'map'
 
 const findImageFile = (
   folder: string,
@@ -172,14 +177,17 @@ const normalizeImageUrl = (url?: string): string | undefined => {
 async function extractZip(zipPath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const AdmZip = require('adm-zip') as any
+    const AdmZip = require('adm-zip')
     const tempDir = path.join(os.tmpdir(), `maps-import-${randomUUID()}`)
     fs.mkdirSync(tempDir, { recursive: true })
     const zip = new AdmZip(zipPath)
     zip.extractAllTo(tempDir, true)
     return tempDir
   } catch (err) {
-    logger.error('Failed to load/extract zip. Install adm-zip or extract manually and use --dir.', err)
+    logger.error(
+      'Failed to load/extract zip. Install adm-zip or extract manually and use --dir.',
+      err,
+    )
     throw new Error('adm-zip not installed. Run: cd backend && npm i adm-zip')
   }
 }
@@ -277,42 +285,59 @@ async function run(): Promise<void> {
         imageHeight = info.height
       }
 
-      let metadata = {
-        territories: Array.isArray(data.territories) ? data.territories : [],
-        continents: Array.isArray(data.continents) ? data.continents : [],
-        adjacencies: Array.isArray(data.adjacencies) ? data.adjacencies : [],
+      type ImportTerritory = {
+        id?: string
+        name?: string
+        x?: number
+        y?: number
+        connections?: string[]
+      }
+      type ImportAdjacency = { from: string; to: string }
+      type ImportMetadata = {
+        territories: ImportTerritory[]
+        sectors: unknown[]
+        adjacencies: ImportAdjacency[]
+        capitalAssignments: Record<string, string[]>
+        territoryModifiers?: Record<string, TerritoryModifierMetadata>
+        width?: number
+        height?: number
+      }
+
+      const canvasDims = data as unknown as { canvas_width?: number; canvas_height?: number }
+
+      const metadata: ImportMetadata = {
+        territories: Array.isArray(data.territories) ? (data.territories as ImportTerritory[]) : [],
+        sectors: (() => {
+          const grp = data as unknown as { sectors?: unknown[]; continents?: unknown[] }
+          if (Array.isArray(grp.sectors)) return grp.sectors
+          if (Array.isArray(grp.continents)) return grp.continents
+          return [] as unknown[]
+        })(),
+        adjacencies: Array.isArray(data.adjacencies) ? (data.adjacencies as ImportAdjacency[]) : [],
         capitalAssignments: data.capitalAssignments || {},
-        territoryModifiers: (data.territoryModifiers as
+        territoryModifiers: (data.territoryModifiers || undefined) as
           | Record<string, TerritoryModifierMetadata>
-          | undefined) || undefined,
-        width: typeof (data as any).canvas_width === 'number'
-          ? (data as any).canvas_width
-          : typeof data.width === 'number'
-            ? data.width
-            : imageWidth,
-        height: typeof (data as any).canvas_height === 'number'
-          ? (data as any).canvas_height
-          : typeof data.height === 'number'
-            ? data.height
-            : imageHeight,
+          | undefined,
+        width:
+          typeof canvasDims.canvas_width === 'number'
+            ? canvasDims.canvas_width
+            : typeof data.width === 'number'
+              ? data.width
+              : imageWidth,
+        height:
+          typeof canvasDims.canvas_height === 'number'
+            ? canvasDims.canvas_height
+            : typeof data.height === 'number'
+              ? data.height
+              : imageHeight,
       }
 
       // CSV ingest mode (World-Classic folder style)
-      const csvTerritories = fs
-        .readdirSync(folder)
-        .find((f) => /^territories_.*\.csv$/i.test(f))
-      const csvAdj = fs
-        .readdirSync(folder)
-        .find((f) => /^adjacencies_.*\.csv$/i.test(f))
-      const csvRegions = fs
-        .readdirSync(folder)
-        .find((f) => /^regions_.*\.csv$/i.test(f))
-      const csvBonuses = fs
-        .readdirSync(folder)
-        .find((f) => /^bonuses_.*\.csv$/i.test(f))
-      const csvCapitals = fs
-        .readdirSync(folder)
-        .find((f) => /^capitals_.*\.csv$/i.test(f))
+      const csvTerritories = fs.readdirSync(folder).find((f) => /^territories_.*\.csv$/i.test(f))
+      const csvAdj = fs.readdirSync(folder).find((f) => /^adjacencies_.*\.csv$/i.test(f))
+      const csvRegions = fs.readdirSync(folder).find((f) => /^regions_.*\.csv$/i.test(f))
+      const csvBonuses = fs.readdirSync(folder).find((f) => /^bonuses_.*\.csv$/i.test(f))
+      const csvCapitals = fs.readdirSync(folder).find((f) => /^capitals_.*\.csv$/i.test(f))
 
       const parseCsv = (filePath: string): string[][] => {
         const text = fs.readFileSync(filePath, 'utf8')
@@ -331,7 +356,7 @@ async function run(): Promise<void> {
         const idxName = header.findIndex((h) => h.toLowerCase() === 'name')
         const idxX = header.findIndex((h) => h.toLowerCase() === 'x')
         const idxY = header.findIndex((h) => h.toLowerCase() === 'y')
-        const territories = rows
+        const territories: ImportTerritory[] = rows
           .map((r) => ({
             id: (r[idxId] ?? '').toString(),
             name: r[idxName] ?? undefined,
@@ -339,21 +364,25 @@ async function run(): Promise<void> {
             y: Number(r[idxY] ?? '0') || 0,
           }))
           .filter((t) => t.id && t.name)
-        metadata.territories = territories as any
+        metadata.territories = territories
       }
 
       if (csvAdj) {
         const rows = parseCsv(path.join(folder, csvAdj))
         const header = rows.shift() || []
-        const idxFrom = header.findIndex((h) => h.toLowerCase() === 'source' || h.toLowerCase() === 'from')
-        const idxTo = header.findIndex((h) => h.toLowerCase() === 'target' || h.toLowerCase() === 'to')
-        const adjs = rows
+        const idxFrom = header.findIndex(
+          (h) => h.toLowerCase() === 'source' || h.toLowerCase() === 'from',
+        )
+        const idxTo = header.findIndex(
+          (h) => h.toLowerCase() === 'target' || h.toLowerCase() === 'to',
+        )
+        const adjs: ImportAdjacency[] = rows
           .map((r) => ({ from: r[idxFrom], to: r[idxTo] }))
           .filter((a) => typeof a.from === 'string' && typeof a.to === 'string')
-        metadata.adjacencies = adjs as any
+        metadata.adjacencies = adjs
       }
 
-      // Optionally create continents from regions + bonuses if provided
+      // Optionally create sectors from regions + bonuses if provided
       if (csvRegions && csvBonuses) {
         const regRows = parseCsv(path.join(folder, csvRegions))
         const bonusRows = parseCsv(path.join(folder, csvBonuses))
@@ -371,27 +400,35 @@ async function run(): Promise<void> {
         const capRows = parseCsv(path.join(folder, csvCapitals))
         if (capRows.length > 1) {
           // Example: assign listed ids as valid capitals for 2 players by default
-          const ids = capRows.slice(1).map((r) => r[0]).filter(Boolean)
-          if (!metadata.capitalAssignments) (metadata as any).capitalAssignments = {}
-          ;(metadata as any).capitalAssignments['2'] = ids
+          const ids = capRows
+            .slice(1)
+            .map((r) => r[0])
+            .filter(Boolean)
+          if (!metadata.capitalAssignments) metadata.capitalAssignments = {}
+          metadata.capitalAssignments['2'] = ids
         }
       }
 
       // Normalize connections/adjacencies for compatibility
       const normTerritories = Array.isArray(metadata.territories)
-        ? metadata.territories.map((t: any) => {
-            if (t && !Array.isArray(t.connections)) {
-              const neighbors = Array.isArray(t.neighbors)
-                ? t.neighbors
-                : Array.isArray(t.neighbours)
-                  ? t.neighbours
-                  : Array.isArray(t.links)
-                    ? t.links
-                    : Array.isArray(t.adjacent)
-                      ? t.adjacent
+        ? metadata.territories.map((t) => {
+            const rec = t as Record<string, unknown>
+            const connections = rec.connections
+            if (rec && !Array.isArray(connections)) {
+              const neighbors = Array.isArray(rec.neighbors)
+                ? (rec.neighbors as unknown[])
+                : Array.isArray((rec as { neighbours?: unknown[] }).neighbours)
+                  ? ((rec as { neighbours?: unknown[] }).neighbours as unknown[])
+                  : Array.isArray((rec as { links?: unknown[] }).links)
+                    ? ((rec as { links?: unknown[] }).links as unknown[])
+                    : Array.isArray((rec as { adjacent?: unknown[] }).adjacent)
+                      ? ((rec as { adjacent?: unknown[] }).adjacent as unknown[])
                       : undefined
               if (Array.isArray(neighbors)) {
-                return { ...t, connections: neighbors.filter((x: any) => typeof x === 'string') }
+                return {
+                  ...rec,
+                  connections: neighbors.filter((x) => typeof x === 'string') as string[],
+                }
               }
             }
             return t
@@ -415,9 +452,11 @@ async function run(): Promise<void> {
           pairs.push({ from: t, to: f })
         }
 
-        const raw = Array.isArray(metadata.adjacencies) ? metadata.adjacencies : []
+        const raw: Array<Record<string, unknown>> = Array.isArray(metadata.adjacencies)
+          ? (metadata.adjacencies as Array<Record<string, unknown>>)
+          : []
         if (raw.length > 0) {
-          for (const a of raw as any[]) {
+          for (const a of raw) {
             if (!a || typeof a !== 'object') continue
             const from = (a.from || a.fromTerritoryId || a.territory_from || a.source) as
               | string
@@ -436,7 +475,7 @@ async function run(): Promise<void> {
         }
 
         // Fallback: build from per-territory connections if present
-        for (const t of normTerritories as any[]) {
+        for (const t of normTerritories as Array<Record<string, unknown>>) {
           const from = (t?.id || t?.name) as string | undefined
           if (!from || !Array.isArray(t?.connections)) continue
           for (const c of t.connections) addPair(from, c)
@@ -453,12 +492,14 @@ async function run(): Promise<void> {
       }
 
       if (opts.forceDraft) {
-        const { default: mapWorkflowService } = (await import('../services/mapWorkflowService')) as typeof import('../services/mapWorkflowService')
+        const { default: mapWorkflowService } = (await import(
+          '../services/mapWorkflowService'
+        )) as typeof import('../services/mapWorkflowService')
         const draft = await mapWorkflowService.saveDraft(userId as string, {
           name: data.name,
           description: data.description || undefined,
           territories: metadata.territories,
-          continents: metadata.continents,
+          sectors: metadata.sectors,
           adjacencies: metadata.adjacencies,
           capitalAssignments: metadata.capitalAssignments,
           imageUrl,
@@ -472,7 +513,9 @@ async function run(): Promise<void> {
       }
 
       try {
-        const { mapService } = (await import('../services/mapService')) as typeof import('../services/mapService')
+        const { mapService } = (await import(
+          '../services/mapService'
+        )) as typeof import('../services/mapService')
         const created = await mapService.createMap(userId as string, {
           name: data.name,
           description: data.description || undefined,
@@ -483,21 +526,39 @@ async function run(): Promise<void> {
           tags: Array.isArray(data.tags) ? data.tags : [],
           minPlayers: typeof data.minPlayers === 'number' ? data.minPlayers : 2,
           maxPlayers: typeof data.maxPlayers === 'number' ? data.maxPlayers : 6,
-          metadata,
+          metadata: {
+            territories: metadata.territories as any,
+            sectors: metadata.sectors as any,
+            adjacencies: metadata.adjacencies as any,
+            capitalAssignments: metadata.capitalAssignments,
+            width: metadata.width,
+            height: metadata.height,
+          },
         })
 
         logger.info(`✅ Imported map: ${created.name} (${created.id})`)
 
         // Post-insert row counts (authoritative from DB)
         try {
-          const { query } = (await import('../config/database')) as typeof import('../config/database')
-          const t = await query<{ c: string }>('SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1', [created.id])
-          const c = await query<{ c: string }>('SELECT COUNT(*) AS c FROM map_continents WHERE map_id = $1', [created.id])
-          const a = await query<{ c: string }>('SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1', [created.id])
+          const { query } = (await import(
+            '../config/database'
+          )) as typeof import('../config/database')
+          const t = await query<{ c: string }>(
+            'SELECT COUNT(*) AS c FROM map_territories WHERE map_id = $1',
+            [created.id],
+          )
+          const c = await query<{ c: string }>(
+            'SELECT COUNT(*) AS c FROM map_sectors WHERE map_id = $1',
+            [created.id],
+          )
+          const a = await query<{ c: string }>(
+            'SELECT COUNT(*) AS c FROM territory_adjacencies WHERE map_id = $1',
+            [created.id],
+          )
           logger.info('📊 Inserted rows', {
             mapId: created.id,
             territories: parseInt(t.rows[0]?.c || '0', 10),
-            continents: parseInt(c.rows[0]?.c || '0', 10),
+            sectors: parseInt(c.rows[0]?.c || '0', 10),
             adjacencies: parseInt(a.rows[0]?.c || '0', 10),
           })
         } catch (countErr) {
@@ -507,23 +568,30 @@ async function run(): Promise<void> {
         if (opts.approve) {
           try {
             const adminId = await resolveAdminUserId()
-            const { default: mapWorkflowService } = (await import('../services/mapWorkflowService')) as typeof import('../services/mapWorkflowService')
+            const { default: mapWorkflowService } = (await import(
+              '../services/mapWorkflowService'
+            )) as typeof import('../services/mapWorkflowService')
             await mapWorkflowService.approveMap(created.id, adminId, {
               notes: 'Auto-approved by import script',
             })
             logger.info(`🔓 Approved map: ${created.name} (${created.id})`)
           } catch (approveErr) {
-            logger.warn('Failed to auto-approve map (skipping)', { mapId: created.id, error: approveErr })
+            logger.warn('Failed to auto-approve map (skipping)', {
+              mapId: created.id,
+              error: approveErr,
+            })
           }
         }
       } catch (createErr) {
         if (opts.draftOnFail) {
-          const { default: mapWorkflowService } = (await import('../services/mapWorkflowService')) as typeof import('../services/mapWorkflowService')
+          const { default: mapWorkflowService } = (await import(
+            '../services/mapWorkflowService'
+          )) as typeof import('../services/mapWorkflowService')
           const draft = await mapWorkflowService.saveDraft(userId as string, {
             name: data.name,
             description: data.description || undefined,
             territories: metadata.territories,
-            continents: metadata.continents,
+            sectors: metadata.sectors,
             adjacencies: metadata.adjacencies,
             capitalAssignments: metadata.capitalAssignments,
             imageUrl,

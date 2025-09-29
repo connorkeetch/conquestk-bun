@@ -14,9 +14,12 @@ jest.mock('../config/database', () => {
   }
 })
 
+const mockValidateMapPlayable = jest.fn().mockResolvedValue({ isValid: true, errors: [] })
+
 jest.mock('../services/mapService', () => ({
   mapService: {
     createMap: (...args: unknown[]) => mockCreateMap(...args),
+    validateMapPlayable: (...args: unknown[]) => mockValidateMapPlayable(...args),
   },
 }))
 

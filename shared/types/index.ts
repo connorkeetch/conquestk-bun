@@ -376,7 +376,9 @@ export interface Map {
   isOfficial: boolean
   tags: string[]
   territories: MapTerritory[]
-  continents: MapContinent[]
+  sectors: MapSector[]
+  // Backward compatibility
+  continents?: MapSector[]
   status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
   createdAt: Date | string
   updatedAt: Date | string
@@ -388,6 +390,8 @@ export interface MapTerritory {
   id: string
   territoryId: string
   name: string
+  sectorId?: string
+  /** @deprecated use `sectorId` */
   continentId?: string
   boundaryCoords: { x: number; y: number }[]
   centerX: number
@@ -396,13 +400,15 @@ export interface MapTerritory {
   abilities?: TerritoryAbility[]
 }
 
-export interface MapContinent {
+export interface MapSector {
   id: string
   name: string
   bonusArmies: number
   color: string
   territories: string[]
 }
+
+export type MapContinent = MapSector
 
 // ============================================
 // Room & Lobby Types

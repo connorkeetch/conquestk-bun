@@ -118,7 +118,7 @@ const TutorialPage: React.FC = () => {
                   <h4 className="font-semibold text-[color:var(--color-warning)]">1. Reinforce</h4>
                   <p className="text-sm text-muted mt-2">
                     Deploy new troops to friendly territory. Bonus soldiers arrive when you hold
-                    entire continents, and in team games you can reinforce an ally directly.
+                    entire sectors, and in team games you can reinforce an ally directly.
                   </p>
                 </div>
                 <div className="panel-muted border-l-4 border-[color:var(--color-danger)]">
@@ -210,7 +210,7 @@ const TutorialPage: React.FC = () => {
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
-                    <span>Secure an easily defended continent to earn bonus reinforcements.</span>
+                    <span>Secure an easily defended sector to earn bonus reinforcements.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Zap className="h-4 w-4 text-[color:var(--color-warning)] mt-0.5" />
@@ -234,7 +234,7 @@ const TutorialPage: React.FC = () => {
                 <ul className="space-y-2 text-sm text-muted">
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
-                    <span>Break enemy continents to choke off their bonus troops.</span>
+                    <span>Break enemy sectors to choke off their bonus troops.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-[color:var(--color-success)] mt-0.5" />
@@ -404,7 +404,7 @@ const TutorialPage: React.FC = () => {
                         The Great King (1800-1999)
                       </div>
                       <div className="text-sm text-muted">
-                        Ruler of kings, empire spanning continents — Example: Alexander the Great
+                        Ruler of kings, empire spanning sectors — Example: Alexander the Great
                       </div>
                     </div>
                   </div>
@@ -483,7 +483,7 @@ const TutorialPage: React.FC = () => {
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted">
                 <li>Upload a background image (minimum 400×300)</li>
                 <li>Place territory tokens on strategic locations</li>
-                <li>Assign continents and bonuses as needed</li>
+                <li>Assign sectors and bonuses as needed</li>
                 <li>Connect territories to define borders</li>
                 <li>Set capital positions for each player count</li>
                 <li>Save your map and submit it for approval</li>
@@ -500,17 +500,16 @@ const TutorialPage: React.FC = () => {
                     🗺️ Territories mode
                   </h4>
                   <p className="text-sm text-muted">
-                    Place and reposition territory tokens. Select a continent first to auto-assign
-                    new territories.
+                    Place and reposition territory tokens. Select a sector first to auto-assign new
+                    territories.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
                   <h4 className="font-semibold text-[color:var(--color-primary)]">
-                    🌍 Continents mode
+                    🌍 Sectors mode
                   </h4>
                   <p className="text-sm text-muted">
-                    Group territories into continents, set bonus values, and choose highlight
-                    colors.
+                    Group territories into sectors, set bonus values, and choose highlight colors.
                   </p>
                 </div>
                 <div className="panel-muted space-y-1">
@@ -590,7 +589,7 @@ const TutorialPage: React.FC = () => {
                     <td className="text-center text-[color:var(--color-success)]">20–50</td>
                   </tr>
                   <tr>
-                    <td>Continents</td>
+                    <td>Sectors</td>
                     <td className="text-center text-[color:var(--color-warning)]">Optional</td>
                     <td className="text-center text-[color:var(--color-success)]">3–7</td>
                   </tr>

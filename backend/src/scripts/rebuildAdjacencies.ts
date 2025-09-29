@@ -1,5 +1,5 @@
-import dotenv from 'dotenv'
 import path from 'node:path'
+import dotenv from 'dotenv'
 import { logger } from '../utils/logger'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
@@ -13,7 +13,16 @@ type MapRow = {
 }
 
 type MetadataTerritory = { id?: string; name?: string; connections?: string[] }
-type MetadataAdjacency = { from?: string; to?: string; fromTerritoryId?: string; toTerritoryId?: string; territory_from?: string; territory_to?: string; source?: string; target?: string }
+type MetadataAdjacency = {
+  from?: string
+  to?: string
+  fromTerritoryId?: string
+  toTerritoryId?: string
+  territory_from?: string
+  territory_to?: string
+  source?: string
+  target?: string
+}
 
 type Metadata = {
   territories?: MetadataTerritory[]
@@ -21,7 +30,7 @@ type Metadata = {
 }
 
 const pick = (...candidates: Array<string | undefined>): string | undefined => {
-  for (const c of candidates) if (c && c.trim()) return c.trim()
+  for (const c of candidates) if (c?.trim()) return c.trim()
   return undefined
 }
 

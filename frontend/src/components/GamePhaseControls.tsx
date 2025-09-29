@@ -48,8 +48,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
   const fortifyInputId = useId()
 
   const continentDefinitions = useMemo(
-    () => resolveContinentDefinitions(gameState?.gameConfig?.continentBonuses),
-    [gameState?.gameConfig?.continentBonuses],
+    () =>
+      resolveContinentDefinitions(
+        gameState?.gameConfig?.sectorBonuses || gameState?.gameConfig?.continentBonuses,
+      ),
+    [gameState?.gameConfig],
   )
 
   if (!gameState || !currentUser) return null
@@ -68,7 +71,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
     const territoryCount = gameState.board.filter((t) => t.ownerId === currentPlayer.id).length
     const baseArmies = Math.max(3, Math.floor(territoryCount / 3))
 
-    // Add continent bonuses
+    // Add sector bonuses
     const continentBonuses = getContinentBonusArmies(
       currentPlayer.id,
       gameState.board,
@@ -228,7 +231,7 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                       </div>
                       {continentBonuses > 0 && (
                         <div className="flex justify-between">
-                          <span>Continent bonuses:</span>
+                          <span>Sector bonuses:</span>
                           <span>+{continentBonuses}</span>
                         </div>
                       )}
@@ -241,11 +244,11 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
                 })()}
               </div>
 
-              {/* Continent control details */}
+              {/* Sector control details */}
               {currentPlayerContinentStatus &&
                 currentPlayerContinentStatus.totalBonusArmies > 0 && (
                   <div className="mt-2 text-xs">
-                    <div className="font-medium text-green-300 mb-1">Controlled Continents:</div>
+                    <div className="font-medium text-green-300 mb-1">Controlled Sectors:</div>
                     <div className="space-y-1">
                       {currentPlayerContinentStatus.controlledContinents
                         .filter((cc) => cc.controlled)

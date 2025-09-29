@@ -1,5 +1,5 @@
-import dotenv from 'dotenv'
 import path from 'node:path'
+import dotenv from 'dotenv'
 import { logger } from '../utils/logger'
 
 // Load env before importing database module

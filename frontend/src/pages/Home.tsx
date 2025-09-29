@@ -55,14 +55,14 @@ const Home: React.FC = () => {
       icon: '🗺️',
       title: 'Custom Map Showdowns',
       description:
-        'Host games on official or community maps with continent bonuses, capital rules, and team alliances.',
+        'Host games on official or community maps with sector bonuses, capital rules, and team alliances.',
       meta: 'Up to 12 commanders per battle',
     },
     {
       icon: '🏗️',
       title: 'Creator Playground',
       description:
-        'Design, iterate, and publish new arenas in the map editor—territories, continents, and adjacencies included.',
+        'Design, iterate, and publish new arenas in the map editor—territories, sectors, and adjacencies included.',
       meta: 'Review and approval workflow built-in',
     },
   ]
@@ -89,7 +89,7 @@ const Home: React.FC = () => {
       description:
         'Build worlds with the same workflows moderators use to review and ship official maps.',
       bullets: [
-        'Advanced editor manages territories, continents, bonuses, and adjacency in one place.',
+        'Advanced editor manages territories, sectors, bonuses, and adjacency in one place.',
         'Versioned drafts flow through review queues before they reach the live rotation.',
         'Automated asset lifecycle keeps staging buckets tidy as maps evolve.',
       ],

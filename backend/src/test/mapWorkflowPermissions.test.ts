@@ -102,6 +102,13 @@ jest.mock('../services/NotificationDispatcher', () => ({
   },
 }))
 
+// Ensure map validation does not fail tests that don't set up territories
+jest.mock('../services/mapService', () => ({
+  mapService: {
+    validateMapPlayable: jest.fn().mockResolvedValue({ isValid: true, errors: [] }),
+  },
+}))
+
 const databaseModule = require('../config/database') as { query: jest.Mock }
 const queryMock = databaseModule.query
 

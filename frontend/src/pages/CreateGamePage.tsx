@@ -1614,9 +1614,12 @@ const CreateGamePage: React.FC = () => {
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-muted">Continents</dt>
+                              <dt className="text-muted">Sectors</dt>
                               <dd className="text-white">
-                                {selectedMapData.continent_count || 'Unknown'}
+                                {(selectedMapData as unknown as { sector_count?: number })
+                                  .sector_count ||
+                                  selectedMapData.continent_count ||
+                                  'Unknown'}
                               </dd>
                             </div>
                             <div>

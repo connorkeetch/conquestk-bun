@@ -17,7 +17,7 @@ export const testWorldMap = {
         { x: 100, y: 300 },
       ],
       armyPosition: { x: 175, y: 225 },
-      continentId: 'americas',
+      sectorId: 'americas',
       color: '#dc2626',
     },
     {
@@ -29,7 +29,7 @@ export const testWorldMap = {
         { x: 150, y: 500 },
       ],
       armyPosition: { x: 200, y: 425 },
-      continentId: 'americas',
+      sectorId: 'americas',
       color: '#dc2626',
     },
     {
@@ -41,7 +41,7 @@ export const testWorldMap = {
         { x: 350, y: 250 },
       ],
       armyPosition: { x: 400, y: 200 },
-      continentId: 'eurasia',
+      sectorId: 'eurasia',
       color: '#2563eb',
     },
     {
@@ -53,7 +53,7 @@ export const testWorldMap = {
         { x: 350, y: 450 },
       ],
       armyPosition: { x: 400, y: 375 },
-      continentId: 'africa',
+      sectorId: 'africa',
       color: '#16a34a',
     },
     {
@@ -65,7 +65,7 @@ export const testWorldMap = {
         { x: 500, y: 300 },
       ],
       armyPosition: { x: 575, y: 225 },
-      continentId: 'eurasia',
+      sectorId: 'eurasia',
       color: '#2563eb',
     },
     {
@@ -77,12 +77,12 @@ export const testWorldMap = {
         { x: 550, y: 500 },
       ],
       armyPosition: { x: 625, y: 450 },
-      continentId: 'oceania',
+      sectorId: 'oceania',
       color: '#7c3aed',
     },
   ],
 
-  continents: [
+  sectors: [
     {
       name: 'Americas',
       color: '#dc2626',

@@ -10,7 +10,7 @@ import type {
   MapStatus,
   MapSubmissionLog,
   MetadataAdjacencyInput,
-  MetadataContinentInput,
+  MetadataSectorInput,
   MetadataTerritoryInput,
   TerritoryModifierMetadata,
 } from '../types/maps'
@@ -39,7 +39,7 @@ type MapDraftRow = {
   description: string | null
   map_data: JsonValue | string | null
   territories: JsonValue | string | null
-  continents: JsonValue | string | null
+  sectors: JsonValue | string | null
   adjacencies: JsonValue | string | null
   capital_assignments: JsonValue | string | null
   thumbnail_url: string | null
@@ -217,7 +217,7 @@ export class MapWorkflowService {
           `
           UPDATE map_drafts 
           SET name = $1, description = $2, map_data = $3, territories = $4, 
-              continents = $5, adjacencies = $6, thumbnail_url = $7,
+              sectors = $5, adjacencies = $6, thumbnail_url = $7,
               staging_image_id = $8, parent_map_id = $9, 
               image_url = $10, image_width = $11, image_height = $12,
               capital_assignments = $13, tags = $14, is_public = $15,
@@ -231,7 +231,11 @@ export class MapWorkflowService {
             draftData.description,
             JSON.stringify(draftData.data || {}),
             JSON.stringify(draftData.territories || []),
-            JSON.stringify(draftData.continents || []),
+            JSON.stringify(
+              (draftData as unknown as { sectors?: unknown[]; continents?: unknown[] }).sectors ||
+                (draftData as unknown as { continents?: unknown[] }).continents ||
+                [],
+            ),
             JSON.stringify(draftData.adjacencies || []),
             draftData.thumbnailUrl,
             draftData.stagingImageId || null,
@@ -274,7 +278,7 @@ export class MapWorkflowService {
         `
           INSERT INTO map_drafts (
             user_id, staging_image_id, parent_map_id, name, description, 
-            map_data, territories, continents, adjacencies, thumbnail_url,
+            map_data, territories, sectors, adjacencies, thumbnail_url,
             image_url, image_width, image_height, capital_assignments,
             tags, is_public, draft_status
           )
@@ -289,7 +293,11 @@ export class MapWorkflowService {
           draftData.description,
           JSON.stringify(draftData.data || {}),
           JSON.stringify(draftData.territories || []),
-          JSON.stringify(draftData.continents || []),
+          JSON.stringify(
+            (draftData as unknown as { sectors?: unknown[]; continents?: unknown[] }).sectors ||
+              (draftData as unknown as { continents?: unknown[] }).continents ||
+              [],
+          ),
           JSON.stringify(draftData.adjacencies || []),
           draftData.thumbnailUrl,
           draftData.imageUrl,
@@ -679,7 +687,7 @@ export class MapWorkflowService {
       // Save current version to history
       await query(
         `
-        INSERT INTO map_versions (map_id, version_number, data, territories, continents, adjacencies, change_summary, changed_by)
+        INSERT INTO map_versions (map_id, version_number, data, territories, sectors, adjacencies, change_summary, changed_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
         [
@@ -687,7 +695,7 @@ export class MapWorkflowService {
           mapData.version || 1,
           JSON.stringify(mapData),
           mapData.territories,
-          mapData.continents,
+          (mapData as unknown as { sectors?: unknown[] }).sectors,
           mapData.adjacencies,
           'Version before edit',
           userId,
@@ -811,7 +819,8 @@ export class MapWorkflowService {
   private formatDraftRow(row: MapDraftRow): MapDraft {
     const mapData = this.safeJson<Record<string, unknown>>(row.map_data, {})
     const mapDataTerritories = mapData.territories
-    const mapDataContinents = mapData.continents
+    const mapDataGroups = mapData as unknown as { sectors?: unknown[]; continents?: unknown[] }
+    const mapDataSectors = mapDataGroups.sectors ?? mapDataGroups.continents
     const mapDataAdjacencies = mapData.adjacencies
     const mapDataCapitalAssignments = mapData.capitalAssignments
     const mapDataTags = mapData.tags
@@ -823,9 +832,9 @@ export class MapWorkflowService {
       row.territories,
       Array.isArray(mapDataTerritories) ? mapDataTerritories : [],
     )
-    const continents = this.safeJson<unknown[]>(
-      row.continents,
-      Array.isArray(mapDataContinents) ? mapDataContinents : [],
+    const sectors = this.safeJson<unknown[]>(
+      row.sectors,
+      Array.isArray(mapDataSectors) ? mapDataSectors : [],
     )
     const adjacencies = this.safeJson<unknown[]>(
       row.adjacencies,
@@ -848,7 +857,7 @@ export class MapWorkflowService {
       description: row.description || undefined,
       data: mapData,
       territories,
-      continents,
+      sectors,
       adjacencies,
       capitalAssignments,
       territoryModifiers: hasTerritoryModifiers(territoryModifiers)
@@ -953,7 +962,10 @@ export class MapWorkflowService {
           boundaryCoords: Array.isArray(entry.boundaryCoords)
             ? (entry.boundaryCoords as MetadataTerritoryInput['boundaryCoords'])
             : undefined,
-          continentId: asString(entry.continentId) ?? undefined,
+          sectorId:
+            asString((entry as unknown as { sectorId?: string }).sectorId) ??
+            asString((entry as unknown as { continentId?: string }).continentId) ??
+            undefined,
           x: pixelX,
           y: pixelY,
           normalizedX,
@@ -986,7 +998,8 @@ export class MapWorkflowService {
         : {}
 
     const dataTerritories = data.territories
-    const dataContinents = data.continents
+    const groups = data as unknown as { sectors?: unknown[]; continents?: unknown[] }
+    const dataSectors = groups.sectors ?? groups.continents
     const dataAdjacencies = data.adjacencies
     const dataCapitalAssignments = data.capitalAssignments
     const dataTags = data.tags
@@ -999,11 +1012,12 @@ export class MapWorkflowService {
           ? (dataTerritories as unknown[])
           : []
 
-    const continents =
-      Array.isArray(draft.continents) && draft.continents.length > 0
-        ? draft.continents
-        : Array.isArray(dataContinents)
-          ? (dataContinents as unknown[])
+    const draftGroups = draft as unknown as { sectors?: unknown[] }
+    const sectors =
+      Array.isArray(draftGroups.sectors) && (draftGroups.sectors?.length ?? 0) > 0
+        ? (draftGroups.sectors as unknown[])
+        : Array.isArray(dataSectors)
+          ? (dataSectors as unknown[])
           : []
 
     const adjacencies =
@@ -1087,7 +1101,7 @@ export class MapWorkflowService {
 
     const metadata: MapMetadataPayload = {
       territories: normalizedTerritories,
-      continents: continents as MetadataContinentInput[],
+      sectors: sectors as MetadataSectorInput[],
       adjacencies: adjacencies as MetadataAdjacencyInput[],
       capitalAssignments,
       width: canvasWidth,
