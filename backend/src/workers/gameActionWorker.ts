@@ -141,9 +141,26 @@ export class GameActionWorker {
           delta = await this.processFortify(gameId, playerId, action)
           break
 
-        case 'end_turn':
+        case 'end_turn': {
+          // If invoked by auto-timer and player has time bank, try to extend instead of ending
+          try {
+            const { GameLifecycleService } = await import('../services/gameLifecycleService')
+            const lifecycle = new GameLifecycleService()
+            const extended = await lifecycle.tryConsumeTimeBank(gameId)
+            if (extended) {
+              delta = null
+              shouldBroadcast = false
+              break
+            }
+          } catch (e) {
+            logger.warn('Time bank extension attempt failed', {
+              roomId: gameId,
+              error: e instanceof Error ? e.message : e,
+            })
+          }
           delta = await this.processEndTurn(gameId, playerId)
           break
+        }
 
         case 'begin_turn':
         case 'trade_cards':

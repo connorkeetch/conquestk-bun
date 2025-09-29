@@ -5,6 +5,7 @@ import { logger } from '../utils/logger'
 import capitalGameService from './capitalGameService'
 import { GameRoomService } from './gameRoomService'
 import { GameService } from './gameService'
+import { queueService } from './queueService'
 import { tryGetSocketServer } from './socketRegistry'
 
 interface ReadyPlayerRow {
@@ -325,6 +326,22 @@ export class GameLifecycleService {
 
     const gameState = await this.gameService.initializeGame(roomId, playerConfigs, configOverrides)
 
+    // Initialize time bank remaining for each player to room capacity (if configured)
+    try {
+      const initQuery = `
+        UPDATE room_players rp
+        SET time_bank_seconds_remaining = GREATEST(0, COALESCE(gr.time_bank_seconds, 0))
+        FROM game_rooms gr
+        WHERE rp.room_id = gr.id AND rp.room_id = $1
+      `
+      await query(initQuery, [roomId])
+    } catch (error) {
+      logger.warn('Failed to initialize time bank for room', {
+        roomId,
+        error: error instanceof Error ? error.message : error,
+      })
+    }
+
     // Initialize capitals if requested and possible
     if ((room?.gameMode === 'capitals' || configOverrides.gameMode === 'capitals') && room?.mapId) {
       try {
@@ -405,6 +422,95 @@ export class GameLifecycleService {
         roomId,
         error: error instanceof Error ? error.message : error,
       })
+    }
+  }
+
+  /**
+   * Try to extend the current player's turn by consuming time bank.
+   * Returns true if extension was applied and end-turn should be skipped.
+   */
+  async tryConsumeTimeBank(roomId: string, chunkSeconds = 15): Promise<boolean> {
+    const client = await getClient()
+    try {
+      await client.query('BEGIN')
+      const res = await client.query<{
+        current_turn_user_id: string | null
+        turn_expires_at: Date | null
+        turn_timer: number | null
+        remaining: number | null
+      }>(
+        `
+        SELECT gr.current_turn_user_id, gr.turn_expires_at, gr.turn_timer,
+               rp.time_bank_seconds_remaining as remaining
+        FROM game_rooms gr
+        LEFT JOIN room_players rp ON rp.room_id = gr.id AND rp.user_id = gr.current_turn_user_id
+        WHERE gr.id = $1
+        FOR UPDATE
+        `,
+        [roomId],
+      )
+      const row = res.rows[0]
+      if (!row || !row.current_turn_user_id || !row.remaining || row.remaining <= 0) {
+        await client.query('ROLLBACK')
+        return false
+      }
+
+      const extendBy = Math.max(1, Math.min(chunkSeconds, Math.trunc(row.remaining)))
+      await client.query(
+        `UPDATE room_players SET time_bank_seconds_remaining = time_bank_seconds_remaining - $2
+         WHERE room_id = $1 AND user_id = $3`,
+        [roomId, extendBy, row.current_turn_user_id],
+      )
+
+      // Update expiry to now + extendBy (or add to existing if in future)
+      await client.query(
+        `UPDATE game_rooms
+           SET turn_expires_at = CASE
+             WHEN turn_expires_at IS NULL OR turn_expires_at < NOW()
+               THEN NOW() + ($2 * INTERVAL '1 second')
+             ELSE turn_expires_at + ($2 * INTERVAL '1 second')
+           END
+         WHERE id = $1`,
+        [roomId, extendBy],
+      )
+
+      await client.query('COMMIT')
+
+      // Broadcast updated lifecycle
+      const snapshot = await this.getLifecycleSnapshot(roomId)
+      await this.broadcastLifecycle(snapshot)
+
+      // Reschedule auto end-turn for chunk
+      try {
+        const idKey = `auto-end:${roomId}:bank:${Date.now()}`
+        await queueService.addDelayedGameAction(
+          {
+            gameId: roomId,
+            playerId: snapshot.room?.currentTurnUserId ?? '',
+            action: {
+              type: 'end_turn',
+              playerId: snapshot.room?.currentTurnUserId ?? '',
+              roomId,
+            },
+            idempotencyKey: idKey,
+          },
+          extendBy * 1000,
+          { idempotencyKey: idKey, priority: 10 },
+        )
+      } catch (e) {
+        logger.warn('Failed to reschedule end-turn after time bank extension', {
+          roomId,
+          error: e instanceof Error ? e.message : e,
+        })
+      }
+
+      return true
+    } catch (error) {
+      await client.query('ROLLBACK')
+      logger.error('Error trying to consume time bank', error)
+      return false
+    } finally {
+      client.release()
     }
   }
 
