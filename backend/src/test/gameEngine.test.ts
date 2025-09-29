@@ -181,7 +181,7 @@ describe('GameEngine', () => {
         maxPlayers: 4,
         mapId: 'classic',
         gameMode: 'standard',
-        continentBonuses: [
+        sectorBonuses: [
           {
             id: 'continent-alpha',
             name: 'Continent Alpha',

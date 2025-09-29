@@ -87,7 +87,7 @@ const createGameState = (overrides: Partial<GameState> = {}): GameState => {
       maxPlayers: 4,
       mapId: 'test-map',
       gameMode: 'standard',
-      continentBonuses: [],
+      sectorBonuses: [],
       useTerritoryModifiers: false,
       modifierDistribution: 'none',
     },

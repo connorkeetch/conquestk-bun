@@ -185,7 +185,7 @@ describe('GameEngine', () => {
       const gameState = gameEngine.initializeGame(
         'room123',
         createPlayers('player1'),
-        createConfig(1, { continentBonuses: [] }),
+        createConfig(1, { sectorBonuses: [] }),
         mapOverrides,
       )
       const player = gameState.players.find((p) => p.id === 'player1')
@@ -196,7 +196,7 @@ describe('GameEngine', () => {
         ...territory,
         continent: 'neutral-continent',
       }))
-      const configWithoutBonuses = { ...gameState.gameConfig, continentBonuses: [] }
+      const configWithoutBonuses = { ...gameState.gameConfig, sectorBonuses: [] }
 
       const armies = gameEngine.calculateReinforcementArmies(
         player?.territories ?? [],
@@ -221,7 +221,7 @@ describe('GameEngine', () => {
 
       const bonusValue = 4
       const config = createConfig(1, {
-        continentBonuses: [
+        sectorBonuses: [
           {
             id: 'test-continent',
             name: 'Test Continent',
