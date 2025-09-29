@@ -125,14 +125,18 @@ export default function CustomMapDisplay({
       mapWidth={mapData.width}
       mapHeight={mapData.height}
       className="custom-map-display"
+      showMinimap={true}
+      backgroundImageUrl={mapData.imageUrl}
     >
       {/* Map background */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage: `url(${mapData.imageUrl})`,
-          backgroundSize: 'cover',
+          backgroundSize: 'contain',
           backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          imageRendering: 'auto',
         }}
       />
 
@@ -140,44 +144,58 @@ export default function CustomMapDisplay({
       {territories.map((territory) => {
         const isSelected = territory.id === selectedTerritoryId
         const ownerColor = territory.owner ? playerColors[territory.owner] : undefined
+        const color = ownerColor || '#6b7280' // gray-500 as fallback
 
         return (
-          <button
+          <div
             key={territory.id}
-            className={`absolute cursor-pointer transition-all ${isSelected ? 'z-20' : 'z-10'}`}
+            className={`absolute ${isSelected ? 'z-20' : 'z-10'}`}
             style={{
               left: `${(territory.x / mapData.width) * 100}%`,
               top: `${(territory.y / mapData.height) * 100}%`,
               transform: 'translate(-50%, -50%)',
             }}
-            type="button"
-            onClick={() => handleTerritoryActivate(territory.id)}
           >
-            {/* Territory token */}
-            <span
-              className={`relative block w-8 h-8 rounded-full border-2 ${
-                isSelected ? 'border-yellow-400 border-4' : 'border-black'
-              }`}
-              style={{
-                backgroundColor: ownerColor || '#666',
-                boxShadow: isSelected
-                  ? '0 0 10px rgba(250, 204, 21, 0.5)'
-                  : '0 2px 4px rgba(0,0,0,0.3)',
-              }}
+            <button
+              type="button"
+              onClick={() => handleTerritoryActivate(territory.id)}
+              className="relative block"
+              title={territory.name}
+              aria-label={`Territory: ${territory.name}`}
             >
-              {/* Army count */}
-              {territory.armies && territory.armies > 0 && (
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{territory.armies}</span>
-                </span>
-              )}
-            </span>
-
-            {/* Territory name tooltip */}
-            <span className="absolute -bottom-6 left-1/2 block -translate-x-1/2 whitespace-nowrap bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-              {territory.name}
-            </span>
-          </button>
+              <span
+                className="block"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  backgroundColor: color,
+                  opacity: isSelected ? 0.9 : 0.8,
+                  clipPath:
+                    'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+                  boxShadow: isSelected
+                    ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
+                    : '0 2px 4px rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {territory.armies && territory.armies > 0 ? (
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                    }}
+                  >
+                    {territory.armies}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </div>
         )
       })}
     </ResponsiveMapContainer>

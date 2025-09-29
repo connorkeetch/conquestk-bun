@@ -62,7 +62,11 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
     <div className="game-board flex-1 relative bg-blue-100 p-4">
       <div className="relative w-full h-full">
         {mapId === 'classic' ? (
-          <ResponsiveMapContainer mapWidth={CLASSIC_MAP_WIDTH} mapHeight={CLASSIC_MAP_HEIGHT}>
+          <ResponsiveMapContainer
+            mapWidth={CLASSIC_MAP_WIDTH}
+            mapHeight={CLASSIC_MAP_HEIGHT}
+            showMinimap={true}
+          >
             <WorldMapSVG
               territories={territories}
               onTerritoryClick={onTerritoryClick}

@@ -120,6 +120,41 @@ const server = createServer(app)
 // Set to 1 to trust first proxy (Railway's proxy)
 app.set('trust proxy', 1)
 
+// Enforce a canonical host in production to avoid split state across www/apex
+// This prevents users from landing on different origins with separate localStorage/session state
+// and ensures all requests (including /api) resolve under the same host.
+app.use((req, res, next) => {
+  try {
+    const isProd = process.env.NODE_ENV === 'production'
+    if (!isProd) return next()
+
+    const headerHost = (req.headers.host || '').toLowerCase()
+    if (!headerHost) return next()
+
+    const hostWithoutPort = headerHost.split(':')[0]
+    const canonical = (process.env.CANONICAL_HOST || 'conquestk.com').toLowerCase()
+
+    // Allow health checks or localhost during odd proxies
+    if (
+      hostWithoutPort === canonical ||
+      hostWithoutPort === 'localhost' ||
+      hostWithoutPort === '127.0.0.1'
+    ) {
+      return next()
+    }
+
+    // Only redirect GET/HEAD (safe to redirect); let non-idempotent requests proceed
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const target = `${req.protocol}://${canonical}${req.originalUrl}`
+      return res.redirect(308, target)
+    }
+
+    return next()
+  } catch {
+    return next()
+  }
+})
+
 // Configure allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
   if (process.env.NODE_ENV === 'production') {

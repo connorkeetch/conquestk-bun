@@ -199,6 +199,34 @@ export const GamePhaseControls: React.FC<GamePhaseControlsProps> = ({ onEndTurn 
         </button>
       </div>
 
+      {/* Phase stepper */}
+      <div className="flex items-center justify-between text-xs text-muted">
+        {['reinforcement', 'attack', 'fortify'].map((p, idx, arr) => {
+          const isActive = gameState.phase === p
+          const isCompleted =
+            (p === 'reinforcement' && (gameState.phase === 'attack' || gameState.phase === 'fortify')) ||
+            (p === 'attack' && gameState.phase === 'fortify')
+          return (
+            <div key={p} className="flex-1 flex items-center">
+              <div
+                className={`flex items-center gap-2 px-2 py-1 rounded ${
+                  isActive ? 'bg-slate-700 text-white' : isCompleted ? 'opacity-70' : 'opacity-60'
+                }`}
+                title={p}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isActive ? 'bg-primary' : isCompleted ? 'bg-green-500' : 'bg-slate-500'
+                  }`}
+                />
+                <span className="capitalize">{p}</span>
+              </div>
+              {idx < arr.length - 1 && <div className="flex-1 h-px bg-slate-600 mx-2" />}
+            </div>
+          )
+        })}
+      </div>
+
       {/* Reinforcement Phase Controls */}
       {gameState.phase === 'reinforcement' && (
         <div className="space-y-3">

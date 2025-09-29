@@ -922,18 +922,22 @@ export default function GameRoom() {
           >
             {isMuted ? '🔇' : '🔊'} {isMuted ? 'Unmute' : 'Mute'}
           </button>
-          <button
-            onClick={() => void handleCopyInviteLink()}
-            type="button"
-            className="btn btn-secondary"
-            title="Copy invite link"
-            aria-live="polite"
-          >
-            {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
-          </button>
-          <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
-            Leave Room
-          </button>
+          {(currentRoom.status === 'lobby' || currentRoom.status === 'initializing') && (
+            <>
+              <button
+                onClick={() => void handleCopyInviteLink()}
+                type="button"
+                className="btn btn-secondary"
+                title="Copy invite link"
+                aria-live="polite"
+              >
+                {inviteLinkCopied ? 'Link copied ✓' : 'Copy Link'}
+              </button>
+              <button onClick={handleLeaveRoom} type="button" className="btn btn-danger">
+                Leave Room
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1028,6 +1032,7 @@ export default function GameRoom() {
           <div className="panel h-auto min-h-[clamp(520px,65vh,920px)] p-0">
             {currentGame ? (
               <RiskGameBoard
+                mapId={currentRoom?.mapId || 'classic'}
                 onTerritoryClick={(_territoryId) => {
                   // TODO: Handle territory interactions based on game phase
                 }}
@@ -1348,23 +1353,7 @@ export default function GameRoom() {
             </div>
           )}
 
-          {currentGame && (
-            <div className="panel space-y-2">
-              <h3 className="text-lg font-semibold text-[color:var(--heading)]">Game Controls</h3>
-              <button type="button" className="btn btn-primary w-full">
-                Deploy Armies
-              </button>
-              <button type="button" className="btn btn-danger w-full">
-                Attack
-              </button>
-              <button type="button" className="btn btn-success w-full">
-                Fortify
-              </button>
-              <button type="button" className="btn btn-secondary w-full">
-                End Turn
-              </button>
-            </div>
-          )}
+          {/* Contextual controls live inside RiskGameBoard -> GamePhaseControls; duplicate panel removed */}
         </div>
         {/* SR-only live region for announcements */}
         <div className="sr-only" aria-live="polite">
