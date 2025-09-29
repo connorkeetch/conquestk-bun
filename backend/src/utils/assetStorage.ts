@@ -178,6 +178,66 @@ export const uploadAsset = async (options: UploadAssetOptions): Promise<AssetUpl
   }
 }
 
+/**
+ * Extract the storage key (e.g. `maps/foo.png`) from a public URL or local uploads path.
+ * Handles these cases:
+ * - Absolute CDN URL using PUBLIC_ASSET_BASE_URL: `${PUBLIC_ASSET_BASE_URL}/maps/...`
+ * - Absolute R2 endpoint URL: `${ASSET_ENDPOINT}/${ASSET_BUCKET}/maps/...`
+ * - Local dev served path: `/uploads/maps/...`
+ * - Raw storage key input already (returns normalized key)
+ */
+export const extractStorageKeyFromUrl = (input: string | null | undefined): string | null => {
+  if (!input) return null
+  let url = input.trim()
+  if (!url) return null
+
+  // Strip query/hash
+  const hashIndex = url.indexOf('#')
+  if (hashIndex >= 0) url = url.slice(0, hashIndex)
+  const qIndex = url.indexOf('?')
+  if (qIndex >= 0) url = url.slice(0, qIndex)
+
+  // Already a storage key
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('/uploads/')) {
+    return normalizeKey(url)
+  }
+
+  // Local served path
+  if (url.startsWith('/uploads/')) {
+    const relative = url.replace(/^\/uploads\//, '')
+    return normalizeKey(relative)
+  }
+
+  // Try PUBLIC_ASSET_BASE_URL
+  if (publicBaseUrl && url.startsWith(publicBaseUrl)) {
+    const suffix = url.slice(publicBaseUrl.length).replace(/^\//, '')
+    return normalizeKey(suffix)
+  }
+
+  // Try R2 endpoint + bucket
+  if (remoteConfig) {
+    const base = `${remoteConfig.endpoint.replace(/\/$/, '')}/${remoteConfig.bucket}`
+    if (url.startsWith(base)) {
+      const suffix = url.slice(base.length).replace(/^\//, '')
+      return normalizeKey(suffix)
+    }
+  }
+
+  // Fallback: attempt to parse path and locate `/maps/...`
+  try {
+    const parsed = new URL(url)
+    const idx = parsed.pathname.indexOf('/maps/')
+    if (idx >= 0) {
+      const key = parsed.pathname.slice(idx + 1) // remove leading '/'
+      return normalizeKey(key)
+    }
+  } catch {
+    // ignore
+  }
+
+  return null
+}
+
 export const deleteAsset = async (key: string): Promise<void> => {
   const normalizedKey = normalizeKey(key)
 

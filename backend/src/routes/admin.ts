@@ -1816,8 +1816,8 @@ router.delete(
         return
       }
 
-      // Delete map and cascade to related tables
-      await dbQuery('DELETE FROM maps WHERE id = $1', [mapId])
+      // Delete map (and its unreferenced image asset) using service
+      await mapService.deleteMap(mapId, adminUserId, { isAdmin: true })
 
       // Log the action
       await dbQuery(
