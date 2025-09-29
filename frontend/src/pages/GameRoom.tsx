@@ -17,7 +17,7 @@ import { store } from '../store'
 import { endTurn } from '../store/gameActions'
 import { clearGame, fetchGameState, selectTerritory, setPendingAction } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
-import { setDice, setOverlay } from '../store/uiRoomSlice'
+import { hydrateFromStorage, setDice, setOverlay } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
 import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
@@ -642,6 +642,8 @@ export default function GameRoom() {
     }
 
     socketService.connect()
+    // Load persisted UI prefs (e.g., animation speed)
+    dispatch(hydrateFromStorage())
 
     return () => {
       dispatch(clearGame())

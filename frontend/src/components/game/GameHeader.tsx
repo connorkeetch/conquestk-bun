@@ -1,7 +1,8 @@
 import type React from 'react'
 import { useState } from 'react'
 import PlayerProfileModal from '@/components/profile/PlayerProfileModal'
-import { useAppSelector } from '@/hooks/redux'
+import { useAppDispatch, useAppSelector } from '@/hooks/redux'
+import { type AnimationSpeed, setAnimationSpeed } from '@/store/uiRoomSlice'
 import { TurnTimer } from './TurnTimer'
 
 interface GameHeaderProps {
@@ -20,7 +21,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   turn,
   currentPlayerInfo,
 }) => {
+  const dispatch = useAppDispatch()
   const connection = useAppSelector((s) => s.uiRoom.connectionStatus)
+  const anim = useAppSelector((s) => s.uiRoom.animationSpeed)
   const [profileUsername, setProfileUsername] = useState<string | null>(null)
   return (
     <div className="bg-blue-900 text-white p-4">
@@ -56,6 +59,19 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               />
               {connection}
             </span>
+            <label className="inline-flex items-center gap-2 text-xs">
+              <span>Anim:</span>
+              <select
+                value={anim}
+                onChange={(e) => dispatch(setAnimationSpeed(e.target.value as AnimationSpeed))}
+                className="bg-surface-2 text-white border border-border rounded px-1 py-0.5 text-xs"
+                title="Animation speed"
+              >
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+                <option value="instant">Instant</option>
+              </select>
+            </label>
           </div>
         </div>
         {currentPlayerInfo && (
