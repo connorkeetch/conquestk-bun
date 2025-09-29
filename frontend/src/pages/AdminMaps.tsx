@@ -3,6 +3,7 @@ import type React from 'react'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import TerritoryToken from '../components/TerritoryToken'
 import api from '../services/api'
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -1518,33 +1519,31 @@ export const AdminMaps: React.FC = () => {
                           {previewTokens.map((token) => {
                             const clampedLeft = Math.min(Math.max(token.left, 0), 100)
                             const clampedTop = Math.min(Math.max(token.top, 0), 100)
+                            const pxX = (clampedLeft / 100) * (effectiveCanvasWidth || 0)
+                            const pxY = (clampedTop / 100) * (effectiveCanvasHeight || 0)
                             return (
-                              <div
-                                key={token.id}
-                                className="absolute"
-                                style={{
-                                  left: `${clampedLeft}%`,
-                                  top: `${clampedTop}%`,
-                                  transform: 'translate(-50%, -50%)',
-                                }}
-                              >
-                                {/* Hex-style token to mirror editor visuals */}
-                                <div
-                                  style={{
-                                    width: 16,
-                                    height: 16,
-                                    backgroundColor: '#6b7280', // gray similar to editor default
-                                    opacity: 0.7,
-                                    border: '2px solid rgba(0,0,0,0.6)',
-                                    clipPath:
-                                      'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                  }}
+                              <div key={token.id} className="absolute inset-0">
+                                <TerritoryToken
+                                  x={pxX}
+                                  y={pxY}
+                                  armies={0}
+                                  showArmies={false}
+                                  color="#6b7280"
+                                  outlineColor={undefined}
+                                  shape="hexagon"
+                                  isSelected={false}
+                                  isDragging={false}
+                                  size={16}
+                                  opacity={0.7}
                                 />
                                 {/* Territory name below the token without affecting centering */}
                                 <span
                                   className="absolute whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-[color:var(--color-white)]"
-                                  style={{ left: '50%', top: 'calc(100% + 6px)', transform: 'translateX(-50%)' }}
+                                  style={{
+                                    left: `${clampedLeft}%`,
+                                    top: `calc(${clampedTop}% + 12px)`,
+                                    transform: 'translate(-50%, 0)',
+                                  }}
                                 >
                                   {token.name}
                                 </span>
