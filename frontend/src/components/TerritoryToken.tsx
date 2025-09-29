@@ -12,7 +12,7 @@ export interface TerritoryTokenProps {
   shape?: TokenShape
   isSelected?: boolean
   isDragging?: boolean
-  onClick?: () => void
+  onClick?: (e: React.MouseEvent) => void
   onMouseDown?: (e: React.MouseEvent) => void
   size?: number
   opacity?: number
