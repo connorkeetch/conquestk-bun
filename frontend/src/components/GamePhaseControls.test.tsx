@@ -70,7 +70,7 @@ describe('GamePhaseControls', () => {
     gameConfig: {
       movementType: 'classic_adjacent',
       maxPlayers: 2,
-      continentBonuses: [
+      sectorBonuses: [
         {
           id: 'north_america',
           name: 'North America',
