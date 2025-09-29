@@ -13,9 +13,11 @@ import audioService from '../services/audioService'
 import { gameService } from '../services/gameService'
 import { mapService } from '../services/mapService'
 import { socketService } from '../services/socketService'
+import { store } from '../store'
 import { endTurn } from '../store/gameActions'
-import { clearGame, fetchGameState, selectTerritory } from '../store/gameSlice'
+import { clearGame, fetchGameState, selectTerritory, setPendingAction } from '../store/gameSlice'
 import { setCurrentRoom } from '../store/roomSlice'
+import { setDice, setOverlay } from '../store/uiRoomSlice'
 import type { AIDifficulty } from '../types/game'
 import { ensureReadableOnDark, extractFirstHexColor } from '../utils/color'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
@@ -754,8 +756,55 @@ export default function GameRoom() {
         dispatch(endTurn())
         return
       }
-      // 'L' to focus last log event: handled inside log panel when clicked
-      // Dice 1/2/3 handled inside action bar
+      // Dice 1/2/3
+      if (key === '1' || key === '2' || key === '3') {
+        e.preventDefault()
+        dispatch(setDice(Number(key) as 1 | 2 | 3))
+        return
+      }
+      // Mode intents
+      if (key === 'a') {
+        e.preventDefault()
+        dispatch(setPendingAction('attack'))
+        return
+      }
+      if (key === 'f') {
+        e.preventDefault()
+        dispatch(setPendingAction('fortify'))
+        return
+      }
+      if (key === 'd') {
+        e.preventDefault()
+        dispatch(setPendingAction('deploy'))
+        return
+      }
+      // Clear selection
+      if (key === 'z') {
+        e.preventDefault()
+        dispatch(selectTerritory(null))
+        dispatch(setPendingAction(null))
+        return
+      }
+      // Toggle overlays
+      if (key === 'g' || key === 'h') {
+        e.preventDefault()
+        const state = store.getState()
+        const overlays = state.uiRoom?.overlays
+        if (key === 'g') {
+          dispatch(setOverlay({ key: 'continents', value: !overlays?.continents }))
+        } else {
+          dispatch(setOverlay({ key: 'threat', value: !overlays?.threat }))
+        }
+        return
+      }
+      // Focus last log/last action territory
+      if (key === 'l') {
+        e.preventDefault()
+        const hist = store.getState().game.territoryActionHistory
+        const last = hist.length > 0 ? hist[hist.length - 1]?.territoryId : null
+        if (last) dispatch(selectTerritory(last))
+        return
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
