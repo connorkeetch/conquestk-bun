@@ -43,8 +43,11 @@ function TerritoryTokenComponent({
       top: `${y}px`,
       cursor: isDragging ? 'grabbing' : 'pointer',
       transition: isDragging ? 'none' : 'all 0.2s ease',
-      // Center the token around (x,y) so editor and previews align
-      transform: `${isSelected ? 'scale(1.15)' : 'scale(1)'} translate(-50%, -50%)`,
+      // Center on (x,y) first, then apply scale so the center stays fixed
+      transform: `translate(-50%, -50%) ${isSelected ? 'scale(1.15)' : 'scale(1)'}`,
+      transformOrigin: '50% 50%',
+      padding: 0,
+      boxSizing: 'border-box',
       boxShadow: isSelected
         ? '0 0 15px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.3)'
         : '0 2px 4px rgba(0,0,0,0.3)',

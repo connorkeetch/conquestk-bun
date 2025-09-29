@@ -4557,8 +4557,8 @@ export default function MapEditorTokens() {
               return (
                 <Fragment key={territory.id}>
                   <TerritoryToken
-                    x={territory.x - tokenSize / 2}
-                    y={territory.y - tokenSize / 2}
+                    x={territory.x}
+                    y={territory.y}
                     armies={territory.armies}
                     color={continent?.color || '#808080'} // Gray for unassigned
                     outlineColor={continent?.color} // Continent color for outline
