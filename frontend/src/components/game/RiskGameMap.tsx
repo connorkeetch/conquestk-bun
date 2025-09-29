@@ -7,6 +7,7 @@ import type { TerritoryModifier as IconTerritoryModifier } from '../TerritoryMod
 import { TerritoryModifierIcon } from '../TerritoryModifierIcon'
 import { TerritoryModifierLegend } from '../TerritoryModifierLegend'
 import { WorldMapSVG } from '../WorldMapSVG'
+import { ConquestTransferOverlay } from './ConquestTransferOverlay'
 import type { TerritoryDisplayMap } from './territoryDisplay'
 
 const CLASSIC_MAP_WIDTH = 800
@@ -132,6 +133,14 @@ export const RiskGameMap: React.FC<RiskGameMapProps> = ({
               </div>
             )
           })}
+        {/* Inline post-conquest transfer overlay */}
+        {mapId === 'classic' && (
+          <ConquestTransferOverlay
+            territories={territories}
+            mapWidth={CLASSIC_MAP_WIDTH}
+            mapHeight={CLASSIC_MAP_HEIGHT}
+          />
+        )}
       </div>
 
       {territoryModifierMap && territoryModifierMap.size > 0 && (

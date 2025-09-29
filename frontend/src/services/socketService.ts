@@ -533,6 +533,17 @@ class SocketService {
       // Show battle results
       store.dispatch(setBattleResult(battleResult))
 
+      // If conquered, show inline conquest transfer overlay for next-commit adjustment
+      if (conquered) {
+        try {
+          const { showConquestOverlay } =
+            require('../store/uiRoomSlice') as typeof import('../store/uiRoomSlice')
+          store.dispatch(showConquestOverlay({ fromId: fromTerritory.id, toId: toTerritory.id }))
+        } catch {
+          // best-effort; ignore if slice not available
+        }
+      }
+
       // Clear target selection after attack
       store.dispatch(selectTargetTerritory(null))
     })
