@@ -7,10 +7,12 @@
   - Follow-up: removed the legacy `GamePhaseControls` panel from the right rail and consolidated controls into the bottom bar to reduce mode errors.
 - Turn timer
   - Added `frontend/src/components/game/TurnTimer.tsx`, driven by `room.turnExpiresAt` via lifecycle updates. Plays a subtle audio tick under 10s. No client auto-end; server remains source of truth. Time-bank UI not yet surfaced.
+  - Timer now shows an optional time bank chip when lifecycle payloads include fields like `timeBankMs` or `timeBankSecondsRemaining`.
 - Connection/resync UX
   - Added `frontend/src/components/game/ConnectionBanner.tsx` and socket connection status in `uiRoomSlice`. Header shows a (green/yellow/red) dot; a top banner appears while disconnected/connecting. “Resync” button not required yet since a fresh `game-update` arrives on reconnect; add if desync incidents appear.
 - Clickable log → map focus
-  - `GameLogPanel` now emits `onFocus([from,to])` for battle/fortify entries; `TabbedGameChat` plumbs this to `GameRoom`, which highlights the last territory. Pan/zoom-to-fit is not implemented; selection highlight acts as focus for now.
+  - `GameLogPanel` now emits `onFocus([from,to])` for battle/fortify entries; `TabbedGameChat` plumbs this to `GameRoom`, which highlights the last territory.
+  - Implemented pan/zoom focus: selecting from log now recenters the map to the selected territory via a `focus` prop on `ResponsiveMapContainer`.
 - Keyboard shortcuts
   - Added minimal bindings: `E`/`T` end turn. Numeric dice are set via UI in the action bar. More shortcuts remain TODO.
 - Reduced motion

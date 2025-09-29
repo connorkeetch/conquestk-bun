@@ -355,6 +355,10 @@ class SocketService {
         turnNumber: payload.turnNumber,
         currentTurnUserId: payload.currentTurnUserId,
         turnExpiresAt: payload.turnExpiresAt,
+        timeBankSecondsRemaining:
+          // Cast to the superset type that includes optional field from shared types
+          (payload as Parameters<ServerToClientEvents['lifecycle:update']>[0])
+            .timeBankSecondsRemaining,
         readyCheckStartedAt: payload.readyCheckStartedAt,
         readyStates: payload.readyStates,
       }
@@ -420,6 +424,8 @@ class SocketService {
               ? null
               : undefined,
         turnExpiresAt: typeof payload.turnExpiresAt === 'string' ? payload.turnExpiresAt : null,
+        timeBankSecondsRemaining: (payload as Parameters<ServerToClientEvents['room-update']>[0])
+          .timeBankSecondsRemaining,
         readyCheckStartedAt:
           typeof payload.readyCheckStartedAt === 'string' ? payload.readyCheckStartedAt : null,
         // 'players' omitted: room-update payload may not match RoomPlayer shape

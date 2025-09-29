@@ -41,6 +41,8 @@ export interface GameRoom {
   turnNumber?: number
   turnExpiresAt?: Date | null
   readyCheckStartedAt?: Date | null
+  // Canonical time bank remaining (seconds) for current turn user
+  timeBankSecondsRemaining?: number | null
   winner?: string | null
   playerCount?: number
   turnTimerSeconds?: number
